@@ -37,7 +37,7 @@ ent.CopyFrom(sourceEntity);
 
 #### Create components
 ```csharp
-[ComponentGroup(10)] // Set component to group
+[ComponentGroup(10)] // Set component to group (optional)
 public struct Component : IComponent {
     // Any unmanaged data
     public int data;
