@@ -70,7 +70,7 @@ Awake systems
 public unsafe struct TransformWorldMatrixUpdateSystem : IAwake {
     public void OnAwake(ref SystemContext context) {
         var jobHandle = ...
-        content.SetDependency(jobHandle);
+        context.SetDependency(jobHandle);
     }
 }
 ```
@@ -80,7 +80,7 @@ Update systems
 public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
     public void OnUpdate(ref SystemContext context) {
         var jobHandle = ...
-        content.SetDependency(jobHandle);
+        context.SetDependency(jobHandle);
     }
 }
 ```
@@ -90,7 +90,7 @@ Destroy systems
 public unsafe struct TransformWorldMatrixUpdateSystem : IDestroy {
     public void OnDestroy(ref SystemContext context) {
         var jobHandle = ...
-        content.SetDependency(jobHandle);
+        context.SetDependency(jobHandle);
     }
 }
 ```
