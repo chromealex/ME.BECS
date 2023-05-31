@@ -190,5 +190,5 @@ var world = World.Create(bytes);
 ent.InstantiateView(viewSource);
 
 // Destroy view
-ent.InstantiateView(viewSource);
+ent.DestroyViews(viewSource);
 ```
