@@ -27,6 +27,12 @@ ent.Version;
 
 // Get entity's version group
 ent.GetVersion(groupId);
+
+// Clone entity
+var clone = ent.Clone();
+
+// Copy entity
+ent.CopyFrom(sourceEntity);
 ```
 
 #### Create components
@@ -158,6 +164,15 @@ public void Job : IJob {
         ent.Get<MyComponent>().data = 123;
     }
 }
+```
+
+#### Clone/Copy world
+```csharp
+// Clone world
+var newWorld = world.Clone();
+
+// Copy world
+world.CopyFrom(sourceWorld);
 ```
 
 #### Serialize/Deserialize world
