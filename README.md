@@ -10,6 +10,8 @@ Bursted Entity Component System
 - Create csc.rsp in Assets directory;
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 
+Tested in Unity 2023.1
+
 ## API
 #### Create new world
 ```csharp
