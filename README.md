@@ -77,7 +77,9 @@ public unsafe struct TransformWorldMatrixUpdateSystem : IAwake {
 
 Update systems
 ```csharp
+[BurstCompile] // Use burst in awake/update/destroy by default
 public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
+    [WithoutBurst] // Do not compile this method into burst
     public void OnUpdate(ref SystemContext context) {
         var jobHandle = ...
         context.SetDependency(jobHandle);
