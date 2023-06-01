@@ -1,4 +1,4 @@
-<img src="https://github.com/chromealex/ME.BECS/blob/main/ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
+<img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
 
 # ME.BECS
 Bursted Entity Component System
@@ -9,18 +9,18 @@ Bursted Entity Component System
 <br>
 <br>
 
-## Benefits
+## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
 - Clone world/Serialize world very fast;
 - Deterministic.
 
-## Project Initialization
+## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
 - Create csc.rsp in Assets directory;
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 
 Tested in Unity 2023.1
 
-## Dependencies
+## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Dependencies
 ```
 "dependencies": {
     "com.unity.collections": "1.4.0",
@@ -32,7 +32,7 @@ Tested in Unity 2023.1
   },
 ```
 
-## API
+## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> API
 #### Create new world
 ```csharp
 var world = World.Create();
