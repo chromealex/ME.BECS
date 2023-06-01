@@ -1,0 +1,207 @@
+.fields-container .field .unity-foldout {
+    background-color: rgba(0, 90, 128, 0.1);
+    border-bottom-color: rgba(0, 90, 128, 0.1);
+}
+
+.entity-header {
+    padding: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    flex-direction: row;
+    background-color: rgba(0, 90, 128, 0.3);
+    border-radius: 7px;
+    min-height: 50px;
+}
+
+.entity-mini {
+    margin-top: 3px;
+    margin-right: -6px;
+    margin-bottom: 2px;
+}
+
+.entity-header .unity-label {
+    overflow: hidden;
+    -unity-text-overflow-position: middle;
+    text-overflow: ellipsis;
+}
+
+.entity-mini .entity-header {
+    margin: 0px;
+    padding: 2px;
+    border-bottom-right-radius: 0px;
+    border-top-right-radius: 0px;
+    min-height: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.entity-mini .entity-header .entity-not-alive {
+    -unity-text-align: middle-center;
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.entity-mini.entity-not-alive .entity-header {
+    background-color: rgba(182, 35, 14, 0.3);
+    border-top-width: 1px;
+    border-color: rgba(182, 35, 14, 0.5);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(90, 20, 6, 0.5);
+}
+
+.entity-not-alive > .unity-base-field > .unity-base-field__input {
+    display: none;
+}
+
+.entity-mini .entity-header:hover {
+    background-color: rgba(0, 90, 128, 0.6);
+}
+
+.entity-mini .entity-header.toggle-checked:hover {
+    background-color: rgba(0, 90, 128, 0.6);
+}
+
+.entity-mini .entity-header.toggle-checked {
+    background-color: rgba(0, 90, 128, 0.2);
+}
+
+.entity-mini.entity-not-alive .entity-header:hover {
+    background-color: rgba(182, 35, 14, 0.3);
+}
+.entity-mini.entity-not-alive .entity-header.toggle-checked {
+    background-color: rgba(182, 35, 14, 0.3);
+}
+
+.entity-header .entity-arch-container {
+    flex-direction: column;
+    min-width: 60px;
+    align-self: flex-end;
+}
+
+.entity-header .entity-id-container {
+    margin-left: 10px;
+}
+
+.entity-header .entity-id-container,
+.entity-header .entity-gen-container,
+.entity-header .entity-version-container {
+    flex-direction: column;
+    min-width: 40px;
+    padding-right: 8px;
+}
+
+.entity-header .entity-arch-label,
+.entity-header .entity-id-label,
+.entity-header .entity-gen-label,
+.entity-header .entity-version-label{
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.entity-components-label {
+    -unity-font-style: bold;
+    padding-left: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    align-self: flex-start;
+}
+
+.entity-mini .entity-components-label {
+    padding-left: 4px;
+    padding-right: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-width: 1px;
+    border-bottom-width: 0px;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    margin-top: 2px;
+    font-size: 9px;
+}
+
+.fields-container {
+    padding: 7px;
+}
+.entity-mini .fields-container {
+    border-top-left-radius: 0px;
+}
+
+.entity-mini .entity-header .unity-toggle__input {
+    flex-grow: 0;
+}
+.entity-mini .entity-header #unity-checkmark {
+    background-image: resource("uipackageresources/images/d_in_foldout.png");
+}
+
+.entity-mini .toggle-checked #unity-checkmark {
+    background-image: resource("uipackageresources/images/d_in_foldout_on.png");
+}
+
+.fields-container .field {
+    padding: 2px;
+    margin: 1px;
+    border-radius: 7px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.fields-container .field .unity-foldout,
+.fields-container Label.field {
+    border-radius: 5px;
+    border-bottom-width: 1px;
+}
+
+.fields-container .field .unity-foldout__content,
+.fields-container Label.field {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    margin: 0px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 15px;
+    padding-right: 6px;
+}
+
+.fields-container .field .unity-toggle,
+.fields-container Label.field {
+    margin: 0px;
+    padding: 3px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+.fields-container .field .unity-toggle:hover,
+.fields-container Label.field:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+
+.fields-container .field .unity-toggle__input,
+.fields-container Label.field {
+    -unity-font-style: bold;
+}
+
+.entity-mini .label-header,
+.entity-mini .entity-id-label,
+.entity-mini .entity-gen-label,
+.entity-mini .entity-version-label,
+.entity-mini .entity-arch-label {
+    font-size: 8px;
+}
+
+
+.entity-header .entity-gen,
+.entity-header .entity-arch,
+.entity-header .entity-version,
+.entity-header .entity-id {
+    font-size: 16px;
+}
+
+.entity-mini .label-value {
+    margin-top: -2px;
+    font-size: 12px;
+}

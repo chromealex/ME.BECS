@@ -1,0 +1,137 @@
+
+namespace ME.BECS {
+
+    using static Cuts;
+    using MemPtr = System.Int64;
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+
+    public struct StaticTypesGroups {
+
+        public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroups>();
+        public static ref uint maxId => ref maxIdBurst.Data;
+        
+    }
+
+    public struct StaticTypes {
+
+        public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypes>();
+        public static ref uint counter => ref counterBurst.Data;
+
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> sizesBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10201);
+        public static ref ME.BECS.Internal.Array<uint> sizes => ref sizesBurst.Data;
+
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> groupsBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10202);
+        public static ref ME.BECS.Internal.Array<uint> groups => ref groupsBurst.Data;
+
+    }
+
+    public struct StaticSharedTypes {
+
+        public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticSharedTypes>();
+        public static ref uint counter => ref counterBurst.Data;
+        
+    }
+
+    public struct StaticTypesLoadedManaged {
+
+        public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
+        public static readonly System.Collections.Generic.Dictionary<System.Type, uint> typeToId = new System.Collections.Generic.Dictionary<System.Type, uint>();
+        public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedSharedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
+
+    }
+
+    public struct SharedStaticDefault<T> where T : unmanaged {
+
+        private static readonly T ptr;
+        
+        public ref readonly T Data {
+            [INLINE(256)]
+            get {
+                return ref ptr;
+            }
+        }
+
+    }
+
+    public struct StaticTypesGroupId<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroupId<T>>();
+
+    }
+
+    public struct StaticTypesId<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesId<T>>();
+
+    }
+
+    public struct StaticTypesIsTag<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesIsTag<T>>();
+
+    }
+
+    public struct StaticTypesSharedTypeId<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesSharedTypeId<T>>();
+
+    }
+
+    public struct StaticTypes<T> where T : unmanaged {
+
+        public static readonly SharedStaticDefault<T> defaultValueBurst;
+        public static ref uint sharedTypeId => ref StaticTypesSharedTypeId<T>.value.Data;
+        public static ref uint typeId => ref StaticTypesId<T>.value.Data;
+        public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
+        public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
+        public static ref readonly T defaultValue => ref StaticTypes<T>.defaultValueBurst.Data;
+
+        [INLINE(256)]
+        public static void Validate(bool isTag) {
+
+            if (typeId == 0u) {
+                StaticTypes<T>.typeId = ++StaticTypes.counter;
+                StaticTypes<T>.isTag = isTag;
+                StaticTypes.sizes.Resize(StaticTypes<T>.typeId + 1u);
+                StaticTypes.sizes.Get(StaticTypes<T>.typeId) = isTag == true ? 0u : TSize<T>.size;
+                StaticTypes.groups.Resize(StaticTypes<T>.typeId + 1u);
+                StaticTypes.groups.Get(StaticTypes<T>.typeId) = groupId;
+                StaticTypes<T>.AddTypeToCache();
+            }
+
+        }
+
+        [INLINE(256)]
+        public static void ValidateShared(bool isTag) {
+
+            if (sharedTypeId == 0u) {
+                StaticTypes<T>.sharedTypeId = ++StaticSharedTypes.counter;
+                StaticTypes<T>.AddSharedTypeToCache();
+            }
+
+            Validate(isTag);
+
+        }
+
+        [Unity.Burst.BurstDiscard]
+        public static void ApplyGroup(uint groupId) {
+
+            StaticTypes<T>.groupId = groupId;
+            if (groupId > StaticTypesGroups.maxId) StaticTypesGroups.maxId = groupId;
+
+        }
+
+        [Unity.Burst.BurstDiscard]
+        public static void AddTypeToCache() {
+            StaticTypesLoadedManaged.loadedTypes.Add(StaticTypes<T>.typeId, typeof(T));
+            StaticTypesLoadedManaged.typeToId.Add(typeof(T), StaticTypes<T>.typeId);
+        }
+
+        [Unity.Burst.BurstDiscard]
+        public static void AddSharedTypeToCache() {
+            StaticTypesLoadedManaged.loadedSharedTypes.Add(StaticTypes<T>.sharedTypeId, typeof(T));
+        }
+
+    }
+
+}

@@ -1,0 +1,18 @@
+.horizontal-group {
+    align-items: stretch;
+    flex-direction: row;
+}
+.horizontal-group .unity-object-field-display Label {
+    min-width: 50px;
+    width: 10px;
+}
+
+.horizontal-group > ObjectField {
+    flex-grow: 1;
+}
+
+.providers-dropdown {
+    max-width: 80px;
+    min-width: 50px;
+    width: 20%;
+}

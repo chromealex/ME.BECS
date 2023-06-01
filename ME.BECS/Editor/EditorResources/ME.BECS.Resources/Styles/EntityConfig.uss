@@ -1,0 +1,64 @@
+.fields-container .field.field-selected {
+    background-color: rgba(0, 127, 255, 0.1);
+}
+
+.fields-container {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 2px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-bottom-width: 2px;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.fields-container-root {
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+
+.buttons-container {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-right: 10px;
+}
+
+.buttons-container Button {
+    background-color: rgba(0, 0, 0, 0.4);
+    align-self: flex-end;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+    border-width: 0px;
+    margin: 0px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    -unity-font-style: bold;
+    font-size: 18px;
+    height: 18px;
+    width: 34px;
+    padding-bottom: 2px;
+}
+
+.buttons-container Button:disabled {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.buttons-container .add-button {
+    margin-left: 1px;
+    border-bottom-left-radius: 0px;
+}
+
+.buttons-container .remove-button {
+    border-bottom-right-radius: 0px;
+}
+
+.button-selector {
+    border-radius: 5px;
+}
+
+.button-selector-with-content {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+}

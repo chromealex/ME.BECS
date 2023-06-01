@@ -1,0 +1,23 @@
+{
+    "name": "ME.BECS.Network.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Editor",
+        "Unity.Burst",
+        "Unity.Collections",
+        "ME.BECS.Features.Editor",
+        "ME.BECS.Network"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

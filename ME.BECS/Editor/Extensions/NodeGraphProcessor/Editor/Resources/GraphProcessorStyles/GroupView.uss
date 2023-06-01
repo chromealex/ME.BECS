@@ -1,0 +1,28 @@
+#headerColorPicker {
+    margin: 8px;
+    width: 50px;
+}
+
+#titleContainer > #titleLabel, #titleContainer > #titleField {
+    margin-left: 55px;
+}
+
+.light-color #headerContainer > #titleContainer > #titleLabel {
+    color: white !important;
+}
+
+.dark-color #headerContainer > #titleContainer > #titleLabel {
+    color: black !important;
+}
+
+.scope > .mainContainer > #headerContainer {
+    flex-direction: row;
+}
+
+#titleContainer #titleLabel {
+    margin: 0px;
+}
+
+#titleContainer #titleField {
+    margin: 0px;
+}

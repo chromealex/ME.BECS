@@ -1,0 +1,20 @@
+{
+    "name": "ME.BECS.Features.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Editor",
+        "ME.BECS.Features"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

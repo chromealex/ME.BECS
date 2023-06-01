@@ -1,0 +1,14 @@
+.systems-graph-field {
+    margin: 0px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding: 8px;
+    border-left-width: 2px;
+    border-color: #af3733;
+}
+
+.systems-graph-field.set {
+    border-color: #82af33;
+}

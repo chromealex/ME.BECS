@@ -1,0 +1,43 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System.Linq;
+using Unity.Jobs;
+using Unity.Collections;
+// using Unity.Entities;
+
+namespace ME.BECS.Extensions.GraphProcessor
+{
+
+	using scg = System.Collections.Generic;
+	/// <summary>
+	/// Graph processor
+	/// </summary>
+	public class ProcessGraphProcessor : BaseGraphProcessor
+	{
+		public scg::List<BaseNode> processList;
+		
+		/// <summary>
+		/// Manage graph scheduling and processing
+		/// </summary>
+		/// <param name="graph">Graph to be processed</param>
+		public ProcessGraphProcessor(BaseGraph graph) : base(graph) {}
+
+		public override void UpdateComputeOrder()
+		{
+			this.graph.UpdateComputeOrder();
+			processList = graph.nodes.OrderBy(n => n.computeOrder).ToList();
+		}
+
+		/// <summary>
+		/// Process all the nodes following the compute order.
+		/// </summary>
+		public override void Run() {
+			
+			int count = processList.Count;
+
+			for (int i = 0; i < count; i++)
+				processList[i].OnProcess();
+		}
+	}
+}

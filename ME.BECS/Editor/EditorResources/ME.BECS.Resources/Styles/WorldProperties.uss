@@ -1,0 +1,142 @@
+.field. .tooltip-text {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-radius: 7px;
+    padding: 7px;
+    width: 100%;
+    right: 0px;
+    bottom: 100%;
+    white-space: normal;
+    align-self: flex-end;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.5);
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    display: none;
+}
+
+.button-selector {
+    background-color: rgba(22, 116, 238, 0.5);
+    border-radius: 5px;
+    font-size: 11px;
+    height: 24px;
+    margin: 0px;
+    flex-direction: row-reverse;
+    justify-content: center;
+}
+
+.button-selector:hover {
+    background-color: rgba(22, 116, 238, 0.3);
+}
+
+.button-selector .unity-foldout__checkmark {
+    margin-left: 10px;
+    background-image: resource("uipackageresources/images/d_in_foldout_on.png");
+}
+
+.subclass-selector {
+    flex-direction: row;
+    margin-right: 0px;
+}
+
+.subclass-selector-label {
+    -unity-text-align: middle-left;
+}
+
+.subclass-button-selector {
+    flex-grow: 1;
+}
+
+.field > PropertyField {
+    flex-grow: 1;
+}
+
+.properties-block {
+    margin-top: 6px;
+}
+
+.properties-block .properties-block-header {
+    font-size: 8px;
+    opacity: 0.6;
+}
+
+.foldout {
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin-top: 2px;
+    margin-bottom: 2px;
+    transition-duration: 1s;
+}
+
+.foldout:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    transition-duration: 1s;
+}
+
+.foldout > Toggle,
+.foldout > ListView > Foldout > Toggle {
+    padding: 8px;
+    margin: 0px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.foldout > ListView > TextField {
+    right: 20px;
+    top: 6px;
+}
+
+.foldout > #unity-content,
+.foldout > ListView > Foldout > #unity-content {
+    padding: 8px;
+    padding-top: 0px;
+    padding-left: 4px;
+}
+
+.foldout > ListView > Foldout > #unity-content {
+    margin-top: 8px;
+    margin-left: 4px;
+}
+
+.field {
+    flex-direction: row;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.field .tooltip {
+    align-self: center;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin: 4px;
+    background-color: rgba(198, 198, 26, 0.1);
+    border-radius: 7px;
+    color: rgba(0, 0, 0, 1);
+    margin-left: 8px;
+    margin-right: 0px;
+    width: 10px;
+    height: 10px;
+    font-size: 8px;
+}
+
+.field .unity-base-field {
+    flex-shrink: 1;
+    flex-grow: 1;
+}
+
+.field:hover .tooltip-text {
+    display: flex;
+}
+
+.field:hover {
+    overflow: visible;
+}
+
+.field.has-tooltip:hover {
+    background-color: rgba(20, 20, 20, 0.8);
+    border-radius: 7px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}

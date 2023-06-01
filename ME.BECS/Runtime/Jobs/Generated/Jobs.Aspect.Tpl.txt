@@ -1,0 +1,102 @@
+namespace ME.BECS.Jobs {
+    
+    using Unity.Jobs;
+    using Unity.Jobs.LowLevel.Unsafe;
+    using Unity.Collections.LowLevel.Unsafe;
+
+    public static unsafe partial class QueryAspectScheduleExtensions {
+        
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+            {count( )[builder.WithAspect<T#i#>();]}
+            builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.builderDependsOn);
+            builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
+            return builder.builderDependsOn;
+        }
+        
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+            return staticQuery.Schedule<T, {count(,)[T#i#]}>(in job, in context.world, context.dependsOn);
+        }
+        
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+            var state = world.state;
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            return query.Schedule<T, {count(,)[T#i#]}>(in job);
+        }
+
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
+            return staticQuery.builderDependsOn;
+        }
+        
+    }
+
+    [JobProducerType(typeof(JobAspectExtensions_{{count}}.JobProcess<{count[,]}>))]
+    public interface IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        void Execute({count(,)[{{inref}} T#i# c#i#]});
+    }
+
+    public static unsafe partial class JobAspectExtensions_{{count}} {
+        
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, JobHandle dependsOn = default)
+            {count( )[where T#i# : unmanaged, IAspect]}
+            where T : struct, IJobAspect<{count(,)[T#i#]}> {
+            
+            buffer->sync = false;
+            var data = new JobData<T, {count(,)[T#i#]}>() {
+                jobData = jobData,
+                buffer = buffer,
+                {count[c#i# = buffer->state->aspectsStorage.Initialize<T#i#>(buffer->state),]}
+            };
+            
+            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T, {count(,)[T#i#]}>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            return JobsUtility.Schedule(ref parameters);
+
+        }
+
+        private struct JobData<T, {count(,)[T#i#]}>
+            {count( )[where T#i# : unmanaged, IAspect]}
+            where T : struct {
+            [NativeDisableUnsafePtrRestriction]
+            public T jobData;
+            [NativeDisableUnsafePtrRestriction]
+            public CommandBuffer* buffer;
+            {count[public T#i# c#i#;]}
+        }
+
+        internal struct JobProcess<T, {count(,)[T#i#]}>
+            {count( )[where T#i# : unmanaged, IAspect]}
+            where T : struct, IJobAspect<{count(,)[T#i#]}> {
+
+            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();
+
+            public static System.IntPtr Initialize() {
+                if (jobReflectionData.Data == System.IntPtr.Zero) {
+                    jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
+                }
+                return jobReflectionData.Data;
+            }
+
+            private delegate void ExecuteJobFunction(ref JobData<T, {count(,)[T#i#]}> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex);
+
+            private static void Execute(ref JobData<T, {count(,)[T#i#]}> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
+            
+                JobUtils.SetCurrentThreadAsSingle(true);
+                
+                jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
+                for (int i = 0; i < jobData.buffer->count; ++i) {
+                    var entId = jobData.buffer->entities[i];
+                    var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
+                    {count[jobData.c#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
+                    jobData.jobData.Execute({count(,)[{{inref}} jobData.c#i#]});
+                }
+                jobData.buffer->EndForEachRange();
+                
+                JobUtils.SetCurrentThreadAsSingle(false);
+                
+            }
+        }
+    }
+    
+}

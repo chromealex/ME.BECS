@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26b789d95c004cd2984c41a48a639a06, type: 3}
+  m_Name: NetworkModule
+  m_EditorClassIdentifier: 
+  properties:
+    tickTime: 33
+    maxFrameTime: 10
+    inputLag: 1
+    eventsStorageProperties:
+      capacity: 1000
+      capacityPerTick: 30
+      localPlayersCapacity: 1
+      bufferCapacity: 1000
+    statesStorageProperties:
+      capacity: 20
+      copyPerTick: 10
+    methodsStorageProperties:
+      capacity: 10
+    transport:
+      rid: 8411176145102831617
+  references:
+    version: 2
+    RefIds:
+    - rid: 8411176145102831617
+      type: {class: LocalTransport, ns: ME.MiniECS, asm: ME.MiniECS.NetworkMarkers}

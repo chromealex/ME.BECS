@@ -1,0 +1,22 @@
+{
+    "name": "ME.BECS.Views",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Features",
+        "ME.BECS.Aspects.TransformAspect",
+        "Unity.Burst",
+        "Unity.Mathematics",
+        "Unity.Collections",
+        "ME.BECS.ObjectReference.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

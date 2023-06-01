@@ -1,0 +1,144 @@
+.container {
+}
+
+.zone {
+}
+
+.scroll-view {
+    flex-grow: 1;
+}
+
+.scroll-view .unity-scroller--horizontal {
+    visibility: hidden;
+}
+
+.blocks {
+    min-height: 20px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.block {
+    background-color: #652a2a;
+    border-width: 1px;
+    border-color: #8f4c4c;
+    min-width: 2px;
+    border-right-width: 0px;
+    height: 20px;
+    flex-grow: 1;
+    opacity: 1;
+}
+
+.block.free {
+    background-color: #2f642f;
+    border-color: #56752f;
+}
+
+.zone > Toggle,
+.zone > ListView > Foldout > Toggle {
+    padding: 8px;
+    margin: 0px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.zone {
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.1);
+    margin-top: 2px;
+    margin-bottom: 2px;
+    margin-left: 10px;
+    margin-right: 10px;
+    transition-duration: 1s;
+}
+
+.zone:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    transition-duration: 1s;
+}
+
+.zone > #unity-content,
+.zone > ListView > Foldout > #unity-content {
+    padding: 8px;
+    margin-left: 0px;
+}
+
+.zone > ListView > Foldout > #unity-content {
+    margin-top: 8px;
+    margin-left: 4px;
+}
+
+.label-counter-count {
+    align-content: flex-start;
+    align-items: center;
+    align-self: flex-start;
+    flex-direction: row;
+    margin: 2px;
+    margin-left: 0px;
+    padding: 2px;
+    background-color: rgba(30, 30, 30, 0.9);
+    border-radius: 15px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+.label-counter-count-label {
+    font-size: 10px;
+    flex-wrap: wrap;
+    white-space: normal;
+    color: white;
+    width: 120px;
+    margin-right: 4px;
+    -unity-text-align: middle-right;
+}
+
+.label-counter-count-count {
+    font-size: 20px;
+    white-space: nowrap;
+    border-radius: 10px;
+    color: deepskyblue;
+    padding-left: 8px;
+    padding-right: 8px;
+    background-color: black;
+}
+
+.small-counter {
+    border-radius: 8px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+.small-counter .label-counter-count-count {
+    font-size: 10px;
+    border-radius: 7px;
+}
+
+.tooltip-text {
+    position: absolute;
+    width: 120px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-radius: 7px;
+    padding: 7px;
+    bottom: 24px;
+    white-space: normal;
+    align-self: center;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+}
+
+.block:hover .tooltip-text {
+    opacity: 1;
+}
+
+.block:hover {
+    overflow: visible;
+    transition-duration: 0.2s;
+}
+
+.block:hover {
+    opacity: 0.8;
+    transition-duration: 0.2s;
+}

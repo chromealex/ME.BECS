@@ -1,0 +1,43 @@
+namespace ME.BECS{{EDITOR}} {
+    [UnityEngine.Scripting.PreserveAttribute]
+    public static unsafe class AOTBurstHelper {
+        [UnityEngine.Scripting.PreserveAttribute] 
+        public static void AOT() {
+            {{CONTENT}}
+        }
+    }
+        
+    #if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoadAttribute]
+    #endif
+    [UnityEngine.Scripting.PreserveAttribute]
+    public static unsafe class StaticTypesInitializer {
+        [UnityEngine.Scripting.PreserveAttribute] 
+        static StaticTypesInitializer() { 
+            Load();
+        }
+        [UnityEngine.Scripting.PreserveAttribute] 
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Load() {
+            JobUtils.Initialize();
+            {{CONTENT_TYPES}}
+        }
+    }
+    
+    #if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoadAttribute]
+    #endif
+    [UnityEngine.Scripting.PreserveAttribute]
+    public static unsafe class StaticMethods {
+        [UnityEngine.Scripting.PreserveAttribute] 
+        static StaticMethods() {
+            Load();
+        }
+        [UnityEngine.Scripting.PreserveAttribute] 
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Load() {
+            {{CUSTOM_METHOD_REGISTRY}}
+        }
+        {{CUSTOM_METHODS}}
+    }
+}
