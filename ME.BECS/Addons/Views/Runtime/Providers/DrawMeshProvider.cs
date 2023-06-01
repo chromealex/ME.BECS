@@ -12,7 +12,7 @@ namespace ME.BECS.Views {
     using scg = System.Collections.Generic;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
-    using static Cuts;
+    using static CutsPool;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
     public struct DrawMeshProviderTag : IComponent {}
@@ -197,6 +197,7 @@ namespace ME.BECS.Views {
                 var info = new Info {
                     renderParams = renderParams,
                     mesh = mesh,
+                    submeshIndex = 0,
                     renderingInstanced = renderParams.material.enableInstancing,
                 };
                 if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == false) {
@@ -245,6 +246,7 @@ namespace ME.BECS.Views {
                 renderParams.worldBounds = new UnityEngine.Bounds(mesh.bounds.center, mesh.bounds.size);
                 var info = new Info {
                     renderParams = renderParams,
+                    submeshIndex = 0,
                     mesh = mesh,
                     renderingInstanced = renderParams.material.enableInstancing,
                 };
