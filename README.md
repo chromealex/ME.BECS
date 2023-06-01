@@ -1,5 +1,13 @@
+<img src="https://github.com/chromealex/ME.BECS/blob/main/ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
+
 # ME.BECS
 Bursted Entity Component System
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
 
 ## Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
