@@ -2,9 +2,13 @@
 Bursted Entity Component System
 
 ## Benefits
-- You can use all API in Burst and in parallel mode without copying data to Native Arrays.
-- Clone world/Serialize world very fast
-- Deterministic
+- You can use all API in Burst and in parallel mode without copying data to Native Arrays;
+- Clone world/Serialize world very fast;
+- Deterministic.
+
+## Project Initialization
+- Create csc.rsp in Assets directory;
+- Use "Create/ME.BECS/Create Project" menu to create default project.
 
 ## API
 #### Create new world
