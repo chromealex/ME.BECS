@@ -114,6 +114,8 @@ namespace ME.BECS.Editor {
 
         static CodeGenerator() {
             
+            UnityEngine.Application.logMessageReceived -= OnLogAdded;
+            UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
@@ -122,6 +124,8 @@ namespace ME.BECS.Editor {
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptsReload() {
             
+            UnityEngine.Application.logMessageReceived -= OnLogAdded;
+            UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
@@ -223,12 +227,12 @@ namespace ME.BECS.Editor {
                     {
                         var dir = $"Assets/{ECS}.BurstHelper/Runtime";
                         var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                        UnityEditor.AssetDatabase.DeleteAsset(path);
+                        //UnityEditor.AssetDatabase.DeleteAsset(path);
                     }
                     {
                         var dir = $"Assets/{ECS}.BurstHelper/Editor";
                         var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                        UnityEditor.AssetDatabase.DeleteAsset(path);
+                        //UnityEditor.AssetDatabase.DeleteAsset(path);
                     }
                 }
             }
