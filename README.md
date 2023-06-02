@@ -18,7 +18,7 @@ Bursted Entity Component System
 - Deterministic.
 
 ## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
-- Create csc.rsp in Assets directory;
+- Create csc.rsp in Assets directory with this content:
 ```
 -define:EXCEPTIONS_CONTEXT
 -define:EXCEPTIONS_THREAD_SAFE
