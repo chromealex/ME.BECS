@@ -50,6 +50,12 @@ namespace ME.BECS {
 
         }
 
+        #if UNITY_2023_1_OR_NEWER
+        private const Allocator ALLOCATOR = Allocator.Domain;
+        #else
+        private const Allocator ALLOCATOR = Allocator.Persistent;
+        #endif
+        
         private const uint MAX_CAPACITY = 1000u;
         private const int MAX_ITEMS_CAPACITY = 50;
         private static readonly Unity.Burst.SharedStatic<NativeArray<ThreadItem>> itemsPerThread = Unity.Burst.SharedStatic<NativeArray<ThreadItem>>.GetOrCreate<Pools>();
@@ -60,7 +66,7 @@ namespace ME.BECS {
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute]
         public static void Initialize() {
             
-            Pools.itemsPerThread.Data = new NativeArray<ThreadItem>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Allocator.Domain);
+            Pools.itemsPerThread.Data = new NativeArray<ThreadItem>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, ALLOCATOR);
             
         }
 
@@ -92,7 +98,7 @@ namespace ME.BECS {
             if (threadItem.items.IsCreated == false) {
                 JobUtils.Lock(ref PoolsLock.lockIndex.Data);
                 if (threadItem.items.IsCreated == false) {
-                    threadItem.items = new NativeArray<Item>(MAX_ITEMS_CAPACITY, Allocator.Domain);
+                    threadItem.items = new NativeArray<Item>(MAX_ITEMS_CAPACITY, ALLOCATOR);
                     for (int i = 0; i < threadItem.items.Length; ++i) {
                         ref var item = ref *((Item*)threadItem.items.GetUnsafePtr() + i);
                         item.stack = _makeArray<StackItem>(Pools.MAX_CAPACITY);

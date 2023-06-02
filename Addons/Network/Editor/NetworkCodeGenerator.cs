@@ -7,7 +7,6 @@ namespace ME.BECS.Editor.Network {
             
             var content = new System.Collections.Generic.List<string>();
             var methods = UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>();
-            references.Add(typeof(UnsafeNetworkModule));
             foreach (var method in methods) {
 
                 if (method.IsStatic == false) continue;

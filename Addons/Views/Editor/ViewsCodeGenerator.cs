@@ -20,7 +20,6 @@ namespace ME.BECS.Views.Editor {
             
             var content = new System.Collections.Generic.List<string>();
             var views = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.Views.EntityView>();
-            references.Add(typeof(UnsafeViewsModule));
             foreach (var viewType in views) {
 
                 if (viewType.IsAbstract == true) continue;

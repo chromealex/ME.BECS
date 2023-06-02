@@ -114,8 +114,6 @@ namespace ME.BECS.Editor {
 
         static CodeGenerator() {
             
-            UnityEngine.Application.logMessageReceived -= OnLogAdded;
-            UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
@@ -124,8 +122,6 @@ namespace ME.BECS.Editor {
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptsReload() {
             
-            UnityEngine.Application.logMessageReceived -= OnLogAdded;
-            UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
@@ -223,16 +219,18 @@ namespace ME.BECS.Editor {
                 type == UnityEngine.LogType.Error) {
                 if (condition.Contains($"{ECS}.BurstHelper.cs") == true ||
                     stackTrace.Contains($"{ECS}.BurstHelper.cs") == true) {
-                    // Remove files
-                    {
-                        var dir = $"Assets/{ECS}.BurstHelper/Runtime";
-                        var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                        //UnityEditor.AssetDatabase.DeleteAsset(path);
-                    }
-                    {
-                        var dir = $"Assets/{ECS}.BurstHelper/Editor";
-                        var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                        //UnityEditor.AssetDatabase.DeleteAsset(path);
+                    if (stackTrace.Contains("Validate") == true) {
+                        // Remove files
+                        {
+                            var dir = $"Assets/{ECS}.BurstHelper/Runtime";
+                            var path = @$"{dir}/{ECS}.BurstHelper.cs";
+                            UnityEditor.AssetDatabase.DeleteAsset(path);
+                        }
+                        {
+                            var dir = $"Assets/{ECS}.BurstHelper/Editor";
+                            var path = @$"{dir}/{ECS}.BurstHelper.cs";
+                            UnityEditor.AssetDatabase.DeleteAsset(path);
+                        }
                     }
                 }
             }

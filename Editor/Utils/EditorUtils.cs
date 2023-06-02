@@ -139,9 +139,6 @@ namespace ME.BECS.Editor {
         
         public static T LoadResource<T>(string path, bool isRequired = true) where T : UnityEngine.Object {
             
-            var res = UnityEngine.Resources.Load<T>(System.IO.Path.GetDirectoryName(path) + "/" + System.IO.Path.GetFileNameWithoutExtension(path));
-            if (res != null) return res;
-
             foreach (var searchPath in searchPaths) {
 
                 var data = UnityEditor.AssetDatabase.LoadAssetAtPath<T>($"{searchPath}Editor/EditorResources/{path}");
@@ -167,10 +164,10 @@ namespace ME.BECS.Editor {
             var paths = path.Split('/');
             foreach (var searchPath in searchPaths) {
 
-                var dirGuid = GetDirGUID(searchPath, paths);
-                if (dirGuid != null) {
+                var dirPath = GetDirGUID(searchPath, paths);
+                if (dirPath != null) {
 
-                    return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(UnityEditor.AssetDatabase.GUIDToAssetPath(dirGuid));
+                    return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(dirPath);
 
                 }
 
@@ -189,14 +186,20 @@ namespace ME.BECS.Editor {
         private static string GetDirGUID(string rootDir, string[] paths, int index = 0, string guid = null) {
 
             if (index >= paths.Length) return guid;
-
-            if (System.IO.Directory.Exists(rootDir) == false) return guid;
+            
+            rootDir = rootDir.TrimEnd('/');
             var srcDir = paths[index];
-            var directories = UnityEditor.AssetDatabase.FindAssets(System.IO.Path.GetFileNameWithoutExtension(srcDir), new string[] { rootDir });
-            foreach (var dirGuid in directories) {
+            var dirs = System.IO.Directory.GetDirectories(rootDir);
+            var directories = new System.Collections.Generic.List<string>();
+            var filter = System.IO.Path.GetFileNameWithoutExtension(srcDir);
+            foreach (var dir in dirs) {
+                if (dir == filter) directories.Add(dir);
+            }
+            //var directories = UnityEditor.AssetDatabase.FindAssets(System.IO.Path.GetFileNameWithoutExtension(srcDir), new string[] { rootDir });
+            foreach (var dir in directories) {
 
-                var nextDir = UnityEditor.AssetDatabase.GUIDToAssetPath(dirGuid);
-                var d = GetDirGUID(nextDir, paths, index + 1, dirGuid);
+                var nextDir = dir;//UnityEditor.AssetDatabase.GUIDToAssetPath(dirGuid);
+                var d = GetDirGUID(nextDir, paths, index + 1, dir);
                 if (d != null) {
                     return d;
                 }
