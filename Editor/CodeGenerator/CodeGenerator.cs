@@ -104,14 +104,6 @@ namespace ME.BECS.Editor {
             return loadedAssemblies;
         }
         
-        /*
-        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths) {
-
-            RegenerateBurstAOT();
-
-        }
-        */
-
         static CodeGenerator() {
             
             UnityEngine.Application.logMessageReceived += OnLogAdded;
@@ -219,7 +211,7 @@ namespace ME.BECS.Editor {
                 type == UnityEngine.LogType.Error) {
                 if (condition.Contains($"{ECS}.BurstHelper.cs") == true ||
                     stackTrace.Contains($"{ECS}.BurstHelper.cs") == true) {
-                    if (stackTrace.Contains("Validate") == true) {
+                    if (condition.Contains("does not exist in the namespace") == true) {
                         // Remove files
                         {
                             var dir = $"Assets/{ECS}.BurstHelper/Runtime";
