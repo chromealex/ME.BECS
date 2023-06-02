@@ -44,25 +44,7 @@ world.Dispose();
 ```
 
 #### Entities
-```csharp
-// Create new entity
-var ent = Ent.New();
-
-// Destroy entity
-ent.Destroy();
-
-// Get entity's version
-ent.Version;
-
-// Get entity's version group
-ent.GetVersion(groupId);
-
-// Clone entity
-var clone = ent.Clone();
-
-// Copy entity
-ent.CopyFrom(sourceEntity);
-```
+WIKI [https://github.com/chromealex/ME.BECS/wiki/Entity-API](https://github.com/chromealex/ME.BECS/wiki/Entity-API)
 
 #### Create components
 ```csharp
