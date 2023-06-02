@@ -139,6 +139,9 @@ namespace ME.BECS.Editor {
         
         public static T LoadResource<T>(string path, bool isRequired = true) where T : UnityEngine.Object {
             
+            var res = UnityEngine.Resources.Load<T>(System.IO.Path.GetDirectoryName(path) + "/" + System.IO.Path.GetFileNameWithoutExtension(path));
+            if (res != null) return res;
+
             foreach (var searchPath in searchPaths) {
 
                 var data = UnityEditor.AssetDatabase.LoadAssetAtPath<T>($"{searchPath}Editor/EditorResources/{path}");
@@ -172,9 +175,6 @@ namespace ME.BECS.Editor {
                 }
 
             }
-
-            var res = UnityEngine.Resources.Load<T>(System.IO.Path.GetDirectoryName(path) + "/" + System.IO.Path.GetFileNameWithoutExtension(path));
-            if (res != null) return res;
 
             if (isRequired == true) {
 
