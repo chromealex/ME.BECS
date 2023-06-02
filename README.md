@@ -68,6 +68,8 @@ ent.CopyFrom(sourceEntity);
 ```csharp
 [ComponentGroup(10)] // Set component to group (optional)
 public struct Component : IComponent {
+    // (optional) Initialize component with default data (ex: ent.Read<Component>() or ent.Get<Component>() returns this value by default)
+    public static Component Default => new Component() { data = 100 };
     // Any unmanaged data
     public int data;
     // Reference to any persistent UnityEngine.Object
