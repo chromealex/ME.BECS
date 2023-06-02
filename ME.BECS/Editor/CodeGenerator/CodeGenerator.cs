@@ -334,12 +334,19 @@ namespace ME.BECS.Editor {
                         var info = asms.FirstOrDefault(x => x.name == asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var isTag = IsTagType(component).ToString().ToLower();
+                        var isTagType = IsTagType(component);
+                        var isTag = isTagType.ToString().ToLower();
                         var type = component.FullName.Replace("+", ".");
                         var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
-
+                        if (isTagType == false) {
+                            if (component.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
+                                str = $"StaticTypes<{type}>.defaultValueBurst.Data = {type}.Default;";
+                                typesContent.Add(str);
+                            }
+                        }
+                        
                     }
                 }
                 {

@@ -79,7 +79,7 @@ namespace ME.BECS {
 
     public struct StaticTypes<T> where T : unmanaged {
 
-        public static readonly SharedStaticDefault<T> defaultValueBurst;
+        public static readonly Unity.Burst.SharedStatic<T> defaultValueBurst = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypes<T>>();
         public static ref uint sharedTypeId => ref StaticTypesSharedTypeId<T>.value.Data;
         public static ref uint typeId => ref StaticTypesId<T>.value.Data;
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;

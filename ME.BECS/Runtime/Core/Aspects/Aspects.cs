@@ -27,6 +27,7 @@ namespace ME.BECS {
             ref var res = ref *(T*)this.storage->Get(this.state, ent.id, ent.gen, out var isNew); 
             this.state->entities.UpVersion(this.state, ent.id, StaticTypes<T>.groupId);
             if (isNew == true) {
+                res = StaticTypes<T>.defaultValue;
                 var typeId = StaticTypes<T>.typeId;
                 this.state->batches.Set_INTERNAL(typeId, ent.id, this.state);
             }
@@ -38,6 +39,7 @@ namespace ME.BECS {
             ref var res = ref *(T*)this.storage->Get(this.state, entId, this.state->entities.GetGeneration(this.state, entId), out var isNew);
             this.state->entities.UpVersion(this.state, entId, StaticTypes<T>.groupId);
             if (isNew == true) {
+                res = StaticTypes<T>.defaultValue;
                 var typeId = StaticTypes<T>.typeId;
                 this.state->batches.Set_INTERNAL(typeId, entId, this.state);
             }
