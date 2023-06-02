@@ -433,7 +433,7 @@ namespace ME.BECS.Views {
                 JobHandle toAddJob;
                 {
                     // InstantiateView() case: Add views to the scene which have ViewComponent, but not contained in renderingOnSceneBits
-                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<ViewComponent>();
+                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<ViewComponent>().WithAspect<TransformAspect.TransformAspect>();
                     this.provider.Query(ref query);
                     toAddJob = query.ScheduleParallelFor(new Jobs.JobAddToScene() {
                         state = this.data->viewsWorld.state,

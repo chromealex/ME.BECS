@@ -35,7 +35,7 @@ namespace ME.BECS.TransformAspect {
         private float _;
 
     }
-
+    
     [ComponentGroup(10)]
     public struct ParentComponent : IComponent {
 
