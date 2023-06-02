@@ -91,6 +91,27 @@ ent.Remove<Component>();
 
 // Has data - return true if exist
 bool has = ent.Has<Component>();
+
+// Has data - return true if static component is exist (from EntityConfig)
+bool has = ent.HasStatic<Component>();
+    
+// Read data - return static data (from EntityConfig)
+var comp = ent.ReadStatic<Component>();
+
+// Remove shared component - return true if removed
+ent.RemoveShared<Component>([hash]);
+
+// Set shared component
+ent.SetShared(new Component());
+
+// Has shared component - return true if component is exist
+bool has = ent.HasShared<Component>();
+
+// Read shared component
+ref readonly var comp = ref ent.ReadShared<Component>();
+
+// Get shared component
+ref var comp = ref ent.GetShared<Component>();
 ```
 
 #### Systems
