@@ -1,9 +1,37 @@
+using System.Reflection;
+
 namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     
     using UnityEditor;
     
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.FeaturesGraph.Nodes.SystemNode))]
     public class FeaturesGraphSystemNodeView : FeaturesGraphNodeView {
+
+        protected override void DrawDefaultInspector(bool fromInspector = false) {
+
+            if (fromInspector == false) {
+
+                if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode &&
+                    systemNode.system != null) {
+
+                    var type = systemNode.system.GetType();
+                    var tooltip = type.GetCustomAttribute<UnityEngine.TooltipAttribute>();
+                    if (tooltip != null) {
+
+                        var typeStr = EditorUtils.GetComponentName(type);
+                        var label = new UnityEngine.UIElements.Label($"<b>{typeStr}</b>\n{tooltip.tooltip}");
+                        label.AddToClassList("node-tooltip");
+                        this.Add(label);
+
+                    }
+
+                }
+
+            }
+            
+            base.DrawDefaultInspector(fromInspector);
+            
+        }
 
         public override void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent evt) {
             

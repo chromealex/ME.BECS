@@ -3,6 +3,7 @@ namespace ME.BECS.TransformAspect {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
+    [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required)")]
     public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
         
         [BURST]

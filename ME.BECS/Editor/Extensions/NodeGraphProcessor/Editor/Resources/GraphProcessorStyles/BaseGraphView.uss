@@ -73,3 +73,24 @@
     border-top-width: 2px;
     border-top-color: #d01616;
 }
+
+
+
+.node-tooltip {
+    display: none;
+    background-color: rgba(0, 0, 0, 1);
+    border-radius: 5px;
+    border-color: rgb(169, 99, 54);
+    border-width: 2px;
+    padding: 10px;
+    font-size: 14px;
+    position: absolute;
+    bottom: 100%;
+    min-width: 150px;
+    max-width: 100%;
+    white-space: normal;
+}
+
+.node:hover .node-tooltip {
+    display: flex;
+}
