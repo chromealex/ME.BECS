@@ -108,10 +108,10 @@ ent.SetShared(new Component());
 bool has = ent.HasShared<Component>();
 
 // Read shared component
-ref readonly var comp = ref ent.ReadShared<Component>();
+ref readonly var comp = ref ent.ReadShared<Component>([hash]);
 
 // Get shared component
-ref var comp = ref ent.GetShared<Component>();
+ref var comp = ref ent.GetShared<Component>([hash]);
 ```
 
 #### Systems
