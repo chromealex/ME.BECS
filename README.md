@@ -37,11 +37,7 @@ Tested in Unity 2023.1
 
 ## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> API
 #### Create new world
-```csharp
-var world = World.Create();
-...
-world.Dispose();
-```
+WIKI [https://github.com/chromealex/ME.BECS/wiki/New-World](https://github.com/chromealex/ME.BECS/wiki/New-World)
 
 #### Entities
 WIKI [https://github.com/chromealex/ME.BECS/wiki/Entity-API](https://github.com/chromealex/ME.BECS/wiki/Entity-API)
