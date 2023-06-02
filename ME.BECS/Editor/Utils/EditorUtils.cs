@@ -127,6 +127,7 @@ namespace ME.BECS.Editor {
 
         private static readonly string[] searchPaths = new[] {
             "Packages/com.ME.BECS/",
+            "Packages/com.me.becs/",
             "Assets/BECS/",
             "Assets/ME.BECS/",
             "Assets/ME.BECS-submodule/",
