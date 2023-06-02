@@ -19,6 +19,16 @@ Bursted Entity Component System
 
 ## <img src="ME.BECS/Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
 - Create csc.rsp in Assets directory;
+```
+-define:EXCEPTIONS_CONTEXT
+-define:EXCEPTIONS_THREAD_SAFE
+-define:EXCEPTIONS_COLLECTIONS
+-define:EXCEPTIONS_COMMAND_BUFFER
+-define:EXCEPTIONS_ENTITIES
+-define:EXCEPTIONS_QUERY_BUILDER
+-define:EXCEPTIONS_INTERNAL
+-define:EXCEPTIONS
+```
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 
 Tested in Unity 2023.1
