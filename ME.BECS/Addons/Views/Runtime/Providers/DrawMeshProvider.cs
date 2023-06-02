@@ -83,7 +83,7 @@ namespace ME.BECS.Views {
             public NativeList<Ent> entities;
             public NativeList<Unity.Mathematics.float4x4> prefabWorldMatrices;
 
-            public void Dispose() {
+            public void Dispose(State* state) {
 
                 this.matrices.Dispose();
                 this.entities.Dispose();
@@ -177,7 +177,7 @@ namespace ME.BECS.Views {
                 var worldEnt = list[i].ent;
                 this.SpawnInstanceHierarchy(data, in data->viewsWorld, in worldEnt, in ent);
                 
-                var instanceInfo = new SceneInstanceInfo((System.IntPtr)_make(worldEnt), list[i].prefabInfo.info);
+                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), list[i].prefabInfo.info);
                 data->renderingOnScene.Add(ref data->viewsWorld.state->allocator, instanceInfo);
             }
 
@@ -208,6 +208,7 @@ namespace ME.BECS.Views {
                     };
                     this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
                 }
+
                 objectsPerInfo.matrices.Add(worldEnt.Read<ME.BECS.TransformAspect.WorldMatrixComponent>().value);
                 objectsPerInfo.entities.Add(worldEnt);
                 objectsPerInfo.prefabWorldMatrices.Add(prefabEnt.Read<ME.BECS.TransformAspect.WorldMatrixComponent>().value);
@@ -227,9 +228,8 @@ namespace ME.BECS.Views {
             for (int i = 0; i < list.Length; ++i) {
                 var entId = (uint)list[i].prefabInfo->prefabPtr;
                 var ent = new Ent(entId, data->viewsWorld);
-                var worldEnt = (Ent*)list[i].obj;
-                this.DespawnInstanceHierarchy(data, in *worldEnt, in ent);
-                _free(worldEnt);
+                var worldEnt = new Ent((ulong)list[i].obj);
+                this.DespawnInstanceHierarchy(data, in worldEnt, in ent);
             }
             
             return dependsOn;
@@ -282,7 +282,7 @@ namespace ME.BECS.Views {
 
             foreach (var kv in this.objectsPerMeshAndMaterial) {
 
-                kv.Value.Dispose();
+                kv.Value.Dispose(state);
 
             }
             

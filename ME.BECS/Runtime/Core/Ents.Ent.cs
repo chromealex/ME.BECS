@@ -33,9 +33,15 @@ namespace ME.BECS {
             get => ref Worlds.GetWorld(this.worldId);
         }
 
+        [INLINE(256)]
         public uint GetVersion(ushort groupId) {
             var world = this.World;
             return world.state->entities.GetVersion(world.state, this.id, groupId);
+        }
+
+        [INLINE(256)]
+        public ulong ToULong() {
+            return ((ulong)this.id << 32) | ((uint)this.gen << 16 | this.worldId);
         }
 
         /// <summary>
@@ -93,6 +99,14 @@ namespace ME.BECS {
 
             return newEnt;
 
+        }
+
+        [INLINE(256)]
+        public Ent(ulong value) {
+            this.id = (uint)(value >> 32);
+            var key = value & 0xffffffff;
+            this.gen = (ushort)(key >> 16);
+            this.worldId = (ushort)(key & 0xffff);
         }
 
         [INLINE(256)]
