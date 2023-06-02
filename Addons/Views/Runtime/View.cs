@@ -6,7 +6,6 @@ namespace ME.BECS.Views {
         public ViewSource viewSource;
 
         public static implicit operator ViewSource(View view) {
-            //this.viewsWorld.RegisterViewSource(this.testEntityView)
             return view.viewSource;
         }
         
