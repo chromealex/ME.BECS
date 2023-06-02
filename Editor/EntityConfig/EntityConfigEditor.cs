@@ -48,6 +48,11 @@ namespace ME.BECS.Editor {
             var componentsContainer = new VisualElement();
             scrollView.contentContainer.Add(componentsContainer);
             {
+                var baseConfig = new PropertyField(serializedObject.FindProperty(nameof(EntityConfig.baseConfig)));
+                baseConfig.AddToClassList("baseconfig-field");
+                componentsContainer.Add(baseConfig);
+            }
+            {
                 
                 var components = new VisualElement();
                 components.AddToClassList("entity-components");

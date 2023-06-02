@@ -32,7 +32,6 @@
     padding-left: 10px;
     padding-right: 10px;
     padding-top: 0px;
-    padding-bottom: 0px;
     -unity-font-style: bold;
     font-size: 18px;
     height: 18px;
@@ -61,4 +60,9 @@
     position: absolute;
     right: 0px;
     top: 0px;
+}
+
+.baseconfig-field {
+    padding-top: 5px;
+    padding-bottom: 10px;
 }

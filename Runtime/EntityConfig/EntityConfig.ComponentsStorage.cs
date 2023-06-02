@@ -15,6 +15,7 @@ namespace ME.BECS {
                 for (var i = 0; i < components.Length; ++i) {
                     
                     var component = components[i];
+                    if (component == null) continue;
                     var type = component.GetType();
                     types[0] = type;
                     var gType = typeof(CacheData<>).MakeGenericType(types);

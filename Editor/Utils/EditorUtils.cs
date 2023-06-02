@@ -162,15 +162,13 @@ namespace ME.BECS.Editor {
             }
 
             var paths = path.Split('/');
-            foreach (var searchPath in searchPaths) {
-
-                var dirPath = GetDirGUID(searchPath, paths);
+            {
+                var dirPath = GetDirGUID("Assets", paths);
                 if (dirPath != null) {
 
                     return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(UnityEditor.AssetDatabase.GUIDToAssetPath(dirPath));
 
                 }
-
             }
 
             if (isRequired == true) {
