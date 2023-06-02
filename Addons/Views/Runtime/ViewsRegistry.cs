@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace ME.BECS.Views {
 
     public class ViewsRegistryData : UnityEngine.ScriptableObject {
@@ -9,10 +11,24 @@ namespace ME.BECS.Views {
             public uint prefabId;
             public uint references;
 
+            public bool IsValid() {
+                return this.prefab != null;
+            }
+
         }
         
         public uint prefabId;
         public Item[] items = System.Array.Empty<Item>();
+
+        public void OnValidate() {
+            this.CleanUp();
+        }
+
+        private void CleanUp() {
+
+            this.items = this.items.Where(x => x.prefab != null).ToArray();
+
+        }
 
         public EntityView GetEntityViewByPrefabId(uint prefabId) {
 

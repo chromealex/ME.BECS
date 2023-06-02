@@ -317,6 +317,7 @@ namespace ME.BECS.Views {
 
             viewsModuleData->prefabId = data.prefabId;
             foreach (var item in data.items) {
+                if (item.IsValid() == false) continue;
                 this.Register(viewsModuleData, item.prefab, item.prefabId);
             }
 
