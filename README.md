@@ -1,4 +1,4 @@
-<img src="Editor/EditorResources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
+<img src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
 
 # ME.BECS
 Bursted Entity Component System
@@ -12,12 +12,12 @@ Bursted Entity Component System
 > **Warning**
 > Currently ME.BECS is in alpha version, if you need stable ECS with rollbacks use [ME.ECS](https://github.com/chromealex/ecs)
 
-## <img src="Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
 - Clone world/Serialize world very fast;
 - Deterministic.
 
-## <img src="Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
 - Create csc.rsp in Assets directory with this content:
 ```
 -define:EXCEPTIONS_CONTEXT
@@ -33,7 +33,7 @@ Bursted Entity Component System
 
 Tested in Unity 2023.1
 
-## <img src="Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Dependencies
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Dependencies
 ```
 "dependencies": {
     "com.unity.collections": "1.4.0",
@@ -45,7 +45,7 @@ Tested in Unity 2023.1
   },
 ```
 
-## <img src="Editor/EditorResources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> API
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> API
 #### Create new world
 WIKI [https://github.com/chromealex/ME.BECS/wiki/New-World](https://github.com/chromealex/ME.BECS/wiki/New-World)
 
