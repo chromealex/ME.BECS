@@ -13,14 +13,14 @@ namespace ME.BECS {
 
             public bool Has<T>() where T : Module {
                 for (int i = 0; i < this.list.Length; ++i) {
-                    if (this.list[i].obj is T) return true;
+                    if (this.list[i].IsEnabled() == true && this.list[i].obj is T) return true;
                 }
                 return false;
             }
 
             public T Get<T>() where T : Module {
                 for (int i = 0; i < this.list.Length; ++i) {
-                    if (this.list[i].obj is T module) return module;
+                    if (this.list[i].IsEnabled() == true && this.list[i].obj is T module) return module;
                 }
                 return null;
             }
