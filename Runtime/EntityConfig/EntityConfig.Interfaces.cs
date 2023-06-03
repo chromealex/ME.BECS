@@ -12,6 +12,12 @@ namespace ME.BECS {
     /// </summary>
     public interface IConfigComponent : IComponent { }
 
+    /// <summary>
+    /// Use this interface to assign to unmanaged type
+    /// to show in EntityConfig list
+    /// </summary>
+    public interface IConfigComponentShared : IComponentShared { }
+
     public struct EntityConfigComponent : IComponent {
 
         public uint id;

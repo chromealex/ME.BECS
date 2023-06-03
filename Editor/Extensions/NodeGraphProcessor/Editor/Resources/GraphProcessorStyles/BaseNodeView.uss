@@ -263,6 +263,7 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 .graphElement {
     min-width: 300px;
+    max-width: 300px;
 }
 
 #controls {
@@ -322,4 +323,8 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 .start-node .enable-toggle,
 .exit-node .enable-toggle {
     display: none;
+}
+
+#title-label {
+    text-overflow: ellipsis;
 }

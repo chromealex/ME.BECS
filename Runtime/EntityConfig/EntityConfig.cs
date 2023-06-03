@@ -6,8 +6,14 @@ namespace ME.BECS {
     public class EntityConfig : ScriptableObject {
 
         public EntityConfig baseConfig;
-        public ComponentsStorage<IConfigComponent> data;
-        public ComponentsStorage<IStaticComponent> staticData;
+        public ComponentsStorage<IConfigComponent> data = new() { isShared = false, components = System.Array.Empty<IConfigComponent>() };
+        public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
+        public ComponentsStorage<IStaticComponent> staticData = new() { isShared = false, components = System.Array.Empty<IStaticComponent>() };
+
+        public void ResetCache() {
+            this.data.ResetCache();
+            this.staticData.ResetCache();
+        }
 
         public void Apply(in Ent ent) {
             
@@ -20,6 +26,7 @@ namespace ME.BECS {
             });
             
             this.data.Apply(in ent);
+            this.sharedData.Apply(in ent);
             if (this.baseConfig != null) this.baseConfig.Apply(in ent);
             
         }

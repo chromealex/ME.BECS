@@ -53,6 +53,7 @@ namespace ME.BECS.Editor {
                 
                 var components = new VisualElement();
                 components.AddToClassList("entity-components");
+                components.AddToClassList("entity-state-components");
                 componentsContainer.Add(components);
 
                 var componentsLabel = new Label("Components");
@@ -69,6 +70,29 @@ namespace ME.BECS.Editor {
                     var data = serializedObject.FindProperty(nameof(EntityConfig.data));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.data.components));
                     componentContainer.Add(this.DrawFields(typeof(IConfigComponent), componentsData, serializedObject));
+                }
+            }
+            {
+                
+                var components = new VisualElement();
+                components.AddToClassList("entity-components");
+                components.AddToClassList("entity-shared-components");
+                componentsContainer.Add(components);
+
+                var componentsLabel = new Label("Shared Components");
+                componentsLabel.AddToClassList("entity-components-label");
+                components.Add(componentsLabel);
+
+                var componentsList = new VisualElement();
+                componentsList.AddToClassList("entity-components-list");
+                components.Add(componentsList);
+                {
+                    var componentContainer = new VisualElement();
+                    componentsList.Add(componentContainer);
+
+                    var data = serializedObject.FindProperty(nameof(EntityConfig.sharedData));
+                    var componentsData = data.FindPropertyRelative(nameof(EntityConfig.sharedData.components));
+                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentShared), componentsData, serializedObject));
                 }
             }
             {
@@ -109,6 +133,11 @@ namespace ME.BECS.Editor {
                     if (selectedIndex >= 0) allProps[selectedIndex].AddToClassList("field-selected");
                 }
 
+                foreach (var target in serializedObject.targetObjects) {
+                    if (target is EntityConfig config) {
+                        config.ResetCache();
+                    }
+                }
                 removeButton.SetEnabled(selectIndex >= 0);
             }
             

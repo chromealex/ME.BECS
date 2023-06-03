@@ -2,7 +2,8 @@
     "name": "ME.BECS.Features",
     "rootNamespace": "",
     "references": [
-        "ME.BECS"
+        "ME.BECS",
+        "ME.BECS.Editor"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

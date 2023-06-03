@@ -28,4 +28,24 @@ namespace ME.BECS {
 
     }
 
+    internal unsafe class CacheSharedData<TComponent> : CacheBase where TComponent : unmanaged, IComponentShared {
+
+        public TComponent data;
+        private System.Type type;
+        
+        public override void Apply(State* state, uint entId, ushort entGen) {
+            state->batches.SetShared<TComponent>(entId, this.data, state);
+        }
+
+        public override void BuildCache(object component) {
+            this.data = (TComponent)component;
+            this.type = typeof(TComponent);
+        }
+
+        public override bool Is<T>() {
+            return this.type == typeof(T);
+        }
+
+    }
+
 }

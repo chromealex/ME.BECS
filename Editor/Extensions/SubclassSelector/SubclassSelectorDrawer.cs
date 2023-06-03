@@ -7,17 +7,15 @@ using UnityEditor.UIElements;
 
 namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
-    using BECS.Extensions.SubclassSelector;
-
     public class FindGraphAssetsWindow : ScriptableObject, UnityEditor.Experimental.GraphView.ISearchWindowProvider {
 
         private string[] guids;
         private System.Action<Object> callback;
         
-        public void Initialize(System.Type baseType, System.Action<Object> callback) {
+        public void Initialize(System.Type baseType, System.Type additionalType, System.Action<Object> callback) {
 
             this.callback = callback;
-            this.guids = AssetDatabase.FindAssets("t:" + baseType.Name);
+            this.guids = AssetDatabase.FindAssets("t:" + baseType.Name + (additionalType != null ? (" t:" + additionalType.Name) : ""));
             
         }
         
@@ -110,7 +108,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                 button.RegisterCallback<UnityEngine.UIElements.ClickEvent>((evt) => {
                     if (property.propertyType == SerializedPropertyType.ObjectReference) {
                         this.findGraphAssetsWindow = ScriptableObject.CreateInstance<FindGraphAssetsWindow>();
-                        this.findGraphAssetsWindow.Initialize(this.fieldInfo.FieldType, (item) => {
+                        this.findGraphAssetsWindow.Initialize(this.fieldInfo.FieldType, attr.additionalType, (item) => {
                             property.serializedObject.ApplyModifiedProperties();
                             property.serializedObject.Update();
                             property.objectReferenceValue = item;

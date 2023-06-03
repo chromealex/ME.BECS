@@ -340,6 +340,7 @@ namespace ME.BECS.Editor {
                                 typesContent.Add(str);
                             }
                         }
+                        content.Add($"StaticTypes<{type}>.AOT();");
                         
                     }
                 }
@@ -358,6 +359,7 @@ namespace ME.BECS.Editor {
                         var str = $"StaticTypes<{type}>.ValidateShared(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
+                        content.Add($"StaticTypesShared<{type}>.AOT();");
 
                     }
                 }

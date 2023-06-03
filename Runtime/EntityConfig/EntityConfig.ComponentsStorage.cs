@@ -2,14 +2,32 @@ namespace ME.BECS {
 
     using Extensions.SubclassSelector;
 
+    internal interface IConfigComponentsStorage {
+
+        void ResetCache();
+
+    }
+    
     [System.Serializable]
-    public unsafe struct ComponentsStorage<T> where T : class {
+    public unsafe struct ComponentsStorage<T> : IConfigComponentsStorage where T : class {
+
+        public void AOTShared<TComponent>() where TComponent : unmanaged, IComponentShared {
+            
+            new CacheSharedData<TComponent>();
+            
+        }
+
+        public void AOT<TComponent>() where TComponent : unmanaged {
+            
+            new CacheData<TComponent>();
+            
+        }
 
         private class CacheData {
 
             private readonly System.Collections.Generic.Dictionary<System.Type, CacheBase> dictionary = new System.Collections.Generic.Dictionary<System.Type, CacheBase>();
 
-            public CacheData(T[] components) {
+            public CacheData(T[] components, bool isShared) {
 
                 var types = new System.Type[1];
                 for (var i = 0; i < components.Length; ++i) {
@@ -18,7 +36,12 @@ namespace ME.BECS {
                     if (component == null) continue;
                     var type = component.GetType();
                     types[0] = type;
-                    var gType = typeof(CacheData<>).MakeGenericType(types);
+                    System.Type gType;
+                    if (isShared == true) {
+                        gType = typeof(CacheSharedData<>).MakeGenericType(types);
+                    } else {
+                        gType = typeof(CacheData<>).MakeGenericType(types);
+                    }
                     var item = (CacheBase)System.Activator.CreateInstance(gType);
                     item.BuildCache(component);
                     this.dictionary.Add(type, item);
@@ -61,13 +84,18 @@ namespace ME.BECS {
         [SubclassSelector(unmanagedTypes: true, runtimeAssembliesOnly: true, showSelector: false)]
         [UnityEngine.SerializeReference]
         public T[] components;
+        public bool isShared;
+
+        public void ResetCache() {
+            
+            this.cache = null;
+            
+        }
 
         public void BuildCache() {
 
             if (this.cache == null) {
-
-                this.cache = new CacheData(this.components);
-                
+                this.cache = new CacheData(this.components, this.isShared);
             }
 
         }

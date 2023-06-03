@@ -6,6 +6,10 @@ namespace ME.BECS.Tests {
 
     public class Tests_EntityConfig {
 
+        public struct TestConfigShared1Component : IConfigComponentShared {
+            public int data;
+        }
+
         public struct TestConfig1Component : IConfigComponent {
             public int data;
         }
@@ -39,6 +43,26 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(ent.Has<TestConfig2Component>());
                 Assert.AreEqual(1, ent.Read<TestConfig1Component>().data);
                 Assert.AreEqual(2, ent.Read<TestConfig2Component>().data);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void Shared() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.sharedData.components = new IConfigComponentShared[1] {
+                new TestConfigShared1Component() { data = 1 },
+            };
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.IsTrue(ent.HasShared<TestConfigShared1Component>());
+                Assert.AreEqual(1, ent.ReadShared<TestConfigShared1Component>().data);
             }
             
             UnityEngine.Object.DestroyImmediate(config);

@@ -77,6 +77,14 @@ namespace ME.BECS {
 
     }
 
+    public struct StaticTypesShared<T> where T : unmanaged, IComponentShared {
+
+        public static void AOT() {
+            default(EntityConfig).data.AOTShared<T>();
+        }
+
+    }
+
     public struct StaticTypes<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<T> defaultValueBurst = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypes<T>>();
@@ -85,6 +93,10 @@ namespace ME.BECS {
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
         public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
         public static ref readonly T defaultValue => ref StaticTypes<T>.defaultValueBurst.Data;
+
+        public static void AOT() {
+            default(EntityConfig).data.AOT<T>();
+        }
 
         [INLINE(256)]
         public static void Validate(bool isTag) {
