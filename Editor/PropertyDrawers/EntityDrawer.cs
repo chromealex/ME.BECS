@@ -116,14 +116,32 @@ namespace ME.BECS.Editor {
             var container = root;
             container.Clear();
 
+            var idString = this.entity.id.ToString();
+            var genString = this.entity.gen.ToString();
+            var versionString = this.entity.Version.ToString();
+            var drawComponents = true;
+
+            if (this.property.serializedObject.targetObjects.Length > 1) {
+
+                idString = "-";
+                genString = "-";
+                versionString = "-";
+                drawComponents = false;
+
+            }
+            
             var toggleContainer = new VisualElement();
             var header = new Toggle();
             header.RegisterValueChangedCallback((evt) => {
                 toggleContainer.style.display = new StyleEnum<DisplayStyle>(evt.newValue == true ? DisplayStyle.Flex : DisplayStyle.None);
                 header.RemoveFromClassList("toggle-checked");
                 if (evt.newValue == true) header.AddToClassList("toggle-checked");
+                EditorPrefs.SetBool("ME.BECS.Foldouts.Entity", evt.newValue);
             });
-            toggleContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
+            header.value = EditorPrefs.GetBool("ME.BECS.Foldouts.Entity");
+            toggleContainer.style.display = new StyleEnum<DisplayStyle>(header.value == true ? DisplayStyle.Flex : DisplayStyle.None);
+            header.RemoveFromClassList("toggle-checked");
+            if (header.value == true) header.AddToClassList("toggle-checked");
             header.AddToClassList("entity-header");
             container.Add(header);
             container.Add(toggleContainer);
@@ -136,7 +154,7 @@ namespace ME.BECS.Editor {
                 entityIdLabel.AddToClassList("entity-id-label");
                 entityIdLabel.AddToClassList("label-header");
                 idContainer.Add(entityIdLabel);
-                var entityId = new Label(this.entity.id.ToString());
+                var entityId = new Label(idString);
                 entityId.AddToClassList("entity-id");
                 entityId.AddToClassList("label-value");
                 idContainer.Add(entityId);
@@ -150,7 +168,7 @@ namespace ME.BECS.Editor {
                 entityGenLabel.AddToClassList("entity-gen-label");
                 entityGenLabel.AddToClassList("label-header");
                 genContainer.Add(entityGenLabel);
-                var entityGen = new Label(this.entity.gen.ToString());
+                var entityGen = new Label(genString);
                 entityGen.AddToClassList("entity-gen");
                 entityGen.AddToClassList("label-value");
                 genContainer.Add(entityGen);
@@ -185,7 +203,7 @@ namespace ME.BECS.Editor {
                     entityGenLabel.AddToClassList("entity-version-label");
                     entityGenLabel.AddToClassList("label-header");
                     versionContainer.Add(entityGenLabel);
-                    var entityVersion = new Label(this.entity.Version.ToString());
+                    var entityVersion = new Label(versionString);
                     this.versionLabel = entityVersion;
                     entityVersion.AddToClassList("entity-version");
                     entityVersion.AddToClassList("label-value");
@@ -204,14 +222,14 @@ namespace ME.BECS.Editor {
                     archContainer.Add(entityArchLabel);
                     var archId = this.GetArchId();
                     this.archId = archId;
-                    var entityArch = new Label($"#{archId}");
+                    var entityArch = new Label(drawComponents == true ? $"#{archId}" : "-");
                     entityArch.AddToClassList("entity-arch");
                     entityArch.AddToClassList("label-value");
                     archContainer.Add(entityArch);
                 }
 
                 var rootComponents = new VisualElement();
-                this.DrawComponents(rootComponents, world);
+                if (drawComponents == true) this.DrawComponents(rootComponents, world);
                 toggleContainer.Add(rootComponents);
                 
             }
@@ -316,49 +334,96 @@ namespace ME.BECS.Editor {
             var arch = world.state->archetypes.list[world.state->allocator, archId];
                     
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
-                    
-            this.tempObject.data = new object[arch.components.Count];
-            var i = 0;
-            var e = arch.components.GetEnumerator(world);
-            while (e.MoveNext() == true) {
-                var cId = e.Current;
-                var type = StaticTypesLoadedManaged.loadedTypes[cId];
-                {
-                    var gMethod = methodRead.MakeGenericMethod(type);
-                    var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
-                    this.tempObject.data[i] = val;
+
+            if (this.tempObject.data != null &&
+                this.tempObject.data.Length == arch.components.count) {
+                var i = 0;
+                var e = arch.components.GetEnumerator(world);
+                while (e.MoveNext() == true) {
+                    var cId = e.Current;
+                    var type = StaticTypesLoadedManaged.loadedTypes[cId];
+                    {
+                        var gMethod = methodRead.MakeGenericMethod(type);
+                        var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                        this.tempObject.data[i] = val;
+                    }
+                    ++i;
                 }
-                ++i;
+            } else {
+                this.tempObject.data = new object[arch.components.Count];
+                var i = 0;
+                var e = arch.components.GetEnumerator(world);
+                while (e.MoveNext() == true) {
+                    var cId = e.Current;
+                    var type = StaticTypesLoadedManaged.loadedTypes[cId];
+                    {
+                        var gMethod = methodRead.MakeGenericMethod(type);
+                        var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                        this.tempObject.data[i] = val;
+                    }
+                    ++i;
+                }
             }
-            
+
         }
 
         private void FetchSharedComponentsFromEntity(World world) {
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadSharedDirect));
             var methodHas = typeof(Components).GetMethod(nameof(Components.HasSharedDirect));
-                    
-            var list = new System.Collections.Generic.List<object>();
+            var count = 0;
             foreach (var kv in StaticTypesLoadedManaged.loadedSharedTypes) {
                 var type = kv.Value;
                 {
                     var gHas = methodHas.MakeGenericMethod(type);
                     var has = (bool)gHas.Invoke(world.state->components, new object[] { this.entity });
                     if (has == true) {
-                        var gMethod = methodRead.MakeGenericMethod(type);
-                        var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
-                        list.Add(val);
+                        ++count;
                     }
+
                 }
             }
 
-            this.tempObject.dataShared = list.ToArray();
+            if (this.tempObject.dataShared != null &&
+                this.tempObject.dataShared.Length == count) {
+                var i = 0;
+                foreach (var kv in StaticTypesLoadedManaged.loadedSharedTypes) {
+                    var type = kv.Value;
+                    {
+                        var gHas = methodHas.MakeGenericMethod(type);
+                        var has = (bool)gHas.Invoke(world.state->components, new object[] { this.entity });
+                        if (has == true) {
+                            var gMethod = methodRead.MakeGenericMethod(type);
+                            var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                            this.tempObject.dataShared[i++] = val;
+                        }
+                    }
+                }
+            } else {
+                var list = new System.Collections.Generic.List<object>(count);
+                foreach (var kv in StaticTypesLoadedManaged.loadedSharedTypes) {
+                    var type = kv.Value;
+                    {
+                        var gHas = methodHas.MakeGenericMethod(type);
+                        var has = (bool)gHas.Invoke(world.state->components, new object[] { this.entity });
+                        if (has == true) {
+                            var gMethod = methodRead.MakeGenericMethod(type);
+                            var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                            list.Add(val);
+                        }
+                    }
+                }
+                this.tempObject.dataShared = list.ToArray();
+            }
+
         }
 
         private void DrawFields(VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet) {
 
             var dataArr = serializedObject.FindProperty(fieldName);
             var delta = dataArr.arraySize - fields.Count;
+            var isDirty = false;
             if (delta > 0) {
+                isDirty = true;
                 // add new items
                 for (int i = 0; i < delta; ++i) {
 
@@ -371,6 +436,7 @@ namespace ME.BECS.Editor {
                         };
                         propertyField.userData = i;
                         propertyField.AddToClassList("field");
+                        propertyField.BindProperty(copy);
                         propertyField.Bind(serializedObject);
                         System.Action rebuild = () => {
                             var allChilds = propertyField.Query<PropertyField>().ToList();
@@ -406,6 +472,7 @@ namespace ME.BECS.Editor {
 
                 }
             } else if (delta < 0) {
+                isDirty = true;
                 // remove items
                 delta = -delta;
                 for (int i = 0; i < delta; ++i) {
@@ -419,25 +486,27 @@ namespace ME.BECS.Editor {
             } else {
                 root.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
             }
-            
-            // redraw all items
-            for (int i = 0; i < dataArr.arraySize; ++i) {
 
-                var field = fields[i];
-                var it = dataArr.GetArrayElementAtIndex(i);
-                if (field is PropertyField propertyField) {
-                    var copy = it.Copy();
-                    propertyField.name = $"PropertyField:{it.propertyPath}";
-                    propertyField.bindingPath = it.propertyPath;
-                    propertyField.userData = i;
-                    propertyField.BindProperty(copy);
-                    propertyField.Bind(serializedObject);
-                    var allChilds = field.Query<PropertyField>().ToList();
-                    foreach (var child in allChilds) {
-                        child.userData = propertyField.userData;
+            if (isDirty == true) {
+                // redraw all items
+                for (int i = 0; i < dataArr.arraySize; ++i) {
+
+                    var field = fields[i];
+                    var it = dataArr.GetArrayElementAtIndex(i);
+                    if (field is PropertyField propertyField) {
+                        var copy = it.Copy();
+                        propertyField.name = $"PropertyField:{it.propertyPath}";
+                        propertyField.bindingPath = it.propertyPath;
+                        propertyField.userData = i;
+                        propertyField.BindProperty(copy);
+                        propertyField.Bind(serializedObject);
+                        var allChilds = field.Query<PropertyField>().ToList();
+                        foreach (var child in allChilds) {
+                            child.userData = propertyField.userData;
+                        }
                     }
-                }
 
+                }
             }
 
         }

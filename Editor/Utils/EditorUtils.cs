@@ -64,7 +64,7 @@ namespace ME.BECS.Editor {
 
         public static string GetComponentName(System.Type type) {
             if (type == null) return "<null>";
-            return UnityEditor.ObjectNames.NicifyVariableName(type.Name);
+            return UnityEditor.ObjectNames.NicifyVariableName(type.Namespace?.Length > 0 ? type.FullName.Substring(type.Namespace.Length + 1) : type.Name);
         }
 
         public static System.Type GetTypeFromPropertyField(string typeName, bool isType = false) {
