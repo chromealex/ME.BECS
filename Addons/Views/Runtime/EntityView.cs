@@ -50,7 +50,6 @@ namespace ME.BECS.Views {
         /// </summary>
         /// <param name="ent"></param>
         public void DoInitialize(in Ent ent) {
-            this.ent = ent;
             this.OnInitialize(in ent);
         }
 
