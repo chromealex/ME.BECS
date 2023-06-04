@@ -1,4 +1,4 @@
-namespace ME.BECS {
+namespace ME.BECS.Network {
 
     public enum TransportStatus : byte {
 

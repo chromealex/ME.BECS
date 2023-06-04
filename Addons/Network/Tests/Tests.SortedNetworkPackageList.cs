@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace MiniECS.Addons.Network.Tests {
+namespace ME.BECS.Network.Tests {
 
     using NUnit.Framework;
     
@@ -11,28 +11,28 @@ namespace MiniECS.Addons.Network.Tests {
 
             var world = ME.BECS.World.Create();
             {
-                var list = new ME.BECS.SortedNetworkPackageList(ref world.state->allocator, 1);
-                list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                var list = new SortedNetworkPackageList(ref world.state->allocator, 1);
+                list.Add(ref world.state->allocator, new NetworkPackage() {
                     playerId = 1,
                     localOrder = 1,
                 });
-                list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                list.Add(ref world.state->allocator, new NetworkPackage() {
                     playerId = 1,
                     localOrder = 3,
                 });
-                list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                list.Add(ref world.state->allocator, new NetworkPackage() {
                     playerId = 1,
                     localOrder = 2,
                 });
-                list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                list.Add(ref world.state->allocator, new NetworkPackage() {
                     playerId = 1,
                     localOrder = 6,
                 });
-                list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                list.Add(ref world.state->allocator, new NetworkPackage() {
                     playerId = 1,
                     localOrder = 5,
                 });
-                list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                list.Add(ref world.state->allocator, new NetworkPackage() {
                     playerId = 1,
                     localOrder = 4,
                 });
@@ -55,7 +55,7 @@ namespace MiniECS.Addons.Network.Tests {
             var world = ME.BECS.World.Create();
             {
                 UnityEngine.Random.InitState(1);
-                var list = new ME.BECS.SortedNetworkPackageList(ref world.state->allocator, 1);
+                var list = new SortedNetworkPackageList(ref world.state->allocator, 1);
                 var temp = new System.Collections.Generic.List<byte>();
                 for (int i = 0; i < 256; ++i) {
                     temp.Add((byte)i);
@@ -63,7 +63,7 @@ namespace MiniECS.Addons.Network.Tests {
 
                 temp = temp.OrderBy(x => UnityEngine.Random.value).ToList();
                 foreach (var item in temp) {
-                    list.Add(ref world.state->allocator, new ME.BECS.NetworkPackage() {
+                    list.Add(ref world.state->allocator, new NetworkPackage() {
                         playerId = 1,
                         localOrder = item,
                     });

@@ -1,6 +1,8 @@
 
-namespace ME.BECS.Editor.Network {
+namespace ME.BECS.Network.Editor {
 
+    using ME.BECS.Editor;
+    
     public class NetworkCodeGenerator : CustomCodeGenerator {
         
         public override CodeGenerator.MethodDefinition AddMethod(System.Collections.Generic.List<System.Type> references) {
@@ -22,8 +24,8 @@ namespace ME.BECS.Editor.Network {
             
             var def = new CodeGenerator.MethodDefinition() {
                 methodName = "NetworkLoad",
-                type = "UnsafeNetworkModule.MethodsStorage",
-                definition = "ref UnsafeNetworkModule.MethodsStorage methods",
+                type = "ME.BECS.Network.UnsafeNetworkModule.MethodsStorage",
+                definition = "ref ME.BECS.Network.UnsafeNetworkModule.MethodsStorage methods",
                 content = string.Join("\n", content.ToArray()),
             };
             return def;

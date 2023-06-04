@@ -1,6 +1,6 @@
 using Unity.Jobs;
 
-namespace ME.BECS {
+namespace ME.BECS.Network {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;

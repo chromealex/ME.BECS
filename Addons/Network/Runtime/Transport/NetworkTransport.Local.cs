@@ -1,6 +1,6 @@
 using Unity.Jobs;
 
-namespace ME.BECS {
+namespace ME.BECS.Network {
     
     using static Cuts;
 

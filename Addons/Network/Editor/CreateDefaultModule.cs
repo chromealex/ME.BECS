@@ -1,4 +1,4 @@
-namespace ME.BECS.Views.Editor {
+namespace ME.BECS.Network.Editor {
     
     using ME.BECS.Editor;
 

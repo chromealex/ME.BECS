@@ -1,4 +1,4 @@
-namespace ME.BECS {
+namespace ME.BECS.Network {
 
     using UnityEngine;
     

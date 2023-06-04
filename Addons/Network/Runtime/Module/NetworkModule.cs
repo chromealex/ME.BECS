@@ -1,4 +1,4 @@
-namespace ME.BECS {
+namespace ME.BECS.Network {
 
     using Unity.Jobs;
 
@@ -88,11 +88,10 @@ namespace ME.BECS {
         public uint LocalPlayerId => this.network.data->localPlayerId;
 
         public override void OnAwake(ref World world) {
-            
+            this.network = new UnsafeNetworkModule(in world, this.properties);
         }
 
         public override JobHandle OnStart(ref World world, JobHandle dependsOn) {
-            this.network = new UnsafeNetworkModule(in world, this.properties);
             return dependsOn;
         }
 
