@@ -163,30 +163,46 @@ namespace ME.BECS.Views {
         public SceneInstanceInfo Spawn(SourceRegistry.Info* prefabInfo, in Ent ent, out bool isNew) {
 
             EntityView objInstance;
-            if (this.prefabIdToPool.TryGetValue(prefabInfo->prefabId, out var list) == true && list.Count > 0) {
+            if (prefabInfo->sceneSource == false) {
 
-                var instance = list.Pop();
-                if (this.tempViews.Contains(instance.obj) == true) {
-                    this.tempViews.Remove(instance.obj);
+                if (this.prefabIdToPool.TryGetValue(prefabInfo->prefabId, out var list) == true && list.Count > 0) {
+
+                    var instance = list.Pop();
+                    if (this.tempViews.Contains(instance.obj) == true) {
+                        this.tempViews.Remove(instance.obj);
+                    } else {
+                        var root = this.AssignToRoot();
+                        if (instance.obj.transform.parent != root.tr) instance.obj.transform.SetParent(root.tr);
+                        instance.obj.gameObject.SetActive(true);
+                    }
+
+                    isNew = false;
+                    objInstance = instance.obj;
+
                 } else {
+
                     var root = this.AssignToRoot();
-                    if (instance.obj.transform.parent != root.tr) instance.obj.transform.SetParent(root.tr);
-                    instance.obj.gameObject.SetActive(true);
+                    var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
+                    var instance = EntityView.Instantiate((EntityView)handle.Target, root.tr);
+                    instance.rootInfo = root;
+                    isNew = true;
+                    objInstance = instance;
+
                 }
 
-                isNew = false;
-                objInstance = instance.obj;
-                
             } else {
                 
                 var root = this.AssignToRoot();
                 var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
-                var instance = EntityView.Instantiate((EntityView)handle.Target, root.tr);
+                var instance = (EntityView)handle.Target;
+                instance.transform.SetParent(root.tr);
                 instance.rootInfo = root;
                 isNew = true;
                 objInstance = instance;
-                
+
             }
+
+            objInstance.groupChangedTracker.Initialize();
 
             SceneInstanceInfo info;
             {
@@ -257,8 +273,11 @@ namespace ME.BECS.Views {
         public void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent) {
             
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            instanceObj.DoApplyState(in ent);
-            if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in ent);
+            var hasChanged = instanceObj.groupChangedTracker.HasChanged(in ent);
+            if (hasChanged == true) {
+                instanceObj.DoApplyState(in ent);
+                if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in ent);
+            }
             
         }
 
@@ -324,7 +343,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public ViewSource Register(ViewsModuleData* viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true) {
+        public ViewSource Register(ViewsModuleData* viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
             if (prefab == null) {
@@ -332,7 +351,7 @@ namespace ME.BECS.Views {
             }
 
             var instanceId = prefab.GetInstanceID();
-            if (instanceId < 0 && checkPrefab == true) {
+            if (instanceId <= 0 && checkPrefab == true) {
                 throw new System.Exception("Value is not a prefab");
             }
 
@@ -350,6 +369,7 @@ namespace ME.BECS.Views {
                     prefabPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(new HeapReference<EntityView>(prefab).handle),
                     prefabId = prefabId,
                     typeInfo = typeInfo,
+                    sceneSource = sceneSource,
                     HasUpdateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewUpdate).Any(),
                     HasApplyStateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewApplyState).Any(),
                     HasInitializeModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewInitialize).Any(),

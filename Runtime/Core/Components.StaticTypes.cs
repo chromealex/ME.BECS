@@ -7,7 +7,14 @@ namespace ME.BECS {
 
     public struct StaticTypesGroups {
 
-        public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroups>();
+        public static System.Collections.Generic.Dictionary<System.Type, ushort> groups = new System.Collections.Generic.Dictionary<System.Type, ushort>();
+        public static ushort nextGroupId;
+
+    }
+
+    public struct StaticTypesGroupsBurst {
+
+        public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroupsBurst>();
         public static ref uint maxId => ref maxIdBurst.Data;
         
     }
@@ -85,14 +92,19 @@ namespace ME.BECS {
 
     }
 
+    public struct StaticTypesDefaultValue<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<T> value = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypesDefaultValue<T>>();
+
+    }
+
     public struct StaticTypes<T> where T : unmanaged {
 
-        public static readonly Unity.Burst.SharedStatic<T> defaultValueBurst = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypes<T>>();
         public static ref uint sharedTypeId => ref StaticTypesSharedTypeId<T>.value.Data;
         public static ref uint typeId => ref StaticTypesId<T>.value.Data;
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
         public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
-        public static ref readonly T defaultValue => ref StaticTypes<T>.defaultValueBurst.Data;
+        public static ref readonly T defaultValue => ref StaticTypesDefaultValue<T>.value.Data;
 
         public static void AOT() {
             default(EntityConfig).data.AOT<T>();
@@ -126,10 +138,15 @@ namespace ME.BECS {
         }
 
         [Unity.Burst.BurstDiscard]
-        public static void ApplyGroup(uint groupId) {
+        public static void ApplyGroup(System.Type groupType) {
 
+            if (StaticTypesGroups.groups.TryGetValue(groupType, out var groupId) == false) {
+                groupId = ++StaticTypesGroups.nextGroupId;
+                StaticTypesGroups.groups.Add(groupType, groupId);
+            }
+            
             StaticTypes<T>.groupId = groupId;
-            if (groupId > StaticTypesGroups.maxId) StaticTypesGroups.maxId = groupId;
+            if (groupId > StaticTypesGroupsBurst.maxId) StaticTypesGroupsBurst.maxId = groupId;
 
         }
 

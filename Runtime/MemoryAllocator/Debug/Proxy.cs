@@ -15,6 +15,8 @@ namespace ME.BECS {
         
         public object[] components {
             get {
+
+                if (this.alive == false) return null;
                 
                 var world = this.ent.World;
                 var methodHas = typeof(Components).GetMethod(nameof(Components.HasDirect));
@@ -41,6 +43,8 @@ namespace ME.BECS {
         public object[] sharedComponents {
             get {
                 
+                if (this.alive == false) return null;
+
                 var world = this.ent.World;
                 var result = new System.Collections.Generic.List<object>();
                 var methodHas = typeof(Components).GetMethod(nameof(Components.HasSharedDirect));

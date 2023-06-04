@@ -298,7 +298,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public ViewSource Register(ViewsModuleData* viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true) {
+        public ViewSource Register(ViewsModuleData* viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
             if (prefab == null) {
@@ -308,6 +308,10 @@ namespace ME.BECS.Views {
             var instanceId = prefab.GetInstanceID();
             if (instanceId < 0 && checkPrefab == true) {
                 throw new System.Exception("Value is not a prefab");
+            }
+
+            if (sceneSource == true) {
+                throw new System.Exception("sceneSource = false is not valid for this provider");
             }
 
             var id = (uint)instanceId;
@@ -324,6 +328,7 @@ namespace ME.BECS.Views {
                     prefabPtr = (System.IntPtr)ProvidersHelper.ConstructEntFromPrefab(prefab.transform, Ent.Null, in viewsModuleData->viewsWorld).id,
                     prefabId = prefabId,
                     typeInfo = typeInfo,
+                    sceneSource = sceneSource,
                     HasUpdateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewUpdate).Any(),
                     HasApplyStateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewApplyState).Any(),
                     HasInitializeModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewInitialize).Any(),

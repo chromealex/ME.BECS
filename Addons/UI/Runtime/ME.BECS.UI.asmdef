@@ -1,15 +1,14 @@
 {
-    "name": "ME.BECS.ObjectReference.Editor",
+    "name": "ME.BECS.UI",
     "rootNamespace": "",
     "references": [
-        "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.Editor"
+        "GUID:3060f017167674cd99b29813204e19d2",
+        "GUID:c86be02c705c6464297ae4152f281812",
+        "GUID:b2ee0b71a4ac94950a93c36ebd0ffabb"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

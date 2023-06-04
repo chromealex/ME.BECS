@@ -3,7 +3,7 @@ using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
 namespace ME.BECS.Addons.Editor {
-
+    
     [CustomPropertyDrawer(typeof(ME.BECS.Addons.ObjectReference<>))]
     public class ObjectReferenceDrawer : PropertyDrawer {
 
@@ -15,7 +15,9 @@ namespace ME.BECS.Addons.Editor {
             
             var container = new UnityEngine.UIElements.VisualElement();
             var objectField = new ObjectField(property.displayName);
-            objectField.objectType = System.Type.GetType(property.type);//typeof(prop);
+            var type = this.fieldInfo.FieldType.GenericTypeArguments[0];
+
+            objectField.objectType = type;
             objectField.allowSceneObjects = false;
             objectField.value = obj;
             objectField.RegisterValueChangedCallback((evt) => {

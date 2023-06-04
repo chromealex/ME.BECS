@@ -405,7 +405,6 @@ namespace ME.BECS {
 
             } else {
 
-                this.WaitForAllJobs();
                 this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
                 this.commandBuffer->sync = true;
                 if (this.withBurst == true) {
@@ -426,7 +425,7 @@ namespace ME.BECS {
 
                 } else {
                     
-                    this.builderDependsOn.Complete();
+                    this.WaitForAllJobs();
                     
                     for (uint i = 0u; i < this.commandBuffer->count; ++i) {
 

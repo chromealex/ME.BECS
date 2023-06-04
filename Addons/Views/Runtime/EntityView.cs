@@ -42,6 +42,7 @@ namespace ME.BECS.Views {
         internal IViewApplyState[] applyStateModules;
         internal IViewUpdate[] updateModules;
 
+        public GroupChangedTracker groupChangedTracker;
         public ViewRoot rootInfo;
         public Ent ent;
 

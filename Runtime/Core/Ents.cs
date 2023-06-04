@@ -51,7 +51,7 @@ namespace ME.BECS {
             var ents = new Ents() {
                 generations = new MemArray<ushort>(ref state->allocator, entityCapacity, growFactor: 2),
                 versions = new MemArray<uint>(ref state->allocator, entityCapacity, growFactor: 2),
-                versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroups.maxId + 1u), growFactor: 2),
+                versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u), growFactor: 2),
                 aliveBits = new BitArray(ref state->allocator, entityCapacity),
                 free = new Stack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
                 lockIndex = 0,
@@ -93,7 +93,7 @@ namespace ME.BECS {
             
             // Resize by maxId
             this.generations.Resize(ref state->allocator, maxId + 1u);
-            this.versionsGroup.Resize(ref state->allocator, (maxId + 1u) * (StaticTypesGroups.maxId + 1u));
+            this.versionsGroup.Resize(ref state->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
             this.versions.Resize(ref state->allocator, maxId + 1u);
             this.aliveBits.Resize(ref state->allocator, maxId + 1u);
             
@@ -121,8 +121,8 @@ namespace ME.BECS {
                 var idx = this.free.Pop(in state->allocator);
                 var nextGen = ++this.generations[in state->allocator, idx];
                 this.versions[in state->allocator, idx] = version;
-                var groupsIndex = (StaticTypesGroups.maxId + 1u) * idx;
-                _memclear((byte*)this.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * sizeof(int), StaticTypesGroups.maxId + 1u);
+                var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * idx;
+                _memclear((byte*)this.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * sizeof(int), StaticTypesGroupsBurst.maxId + 1u);
                 this.aliveBits.Set(in state->allocator, (int)idx, true);
                 return new Ent(idx, nextGen, worldId);
 
@@ -136,7 +136,7 @@ namespace ME.BECS {
                 idx = ent.id;
                 this.generations.Resize(ref state->allocator, idx + 1u);
                 this.generations[in state->allocator, idx] = gen;
-                this.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroups.maxId + 1u));
+                this.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
                 this.versions.Resize(ref state->allocator, idx + 1u);
                 this.versions[in state->allocator, idx] = version;
                 this.aliveBits.Resize(ref state->allocator, idx + 1u);
@@ -189,11 +189,10 @@ namespace ME.BECS {
 
         }
 
-        private SparseSet sparseSet;
         [INLINE(256)]
         public uint GetVersion(State* state, uint id, uint groupId) {
 
-            var groupsIndex = (StaticTypesGroups.maxId + 1u) * id;
+            var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * id;
             var idx = groupsIndex + groupId;
             if (idx >= this.versionsGroup.Length) return 0u;
             return this.versionsGroup[in state->allocator, idx];
@@ -226,7 +225,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void UpVersionGroup(State* state, uint id, uint groupId) {
 
-            var groupsIndex = (StaticTypesGroups.maxId + 1u) * id;
+            var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * id;
             JobUtils.Increment(ref this.versionsGroup[in state->allocator, groupsIndex + groupId]);
             
         }

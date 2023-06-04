@@ -13,8 +13,25 @@ namespace ME.BECS.Editor {
     [CustomPropertyDrawer(typeof(Ent))]
     public unsafe class EntityDrawer : PropertyDrawer {
 
+        public static Dictionary<ulong, TempObject> tempObjects = new Dictionary<ulong, TempObject>();
+        
         private static StyleSheet styleSheetBase;
         private static StyleSheet styleSheet;
+
+        private TempObject tempObject {
+            get {
+                if (tempObjects.TryGetValue(this.entity.ToULong(), out var temp) == true) {
+                    return temp;
+                }
+
+                return null;
+            }
+        }
+
+        private void CreateTempObject() {
+            var c = TempObject.CreateInstance<TempObject>();
+            tempObjects.Add(this.entity.ToULong(), c);
+        }
         
         private void LoadStyle() {
             if (EntityDrawer.styleSheetBase == null) {
@@ -30,6 +47,11 @@ namespace ME.BECS.Editor {
             this.propertyPath = null;
             this.property = null;
             this.propertySerializedObject = null;
+
+            if (tempObjects.TryGetValue(this.entity.ToULong(), out var temp) == true) {
+                if (temp != null) Object.DestroyImmediate(temp);
+                tempObjects.Remove(this.entity.ToULong());
+            }
 
         }
         
@@ -95,7 +117,6 @@ namespace ME.BECS.Editor {
         private Ent entity;
         private uint archId;
         private VisualElement rootVisualElement;
-        private TempObject tempObject;
         private SerializedObject serializedObj;
 
         private Label versionLabel;
@@ -116,10 +137,18 @@ namespace ME.BECS.Editor {
             var container = root;
             container.Clear();
 
-            var idString = this.entity.id.ToString();
-            var genString = this.entity.gen.ToString();
-            var versionString = this.entity.Version.ToString();
+            var idString = "-";
+            var genString = "-";
+            var versionString = string.Empty;
             var drawComponents = true;
+
+            if (this.GetState(world) == true) {
+                
+                idString = this.entity.id.ToString();
+                genString = this.entity.gen.ToString();
+                versionString = this.entity.Version.ToString();
+                
+            }
 
             if (this.property.serializedObject.targetObjects.Length > 1) {
 
@@ -238,6 +267,8 @@ namespace ME.BECS.Editor {
         
         private static readonly System.Reflection.MethodInfo methodSetComponent = typeof(Components).GetMethod(nameof(Components.SetDirect));
         private static readonly System.Reflection.MethodInfo methodSetSharedComponent = typeof(Components).GetMethod(nameof(Components.SetSharedDirect));
+        private static readonly System.Reflection.MethodInfo methodReadComponent = typeof(Components).GetMethod(nameof(Components.ReadDirect));
+        private static readonly System.Reflection.MethodInfo methodReadSharedComponent = typeof(Components).GetMethod(nameof(Components.ReadSharedDirect));
         private VisualElement componentContainerComponents;
         private VisualElement componentContainerSharedComponents;
         private VisualElement componentContainerComponentsRoot;
@@ -309,8 +340,8 @@ namespace ME.BECS.Editor {
         private System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
         private void RedrawComponents(World world) {
             
-            this.DrawFields(this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.serializedObj, nameof(TempObject.data), methodSetComponent);
-            this.DrawFields(this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent);
+            this.DrawFields(this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
+            this.DrawFields(this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
             
         }
         
@@ -319,8 +350,7 @@ namespace ME.BECS.Editor {
             this.version = this.entity.Version;
             
             if (this.tempObject == null) {
-                var c = TempObject.CreateInstance<TempObject>();
-                this.tempObject = c;
+                this.CreateTempObject();
                 this.serializedObj = new SerializedObject(this.tempObject);
             }
 
@@ -417,7 +447,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private void DrawFields(VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet) {
+        private void DrawFields(VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet, System.Reflection.MethodInfo methodRead) {
 
             var dataArr = serializedObject.FindProperty(fieldName);
             var delta = dataArr.arraySize - fields.Count;
@@ -449,11 +479,22 @@ namespace ME.BECS.Editor {
                                     if (userData == null) return;
 
                                     var idx = (int)userData;
-                                    arrData[idx] = dataArr.GetArrayElementAtIndex(idx).managedReferenceValue;
-                                    var value = arrData[idx];
-                                    var gMethod = methodSet.MakeGenericMethod(value.GetType());
-                                    gMethod.Invoke(world.state->components, new object[] { this.entity, value });
-                                    this.version = this.entity.Version;
+                                    var newValue = dataArr.GetArrayElementAtIndex(idx).managedReferenceValue;
+                                    {
+                                        arrData[idx] = newValue;
+                                        var value = arrData[idx];
+                                        object prevData;
+                                        {
+                                            var gMethod = methodRead.MakeGenericMethod(value.GetType());
+                                            prevData = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                                        }
+                                        var hasChanged = StructsAreEqual(prevData, newValue) == false;
+                                        if (hasChanged == true) {
+                                            var gMethod = methodSet.MakeGenericMethod(value.GetType());
+                                            gMethod.Invoke(world.state->components, new object[] { this.entity, value });
+                                        }
+                                        this.version = this.entity.Version;
+                                    }
 
                                 });
                             }
@@ -509,6 +550,20 @@ namespace ME.BECS.Editor {
                 }
             }
 
+        }
+
+        public static bool StructCopy<T>(T data, T data2) where T : unmanaged {
+            var size = sizeof(T);
+            var addr1 = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref data);
+            var addr2 = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref data2);
+            return Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCmp(addr1, addr2, size) == 0;
+        }
+
+        public static bool StructsAreEqual(object s1, object s2) {
+            var method = typeof(EntityDrawer).GetMethod("StructCopy");
+            var gMethod = method.MakeGenericMethod(s1.GetType());
+            var res = (bool)gMethod.Invoke(null, new object[] { s1, s2 });
+            return res;
         }
 
     }

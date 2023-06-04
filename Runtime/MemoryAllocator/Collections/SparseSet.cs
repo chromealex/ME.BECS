@@ -363,7 +363,8 @@ namespace ME.BECS {
             var globalHeadIndex = _index(headIndex, pageIndex);
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
             JobUtils.Lock(ref dataPage.lockIndex);
-            *(T*)MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize) = data;
+            var vPtr = MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
+            *(T*)vPtr = data;
             JobUtils.Unlock(ref dataPage.lockIndex);
             JobUtils.Unlock(ref page.lockIndex);
             MemoryAllocatorExt.ValidateConsistency(state->allocator);

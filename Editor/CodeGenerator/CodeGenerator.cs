@@ -312,7 +312,8 @@ namespace ME.BECS.Editor {
                     
                     var attr = (ComponentGroupAttribute)component.GetCustomAttribute(typeof(ComponentGroupAttribute));
                     var systemType = component.FullName.Replace("+", ".");
-                    var str = $"StaticTypes<{systemType}>.ApplyGroup({attr.groupId});";
+                    var groupType = attr.groupType.FullName.Replace("+", ".");
+                    var str = $"StaticTypes<{systemType}>.ApplyGroup(typeof({groupType}));";
                     typesContent.Add(str);
                     componentTypes.Add(component);
 
@@ -336,7 +337,7 @@ namespace ME.BECS.Editor {
                         componentTypes.Add(component);
                         if (isTagType == false) {
                             if (component.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
-                                str = $"StaticTypes<{type}>.defaultValueBurst.Data = {type}.Default;";
+                                str = $"StaticTypesDefaultValue<{type}>.value.Data = {type}.Default;";
                                 typesContent.Add(str);
                             }
                         }

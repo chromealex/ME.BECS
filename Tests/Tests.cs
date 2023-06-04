@@ -23,7 +23,9 @@ namespace ME.BECS.Tests {
 
     }
 
-    [ComponentGroup(1)]
+    public struct TestGroup { }
+
+    [ComponentGroup(typeof(TestGroup))]
     public struct TestComponent : IComponent {
 
         public int data;

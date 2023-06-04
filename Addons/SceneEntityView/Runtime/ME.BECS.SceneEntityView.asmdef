@@ -1,13 +1,14 @@
 {
-    "name": "ME.BECS.ObjectReference.Editor",
+    "name": "ME.BECS.SceneEntityView",
     "rootNamespace": "",
     "references": [
-        "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.Editor"
+        "ME.BECS",
+        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Features",
+        "ME.BECS.Views",
+        "Unity.Mathematics"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

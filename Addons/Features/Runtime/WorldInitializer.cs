@@ -4,6 +4,7 @@ namespace ME.BECS {
     
     using Unity.Jobs;
 
+    [DefaultExecutionOrder(-10_000)]
     public class WorldInitializer : MonoBehaviour {
 
         [System.Serializable]
@@ -32,10 +33,15 @@ namespace ME.BECS {
             list = System.Array.Empty<OptionalModule>(),
         };
         public FeaturesGraph.SystemsGraph featuresGraph;
-        protected World world;
+        public World world;
         protected JobHandle previousFrameDependsOn;
+        private static WorldInitializer instance;
+        
+        public static WorldInitializer GetInstance() => instance;
 
         protected virtual void Awake() {
+
+            instance = this;
 
             if (this.featuresGraph == null) {
                 Debug.LogError("Graph is null");

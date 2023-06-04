@@ -24,7 +24,7 @@ namespace ME.BECS.Views {
         void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
 
         public void Load(ViewsModuleData* viewsModuleData, ViewsRegistryData data);
-        public ViewSource Register(ViewsModuleData* viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true);
+        public ViewSource Register(ViewsModuleData* viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
 
         void Query(ref QueryBuilder queryBuilder);
 
@@ -87,6 +87,7 @@ namespace ME.BECS.Views {
             public System.IntPtr prefabPtr;
             public uint prefabId;
             public ViewTypeInfo typeInfo;
+            public bool sceneSource;
             
             public TypeFlags flags;
 
@@ -392,9 +393,9 @@ namespace ME.BECS.Views {
 
         }
 
-        internal ViewSource RegisterViewSource(TEntityView prefab, bool checkPrefab) {
+        internal ViewSource RegisterViewSource(TEntityView prefab, bool checkPrefab, bool sceneSource = false) {
 
-            return this.provider.Register(this.data, prefab, checkPrefab: checkPrefab);
+            return this.provider.Register(this.data, prefab, checkPrefab: checkPrefab, sceneSource: sceneSource);
 
         }
 

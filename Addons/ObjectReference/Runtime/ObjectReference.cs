@@ -37,8 +37,8 @@ namespace ME.BECS.Addons {
 
         [INLINE(256)]
         public T ReadObject<T>(uint id) where T : UnityEngine.Object {
-            if (id <= 0u || id >= this.objects.Length - 1) return null;
             var idx = id - 1u;
+            if (id <= 0u || idx > this.objects.Length) return null;
             return (T)this.objects[idx];
         }
 
@@ -47,9 +47,9 @@ namespace ME.BECS.Addons {
             if (id == 0) {
                 if (obj == null) return null;
                 var instanceId = obj.GetInstanceID();
-                if (instanceId <= 0) {
+                /*if (instanceId <= 0) {
                     throw new System.Exception("Persistent asset is required");
-                }
+                }*/
                 if (this.objectInstanceIdToIdx.TryGetValue(instanceId, out var index) == true) {
                     id = index + 1u;
                     return (T)this.objects[index];

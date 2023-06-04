@@ -2,25 +2,26 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
-    public class ComponentGroupAttribute : System.Attribute {
-
-        public readonly ushort groupId;
-
-        public ComponentGroupAttribute(ushort groupId) {
-            this.groupId = groupId;
-        }
-
-    }
-    
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
-    public readonly unsafe struct Ent : System.IEquatable<Ent> {
+    public
+        // Unity bug: readonly struct inside SerializeReference do not serialized
+        #if !UNITY_EDITOR
+        readonly 
+        #endif
+        unsafe struct Ent : System.IEquatable<Ent> {
 
         public static Ent Null => new Ent();
-        
+
+        #if !UNITY_EDITOR
         public readonly uint id;
         public readonly ushort gen;
         public readonly ushort worldId;
+        #else
+        public uint id;
+        public ushort gen;
+        public ushort worldId;
+        #endif
         public uint Version {
             get {
                 var world = this.World;
@@ -28,13 +29,13 @@ namespace ME.BECS {
             }
         }
 
-        public ref readonly World World {
+        public readonly ref readonly World World {
             [INLINE(256)]
             get => ref Worlds.GetWorld(this.worldId);
         }
 
         [INLINE(256)]
-        public uint GetVersion(ushort groupId) {
+        public readonly uint GetVersion(ushort groupId) {
             var world = this.World;
             return world.state->entities.GetVersion(world.state, this.id, groupId);
         }

@@ -54,6 +54,18 @@ namespace ME.BECS {
 
         }
 
+        public ViewSource RegisterViewSource(EntityView entityView, uint providerId, bool sceneSource = false) {
+
+            if (providerId == GAMEOBJECT_PROVIDER_ID) {
+                return this.viewsGameObjects.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
+            } else if (providerId == DRAW_MESH_PROVIDER_ID) {
+                return this.viewsDrawMeshes.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
+            }
+            
+            return default;
+
+        }
+
     }
 
 }
