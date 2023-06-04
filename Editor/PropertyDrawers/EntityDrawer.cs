@@ -132,10 +132,11 @@ namespace ME.BECS.Editor {
             this.versionLabel.text = this.entity.Version.ToString();
 
         }
-        
+
         private void DrawEntity(VisualElement root, World world) {
             
             var container = root;
+            container.userData = this.entity;
             container.Clear();
 
             var idString = "-";
@@ -149,6 +150,10 @@ namespace ME.BECS.Editor {
                 genString = this.entity.gen.ToString();
                 versionString = this.entity.Version.ToString();
                 
+            } else {
+
+                drawComponents = false;
+
             }
 
             if (this.property.serializedObject.targetObjects.Length > 1) {
@@ -159,16 +164,22 @@ namespace ME.BECS.Editor {
                 drawComponents = false;
 
             }
-            
+
+            var rootComponents = new VisualElement();
             var toggleContainer = new VisualElement();
             var header = new Toggle();
             header.RegisterValueChangedCallback((evt) => {
                 toggleContainer.style.display = new StyleEnum<DisplayStyle>(evt.newValue == true ? DisplayStyle.Flex : DisplayStyle.None);
                 header.RemoveFromClassList("toggle-checked");
-                if (evt.newValue == true) header.AddToClassList("toggle-checked");
-                EditorPrefs.SetBool("ME.BECS.Foldouts.Entity", evt.newValue);
+                if (evt.newValue == true) {
+                    header.AddToClassList("toggle-checked");
+                    if (drawComponents == true && header.value == true) this.DrawComponents(rootComponents, world);
+                } else {
+                    rootComponents.Clear();
+                }
+                EditorPrefs.SetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", evt.newValue);
             });
-            header.value = EditorPrefs.GetBool("ME.BECS.Foldouts.Entity");
+            header.value = EditorPrefs.GetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", false);
             toggleContainer.style.display = new StyleEnum<DisplayStyle>(header.value == true ? DisplayStyle.Flex : DisplayStyle.None);
             header.RemoveFromClassList("toggle-checked");
             if (header.value == true) header.AddToClassList("toggle-checked");
@@ -176,6 +187,9 @@ namespace ME.BECS.Editor {
             container.Add(header);
             container.Add(toggleContainer);
             
+            if (drawComponents == true && header.value == true) this.DrawComponents(rootComponents, world);
+            toggleContainer.Add(rootComponents);
+
             {
                 var idContainer = new VisualElement();
                 idContainer.AddToClassList("entity-id-container");
@@ -258,10 +272,6 @@ namespace ME.BECS.Editor {
                     archContainer.Add(entityArch);
                 }
 
-                var rootComponents = new VisualElement();
-                if (drawComponents == true) this.DrawComponents(rootComponents, world);
-                toggleContainer.Add(rootComponents);
-                
             }
 
         }
@@ -276,6 +286,8 @@ namespace ME.BECS.Editor {
         private VisualElement componentContainerSharedComponentsRoot;
         private void DrawComponents(VisualElement root, World world) {
 
+            root.Clear();
+            
             this.cachedFieldsComponents.Clear();
             this.cachedFieldsSharedComponents.Clear();
             
@@ -484,6 +496,11 @@ namespace ME.BECS.Editor {
                                     {
                                         arrData[idx] = newValue;
                                         var value = arrData[idx];
+                                        if (value == null) {
+                                            Debug.LogError($"Value is null at index {idx} in entity {this.entity}");
+                                            return;
+                                        }
+                                        
                                         object prevData;
                                         {
                                             var gMethod = methodRead.MakeGenericMethod(value.GetType());
