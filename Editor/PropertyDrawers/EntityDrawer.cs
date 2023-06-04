@@ -21,6 +21,7 @@ namespace ME.BECS.Editor {
         private TempObject tempObject {
             get {
                 if (tempObjects.TryGetValue(this.entity.ToULong(), out var temp) == true) {
+                    if (temp == null) tempObjects.Remove(this.entity.ToULong());
                     return temp;
                 }
 

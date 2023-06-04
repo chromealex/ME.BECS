@@ -53,7 +53,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public static void DestroyViewRegistry(in Ent ent, in ViewSource viewSource) {
+        public static void DestroyViewRegistry(in Ent ent) {
             ent.Remove<EntityViewProviderTag>();
         }
 
@@ -76,6 +76,7 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public JobHandle Commit(ViewsModuleData* data, JobHandle dependsOn) {
 
+            dependsOn.Complete();
             foreach (var instance in this.tempViews) {
                 //instance.transform.SetParent(this.disabledRoot);
                 instance.gameObject.SetActive(false);
@@ -235,7 +236,7 @@ namespace ME.BECS.Views {
         public void Despawn(SceneInstanceInfo instanceInfo) {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            
+
             {
                 if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
                 if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {

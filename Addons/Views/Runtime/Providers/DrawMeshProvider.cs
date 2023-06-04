@@ -107,7 +107,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public static void DestroyViewRegistry(in Ent ent, in ViewSource viewSource) {
+        public static void DestroyViewRegistry(in Ent ent) {
             ent.Remove<DrawMeshProviderTag>();
         }
 

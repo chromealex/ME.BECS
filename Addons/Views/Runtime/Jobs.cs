@@ -160,6 +160,7 @@ namespace ME.BECS.Views {
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
             [NativeDisableUnsafePtrRestriction]
             public Counter* toRemoveCounter;
+            public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
 
             public void Execute(in CommandBufferJobParallel commandBuffer) {
 
@@ -168,7 +169,21 @@ namespace ME.BECS.Views {
                     
                     // Remove
                     if (this.toRemove.TryAdd(entId, false) == true) {
+                        
+                        var ent = commandBuffer.ent;
+                        
+                        var viewSource = ent.Read<ViewComponent>().source;
+                        var providerId = viewSource.providerId;
+                        if (providerId > 0u &&
+                            viewSource.providerId < this.registeredProviders.Length) {
+                            ref var item = ref *(this.registeredProviders.Ptr + viewSource.providerId);
+                            E.IS_CREATED(item);
+                            item.destroyMethod.Invoke(in ent);
+                        }
+                        ent.Remove<ViewComponent>();
+
                         this.toRemoveCounter->Increment();
+                        
                     }
 
                 }

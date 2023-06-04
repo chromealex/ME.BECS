@@ -16,10 +16,11 @@ namespace ME.BECS.Tests {
                 
                 var world = World.Create();
                 var views = ME.BECS.Views.UnsafeViewsModule<EntityView>.Create(ViewsModule.GAMEOBJECT_PROVIDER_ID, ref world, new ME.BECS.Views.EntityViewProvider(), WorldProperties.Default.stateProperties.entitiesCapacity, ME.BECS.Views.ViewsModuleProperties.Default);
-                var viewId = views.RegisterViewSource(comp, checkPrefab: false);
+                var viewId = views.RegisterViewSource(comp, checkPrefab: false, sceneSource: false);
                 Ent firstEnt;
                 {
                     var ent = world.NewEnt();
+                    ent.GetAspect<ME.BECS.TransformAspect.TransformAspect>();
                     ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
                     Batches.Apply(world.state, world.id);
                     firstEnt = ent;
@@ -33,6 +34,7 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(1, views.data->renderingOnScene.Count);
                     {
                         var ent = world.NewEnt();
+                        ent.GetAspect<ME.BECS.TransformAspect.TransformAspect>();
                         ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
                         Batches.Apply(world.state, world.id);
                     }
@@ -49,6 +51,9 @@ namespace ME.BECS.Tests {
                         Batches.Apply(world.state, world.id);
                     }
                     views.Update(dt);
+                    Assert.IsFalse(firstEnt.Has<ViewComponent>());
+                    Assert.IsFalse(firstEnt.Has<IsViewRequested>());
+                    Assert.IsFalse(firstEnt.Has<EntityViewProviderTag>());
                     Assert.AreEqual(1, views.data->renderingOnSceneEntToRenderIndex.Count);
                     Assert.AreEqual(1, views.data->renderingOnSceneRenderIndexToEnt.Count);
                     Assert.AreEqual(1, views.data->renderingOnScene.Count);

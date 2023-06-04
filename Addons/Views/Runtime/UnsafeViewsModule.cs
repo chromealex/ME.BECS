@@ -286,7 +286,7 @@ namespace ME.BECS.Views {
     }
 
     public delegate void ProviderInstantiateView(in Ent ent, in ViewSource viewSource);
-    public delegate void ProviderDestroyView(in Ent ent, in ViewSource viewSource);
+    public delegate void ProviderDestroyView(in Ent ent);
     
     public unsafe struct UnsafeViewsModule {
 
@@ -298,7 +298,7 @@ namespace ME.BECS.Views {
 
         }
         
-        private static readonly Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>> registeredProviders = Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>>.GetOrCreatePartiallyUnsafeWithHashCode<UnsafeViewsModule>(TAlign<UnsafeList<ProviderInfo>>.align, 20021);
+        internal static readonly Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>> registeredProviders = Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>>.GetOrCreatePartiallyUnsafeWithHashCode<UnsafeViewsModule>(TAlign<UnsafeList<ProviderInfo>>.align, 20021);
         
         public static void RegisterProviderCallbacks(uint providerId, ProviderInstantiateView instantiateView, ProviderDestroyView destroyView) {
 
@@ -332,15 +332,6 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public static void DestroyView(in Ent ent) {
 
-            var viewSource = ent.Read<ViewComponent>().source;
-            var providerId = viewSource.providerId;
-            if (providerId > 0u &&
-                viewSource.providerId < registeredProviders.Data.Length) {
-                ref var item = ref *(registeredProviders.Data.Ptr + viewSource.providerId);
-                E.IS_CREATED(item);
-                item.destroyMethod.Invoke(in ent, in viewSource);
-            }
-            ent.Remove<ViewComponent>();
             ent.Remove<IsViewRequested>();
             
         }
@@ -416,25 +407,26 @@ namespace ME.BECS.Views {
                 state = this.data->viewsWorld.state,
                 connectedWorld = this.data->connectedWorld,
             }.Schedule(dependsOn);
-
+            
             JobHandle toRemoveEntitiesJob;
             {
                 // Update views
                 JobHandle toRemoveJob;
                 {
                     // DestroyView() case: Remove views from the scene which don't have ViewComponent, but contained in renderingOnSceneBits (DestroyView called)
-                    var query = API.Query(in this.data->connectedWorld, dependsOn).Without<ViewComponent>().With<IsViewRequested>();
+                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<ViewComponent>().Without<IsViewRequested>();
                     this.provider.Query(ref query);
                     toRemoveJob = query.ScheduleParallelFor(new Jobs.JobRemoveFromScene() {
                         viewsModuleData = this.data,
                         toRemove = this.data->toRemove.AsParallelWriter(),
                         toRemoveCounter = toRemoveCounter,
+                        registeredProviders = UnsafeViewsModule.registeredProviders.Data,
                     });
                 }
                 JobHandle toAddJob;
                 {
                     // InstantiateView() case: Add views to the scene which have ViewComponent, but not contained in renderingOnSceneBits
-                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<ViewComponent>().WithAspect<TransformAspect.TransformAspect>();
+                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<IsViewRequested>().WithAspect<TransformAspect.TransformAspect>();
                     this.provider.Query(ref query);
                     toAddJob = query.ScheduleParallelFor(new Jobs.JobAddToScene() {
                         state = this.data->viewsWorld.state,
@@ -459,7 +451,6 @@ namespace ME.BECS.Views {
             }
 
             dependsOn = toRemoveEntitiesJob;
-            dependsOn.Complete();
 
             {
                 // Update views
@@ -472,7 +463,6 @@ namespace ME.BECS.Views {
                     }.Schedule(dependsOn);
                     marker.End();
                 }
-                dependsOn.Complete();
 
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Update Add Lists Schedule");
@@ -484,10 +474,10 @@ namespace ME.BECS.Views {
                     }.Schedule(dependsOn);
                     marker.End();
                 }
-                dependsOn.Complete();
 
             }
             JobUtils.RunScheduled();
+            dependsOn.Complete();
             
             {
                 {
