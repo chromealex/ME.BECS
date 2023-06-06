@@ -20,9 +20,11 @@ namespace ME.BECS.FeaturesGraph.Nodes {
 
         public override string name {
             get {
+                #if UNITY_EDITOR
                 if (this.system != null) {
                     return UnityEditor.ObjectNames.NicifyVariableName(this.system.GetType().Name);
                 }
+                #endif
 
                 return "System Node";
             }
