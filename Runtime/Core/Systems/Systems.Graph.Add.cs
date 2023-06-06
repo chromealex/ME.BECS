@@ -48,7 +48,8 @@ namespace ME.BECS {
             for (int i = 0; i < graph.index; ++i) {
                 var node = graph.nodes[i];
                 if (node.data->graph != null) {
-                    return ref (*node.data->graph).GetSystem<T>(out found);
+                    ref var sys = ref (*node.data->graph).GetSystem<T>(out found);
+                    if (found == true) return ref sys;
                 } else if (node.data->systemData != null) {
                     if (node.data->systemTypeId == typeId) {
                         found = true;

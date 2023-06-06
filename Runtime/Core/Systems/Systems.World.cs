@@ -73,7 +73,7 @@ namespace ME.BECS {
             
         }
 
-        public static ref T GetSystem<T>(this ref World world) where T : unmanaged, ISystem {
+        public static ref T GetSystem<T>(this in World world) where T : unmanaged, ISystem {
             
             var address = world.id;
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
