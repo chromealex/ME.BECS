@@ -233,6 +233,7 @@ namespace ME.BECS.Views {
         public UIntDictionary<uint> renderingOnSceneEntToRenderIndex;
         public UIntDictionary<uint> renderingOnSceneRenderIndexToEnt;
         public MemArray<uint> renderingOnSceneEntToPrefabId;
+        public UnsafeParallelHashMap<uint, bool> toChange;
         public UnsafeParallelHashMap<uint, bool> toRemove;
         public UnsafeParallelHashMap<uint, bool> toAdd;
         public UnsafeParallelHashMap<uint, bool> dirty;
@@ -264,6 +265,7 @@ namespace ME.BECS.Views {
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneRenderIndexToEnt = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneEntToPrefabId = new MemArray<uint>(ref allocator, entitiesCapacity),
+                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
                 toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
                 toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
                 dirty = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
@@ -280,6 +282,7 @@ namespace ME.BECS.Views {
             if (this.toRemove.IsCreated == true) this.toRemove.Dispose();
             if (this.toAdd.IsCreated == true) this.toAdd.Dispose();
             if (this.dirty.IsCreated == true) this.dirty.Dispose();
+            if (this.toChange.IsCreated == true) this.toChange.Dispose();
             
         }
 
@@ -444,6 +447,7 @@ namespace ME.BECS.Views {
                         world = this.data->connectedWorld,
                         viewsModuleData = this.data,
                         dirty = this.data->dirty,
+                        toChange = this.data->toChange.AsParallelWriter(),
                         toRemove = this.data->toRemove.AsParallelWriter(),
                         toRemoveCounter = toRemoveCounter,
                     }.Schedule(this.data->renderingOnSceneEnts.Length, 64, handle);
@@ -541,6 +545,7 @@ namespace ME.BECS.Views {
                 // Clean up
                 this.data->toRemoveTemp.Clear();
                 this.data->toAddTemp.Clear();
+                this.data->toChange.Clear();
                 this.data->toAdd.Clear();
                 this.data->toRemove.Clear();
                 this.data->dirty.Clear();

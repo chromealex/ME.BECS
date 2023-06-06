@@ -75,7 +75,7 @@ namespace ME.BECS.Views {
                                 version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
                             });
                         } else {
-                            UnityEngine.Debug.LogError($"Item not found {viewComponent.source}");
+                            UnityEngine.Debug.LogError("Item not found");
                         }
                     }
                 }
@@ -171,7 +171,6 @@ namespace ME.BECS.Views {
                     if (this.toRemove.TryAdd(entId, false) == true) {
                         
                         var ent = commandBuffer.ent;
-                        
                         var viewSource = ent.Read<ViewComponent>().source;
                         var providerId = viewSource.providerId;
                         if (providerId > 0u &&
@@ -199,6 +198,7 @@ namespace ME.BECS.Views {
             [NativeDisableUnsafePtrRestriction]
             public ViewsModuleData* viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
+            public UnsafeParallelHashMap<uint, bool>.ParallelWriter toChange;
             [ReadOnly]
             public UnsafeParallelHashMap<uint, bool> dirty;
             [NativeDisableUnsafePtrRestriction]
@@ -218,6 +218,7 @@ namespace ME.BECS.Views {
                     } else {
                         // update entity
                         entData.element.ent = new Ent(entData.element.ent.id, this.world);
+                        this.toChange.TryAdd(entData.element.ent.id, false);
                     }
                 }
             }
@@ -288,6 +289,7 @@ namespace ME.BECS.Views {
                 if (entitiesCapacity > this.viewsModuleData->toRemove.Capacity) this.viewsModuleData->toRemove.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->toAdd.Capacity) this.viewsModuleData->toAdd.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->dirty.Capacity) this.viewsModuleData->dirty.Capacity = (int)entitiesCapacity;
+                if (entitiesCapacity > this.viewsModuleData->toChange.Capacity) this.viewsModuleData->toChange.Capacity = (int)entitiesCapacity;
                 
             }
 

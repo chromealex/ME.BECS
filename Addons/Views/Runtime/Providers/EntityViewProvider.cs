@@ -83,6 +83,31 @@ namespace ME.BECS.Views {
                 this.UnassignRoot(instance.rootInfo);
             }
             this.tempViews.Clear();
+
+            foreach (var item in data->toChange) {
+                var entId = item.Key;
+                if (data->renderingOnSceneEntToRenderIndex.TryGetValue(in data->viewsWorld.state->allocator, entId, out var index) == true) {
+                    var instanceInfo = data->renderingOnScene[data->viewsWorld.state, index];
+                    var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+                    {
+                        // call despawn methods
+                        {
+                            if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
+                            if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {
+                                instance.DoDisableToPoolChildren();
+                            }
+                        }
+                    }
+                    {
+                        // call spawn methods
+                        instance.ent = data->renderingOnSceneEnts[(int)index].element.ent;
+                        if (instanceInfo.prefabInfo->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
+                        if (instanceInfo.prefabInfo->HasEnableFromPoolModules == true) {
+                            instance.DoEnableFromPoolChildren(instance.ent);
+                        }
+                    }
+                }
+            }
             
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Schedule JobUpdateTransforms");
@@ -236,15 +261,15 @@ namespace ME.BECS.Views {
         public void Despawn(SceneInstanceInfo instanceInfo) {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            instance.ent = default;
 
             {
                 if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
                 if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {
                     instance.DoDisableToPoolChildren();
                 }
-                if (instanceInfo.prefabInfo->typeInfo.HasDeInitialize == true) instance.DoDeInitialize();
             }
-            
+
             // Store despawn in temp (don't deactivate)
             this.tempViews.Add(instance);
             

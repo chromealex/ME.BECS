@@ -124,9 +124,7 @@ namespace ME.BECS.TransformAspect {
                 ref readonly var container = ref this.parent;
                 if (container.IsEmpty() == false) {
                     var parentTr = (TransformAspect)container;
-                    var containerRotation = parentTr.rotation;
-                    var containerRotationInverse = math.inverse(containerRotation);
-                    parentTr.localRotation = math.mul(containerRotationInverse, value);
+                    this.localRotation = math.mul(math.inverse(parentTr.rotation), value);
                 } else {
                     this.localRotation = value;
                 }
