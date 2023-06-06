@@ -44,7 +44,7 @@ namespace ME.BECS.FeaturesGraph.Nodes {
             if (this.inputNodes == null || this.inputNodes.Count == 0) return;
             var handle = (this.inputNodes.Count == 1 ? this.inputNodes[0] : this.runtimeSystemGroup.Combine(this.inputNodes));
             this.runtimeHandle = handle;
-            if (this.graphValue != null) {
+            if (this.enabled == true && this.IsGroupEnabled() == true && this.graphValue != null) {
                 
                 var processor = new Extensions.GraphProcessor.ProcessGraphProcessor(this.graphValue);
                 var systemGroup = SystemGroup.Create();
