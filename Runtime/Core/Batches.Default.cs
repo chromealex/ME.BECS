@@ -40,6 +40,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool Set(this ref Batches batches, uint entId, ushort gen, uint typeId, void* data, State* state) {
+            
+            E.IS_IN_TICK(state);
+
+            var groupId = StaticTypes.groups.Get(typeId);
+            if (state->components.SetUnknownType(state, typeId, groupId, entId, gen, data) == true) {
+                batches.Set_INTERNAL(typeId, entId, state);
+                return true;
+            }
+            
+            return false;
+
+        }
+
+        [INLINE(256)]
         public static bool Remove<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
 
             E.IS_IN_TICK(state);

@@ -18,11 +18,11 @@ namespace ME.BECS.Tests {
             public int data;
         }
 
-        public struct TestConfig1StaticComponent : IStaticComponent {
+        public struct TestConfig1StaticComponent : IComponentStatic {
             public int data;
         }
 
-        public struct TestConfig2StaticComponent : IStaticComponent {
+        public struct TestConfig2StaticComponent : IComponentStatic {
             public int data;
         }
 
@@ -77,7 +77,7 @@ namespace ME.BECS.Tests {
                 new TestConfig1Component() { data = 1 },
                 new TestConfig2Component() { data = 2 },
             };
-            config.staticData.components = new IStaticComponent[] {
+            config.staticData.components = new IComponentStatic[] {
                 new TestConfig1StaticComponent() { data = 1 },
                 new TestConfig2StaticComponent() { data = 2 },
             };

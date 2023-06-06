@@ -84,6 +84,100 @@ namespace ME.BECS.TransformAspect {
         public readonly ref readonly List<Ent> children => ref this.childrenData.Get(this.ent.id).list;
         public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id).value;
         public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Get(this.ent.id).value, this.localRotationData.Get(this.ent.id).value, this.localScaleData.Get(this.ent.id).value);
+
+        public float3 position {
+            [INLINE(256)]
+            set {
+                ref readonly var parent = ref this.parent;
+                if (parent.IsEmpty() == false) {
+                    var parentTr = (TransformAspect)parent;
+                    var containerRotation = parentTr.rotation;
+                    var containerPosition = parentTr.position;
+                    this.localPosition = math.mul(math.inverse(containerRotation), GetInvScale_INTERNAL(in parent) * (value - containerPosition));
+                } else {
+                    this.localPosition = value;
+                }
+            }
+            [INLINE(256)]
+            get {
+                var position = this.localPosition;
+                ref readonly var container = ref this.parent;
+                while (container.IsEmpty() == false) {
+                    var parentTr = (TransformAspect)container;
+                    quaternion worldRot;
+                    if (container.TryRead(out LocalRotationComponent worldComponent) == true) {
+                        worldRot = worldComponent.value;
+                    } else {
+                        worldRot = quaternion.identity;
+                    }
+                    position = math.mul(worldRot, GetScale_INTERNAL(in container) * position);
+                    position += parentTr.localPosition;
+                    container = ref parentTr.parent;
+                }
+                return position;
+            }
+        }
+
+        public quaternion rotation {
+            [INLINE(256)]
+            set {
+                ref readonly var container = ref this.parent;
+                if (container.IsEmpty() == false) {
+                    var parentTr = (TransformAspect)container;
+                    var containerRotation = parentTr.rotation;
+                    var containerRotationInverse = math.inverse(containerRotation);
+                    parentTr.localRotation = math.mul(containerRotationInverse, value);
+                } else {
+                    this.localRotation = value;
+                }
+            }
+            [INLINE(256)]
+            get {
+                quaternion worldRot;
+                if (this.ent.TryRead(out LocalRotationComponent worldComponent) == true) {
+                    worldRot = worldComponent.value;
+                } else {
+                    worldRot = quaternion.identity;
+                }
+                ref readonly var container = ref this.parent;
+                while (container.IsEmpty() == false) {
+                    var parentTr = (TransformAspect)container;
+                    worldRot = math.mul(parentTr.localRotation, worldRot);
+                    container = ref parentTr.parent;
+                }
+                return worldRot;
+            }
+        }
+            
+        [INLINE(256)]
+        private static float3 GetInvScale_INTERNAL(in Ent entity) {
+            
+            if (entity.TryRead(out LocalScaleComponent component) == true) {
+
+                var v = component.value;
+                if (v.x != 0f) v.x = 1f / v.x;
+                if (v.y != 0f) v.y = 1f / v.y;
+                if (v.z != 0f) v.z = 1f / v.z;
+                return v;
+
+            }
+
+            return new float3(1f, 1f, 1f);
+            
+        }
+        
+        [INLINE(256)]
+        private static float3 GetScale_INTERNAL(in Ent entity) {
+
+            if (entity.TryRead(out LocalScaleComponent component) == true) {
+
+                return component.value;
+
+            }
+
+            return new float3(1f, 1f, 1f);
+
+        }
         
         [INLINE(256)]
         public readonly float3 GetWorldMatrixPosition() {

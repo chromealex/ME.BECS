@@ -115,7 +115,7 @@ namespace ME.BECS.Editor {
                     
                     var data = serializedObject.FindProperty(nameof(EntityConfig.staticData));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.staticData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IStaticComponent), componentsData, serializedObject));
+                    componentContainer.Add(this.DrawFields(typeof(IComponentStatic), componentsData, serializedObject));
                 }
             }
             

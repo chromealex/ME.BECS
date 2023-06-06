@@ -10,6 +10,8 @@ namespace ME.BECS {
             entityConfig.Apply(in ent);
         }
         
+        public UnsafeEntityConfig AsUnsafeConfig() => EntityConfigsRegistry.GetEntityConfigBySourceId(this.sourceId).AsUnsafeConfig();
+        
         public bool Equals(Config other) {
             return this.sourceId == other.sourceId;
         }

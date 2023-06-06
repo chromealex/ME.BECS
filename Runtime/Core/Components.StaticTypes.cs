@@ -30,11 +30,24 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> groupsBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10202);
         public static ref ME.BECS.Internal.Array<uint> groups => ref groupsBurst.Data;
 
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> sharedTypeIdBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10203);
+        public static ref ME.BECS.Internal.Array<uint> sharedTypeId => ref sharedTypeIdBurst.Data;
+
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> staticTypeIdBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10204);
+        public static ref ME.BECS.Internal.Array<uint> staticTypeId => ref staticTypeIdBurst.Data;
+
     }
 
     public struct StaticSharedTypes {
 
         public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticSharedTypes>();
+        public static ref uint counter => ref counterBurst.Data;
+        
+    }
+
+    public struct StaticStaticTypes {
+
+        public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticStaticTypes>();
         public static ref uint counter => ref counterBurst.Data;
         
     }
@@ -84,10 +97,24 @@ namespace ME.BECS {
 
     }
 
+    public struct StaticTypesStaticTypeId<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesStaticTypeId<T>>();
+
+    }
+
     public struct StaticTypesShared<T> where T : unmanaged, IComponentShared {
 
         public static void AOT() {
             default(EntityConfig).data.AOTShared<T>();
+        }
+
+    }
+
+    public struct StaticTypesStatic<T> where T : unmanaged, IComponentStatic {
+
+        public static void AOT() {
+            default(EntityConfig).data.AOTStatic<T>();
         }
 
     }
@@ -100,6 +127,7 @@ namespace ME.BECS {
 
     public struct StaticTypes<T> where T : unmanaged {
 
+        public static ref uint staticTypeId => ref StaticTypesStaticTypeId<T>.value.Data;
         public static ref uint sharedTypeId => ref StaticTypesSharedTypeId<T>.value.Data;
         public static ref uint typeId => ref StaticTypesId<T>.value.Data;
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
@@ -128,12 +156,27 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void ValidateShared(bool isTag) {
 
+            Validate(isTag);
+
             if (sharedTypeId == 0u) {
                 StaticTypes<T>.sharedTypeId = ++StaticSharedTypes.counter;
+                StaticTypes.sharedTypeId.Resize(StaticTypes<T>.typeId + 1u);
+                StaticTypes.sharedTypeId.Get(StaticTypes<T>.typeId) = StaticTypes<T>.sharedTypeId;
                 StaticTypes<T>.AddSharedTypeToCache();
             }
 
+        }
+
+        [INLINE(256)]
+        public static void ValidateStatic(bool isTag) {
+
             Validate(isTag);
+
+            if (sharedTypeId == 0u) {
+                StaticTypes<T>.staticTypeId = ++StaticStaticTypes.counter;
+                StaticTypes.staticTypeId.Resize(StaticTypes<T>.typeId + 1u);
+                StaticTypes.staticTypeId.Get(StaticTypes<T>.typeId) = StaticTypes<T>.staticTypeId;
+            }
 
         }
 

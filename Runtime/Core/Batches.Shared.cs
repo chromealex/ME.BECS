@@ -41,6 +41,18 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool SetShared(this ref Batches batches, uint entId, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, State* state, uint hash) {
+
+            if (state->components.SetShared(state, entId, groupId, data, dataSize, sharedTypeId, hash) == true) {
+                batches.Set_INTERNAL(typeId, entId, state);
+                return true;
+            }
+
+            return false;
+
+        }
+
+        [INLINE(256)]
         public static bool RemoveShared<T>(this ref Batches batches, uint entId, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             if (state->components.RemoveShared<T>(state, entId, hash) == true) {

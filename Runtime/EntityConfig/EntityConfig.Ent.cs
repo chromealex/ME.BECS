@@ -2,10 +2,10 @@ namespace ME.BECS {
 
     public static class EntityConfigEntExt {
 
-        public static T ReadStatic<T>(this in Ent ent) where T : unmanaged, IStaticComponent {
+        public static T ReadStatic<T>(this in Ent ent) where T : unmanaged, IComponentStatic {
 
             var config = ent.Read<EntityConfigComponent>().EntityConfig;
-            if (config != null) {
+            if (config.IsValid() == true) {
                 return config.ReadStatic<T>();
             }
 
@@ -13,10 +13,10 @@ namespace ME.BECS {
 
         }
 
-        public static bool HasStatic<T>(this in Ent ent) where T : unmanaged, IStaticComponent {
+        public static bool HasStatic<T>(this in Ent ent) where T : unmanaged, IComponentStatic {
 
             var config = ent.Read<EntityConfigComponent>().EntityConfig;
-            if (config != null) {
+            if (config.IsValid() == true) {
                 return config.HasStatic<T>();
             }
 

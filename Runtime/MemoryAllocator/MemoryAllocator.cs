@@ -11,6 +11,7 @@ using BURST = Unity.Burst.BurstCompileAttribute;
 namespace ME.BECS {
     
     using math = Unity.Mathematics.math;
+    using static Cuts;
 
     public enum ClearOptions {
 
@@ -85,7 +86,7 @@ namespace ME.BECS {
 
     public unsafe struct MemAllocatorPtr {
 
-        private MemPtr ptr;
+        internal MemPtr ptr;
 
         [INLINE(256)]
         public long AsLong() => this.ptr.AsLong();
@@ -114,6 +115,18 @@ namespace ME.BECS {
 
             this.ptr = allocator.Alloc<T>();
             allocator.Ref<T>(this.ptr) = data;
+
+        }
+
+        [INLINE(256)]
+        public void Set(ref MemoryAllocator allocator, void* data, uint dataSize) {
+
+            this.ptr = MemoryAllocatorExt.Alloc(ref allocator, dataSize, out var ptr);
+            if (data != null) {
+                _memcpy(data, ptr, dataSize);
+            } else {
+                _memclear(ptr, dataSize);
+            }
 
         }
 

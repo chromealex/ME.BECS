@@ -17,6 +17,17 @@ namespace ME.BECS {
 
         }
 
+        public class IsTagException : System.Exception {
+
+            public IsTagException(string str) : base(str) { }
+
+            [HIDE_CALLSTACK]
+            public static void Throw() {
+                throw new OutOfRangeException("Component is a tag which doesn't allow to access this method");
+            }
+
+        }
+
     }
     
     public static partial class E {
@@ -32,7 +43,7 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void IS_NOT_TAG(uint typeId) {
             if (StaticTypes.sizes.Get(typeId) != 0u) return;
-            InvalidTypeIdException.Throw();
+            IsTagException.Throw();
         }
 
     }

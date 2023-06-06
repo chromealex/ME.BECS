@@ -4,7 +4,7 @@ namespace ME.BECS {
     /// Use this interface to assign to unmanaged type
     /// to show in EntityConfig static list
     /// </summary>
-    public interface IStaticComponent { }
+    public interface IComponentStatic { }
 
     /// <summary>
     /// Use this interface to assign to unmanaged type
@@ -21,7 +21,7 @@ namespace ME.BECS {
     public struct EntityConfigComponent : IComponent {
 
         public uint id;
-        public EntityConfig EntityConfig => EntityConfigRegistry.GetId(this.id);
+        public UnsafeEntityConfig EntityConfig => EntityConfigRegistry.GetById(this.id);
 
     }
 

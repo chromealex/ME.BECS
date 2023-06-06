@@ -58,6 +58,16 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
+        public static bool TryRead<T>(in this Ent ent, out T component) where T : unmanaged, IComponent {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            component = world.state->components.Read<T>(world.state, ent.id, ent.gen, out var exists);
+            return exists;
+
+        }
+
     }
 
 }

@@ -143,7 +143,7 @@ namespace ME.BECS {
         public RefRW<T> GetRW<T>(State* state) where T : unmanaged, IComponent {
             return new RefRW<T>() {
                 state = state,
-                storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                //storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
             };
         }
 
@@ -151,7 +151,7 @@ namespace ME.BECS {
         public RefRO<T> GetRO<T>(State* state) where T : unmanaged, IComponent {
             return new RefRO<T>() {
                 state = state,
-                storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                //storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
             };
         }
 

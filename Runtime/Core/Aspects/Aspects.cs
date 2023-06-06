@@ -14,8 +14,6 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
-        [NativeDisableUnsafePtrRestriction]
-        public SparseSetUnknownType* storage;
         
         [INLINE(256)]
         public RefRW(in World world) {
@@ -24,11 +22,12 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public readonly ref T Get(Ent ent) {
-            ref var res = ref *(T*)this.storage->Get(this.state, ent.id, ent.gen, out var isNew); 
-            this.state->entities.UpVersion(this.state, ent.id, StaticTypes<T>.groupId);
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.groupId;
+            ref var res = ref *(T*)this.state->components.GetUnknownType(this.state, typeId, groupId, ent.id, ent.gen, out var isNew); 
+            this.state->entities.UpVersion(this.state, ent.id, groupId);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
-                var typeId = StaticTypes<T>.typeId;
                 this.state->batches.Set_INTERNAL(typeId, ent.id, this.state);
             }
             return ref res;
@@ -36,11 +35,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly ref T Get(uint entId) {
-            ref var res = ref *(T*)this.storage->Get(this.state, entId, this.state->entities.GetGeneration(this.state, entId), out var isNew);
-            this.state->entities.UpVersion(this.state, entId, StaticTypes<T>.groupId);
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.groupId;
+            ref var res = ref *(T*)this.state->components.GetUnknownType(this.state, typeId, groupId, entId, this.state->entities.GetGeneration(this.state, entId), out var isNew);
+            this.state->entities.UpVersion(this.state, entId, groupId);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
-                var typeId = StaticTypes<T>.typeId;
                 this.state->batches.Set_INTERNAL(typeId, entId, this.state);
             }
             return ref res;
@@ -52,8 +52,6 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
-        [NativeDisableUnsafePtrRestriction]
-        public SparseSetUnknownType* storage;
 
         [INLINE(256)]
         public RefRO(in World world) {
@@ -62,14 +60,16 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public readonly ref readonly T Get(Ent ent) {
-            ref var res = ref *(T*)this.storage->Read(this.state, ent.id, ent.gen, out var exists);
+            var typeId = StaticTypes<T>.typeId;
+            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, ent.id, ent.gen, out var exists); 
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
         }
         
         [INLINE(256)]
         public readonly ref readonly T Get(uint entId) {
-            ref var res = ref *(T*)this.storage->Read(this.state, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
+            var typeId = StaticTypes<T>.typeId;
+            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
         }

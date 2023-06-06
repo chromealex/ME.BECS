@@ -214,8 +214,8 @@ namespace ME.BECS.Views {
             }
 
             {
+                objInstance.ent = ent;
                 if (isNew == true) {
-                    objInstance.ent = ent;
                     if (prefabInfo->typeInfo.HasInitialize == true) objInstance.DoInitialize(ent);
                     if (prefabInfo->HasInitializeModules == true) {
                         objInstance.DoInitializeChildren(ent);
