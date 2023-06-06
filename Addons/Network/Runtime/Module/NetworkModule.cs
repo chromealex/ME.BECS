@@ -85,7 +85,9 @@ namespace ME.BECS.Network {
         public NetworkModuleProperties properties = NetworkModuleProperties.Default;
         private UnsafeNetworkModule network;
 
-        public uint LocalPlayerId => this.network.data->localPlayerId;
+        public TransportStatus Status => this.network.networkTransport.Status;
+        
+        public uint LocalPlayerId  => this.network.data->localPlayerId;
 
         public override void OnAwake(ref World world) {
             this.network = new UnsafeNetworkModule(in world, this.properties);

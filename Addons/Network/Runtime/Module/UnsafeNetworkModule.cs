@@ -78,11 +78,13 @@ namespace ME.BECS.Network {
     public readonly unsafe ref struct InputData {
 
         private readonly NetworkPackage package;
+        public readonly World world;
 
         public uint PlayerId => this.package.playerId;
         
-        public InputData(NetworkPackage package) {
+        public InputData(NetworkPackage package, in World world) {
             this.package = package;
+            this.world = world;
         }
         
         public T GetData<T>() where T : unmanaged {
@@ -169,14 +171,14 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Call(in NetworkPackage package, JobHandle dependsOn) {
+            public JobHandle Call(in NetworkPackage package, in World world, JobHandle dependsOn) {
                 
                 var idx = package.methodId - 1u;
                 if (idx >= this.methods.Length) return dependsOn;
 
                 ref var item = ref this.methods[this.state, idx];
                 var func = Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)item.methodPtr);
-                var input = new InputData(package);
+                var input = new InputData(package, in world);
                 dependsOn = func.Invoke(input, dependsOn);
                 return dependsOn;
 
@@ -283,7 +285,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Tick(ulong tick, Data* data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, in World world, Data* data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
                 if (events.isCreated == true && events.Count > 0u) {
@@ -292,7 +294,7 @@ namespace ME.BECS.Network {
                     for (uint i = 0u; i < events.Count; ++i) {
 
                         var evt = events[in allocator, i];
-                        dependsOn = data->methodsStorage.Call(in evt, dependsOn);
+                        dependsOn = data->methodsStorage.Call(in evt, in world, dependsOn);
 
                     }
                     
@@ -390,7 +392,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Tick(ulong tick, Data* data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, in World world, Data* data, JobHandle dependsOn) {
 
                 if (tick % this.properties.copyPerTick == 0u) {
                     
@@ -591,10 +593,10 @@ namespace ME.BECS.Network {
             }
 
             [INLINE(256)]
-            public JobHandle Tick(ulong tick, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, in World world, JobHandle dependsOn) {
 
-                dependsOn = this.statesStorage.Tick(tick, this.selfPtr, dependsOn);
-                dependsOn = this.eventsStorage.Tick(tick, this.selfPtr, dependsOn);
+                dependsOn = this.statesStorage.Tick(tick, in world, this.selfPtr, dependsOn);
+                dependsOn = this.eventsStorage.Tick(tick, in world, this.selfPtr, dependsOn);
                 
                 return dependsOn;
 
@@ -759,6 +761,8 @@ namespace ME.BECS.Network {
         [INLINE(256)]
         public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
 
+            if (this.networkTransport.Status != TransportStatus.Connected) return dependsOn; 
+            
             /*
             // test
             if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.A) == true) {
@@ -793,7 +797,7 @@ namespace ME.BECS.Network {
                         readBuffer.Dispose();
                     }
                 }
-                //if (targetTick > currentTick && targetTick - currentTick > 1) UnityEngine.Debug.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {(targetTick - currentTick)}");
+                if (targetTick > currentTick && targetTick - currentTick > 1) UnityEngine.Debug.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {(targetTick - currentTick)}");
                 {
                     // Do we need the rollback?
                     dependsOn = this.data->Rollback(ref currentTick, ref targetTick, dependsOn);
@@ -807,7 +811,7 @@ namespace ME.BECS.Network {
                     {
                         // Apply events for this tick
                         //dependsOn.Complete();
-                        dependsOn = this.data->Tick(tick, dependsOn);
+                        dependsOn = this.data->Tick(tick, in world, dependsOn);
                     }
                     
                     //UnityEngine.Debug.LogWarning("---- BEGIN WORLD TICK ----");

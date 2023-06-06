@@ -5,7 +5,9 @@
         "ME.BECS",
         "Unity.Burst",
         "Unity.Collections",
-        "ME.BECS.Features"
+        "ME.BECS.Features",
+        "PhotonUnityNetworking",
+        "PhotonRealtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
