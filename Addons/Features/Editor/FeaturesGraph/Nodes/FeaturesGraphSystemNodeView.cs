@@ -33,6 +33,20 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        protected override void CreateLabels(UnityEngine.UIElements.VisualElement container) {
+
+            var node = this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode;
+            if (node?.system != null) {
+                var isBurst = node.system.GetType().GetCustomAttribute<Unity.Burst.BurstCompileAttribute>();
+                if (isBurst != null) {
+                    var burstLabel = new UnityEngine.UIElements.Label("Burst");
+                    burstLabel.AddToClassList("burst-label");
+                    container.Add(burstLabel);
+                }
+            }
+            
+        }
+
         public override void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent evt) {
             
             var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode).system;

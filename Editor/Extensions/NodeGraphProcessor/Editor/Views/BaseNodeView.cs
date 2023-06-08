@@ -185,6 +185,21 @@ namespace ME.BECS.Extensions.GraphProcessor
             
 			AddInputContainer();
 
+			{
+				var container = new VisualElement();
+				container.AddToClassList("title-container");
+				var titleLabel = this.Q("title-label") as Label;
+				titleLabel.parent.Insert(1, container);
+				container.Add(titleLabel);
+				var containerLabels = new VisualElement();
+				containerLabels.AddToClassList("container-labels");
+				container.Add(containerLabels);
+				this.CreateLabels(containerLabels);
+				if (containerLabels.childCount == 0) {
+					containerLabels.parent.Remove(containerLabels);
+				}
+			}
+
 			// Add renaming capability
 			if ((capabilities & Capabilities.Renamable) != 0)
 				SetupRenamableTitle();
@@ -220,6 +235,10 @@ namespace ME.BECS.Extensions.GraphProcessor
 				});
 				this.RefreshEnabled();
 			}
+		}
+
+		protected virtual void CreateLabels(VisualElement container) {
+			
 		}
 
 		private void RefreshEnabled() {

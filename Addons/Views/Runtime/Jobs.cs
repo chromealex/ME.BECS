@@ -147,7 +147,8 @@ namespace ME.BECS.Views {
                 
                 var entityData = this.renderingOnSceneEnts[index];
                 transform.SetLocalPositionAndRotation(entityData.element.GetWorldMatrixPosition(), entityData.element.GetWorldMatrixRotation());
-                
+                transform.localScale = entityData.element.readLocalScale;
+
             }
 
         }

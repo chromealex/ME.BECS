@@ -328,3 +328,25 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 #title-label {
     text-overflow: ellipsis;
 }
+
+.title-container {
+    margin-top: 3px;
+}
+
+.title-container #title-label {
+    padding-bottom: 0px;
+    margin-bottom: 0px;
+}
+
+.container-labels {
+    margin-left: 8px;
+}
+
+.container-labels Label {
+    padding: 1px 4px;
+    background-color: rgb(148, 63, 39);
+    font-size: 8px;
+    align-self: flex-start;
+    border-radius: 4px;
+    margin-right: 5px;
+}

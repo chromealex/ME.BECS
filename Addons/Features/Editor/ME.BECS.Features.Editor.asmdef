@@ -4,7 +4,8 @@
     "references": [
         "ME.BECS",
         "ME.BECS.Editor",
-        "ME.BECS.Features"
+        "ME.BECS.Features",
+        "Unity.Burst"
     ],
     "includePlatforms": [
         "Editor"
