@@ -267,13 +267,12 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 }
 
 #controls {
-    padding: 5px;
-    border-top-width: 1px;
+    padding: 0px;
+    padding-bottom: 4px;
+    border-top-width: 0.5px;
     border-color: rgba(0, 0, 0, 0.4);
     background-color: rgba(40, 40, 40, 0.8);
-    border-radius: 7px;
-    border-top-left-radius: 0px;
-    border-top-right-radius: 0px;
+    border-radius: 0px;
 }
 
 .collapsed #controls {
@@ -283,6 +282,9 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 #controls .subclass-button-selector {
     min-width: 120px;
     height: 24px;
+    margin-top: 0px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
 }
 
 .start-node #node-border {
@@ -340,6 +342,8 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 .container-labels {
     margin-left: 8px;
+    margin-bottom: 10px;
+    flex-direction: row;
 }
 
 .container-labels Label {
@@ -349,4 +353,8 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
     align-self: flex-start;
     border-radius: 4px;
     margin-right: 5px;
+}
+
+#title.with-labels {
+    height: 45px;
 }

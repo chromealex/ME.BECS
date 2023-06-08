@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
@@ -124,7 +125,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     this.m_TargetProperty = property;
                     popup.TypePopup.Show(button.worldBound);
                     popup.TypePopup.OnItemSelected += (item) => {
-                        button.text = this.GetTypeName(property).text;
+                        button.Q<Label>(className: "button-text").text = this.GetTypeName(property).text;
                     };
                 });
                 button.AddToClassList("subclass-button-selector");
@@ -139,6 +140,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     checkmark.AddToClassList("unity-foldout__checkmark");
                     button.Add(checkmark);
                     var buttonText = new UnityEngine.UIElements.Label(this.GetTypeName(property).text);
+                    buttonText.AddToClassList("button-text");
                     button.Add(buttonText);
                 }
 

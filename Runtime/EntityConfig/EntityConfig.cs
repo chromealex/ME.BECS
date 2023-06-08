@@ -13,6 +13,12 @@ namespace ME.BECS {
         public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u) {
             return new UnsafeEntityConfig(this, id);
         }
+        
+        public void Sync() {
+
+            EntityConfigRegistry.Sync(this);
+            
+        }
 
         public UnsafeEntityConfig AsUnsafeConfig() {
             EntityConfigRegistry.Register(this, out var config);

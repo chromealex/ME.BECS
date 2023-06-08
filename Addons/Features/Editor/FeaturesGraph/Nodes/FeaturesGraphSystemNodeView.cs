@@ -40,6 +40,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 var isBurst = node.system.GetType().GetCustomAttribute<Unity.Burst.BurstCompileAttribute>();
                 if (isBurst != null) {
                     var burstLabel = new UnityEngine.UIElements.Label("Burst");
+                    burstLabel.tooltip = "System run with Burst Compiler";
                     burstLabel.AddToClassList("burst-label");
                     container.Add(burstLabel);
                 }

@@ -197,7 +197,12 @@ namespace ME.BECS.Extensions.GraphProcessor
 				this.CreateLabels(containerLabels);
 				if (containerLabels.childCount == 0) {
 					containerLabels.parent.Remove(containerLabels);
+				} else {
+					container.parent.AddToClassList("with-labels");
 				}
+
+				var contents = this.Q("contents");
+				contents.parent.Add(contents);
 			}
 
 			// Add renaming capability

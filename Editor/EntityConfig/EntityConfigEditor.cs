@@ -136,6 +136,7 @@ namespace ME.BECS.Editor {
                 foreach (var target in serializedObject.targetObjects) {
                     if (target is EntityConfig config) {
                         config.ResetCache();
+                        config.Sync();
                     }
                 }
                 removeButton.SetEnabled(selectIndex >= 0);

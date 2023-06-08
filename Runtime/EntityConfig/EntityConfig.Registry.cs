@@ -21,6 +21,18 @@ namespace ME.BECS {
 
         }
 
+        public static void Sync(EntityConfig config) {
+
+            if (registryToId.TryGetValue(config, out var id) == true) {
+                if (registryFromId.TryGetValue(id, out var unsafeEntityConfig) == true) {
+                    unsafeEntityConfig.Dispose();
+                    unsafeEntityConfig = new UnsafeEntityConfig(config, id);
+                    registryFromId[id] = unsafeEntityConfig;
+                }
+            }
+
+        }
+
         public static UnsafeEntityConfig GetById(uint id) {
             
             if (registryFromId.TryGetValue(id, out var config) == true) {
