@@ -50,7 +50,7 @@ namespace ME.BECS.TransformAspect {
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
             var matrix = ent.localMatrix;
-            if (parent.ent.IsEmpty() == false) matrix = math.mul(parent.worldMatrix, matrix);
+            if (parent.ent.IsAlive() == true) matrix = math.mul(parent.worldMatrix, matrix);
             ent.worldMatrix = matrix;
 
         }
