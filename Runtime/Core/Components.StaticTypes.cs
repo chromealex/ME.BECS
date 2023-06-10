@@ -57,6 +57,7 @@ namespace ME.BECS {
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
         public static readonly System.Collections.Generic.Dictionary<System.Type, uint> typeToId = new System.Collections.Generic.Dictionary<System.Type, uint>();
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedSharedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
+        public static readonly System.Collections.Generic.Dictionary<uint, bool> loadedSharedTypesCustomHash = new System.Collections.Generic.Dictionary<uint, bool>();
 
     }
 
@@ -97,6 +98,12 @@ namespace ME.BECS {
 
     }
 
+    public struct StaticTypesSharedCustomHash<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesSharedCustomHash<T>>();
+
+    }
+
     public struct StaticTypesStaticTypeId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesStaticTypeId<T>>();
@@ -129,6 +136,7 @@ namespace ME.BECS {
 
         public static ref uint staticTypeId => ref StaticTypesStaticTypeId<T>.value.Data;
         public static ref uint sharedTypeId => ref StaticTypesSharedTypeId<T>.value.Data;
+        public static ref bool hasSharedCustomHash => ref StaticTypesSharedCustomHash<T>.value.Data;
         public static ref uint typeId => ref StaticTypesId<T>.value.Data;
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
         public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
@@ -154,15 +162,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void ValidateShared(bool isTag) {
+        public static void ValidateShared(bool isTag, bool hasCustomHash) {
 
             Validate(isTag);
 
             if (sharedTypeId == 0u) {
                 StaticTypes<T>.sharedTypeId = ++StaticSharedTypes.counter;
+                StaticTypes<T>.hasSharedCustomHash = hasCustomHash;
                 StaticTypes.sharedTypeId.Resize(StaticTypes<T>.typeId + 1u);
                 StaticTypes.sharedTypeId.Get(StaticTypes<T>.typeId) = StaticTypes<T>.sharedTypeId;
-                StaticTypes<T>.AddSharedTypeToCache();
+                StaticTypes<T>.AddSharedTypeToCache(hasCustomHash);
             }
 
         }
@@ -200,8 +209,9 @@ namespace ME.BECS {
         }
 
         [Unity.Burst.BurstDiscard]
-        public static void AddSharedTypeToCache() {
+        public static void AddSharedTypeToCache(bool hasCustomHash) {
             StaticTypesLoadedManaged.loadedSharedTypes.Add(StaticTypes<T>.sharedTypeId, typeof(T));
+            StaticTypesLoadedManaged.loadedSharedTypesCustomHash.Add(StaticTypes<T>.typeId, hasCustomHash);
         }
 
     }

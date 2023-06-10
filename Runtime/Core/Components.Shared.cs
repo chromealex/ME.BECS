@@ -11,7 +11,7 @@ namespace ME.BECS {
         /// Returns static hash of instance
         /// </summary>
         /// <returns></returns>
-        uint GetHash() => Components.COMPONENT_SHARED_DEFAULT_HASH;
+        uint GetHash() => throw new System.NotImplementedException();
 
     }
 
@@ -85,8 +85,8 @@ namespace ME.BECS {
         private static uint GetDataSharedHash<T>(in T data)  where T : unmanaged, IComponentShared {
 
             // [!] C# now has no way to prevent copying here
-            var customHash = data.GetHash();
-            if (customHash == Components.COMPONENT_SHARED_DEFAULT_HASH) {
+            var customHash = StaticTypes<T>.hasSharedCustomHash == true ? data.GetHash() : COMPONENT_SHARED_DEFAULT_HASH;
+            if (customHash == COMPONENT_SHARED_DEFAULT_HASH) {
                 // use typeId as hash
                 customHash = StaticTypes<T>.sharedTypeId;
             }
