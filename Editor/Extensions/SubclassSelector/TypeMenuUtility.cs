@@ -19,9 +19,10 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             if (typeMenu != null) {
                 return typeMenu.GetSplittedMenuName();
             } else {
-                var splitIndex = type.FullName.LastIndexOf('.');
+                var name = type.FullName.Replace("+", ".");
+                var splitIndex = name.LastIndexOf('.');
                 if (splitIndex >= 0) {
-                    return new string[] { type.FullName.Substring(0, splitIndex), type.FullName.Substring(splitIndex + 1) };
+                    return new string[] { name.Substring(0, splitIndex), name.Substring(splitIndex + 1) };
                 } else {
                     return new string[] { type.Name };
                 }

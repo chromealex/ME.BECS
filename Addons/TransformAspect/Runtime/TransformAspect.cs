@@ -77,13 +77,14 @@ namespace ME.BECS.TransformAspect {
         public readonly ref float3 localPosition => ref this.SetDirty(ref this.localPositionData.Get(this.ent.id).value);
         public readonly ref quaternion localRotation => ref this.SetDirty(ref this.localRotationData.Get(this.ent.id).value);
         public readonly ref float3 localScale => ref this.SetDirty(ref this.localScaleData.Get(this.ent.id).value);
-        public readonly float3 readLocalPosition => this.localPositionData.Get(this.ent.id).value;
-        public readonly quaternion readLocalRotation => this.localRotationData.Get(this.ent.id).value;
-        public readonly float3 readLocalScale => this.localScaleData.Get(this.ent.id).value;
-        public readonly ref readonly Ent parent => ref this.parentData.Get(this.ent.id).value;
-        public readonly ref readonly List<Ent> children => ref this.childrenData.Get(this.ent.id).list;
+        public readonly ref readonly float3 readLocalPosition => ref this.localPositionData.Read(this.ent.id).value;
+        public readonly ref readonly quaternion readLocalRotation => ref this.localRotationData.Read(this.ent.id).value;
+        public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id).value;
+        public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id).value;
+        public readonly ref readonly List<Ent> children => ref this.childrenData.Read(this.ent.id).list;
         public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id).value;
-        public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Get(this.ent.id).value, this.localRotationData.Get(this.ent.id).value, this.localScaleData.Get(this.ent.id).value);
+        public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id).value;
+        public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Read(this.ent.id).value, this.localRotationData.Read(this.ent.id).value, this.localScaleData.Read(this.ent.id).value);
 
         public float3 position {
             [INLINE(256)]
@@ -179,22 +180,22 @@ namespace ME.BECS.TransformAspect {
         
         [INLINE(256)]
         public readonly float3 GetWorldMatrixPosition() {
-            return this.worldMatrix.c3.xyz;
+            return this.readWorldMatrix.c3.xyz;
         }
  
         [INLINE(256)]
         public readonly quaternion GetWorldMatrixRotation() {
-            float3 forward = this.worldMatrix.c2.xyz;
-            float3 upwards = this.worldMatrix.c1.xyz;
+            float3 forward = this.readWorldMatrix.c2.xyz;
+            float3 upwards = this.readWorldMatrix.c1.xyz;
             return quaternion.LookRotation(forward, upwards);
         }
  
         [INLINE(256)]
         public readonly float3 GetWorldMatrixScale() {
             float3 scale;
-            scale.x = math.length(this.worldMatrix.c0);
-            scale.y = math.length(this.worldMatrix.c1);
-            scale.z = math.length(this.worldMatrix.c2);
+            scale.x = math.length(this.readWorldMatrix.c0);
+            scale.y = math.length(this.readWorldMatrix.c1);
+            scale.z = math.length(this.readWorldMatrix.c2);
             return scale;
         }
 

@@ -26,6 +26,11 @@ namespace ME.BECS {
             public SharedData(T[] components) {
                 
                 var cnt = (uint)components.Length;
+                if (cnt == 0u) {
+                    this = default;
+                    return;
+                }
+                
                 this.offsets = _makeArray<uint>(cnt);
                 this.typeIds = _makeArray<uint>(cnt);
                 this.hashes = _makeArray<uint>(cnt);
@@ -99,10 +104,14 @@ namespace ME.BECS {
             public Data(T[] components) {
                 
                 var cnt = (uint)components.Length;
+                if (cnt == 0u) {
+                    this = default;
+                    return;
+                }
                 this.offsets = _makeArray<uint>(cnt);
                 this.typeIds = _makeArray<uint>(cnt);
                 this.count = cnt;
-
+                
                 var offset = 0u;
                 var size = 0u;
                 for (uint i = 0u; i < components.Length; ++i) {

@@ -46,6 +46,22 @@ namespace ME.BECS {
             return ref res;
         }
 
+        [INLINE(256)]
+        public readonly ref readonly T Read(Ent ent) {
+            var typeId = StaticTypes<T>.typeId;
+            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, ent.id, ent.gen, out var exists);
+            if (exists == false) return ref StaticTypes<T>.defaultValue;
+            return ref res;
+        }
+
+        [INLINE(256)]
+        public readonly ref readonly T Read(uint entId) {
+            var typeId = StaticTypes<T>.typeId;
+            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
+            if (exists == false) return ref StaticTypes<T>.defaultValue;
+            return ref res;
+        }
+
     }
 
     public unsafe struct RefRO<T> : IAspectData where T : unmanaged, IComponent {
@@ -59,7 +75,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public readonly ref readonly T Get(Ent ent) {
+        public readonly ref readonly T Read(Ent ent) {
             var typeId = StaticTypes<T>.typeId;
             ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, ent.id, ent.gen, out var exists); 
             if (exists == false) return ref StaticTypes<T>.defaultValue;
@@ -67,7 +83,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public readonly ref readonly T Get(uint entId) {
+        public readonly ref readonly T Read(uint entId) {
             var typeId = StaticTypes<T>.typeId;
             ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;

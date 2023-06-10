@@ -638,6 +638,7 @@ namespace ME.BECS.Network {
             this.networkTransport.OnAwake();
         }
 
+        /*
         public struct TestData {
 
             public int a;
@@ -653,6 +654,7 @@ namespace ME.BECS.Network {
             UnityEngine.Debug.Log("TestNetMethod: " + input.a + " :: " + input.b + " :: " + input.c);
             return dependsOn;
         }
+        */
 
         [INLINE(256)]
         public void Dispose() {
