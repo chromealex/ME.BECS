@@ -83,17 +83,30 @@ namespace ME.BECS.Editor {
             var tooltip = property.tooltip;
             if (string.IsNullOrEmpty(tooltip) == false) {
 
+                DrawTooltip(container, $"<b>{property.displayName}</b>\n{tooltip}");
+
+            }
+
+        }
+
+        public static VisualElement DrawTooltip(VisualElement container, string tooltip) {
+            
+            if (string.IsNullOrEmpty(tooltip) == false) {
+
                 container.AddToClassList("has-tooltip");
-                var tooltipElement = new Label($"<b>{property.displayName}</b>\n{tooltip}");
+                var tooltipElement = new Label(tooltip);
                 tooltipElement.AddToClassList("tooltip-text");
                 tooltipElement.pickingMode = PickingMode.Ignore;
                 var tooltipButton = new Label("?");
                 tooltipButton.AddToClassList("tooltip");
                 container.Add(tooltipElement);
                 container.Add(tooltipButton);
+                return tooltipElement;
 
             }
-            
+
+            return null;
+
         }
 
         public static void DrawPropertyField(VisualElement root, SerializedProperty property) {

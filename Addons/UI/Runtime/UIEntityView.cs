@@ -27,6 +27,17 @@ namespace ME.BECS.UI {
 
         }
 
+        public void Assign(in Ent worldEnt) {
+
+            if (this.uiEntity.IsAlive() == false) {
+                Debug.LogError("UI Module View has not been initialized");
+                return;
+            }
+            
+            this.uiEntity.Get<UIComponent>().entity = worldEnt;
+
+        }
+
         internal void DoApplyState() {
             this.ApplyState();
         }

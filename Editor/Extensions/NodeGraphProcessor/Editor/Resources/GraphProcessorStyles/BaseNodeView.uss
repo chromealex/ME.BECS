@@ -332,7 +332,7 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 }
 
 .title-container {
-    margin-top: 3px;
+    margin-top: 0px;
 }
 
 .title-container #title-label {
@@ -342,19 +342,28 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 .container-labels {
     margin-left: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
     flex-direction: row;
 }
 
-.container-labels Label {
+.container-labels .burst-label,
+.container-labels .no-burst-label {
     padding: 1px 4px;
-    background-color: rgb(148, 63, 39);
-    font-size: 8px;
+    margin-top: 2px;
+    font-size: 7px;
     align-self: flex-start;
     border-radius: 4px;
     margin-right: 5px;
 }
 
+.container-labels .burst-label {
+    background-color: #275C18;
+}
+
+.container-labels .no-burst-label {
+    background-color: rgb(108, 46, 28);
+}
+
 #title.with-labels {
-    height: 45px;
+    height: 40px;
 }

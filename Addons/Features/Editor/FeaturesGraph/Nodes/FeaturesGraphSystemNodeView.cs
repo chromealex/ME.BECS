@@ -33,16 +33,75 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        private static void AddLabel(UnityEngine.UIElements.VisualElement container, string label, string tooltip, bool burst) {
+            
+            var burstLabel = new UnityEngine.UIElements.Label(label);
+            burstLabel.tooltip = tooltip;
+            burstLabel.AddToClassList(burst == true ? "burst-label" : "no-burst-label");
+            container.Add(burstLabel);
+                        
+        }
+
+        private static bool IsBurstMethod(ISystem system, System.Type interfaceType, bool systemBurst, out bool hasInterface) {
+            var isBurst = systemBurst;
+            hasInterface = false;
+            if (interfaceType.IsInstanceOfType(system) == true) {
+                hasInterface = true;
+                var map = system.GetType().GetInterfaceMap(interfaceType);
+                var method = map.TargetMethods[0];
+                {
+                    var withBurst = method.GetCustomAttribute<Unity.Burst.BurstCompileAttribute>() != null;
+                    if (withBurst == true) {
+                        isBurst = true;
+                    } else {
+                        var noBurst = method.GetCustomAttribute<WithoutBurstAttribute>() != null;
+                        if (noBurst == true) {
+                            isBurst = false;
+                        }
+                    }
+                }
+            }
+
+            return isBurst;
+        }
+
         protected override void CreateLabels(UnityEngine.UIElements.VisualElement container) {
 
             var node = this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode;
             if (node?.system != null) {
-                var isBurst = node.system.GetType().GetCustomAttribute<Unity.Burst.BurstCompileAttribute>();
-                if (isBurst != null) {
-                    var burstLabel = new UnityEngine.UIElements.Label("Burst");
-                    burstLabel.tooltip = "System run with Burst Compiler";
-                    burstLabel.AddToClassList("burst-label");
-                    container.Add(burstLabel);
+                var isBurst = node.system.GetType().GetCustomAttribute<Unity.Burst.BurstCompileAttribute>() != null;
+                var awakeBurst = IsBurstMethod(node.system, typeof(IAwake), isBurst, out var hasAwake);
+                var updateBurst = IsBurstMethod(node.system, typeof(IUpdate), isBurst, out var hasUpdate);
+                var disposeBurst = IsBurstMethod(node.system, typeof(IDestroy), isBurst, out var hasDestroy);
+                
+                if (awakeBurst == true && updateBurst == true && disposeBurst == true && isBurst == true) {
+                    AddLabel(container, "Burst", "System run with Burst Compiler", true);
+                } else if (isBurst == false && awakeBurst == false && updateBurst == false && disposeBurst == false) {
+                    AddLabel(container, "No Burst", "System run without Burst Compiler", false);
+                } else {
+                    if (hasAwake == true) {
+                        if (awakeBurst == true) {
+                            AddLabel(container, "Awake Burst", "Method run with Burst Compiler", true);
+                        } else {
+                            AddLabel(container, "Awake No Burst", "Method run without Burst Compiler", false);
+                        }
+                    }
+
+                    if (hasUpdate == true) {
+                        if (updateBurst == true) {
+                            AddLabel(container, "Update Burst", "Method run with Burst Compiler", true);
+                        } else {
+                            AddLabel(container, "Update No Burst", "Method run without Burst Compiler", false);
+                        }
+                    }
+
+                    if (hasDestroy == true) {
+                        if (disposeBurst == true) {
+                            AddLabel(container, "Destroy Burst", "Method run with Burst Compiler", true);
+                        } else {
+                            AddLabel(container, "Destroy No Burst", "Method run without Burst Compiler", false);
+                        }
+                    }
                 }
             }
             
