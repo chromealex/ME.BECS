@@ -7,6 +7,9 @@ namespace ME.BECS {
 
     public interface IComponent {}
 
+    // ReSharper disable once InconsistentNaming
+    public readonly struct TNull { }
+
     [System.Serializable]
     public struct GroupChangedTracker {
 

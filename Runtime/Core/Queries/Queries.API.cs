@@ -28,6 +28,10 @@ namespace ME.BECS {
 
     public static class APIExt {
 
+        public static QueryBuilder Query(this in SystemContext context) {
+            return API.Query(context);
+        }
+
         public static QueryBuilder Query<T>(this T system, in SystemContext context) where T : unmanaged, ISystem {
             return API.Query(context);
         }

@@ -723,6 +723,12 @@ namespace ME.BECS.Network {
 
         [INLINE(256)]
         public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged {
+
+            if (networkTransport != null && networkTransport.Status != TransportStatus.Connected) {
+                
+                E.CustomException.Throw("NetworkModule is not connected");
+                
+            }
             
             // Form the package
             var tick = moduleData->GetTargetTick() - negativeDeltaTicks;

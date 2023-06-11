@@ -10,10 +10,13 @@ namespace ME.BECS {
     public static unsafe class ArchetypeQueries {
         
         [INLINE(256)]
-        public static void WithAnySync<T0, T1>(ref QueryBuilder builder) where T0 : unmanaged where T1 : unmanaged {
+        public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged
+                                                                                 where T1 : unmanaged
+                                                                                 where T2 : unmanaged
+                                                                                 where T3 : unmanaged {
 
             builder.WaitForAllJobs();
-            WithAny(ref builder, StaticTypes<T0>.typeId, StaticTypes<T1>.typeId);
+            WithAny(ref builder, StaticTypes<T0>.typeId, StaticTypes<T1>.typeId, StaticTypes<T2>.typeId, StaticTypes<T3>.typeId);
             
         }
 
@@ -34,13 +37,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void WithAny(ref QueryBuilder builder, uint typeId1, uint typeId2) {
+        public static void WithAny(ref QueryBuilder builder, uint typeId1, uint typeId2, uint typeId3, uint typeId4) {
 
             builder.WaitForAllJobs();
             new WithAnyJob() {
                 state = builder.commandBuffer->state,
                 typeId1 = typeId1,
                 typeId2 = typeId2,
+                typeId3 = typeId3,
+                typeId4 = typeId4,
                 queryData = builder.queryData,
             }.Execute();
             
@@ -120,6 +125,8 @@ namespace ME.BECS {
 
             public uint typeId1;
             public uint typeId2;
+            public uint typeId3;
+            public uint typeId4;
             [NativeDisableUnsafePtrRestriction]
             public State* state;
             [NativeDisableUnsafePtrRestriction]
@@ -129,20 +136,34 @@ namespace ME.BECS {
             public void Execute() {
 
                 var temp = new TempBitArray(this.state->archetypes.archetypesWithTypeIdBits.Length, allocator: Unity.Collections.Allocator.Temp);
-                if (this.typeId1 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
+                if (this.typeId1 > 0u && this.typeId1 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
                     if (list.isCreated == true) {
                         temp.Union(in this.state->allocator, list);
                     }
                 }
                 
-                if (this.typeId2 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
+                if (this.typeId2 > 0u && this.typeId2 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId2];
                     if (list.isCreated == true) {
                         temp.Union(in this.state->allocator, list);
                     }
                 }
-                
+
+                if (this.typeId3 > 0u && this.typeId3 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
+                    var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId3];
+                    if (list.isCreated == true) {
+                        temp.Union(in this.state->allocator, list);
+                    }
+                }
+
+                if (this.typeId4 > 0u && this.typeId4 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
+                    var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId4];
+                    if (list.isCreated == true) {
+                        temp.Union(in this.state->allocator, list);
+                    }
+                }
+
                 this.queryData->archetypesBits.Intersect(temp);
                 
                 temp.Dispose();
@@ -150,14 +171,19 @@ namespace ME.BECS {
             }
 
         }
-        
+
         [INLINE(256)]
-        public static JobHandle WithAny<T0, T1>(ref QueryBuilder builder) where T0 : unmanaged where T1 : unmanaged {
+        public static JobHandle WithAny<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged
+                                                                                  where T1 : unmanaged
+                                                                                  where T2 : unmanaged
+                                                                                  where T3 : unmanaged {
 
             return new WithAnyJob() {
                 state = builder.commandBuffer->state,
                 typeId1 = StaticTypes<T0>.typeId,
                 typeId2 = StaticTypes<T1>.typeId,
+                typeId3 = StaticTypes<T2>.typeId,
+                typeId4 = StaticTypes<T3>.typeId,
                 queryData = builder.queryData,
             }.Schedule(builder.builderDependsOn);
             

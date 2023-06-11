@@ -196,8 +196,11 @@ namespace ME.BECS.Editor {
 
         private static bool HasComponentCustomSharedHash(System.Type type) {
 
-            var m = type.GetMethod(nameof(IComponentShared.GetHash));
-            if (m == null) return false;
+            var m = type.GetMethod(nameof(IComponentShared.GetHash), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (m == null) {
+                var hasMethod = type.GetInterfaceMap(typeof(IComponentShared)).TargetMethods.Any(m => m.IsPrivate == true && m.Name == typeof(IComponentShared).FullName + "." + nameof(IComponentShared.GetHash));
+                return hasMethod;
+            }
             return true;
 
         }
