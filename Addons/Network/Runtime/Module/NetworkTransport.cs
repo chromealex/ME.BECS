@@ -9,33 +9,35 @@ namespace ME.BECS.Network {
 
     }
 
+    [System.Flags]
     public enum EventsBehaviourState : byte {
 
         /// <summary>
         /// Add package to events history on local side
         /// </summary>
-        RunLocal = 0x0,
+        RunLocal      = 1 << 0,
         /// <summary>
         /// Send package to server
         /// </summary>
-        SendToNetwork = 0x1,
+        SendToNetwork = 1 << 1,
 
     }
 
+    [System.Flags]
     public enum EventsBehaviour : byte {
 
+        /// <summary>
+        /// Send package to server only (So you need to send it to all clients include current)
+        /// </summary>
+        SendToNetworkOnly          = EventsBehaviourState.SendToNetwork,
+        /// <summary>
+        /// For debug purposes only
+        /// </summary>
+        RunLocalOnly               = EventsBehaviourState.RunLocal,
         /// <summary>
         /// Apply package locally and send it to other clients (So you need to send it too all clients except of current)
         /// </summary>
         StoreLocalAndSendToNetwork = EventsBehaviourState.RunLocal | EventsBehaviourState.SendToNetwork,
-        /// <summary>
-        /// Send package to server only (So you need to send it to all clients include current)
-        /// </summary>
-        SendToNetworkOnly = EventsBehaviourState.SendToNetwork,
-        /// <summary>
-        /// For debug purposes only
-        /// </summary>
-        RunLocalOnly = EventsBehaviourState.RunLocal,
 
     }
 

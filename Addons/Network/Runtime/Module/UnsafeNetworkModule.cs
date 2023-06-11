@@ -16,25 +16,23 @@ namespace ME.BECS.Network {
         /// Tick
         /// </summary>
         public ulong tick;
-        
         /// <summary>
         /// All packages ordered by playerId first
         /// </summary>
         public uint playerId;
         /// <summary>
-        /// Then by localOrder
-        /// </summary>
-        public byte localOrder;
-
-        /// <summary>
         /// Registered method id
         /// </summary>
         public ushort methodId;
-        
         /// <summary>
         /// Package data
         /// </summary>
         public ushort dataSize;
+        /// <summary>
+        /// Then by localOrder
+        /// </summary>
+        public byte localOrder;
+        
         [NativeDisableUnsafePtrRestriction]
         public byte* data;
 
