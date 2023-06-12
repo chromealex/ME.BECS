@@ -75,6 +75,13 @@ namespace ME.BECS.Addons {
     public static class RuntimeObjectReference {
 
         private static ObjectReferenceData[] dataArr;
+
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Initialize() {
+
+            dataArr = null;
+            
+        }
         
         private static ObjectReferenceData GetData(ushort worldId) {
 
@@ -101,6 +108,7 @@ namespace ME.BECS.Addons {
 
         [INLINE(256)]
         public static T GetObject<T>(ref uint id, ushort worldId, T obj) where T : UnityEngine.Object {
+            if (worldId == 0) return null;
             var data = GetData(worldId);
             return data.GetObject(ref id, obj);
         }
