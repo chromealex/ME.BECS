@@ -100,6 +100,9 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void Union(TempBitArray bitmap) {
+            if (bitmap.Length == 0) return;
+            this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {
                 this.ptr[index] |= bitmap.ptr[index];
@@ -108,6 +111,9 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Union(in MemoryAllocator allocator, BitArray bitmap) {
+            if (bitmap.Length == 0) return;
+            this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {
@@ -123,23 +129,43 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void Intersect(TempBitArray bitmap) {
-            var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
+            if (bitmap.Length == 0) {
+                this.SetAllBits(false);
+                return;
+            }
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
+            var ptr = bitmap.ptr;
+            var len = Bitwise.GetLength(this.Length);
+            var bLen = Bitwise.GetLength(bitmap.Length);
             for (var index = 0; index < len; ++index) {
-                this.ptr[index] &= bitmap.ptr[index];
+                var v = 0UL;
+                if (index < bLen) v = ptr[index];
+                this.ptr[index] &= v;
             }
         }
 
         [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, in BitArray bitmap) {
+            if (bitmap.Length == 0) {
+                this.SetAllBits(false);
+                return;
+            }
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
-            var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
+            var len = Bitwise.GetLength(this.Length);
+            var bLen = Bitwise.GetLength(bitmap.Length);
             for (var index = 0; index < len; ++index) {
-                this.ptr[index] &= ptr[index];
+                var v = 0UL;
+                if (index < bLen) v = ptr[index];
+                this.ptr[index] &= v;
             }
         }
 
         [INLINE(256)]
         public void Remove(TempBitArray bitmap) {
+            if (bitmap.Length == 0) return;
+            this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {
                 this.ptr[index] &= ~bitmap.ptr[index];
@@ -148,6 +174,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Remove(in MemoryAllocator allocator, in BitArray bitmap) {
+            if (bitmap.Length == 0) return;
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {

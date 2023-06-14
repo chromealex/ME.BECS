@@ -37,9 +37,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public unsafe void Add(uint value) {
 
-            if (this.list.isCreated == false) this.list = new TempBitArray((StaticTypes.counter + 1u) * 2u, ClearOptions.ClearMemory, Allocator.Temp);
+            if (this.list.isCreated == false) this.list = new TempBitArray((StaticTypes.counter + 1u) * 2u, ClearOptions.ClearMemory, Allocator.Persistent);
             if (StaticTypes.counter >= this.list.Length) {
-                var newList = new TempBitArray((StaticTypes.counter + 1u) * 2u, ClearOptions.ClearMemory,  Allocator.Temp);
+                var newList = new TempBitArray((StaticTypes.counter + 1u) * 2u, ClearOptions.ClearMemory,  Allocator.Persistent);
                 UnsafeUtility.MemCpy(newList.ptr, this.list.ptr, this.list.Length * sizeof(ulong));
                 this.list.Dispose();
                 this.list = newList;
@@ -339,6 +339,7 @@ namespace ME.BECS {
             if (wasCount == 0u && item.Count > 0u) {
                 threadItem.items.Add(ref state->allocator, entId);
             }
+            
             JobUtils.Unlock(ref threadItem.lockIndex);
 
         }
@@ -358,6 +359,7 @@ namespace ME.BECS {
             if (wasCount == 0u && item.Count > 0u) {
                 threadItem.items.Add(ref state->allocator, entId);
             }
+            
             JobUtils.Unlock(ref threadItem.lockIndex);
             
         }

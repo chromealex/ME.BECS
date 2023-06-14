@@ -7,7 +7,7 @@ namespace ME.BECS {
 
         public static EntityConfigsRegistryData data;
         
-        [UnityEngine.RuntimeInitializeOnLoadMethod]
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
 
             if (data != null) return;

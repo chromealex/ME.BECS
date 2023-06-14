@@ -1,5 +1,6 @@
 namespace ME.BECS{{EDITOR}} {
     [UnityEngine.Scripting.PreserveAttribute]
+    [UnityEngine.DefaultExecutionOrder(-100_000)]
     public static unsafe class AOTBurstHelper {
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void AOT() {
@@ -11,6 +12,7 @@ namespace ME.BECS{{EDITOR}} {
     [UnityEditor.InitializeOnLoadAttribute]
     #endif
     [UnityEngine.Scripting.PreserveAttribute]
+    [UnityEngine.DefaultExecutionOrder(-100_000)]
     public static unsafe class StaticTypesInitializer {
         [UnityEngine.Scripting.PreserveAttribute] 
         static StaticTypesInitializer() { 
@@ -28,6 +30,7 @@ namespace ME.BECS{{EDITOR}} {
     [UnityEditor.InitializeOnLoadAttribute]
     #endif
     [UnityEngine.Scripting.PreserveAttribute]
+    [UnityEngine.DefaultExecutionOrder(-100_000)]
     public static unsafe class StaticMethods {
         [UnityEngine.Scripting.PreserveAttribute] 
         static StaticMethods() {

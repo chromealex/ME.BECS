@@ -162,16 +162,16 @@ namespace ME.BECS {
     
     public unsafe struct Worlds {
         
-        internal sealed class Destructor {
-            ~Destructor() {
-                Worlds.CleanUp();
-            }
-        }
-
-        internal static readonly Destructor staticDestructor = new Destructor();
-
         private static readonly Unity.Burst.SharedStatic<ushort> worldsCounterBurst = Unity.Burst.SharedStatic<ushort>.GetOrCreate<Worlds>();
         private static ref ushort counter => ref worldsCounterBurst.Data;
+
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Initialize() {
+
+            if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
+            ResetWorldsCounter();
+            
+        }
 
         [INLINE(256)]
         public static Array<WorldHeader> GetWorlds() {
@@ -269,14 +269,6 @@ namespace ME.BECS {
             counter = 0;
             WorldsIdStorage.worldIds.Clear();
             
-        }
-
-        [INLINE(256)]
-        internal static void CleanUp() {
-
-            WorldsIdStorage.worldIds.Dispose();
-            WorldsStorage.worlds.Dispose();
-
         }
 
     }

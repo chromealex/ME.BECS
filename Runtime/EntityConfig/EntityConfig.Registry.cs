@@ -6,6 +6,13 @@ namespace ME.BECS {
         public static System.Collections.Generic.Dictionary<uint, UnsafeEntityConfig> registryFromId = new System.Collections.Generic.Dictionary<uint, UnsafeEntityConfig>();
         public static uint nextId;
 
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void CleanUp() {
+            registryFromId.Clear();
+            registryToId.Clear();
+            nextId = 0u;
+        }
+        
         public static uint Register(EntityConfig config, out UnsafeEntityConfig unsafeConfig) {
 
             if (registryToId.TryGetValue(config, out var id) == true) {

@@ -1,3 +1,5 @@
+using scg = System.Collections.Generic;
+
 namespace ME.BECS {
 
     public static class WorldStaticCallbacksTypes {
@@ -9,12 +11,22 @@ namespace ME.BECS {
     public static class WorldStaticCallbacksTypes<T> where T : unmanaged {
 
         public static uint id;
-
-        public static System.Collections.Generic.Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>> callbacks = new System.Collections.Generic.Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>>();
+        public static readonly System.Collections.Generic.Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>> callbacks = new System.Collections.Generic.Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>>();
 
     }
 
     public static class WorldStaticCallbacks {
+
+        private static scg::HashSet<System.Collections.IDictionary> allDics = new scg::HashSet<System.Collections.IDictionary>();
+        
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Initialize() {
+
+            foreach (var dic in allDics) {
+                dic.Clear();
+            }
+            
+        }
 
         public delegate void CallbackDelegate<T>(ref T data) where T : unmanaged;
 
@@ -38,6 +50,7 @@ namespace ME.BECS {
                 WorldStaticCallbacksTypes<T>.id = ++WorldStaticCallbacksTypes.counter;
             }
             
+            allDics.Add(WorldStaticCallbacksTypes<T>.callbacks);
             if (WorldStaticCallbacksTypes<T>.callbacks.ContainsKey(subId) == false) {
                 
                 WorldStaticCallbacksTypes<T>.callbacks.Add(subId, callback);

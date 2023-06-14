@@ -63,7 +63,7 @@ namespace ME.BECS {
         #if UNITY_EDITOR
         [UnityEditor.InitializeOnLoadMethodAttribute]
         #endif
-        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute]
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
             Pools.itemsPerThread.Data = new NativeArray<ThreadItem>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, ALLOCATOR);

@@ -15,6 +15,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static uint GetMaxLength(uint bitsCount1, uint bitsCount2) {
+            var length = math.max(GetLength(bitsCount1), GetLength(bitsCount2));
+            return length;
+        }
+
+        [INLINE(256)]
         public static uint GetLength(uint bitsCount) {
             return AlignULongBits(bitsCount) / ULONG_SIZE;
             //if (bitsCount > 0u && bitsCount < 64u) bitsCount = 64u;

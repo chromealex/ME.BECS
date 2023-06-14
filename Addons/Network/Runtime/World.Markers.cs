@@ -34,13 +34,10 @@ namespace ME.BECS.Network.Markers {
 
     public static unsafe class WorldNetworkMarkers {
 
-        internal sealed class Destructor {
-            ~Destructor() {
-                WorldsNetworkDataStorage.CleanUp();
-            }
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Reset() {
+            WorldsNetworkDataStorage.CleanUp();
         }
-
-        internal static readonly Destructor staticDestructor = new Destructor();
 
         public static void Set(in World world, in UnsafeNetworkModule data) {
             

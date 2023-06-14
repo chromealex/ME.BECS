@@ -49,6 +49,10 @@ namespace ME.BECS {
                     archetypes.list[in state->allocator, 0].entitiesList.Add(ref state->allocator, entId);
                     return 0u;
                 }
+
+                var currentBits = new TempBitArray(in state->allocator, this.componentBits, Unity.Collections.Allocator.Temp);
+                currentBits.Union(addItems.root);
+                currentBits.Remove(removeItems.root);
                 
                 if (targetCount < archetypes.componentsCountToArchetypeIds.Length) {
                     // Look up archetype by targetCount
@@ -61,10 +65,9 @@ namespace ME.BECS {
                             for (uint i = 0u; i < list.Count; ++i) {
                                 var archIdx = list[in state->allocator, i];
                                 ref var arch = ref archetypes.list[in state->allocator, archIdx];
-                                if (arch.ContainsComponents(in state->allocator, in this.componentBits, in addItems, in removeItems) == true) {
+                                if (arch.ContainsComponents(in state->allocator, in currentBits, in addItems, in removeItems) == true) {
                                     // Add entity to the new one
                                     arch.AddEntity(state, entId);
-
                                     return archIdx;
                                 }
                             }
@@ -85,8 +88,9 @@ namespace ME.BECS {
                 MemoryAllocatorExt.ValidateConsistency(state->allocator);
                 if (addItems.Count > 0u) {
                     newArchetype.components.Add(ref state->allocator, addItems);
-                    newArchetype.componentBits.Union(in state->allocator, addItems.root);
+                    newArchetype.componentBits.Union(ref state->allocator, addItems.root);
                 }
+
                 MemoryAllocatorExt.ValidateConsistency(state->allocator);
                 newArchetype.AddEntity(state, entId);
                 MemoryAllocatorExt.ValidateConsistency(state->allocator);
@@ -128,19 +132,19 @@ namespace ME.BECS {
 
             [INLINE(256)]
             private bool ContainsComponents(in MemoryAllocator allocator,
-                                            in BitArray componentBits,
+                                            in TempBitArray componentBits,
                                             in ComponentsFastTrack containsItems,
                                             in ComponentsFastTrack notContainsItems) {
 
-                if (this.componentBits.ContainsAll(in allocator, componentBits, containsItems.root) == false ||
-                    this.componentBits.NotContainsAll(in allocator, notContainsItems.root) == false) {
+                if (this.componentBits.ContainsAll(in allocator, componentBits) == false /*||
+                    this.componentBits.NotContainsAll(in allocator, notContainsItems.root) == false*/) {
                     return false;
                 }
                 return true;
 
             }
 
-            public unsafe uint GetReservedSizeInBytes(State* state) {
+            public uint GetReservedSizeInBytes(State* state) {
                 
                 var size = 0u;
                 size += this.components.GetReservedSizeInBytes();

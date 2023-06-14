@@ -2,6 +2,7 @@ namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Mathematics;
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(BitArrayDebugView))]
     public unsafe struct BitArray {
@@ -51,7 +52,7 @@ namespace ME.BECS {
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var ptrOther = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in other.ptr);
             for (var index = 0; index < len; index++) {
-                if ((ptr[index] & ptrOther[index]) != ptr[index]) return false;
+                if ((ptr[index] & ptrOther[index]) != ptrOther[index]) return false;
             }
 
             return true;
@@ -61,14 +62,21 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool ContainsAll(in MemoryAllocator allocator, BitArray other, TempBitArray otherAdd) {
 
-            var len = Bitwise.GetMinLength(other.Length, this.Length);
+            var curLen = Bitwise.GetLength(this.Length);
+            var otherLen = Bitwise.GetLength(other.Length);
+            var otherLenAdd = Bitwise.GetLength(otherAdd.Length);
+            var maxLen = math.max(curLen, math.max(otherLen, otherLenAdd));
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var ptrOther = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in other.ptr);
             var ptrOtherAdd = otherAdd.ptr;
-            for (var index = 0; index < len; index++) {
-                var otherVal = ptrOther[index];
-                if (index < otherAdd.Length) otherVal |= ptrOtherAdd[index];
-                if ((ptr[index] & otherVal) != ptr[index]) return false;
+            for (var index = 0; index < maxLen; ++index) {
+                var vOther = 0UL;
+                var v = (index > curLen ? 0UL : ptr[index]);
+                if (index < otherLen) vOther |= ptrOther[index];
+                if (index < otherLenAdd) vOther |= ptrOtherAdd[index];
+                if ((v & vOther) != vOther) {
+                    return false;
+                }
             }
 
             return true;
@@ -78,11 +86,18 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool ContainsAll(in MemoryAllocator allocator, TempBitArray other) {
 
-            var len = Bitwise.GetMinLength(other.Length, this.Length);
+            var curLen = Bitwise.GetLength(this.Length);
+            var otherLen = Bitwise.GetLength(other.Length);
+            var maxLen = math.max(curLen, otherLen);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var ptrOther = other.ptr;
-            for (var index = 0; index < len; index++) {
-                if ((ptr[index] & ptrOther[index]) != ptr[index]) return false;
+            for (var index = 0; index < maxLen; ++index) {
+                var vOther = 0UL;
+                var v = (index > curLen ? 0UL : ptr[index]);
+                if (index < otherLen) vOther |= ptrOther[index];
+                if ((v & vOther) != vOther) {
+                    return false;
+                }
             }
 
             return true;
@@ -92,11 +107,18 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool NotContainsAll(in MemoryAllocator allocator, TempBitArray other) {
 
-            var len = Bitwise.GetMinLength(other.Length, this.Length);
+            var curLen = Bitwise.GetLength(this.Length);
+            var otherLen = Bitwise.GetLength(other.Length);
+            var maxLen = math.max(curLen, otherLen);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var ptrOther = other.ptr;
-            for (var index = 0; index < len; index++) {
-                if ((ptr[index] & ptrOther[index]) != 0UL) return false;
+            for (var index = 0; index < maxLen; ++index) {
+                var vOther = 0UL;
+                var v = (index > curLen ? 0UL : ptr[index]);
+                if (index < otherLen) vOther |= ptrOther[index];
+                if ((v & vOther) != 0UL) {
+                    return false;
+                }
             }
 
             return true;
@@ -178,21 +200,25 @@ namespace ME.BECS {
         /// <param name="bitmap">The bitmap to union with this instance.</param>
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
-        public void Union(in MemoryAllocator allocator, BitArray bitmap) {
+        public void Union(ref MemoryAllocator allocator, BitArray bitmap) {
+            this.Resize(ref allocator, bitmap.Length > this.Length ? bitmap.Length : this.Length);
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var otherPtr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
-            for (var index = 0; index < len; ++index) {
+            for (var index = 0u; index < len; ++index) {
                 ptr[index] |= otherPtr[index];
             }
         }
 
         [INLINE(256)]
-        public void Union(in MemoryAllocator allocator, TempBitArray bitmap) {
+        public void Union(ref MemoryAllocator allocator, TempBitArray bitmap) {
+            this.Resize(ref allocator, bitmap.Length > this.Length ? bitmap.Length : this.Length);
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var otherPtr = bitmap.ptr;
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
-            for (var index = 0; index < len; ++index) {
+            for (var index = 0u; index < len; ++index) {
                 ptr[index] |= otherPtr[index];
             }
         }
@@ -205,29 +231,21 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, BitArray bitmap) {
+            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var otherPtr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
-            for (var index = 0; index < len; ++index) {
+            for (var index = 0u; index < len; ++index) {
                 ptr[index] &= otherPtr[index];
             }
         }
-
-        /*
-        public void Intersect(in MemoryAllocator allocator, TempBitArray bitmap) {
-            var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
-            var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
-            for (var index = 0; index < len; ++index) {
-                ptr[index] &= bitmap.ptr[index];
-            }
-        }*/
 
         [INLINE(256)]
         public void Remove(in MemoryAllocator allocator, BitArray bitmap) {
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var otherPtr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
-            for (var index = 0; index < len; ++index) {
+            for (var index = 0u; index < len; ++index) {
                 ptr[index] &= ~otherPtr[index];
             }
         }
@@ -237,7 +255,7 @@ namespace ME.BECS {
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var otherPtr = bitmap.ptr;
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
-            for (var index = 0; index < len; ++index) {
+            for (var index = 0u; index < len; ++index) {
                 ptr[index] &= ~otherPtr[index];
             }
         }
@@ -250,7 +268,7 @@ namespace ME.BECS {
         public void Invert(in MemoryAllocator allocator) {
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr);
             var len = Bitwise.GetLength(this.Length);
-            for (var index = 0; index < len; ++index) {
+            for (var index = 0u; index < len; ++index) {
                 ptr[index] = ~ptr[index];
             }
         }

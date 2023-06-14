@@ -34,17 +34,9 @@ namespace ME.BECS {
     }
 
     public static unsafe class JobUtils {
-
-        internal sealed class Destructor {
-            ~Destructor() {
-                JobUtils.CleanUp();
-            }
-        }
-
-        internal static readonly Destructor staticDestructor = new Destructor();
-
-        [INLINE(256)]
+        
         public static void Initialize() {
+            CleanUp();
             JobUtilsArray.singleThreads.Resize((uint)JobsUtility.ThreadIndexCount);
         }
 
