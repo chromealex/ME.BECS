@@ -21,6 +21,8 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var state = ent.World.state;
+            E.IS_IN_TICK(state);
+            
             JobUtils.Lock(ref state->entities.lockIndex);
             {
                 state->entities.Remove(state, ent.id);

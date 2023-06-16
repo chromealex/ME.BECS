@@ -40,6 +40,42 @@ namespace ME.BECS.Tests {
             {
                 using var world = World.Create();
                 var ent = Ent.New();
+                ent.Set(new Test1Component() {
+                    data = 1,
+                });
+                ent.Set(new Test2Component() {
+                    data = 2,
+                });
+                ent.Set(new Test3Component() {
+                    data = 3,
+                });
+                ent.Set(new Test4Component() {
+                    data = 4,
+                });
+                ent.Set(new Test5Component() {
+                    data = 4,
+                });
+                ME.BECS.Batches.Apply(world.state, world.id);
+                Assert.AreEqual(2, world.state->archetypes.list.Count);
+                
+                ent.Remove<TestComponent>();
+
+                ME.BECS.Batches.Apply(world.state, world.id);
+                Assert.AreEqual(2, world.state->archetypes.list.Count);
+                
+                ent.Remove<Test5Component>();
+
+                ME.BECS.Batches.Apply(world.state, world.id);
+                Assert.AreEqual(3, world.state->archetypes.list.Count);
+                
+                ent.Remove<Test5Component>();
+
+                ME.BECS.Batches.Apply(world.state, world.id);
+                Assert.AreEqual(3, world.state->archetypes.list.Count);
+            }
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
                 ent.Set(new TestComponent() {
                     data = 1,
                 });
