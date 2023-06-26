@@ -106,7 +106,7 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public void Dispose() {
-            
+            this.root.Dispose();
         }
 
     }
