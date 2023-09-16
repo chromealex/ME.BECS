@@ -3,13 +3,13 @@ namespace ME.BECS.Addons {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
     [System.Serializable]
-    public struct ObjectReference<T> where T : UnityEngine.Object {
+    public struct RuntimeObjectReference<T> where T : UnityEngine.Object {
 
         public uint id;
         public ushort worldId;
 
         [INLINE(256)]
-        public ObjectReference(T obj, ushort worldId) {
+        public RuntimeObjectReference(T obj, ushort worldId) {
             this.id = 0u;
             this.worldId = worldId;
             RuntimeObjectReference.GetObject(ref this.id, this.worldId, obj);
@@ -18,12 +18,12 @@ namespace ME.BECS.Addons {
         public T Value => RuntimeObjectReference.GetObject<T>(ref this.id, this.worldId, null);
 
         [INLINE(256)]
-        public static implicit operator ObjectReference<T>(T obj) {
-            return new ObjectReference<T>(obj, Context.world.id);
+        public static implicit operator RuntimeObjectReference<T>(T obj) {
+            return new RuntimeObjectReference<T>(obj, Context.world.id);
         }
 
         [INLINE(256)]
-        public static implicit operator T(ObjectReference<T> reference) {
+        public static implicit operator T(RuntimeObjectReference<T> reference) {
             return reference.Value;
         }
 

@@ -9,9 +9,10 @@ namespace ME.BECS.Addons.Editor {
 
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
+            ObjectReferenceRegistry.Initialize();
+            
             var id = property.FindPropertyRelative(nameof(ME.BECS.Addons.ObjectReference<UnityEngine.Object>.id));
-            var worldId = property.FindPropertyRelative(nameof(ME.BECS.Addons.ObjectReference<UnityEngine.Object>.worldId));
-            var obj = RuntimeObjectReference.ReadObject<UnityEngine.Object>(id.uintValue, (ushort)worldId.uintValue);
+            var obj = ObjectReferenceRegistry.GetObjectBySourceId<UnityEngine.Object>(id.uintValue);
             
             var container = new UnityEngine.UIElements.VisualElement();
             var objectField = new ObjectField(property.displayName);
@@ -22,8 +23,7 @@ namespace ME.BECS.Addons.Editor {
             objectField.value = obj;
             objectField.RegisterValueChangedCallback((evt) => {
                 if (evt.newValue == evt.previousValue) return;
-                var pId = 0u;
-                RuntimeObjectReference.GetObject(ref pId, (ushort)worldId.uintValue, evt.newValue);
+                var pId = ObjectReferenceRegistry.Assign(evt.previousValue, evt.newValue);
                 var prop = property.serializedObject.FindProperty(id.propertyPath);
                 prop.serializedObject.Update();
                 id.uintValue = pId;

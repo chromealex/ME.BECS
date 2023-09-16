@@ -5,7 +5,7 @@ namespace ME.BECS.UI {
     [System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct UIComponent : IComponent {
 
-        public ObjectReference<UIEntityView> target;
+        public RuntimeObjectReference<UIEntityView> target;
         public Ent entity;
 
     }

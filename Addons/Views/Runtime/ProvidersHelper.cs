@@ -4,13 +4,13 @@ namespace ME.BECS.Views {
 
     public struct MeshFilterComponent : IComponent {
 
-        public ME.BECS.Addons.ObjectReference<UnityEngine.Mesh> mesh;
+        public ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Mesh> mesh;
 
     }
 
     public struct MeshRendererComponent : IComponent {
 
-        public ME.BECS.Addons.ObjectReference<UnityEngine.Material> material;
+        public ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material> material;
 
     }
 
@@ -42,12 +42,12 @@ namespace ME.BECS.Views {
             {
                 // Get mesh
                 if (prefab.TryGetComponent<UnityEngine.MeshFilter>(out var filter) == true) {
-                    ent.Get<MeshFilterComponent>().mesh = new ME.BECS.Addons.ObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
+                    ent.Get<MeshFilterComponent>().mesh = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
                 }
 
                 // Get material
                 if (prefab.TryGetComponent<UnityEngine.MeshRenderer>(out var renderer) == true) {
-                    ent.Get<MeshRendererComponent>().material = new ME.BECS.Addons.ObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
+                    ent.Get<MeshRendererComponent>().material = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
                 }
 
                 for (int i = 0; i < prefab.transform.childCount; ++i) {

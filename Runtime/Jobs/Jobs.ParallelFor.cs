@@ -12,6 +12,14 @@ namespace ME.BECS.Jobs {
 
     public static unsafe class ICommandBufferJobParallelForExtensions {
         
+        public static void EarlyJobInit<T>() where T : struct, IJobParallelForCommandBuffer => ICommandBufferJobParallelForExtensions.JobProcess<T>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T>() where T : struct, IJobParallelForCommandBuffer {
+            ICommandBufferJobParallelForExtensions.JobProcess<T>.Initialize();
+            System.IntPtr reflectionData = ICommandBufferJobParallelForExtensions.JobProcess<T>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
         public static JobHandle Schedule<T>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle inputDeps = default) where T : struct, IJobParallelForCommandBuffer {
 
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;
@@ -22,7 +30,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
             
         }
@@ -37,7 +45,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
             
         }
@@ -51,13 +59,13 @@ namespace ME.BECS.Jobs {
 
         internal struct JobProcess<T> where T : struct, IJobParallelForCommandBuffer {
 
-            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T>>();
+            public static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T>>();
 
-            public static System.IntPtr Initialize() {
+            [Unity.Burst.BurstDiscardAttribute]
+            public static void Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T>), typeof(T), (ExecuteJobFunction)Execute);
                 }
-                return jobReflectionData.Data;
             }
 
             private delegate void ExecuteJobFunction(ref JobData<T> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex);
