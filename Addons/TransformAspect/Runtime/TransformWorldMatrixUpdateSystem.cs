@@ -7,7 +7,7 @@ namespace ME.BECS.TransformAspect {
     public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
         
         [BURST]
-        private struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
+        public struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
 
             public State* state;
             
@@ -20,7 +20,7 @@ namespace ME.BECS.TransformAspect {
         }
 
         public void OnUpdate(ref SystemContext context) {
-
+            
             // update roots
             var childHandle = API.Query(in context).ScheduleParallelFor<CalculateRootsJob, TransformAspect>(new CalculateRootsJob() {
                 state = context.world.state,

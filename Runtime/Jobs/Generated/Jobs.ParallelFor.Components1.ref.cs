@@ -37,34 +37,7 @@ namespace ME.BECS.Jobs {
         void Execute(ref T0 c0);
     }
 
-    public static class Test {
-
-        public struct TC : IComponent {}
-
-        public struct Job : IJobParallelForComponents<TC> {
-
-
-            public void Execute(ref TC c0) {
-                
-            }
-
-        }
-
-        static unsafe Test() {
-            var j = new Job();
-            CommandBuffer* cb = null;
-            j.ScheduleParallelFor<Job, TC>(cb, 64);
-        }
-        
-    }
-    
     public static unsafe partial class JobParallelForComponentsExtensions {
-
-        public static void ECSEarlyJobInit<T, T0>()
-            where T0 : unmanaged, IComponent
-            where T : struct, IJobParallelForComponents<T0> {
-            JobProcess<T, T0>.Initialize();
-        }
         
         public static JobHandle ScheduleParallelFor<T, T0>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
             where T0 : unmanaged, IComponent

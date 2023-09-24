@@ -9,7 +9,9 @@ namespace ME.BECS {
         Ent ent { get; set; }
 
     }
-
+    
+    public interface IJobParallelForAspect {}
+    
     public unsafe struct RefRW<T> : IAspectData where T : unmanaged, IComponent {
 
         [NativeDisableUnsafePtrRestriction]

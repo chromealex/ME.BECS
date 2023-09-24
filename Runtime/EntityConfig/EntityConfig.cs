@@ -10,8 +10,8 @@ namespace ME.BECS {
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
         public ComponentsStorage<IComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IComponentStatic>() };
 
-        public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u) {
-            return new UnsafeEntityConfig(this, id);
+        public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u, Ent ent = default) {
+            return new UnsafeEntityConfig(this, id, ent);
         }
         
         public void Sync() {

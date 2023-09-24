@@ -125,14 +125,14 @@ namespace ME.BECS {
                     this.typeIds[i] = typeId;
                     offset += elemSize;
                 }
-                this.data = (byte*)UnsafeUtility.Malloc(size, 4, Allocator.Persistent);
+                this.data = (byte*)_make(size);
 
                 for (int i = 0; i < components.Length; ++i) {
                     var comp = components[i];
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    UnsafeUtility.MemCpy(this.data + this.offsets[i], (void*)ptr, elemSize);
+                    Cuts._memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
                     gcHandle.Free();
                 }
 
@@ -153,7 +153,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Dispose() {
 
-                UnsafeUtility.Free(this.data, Allocator.Persistent);
+                _free(this.data);
                 _freeArray(this.offsets, this.count);
                 _freeArray(this.typeIds, this.count);
 
@@ -195,20 +195,30 @@ namespace ME.BECS {
         private readonly UnsafeEntityConfig* baseConfig;
         private readonly Data<IConfigComponent> data;
         private readonly SharedData<IConfigComponentShared> dataShared;
-        private readonly Data<IComponentStatic> dataStatic;
         private readonly uint id;
+        private readonly Ent staticDataEnt;
 
         [INLINE(256)]
-        public UnsafeEntityConfig(EntityConfig config, uint id = 0u) {
+        public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default) {
             
             this.id = id > 0u ? id : EntityConfigRegistry.Register(config, out _);
             this.data = new Data<IConfigComponent>(config.data.components);
             this.dataShared = new SharedData<IConfigComponentShared>(config.sharedData.components);
-            this.dataStatic = new Data<IComponentStatic>(config.staticData.components);
-
+            this.staticDataEnt = staticDataEnt;
+            var state = staticDataEnt.World.state;
+            
             this.baseConfig = null;
             if (config.baseConfig != null) {
-                this.baseConfig = _make(new UnsafeEntityConfig(config.baseConfig));
+                this.baseConfig = _make(new UnsafeEntityConfig(config.baseConfig, staticDataEnt: staticDataEnt));
+            }
+
+            for (int i = 0; i < config.staticData.components.Length; ++i) {
+                var comp = config.staticData.components[i];
+                StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
+                var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
+                var ptr = gcHandle.AddrOfPinnedObject();
+                state->batches.Set(staticDataEnt.id, staticDataEnt.gen, typeId, (void*)ptr, staticDataEnt.World.state);
+                gcHandle.Free();
             }
 
         }
@@ -252,7 +262,6 @@ namespace ME.BECS {
 
             this.data.Dispose();
             this.dataShared.Dispose();
-            this.dataStatic.Dispose();
             if (this.baseConfig != null) this.baseConfig->Dispose();
 
         }
@@ -264,15 +273,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public bool HasStatic<T>() where T : unmanaged, IComponentStatic {
-            
-            if (this.dataStatic.Has<T>() == true) {
+
+            var state = this.staticDataEnt.World.state;
+            if (state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen) == true) {
                 return true;
             }
 
-            if (this.baseConfig != null) {
-                return this.baseConfig->HasStatic<T>();
-            }
-            
             return false;
 
         }
@@ -280,15 +286,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public T ReadStatic<T>() where T : unmanaged, IComponentStatic {
 
-            if (this.dataStatic.TryRead<T>(out var data) == true) {
-                return data;
-            }
-
-            if (this.baseConfig != null) {
-                return this.baseConfig->ReadStatic<T>();
-            }
-            
-            return default;
+            var state = this.staticDataEnt.World.state;
+            return state->components.Read<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen);
 
         }
 

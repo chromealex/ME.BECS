@@ -9,7 +9,7 @@ namespace ME.BECS {
                 return config.ReadStatic<T>();
             }
 
-            return default;
+            return StaticTypes<T>.defaultValue;
 
         }
 
@@ -20,7 +20,7 @@ namespace ME.BECS {
                 return config.HasStatic<T>();
             }
 
-            return default;
+            return false;
 
         }
 

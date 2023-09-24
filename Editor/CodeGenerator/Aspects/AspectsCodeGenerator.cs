@@ -94,8 +94,18 @@ ref var aspect = ref world.InitializeAspect<{strType}>();
 }}";
                     content.Add(str);
                 }
-            }
+                
+                var allJobs = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.IJobParallelForAspect>();
+                foreach (var job in allJobs) {
+                    if (this.IsValidTypeForAssembly(job) == false) continue;
+                    if (job.IsPublic == false || job.IsInterface == true) continue;
+                    var typeStr = GetTypeName(job);
+                    var str = $"//JobEarlyInitGenerator.Init<{typeStr}, {strType}>();";
+                    content.Add(str);
+                }
 
+            }
+            
             var def = new CodeGenerator.MethodDefinition() {
                 methodName = "AspectsConstruct",
                 type = "World",

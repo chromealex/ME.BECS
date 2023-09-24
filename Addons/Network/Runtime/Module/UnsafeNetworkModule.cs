@@ -94,7 +94,7 @@ namespace ME.BECS.Network {
 
     }
 
-    public delegate JobHandle NetworkMethodDelegate(in InputData data, JobHandle dependsOn);
+    public delegate void NetworkMethodDelegate(in InputData data, ref SystemContext context);
 
     [System.AttributeUsageAttribute(System.AttributeTargets.Method)]
     public class NetworkMethodAttribute : AOT.MonoPInvokeCallbackAttribute {
@@ -169,7 +169,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Call(in NetworkPackage package, in World world, JobHandle dependsOn) {
+            public JobHandle Call(in NetworkPackage package, float dt, in World world, JobHandle dependsOn) {
                 
                 var idx = package.methodId - 1u;
                 if (idx >= this.methods.Length) return dependsOn;
@@ -177,7 +177,9 @@ namespace ME.BECS.Network {
                 ref var item = ref this.methods[this.state, idx];
                 var func = Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)item.methodPtr);
                 var input = new InputData(package, in world);
-                dependsOn = func.Invoke(input, dependsOn);
+                var context = SystemContext.Create(dt, world, dependsOn);
+                func.Invoke(input, ref context);
+                dependsOn = context.dependsOn;
                 return dependsOn;
 
             }
@@ -283,7 +285,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Tick(ulong tick, in World world, Data* data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, float dt, in World world, Data* data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
                 if (events.isCreated == true && events.Count > 0u) {
@@ -292,7 +294,7 @@ namespace ME.BECS.Network {
                     for (uint i = 0u; i < events.Count; ++i) {
 
                         var evt = events[in allocator, i];
-                        dependsOn = data->methodsStorage.Call(in evt, in world, dependsOn);
+                        dependsOn = data->methodsStorage.Call(in evt, dt, in world, dependsOn);
 
                     }
                     
@@ -591,10 +593,10 @@ namespace ME.BECS.Network {
             }
 
             [INLINE(256)]
-            public JobHandle Tick(ulong tick, in World world, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, float dt, in World world, JobHandle dependsOn) {
 
                 dependsOn = this.statesStorage.Tick(tick, in world, this.selfPtr, dependsOn);
-                dependsOn = this.eventsStorage.Tick(tick, in world, this.selfPtr, dependsOn);
+                dependsOn = this.eventsStorage.Tick(tick, dt, in world, this.selfPtr, dependsOn);
                 
                 return dependsOn;
 
@@ -817,7 +819,7 @@ namespace ME.BECS.Network {
                     {
                         // Apply events for this tick
                         //dependsOn.Complete();
-                        dependsOn = this.data->Tick(tick, in world, dependsOn);
+                        dependsOn = this.data->Tick(tick, deltaTime, in world, dependsOn);
                     }
                     
                     //UnityEngine.Debug.LogWarning("---- BEGIN WORLD TICK ----");

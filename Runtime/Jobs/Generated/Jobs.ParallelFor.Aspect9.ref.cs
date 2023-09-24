@@ -39,6 +39,14 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class JobParallelForAspectExtensions_1 {
         
+        public static void JobEarlyInitialize<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>() where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5,T6,T7,T8> => JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>.Initialize();
+        
+        private static System.IntPtr GetReflectionData<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>() where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5,T6,T7,T8> {
+            JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>.Initialize();
+            System.IntPtr reflectionData = JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
         public static JobHandle ScheduleParallelFor<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect
             where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5,T6,T7,T8> {
@@ -52,7 +60,7 @@ namespace ME.BECS.Jobs {
                 c0 = buffer->state->aspectsStorage.Initialize<T0>(buffer->state),c1 = buffer->state->aspectsStorage.Initialize<T1>(buffer->state),c2 = buffer->state->aspectsStorage.Initialize<T2>(buffer->state),c3 = buffer->state->aspectsStorage.Initialize<T3>(buffer->state),c4 = buffer->state->aspectsStorage.Initialize<T4>(buffer->state),c5 = buffer->state->aspectsStorage.Initialize<T5>(buffer->state),c6 = buffer->state->aspectsStorage.Initialize<T6>(buffer->state),c7 = buffer->state->aspectsStorage.Initialize<T7>(buffer->state),c8 = buffer->state->aspectsStorage.Initialize<T8>(buffer->state),
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), GetReflectionData<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
 
         }
@@ -71,13 +79,12 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect
             where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5,T6,T7,T8> {
 
-            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>>();
+            public static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>>();
 
-            public static System.IntPtr Initialize() {
+            public static void Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>), typeof(T), (ExecuteJobFunction)Execute);
                 }
-                return jobReflectionData.Data;
             }
 
             private delegate void ExecuteJobFunction(ref JobData<T, T0,T1,T2,T3,T4,T5,T6,T7,T8> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex);
