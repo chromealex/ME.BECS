@@ -50,12 +50,6 @@ namespace ME.BECS {
 
         }
 
-        #if UNITY_2023_1_OR_NEWER
-        private const Allocator ALLOCATOR = Allocator.Domain;
-        #else
-        private const Allocator ALLOCATOR = Allocator.Persistent;
-        #endif
-        
         private const uint MAX_CAPACITY = 1000u;
         private const int MAX_ITEMS_CAPACITY = 50;
         private static readonly Unity.Burst.SharedStatic<NativeArray<ThreadItem>> itemsPerThread = Unity.Burst.SharedStatic<NativeArray<ThreadItem>>.GetOrCreate<Pools>();

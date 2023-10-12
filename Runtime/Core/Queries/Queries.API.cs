@@ -54,7 +54,7 @@ namespace ME.BECS {
             
             public void Execute() {
 
-                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, Unity.Collections.Allocator.Persistent);
+                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_PERSISTENT);
 
             }
 

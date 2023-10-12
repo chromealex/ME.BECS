@@ -1,5 +1,6 @@
 namespace ME.BECS {
 
+    using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
     using UnityEngine.Scripting;
@@ -12,9 +13,9 @@ namespace ME.BECS {
         [AOT.MonoPInvokeCallbackAttribute(typeof(FunctionPointerDelegate))]
         public static void CallNoBurst(void* systemData, ref SystemContext context) {
 
-            UnsafeUtility.CopyPtrToStructure(systemData, out T tempData);
+            _ptrToStruct(systemData, out T tempData);
             tempData.OnAwake(ref context);
-            UnsafeUtility.CopyStructureToPtr(ref tempData, systemData);
+            _structToPtr(ref tempData, systemData);
 
         }
 
@@ -36,9 +37,9 @@ namespace ME.BECS {
         [AOT.MonoPInvokeCallbackAttribute(typeof(FunctionPointerDelegate))]
         public static void Call(void* systemData, ref SystemContext context) {
 
-            UnsafeUtility.CopyPtrToStructure(systemData, out T tempData);
+            _ptrToStruct(systemData, out T tempData);
             tempData.OnAwake(ref context);
-            UnsafeUtility.CopyStructureToPtr(ref tempData, systemData);
+            _structToPtr(ref tempData, systemData);
 
         }
         

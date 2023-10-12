@@ -1,12 +1,10 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using ME.BECS.Editor.Extensions.SubclassSelector;
 using Unity.Collections;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
+using static ME.BECS.Cuts;
 
 namespace ME.BECS.Editor {
 
@@ -572,9 +570,9 @@ namespace ME.BECS.Editor {
 
         public static bool StructCopy<T>(T data, T data2) where T : unmanaged {
             var size = sizeof(T);
-            var addr1 = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref data);
-            var addr2 = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref data2);
-            return Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCmp(addr1, addr2, size) == 0;
+            var addr1 = _address(ref data);
+            var addr2 = _address(ref data2);
+            return _memcmp(addr1, addr2, size) == 0;
         }
 
         public static bool StructsAreEqual(object s1, object s2) {

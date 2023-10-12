@@ -50,7 +50,7 @@ namespace ME.BECS {
                     return 0u;
                 }
 
-                var currentBits = new TempBitArray(in state->allocator, this.componentBits, Unity.Collections.Allocator.Temp);
+                var currentBits = new TempBitArray(in state->allocator, this.componentBits, Constants.ALLOCATOR_TEMP);
                 currentBits.Union(addItems.root);
                 currentBits.Remove(removeItems.root);
                 

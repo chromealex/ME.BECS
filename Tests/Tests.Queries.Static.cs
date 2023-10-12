@@ -260,7 +260,7 @@ namespace ME.BECS.Tests {
 
                 {
                     var job = new Job() {
-                        sum = new Unity.Collections.NativeReference<int>(0, Unity.Collections.Allocator.TempJob),
+                        sum = new Unity.Collections.NativeReference<int>(0, Constants.ALLOCATOR_TEMPJOB),
                     };
                     var handle = this.query.Schedule(job, context);
                     context.SetDependency(handle);
@@ -271,7 +271,7 @@ namespace ME.BECS.Tests {
                 }
                 {
                     var job = new Job() {
-                        sum = new Unity.Collections.NativeReference<int>(0, Unity.Collections.Allocator.TempJob),
+                        sum = new Unity.Collections.NativeReference<int>(0, Constants.ALLOCATOR_TEMPJOB),
                     };
                     var handle = this.query.Schedule(job, context);
                     context.SetDependency(handle);
@@ -282,7 +282,7 @@ namespace ME.BECS.Tests {
                 }
                 {
                     var job = new JobComponents() {
-                        sum = new Unity.Collections.NativeReference<int>(0, Unity.Collections.Allocator.TempJob),
+                        sum = new Unity.Collections.NativeReference<int>(0, Constants.ALLOCATOR_TEMPJOB),
                     };
                     var handle = this.query.Schedule<JobComponents, TestComponent>(job, context);
                     context.SetDependency(handle);

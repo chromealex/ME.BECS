@@ -2,6 +2,7 @@ using Unity.Jobs;
 
 namespace ME.BECS {
 
+    using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
     public unsafe struct UIntListHash : IIsCreated {
@@ -236,8 +237,8 @@ namespace ME.BECS {
             uint[] dst,
             int dstIndex,
             uint length) {
-            System.Runtime.InteropServices.GCHandle gcHandle = System.Runtime.InteropServices.GCHandle.Alloc((object) dst, System.Runtime.InteropServices.GCHandleType.Pinned);
-            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy((void*) ((System.IntPtr) (void*) gcHandle.AddrOfPinnedObject() + dstIndex * Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<uint>()), (void*) ((System.IntPtr) src.GetUnsafePtr(in allocator) + srcIndex * Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<uint>()), (long) (length * Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<uint>()));
+            System.Runtime.InteropServices.GCHandle gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(dst, System.Runtime.InteropServices.GCHandleType.Pinned);
+            _memcpy((void*)((System.IntPtr)src.GetUnsafePtr(in allocator) + srcIndex * TSize<uint>.sizeInt), (void*)((System.IntPtr) (void*)gcHandle.AddrOfPinnedObject() + dstIndex * TSize<uint>.sizeInt), length * TSize<uint>.size);
             gcHandle.Free();
         }
 

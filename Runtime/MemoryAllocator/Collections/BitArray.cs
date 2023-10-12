@@ -1,5 +1,6 @@
 namespace ME.BECS {
     
+    using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Mathematics;
@@ -40,7 +41,7 @@ namespace ME.BECS {
             this.Length = source.Length;
             var sourcePtr = MemoryAllocatorExt.GetUnsafePtr(in allocator, source.ptr);
             MemoryAllocatorExt.ValidateConsistency(allocator);
-            UnsafeUtility.MemCpy(ptr, sourcePtr, sizeInBytes);
+            _memcpy(sourcePtr, ptr, sizeInBytes);
             MemoryAllocatorExt.ValidateConsistency(allocator);
 
         }

@@ -1,6 +1,7 @@
 //#define MEMORY_ALLOCATOR_BOUNDS_CHECK
 //#define BURST
 
+using static ME.BECS.Cuts;
 using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -175,7 +176,7 @@ namespace ME.BECS {
         public static MemZone* ZmCreateZoneEmpty(int size) {
 
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = (MemZone*)UnsafeUtility.Malloc(size, TAlign<byte>.alignInt, Allocator.Persistent);
+            var zone = (MemZone*)_make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_PERSISTENT);
             return zone;
             
         }
@@ -187,10 +188,7 @@ namespace ME.BECS {
         public static MemZone* ZmCreateZone(int size) {
 
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = (MemZone*)UnsafeUtility.Malloc(size, TAlign<byte>.alignInt, Allocator.Persistent);
-            
-            //UnsafeUtility.MemClear(zone, size);
-            
+            var zone = (MemZone*)_make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_PERSISTENT);
             zone->size = size;
             MemoryAllocator.ZmClearZone(zone);
             
@@ -207,7 +205,7 @@ namespace ME.BECS {
             var newZone = MemoryAllocator.ZmCreateZone(newSize);
             var extra = newZone->size - zone->size;
 
-            UnsafeUtility.MemCpy(newZone, zone, zone->size);
+            _memcpy(zone, newZone, zone->size);
 
             newZone->size = zone->size + extra;
 
@@ -245,7 +243,7 @@ namespace ME.BECS {
         #endif
         [INLINE(256)]
         public static void ZmFreeZone(MemZone* zone) {
-            UnsafeUtility.Free(zone, Allocator.Persistent);
+            _free(zone, Constants.ALLOCATOR_PERSISTENT);
         }
 
         #if BURST

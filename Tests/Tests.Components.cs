@@ -83,7 +83,7 @@ namespace ME.BECS.Tests {
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = 10;
                 using var world = World.Create(props);
-                var arr = new Unity.Collections.NativeArray<Ent>(amount, Unity.Collections.Allocator.TempJob);
+                var arr = new Unity.Collections.NativeArray<Ent>(amount, Constants.ALLOCATOR_TEMPJOB);
                 for (int i = 0; i < amount; ++i) {
                     var ent = Ent.New();
                     arr[i] = ent;
@@ -151,7 +151,7 @@ namespace ME.BECS.Tests {
             {
                 var amount = 10_000;
                 using var world = World.Create();
-                var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(amount, Unity.Collections.Allocator.Temp);
+                var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(amount, Constants.ALLOCATOR_TEMP);
                 for (int i = 0; i < amount; ++i) {
                     var ent = Ent.New();
                     ent.Set(new TestComponent() {
@@ -179,7 +179,7 @@ namespace ME.BECS.Tests {
             {
                 var amount = 10_000;
                 using var world = World.Create();
-                var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(amount, Unity.Collections.Allocator.Temp);
+                var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(amount, Constants.ALLOCATOR_TEMP);
                 for (int j = 0; j < 2; ++j) {
                     for (int i = 0; i < amount; ++i) {
                         var ent = Ent.New();

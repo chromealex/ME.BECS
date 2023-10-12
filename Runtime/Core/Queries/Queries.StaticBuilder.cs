@@ -423,7 +423,7 @@ namespace ME.BECS {
             public void Validate(State* state) {
 
                 var queryData = new QueryData() {
-                    archetypesBits = new TempBitArray(in state->allocator, state->archetypes.allArchetypesForQuery, Unity.Collections.Allocator.Temp),
+                    archetypesBits = new TempBitArray(in state->allocator, state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP),
                     minElementsPerStep = this.minElementsPerStep,
                     steps = this.steps,
                 };

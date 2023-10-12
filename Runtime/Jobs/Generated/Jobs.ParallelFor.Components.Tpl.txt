@@ -1,5 +1,6 @@
 namespace ME.BECS.Jobs {
     
+    using static Cuts;
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
@@ -52,7 +53,7 @@ namespace ME.BECS.Jobs {
                 {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state),]}
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T, {count(,)[T#i#]}>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, {count(,)[T#i#]}>.Initialize(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
 
         }

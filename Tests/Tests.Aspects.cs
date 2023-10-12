@@ -107,7 +107,7 @@ namespace ME.BECS.Tests {
             parameters.stateProperties.entitiesCapacity = count;
             var world = World.Create(parameters);
 
-            var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)count, Unity.Collections.Allocator.Persistent);
+            var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)count, Constants.ALLOCATOR_PERSISTENT);
             for (int i = 0; i < count; ++i) {
                 var ent = Ent.New(world);
                 list.Add(ent);
@@ -138,7 +138,7 @@ namespace ME.BECS.Tests {
             parameters.stateProperties.entitiesCapacity = count;
             var world = World.Create(parameters);
 
-            var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)count, Unity.Collections.Allocator.Persistent);
+            var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)count, Constants.ALLOCATOR_PERSISTENT);
             for (int i = 0; i < count; ++i) {
                 var ent = Ent.New(world);
                 list.Add(ent);

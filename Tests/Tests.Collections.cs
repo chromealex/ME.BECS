@@ -8,7 +8,7 @@ namespace ME.BECS.Tests {
         public void NotContainsAll() {
             
             {
-                var bits = new TempBitArray(10, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(10, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(4, true);
                 bits.Set(5, true);
                 bits.Set(6, true);
@@ -23,7 +23,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.NotContainsAll(in w.state->allocator, bits));
             }
             {
-                var bits = new TempBitArray(10, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(10, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(3, true);
                 bits.Set(5, true);
                 bits.Set(6, true);
@@ -38,7 +38,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.NotContainsAll(in w.state->allocator, bits) == false);
             }
             {
-                var bits = new TempBitArray(200, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(200, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(3, true);
                 bits.Set(5, true);
                 bits.Set(6, true);
@@ -60,7 +60,7 @@ namespace ME.BECS.Tests {
         public void ContainsAll() {
 
             {
-                var bits = new TempBitArray(200, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(200, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(1, true);
                 bits.Set(2, true);
                 bits.Set(3, true);
@@ -77,7 +77,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.ContainsAll(in w.state->allocator, bits));
             }
             {
-                var bits = new TempBitArray(200, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(200, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(1, true);
                 bits.Set(2, true);
 
@@ -91,7 +91,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.ContainsAll(in w.state->allocator, bits));
             }
             {
-                var bits = new TempBitArray(200, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(200, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(1, true);
                 bits.Set(2, true);
                 bits.Set(180, true);
@@ -106,7 +106,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.ContainsAll(in w.state->allocator, bits) == false);
             }
             {
-                var bits = new TempBitArray(10, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(10, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(1, true);
                 bits.Set(2, true);
 
@@ -120,7 +120,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.ContainsAll(in w.state->allocator, bits));
             }
             {
-                var bits = new TempBitArray(10, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(10, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(1, true);
                 bits.Set(2, true);
 
@@ -138,7 +138,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.ContainsAll(in w.state->allocator, bitsOther, bits));
             }
             {
-                var bits = new TempBitArray(200, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(200, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(1, true);
                 bits.Set(2, true);
                 bits.Set(180, true);
@@ -158,7 +158,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(bits2.ContainsAll(in w.state->allocator, bitsOther, bits) == false);
             }
             {
-                var bits = new TempBitArray(100, allocator: Unity.Collections.Allocator.Temp);
+                var bits = new TempBitArray(100, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Set(24, true);
                 bits.Set(25, true);
                 bits.Set(27, true);
@@ -181,7 +181,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void Intersect() {
 
-            var bits = new TempBitArray(100, allocator: Unity.Collections.Allocator.Temp);
+            var bits = new TempBitArray(100, allocator: Constants.ALLOCATOR_TEMP);
             bits.Set(1, true);
             bits.Set(2, true);
             bits.Set(3, true);
@@ -205,7 +205,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void Union() {
 
-            var bits = new TempBitArray(100, allocator: Unity.Collections.Allocator.Temp);
+            var bits = new TempBitArray(100, allocator: Constants.ALLOCATOR_TEMP);
             bits.Set(1, true);
             bits.Set(2, true);
             bits.Set(3, true);
@@ -230,7 +230,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void Remove() {
 
-            var bits = new TempBitArray(100, allocator: Unity.Collections.Allocator.Temp);
+            var bits = new TempBitArray(100, allocator: Constants.ALLOCATOR_TEMP);
             bits.Set(1, true);
             bits.Set(2, true);
             bits.Set(3, true);

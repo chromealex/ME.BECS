@@ -396,7 +396,7 @@ namespace ME.BECS.Network {
 
                 if (tick % this.properties.copyPerTick == 0u) {
                     
-                    var tempData = new Unity.Collections.NativeReference<System.IntPtr>(Unity.Collections.Allocator.Persistent);
+                    var tempData = new Unity.Collections.NativeReference<System.IntPtr>(Constants.ALLOCATOR_PERSISTENT);
                     var count = (int)data->connectedWorld.state->allocator.zonesListCount;
                     dependsOn = new CopyStatePrepareJob() {
                         data = data,

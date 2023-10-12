@@ -17,15 +17,15 @@ namespace ME.BECS {
         public bool isCreated => this.ptr != null;
 
         [INLINE(256)]
-        public TempBitArray(uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.TempJob) {
+        public TempBitArray(uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
 
             var sizeInBytes = Bitwise.AlignULongBits(length);
             this.allocator = allocator;
-            this.ptr = (ulong*)UnsafeUtility.Malloc(sizeInBytes, TAlign<ulong>.alignInt, this.allocator);
+            this.ptr = (ulong*)_make(sizeInBytes, TAlign<ulong>.alignInt, this.allocator);
             this.Length = length;
 
             if (clearOptions == ClearOptions.ClearMemory) {
-                UnsafeUtility.MemClear(this.ptr, sizeInBytes);
+                _memclear(this.ptr, sizeInBytes);
             }
         }
 
@@ -34,7 +34,7 @@ namespace ME.BECS {
 
             var newArr = new TempBitArray(bitmap.Length, ClearOptions.UninitializedMemory, unityAllocator);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
-            UnsafeUtility.MemCpy(newArr.ptr, ptr, Bitwise.AlignULongBits(bitmap.Length));
+            _memcpy(ptr, newArr.ptr, Bitwise.AlignULongBits(bitmap.Length));
             this = newArr;
             
         }
@@ -44,8 +44,8 @@ namespace ME.BECS {
 
             if (newLength > this.Length) {
                 var newArr = new TempBitArray(newLength, ClearOptions.ClearMemory, allocator);
-                UnsafeUtility.MemCpy(newArr.ptr, this.ptr, Bitwise.AlignULongBits(this.Length));
-                UnsafeUtility.Free(this.ptr, this.allocator);
+                _memcpy(this.ptr, newArr.ptr, Bitwise.AlignULongBits(this.Length));
+                _free(this.ptr, this.allocator);
                 this = newArr;
             }
             
@@ -241,7 +241,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            UnsafeUtility.Free(this.ptr, this.allocator);
+            _free(this.ptr, this.allocator);
             this = default;
 
         }
@@ -249,7 +249,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public UnsafeList<uint> GetTrueBitsTemp() {
 
-            var trueBits = new UnsafeList<uint>((int)this.Length, Unity.Collections.Allocator.Temp);
+            var trueBits = new UnsafeList<uint>((int)this.Length, Constants.ALLOCATOR_TEMP);
             for (var i = 0; i < this.Length; ++i) {
                 var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
                 if ((val & (0x1ul << (i % TempBitArray.BITS_IN_ULONG))) > 0) {

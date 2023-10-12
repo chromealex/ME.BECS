@@ -20,7 +20,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
 
-            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
             
         }
@@ -33,7 +33,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
 
-            var parameters = new JobsUtility.JobScheduleParameters(UnsafeUtility.AddressOf(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
             
         }

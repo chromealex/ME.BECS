@@ -201,7 +201,7 @@ namespace ME.BECS {
             } else if (this.parentIndex == 3u) {
                 handle = JobHandle.CombineDependencies(this.parents[0].data->dependsOn, this.parents[1].data->dependsOn, this.parents[2].data->dependsOn);
             } else if (this.parentIndex > 3u) {
-                using var list = new Unity.Collections.NativeList<JobHandle>((int)this.parentIndex, Unity.Collections.Allocator.Temp);
+                using var list = new Unity.Collections.NativeList<JobHandle>((int)this.parentIndex, Constants.ALLOCATOR_TEMP);
                 for (uint i = 0; i < this.parentIndex; ++i) {
                     list.Add(this.parents[i].data->dependsOn);
                 }

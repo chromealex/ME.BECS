@@ -94,7 +94,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static uint Increment(ref uint value) {
-            return (uint)System.Threading.Interlocked.Increment(ref UnsafeUtility.As<uint, int>(ref value));
+            return (uint)System.Threading.Interlocked.Increment(ref _as<uint, int>(ref value));
         }
 
         [INLINE(256)]
@@ -104,7 +104,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static uint Decrement(ref uint value) {
-            return (uint)System.Threading.Interlocked.Decrement(ref UnsafeUtility.As<uint, int>(ref value));
+            return (uint)System.Threading.Interlocked.Decrement(ref _as<uint, int>(ref value));
         }
 
         [INLINE(256)]
@@ -124,7 +124,7 @@ namespace ME.BECS {
             do {
                 initialValue = (int)value;
                 computedValue = initialValue - (int)count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref UnsafeUtility.As<uint, int>(ref value), computedValue, initialValue));
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref value), computedValue, initialValue));
         }
 
         [INLINE(256)]
@@ -134,7 +134,7 @@ namespace ME.BECS {
             do {
                 initialValue = (int)value;
                 computedValue = initialValue - count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref UnsafeUtility.As<uint, int>(ref value), computedValue, initialValue));
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref value), computedValue, initialValue));
         }
 
         [INLINE(256)]

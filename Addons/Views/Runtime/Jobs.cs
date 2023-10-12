@@ -285,7 +285,7 @@ namespace ME.BECS.Views {
             public void Execute() {
                 
                 var entitiesCapacity = this.connectedWorld.state->entities.Capacity;
-                this.viewsModuleData->renderingOnSceneBits.Resize(entitiesCapacity, Allocator.Persistent);
+                this.viewsModuleData->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT);
                 if (entitiesCapacity > this.viewsModuleData->renderingOnSceneEntToPrefabId.Length) this.viewsModuleData->renderingOnSceneEntToPrefabId.Resize(ref this.state->allocator, entitiesCapacity);
                 if (entitiesCapacity > this.viewsModuleData->toRemove.Capacity) this.viewsModuleData->toRemove.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->toAdd.Capacity) this.viewsModuleData->toAdd.Capacity = (int)entitiesCapacity;

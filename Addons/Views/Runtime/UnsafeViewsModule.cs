@@ -260,17 +260,17 @@ namespace ME.BECS.Views {
                 renderingOnScene = new List<SceneInstanceInfo>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyState = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
-                renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
-                renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: Allocator.Persistent),
+                renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: Constants.ALLOCATOR_PERSISTENT),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneRenderIndexToEnt = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneEntToPrefabId = new MemArray<uint>(ref allocator, entitiesCapacity),
-                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
-                toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
-                toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
-                dirty = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
-                toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
-                toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Allocator.Persistent),
+                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                dirty = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
             };
 
         }
@@ -306,7 +306,7 @@ namespace ME.BECS.Views {
         public static void RegisterProviderCallbacks(uint providerId, ProviderInstantiateView instantiateView, ProviderDestroyView destroyView) {
 
             if (registeredProviders.Data.IsCreated == false) {
-                registeredProviders.Data = new UnsafeList<ProviderInfo>((int)providerId + 1, Allocator.Domain);
+                registeredProviders.Data = new UnsafeList<ProviderInfo>((int)providerId + 1, Constants.ALLOCATOR_DOMAIN);
             }
             registeredProviders.Data.Resize((int)providerId + 1, NativeArrayOptions.ClearMemory);
 

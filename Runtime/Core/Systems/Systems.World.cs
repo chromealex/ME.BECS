@@ -77,7 +77,7 @@ namespace ME.BECS {
             
             var address = world.id;
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
-                var systemAddr = _address(ref rootGroup.GetSystem<T>(out var found));
+                var systemAddr = _addressT(ref rootGroup.GetSystem<T>(out var found));
                 if (found == false) throw E.NOT_FOUND(typeof(T).Name);
                 return ref _ref(systemAddr);
             }

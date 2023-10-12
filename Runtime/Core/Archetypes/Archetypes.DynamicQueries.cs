@@ -135,7 +135,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                var temp = new TempBitArray(this.state->archetypes.archetypesWithTypeIdBits.Length, allocator: Unity.Collections.Allocator.Temp);
+                var temp = new TempBitArray(this.state->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
                 if (this.typeId1 > 0u && this.typeId1 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
                     if (list.isCreated == true) {

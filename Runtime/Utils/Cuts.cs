@@ -28,7 +28,7 @@ namespace ME.BECS {
 
     public static unsafe class Cuts {
 
-        public const Unity.Collections.Allocator ALLOCATOR = Unity.Collections.Allocator.Persistent;
+        public const Unity.Collections.Allocator ALLOCATOR = Constants.ALLOCATOR_PERSISTENT;
 
         [INLINE(256)]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {
@@ -36,7 +36,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _address<T>(ref T val) where T : unmanaged {
+        public static int _sizeOf<T>() where T : struct => UnsafeUtility.SizeOf<T>();
+
+        [INLINE(256)]
+        public static int _alignOf<T>() where T : struct => UnsafeUtility.AlignOf<T>();
+
+        [INLINE(256)]
+        public static void* _address<T>(ref T val) where T : struct {
+
+            return UnsafeUtility.AddressOf(ref val);
+
+        }
+
+        [INLINE(256)]
+        public static T* _addressT<T>(ref T val) where T : unmanaged {
 
             return (T*)UnsafeUtility.AddressOf(ref val);
 
@@ -47,6 +60,20 @@ namespace ME.BECS {
 
             return ref *ptr;
 
+        }
+
+        [INLINE(256)]
+        public static void _ptrToStruct<T>(void* ptr, out T result) where T : unmanaged {
+            
+            result = *(T*)ptr;
+            
+        }
+
+        [INLINE(256)]
+        public static void _structToPtr<T>(ref T data, void* ptr) where T : unmanaged {
+            
+            *(T*)ptr = data;
+            
         }
 
         [INLINE(256)]
@@ -96,6 +123,34 @@ namespace ME.BECS {
                 length = newLength;
 
             }
+
+        }
+        
+        [INLINE(256)]
+        public static ref T2 _as<T1, T2>(ref T1 val) where T1 : unmanaged {
+            
+            return ref UnsafeUtility.As<T1, T2>(ref val);
+
+        }
+
+        [INLINE(256)]
+        public static int _memcmp(void* ptr1, void* ptr2, long size) {
+            
+            return UnsafeUtility.MemCmp(ptr1, ptr2, size);
+
+        }
+
+        [INLINE(256)]
+        public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
+            
+            return UnsafeUtility.Malloc(size, align, allocator);
+
+        }
+
+        [INLINE(256)]
+        public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
+            
+            return UnsafeUtility.Malloc(size, align, allocator);
 
         }
 
@@ -151,9 +206,23 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void _memclear(void* ptr, long lengthInBytes) {
+            
+            UnsafeUtility.MemClear(ptr, lengthInBytes);
+            
+        }
+
+        [INLINE(256)]
         public static void _memclear(void* ptr, uint lengthInBytes) {
             
             UnsafeUtility.MemClear(ptr, lengthInBytes);
+            
+        }
+
+        [INLINE(256)]
+        public static void _memcpy(void* srcPtr, void* dstPtr, int lengthInBytes) {
+            
+            UnsafeUtility.MemCpy(dstPtr, srcPtr, lengthInBytes);
             
         }
 
@@ -163,9 +232,23 @@ namespace ME.BECS {
             UnsafeUtility.MemCpy(dstPtr, srcPtr, lengthInBytes);
             
         }
+        
+        [INLINE(256)]
+        public static void _memcpy(void* srcPtr, void* dstPtr, long lengthInBytes) {
+            
+            UnsafeUtility.MemCpy(dstPtr, srcPtr, lengthInBytes);
+            
+        }
 
         [INLINE(256)]
         public static void _memmove(void* srcPtr, void* dstPtr, uint lengthInBytes) {
+            
+            UnsafeUtility.MemMove(dstPtr, srcPtr, lengthInBytes);
+            
+        }
+
+        [INLINE(256)]
+        public static void _memmove(void* srcPtr, void* dstPtr, long lengthInBytes) {
             
             UnsafeUtility.MemMove(dstPtr, srcPtr, lengthInBytes);
             
@@ -183,7 +266,6 @@ namespace ME.BECS {
         public static void _free<T>(T* obj) where T : unmanaged {
             
             UnsafeUtility.Free(obj, ALLOCATOR);
-            obj = null;
 
         }
 
@@ -192,6 +274,20 @@ namespace ME.BECS {
             
             UnsafeUtility.Free(obj, ALLOCATOR);
             obj = null;
+
+        }
+
+        [INLINE(256)]
+        public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+            
+            UnsafeUtility.Free(obj, allocator);
+
+        }
+
+        [INLINE(256)]
+        public static void _free(void* obj, Unity.Collections.Allocator allocator) {
+            
+            UnsafeUtility.Free(obj, allocator);
 
         }
 

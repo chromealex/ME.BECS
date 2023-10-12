@@ -50,14 +50,14 @@ namespace ME.BECS {
                     this.hashes[i] = hasCustomHash == true ? comp.GetHash() : Components.COMPONENT_SHARED_DEFAULT_HASH;
                     offset += elemSize;
                 }
-                this.data = (byte*)UnsafeUtility.Malloc(size, 4, Allocator.Persistent);
+                this.data = (byte*)_make(size, 4, Constants.ALLOCATOR_PERSISTENT);
 
                 for (int i = 0; i < components.Length; ++i) {
                     var comp = components[i];
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    UnsafeUtility.MemCpy(this.data + this.offsets[i], (void*)ptr, elemSize);
+                    _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
                     gcHandle.Free();
                 }
 
@@ -82,7 +82,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Dispose() {
 
-                UnsafeUtility.Free(this.data, Allocator.Persistent);
+                _free(this.data, Constants.ALLOCATOR_PERSISTENT);
                 _freeArray(this.hashes, this.count);
                 _freeArray(this.offsets, this.count);
                 _freeArray(this.typeIds, this.count);
@@ -275,11 +275,7 @@ namespace ME.BECS {
         public bool HasStatic<T>() where T : unmanaged, IComponentStatic {
 
             var state = this.staticDataEnt.World.state;
-            if (state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen) == true) {
-                return true;
-            }
-
-            return false;
+            return state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen);
 
         }
 

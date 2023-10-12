@@ -4,6 +4,7 @@ namespace ME.BECS {
     
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using static Cuts;
 
     public readonly unsafe struct CachedPtr<T> where T : unmanaged {
 
@@ -149,7 +150,7 @@ namespace ME.BECS {
             this.growFactor = 1;
             this.arrPtr = allocator.AllocArray<T>(arr.Length, out var ptr);
             var size = TSize<T>.size;
-            UnsafeUtility.MemCpy(ptr, arr.ptr, this.Length * size);
+            _memcpy(arr.ptr, ptr, this.Length * size);
             
         }
 
@@ -164,7 +165,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly ref U As<U>(in MemoryAllocator allocator, uint index) where U : struct {
+        public readonly ref U As<U>(in MemoryAllocator allocator, uint index) where U : unmanaged {
             E.RANGE(index, 0, this.Length);
             return ref allocator.RefArray<U>(this.arrPtr, index);
         }

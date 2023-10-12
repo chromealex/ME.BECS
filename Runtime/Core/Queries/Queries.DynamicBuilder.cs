@@ -572,7 +572,7 @@ namespace ME.BECS {
                     if (this.queryData->steps > 0u) {
 
                         var currentStep = this.state->tick;
-                        var temp = new UnsafeList<uint>((int)archCount, Unity.Collections.Allocator.Temp);
+                        var temp = new UnsafeList<uint>((int)archCount, Constants.ALLOCATOR_TEMP);
 
                         for (uint i = 0u; i < archCount; ++i) {
                             var archIdx = archs[i];
@@ -592,7 +592,7 @@ namespace ME.BECS {
                             // Add range fromIdx..toIdx
                             var size = toIdx - fromIdx;
                             arrPtr = _makeArray<uint>(size);
-                            UnsafeUtility.MemCpy(arrPtr, temp.Ptr + fromIdx, TSize<uint>.sizeInt * (int)size);
+                            _memcpy(temp.Ptr + fromIdx, arrPtr, TSize<uint>.sizeInt * (int)size);
                             elementsCount += size;
                         }
 
@@ -611,7 +611,7 @@ namespace ME.BECS {
                         for (uint i = 0u; i < archCount; ++i) {
                             var archIdx = archs[i];
                             ref var arch = ref this.state->archetypes.list[in this.state->allocator, archIdx];
-                            UnsafeUtility.MemCpy(arrPtr + k, arch.entitiesList.GetUnsafePtr(in this.state->allocator), TSize<uint>.sizeInt * (int)arch.entitiesList.Count);
+                            _memcpy(arch.entitiesList.GetUnsafePtr(in this.state->allocator), arrPtr + k, TSize<uint>.sizeInt * (int)arch.entitiesList.Count);
                             k += arch.entitiesList.Count;
                         }
 

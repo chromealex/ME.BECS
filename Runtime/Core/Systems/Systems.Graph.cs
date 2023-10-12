@@ -166,7 +166,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private JobHandle Run(ref World world, float dt, Method method, JobHandle dependsOn = default) {
             
-            var list = new UnsafeList<NodeData>((int)this.index, Unity.Collections.Allocator.Temp);
+            var list = new UnsafeList<NodeData>((int)this.index, Constants.ALLOCATOR_TEMP);
             ref var queue = ref this.runtimeQueue;
             queue.Clear();
             queue.Enqueue(this.rootNode);
@@ -209,7 +209,7 @@ namespace ME.BECS {
 
             }
 
-            var arrDepends = new Unity.Collections.NativeArray<JobHandle>(list.Length + 1, Unity.Collections.Allocator.Temp);
+            var arrDepends = new Unity.Collections.NativeArray<JobHandle>(list.Length + 1, Constants.ALLOCATOR_TEMP);
             {
                 int i = 0;
                 for (i = 0; i < list.Length; ++i) {
