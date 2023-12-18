@@ -28,7 +28,7 @@ namespace ME.BECS {
 
     public static unsafe class Cuts {
 
-        public const Unity.Collections.Allocator ALLOCATOR = Constants.ALLOCATOR_PERSISTENT;
+        public const Unity.Collections.Allocator ALLOCATOR = Constants.ALLOCATOR_DOMAIN;
 
         [INLINE(256)]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {

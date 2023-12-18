@@ -166,10 +166,19 @@ namespace ME.BECS {
         internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorTemp => ref allocatorTempBurst.Data;
 
         public static void Initialize() {
-            
+
+            var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
+            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
             allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Unity.Collections.Allocator.Domain);
             allocatorTemp.Allocator.Initialize(128 * 1024, true);
+            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
+            
+        }
 
+        public static void Dispose() {
+            
+            allocatorTemp.Dispose();
+            
         }
 
         public static void Reset() {
