@@ -350,6 +350,8 @@ namespace ME.BECS.Editor {
                             if (component.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
                                 str = $"StaticTypesDefaultValue<{type}>.value.Data = {type}.Default;";
                                 typesContent.Add(str);
+                                str = $"StaticTypesHasDefaultValue<{type}>.value.Data = true;";
+                                typesContent.Add(str);
                             }
                         }
                         content.Add($"StaticTypes<{type}>.AOT();");

@@ -11,6 +11,12 @@ namespace ME.BECS.Views {
     public struct MeshRendererComponent : IComponent {
 
         public ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material> material;
+        public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode;
+        public bool receiveShadows;
+        public int layer;
+        public uint renderingLayerMask;
+        public int rendererPriority;
+        public int instanceID;
 
     }
 
@@ -45,9 +51,16 @@ namespace ME.BECS.Views {
                     ent.Get<MeshFilterComponent>().mesh = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
                 }
 
-                // Get material
+                // Get rendering
                 if (prefab.TryGetComponent<UnityEngine.MeshRenderer>(out var renderer) == true) {
-                    ent.Get<MeshRendererComponent>().material = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
+                    ref var ren = ref ent.Get<MeshRendererComponent>();
+                    ren.material = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
+                    ren.shadowCastingMode = renderer.shadowCastingMode;
+                    ren.receiveShadows = renderer.receiveShadows;
+                    ren.layer = renderer.gameObject.layer;
+                    ren.renderingLayerMask = renderer.renderingLayerMask;
+                    ren.rendererPriority = renderer.rendererPriority;
+                    ren.instanceID = renderer.GetInstanceID();
                 }
 
                 for (int i = 0; i < prefab.transform.childCount; ++i) {

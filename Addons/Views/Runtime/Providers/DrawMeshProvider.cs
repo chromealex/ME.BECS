@@ -190,10 +190,17 @@ namespace ME.BECS.Views {
             
             if (prefabEnt.Has<MeshRendererComponent>() == true &&
                 prefabEnt.Has<MeshFilterComponent>() == true) {
-                
-                var renderParams = new UnityEngine.RenderParams(prefabEnt.Read<MeshRendererComponent>().material);
+
+                var rendering = prefabEnt.Read<MeshRendererComponent>();
+                var renderParams = new UnityEngine.RenderParams(rendering.material);
                 var mesh = prefabEnt.Read<MeshFilterComponent>().mesh.Value;
                 renderParams.worldBounds = new UnityEngine.Bounds(mesh.bounds.center, mesh.bounds.size);
+                renderParams.shadowCastingMode = rendering.shadowCastingMode;
+                renderParams.receiveShadows = rendering.receiveShadows;
+                renderParams.layer = rendering.layer;
+                renderParams.renderingLayerMask = rendering.renderingLayerMask;
+                renderParams.rendererPriority = rendering.rendererPriority;
+                renderParams.instanceID = rendering.instanceID;
                 var info = new Info {
                     renderParams = renderParams,
                     mesh = mesh,
