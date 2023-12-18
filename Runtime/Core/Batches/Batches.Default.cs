@@ -10,6 +10,21 @@ namespace ME.BECS {
     public static unsafe partial class BatchesExt {
 
         [INLINE(256)]
+        public static T* GetPtr<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+
+            E.IS_IN_TICK(state);
+            
+            var result = state->components.Get<T>(state, entId, gen, out var isNew);
+            if (isNew == true) {
+                *result = StaticTypes<T>.defaultValue;
+                var typeId = StaticTypes<T>.typeId;
+                batches.Set_INTERNAL(typeId, entId, state);
+            }
+            return result;
+
+        }
+
+        [INLINE(256)]
         public static ref T Get<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
 
             E.IS_IN_TICK(state);

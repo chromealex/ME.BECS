@@ -15,6 +15,18 @@ namespace ME.BECS.Tests {
     [Unity.Burst.BurstCompileAttribute]
     public class Tests_Systems_Graph {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         private static ref int systemAwakeCounter => ref Systems_Graph_Static.systemAwakeCounterBurst.Data;
         private static ref int systemUpdateCounter => ref Systems_Graph_Static.systemUpdateCounterBurst.Data;
         private static ref int systemDestroyCounter => ref Systems_Graph_Static.systemDestroyCounterBurst.Data;

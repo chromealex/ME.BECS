@@ -5,6 +5,18 @@ namespace ME.BECS.Tests {
 
     public class Tests_Queries_Static {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void Create() {
 

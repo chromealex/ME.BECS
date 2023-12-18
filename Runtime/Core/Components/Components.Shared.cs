@@ -42,7 +42,7 @@ namespace ME.BECS {
         internal UIntDictionary<MemAllocatorPtr> sharedData;
         // entityId => [typeId => hash]
         internal MemArray<MemArray<uint>> entityIdToHash;
-        public int lockSharedIndex;
+        public LockSpinner lockSharedIndex;
 
         [INLINE(256)]
         private Components InitializeSharedComponents(State* state, in StateProperties stateProperties) {

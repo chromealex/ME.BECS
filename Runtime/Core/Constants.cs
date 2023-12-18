@@ -14,6 +14,8 @@ namespace ME.BECS {
         public const Allocator ALLOCATOR_TEMP = Allocator.Temp;
         public const Allocator ALLOCATOR_TEMPJOB = Allocator.TempJob;
 
+        public static AllocatorManager.AllocatorHandle ALLOCATOR_TEMP_ST => WorldsTempAllocator.allocatorTemp.Allocator.Handle;
+
     }
 
 }

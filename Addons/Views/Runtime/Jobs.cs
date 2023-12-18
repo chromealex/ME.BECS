@@ -7,6 +7,7 @@ namespace ME.BECS.Views {
     using Unity.Collections;
     using ME.BECS.Jobs;
     using static CutsPool;
+    using Unity.Mathematics;
     
     [BURST]
     public unsafe struct Jobs {
@@ -75,7 +76,7 @@ namespace ME.BECS.Views {
                                 version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
                             });
                         } else {
-                            UnityEngine.Debug.LogError("Item not found");
+                            Logger.Views.Error("Item not found");
                         }
                     }
                 }
@@ -129,7 +130,7 @@ namespace ME.BECS.Views {
                                 }
                             }
                         } else {
-                            UnityEngine.Debug.LogError("Item not found");
+                            Logger.Views.Error("Item not found");
                         }
                     }
                 }
@@ -146,8 +147,45 @@ namespace ME.BECS.Views {
             public void Execute(int index, TransformAccess transform) {
                 
                 var entityData = this.renderingOnSceneEnts[index];
-                transform.SetLocalPositionAndRotation(entityData.element.GetWorldMatrixPosition(), entityData.element.GetWorldMatrixRotation());
-                transform.localScale = entityData.element.readLocalScale;
+                transform.SetLocalPositionAndRotation(ME.BECS.TransformAspect.MatrixUtils.GetPosition(entityData.element.readWorldMatrix), ME.BECS.TransformAspect.MatrixUtils.GetRotation(entityData.element.readWorldMatrix));
+                transform.localScale = ME.BECS.TransformAspect.MatrixUtils.GetScale(entityData.element.readWorldMatrix);
+
+            }
+
+        }
+
+        [BURST]
+        public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
+
+            public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
+            [NativeDisableUnsafePtrRestriction]
+            public State* beginFrameState;
+            public ulong currentTick;
+            public float tickTime;
+            public double currentTimeSinceStart;
+
+            public void Execute(int index, TransformAccess transform) {
+                
+                var entityData = this.renderingOnSceneEnts[index];
+                var sourceData = this.beginFrameState->components.Read<ME.BECS.TransformAspect.WorldMatrixComponent>(this.beginFrameState, entityData.element.ent.id, entityData.element.ent.gen);
+                var pos = entityData.element.GetWorldMatrixPosition();
+                var rot = entityData.element.GetWorldMatrixRotation();
+
+                var prevTick = (long)this.beginFrameState->tick;
+                var currentTick = this.currentTick;
+                var tickTime = (double)this.tickTime;
+                var prevTime = prevTick * tickTime;
+                var currentTime = currentTick * tickTime;
+                var currentWorldTime = this.currentTimeSinceStart;
+                var factor = (float)math.select(0d, math.clamp(math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTime);
+                
+                {
+                    var sourceRot = ME.BECS.TransformAspect.MatrixUtils.GetRotation(sourceData.value);
+                    transform.SetLocalPositionAndRotation(math.lerp(ME.BECS.TransformAspect.MatrixUtils.GetPosition(sourceData.value), pos, factor), math.slerp(sourceRot, rot, factor));
+                }
+                {
+                    transform.localScale = math.lerp(ME.BECS.TransformAspect.MatrixUtils.GetScale(sourceData.value), entityData.element.readLocalScale, factor);
+                }
 
             }
 

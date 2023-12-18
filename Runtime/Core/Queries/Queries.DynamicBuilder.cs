@@ -256,7 +256,7 @@ namespace ME.BECS {
                     if (withBurst == true) {
                         // [!] We need to use static method to be able to use BurstCompiler
                         // So, we can throw an exception here or use IL (in roadmap for now) or just use delegate pointer to run this delegate out of burst
-                        UnityEngine.Debug.LogWarning("[ME.BECS] ForEach method run with Burst flag on, but delegate must be static. Delegate will be run without burst.");
+                        Logger.Core.Warning("[ME.BECS] ForEach method run with Burst flag on, but delegate must be static. Delegate will be run without burst.");
                     }
 
                     var ptr = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del);
@@ -382,11 +382,32 @@ namespace ME.BECS {
             return this.builderDependsOn;
 
         }
+        
+        /// <summary>
+        /// [ QUERY END POINT ]
+        /// </summary>
+        /// <returns></returns>
+        public Unity.Collections.NativeArray<Ent> ToArray(Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {
+            
+            var job = new SetEntitiesJob() {
+                buffer = this.commandBuffer,
+                queryData = this.queryData,
+                state = this.commandBuffer->state,
+            };
+            job.Execute();
+            var cnt = (int)this.commandBuffer->count;
+            var result = new Unity.Collections.NativeArray<Ent>(cnt, allocator);
+            for (int i = 0; i < cnt; ++i) {
+                var entId = this.commandBuffer->entities[i];
+                result[i] = new Ent(entId);
+            }
+            return result;
+
+        }
 
         /// <summary>
         /// [ QUERY END POINT ]
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public Enumerator GetEnumerator() {
 
@@ -424,7 +445,6 @@ namespace ME.BECS {
         /// <summary>
         /// [ QUERY END POINT ]
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         [INLINE(256)]
         public JobHandle ForEach(QueryDelegate forEach) {

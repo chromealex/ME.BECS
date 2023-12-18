@@ -43,10 +43,12 @@ namespace ME.BECS.Views.Editor {
                 var renderingObjectsCapacity = property.FindPropertyRelative(nameof(ViewsModuleProperties.renderingObjectsCapacity));
                 var viewsGameObjects = property.FindPropertyRelative(nameof(ViewsModuleProperties.viewsGameObjects));
                 var viewsDrawMeshes = property.FindPropertyRelative(nameof(ViewsModuleProperties.viewsDrawMeshes));
+                var interpolateState = property.FindPropertyRelative(nameof(ViewsModuleProperties.interpolateState));
                 ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, instancesRegistryCapacity);
                 ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, renderingObjectsCapacity);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, viewsGameObjects);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, viewsDrawMeshes);
+                ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, interpolateState);
             }
             root.Add(foldout);
 

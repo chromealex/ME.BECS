@@ -30,7 +30,30 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public TempBitArray(uint length, ClearOptions clearOptions, Unity.Collections.AllocatorManager.AllocatorHandle allocator) {
+
+            var sizeInBytes = Bitwise.AlignULongBits(length);
+            this.allocator = allocator.ToAllocator;
+            this.ptr = (ulong*)Unity.Collections.AllocatorManager.Allocate(this.allocator, (int)sizeInBytes, TAlign<ulong>.alignInt);
+            this.Length = length;
+
+            if (clearOptions == ClearOptions.ClearMemory) {
+                _memclear(this.ptr, sizeInBytes);
+            }
+        }
+
+        [INLINE(256)]
         public TempBitArray(in MemoryAllocator allocator, in BitArray bitmap, Unity.Collections.Allocator unityAllocator) {
+
+            var newArr = new TempBitArray(bitmap.Length, ClearOptions.UninitializedMemory, unityAllocator);
+            var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
+            _memcpy(ptr, newArr.ptr, Bitwise.AlignULongBits(bitmap.Length));
+            this = newArr;
+            
+        }
+
+        [INLINE(256)]
+        public TempBitArray(in MemoryAllocator allocator, in BitArray bitmap, Unity.Collections.AllocatorManager.AllocatorHandle unityAllocator) {
 
             var newArr = new TempBitArray(bitmap.Length, ClearOptions.UninitializedMemory, unityAllocator);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
@@ -241,7 +264,12 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            _free(this.ptr, this.allocator);
+            if (((Unity.Collections.AllocatorManager.AllocatorHandle)this.allocator).IsCustomAllocator == true) {
+                Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
+            } else {
+                _free(this.ptr, this.allocator);
+            }
+
             this = default;
 
         }

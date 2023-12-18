@@ -216,9 +216,7 @@ namespace ME.BECS {
                 E.THREAD_CHECK(nameof(this.Get));
             }
             E.IS_IN_TICK(this.state);
-            JobUtils.Lock(ref this.state->components.lockIndex);
             ref var res = ref this.state->components.Get<T>(this.state, entId, gen);
-            JobUtils.Unlock(ref this.state->components.lockIndex);
             return ref res;
 
         }
@@ -231,9 +229,7 @@ namespace ME.BECS {
                 return false;
             }
             E.IS_IN_TICK(this.state);
-            JobUtils.Lock(ref this.state->components.lockIndex);
             var res = this.state->components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, entId, gen, in data);
-            JobUtils.Unlock(ref this.state->components.lockIndex);
             return res;
 
         }
@@ -246,9 +242,7 @@ namespace ME.BECS {
                 return false;
             } else {
                 E.IS_IN_TICK(this.state);
-                JobUtils.Lock(ref this.state->components.lockIndex);
                 var res = this.state->components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, entId, gen);
-                JobUtils.Unlock(ref this.state->components.lockIndex);
                 return res;
             }
 

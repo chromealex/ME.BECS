@@ -22,7 +22,7 @@ namespace ME.BECS {
 
     public struct PoolsLock {
 
-        public static readonly Unity.Burst.SharedStatic<int> lockIndex = Unity.Burst.SharedStatic<int>.GetOrCreate<PoolsLock>();
+        public static readonly Unity.Burst.SharedStatic<LockSpinner> lockIndex = Unity.Burst.SharedStatic<LockSpinner>.GetOrCreate<PoolsLock>();
 
     }
 
@@ -40,7 +40,7 @@ namespace ME.BECS {
             [NativeDisableUnsafePtrRestriction]
             public StackItem* stack;
             public uint count;
-            public int lockIndex;
+            public LockSpinner lockIndex;
 
         }
 

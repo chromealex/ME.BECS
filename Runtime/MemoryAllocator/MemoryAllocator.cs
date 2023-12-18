@@ -388,7 +388,7 @@ namespace ME.BECS {
 
     public unsafe partial struct MemoryAllocator : IDisposable {
 
-        public int lockIndex;
+        public LockSpinner lockIndex;
         public int threadId;
         
         #if LOGS_ENABLED && UNITY_EDITOR
@@ -421,7 +421,7 @@ namespace ME.BECS {
         [UnityEditor.MenuItem("ME.ECS/Debug/Allocator: Print Log")]
         public static void PrintLog() {
             foreach (var item in MemoryAllocator.strList) {
-                UnityEngine.Debug.Log(item.Key + "\n" + item.Value);
+                Logger.Core.Log(item.Key + "\n" + item.Value);
             }
         }
         #endif

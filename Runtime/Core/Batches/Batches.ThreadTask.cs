@@ -157,8 +157,8 @@ namespace ME.BECS {
         private MemArray<ThreadTaskList> lists;
         private int availableTasksCount;
 
-        private int isThreadWorking;
-        private int isThreadCleanUpWorking;
+        private LockSpinner isThreadWorking;
+        private LockSpinner isThreadCleanUpWorking;
         
         [INLINE(256)]
         public void InitializeThreadTasks(State* state) {

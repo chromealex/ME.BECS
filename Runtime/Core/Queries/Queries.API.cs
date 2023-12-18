@@ -54,7 +54,7 @@ namespace ME.BECS {
             
             public void Execute() {
 
-                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_PERSISTENT);
+                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP_ST);
 
             }
 
@@ -84,12 +84,14 @@ namespace ME.BECS {
                 }),
                 isCreated = true,
             };
+            
             var job = new BuilderArchetypesJob() {
                 state = queryContext.state,
                 queryData = builder.queryData,
             };
             var jobHandle = job.Schedule(dependsOn);
             builder.builderDependsOn = jobHandle;
+            
             return builder;
             
         }

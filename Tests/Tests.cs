@@ -1,6 +1,22 @@
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
+
+    public static class AllTests {
+
+        public static void Start() {
+            Worlds.Initialize();
+            WorldStaticCallbacks.Initialize();
+            Pools.Initialize();
+            EntityConfigRegistry.Initialize();
+            EntityConfigsRegistry.Initialize();
+        }
+
+        public static void Dispose() {
+            
+        }
+
+    }
     
     public struct TestAspect : IAspect {
             
@@ -20,6 +36,16 @@ namespace ME.BECS.Tests {
         public ref Test3Component data3 => ref this.dataPtr3.Get(this.ent);
         public ref Test4Component data4 => ref this.dataPtr4.Get(this.ent);
         public ref Test5Component data5 => ref this.dataPtr5.Get(this.ent);
+
+        public static void TestInitialize(in World world) {
+            ref var aspect = ref world.InitializeAspect<TestAspect>();
+            aspect.dataPtr = new AspectDataPtr<TestComponent>(in world);
+            aspect.dataPtr1 = new AspectDataPtr<Test1Component>(in world);
+            aspect.dataPtr2 = new AspectDataPtr<Test2Component>(in world);
+            aspect.dataPtr3 = new AspectDataPtr<Test3Component>(in world);
+            aspect.dataPtr4 = new AspectDataPtr<Test4Component>(in world);
+            aspect.dataPtr5 = new AspectDataPtr<Test5Component>(in world);
+        }
 
     }
 

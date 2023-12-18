@@ -52,12 +52,11 @@ namespace ME.BECS.Extensions.GraphProcessor
 			visualStyle = badgeText.GetHashCode().ToString();
 		}
 
-		protected override void ExecuteDefaultAction(EventBase evt)
-		{
-			// When the mouse enter the icon, this will add the label to the hierarchy
-			base.ExecuteDefaultAction(evt);
-
-            if (evt.eventTypeId == MouseEnterEvent.TypeId())
+		protected override void HandleEventBubbleUp(EventBase evt) {
+			
+			base.HandleEventBubbleUp(evt);
+			
+			if (evt.eventTypeId == MouseEnterEvent.TypeId())
 			{
 				// And then we can fetch it here:
 				GraphView gv = GetFirstAncestorOfType<GraphView>();
@@ -66,5 +65,6 @@ namespace ME.BECS.Extensions.GraphProcessor
 					label.style.color = color;
 			}
 		}
+
 	}
 }

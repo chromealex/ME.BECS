@@ -9,6 +9,7 @@ namespace ME.BECS.Network {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
     using Jobs;
+    using Unity.Mathematics;
 
     public unsafe struct NetworkPackage {
 
@@ -396,7 +397,7 @@ namespace ME.BECS.Network {
 
                 if (tick % this.properties.copyPerTick == 0u) {
                     
-                    var tempData = new Unity.Collections.NativeReference<System.IntPtr>(Constants.ALLOCATOR_PERSISTENT);
+                    var tempData = new Unity.Collections.NativeReference<System.IntPtr>(Constants.ALLOCATOR_TEMPJOB);
                     var count = (int)data->connectedWorld.state->allocator.zonesListCount;
                     dependsOn = new CopyStatePrepareJob() {
                         data = data,
@@ -491,6 +492,8 @@ namespace ME.BECS.Network {
             public MethodsStorage methodsStorage;
             public Data* selfPtr;
             public ulong rollbackTargetTick;
+
+            public State* startFrameState;
             
             [INLINE(256)]
             public Data(in World connectedWorld, NetworkModuleProperties properties) {
@@ -514,12 +517,13 @@ namespace ME.BECS.Network {
                 this.statesStorage = new StatesStorage(state, this.connectedWorld, properties.statesStorageProperties);
                 this.methodsStorage = new MethodsStorage(state, this.connectedWorld, properties.methodsStorageProperties);
                 this.rollbackTargetTick = 0UL;
+                this.startFrameState = _make(new State());
 
             }
 
             [INLINE(256)]
             public ulong GetTargetTick() {
-                return (ulong)(this.currentTimestamp / this.tickTime);
+                return (ulong)math.ceil(this.currentTimestamp / this.tickTime);
             }
 
             [INLINE(256)]
@@ -558,7 +562,7 @@ namespace ME.BECS.Network {
                     // we need to rollback
                     // need to complete all dependencies
                     dependsOn.Complete();
-                    UnityEngine.Debug.LogWarning("Rollback from " + currentTick + " to " + tickToRollback);
+                    Logger.Network.Warning($"Rollback from {currentTick} to {tickToRollback}");
 
                     var rollbackState = this.statesStorage.GetStateForRollback(tickToRollback);
                     if (rollbackState == null) {
@@ -570,11 +574,11 @@ namespace ME.BECS.Network {
                     }
 
                     currentTick = rollbackState->tick;
-                    UnityEngine.Debug.LogWarning("Rollback State tick: " + currentTick);
+                    Logger.Network.Warning($"Rollback State tick: {currentTick}");
                     this.connectedWorld.state->CopyFrom(in *rollbackState);
                     this.statesStorage.InvalidateStatesFromTick(currentTick);
                     this.rollbackTargetTick = targetTick;
-                    UnityEngine.Debug.LogWarning("Rollback State CopyFrom ended: " + currentTick + ".." + targetTick);
+                    Logger.Network.Warning($"Rollback State CopyFrom ended: {currentTick}..{targetTick}");
                     
                 }
                 
@@ -609,6 +613,7 @@ namespace ME.BECS.Network {
                 this.statesStorage.Dispose();
                 this.methodsStorage.Dispose();
                 this.networkWorld.Dispose();
+                _free(ref this.startFrameState);
             }
             
         }
@@ -694,6 +699,9 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
+        public double GetCurrentTime() => this.data->currentTimestamp;
+
+        [INLINE(256)]
         public uint RegisterMethod(NetworkMethodDelegate method) {
             return this.data->methodsStorage.Add(method);
         }
@@ -768,28 +776,8 @@ namespace ME.BECS.Network {
 
         [INLINE(256)]
         public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
-
-            if (this.networkTransport.Status != TransportStatus.Connected) return dependsOn; 
             
-            /*
-            // test
-            if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.A) == true) {
-                // Add forward
-                this.AddEvent(1u, UnsafeNetworkModule.TestNetMethod, new TestData() {
-                    a = 123,
-                    b = 234,
-                    c = 567,
-                });
-            }
-            if (UnityEngine.Input.GetKey(UnityEngine.KeyCode.S) == true) {
-                // Add backward
-                this.data->connectedWorld.SendNetworkEvent(new TestData() {
-                    a = 123,
-                    b = 234,
-                    c = 567,
-                }, UnsafeNetworkModule.TestNetMethod, negativeDelta: 20);
-            }
-            */
+            if (this.networkTransport.Status != TransportStatus.Connected) return dependsOn; 
             
             dependsOn.Complete();
             {
@@ -805,16 +793,20 @@ namespace ME.BECS.Network {
                         readBuffer.Dispose();
                     }
                 }
-                if (targetTick > currentTick && targetTick - currentTick > 1) UnityEngine.Debug.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {(targetTick - currentTick)}");
+                if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {(targetTick - currentTick)}");
                 {
                     // Do we need the rollback?
                     dependsOn = this.data->Rollback(ref currentTick, ref targetTick, dependsOn);
+                }
+                if ((targetTick - currentTick) > 0UL && this.data->IsInRollback() == false) {
+                    // Make a state copy for interpolation
+                    this.data->startFrameState->CopyFrom(in *world.state);
                 }
                 //var completePerTick = this.properties.maxFrameTime / this.properties.tickTime;
                 this.frameStopwatch.Restart();
                 for (ulong tick = currentTick; tick < targetTick; ++tick) {
 
-                    //UnityEngine.Debug.LogWarning("---- BEGIN TICK ----");
+                    // Begin tick
                     dependsOn = State.SetWorldState(in world, WorldState.BeginTick, dependsOn);
                     {
                         // Apply events for this tick
@@ -822,15 +814,14 @@ namespace ME.BECS.Network {
                         dependsOn = this.data->Tick(tick, deltaTime, in world, dependsOn);
                     }
                     
-                    //UnityEngine.Debug.LogWarning("---- BEGIN WORLD TICK ----");
                     dependsOn = world.Tick(deltaTime, dependsOn);
                     dependsOn = State.SetWorldState(in world, WorldState.EndTick, dependsOn);
                     dependsOn.Complete();
+                    // End tick
 
                     if (this.data->IsRollbackRequired(tick) == true) {
                         break;
                     }
-                    //UnityEngine.Debug.LogWarning("---- END TICK ----");
                     
                     if (this.frameStopwatch.ElapsedMilliseconds >= this.properties.maxFrameTime) {
                         // drop current and try to targetTick in the next frame

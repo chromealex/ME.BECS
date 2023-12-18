@@ -16,8 +16,11 @@ namespace ME.BECS {
         public Archetypes archetypes;
         public Queries queries;
         public AspectsStorage aspectsStorage;
+        public uint random;
         public ulong tick;
         public WorldState worldState;
+
+        public bool IsCreated => this.tick != 0UL;
 
         [INLINE(256)]
         public static State* Create(byte[] bytes) {

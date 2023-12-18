@@ -71,6 +71,7 @@ namespace ME.BECS.TransformAspect {
         internal RefRW<LocalScaleComponent> localScaleData;
         internal RefRO<ParentComponent> parentData;
         internal RefRO<ChildrenComponent> childrenData;
+        [QueryWith]
         internal RefRW<WorldMatrixComponent> worldMatrixData;
         internal RefRW<IsHierarchyDirtyComponent> isDirty;
 
@@ -179,25 +180,13 @@ namespace ME.BECS.TransformAspect {
         }
         
         [INLINE(256)]
-        public readonly float3 GetWorldMatrixPosition() {
-            return this.readWorldMatrix.c3.xyz;
-        }
+        public readonly float3 GetWorldMatrixPosition() => MatrixUtils.GetPosition(in this.readWorldMatrix);
+
+        [INLINE(256)]
+        public readonly quaternion GetWorldMatrixRotation() => MatrixUtils.GetRotation(in this.readWorldMatrix);
  
         [INLINE(256)]
-        public readonly quaternion GetWorldMatrixRotation() {
-            float3 forward = this.readWorldMatrix.c2.xyz;
-            float3 upwards = this.readWorldMatrix.c1.xyz;
-            return quaternion.LookRotation(forward, upwards);
-        }
- 
-        [INLINE(256)]
-        public readonly float3 GetWorldMatrixScale() {
-            float3 scale;
-            scale.x = math.length(this.readWorldMatrix.c0);
-            scale.y = math.length(this.readWorldMatrix.c1);
-            scale.z = math.length(this.readWorldMatrix.c2);
-            return scale;
-        }
+        public readonly float3 GetWorldMatrixScale() => MatrixUtils.GetScale(in this.readWorldMatrix);
 
         [INLINE(256)]
         public readonly ref T SetDirty<T>(ref T value) {
@@ -219,7 +208,44 @@ namespace ME.BECS.TransformAspect {
         public static implicit operator TransformAspect(in Ent ent) {
             return ent.GetAspect<TransformAspect>();
         }
+
+        public static void TestInitialize(in World world) {
+            ref var tr = ref world.InitializeAspect<TransformAspect>();
+            tr.localPositionData = new RefRW<LocalPositionComponent>(in world);
+            tr.localRotationData = new RefRW<LocalRotationComponent>(in world);
+            tr.localScaleData = new RefRW<LocalScaleComponent>(in world);
+            tr.parentData = new RefRO<ParentComponent>(in world);
+            tr.childrenData = new RefRO<ChildrenComponent>(in world);
+            tr.worldMatrixData = new RefRW<WorldMatrixComponent>(in world);
+            tr.isDirty = new RefRW<IsHierarchyDirtyComponent>(in world);
+        }
+
+    }
+
+    public static class MatrixUtils {
+
+        [INLINE(256)]
+        public static float3 GetPosition(in float4x4 matrix) {
+            return matrix.c3.xyz;
+        }
+ 
+        [INLINE(256)]
+        public static quaternion GetRotation(in float4x4 matrix) {
+            float3 forward = matrix.c2.xyz;
+            float3 upwards = matrix.c1.xyz;
+            if (forward.x * forward.y * forward.z == 0f && upwards.x * upwards.y * upwards.z == 0f) return quaternion.identity;
+            return quaternion.LookRotation(forward, upwards);
+        }
         
+        [INLINE(256)]
+        public static float3 GetScale(in float4x4 matrix) {
+            float3 scale;
+            scale.x = math.length(matrix.c0);
+            scale.y = math.length(matrix.c1);
+            scale.z = math.length(matrix.c2);
+            return scale;
+        }
+
     }
 
 }

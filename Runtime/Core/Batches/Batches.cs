@@ -169,7 +169,7 @@ namespace ME.BECS {
 
             public List<uint> items;
             public uint Count;
-            public int lockIndex;
+            public LockSpinner lockIndex;
 
             public uint GetReservedSizeInBytes() {
                 return this.items.GetReservedSizeInBytes();
@@ -180,7 +180,7 @@ namespace ME.BECS {
         public MemArray<ThreadItem> items;
         public MemArray<BatchItem> arr;
 
-        internal int lockIndex;
+        internal LockSpinner lockIndex;
 
         public uint GetReservedSizeInBytes(State* state) {
 

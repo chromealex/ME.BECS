@@ -114,7 +114,7 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         public MemArray<MemAllocatorPtr> items;
-        public int lockIndex;
+        public LockSpinner lockIndex;
 
         [INLINE(256)]
         public static Components Create(State* state, in StateProperties stateProperties) {

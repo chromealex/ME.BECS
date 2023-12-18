@@ -28,42 +28,46 @@ namespace ME.BECS {
         [INLINE(256)]
         public static T* _makeArray<T>(uint elementsCount) where T : unmanaged {
             
-            return Pools.Pop<T>(elementsCount);
+            return Cuts._makeArray<T>(elementsCount);
+            //return Pools.Pop<T>(elementsCount);
             
         }
         
         [INLINE(256)]
         public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
             
-            return UnsafeUtility.Malloc(size, align, allocator);
+            return Cuts._make(size, align, allocator);
 
         }
         
         [INLINE(256)]
         public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
-            
-            return UnsafeUtility.Malloc(size, align, allocator);
+
+            return Cuts._make(size, align, allocator);
 
         }
 
         [INLINE(256)]
         public static T* _make<T>() where T : unmanaged {
 
-            return Pools.Pop<T>();
+            return Cuts._makeDefault<T>();
+            //return Pools.Pop<T>();
             
         }
 
         [INLINE(256)]
         public static T* _make<T>(T obj) where T : unmanaged {
 
-            return Pools.Pop<T>(obj);
+            return Cuts._make(obj);
+            //return Pools.Pop<T>(obj);
             
         }
 
         [INLINE(256)]
         public static T* _make<T>(in T obj) where T : unmanaged {
 
-            return Pools.Pop<T>(obj);
+            return Cuts._make(in obj);
+            //return Pools.Pop<T>(obj);
 
         }
 
@@ -97,36 +101,39 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
-            
-            UnsafeUtility.Free(obj, allocator);
+
+            Cuts._free(obj, allocator);
 
         }
 
         [INLINE(256)]
         public static void _free(void* obj, Unity.Collections.Allocator allocator) {
             
-            UnsafeUtility.Free(obj, allocator);
+            Cuts._free(obj, allocator);
 
         }
 
         [INLINE(256)]
         public static void _free<T>(ref T* obj) where T : unmanaged {
             
-            Pools.Push(ref obj);
+            Cuts._free(ref obj);
+            //Pools.Push(ref obj);
             
         }
 
         [INLINE(256)]
         public static void _free<T>(T* obj) where T : unmanaged {
             
-            Pools.Push(obj);
+            Cuts._free(obj);
+            //Pools.Push(obj);
 
         }
 
         [INLINE(256)]
         public static void _freeArray<T>(T* obj, uint elementsCount) where T : unmanaged {
             
-            Pools.Push(obj, elementsCount);
+            Cuts._free(obj);
+            //Pools.Push(obj, elementsCount);
 
         }
 

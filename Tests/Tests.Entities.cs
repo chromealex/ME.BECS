@@ -7,6 +7,18 @@ namespace ME.BECS.Tests {
     [Unity.Burst.BurstCompileAttribute]
     public unsafe class Tests_Entities {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void CloneEntity() {
 
@@ -47,6 +59,7 @@ namespace ME.BECS.Tests {
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = amount;
                 using var world = World.Create(props);
+                TestAspect.TestInitialize(in world);
 
                 for (int i = 0; i < amount; ++i) {
 

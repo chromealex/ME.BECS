@@ -46,6 +46,26 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public readonly T* ReadPtr<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged {
+
+            var typeId = StaticTypes<T>.typeId;
+            var data = this.ReadUnknownType(state, typeId, entId, gen, out exists);
+            if (exists == false) return default;
+            return (T*)data;
+
+        }
+
+        [INLINE(256)]
+        public readonly T* ReadPtr<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+
+            var typeId = StaticTypes<T>.typeId;
+            var data = this.ReadUnknownType(state, typeId, entId, gen, out var exists);
+            if (exists == false) return default;
+            return (T*)data;
+
+        }
+
+        [INLINE(256)]
         public bool Has<T>(State* state, uint entId, ushort gen) where T : unmanaged {
 
             var typeId = StaticTypes<T>.typeId;

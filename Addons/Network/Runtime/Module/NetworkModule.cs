@@ -107,11 +107,15 @@ namespace ME.BECS.Network {
 
         public bool IsInRollback() => this.network.IsInRollback();
 
-        public JobHandle UpdateInitializer(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
+        public JobHandle UpdateInitializer(double dt, NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
             
             {
-                var currentTime = this.network.networkTransport.ServerTime;
-                this.SetServerTime(currentTime);
+                var serverTime = this.network.networkTransport.ServerTime;
+                if (serverTime > this.GetCurrentTime()) {
+                    this.SetServerTime(serverTime);
+                } else {
+                    this.SetServerTime(this.GetCurrentTime() + dt * 1000d);
+                }
             }
 
             if (this.network.networkTransport.Status == TransportStatus.Disconnected ||
@@ -124,6 +128,8 @@ namespace ME.BECS.Network {
             return this.network.Update(initializer, dependsOn, ref world);
             
         }
+
+        public double GetCurrentTime() => this.network.GetCurrentTime();
 
         public void SetLocalPlayerId(uint playerId) {
             this.network.SetLocalPlayerId(playerId);
@@ -147,6 +153,10 @@ namespace ME.BECS.Network {
 
         public JobHandle Connect(JobHandle dependsOn) {
             return this.network.networkTransport.Connect(in this.network.data->connectedWorld, this, dependsOn);
+        }
+
+        public State* GetStartFrameState() {
+            return this.network.data->startFrameState;
         }
 
     }

@@ -16,6 +16,12 @@ namespace ME.BECS.Tests {
         public ref Test1Component t1 => ref this.t1Value.Get(this.ent);
         public ref Test2Component t2 => ref this.t2Value.Get(this.ent);
 
+        public static void TestInitialize(in World world) {
+            ref var aspect = ref world.InitializeAspect<Aspect1>();
+            aspect.t1Value = new AspectDataPtr<Test1Component>(in world);
+            aspect.t2Value = new AspectDataPtr<Test2Component>(in world);
+        }
+
     }
 
     public struct Aspect2 : IAspect {
@@ -30,9 +36,27 @@ namespace ME.BECS.Tests {
         public ref Test3Component t1 => ref this.t1Value.Get(this.ent);
         public ref Test4Component t2 => ref this.t2Value.Get(this.ent);
 
-    }
+        public static void TestInitialize(in World world) {
+            ref var aspect = ref world.InitializeAspect<Aspect2>();
+            aspect.t1Value = new AspectDataPtr<Test3Component>(in world);
+            aspect.t2Value = new AspectDataPtr<Test4Component>(in world);
+        }
 
+    }
+    
     public unsafe class Tests_Queries {
+
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
 
         [Unity.Burst.BurstCompileAttribute]
         private struct JobComponents : IJobParallelForComponents<TestComponent> {
@@ -96,6 +120,8 @@ namespace ME.BECS.Tests {
             
             {
                 var world = World.Create();
+                Aspect1.TestInitialize(in world);
+                Aspect2.TestInitialize(in world);
                 var emptyEnt = Ent.New();
                 
                 var ent = Ent.New();
@@ -122,6 +148,8 @@ namespace ME.BECS.Tests {
             }
             {
                 var world = World.Create();
+                Aspect1.TestInitialize(in world);
+                Aspect2.TestInitialize(in world);
                 var emptyEnt = Ent.New();
                 
                 var ent = Ent.New();
@@ -154,6 +182,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void All() {
             
+            Worlds.Initialize();
             {
                 var world = World.Create();
                 var emptyEnt = Ent.New();
@@ -876,8 +905,7 @@ namespace ME.BECS.Tests {
 
             {
                 var world = World.Create();
-                var emptyEnt = Ent.New();
-
+                
                 var result = new System.Collections.Generic.List<Ent>();
 
                 for (int i = 0; i < 1000; ++i) {
@@ -908,9 +936,40 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void QueryToArray() {
+
+            {
+                var world = World.Create();
+                
+                for (int i = 0; i < 1000; ++i) {
+
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent() {
+                        data = 1,
+                    });
+                
+                }
+
+                var result = API.Query(world)
+                                .With<TestComponent>()
+                                .ToArray();
+                
+                Assert.AreEqual(1000, result.Length);
+                foreach (var ent in result) {
+                    Assert.AreEqual(1, ent.Read<TestComponent>().data);
+                }
+
+                world.Dispose();
+
+            }
+
+        }
+
+        [Test]
         public void Complex() {
             
             var world = World.Create();
+            TestAspect.TestInitialize(in world);
             var ent = Ent.New();
             ent.Get<TestComponent>().data = 1;
 

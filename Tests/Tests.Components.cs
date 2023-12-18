@@ -5,6 +5,18 @@ namespace ME.BECS.Tests {
 
     public unsafe class Tests_Components {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         public struct SetJob : Unity.Jobs.IJobParallelFor {
 
             public Unity.Collections.NativeArray<Ent> entities;

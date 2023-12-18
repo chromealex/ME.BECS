@@ -8,7 +8,8 @@
         "ME.BECS.Views",
         "Unity.Burst",
         "Unity.Collections",
-        "ME.BECS.Aspects.TransformAspect"
+        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Tests"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,6 +1,7 @@
 namespace ME.BECS.Network {
 
     using UnityEngine;
+    using ME.BECS.Views;
     
     public class NetworkWorldInitializer : WorldInitializer {
 
@@ -9,11 +10,27 @@ namespace ME.BECS.Network {
         protected override void Awake() {
             
             base.Awake();
-
+            
             this.networkModule = this.modules.Get<NetworkModule>();
 
+            WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.ViewsLoad);
+            WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.OnViewsUpdate, 1);
+
         }
-        
+
+        private unsafe void OnViewsUpdate(ref ViewsModuleData data) {
+
+            data.beginFrameState->timeSinceStart = this.networkModule.GetCurrentTime();
+            data.beginFrameState->state = this.networkModule.GetStartFrameState();
+
+        }
+
+        private unsafe void ViewsLoad(ref ViewsModuleData data) {
+
+            data.beginFrameState->tickTime = this.networkModule.properties.tickTime;
+
+        }
+
         public override Unity.Jobs.JobHandle OnStart(Unity.Jobs.JobHandle dependsOn) {
             
             dependsOn = base.OnStart(dependsOn);
@@ -39,9 +56,10 @@ namespace ME.BECS.Network {
             
             // From here there are some code which overrides default world initializer behaviour
             if (this.world.isCreated == true) {
-                
+
+                var dt = Time.deltaTime;
                 // Update logic - depends on tick time
-                var handle = this.networkModule.UpdateInitializer(this, this.previousFrameDependsOn, ref this.world);
+                var handle = this.networkModule.UpdateInitializer(dt, this, this.previousFrameDependsOn, ref this.world);
                 handle.Complete();
                 if (this.networkModule.IsInRollback() == false) {
 

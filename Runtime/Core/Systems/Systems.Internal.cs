@@ -205,7 +205,7 @@ namespace ME.BECS {
                 for (uint i = 0; i < this.parentIndex; ++i) {
                     list.Add(this.parents[i].data->dependsOn);
                 }
-                handle = JobHandle.CombineDependencies(list);
+                handle = JobHandle.CombineDependencies(list.AsArray());
             }
 
             if (this.dependsOn.IsCompleted == true) return handle;

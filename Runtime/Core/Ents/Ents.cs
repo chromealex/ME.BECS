@@ -11,7 +11,7 @@ namespace ME.BECS {
         public MemArray<uint> versionsGroup;
         public BitArray aliveBits;
         public Stack<uint> free;
-        public int lockIndex;
+        public LockSpinner lockIndex;
         public uint Capacity => this.generations.Length;
         public uint FreeCount => this.free.Count;
         public uint EntitiesCount => this.aliveCount;
@@ -54,7 +54,7 @@ namespace ME.BECS {
                 versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u), growFactor: 2),
                 aliveBits = new BitArray(ref state->allocator, entityCapacity),
                 free = new Stack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
-                lockIndex = 0,
+                lockIndex = default,
             };
             var ptr = (uint*)ents.free.GetUnsafePtr(in state->allocator);
             for (uint i = ents.generations.Length, k = 0u; i > 0u; --i, ++k) {

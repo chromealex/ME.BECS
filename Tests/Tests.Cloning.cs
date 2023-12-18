@@ -6,10 +6,23 @@ namespace ME.BECS.Tests {
 
     public unsafe class Tests_Cloning {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void CloningWorld() {
 
             var world = World.Create();
+            TestAspect.TestInitialize(in world);
             var entId = 0u;
             Ent srcEnt;
             {
@@ -21,6 +34,7 @@ namespace ME.BECS.Tests {
 
             {
                 var cloneWorld = world.Clone();
+                TestAspect.TestInitialize(in cloneWorld);
                 Context.Switch(cloneWorld);
                 var newEnt = Ent.New(cloneWorld);
                 newEnt.GetAspect<TestAspect>().data.data = 100500;
@@ -42,6 +56,7 @@ namespace ME.BECS.Tests {
         public void CopyFromWorld() {
 
             var world = World.Create();
+            TestAspect.TestInitialize(in world);
             var entId = 0u;
             Ent srcEnt;
             {
@@ -53,12 +68,14 @@ namespace ME.BECS.Tests {
 
             {
                 var newWorld = World.Create();
+                TestAspect.TestInitialize(in newWorld);
                 Ent e;
                 {
                     e = Ent.New(newWorld);
                     e.GetAspect<TestAspect>().data.data = 500;
                 }
                 newWorld.CopyFrom(world);
+                TestAspect.TestInitialize(in newWorld);
                 Context.Switch(newWorld);
                 Assert.IsTrue(e.IsAlive());
                 {
@@ -86,6 +103,7 @@ namespace ME.BECS.Tests {
         public void CloneBigWorld() {
 
             var world = World.Create();
+            TestAspect.TestInitialize(in world);
             for (int i = 0; i < 10000; ++i) {
                 var ent = Ent.New(world);
                 var aspect = ent.GetAspect<TestAspect>();

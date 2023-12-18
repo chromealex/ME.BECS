@@ -495,7 +495,7 @@ namespace ME.BECS.Editor {
                                         arrData[idx] = newValue;
                                         var value = arrData[idx];
                                         if (value == null) {
-                                            Debug.LogError($"Value is null at index {idx} in entity {this.entity}");
+                                            Logger.Editor.Error($"Value is null at index {idx} in entity {this.entity}");
                                             return;
                                         }
                                         

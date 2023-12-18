@@ -56,6 +56,7 @@ namespace ME.BECS.Views {
             renderingObjectsCapacity = 100u,
             viewsGameObjects = true,
             viewsDrawMeshes = true,
+            interpolateState = true,
         };
 
         [UnityEngine.Tooltip("How many unique prefabs will be registered.")]
@@ -67,6 +68,9 @@ namespace ME.BECS.Views {
         public bool viewsGameObjects;
         [UnityEngine.Tooltip("Enable DrawMeshes Provider.")]
         public bool viewsDrawMeshes;
+
+        [UnityEngine.Tooltip("Use automatic state interpolation between start and end of the frame. Useful with Network Module only.")]
+        public bool interpolateState;
 
     }
 
@@ -216,6 +220,14 @@ namespace ME.BECS.Views {
 
     }
 
+    public unsafe struct BeginFrameState {
+
+        public State* state;
+        public float tickTime;
+        public double timeSinceStart;
+
+    }
+
     public unsafe struct ViewsModuleData {
 
         public struct EntityData {
@@ -247,13 +259,18 @@ namespace ME.BECS.Views {
         public UnsafeList<SceneInstanceInfo> toRemoveTemp;
         public UnsafeList<SpawnInstanceInfo> toAddTemp;
 
+        public ViewsModuleProperties properties;
+        
         public World connectedWorld;
         public World viewsWorld;
+        public BeginFrameState* beginFrameState;
         
         public static ViewsModuleData Create(ref MemoryAllocator allocator, uint entitiesCapacity, ViewsModuleProperties properties) {
 
             return new ViewsModuleData() {
                 prefabId = 0u,
+                properties = properties,
+                beginFrameState = _make(new BeginFrameState()),
                 prefabIdToInfo = new UIntDictionary<SourceRegistry.InfoRef>(ref allocator, properties.instancesRegistryCapacity),
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
@@ -277,6 +294,7 @@ namespace ME.BECS.Views {
 
         public void Dispose(State* state) {
             
+            _free(ref this.beginFrameState);
             if (this.renderingOnSceneEnts.IsCreated == true) this.renderingOnSceneEnts.Dispose();
             if (this.renderingOnSceneBits.isCreated == true) this.renderingOnSceneBits.Dispose();
             if (this.toRemove.IsCreated == true) this.toRemove.Dispose();
@@ -349,8 +367,6 @@ namespace ME.BECS.Views {
         
         public static UnsafeViewsModule<TEntityView> Create<T>(uint providerId, ref World connectedWorld, T provider, uint entitiesCapacity, ViewsModuleProperties properties) where T : IViewProvider<TEntityView> {
             
-            ViewsRegistry.Initialize();
-
             var viewsWorldProperties = WorldProperties.Default;
             viewsWorldProperties.allocatorProperties.sizeInBytesCapacity = (uint)MemoryAllocator.MIN_ZONE_SIZE; // Use min allocator size
             viewsWorldProperties.name = ViewsModule.providerInfos[providerId].editorName;
@@ -402,6 +418,8 @@ namespace ME.BECS.Views {
             E.IS_CREATED(this.data->connectedWorld);
             E.IS_CREATED(this.data->viewsWorld);
 
+            WorldStaticCallbacks.RaiseCallback(ref *this.data, 1);
+            
             var toRemoveCounter = Jobs.Counter.Create();
             
             ref var allocator = ref this.data->viewsWorld.state->allocator;

@@ -33,6 +33,25 @@ namespace ME.BECS {
         
     }
 
+    public struct LockSpinner {
+        
+        private int value;
+        [INLINE(256)]
+        public void Lock() {
+            while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
+            }
+            System.Threading.Interlocked.MemoryBarrier();
+        }
+        
+        [INLINE(256)]
+        public void Unlock() {
+            System.Threading.Interlocked.MemoryBarrier();
+            while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
+            }
+        }
+        
+    }
+    
     public static unsafe class JobUtils {
         
         public static void Initialize() {
@@ -155,43 +174,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Lock(ref int lockIndex) {
-            var iters = 100_000_000;
-            //var spin = new System.Threading.SpinWait();
-            for (;;) {
-                if (--iters == 0) {
-                    // Debug iterations case
-                    UnityEngine.Debug.LogError("Max iterations lock break. This should never happens.");
-                    break;
-                }
-
-                // Block thread while another thread is working on tasks
-                // Wait while previous thread complete all tasks
-                if (System.Threading.Interlocked.Exchange(ref lockIndex, 1) == 0) {
-                    break;
-                }
-                //spin.SpinOnce();
-            }
-            //UnityEngine.Debug.Log("LOCK");
+        public static void Lock(ref LockSpinner spinner) {
+            spinner.Lock();
         }
 
         [INLINE(256)]
-        public static void LockThrow(ref int lockIndex) {
-            for (;;) {
-                // Block thread while another thread is working on tasks
-                // Wait while previous thread complete all tasks
-                if (System.Threading.Interlocked.Exchange(ref lockIndex, 1) == 0) {
-                    break;
-                }
-
-                throw new System.Exception();
-            }
-        }
-
-        [INLINE(256)]
-        public static void Unlock(ref int lockIndex) {
-            //UnityEngine.Debug.Log("UNLOCK");
-            System.Threading.Interlocked.Exchange(ref lockIndex, 0);
+        public static void Unlock(ref LockSpinner spinner) {
+            spinner.Unlock();
         }
 
     }

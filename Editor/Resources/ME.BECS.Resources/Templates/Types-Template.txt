@@ -1,25 +1,14 @@
 namespace ME.BECS{{EDITOR}} {
     [UnityEngine.Scripting.PreserveAttribute]
-    [UnityEngine.DefaultExecutionOrder(-100_000)]
     public static unsafe class AOTBurstHelper {
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void AOT() {
             {{CONTENT}}
         }
     }
-        
-    #if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoadAttribute]
-    #endif
-    [UnityEngine.Scripting.PreserveAttribute]
-    [UnityEngine.DefaultExecutionOrder(-100_000)]
+    
     public static unsafe class StaticTypesInitializer {
         [UnityEngine.Scripting.PreserveAttribute] 
-        static StaticTypesInitializer() { 
-            Load();
-        }
-        [UnityEngine.Scripting.PreserveAttribute] 
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Load() {
             JobUtils.Initialize();
             {{CONTENT_TYPES}}
@@ -39,6 +28,8 @@ namespace ME.BECS{{EDITOR}} {
         [UnityEngine.Scripting.PreserveAttribute] 
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Load() {
+            StaticTypesInitializer.Load();
+            WorldStaticCallbacks.Initialize();
             {{CUSTOM_METHOD_REGISTRY}}
         }
         {{CUSTOM_METHODS}}

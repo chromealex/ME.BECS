@@ -6,6 +6,19 @@ namespace ME.BECS.Network.Tests {
     
     public unsafe class Tests_SortedNetworkPackageList {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            ME.BECS.Network.Markers.WorldNetworkMarkers.Reset();
+            ME.BECS.Tests.AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            ME.BECS.Tests.AllTests.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void Add() {
 

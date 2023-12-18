@@ -160,6 +160,26 @@ namespace ME.BECS {
 
     }
     
+    public struct WorldsTempAllocator {
+
+        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorTempBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10005);
+        internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorTemp => ref allocatorTempBurst.Data;
+
+        public static void Initialize() {
+            
+            allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Unity.Collections.Allocator.Domain);
+            allocatorTemp.Allocator.Initialize(128 * 1024, true);
+
+        }
+
+        public static void Reset() {
+            
+            allocatorTemp.Allocator.Rewind();
+            
+        }
+
+    }
+
     public unsafe struct Worlds {
         
         private static readonly Unity.Burst.SharedStatic<ushort> worldsCounterBurst = Unity.Burst.SharedStatic<ushort>.GetOrCreate<Worlds>();
@@ -170,7 +190,9 @@ namespace ME.BECS {
 
             if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
             ResetWorldsCounter();
-            
+
+            WorldsTempAllocator.Initialize();
+
         }
 
         [INLINE(256)]

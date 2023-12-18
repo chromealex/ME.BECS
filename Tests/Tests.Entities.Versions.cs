@@ -4,6 +4,18 @@ namespace ME.BECS.Tests {
     
     public class Tests_Entities_Versions {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         [Test]
         public void EntityVersionUp() {
 

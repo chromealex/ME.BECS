@@ -6,6 +6,18 @@ namespace ME.BECS.Tests {
     [Unity.Burst.BurstCompileAttribute]
     public unsafe class Tests_Aspects {
 
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
         public struct TestAspect : IAspect {
             
             public Ent ent { get; set; }
@@ -16,12 +28,19 @@ namespace ME.BECS.Tests {
             public ref T1 t1 => ref this.dataPtr.Get(this.ent);
             public ref T2 t2 => ref this.dataPtr1.Get(this.ent);
 
+            public static void TestInitialize(in World world) {
+                ref var aspect = ref world.InitializeAspect<TestAspect>();
+                aspect.dataPtr = new AspectDataPtr<T1>(in world);
+                aspect.dataPtr1 = new AspectDataPtr<T2>(in world);
+            }
+
         }
         
         [Test]
         public void Add() {
             
             using var world = World.Create();
+            TestAspect.TestInitialize(in world);
             var ent1 = Ent.New(world);
             TestAspect aspect1;
             {
@@ -106,6 +125,7 @@ namespace ME.BECS.Tests {
             var parameters = WorldProperties.Default;
             parameters.stateProperties.entitiesCapacity = count;
             var world = World.Create(parameters);
+            TestAspect.TestInitialize(in world);
 
             var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)count, Constants.ALLOCATOR_PERSISTENT);
             for (int i = 0; i < count; ++i) {
@@ -137,6 +157,7 @@ namespace ME.BECS.Tests {
             var parameters = WorldProperties.Default;
             parameters.stateProperties.entitiesCapacity = count;
             var world = World.Create(parameters);
+            TestAspect.TestInitialize(in world);
 
             var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)count, Constants.ALLOCATOR_PERSISTENT);
             for (int i = 0; i < count; ++i) {

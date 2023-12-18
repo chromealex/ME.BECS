@@ -53,6 +53,7 @@ namespace ME.BECS.Network {
         public Unity.Jobs.JobHandle Connect(in World world, NetworkModule module, Unity.Jobs.JobHandle dependsOn) {
 
             // Schedule connection job
+            this.ServerTime = 10d;
             var handle = new ConnectJob() {
                 world = world,
                 transport = _classPtr((INetworkTransport)this),
@@ -80,7 +81,7 @@ namespace ME.BECS.Network {
                 new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)
             ).TotalMilliseconds;
             this.ServerTime = currentTime;
-
+            
             if (this.sendBytes.Count > 0) {
 
                 return this.sendBytes.Dequeue();

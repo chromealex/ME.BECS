@@ -156,7 +156,7 @@ namespace ME.BECS {
 
         }
 
-        public int lockIndex;
+        public LockSpinner lockIndex;
         public List<Archetype> list;
         public List<uint> allArchetypes;
         public BitArray allArchetypesForQuery;

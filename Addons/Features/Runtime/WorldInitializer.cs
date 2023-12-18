@@ -44,7 +44,7 @@ namespace ME.BECS {
             instance = this;
 
             if (this.featuresGraph == null) {
-                Debug.LogError("Graph is null");
+                Logger.Features.Error("Graph is null");
                 return;
             }
             
@@ -115,6 +115,8 @@ namespace ME.BECS {
                 ProfilerCounters.SampleWorld(in this.world);
             }
 
+            WorldsTempAllocator.Reset();
+            
         }
 
         protected virtual void OnDestroy() {

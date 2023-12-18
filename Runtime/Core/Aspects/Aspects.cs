@@ -12,10 +12,12 @@ namespace ME.BECS {
     
     public interface IJobParallelForAspect {}
     
-    public unsafe struct RefRW<T> : IAspectData where T : unmanaged, IComponent {
+    public unsafe struct RefRW<T> : IAspectData, IIsCreated where T : unmanaged, IComponent {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
+
+        public bool isCreated => this.state != null;
         
         [INLINE(256)]
         public RefRW(in World world) {
@@ -24,10 +26,10 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public readonly ref T Get(Ent ent) {
+            E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
             ref var res = ref *(T*)this.state->components.GetUnknownType(this.state, typeId, groupId, ent.id, ent.gen, out var isNew); 
-            this.state->entities.UpVersion(this.state, ent.id, groupId);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 this.state->batches.Set_INTERNAL(typeId, ent.id, this.state);
@@ -37,10 +39,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly ref T Get(uint entId) {
+            E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
             ref var res = ref *(T*)this.state->components.GetUnknownType(this.state, typeId, groupId, entId, this.state->entities.GetGeneration(this.state, entId), out var isNew);
-            this.state->entities.UpVersion(this.state, entId, groupId);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 this.state->batches.Set_INTERNAL(typeId, entId, this.state);
@@ -50,6 +52,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly ref readonly T Read(Ent ent) {
+            E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
             ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, ent.id, ent.gen, out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
@@ -58,6 +61,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly ref readonly T Read(uint entId) {
+            E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
             ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
@@ -118,7 +122,7 @@ namespace ME.BECS {
         public static T GetAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
 
             if (ent.IsAlive() == false) return default;
-            ent.Set<T>();
+            //ent.Set<T>();
             T aspect = AspectStorage<T>.GetAspect(in ent.World);
             aspect.ent = ent;
             return aspect;

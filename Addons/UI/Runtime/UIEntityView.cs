@@ -21,7 +21,7 @@ namespace ME.BECS.UI {
 
             } else {
                 
-                Debug.LogWarning("UI Module required in initializer");
+                Logger.UI.Warning("UI Module required in initializer");
                 
             }
 
@@ -30,7 +30,7 @@ namespace ME.BECS.UI {
         public void Assign(in Ent worldEnt) {
 
             if (this.uiEntity.IsAlive() == false) {
-                Debug.LogError("UI Module View has not been initialized");
+                Logger.UI.Error("UI Module View has not been initialized");
                 return;
             }
             
