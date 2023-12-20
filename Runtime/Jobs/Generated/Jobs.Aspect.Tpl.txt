@@ -87,7 +87,7 @@ namespace ME.BECS.Jobs {
                 
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                 for (int i = 0; i < jobData.buffer->count; ++i) {
-                    var entId = jobData.buffer->entities[i];
+                    var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
                     {count[jobData.c#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
                     jobData.jobData.Execute({count(,)[{{inref}} jobData.c#i#]});

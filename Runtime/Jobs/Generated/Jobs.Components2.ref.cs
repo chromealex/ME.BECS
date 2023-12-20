@@ -87,8 +87,9 @@ namespace ME.BECS.Jobs {
                 
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                 for (int i = 0; i < jobData.buffer->count; ++i) {
-                    var entId = jobData.buffer->entities[i];
-                    jobData.jobData.Execute(ref jobData.c0.Get(entId),ref jobData.c1.Get(entId));
+                    var entId = *(jobData.buffer->entities + i);
+                    var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
+                    jobData.jobData.Execute(ref jobData.c0.Get(entId, gen),ref jobData.c1.Get(entId, gen));
                 }
                 jobData.buffer->EndForEachRange();
                 

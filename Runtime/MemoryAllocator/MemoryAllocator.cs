@@ -880,37 +880,37 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly ref T RefArray<T>(in MemPtr ptr, int index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, ptr, index * size);
+            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, in ptr, index * size);
         }
 
         [INLINE(256)]
         public readonly ref T RefArray<T>(MemPtr ptr, int index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, ptr, index * size);
+            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, in ptr, index * size);
         }
 
         [INLINE(256)]
         public readonly ref T RefArray<T>(in MemPtr ptr, uint index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, ptr, index * size);
+            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, in ptr, index * size);
         }
 
         [INLINE(256)]
         public readonly ref T RefArray<T>(MemPtr ptr, uint index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, ptr, index * size);
+            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in this, in ptr, index * size);
         }
 
         [INLINE(256)]
         public MemPtr ReAllocArray<T>(in MemPtr ptr, int newLength) where T : unmanaged {
             var size = TSize<T>.size;
-            return MemoryAllocatorExt.ReAlloc(ref this, ptr, (int)(size * newLength));
+            return MemoryAllocatorExt.ReAlloc(ref this, in ptr, (int)(size * newLength));
         }
 
         [INLINE(256)]
         public MemPtr ReAllocArray<T>(in MemPtr ptr, uint newLength) where T : unmanaged {
             var size = TSize<T>.size;
-            return MemoryAllocatorExt.ReAlloc(ref this, ptr, (int)(size * newLength));
+            return MemoryAllocatorExt.ReAlloc(ref this, in ptr, (int)(size * newLength));
         }
 
         [INLINE(256)]

@@ -16,6 +16,7 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
+        public MemAllocatorPtr storage;
 
         public bool isCreated => this.state != null;
         
@@ -25,24 +26,11 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public readonly ref T Get(Ent ent) {
+        public readonly ref T Get(uint entId, ushort gen) {
             E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            ref var res = ref *(T*)this.state->components.GetUnknownType(this.state, typeId, groupId, ent.id, ent.gen, out var isNew); 
-            if (isNew == true) {
-                res = StaticTypes<T>.defaultValue;
-                this.state->batches.Set_INTERNAL(typeId, ent.id, this.state);
-            }
-            return ref res;
-        }
-
-        [INLINE(256)]
-        public readonly ref T Get(uint entId) {
-            E.IS_CREATED(this);
-            var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
-            ref var res = ref *(T*)this.state->components.GetUnknownType(this.state, typeId, groupId, entId, this.state->entities.GetGeneration(this.state, entId), out var isNew);
+            ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, entId, gen, out var isNew);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 this.state->batches.Set_INTERNAL(typeId, entId, this.state);
@@ -51,19 +39,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly ref readonly T Read(Ent ent) {
+        public readonly ref readonly T Read(uint entId, ushort gen) {
             E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
-            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, ent.id, ent.gen, out var exists);
-            if (exists == false) return ref StaticTypes<T>.defaultValue;
-            return ref res;
-        }
-
-        [INLINE(256)]
-        public readonly ref readonly T Read(uint entId) {
-            E.IS_CREATED(this);
-            var typeId = StaticTypes<T>.typeId;
-            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
+            ref var res = ref *(T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
         }
@@ -74,6 +53,7 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
+        public MemAllocatorPtr storage;
 
         [INLINE(256)]
         public RefRO(in World world) {
@@ -81,17 +61,9 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public readonly ref readonly T Read(Ent ent) {
+        public readonly ref readonly T Read(uint entId, ushort gen) {
             var typeId = StaticTypes<T>.typeId;
-            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, ent.id, ent.gen, out var exists); 
-            if (exists == false) return ref StaticTypes<T>.defaultValue;
-            return ref res;
-        }
-        
-        [INLINE(256)]
-        public readonly ref readonly T Read(uint entId) {
-            var typeId = StaticTypes<T>.typeId;
-            ref var res = ref *(T*)this.state->components.ReadUnknownType(this.state, typeId, entId, this.state->entities.GetGeneration(this.state, entId), out var exists);
+            ref var res = ref *(T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
         }

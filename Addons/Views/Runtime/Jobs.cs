@@ -238,8 +238,6 @@ namespace ME.BECS.Views {
             public ViewsModuleData* viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toChange;
-            [ReadOnly]
-            public UnsafeParallelHashMap<uint, bool> dirty;
             [NativeDisableUnsafePtrRestriction]
             public Counter* toRemoveCounter;
 
@@ -250,7 +248,7 @@ namespace ME.BECS.Views {
                 //   if entity's generation changed
                 //   we need to check
                 if (entData.element.ent.IsAlive() == false) {
-                    if (this.dirty.ContainsKey(entData.element.ent.id) == false) {
+                    if (this.viewsModuleData->dirty[(int)entData.element.ent.id] == false) {
                         if (this.toRemove.TryAdd(entData.element.ent.id, false) == true) {
                             this.toRemoveCounter->Increment();
                         }
@@ -273,7 +271,6 @@ namespace ME.BECS.Views {
             public ViewsModuleData* viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toAdd;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
-            public UnsafeParallelHashMap<uint, bool>.ParallelWriter dirty;
             [NativeDisableUnsafePtrRestriction]
             public Counter* toRemoveCounter;
 
@@ -305,7 +302,7 @@ namespace ME.BECS.Views {
                 }
 
                 // Mark entity as dirty
-                this.dirty.TryAdd(entId, false);
+                this.viewsModuleData->dirty[(int)entId] = true;
 
             }
 
@@ -321,13 +318,17 @@ namespace ME.BECS.Views {
             public ViewsModuleData* viewsModuleData;
 
             public void Execute() {
-                
+
+                this.viewsModuleData->dirty.Clear();
                 var entitiesCapacity = this.connectedWorld.state->entities.Capacity;
                 this.viewsModuleData->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT);
                 if (entitiesCapacity > this.viewsModuleData->renderingOnSceneEntToPrefabId.Length) this.viewsModuleData->renderingOnSceneEntToPrefabId.Resize(ref this.state->allocator, entitiesCapacity);
                 if (entitiesCapacity > this.viewsModuleData->toRemove.Capacity) this.viewsModuleData->toRemove.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->toAdd.Capacity) this.viewsModuleData->toAdd.Capacity = (int)entitiesCapacity;
-                if (entitiesCapacity > this.viewsModuleData->dirty.Capacity) this.viewsModuleData->dirty.Capacity = (int)entitiesCapacity;
+                if (entitiesCapacity > this.viewsModuleData->dirty.Length) {
+                    this.viewsModuleData->dirty.Length = (int)entitiesCapacity;
+                    _memclear(this.viewsModuleData->dirty.Ptr, TSize<bool>.size);
+                }
                 if (entitiesCapacity > this.viewsModuleData->toChange.Capacity) this.viewsModuleData->toChange.Capacity = (int)entitiesCapacity;
                 
             }

@@ -25,8 +25,8 @@ namespace ME.BECS {
         public AspectDataPtr<T1> t1Value;
         public AspectDataPtr<T2> t2Value;
 
-        public ref T1 t1 => ref this.t1Value.Get(this.ent);
-        public ref T2 t2 => ref this.t2Value.Get(this.ent);
+        public ref T1 t1 => ref this.t1Value.Get(this.ent.id, this.ent.gen);
+        public ref T2 t2 => ref this.t2Value.Get(this.ent.id, this.ent.gen);
 
     }
 
@@ -43,9 +43,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T Get(Ent ent) {
+        public readonly ref T Get(uint entId, ushort gen) {
 
-            return ref this.value.Get(ent);
+            return ref this.value.Get(entId, gen);
+
+        }
+
+        [INLINE(256)]
+        public readonly ref readonly T Read(uint entId, ushort gen) {
+
+            return ref this.value.Read(entId, gen);
 
         }
 

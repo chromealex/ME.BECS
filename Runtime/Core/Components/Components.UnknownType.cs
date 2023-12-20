@@ -120,6 +120,18 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static byte* GetUnknownType(State* state, MemAllocatorPtr storage, uint typeId, uint groupId, uint entId, ushort gen, out bool isNew) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+            E.IS_NOT_TAG(typeId);
+
+            var data = storage.AsPtr<SparseSetUnknownType>(in state->allocator)->Get(state, entId, gen, out isNew);
+            state->entities.UpVersion(state, entId, groupId);
+            return data;
+
+        }
+
+        [INLINE(256)]
         public bool RemoveUnknownType(State* state, uint typeId, uint groupId, uint entId, ushort gen) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -156,6 +168,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static byte* ReadUnknownType(State* state, MemAllocatorPtr storage, uint typeId, uint entId, ushort gen, out bool exists) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+            E.IS_NOT_TAG(typeId);
+
+            return storage.AsPtr<SparseSetUnknownType>(in state->allocator)->Read(state, entId, gen, out exists);
+            
+        }
+
+        [INLINE(256)]
         public bool HasUnknownType(State* state, uint typeId, uint entId, ushort gen) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -172,13 +194,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SparseSetUnknownType* GetUnsafeSparseSetPtr(State* state, uint typeId) {
+        public readonly ref MemAllocatorPtr GetUnsafeSparseSetPtr(State* state, uint typeId) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
 
-            ref var ptr = ref this.items[state, typeId];
-            return ptr.AsPtr<SparseSetUnknownType>(in state->allocator);
+            return ref this.items[state, typeId];
             
         }
 

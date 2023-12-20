@@ -248,7 +248,7 @@ namespace ME.BECS.Views {
         public UnsafeParallelHashMap<uint, bool> toChange;
         public UnsafeParallelHashMap<uint, bool> toRemove;
         public UnsafeParallelHashMap<uint, bool> toAdd;
-        public UnsafeParallelHashMap<uint, bool> dirty;
+        public UnsafeList<bool> dirty;
         public UnsafeList<EntityData> renderingOnSceneEnts;
         public List<SceneInstanceInfo> renderingOnScene;
         
@@ -285,7 +285,7 @@ namespace ME.BECS.Views {
                 toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                dirty = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
+                dirty = new UnsafeList<bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
             };
@@ -454,7 +454,6 @@ namespace ME.BECS.Views {
                         viewsModuleData = this.data,
                         toAdd = this.data->toAdd.AsParallelWriter(),
                         toRemove = this.data->toRemove.AsParallelWriter(),
-                        dirty = this.data->dirty.AsParallelWriter(),
                         toRemoveCounter = toRemoveCounter,
                     });
                 }
@@ -464,7 +463,6 @@ namespace ME.BECS.Views {
                     toRemoveEntitiesJob = new Jobs.JobRemoveEntitiesFromScene() {
                         world = this.data->connectedWorld,
                         viewsModuleData = this.data,
-                        dirty = this.data->dirty,
                         toChange = this.data->toChange.AsParallelWriter(),
                         toRemove = this.data->toRemove.AsParallelWriter(),
                         toRemoveCounter = toRemoveCounter,

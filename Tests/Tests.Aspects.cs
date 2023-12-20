@@ -25,8 +25,8 @@ namespace ME.BECS.Tests {
             public AspectDataPtr<T1> dataPtr;
             public AspectDataPtr<T2> dataPtr1;
 
-            public ref T1 t1 => ref this.dataPtr.Get(this.ent);
-            public ref T2 t2 => ref this.dataPtr1.Get(this.ent);
+            public ref T1 t1 => ref this.dataPtr.Get(this.ent.id, this.ent.gen);
+            public ref T2 t2 => ref this.dataPtr1.Get(this.ent.id, this.ent.gen);
 
             public static void TestInitialize(in World world) {
                 ref var aspect = ref world.InitializeAspect<TestAspect>();

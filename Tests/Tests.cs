@@ -17,7 +17,7 @@ namespace ME.BECS.Tests {
         }
 
     }
-    
+
     public struct TestAspect : IAspect {
             
         public Ent ent { get; set; }
@@ -30,12 +30,12 @@ namespace ME.BECS.Tests {
         public AspectDataPtr<Test4Component> dataPtr4;
         public AspectDataPtr<Test5Component> dataPtr5;
 
-        public ref TestComponent data => ref this.dataPtr.Get(this.ent);
-        public ref Test1Component data1 => ref this.dataPtr1.Get(this.ent);
-        public ref Test2Component data2 => ref this.dataPtr2.Get(this.ent);
-        public ref Test3Component data3 => ref this.dataPtr3.Get(this.ent);
-        public ref Test4Component data4 => ref this.dataPtr4.Get(this.ent);
-        public ref Test5Component data5 => ref this.dataPtr5.Get(this.ent);
+        public ref TestComponent data => ref this.dataPtr.Get(this.ent.id, this.ent.gen);
+        public ref Test1Component data1 => ref this.dataPtr1.Get(this.ent.id, this.ent.gen);
+        public ref Test2Component data2 => ref this.dataPtr2.Get(this.ent.id, this.ent.gen);
+        public ref Test3Component data3 => ref this.dataPtr3.Get(this.ent.id, this.ent.gen);
+        public ref Test4Component data4 => ref this.dataPtr4.Get(this.ent.id, this.ent.gen);
+        public ref Test5Component data5 => ref this.dataPtr5.Get(this.ent.id, this.ent.gen);
 
         public static void TestInitialize(in World world) {
             ref var aspect = ref world.InitializeAspect<TestAspect>();

@@ -16,7 +16,7 @@ namespace ME.BECS {
         public Archetypes archetypes;
         public Queries queries;
         public AspectsStorage aspectsStorage;
-        public uint random;
+        public RandomData random;
         public ulong tick;
         public WorldState worldState;
 
@@ -65,6 +65,7 @@ namespace ME.BECS {
             this.batches = Batches.Create(statePtr, stateProperties.entitiesCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
+            this.random = RandomData.Create(statePtr);
             return this;
 
         }

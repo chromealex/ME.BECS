@@ -39,11 +39,6 @@ namespace ME.BECS.TransformAspect {
                 currentParent = parent;
             }
 
-            {
-                // Mark as dirty
-                ent.Set(new IsHierarchyDirtyComponent());
-            }
-            
         }
         
         [INLINE(256)]
@@ -75,16 +70,18 @@ namespace ME.BECS.TransformAspect {
         public static void CalculateMatrixHierarchy(State* state, in TransformAspect parent, in TransformAspect ent) {
 
             CalculateMatrix(parent, ent);
-            ent.UnsetDirty();
-            
-            ref readonly var children = ref ent.children;
-            for (uint i = 0; i < children.Count; ++i) {
 
-                var child = children[in state->allocator, i];
-                CalculateMatrixHierarchy(state, in ent, child);
+            var cnt = ent.children.Count;
+            if (cnt > 0) {
+                var children = (Ent*)ent.children.GetUnsafePtr(in state->allocator);
+                for (uint i = 0; i < cnt; ++i) {
 
+                    var child = *(children + i);
+                    CalculateMatrixHierarchy(state, in ent, child);
+
+                }
             }
-            
+
         }
 
     }

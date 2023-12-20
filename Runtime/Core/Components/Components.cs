@@ -140,13 +140,22 @@ namespace ME.BECS {
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.items.BurstMode(in allocator, state);
+            for (uint i = 1u; i < this.items.Length; ++i) {
+                ref var ptr = ref this.items[in allocator, i];
+                var dataSize = StaticTypes.sizes.Get(i);
+                if (dataSize == 0u) {
+                    ptr.AsPtr<SparseSetUnknownTypeTag>(in allocator)->BurstMode(in allocator, state);
+                } else {
+                    ptr.AsPtr<SparseSetUnknownType>(in allocator)->BurstMode(in allocator, state);
+                }
+            }
         }
 
         [INLINE(256)]
         public RefRW<T> GetRW<T>(State* state) where T : unmanaged, IComponent {
             return new RefRW<T>() {
                 state = state,
-                //storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
             };
         }
 
@@ -154,7 +163,7 @@ namespace ME.BECS {
         public RefRO<T> GetRO<T>(State* state) where T : unmanaged, IComponent {
             return new RefRO<T>() {
                 state = state,
-                //storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
             };
         }
 

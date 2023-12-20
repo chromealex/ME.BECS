@@ -162,7 +162,16 @@ namespace ME.BECS {
             return size;
 
         }
-        
+
+        [INLINE(256)]
+        public void BurstMode(in MemoryAllocator allocator, bool state) {
+            
+            this.entToDataIdx.BurstMode(in allocator, state);
+            this.dataIdxToEnt.BurstMode(in allocator, state);
+            this.generations.BurstMode(in allocator, state);
+            
+        }
+
     }
 
     public unsafe struct DataPage {
@@ -183,6 +192,16 @@ namespace ME.BECS {
     }
 
     public unsafe partial struct SparseSetUnknownType {
+
+        [INLINE(256)]
+        public void BurstMode(in MemoryAllocator allocator, bool state) {
+            this.indexPages.BurstMode(in allocator, state);
+            this.dataPages.BurstMode(in allocator, state);
+            for (uint i = 0; i < this.indexPages.Length; ++i) {
+                ref var pageIndex = ref this.indexPages[in allocator, i];
+                pageIndex.BurstMode(in allocator, state);
+            }
+        }
 
         [INLINE(256)]
         private static uint _size(uint capacity) {
@@ -253,7 +272,6 @@ namespace ME.BECS {
 
         private MemArray<IndexPage> indexPages;
         private uint version;
-        private int lockIndex;
         private MemArray<DataPage> dataPages;
         private readonly uint dataSize;
         private readonly uint dataPerPage;
@@ -267,7 +285,6 @@ namespace ME.BECS {
             this.indexPages = new MemArray<IndexPage>(ref state->allocator, _size(entitiesCapacity), growFactor: 2);
             this.dataPages = new MemArray<DataPage>(ref state->allocator, _sizeData(entitiesCapacity, this.dataPerPage), growFactor: 2);
             this.version = state->allocator.version;
-            this.lockIndex = 0;
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
 
         }
@@ -448,7 +465,6 @@ namespace ME.BECS {
             var globalHeadIndex = _index(page.entToDataIdx[in state->allocator, entityId], pageIndex);
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
             var ptr =  MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
-            //UnityEngine.Debug.Log("Read EntId: " + src + " ptr: " + dataPage.data.offset + " offset " + (int)ptr + " pageIndex: " + pageIndex + "; headIndex: " + headIndex + "; _index(headIndex, pageIndex): " + _index(headIndex, pageIndex) + " :: offset: " + _dataIndex(_index(headIndex, pageIndex), pageDataIndex));
             JobUtils.Unlock(ref page.lockIndex);
             return ptr;
 
@@ -513,6 +529,15 @@ namespace ME.BECS {
     public unsafe partial struct SparseSetUnknownTypeTag {
 
         [INLINE(256)]
+        public void BurstMode(in MemoryAllocator allocator, bool state) {
+            this.indexPages.BurstMode(in allocator, state);
+            for (uint i = 0; i < this.indexPages.Length; ++i) {
+                ref var pageIndex = ref this.indexPages[in allocator, i];
+                pageIndex.BurstMode(in allocator, state);
+            }
+        }
+
+        [INLINE(256)]
         private static uint _size(uint capacity) {
             return (capacity - 1u) / ENTITIES_PER_PAGE + 1u;
         }
@@ -544,14 +569,12 @@ namespace ME.BECS {
         internal const uint ENTITIES_PER_PAGE = 64u;
         private MemArray<IndexPage> indexPages;
         private uint version;
-        private int lockIndex;
 
         [INLINE(256)]
         public SparseSetUnknownTypeTag(State* state, uint capacity, uint entitiesCapacity) {
 
             this.indexPages = new MemArray<IndexPage>(ref state->allocator, _size(entitiesCapacity), growFactor: 2);
             this.version = state->allocator.version;
-            this.lockIndex = 0;
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
 
         }

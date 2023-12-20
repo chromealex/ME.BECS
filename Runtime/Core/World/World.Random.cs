@@ -2,25 +2,71 @@ namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
+    using Unity.Jobs.LowLevel.Unsafe;
 
+    public unsafe struct RandomData {
+
+        private MemArray<uint> data;
+
+        [INLINE(256)]
+        public uint Get(State* statePtr) {
+            return this.data[statePtr, JobsUtility.ThreadIndex];
+        }
+
+        [INLINE(256)]
+        public void Set(State* statePtr, uint state) {
+            this.data[statePtr, JobsUtility.ThreadIndex] = state;
+        }
+        
+        [INLINE(256)]
+        public static RandomData Create(State* statePtr) {
+            var rnd = new RandomData() {
+                data = new MemArray<uint>(ref statePtr->allocator, (uint)JobsUtility.ThreadIndexCount),
+            };
+            return rnd;
+        }
+
+        [INLINE(256)]
+        public void SetSeed(State* statePtr, uint seed, bool allThreads) {
+
+            if (allThreads == false) {
+                this.data[statePtr, JobsUtility.ThreadIndex] = seed;
+            } else {
+                for (uint i = 0u; i < this.data.Length; ++i) {
+                    this.data[statePtr, i] = seed;
+                }
+            }
+
+        }
+
+    }
+    
     internal unsafe struct RandomState : System.IDisposable {
 
         public State* state;
         public Random random;
         
+        [INLINE(256)]
         public RandomState(State* state) {
             this.state = state;
-            this.random = new Random(this.state->random);
+            this.random = new Random(this.state->random.Get(state));
         }
 
+        [INLINE(256)]
         public void Dispose() {
-            this.state->random = this.random.state;
+            this.state->random.Set(this.state, this.random.state);
         }
 
     }
 
     public unsafe partial struct World {
 
+        [INLINE(256)]
+        public void SetSeed(uint seed, bool allThreads = false) {
+            E.RANGE(seed, 1u, uint.MaxValue);
+            this.state->random.SetSeed(this.state, seed, allThreads);
+        }
+        
         [INLINE(256)]
         public float3 GetRandomVector3InSphere(float radius) {
             E.IS_IN_TICK(this.state);

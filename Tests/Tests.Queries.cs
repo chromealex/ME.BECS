@@ -13,8 +13,8 @@ namespace ME.BECS.Tests {
         [QueryWith]
         public AspectDataPtr<Test2Component> t2Value;
 
-        public ref Test1Component t1 => ref this.t1Value.Get(this.ent);
-        public ref Test2Component t2 => ref this.t2Value.Get(this.ent);
+        public ref Test1Component t1 => ref this.t1Value.Get(this.ent.id, this.ent.gen);
+        public ref Test2Component t2 => ref this.t2Value.Get(this.ent.id, this.ent.gen);
 
         public static void TestInitialize(in World world) {
             ref var aspect = ref world.InitializeAspect<Aspect1>();
@@ -33,8 +33,8 @@ namespace ME.BECS.Tests {
         [QueryWith]
         public AspectDataPtr<Test4Component> t2Value;
 
-        public ref Test3Component t1 => ref this.t1Value.Get(this.ent);
-        public ref Test4Component t2 => ref this.t2Value.Get(this.ent);
+        public ref Test3Component t1 => ref this.t1Value.Get(this.ent.id, this.ent.gen);
+        public ref Test4Component t2 => ref this.t2Value.Get(this.ent.id, this.ent.gen);
 
         public static void TestInitialize(in World world) {
             ref var aspect = ref world.InitializeAspect<Aspect2>();

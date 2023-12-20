@@ -9,8 +9,8 @@ namespace ME.BECS {
     public readonly unsafe struct CachedPtr<T> where T : unmanaged {
 
         [NativeDisableUnsafePtrRestriction]
-        private readonly T* cachedPtr;
-        private readonly ushort version;
+        internal readonly T* cachedPtr;
+        internal readonly ushort version;
 
         [INLINE(256)]
         public CachedPtr(in MemoryAllocator allocator, T* ptr) {
@@ -32,11 +32,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void* ReadPtr(in MemoryAllocator allocator, MemPtr arrPtr) {
+        public void* ReadPtr(in MemoryAllocator allocator, in MemPtr arrPtr) {
             if (allocator.version == this.version) {
                 return this.cachedPtr;
             }
-            return MemoryAllocatorExt.GetUnsafePtr(in allocator, arrPtr);
+            return MemoryAllocatorExt.GetUnsafePtr(in allocator, in arrPtr);
         }
 
         [INLINE(256)]
@@ -56,11 +56,11 @@ namespace ME.BECS {
         }
 
     }
-    
+
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayProxy<>))]
     public unsafe struct MemArray<T> where T : unmanaged {
 
-        public static MemArray<T> Empty => new MemArray<T>() {
+        public static readonly MemArray<T> Empty = new MemArray<T>() {
             arrPtr = MemPtr.Invalid,
             Length = 0,
             growFactor = 0,
@@ -265,7 +265,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref this.cachedPtr.Read(in state->allocator, this.arrPtr, index);
+                return ref *((T*)this.GetUnsafePtrCached(in state->allocator) + index);
             }
         }
 
@@ -273,7 +273,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref this.cachedPtr.Read(in allocator, this.arrPtr, index);
+                return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
             }
         }
 
@@ -281,7 +281,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref this.cachedPtr.Read(in allocator, this.arrPtr, index);
+                return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
             }
         }
 
@@ -289,7 +289,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref this.cachedPtr.Read(in state->allocator, this.arrPtr, index);
+                return ref *((T*)this.GetUnsafePtrCached(in state->allocator) + index);
             }
         }
 

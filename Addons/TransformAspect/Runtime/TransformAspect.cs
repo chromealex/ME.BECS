@@ -46,14 +46,6 @@ namespace ME.BECS.TransformAspect {
     }
     
     [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct IsHierarchyDirtyComponent : IComponent {
-
-        public byte state;
-        private byte _;
-
-    }
-
-    [ComponentGroup(typeof(TransformComponentGroup))]
     public struct ChildrenComponent : IComponent {
 
         public List<Ent> list;
@@ -65,27 +57,26 @@ namespace ME.BECS.TransformAspect {
         public Ent ent { get; set; }
         
         [QueryWith]
-        internal RefRW<LocalPositionComponent> localPositionData;
+        internal AspectDataPtr<LocalPositionComponent> localPositionData;
         [QueryWith]
-        internal RefRW<LocalRotationComponent> localRotationData;
-        internal RefRW<LocalScaleComponent> localScaleData;
-        internal RefRO<ParentComponent> parentData;
-        internal RefRO<ChildrenComponent> childrenData;
+        internal AspectDataPtr<LocalRotationComponent> localRotationData;
+        internal AspectDataPtr<LocalScaleComponent> localScaleData;
+        internal AspectDataPtr<ParentComponent> parentData;
+        internal AspectDataPtr<ChildrenComponent> childrenData;
         [QueryWith]
-        internal RefRW<WorldMatrixComponent> worldMatrixData;
-        internal RefRW<IsHierarchyDirtyComponent> isDirty;
+        internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
 
-        public readonly ref float3 localPosition => ref this.SetDirty(ref this.localPositionData.Get(this.ent.id).value);
-        public readonly ref quaternion localRotation => ref this.SetDirty(ref this.localRotationData.Get(this.ent.id).value);
-        public readonly ref float3 localScale => ref this.SetDirty(ref this.localScaleData.Get(this.ent.id).value);
-        public readonly ref readonly float3 readLocalPosition => ref this.localPositionData.Read(this.ent.id).value;
-        public readonly ref readonly quaternion readLocalRotation => ref this.localRotationData.Read(this.ent.id).value;
-        public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id).value;
-        public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id).value;
-        public readonly ref readonly List<Ent> children => ref this.childrenData.Read(this.ent.id).list;
-        public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id).value;
-        public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id).value;
-        public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Read(this.ent.id).value, this.localRotationData.Read(this.ent.id).value, this.localScaleData.Read(this.ent.id).value);
+        public readonly ref float3 localPosition => ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref quaternion localRotation => ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref float3 localScale => ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly float3 readLocalPosition => ref this.localPositionData.Read(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly quaternion readLocalRotation => ref this.localRotationData.Read(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly List<Ent> children => ref this.childrenData.Read(this.ent.id, this.ent.gen).list;
+        public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
+        public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Read(this.ent.id, this.ent.gen).value, this.localRotationData.Read(this.ent.id, this.ent.gen).value, this.localScaleData.Read(this.ent.id, this.ent.gen).value);
 
         public float3 position {
             [INLINE(256)]
@@ -189,35 +180,18 @@ namespace ME.BECS.TransformAspect {
         public readonly float3 GetWorldMatrixScale() => MatrixUtils.GetScale(in this.readWorldMatrix);
 
         [INLINE(256)]
-        public readonly ref T SetDirty<T>(ref T value) {
-            this.isDirty.Get(this.ent).state = 1;
-            return ref value;
-        }
-
-        [INLINE(256)]
-        public readonly void SetDirty() {
-            this.isDirty.Get(this.ent).state = 1;
-        }
-
-        [INLINE(256)]
-        public readonly void UnsetDirty() {
-            this.isDirty.Get(this.ent).state = 0;
-        }
-
-        [INLINE(256)]
         public static implicit operator TransformAspect(in Ent ent) {
             return ent.GetAspect<TransformAspect>();
         }
 
         public static void TestInitialize(in World world) {
             ref var tr = ref world.InitializeAspect<TransformAspect>();
-            tr.localPositionData = new RefRW<LocalPositionComponent>(in world);
-            tr.localRotationData = new RefRW<LocalRotationComponent>(in world);
-            tr.localScaleData = new RefRW<LocalScaleComponent>(in world);
-            tr.parentData = new RefRO<ParentComponent>(in world);
-            tr.childrenData = new RefRO<ChildrenComponent>(in world);
-            tr.worldMatrixData = new RefRW<WorldMatrixComponent>(in world);
-            tr.isDirty = new RefRW<IsHierarchyDirtyComponent>(in world);
+            tr.localPositionData = new AspectDataPtr<LocalPositionComponent>(in world);
+            tr.localRotationData = new AspectDataPtr<LocalRotationComponent>(in world);
+            tr.localScaleData = new AspectDataPtr<LocalScaleComponent>(in world);
+            tr.parentData = new AspectDataPtr<ParentComponent>(in world);
+            tr.childrenData = new AspectDataPtr<ChildrenComponent>(in world);
+            tr.worldMatrixData = new AspectDataPtr<WorldMatrixComponent>(in world);
         }
 
     }
