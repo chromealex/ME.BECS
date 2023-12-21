@@ -6,37 +6,16 @@ namespace ME.BECS {
 
     public unsafe struct RandomData {
 
-        private MemArray<uint> data;
+        public uint data;
+        public LockSpinner lockIndex;
 
         [INLINE(256)]
-        public uint Get(State* statePtr) {
-            return this.data[statePtr, JobsUtility.ThreadIndex];
+        public void SetSeed(State* statePtr, uint seed) {
+            this.data = seed;
         }
 
-        [INLINE(256)]
-        public void Set(State* statePtr, uint state) {
-            this.data[statePtr, JobsUtility.ThreadIndex] = state;
-        }
-        
-        [INLINE(256)]
         public static RandomData Create(State* statePtr) {
-            var rnd = new RandomData() {
-                data = new MemArray<uint>(ref statePtr->allocator, (uint)JobsUtility.ThreadIndexCount),
-            };
-            return rnd;
-        }
-
-        [INLINE(256)]
-        public void SetSeed(State* statePtr, uint seed, bool allThreads) {
-
-            if (allThreads == false) {
-                this.data[statePtr, JobsUtility.ThreadIndex] = seed;
-            } else {
-                for (uint i = 0u; i < this.data.Length; ++i) {
-                    this.data[statePtr, i] = seed;
-                }
-            }
-
+            return new RandomData() { data = 1u };
         }
 
     }
@@ -49,12 +28,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public RandomState(State* state) {
             this.state = state;
-            this.random = new Random(this.state->random.Get(state));
+            this.state->random.lockIndex.Lock();
+            this.random = new Random(this.state->random.data);
         }
 
         [INLINE(256)]
         public void Dispose() {
-            this.state->random.Set(this.state, this.random.state);
+            this.state->random.data = this.random.state;
+            this.state->random.lockIndex.Unlock();
         }
 
     }
@@ -62,9 +43,9 @@ namespace ME.BECS {
     public unsafe partial struct World {
 
         [INLINE(256)]
-        public void SetSeed(uint seed, bool allThreads = false) {
+        public void SetSeed(uint seed) {
             E.RANGE(seed, 1u, uint.MaxValue);
-            this.state->random.SetSeed(this.state, seed, allThreads);
+            this.state->random.SetSeed(this.state, seed);
         }
         
         [INLINE(256)]
