@@ -26,3 +26,38 @@
 #titleContainer #titleField {
     margin: 0px;
 }
+
+
+.mainContainer {
+    border-top-width: 0px;
+}
+
+#headerContainer {
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.mainContainer > #headerContainer > #titleContainer > #titleLabel {
+    font-size: 12px !important;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.mainContainer > #headerContainer > #titleContainer {
+    justify-content: center;
+    width: 100%;
+}
+
+.mainContainer > #headerContainer > #headerColorPicker {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.mainContainer > #centralContainer {
+    background-color: rgba(45, 45, 45, 1);
+}
+
+.scope {
+    border-color: #1a1a1a;
+}

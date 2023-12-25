@@ -289,7 +289,7 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 .start-node #node-border {
     background-color: #3DA600;
-    border-radius: 8px;
+    border-radius: 5px;
 }
 
 .graphElement.start-node {
@@ -302,7 +302,7 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 .exit-node #node-border {
     background-color: #a61900;
-    border-radius: 8px;
+    border-radius: 5px;
 }
 
 .graphElement.exit-node {
@@ -319,7 +319,7 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 .graph-node #node-border {
     background-color: rgb(80, 0, 166);
-    border-radius: 8px;
+    border-radius: 5px;
 }
 
 .start-node .enable-toggle,
@@ -366,4 +366,22 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 #title.with-labels {
     height: 40px;
+}
+
+
+.node > #node-border {
+    border-left-width: 5px;
+    border-right-width: 5px;
+    border-left-color: rgba(0, 0, 0, 0.3);
+    border-right-color: rgba(0, 0, 0, 0.3);
+}
+
+.title-container {
+    justify-content: center;
+}
+.title-container Label {
+    margin-top: 2px !important;
+}
+#node-border > #title {
+    border-bottom-width: 1px !important;
 }

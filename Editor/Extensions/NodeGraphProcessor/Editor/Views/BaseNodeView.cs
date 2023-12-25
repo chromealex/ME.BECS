@@ -139,8 +139,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
             controlsContainer = new VisualElement{ name = "controls" };
 			controlsContainer.AddToClassList("NodeControls");
-			mainContainer.Add(controlsContainer);
-
+			
 			rightTitleContainer = new VisualElement{ name = "RightTitleContainer" };
 			titleContainer.Add(rightTitleContainer);
 
@@ -227,7 +226,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 
 			this.Q("contents").style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
-
+			
 			{
 				var title = this.Q("title");
 				var enableToggle = new Toggle();
@@ -240,6 +239,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 				});
 				this.RefreshEnabled();
 			}
+			
+			mainContainer.Add(controlsContainer);
+
 		}
 
 		protected virtual void CreateLabels(VisualElement container) {
@@ -1017,7 +1019,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			});*/
 
 			// Disallow picking scene objects when the graph is not linked to a scene
-			if (element != null && !owner.graph.IsLinkedToScene())
+			if (!owner.graph.IsLinkedToScene())
 			{
 				var objectField = element.Q<ObjectField>();
 				if (objectField != null)
@@ -1028,7 +1030,6 @@ namespace ME.BECS.Extensions.GraphProcessor
 				inputFieldList = fieldControlsMap[field] = new scg::List<VisualElement>();
 			inputFieldList.Add(element);
 
-			if(element != null)
 			{
 				if (showInputDrawer)
 				{
@@ -1043,11 +1044,11 @@ namespace ME.BECS.Extensions.GraphProcessor
 				}
 				element.name = field.Name;
 			}
-			else
+			/*else
 			{
 				// Make sure we create an empty placeholder if FieldFactory can not provide a drawer
 				if (showInputDrawer) AddEmptyField(field, false);
-			}
+			}*/
 
 			var visibleCondition = field.GetCustomAttribute(typeof(VisibleIf)) as VisibleIf;
 			if (visibleCondition != null)

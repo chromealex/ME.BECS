@@ -106,10 +106,18 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
-        private UnityEngine.UIElements.Image background;
+        private static StyleSheet styleSheetBase;
+        
+        private void LoadStyle() {
+            if (styleSheetBase == null) {
+                styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/FeaturesGraphEditorWindow.uss");
+            }
+        }
+        
+        private UnityEngine.UIElements.VisualElement background;
         private UnityEditor.UIElements.Toolbar toolbar;
         private UnityEngine.UIElements.Button saveButton;
-        private const float maxOpacity = 0.2f;
+        private const float maxOpacity = 1f;
         protected override void InitializeWindow(BaseGraph graph) {
             var view = new FeaturesGraphView(this);
             view.RegisterCallback<MouseMoveEvent>((evt) => {
@@ -118,7 +126,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.wantsMouseMove = true;
             view.viewTransformChanged += this.OnTransformChanged;
             this.rootView.Add(view);
-            {
+            this.LoadStyle();
+            view.styleSheets.Add(styleSheetBase);
+            /*{
                 var vg = new Image();
                 vg.image = EditorUtils.LoadResource<Texture>("ME.BECS.Resources/Icons/vignette.png");
                 vg.scaleMode = ScaleMode.StretchToFill;
@@ -139,6 +149,68 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 icon.pickingMode = UnityEngine.UIElements.PickingMode.Ignore;
                 view.Add(icon);
                 icon.SendToBack();
+            }*/
+            {
+                var gridSpacing = 20f;
+                var gridBlockSpacing = gridSpacing * 10f;
+                var gridColor = new Color(0f, 0f, 0f, 0.6f);
+                var gridBlockColor = new Color(0f, 0f, 0f, 1f);
+                var back = new IMGUIContainer(() => {
+                    static void DrawGrid(Vector2 min, Vector2 max, float spacing, Color gridColor, Vector2 offset, float opacity) {
+                        
+                        offset.x %= spacing;
+                        offset.y %= spacing;
+                        min.x -= offset.x;
+                        max.x -= offset.x;
+                        min.y -= offset.y;
+                        max.y -= offset.y;
+                        
+                        //Get the bounding points, clamped by the spacing
+                        Vector2 start = new Vector2(
+                            Mathf.Ceil(min.x / spacing) * spacing,
+                            Mathf.Ceil(min.y / spacing) * spacing
+                        );
+                        Vector2 end = new Vector2(
+                            Mathf.Floor(max.x / spacing) * spacing,
+                            Mathf.Floor(max.y / spacing) * spacing
+                        );
+
+                        gridColor.a *= opacity;
+                        
+                        //Find the number of interactions will be done for each axis
+                        int widthLines = Mathf.CeilToInt((end.x - start.x) / spacing);
+                        int heightLines = Mathf.CeilToInt((end.y - start.y) / spacing);
+
+                        //Start the line rendering elements
+                        UnityEditor.Handles.BeginGUI();
+                        UnityEditor.Handles.color = gridColor;
+
+                        //Render the grid lines
+                        for (int x = 0; x <= widthLines; x++) {
+                            UnityEditor.Handles.DrawLine(
+                                new Vector3(start.x + x * spacing + offset.x, min.y + offset.y),
+                                new Vector3(start.x + x * spacing + offset.x, max.y + offset.y)
+                            );
+                        }
+                        for (int y = 0; y <= heightLines; y++) {
+                            UnityEditor.Handles.DrawLine(
+                                new Vector3(min.x + offset.x, start.y + y * spacing + offset.y),
+                                new Vector3(max.x + offset.x, start.y + y * spacing + offset.y)
+                            );
+                        }
+
+                        //End the rendering
+                        UnityEditor.Handles.EndGUI();
+                    }
+
+                    var size = view.worldBound.size;
+                    DrawGrid(Vector2.zero, size, gridSpacing * this.graphView.viewTransform.scale.x, gridColor, this.graphView.viewTransform.position, this.background.style.opacity.value);
+                    DrawGrid(Vector2.zero, size, gridBlockSpacing * this.graphView.viewTransform.scale.x, gridBlockColor, this.graphView.viewTransform.position, 1f);
+                });
+                back.AddToClassList("background");
+                this.background = back;
+                view.Add(back);
+                back.SendToBack();
             }
             if (this.toolbar != null && this.rootView.Contains(this.toolbar) == true) this.rootView.Remove(this.toolbar);
             var toolbar = new UnityEditor.UIElements.Toolbar();
