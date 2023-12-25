@@ -17,12 +17,13 @@ namespace ME.BECS {
         [NativeDisableUnsafePtrRestriction]
         public State* state;
         public MemAllocatorPtr storage;
+        public ushort worldId;
 
         public bool isCreated => this.state != null;
         
         [INLINE(256)]
         public RefRW(in World world) {
-            this = world.state->components.GetRW<T>(world.state);
+            this = world.state->components.GetRW<T>(world.state, world.id);
         }
         
         [INLINE(256)]
@@ -33,7 +34,10 @@ namespace ME.BECS {
             ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, entId, gen, out var isNew);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
+                Journal.CreateComponent<T>(this.worldId, new Ent(entId, gen, this.worldId), in res);
                 this.state->batches.Set_INTERNAL(typeId, entId, this.state);
+            } else {
+                Journal.UpdateComponent<T>(this.worldId, new Ent(entId, gen, this.worldId), in res);
             }
             return ref res;
         }

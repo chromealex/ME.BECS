@@ -106,6 +106,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public bool SetState<T>(State* state, uint typeId, uint groupId, uint entId, ushort gen, bool value) where T : unmanaged {
+
+            E.IS_VALID_TYPE_ID(typeId);
+            E.IS_NOT_TAG(typeId);
+
+            ref var ptr = ref this.items[in state->allocator, typeId];
+            ref var storage = ref ptr.As<SparseSetUnknownType>(in state->allocator);
+            var res = storage.SetState(state, entId, gen, value);
+            state->entities.UpVersion(state, entId, groupId);
+            return res;
+
+        }
+
+        [INLINE(256)]
         public byte* GetUnknownType(State* state, uint typeId, uint groupId, uint entId, ushort gen, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -120,7 +134,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static byte* GetUnknownType(State* state, MemAllocatorPtr storage, uint typeId, uint groupId, uint entId, ushort gen, out bool isNew) {
+        public static byte* GetUnknownType(State* state, in MemAllocatorPtr storage, uint typeId, uint groupId, uint entId, ushort gen, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);

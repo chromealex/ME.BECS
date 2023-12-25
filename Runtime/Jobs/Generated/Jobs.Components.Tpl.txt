@@ -48,7 +48,7 @@ namespace ME.BECS.Jobs {
             var data = new JobData<T, {count(,)[T#i#]}>() {
                 jobData = jobData,
                 buffer = buffer,
-                {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state),]}
+                {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state, buffer->worldId),]}
             };
             
             var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, {count(,)[T#i#]}>.Initialize(), dependsOn, ScheduleMode.Parallel);

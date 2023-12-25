@@ -5,10 +5,31 @@ namespace ME.BECS {
     public static unsafe partial class EntExt {
 
         [INLINE(256)]
+        public static bool Enable<T>(in this Ent ent) where T : unmanaged, IComponent {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            Journal.EnableComponent<T>(world.id, in ent);
+            return world.state->batches.Enable<T>(ent.id, ent.gen, world.state);
+
+        }
+
+        [INLINE(256)]
+        public static bool Disable<T>(in this Ent ent) where T : unmanaged, IComponent {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            Journal.DisableComponent<T>(world.id, in ent);
+            return world.state->batches.Disable<T>(ent.id, ent.gen, world.state);
+
+        }
+
+        [INLINE(256)]
         public static bool Set<T>(in this Ent ent, in T data) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
+            Journal.SetComponent<T>(world.id, in ent, in data);
             return world.state->batches.Set(ent.id, ent.gen, in data, world.state);
 
         }
@@ -18,6 +39,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
+            Journal.RemoveComponent<T>(world.id, in ent);
             return world.state->batches.Remove<T>(ent.id, ent.gen, world.state);
 
         }

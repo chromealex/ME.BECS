@@ -8,6 +8,24 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
+        public bool Enable<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.groupId;
+            return this.SetState<T>(state, typeId, groupId, entId, gen, true);
+            
+        }
+
+        [INLINE(256)]
+        public bool Disable<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.groupId;
+            return this.SetState<T>(state, typeId, groupId, entId, gen, false);
+            
+        }
+
+        [INLINE(256)]
         public bool Set<T>(State* state, uint entId, ushort gen, in T data) where T : unmanaged {
 
             var typeId = StaticTypes<T>.typeId;

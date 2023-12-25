@@ -15,16 +15,16 @@
     background-color: rgba(40, 40, 40, 1);
 }
 
-.allocator-container {
+.popup {
     position: absolute;
     background-color: rgba(0, 0, 0, 0.8);
     top: 0px;
     left: 0px;
     right: 0px;
     bottom: 0px;
-    display: none;
 }
-.allocator-container .allocator-content {
+
+.popup .content {
     margin: 10px;
     margin-right: 260px;
     background-color: rgba(70, 70, 70, 0.8);

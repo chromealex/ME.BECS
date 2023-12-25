@@ -202,19 +202,15 @@ namespace ME.BECS {
         [INLINE(256)]
         public void UpVersion<T>(State* state, uint id) where T : unmanaged {
 
-            JobUtils.Increment(ref this.versions[in state->allocator, id]);
-
-            var groupId = StaticTypes<T>.groupId;
-            if (groupId > 0u) {
-                this.UpVersionGroup(state, id, groupId);
-            }
-
+            this.UpVersion(state, id, StaticTypes<T>.groupId);
+            
         }
 
         [INLINE(256)]
         public void UpVersion(State* state, uint id, uint groupId) {
-
+            
             JobUtils.Increment(ref this.versions[in state->allocator, id]);
+            Journal.VersionUp(Context.world.id, new Ent(id));
 
             if (groupId > 0u) {
                 this.UpVersionGroup(state, id, groupId);

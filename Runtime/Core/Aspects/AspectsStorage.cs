@@ -37,23 +37,17 @@ namespace ME.BECS {
         public RefRW<T> value;
         
         public AspectDataPtr(in World world) {
-
-            this.value = world.state->components.GetRW<T>(world.state);
-
+            this.value = world.state->components.GetRW<T>(world.state, world.id);
         }
 
         [INLINE(256)]
         public readonly ref T Get(uint entId, ushort gen) {
-
             return ref this.value.Get(entId, gen);
-
         }
 
         [INLINE(256)]
         public readonly ref readonly T Read(uint entId, ushort gen) {
-
             return ref this.value.Read(entId, gen);
-
         }
 
     }

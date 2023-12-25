@@ -79,7 +79,6 @@ namespace ME.BECS {
             public void Execute() {
                 if (this.worldState == WorldState.BeginTick) Context.Switch(in this.world);
                 this.world.state->worldState = this.worldState;
-                //UnityEngine.Debug.Log("SetWorldStateJob: " + this.worldState);
             }
 
         }

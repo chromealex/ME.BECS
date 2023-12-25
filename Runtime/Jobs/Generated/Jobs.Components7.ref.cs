@@ -48,7 +48,7 @@ namespace ME.BECS.Jobs {
             var data = new JobData<T, T0,T1,T2,T3,T4,T5,T6>() {
                 jobData = jobData,
                 buffer = buffer,
-                c0 = buffer->state->components.GetRW<T0>(buffer->state),c1 = buffer->state->components.GetRW<T1>(buffer->state),c2 = buffer->state->components.GetRW<T2>(buffer->state),c3 = buffer->state->components.GetRW<T3>(buffer->state),c4 = buffer->state->components.GetRW<T4>(buffer->state),c5 = buffer->state->components.GetRW<T5>(buffer->state),c6 = buffer->state->components.GetRW<T6>(buffer->state),
+                c0 = buffer->state->components.GetRW<T0>(buffer->state, buffer->worldId),c1 = buffer->state->components.GetRW<T1>(buffer->state, buffer->worldId),c2 = buffer->state->components.GetRW<T2>(buffer->state, buffer->worldId),c3 = buffer->state->components.GetRW<T3>(buffer->state, buffer->worldId),c4 = buffer->state->components.GetRW<T4>(buffer->state, buffer->worldId),c5 = buffer->state->components.GetRW<T5>(buffer->state, buffer->worldId),c6 = buffer->state->components.GetRW<T6>(buffer->state, buffer->worldId),
             };
             
             var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, T0,T1,T2,T3,T4,T5,T6>.Initialize(), dependsOn, ScheduleMode.Parallel);

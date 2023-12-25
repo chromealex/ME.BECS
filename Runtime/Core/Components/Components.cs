@@ -152,10 +152,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRW<T> GetRW<T>(State* state) where T : unmanaged, IComponent {
+        public RefRW<T> GetRW<T>(State* state, ushort worldId) where T : unmanaged, IComponent {
             return new RefRW<T>() {
                 state = state,
                 storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                worldId = worldId,
             };
         }
 

@@ -171,19 +171,18 @@ namespace ME.BECS {
             queue.Clear();
             queue.Enqueue(this.rootNode);
             this.rootNode->dependsOn = Batches.Apply(dependsOn, world.state, world.id);
-            //UnityEngine.Debug.Log("    Run dep: " + Debug(this.rootNode->dependsOn) + " :: " + Debug(dependsOn));
             while (queue.Count > 0) {
 
                 var node = queue.Dequeue();
-                //UnityEngine.Debug.Log("NODE: " + node->name + ", children: " + node->childrenIndex);
                 if (node->HasMethod(method) == true) {
                     if (node->isStarted == false) {
                         node->isStarted = true;
                         if (node->AllParentsStarted(method) == true) {
-                            //UnityEngine.Debug.Log("    " + node->name + " :: " + Debug(node->GetJobHandle()) + ", parents: " + node->parents[node->parentIndex - 1].data->name);
                             var context = SystemContext.Create(dt, world, node->GetJobHandle());
                             context.SetDependency(Batches.Apply(context.dependsOn, world.state, world.id));
+                            Journal.UpdateSystemStarted(world.id, node->name);
                             this.RunSystem(node->systemData, node->GetMethod(method), ref context);
+                            Journal.UpdateSystemEnded(world.id, node->name);
                             node->dependsOn = Batches.Apply(context.dependsOn, world.state, world.id);
                             list.Add(new NodeData() { data = node });
                         } else {
@@ -215,14 +214,11 @@ namespace ME.BECS {
                 for (i = 0; i < list.Length; ++i) {
                     list[i].data->isStarted = false;
                     arrDepends[i] = list[i].data->dependsOn;
-                    //UnityEngine.Debug.Log("COM: " + Debug(arrDepends[i]));
                 }
                 arrDepends[i] = dependsOn;
-                //UnityEngine.Debug.Log("COM: " + Debug(arrDepends[i]));
             }
+            
             var resultDepends = JobHandle.CombineDependencies(arrDepends);
-            arrDepends.Dispose();
-            list.Dispose();
             JobUtils.RunScheduled();
             return resultDepends;
 

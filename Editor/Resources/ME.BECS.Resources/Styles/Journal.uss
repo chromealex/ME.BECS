@@ -1,0 +1,248 @@
+.container {
+    flex-direction: column;
+}
+
+.filters-container {
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.4);
+}
+
+.filters-container TextField {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 5px;
+}
+
+.filter-actions {
+    padding: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.filter-actions Toggle {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: 5px;
+    min-width: 160px;
+}
+
+.threads-container {
+    flex-direction: row;
+}
+
+.threads-container .threads-headers {
+
+}
+
+.threads-container .threads-headers Label {
+    height: 40px;
+    padding: 2px;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.1);
+    -unity-text-align: middle-center;
+    background-color: rgba(0, 0, 0, 0.1);
+    width: 100px;
+    max-width: 100px;
+}
+
+.thread-element {
+    padding: 2px;
+    height: 40px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.1);
+    flex-direction: row;
+}
+
+.thread-element .element {
+    padding: 2px;
+    flex-direction: row;
+}
+
+#unity-content-container {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-grow: 1;
+    flex-shrink: 0;
+}
+
+.element {
+    border-width: 1px;
+    border-radius: 3px;
+    margin: 2px;
+    border-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.element Label {
+    -unity-text-align: middle-center;
+}
+
+.element .tooltip {
+    display: none;
+}
+
+.element:hover .tooltip {
+    display: flex;
+}
+
+.tooltip {
+    position: absolute;
+    display: none;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    width: 300px;
+    padding: 10px;
+}
+
+.element.CreateComponent {
+    border-color: rgba(0, 255, 0, 0.2);
+    background-color: rgba(0, 255, 0, 0.08);
+}
+
+.element.UpdateComponent {
+    border-color: rgba(48, 117, 196, 0.2);
+    background-color: rgba(48, 117, 196, 0.08);
+}
+
+.element.RemoveComponent {
+    border-color: rgba(255, 0, 0, 0.2);
+    background-color: rgba(255, 0, 0, 0.08);
+}
+
+.element.EnableComponent {
+    border-color: rgba(255, 0, 0, 0.2);
+    background-color: rgba(255, 0, 0, 0.08);
+}
+
+.element.DisableComponent {
+    border-color: rgba(255, 0, 0, 0.2);
+    background-color: rgba(255, 0, 0, 0.08);
+}
+
+.element.SystemUpdateStarted {
+    border-color: rgba(255, 123, 0, 0.2);
+    background-color: rgba(255, 123, 0, 0.08);
+}
+
+.element.SystemUpdateEnded {
+    border-color: rgba(247, 255, 0, 0.2);
+    background-color: rgba(247, 255, 0, 0.08);
+}
+
+.element.EntityUpVersion {
+    border-color: rgba(247, 0, 255, 0.2);
+    background-color: rgba(247, 0, 255, 0.08);
+}
+
+.element.CreateComponent .typeId,
+.element.UpdateComponent .typeId,
+.element.RemoveComponent .typeId,
+.element.EnableComponent .typeId,
+.element.DisableComponent .typeId {
+    display: none;
+}
+
+.element.CreateComponent .action,
+.element.UpdateComponent .action,
+.element.RemoveComponent .action,
+.element.EnableComponent .action,
+.element.DisableComponent .action {
+    display: none;
+}
+
+.tick {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    padding: 5px;
+    margin-right: 3px;
+}
+
+.entity-journal .unity-toggle__text {
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.7);
+    align-self: flex-start;
+
+    padding-left: 4px;
+    padding-right: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-width: 1px;
+    border-bottom-width: 0px;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    margin-top: 2px;
+    font-size: 9px;
+}
+
+.entity-journal Toggle {
+    margin-bottom: 0px;
+    margin-left: 0px;
+}
+
+.entity-journal .unity-toggle__checkmark {
+    margin-left: 3px;
+    margin-right: 4px;
+    width: 10px;
+    height: 10px;
+}
+
+.entity-journal .unity-foldout__content {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.2);
+    margin-bottom: 4px;
+}
+
+.entity-journal .action {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    -unity-font-style: bold;
+}
+
+.entity-journal .thread {
+    position: absolute;
+    right: 0px;
+    left: 0px;
+    bottom: 6px;
+    -unity-text-align: middle-right;
+    -unity-font-style: bold;
+    font-size: 10px;
+    margin-right: 6px;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.entity-journal .tick {
+    position: absolute;
+    border-top-width: 1px;
+    border-top-color: rgba(0, 0, 0, 0.4);
+    border-radius: 0px;
+    right: 0px;
+    left: 0px;
+    top: 0px;
+    -unity-text-align: middle-right;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.history-item {
+    padding: 5px;
+}
+
+.history-container {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.history-container.even {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.journal-disabled {
+    -unity-text-align: middle-center;
+    padding: 20px;
+    white-space: normal;
+}

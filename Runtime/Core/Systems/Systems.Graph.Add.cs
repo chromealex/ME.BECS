@@ -62,8 +62,8 @@ namespace ME.BECS {
 
         }
         
-        private static object[] addDirectParametersCache = new object[3];
-        private static System.Reflection.MethodInfo addDirectMethodCache = typeof(SystemsGraphExtensions).GetMethod(nameof(AddDirect));
+        private static readonly object[] addDirectParametersCache = new object[3];
+        private static readonly System.Reflection.MethodInfo addDirectMethodCache = typeof(SystemsGraphExtensions).GetMethod(nameof(AddDirect));
         public static SystemHandle Add(this ref SystemGroup graph, ISystem system, in SystemHandle dependsOn = default) {
             var type = system.GetType();
             var gMethod = addDirectMethodCache.MakeGenericMethod(type);
@@ -98,6 +98,8 @@ namespace ME.BECS {
                 }
                 
             }
+            
+            Journal.AddSystem(Context.world.id, node->name);
             
             return SystemHandle.Create(node->id);
 
@@ -139,6 +141,8 @@ namespace ME.BECS {
                 
             }
             
+            Journal.AddSystem(Context.world.id, node->name);
+
             return SystemHandle.Create(node->id);
 
         }

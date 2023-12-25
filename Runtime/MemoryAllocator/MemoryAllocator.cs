@@ -97,14 +97,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T As<T>(in MemoryAllocator allocator) where T : unmanaged {
+        public readonly ref T As<T>(in MemoryAllocator allocator) where T : unmanaged {
 
             return ref allocator.Ref<T>(this.ptr);
 
         }
 
         [INLINE(256)]
-        public T* AsPtr<T>(in MemoryAllocator allocator, uint offset = 0u) where T : unmanaged {
+        public readonly T* AsPtr<T>(in MemoryAllocator allocator, uint offset = 0u) where T : unmanaged {
 
             return (T*)MemoryAllocatorExt.GetUnsafePtr(in allocator, this.ptr, offset);
 

@@ -76,6 +76,8 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             
+            Journal.BeginFrame(Context.world.id);
+
             dependsOn = State.BurstMode(this.state, true, dependsOn);
             dependsOn = Batches.BurstModeThreadTasks(dependsOn, this.state, true);
             {
@@ -85,6 +87,8 @@ namespace ME.BECS {
             }
             dependsOn = Batches.BurstModeThreadTasks(dependsOn, this.state, false);
             dependsOn = State.BurstMode(this.state, false, dependsOn);
+
+            Journal.EndFrame(Context.world.id);
 
             return dependsOn;
 

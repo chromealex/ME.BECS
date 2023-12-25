@@ -28,7 +28,7 @@ namespace ME.BECS {
 
     public static unsafe class Cuts {
 
-        public const Unity.Collections.Allocator ALLOCATOR = Constants.ALLOCATOR_DOMAIN;
+        public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator;
 
         [INLINE(256)]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {
@@ -79,7 +79,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static T* _makeDefault<T>() where T : unmanaged {
             
-            var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
+            var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
+            //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
             return (T*)ptr;
 
         }
@@ -104,7 +105,8 @@ namespace ME.BECS {
             if (newLength > length) {
 
                 var size = newLength * TSize<T>.size;
-                var ptr = (T*)UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
+                var ptr = (T*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
+                //var ptr = (T*)UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
                 UnsafeUtility.MemClear(ptr, size);
                 if (arr != null) {
                     //_memcpy(arr, ptr, length * TSize<T>.size);
@@ -157,15 +159,17 @@ namespace ME.BECS {
         [INLINE(256)]
         public static byte* _make(uint size) {
             
-            var ptr = UnsafeUtility.Malloc(size, TAlign<byte>.alignInt, ALLOCATOR);
-            return (byte*)ptr;
+            return (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
+            //var ptr = UnsafeUtility.Malloc(size, TAlign<byte>.alignInt, ALLOCATOR);
+            //return (byte*)ptr;
 
         }
 
         [INLINE(256)]
         public static T* _make<T>(T obj) where T : unmanaged {
             
-            var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
+            var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
+            //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
             *(T*)ptr = obj;
             
             return (T*)ptr;
@@ -176,7 +180,8 @@ namespace ME.BECS {
         public static T* _makeArray<T>(in T firstElement, uint length, bool clearMemory = false) where T : unmanaged {
             
             var size = TSize<T>.sizeInt * length;
-            var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
+            var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
+            //var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             var tPtr = (T*)ptr;
             *tPtr = firstElement;
@@ -188,7 +193,8 @@ namespace ME.BECS {
         public static T* _makeArray<T>(uint length, bool clearMemory = true) where T : unmanaged {
             
             var size = TSize<T>.sizeInt * length;
-            var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
+            var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
+            //var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             
             return (T*)ptr;
@@ -198,7 +204,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static T* _make<T>(in T obj) where T : unmanaged {
             
-            var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
+            var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
+            //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
             *(T*)ptr = obj;
             
             return (T*)ptr;
@@ -257,22 +264,28 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _free<T>(ref T* obj) where T : unmanaged {
             
-            UnsafeUtility.Free(obj, ALLOCATOR);
+            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
+            //UnsafeUtility.Free(obj, ALLOCATOR);
             obj = null;
 
         }
 
         [INLINE(256)]
         public static void _free<T>(T* obj) where T : unmanaged {
-            
-            UnsafeUtility.Free(obj, ALLOCATOR);
+
+            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
+            //UnsafeUtility.Free(obj, ALLOCATOR);
 
         }
 
         [INLINE(256)]
         public static void _free(ref void* obj) {
             
-            UnsafeUtility.Free(obj, ALLOCATOR);
+            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
+            //UnsafeUtility.Free(obj, ALLOCATOR);
             obj = null;
 
         }
@@ -280,14 +293,18 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
-            UnsafeUtility.Free(obj, allocator);
+            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
+            //UnsafeUtility.Free(obj, allocator);
 
         }
 
         [INLINE(256)]
         public static void _free(void* obj, Unity.Collections.Allocator allocator) {
             
-            UnsafeUtility.Free(obj, allocator);
+            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
+            //UnsafeUtility.Free(obj, allocator);
 
         }
 

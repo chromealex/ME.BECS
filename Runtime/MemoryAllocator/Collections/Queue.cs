@@ -71,6 +71,7 @@ namespace ME.BECS {
         public readonly bool isCreated => this.array.isCreated;
 
         public readonly uint Count => this.size;
+        public readonly uint Capacity => this.array.Length;
 
         public Queue(ref MemoryAllocator allocator, uint capacity) {
             this = default;
@@ -84,8 +85,12 @@ namespace ME.BECS {
             
         }
 
-        public Enumerator GetEnumerator(World world) {
+        public readonly Enumerator GetEnumerator(World world) {
             return new Enumerator(this, world.state);
+        }
+
+        public readonly Enumerator GetEnumerator(State* state) {
+            return new Enumerator(this, state);
         }
 
         public void Clear() {

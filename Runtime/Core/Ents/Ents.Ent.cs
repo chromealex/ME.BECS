@@ -22,7 +22,8 @@ namespace ME.BECS {
         public ushort gen;
         public ushort worldId;
         #endif
-        public uint Version {
+        public readonly uint Version {
+            [INLINE(256)]
             get {
                 var world = this.World;
                 return world.state->entities.GetVersion(world.state, this.id);
@@ -162,7 +163,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public override string ToString() {
+        public override readonly string ToString() {
             if (this.World.isCreated == false) return this.ToString(false);
             if (this.IsAlive() == true) {
                 return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version}, World: {this.worldId})";
@@ -172,9 +173,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public string ToString(bool withWorld) {
+        public readonly string ToString(bool withWorld, bool withVersion = true) {
             if (withWorld == true) return this.ToString();
-            if (this.IsAlive() == true) {
+            if (this.IsAlive() == true && withVersion == true) {
                 return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version})";
             } else {
                 return $"Ent #{this.id} Gen: {this.gen}";

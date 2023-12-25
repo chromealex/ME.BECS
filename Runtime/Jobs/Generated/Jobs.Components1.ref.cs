@@ -48,7 +48,7 @@ namespace ME.BECS.Jobs {
             var data = new JobData<T, T0>() {
                 jobData = jobData,
                 buffer = buffer,
-                c0 = buffer->state->components.GetRW<T0>(buffer->state),
+                c0 = buffer->state->components.GetRW<T0>(buffer->state, buffer->worldId),
             };
             
             var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, T0>.Initialize(), dependsOn, ScheduleMode.Parallel);

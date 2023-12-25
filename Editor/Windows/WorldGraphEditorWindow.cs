@@ -767,7 +767,7 @@ namespace ME.BECS.Editor {
             }
         }
 
-        private System.Collections.Generic.List<World> aliveWorlds = new System.Collections.Generic.List<World>();
+        private readonly System.Collections.Generic.List<World> aliveWorlds = new System.Collections.Generic.List<World>();
 
         private void UpdateWorlds() {
             
@@ -794,6 +794,7 @@ namespace ME.BECS.Editor {
             if (EditorApplication.isPlaying == true && this.rootContainer != null) {
 
                 if (this.allocatorWindow != null) this.allocatorWindow.Update();
+                if (this.journalWindow != null) this.journalWindow.Update();
                 
                 var rect = this.rootContainer.parent.worldBound;
                 if (this.prevRect != rect) {
@@ -904,7 +905,6 @@ namespace ME.BECS.Editor {
             this.rootVisualElement.Clear();
             this.rootVisualElement.styleSheets.Add(this.styleSheet);
 
-            var allocatorContainer = new VisualElement();
             {
                 var containerBack = new VisualElement();
                 containerBack.AddToClassList("worlds-selection-background");
@@ -918,7 +918,7 @@ namespace ME.BECS.Editor {
                 toolbarContainer.AddToClassList("toolbar-container");
                 this.toolbarContainer = toolbarContainer;
                 this.rootVisualElement.Add(toolbarContainer);
-                this.MakeToolbar(toolbarContainer, allocatorContainer);
+                this.MakeToolbar(toolbarContainer);
             }
             
             if (this.world.isCreated == true) {
@@ -945,8 +945,6 @@ namespace ME.BECS.Editor {
                 this.filteredArchetypesCount = this.AddCounter("Archetypes Count", "query-counter");
                 
                 this.UpdateCounters();
-
-                this.rootContainer.Add(allocatorContainer);
 
             }
             
@@ -977,7 +975,8 @@ namespace ME.BECS.Editor {
         }
 
         private WorldAllocatorEditorWindow allocatorWindow;
-        public void MakeToolbar(VisualElement container, VisualElement allocatorContainer) {
+        private JournalEditorWindow journalWindow;
+        public void MakeToolbar(VisualElement container) {
             
             container.Clear();
 
@@ -1011,26 +1010,50 @@ namespace ME.BECS.Editor {
                 toolbar.Add(selection);
             }
             {
-                allocatorContainer.AddToClassList("allocator-container");
-                var allocatorContent = new VisualElement();
-                allocatorContent.AddToClassList("allocator-content");
-                allocatorContainer.Add(allocatorContent);
+                VisualElement popup = null;
                 var allocatorButton = new UnityEditor.UIElements.ToolbarToggle();
                 allocatorButton.RegisterValueChangedCallback((evt) => {
                     if (evt.newValue == true) {
                         this.allocatorWindow = new WorldAllocatorEditorWindow();
                         this.allocatorWindow.world = this.world;
-                        this.allocatorWindow.CreateGUI(allocatorContent);
-                        allocatorContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
+                        popup = new VisualElement();
+                        popup.AddToClassList("popup");
+                        this.rootContainer.Add(popup);
+                        var content = new VisualElement();
+                        content.AddToClassList("content");
+                        popup.Add(content);
+                        this.allocatorWindow.CreateGUI(content);
                     } else {
-                        allocatorContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
+                        popup.RemoveFromHierarchy();
                         this.allocatorWindow.world = default;
                         this.allocatorWindow = null;
-                        allocatorContent.Clear();
                     }
                 });
                 allocatorButton.text = "Memory Allocator";
                 toolbar.Add(allocatorButton);
+            }
+            {
+                VisualElement popup = null;
+                var button = new UnityEditor.UIElements.ToolbarToggle();
+                button.RegisterValueChangedCallback((evt) => {
+                    if (evt.newValue == true) {
+                        this.journalWindow = new JournalEditorWindow();
+                        this.journalWindow.world = this.world;
+                        popup = new VisualElement();
+                        popup.AddToClassList("popup");
+                        this.rootContainer.Add(popup);
+                        var content = new VisualElement();
+                        content.AddToClassList("content");
+                        popup.Add(content);
+                        this.journalWindow.CreateGUI(content);
+                    } else {
+                        popup.RemoveFromHierarchy();
+                        this.journalWindow.world = default;
+                        this.journalWindow = null;
+                    }
+                });
+                button.text = "Journal";
+                toolbar.Add(button);
             }
 
             container.Add(toolbar);

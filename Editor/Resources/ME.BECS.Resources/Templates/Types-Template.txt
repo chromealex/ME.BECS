@@ -28,6 +28,7 @@ namespace ME.BECS{{EDITOR}} {
         [UnityEngine.Scripting.PreserveAttribute] 
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Load() {
+            Worlds.Initialize();
             StaticTypesInitializer.Load();
             WorldStaticCallbacks.Initialize();
             {{CUSTOM_METHOD_REGISTRY}}

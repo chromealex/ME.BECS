@@ -43,6 +43,7 @@ namespace ME.BECS.Editor {
 
         ~EntityDrawer() {
 
+            this.Dispose();
             this.propertyPath = null;
             this.property = null;
             this.propertySerializedObject = null;
@@ -56,6 +57,8 @@ namespace ME.BECS.Editor {
         
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
+            var ent = (Ent)PropertyEditorUtils.GetTargetObjectOfProperty(property);
+            
             this.LoadStyle();
             var rootVisualElement = new VisualElement();
             rootVisualElement.AddToClassList("entity-mini");
@@ -64,23 +67,30 @@ namespace ME.BECS.Editor {
             rootVisualElement.styleSheets.Add(EntityDrawer.styleSheet);
             this.rootVisualElement = rootVisualElement;
 
-            this.entity = (Ent)PropertyEditorUtils.GetTargetObjectOfProperty(property);
+            this.entity = ent;
             this.propertyPath = property.propertyPath;
             this.propertySerializedObject = property.serializedObject;
             this.property = property;
             this.DrawEntity(rootVisualElement, this.entity.World);
 
+            EditorApplication.update -= this.OnUpdate;
             EditorApplication.update += this.OnUpdate;
-            
+
             return rootVisualElement;
 
+        }
+
+        public void Dispose() {
+            
+            EditorApplication.update -= this.OnUpdate;
+            
         }
 
         private bool prevState;
         private SerializedProperty property;
         private string propertyPath;
         private SerializedObject propertySerializedObject;
-        private void OnUpdate() {
+        public void OnUpdate() {
 
             if (PropertyEditorUtils.IsValid(this.property) == false) {
                 EditorApplication.update -= this.OnUpdate;
@@ -128,6 +138,8 @@ namespace ME.BECS.Editor {
         private void UpdateData() {
 
             this.versionLabel.text = this.entity.Version.ToString();
+            if (this.journalRoot != null) this.journalRoot.Clear();
+            JournalEditorWindow.UpdateEntityJournal(this.journalRoot, ref this.journalItems, this.entity);
 
         }
 
@@ -175,7 +187,7 @@ namespace ME.BECS.Editor {
                 } else {
                     rootComponents.Clear();
                 }
-                EditorPrefs.SetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", evt.newValue);
+                this.SetFoldoutState(evt.newValue);
             });
             header.value = EditorPrefs.GetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", false);
             toggleContainer.style.display = new StyleEnum<DisplayStyle>(header.value == true ? DisplayStyle.Flex : DisplayStyle.None);
@@ -340,6 +352,20 @@ namespace ME.BECS.Editor {
                     this.componentContainerSharedComponents = componentContainerSharedComponents;
                 }
             }
+            {
+                var components = new Foldout();
+                components.text = "Journal";
+                components.value = false;
+                components.AddToClassList("entity-journal");
+                componentsContainer.Add(components);
+
+                components.styleSheets.Add(EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Journal.uss"));
+
+                var componentsList = new VisualElement();
+                componentsList.AddToClassList("entity-components-list");
+                components.Add(componentsList);
+                this.journalRoot = JournalEditorWindow.DrawEntityJournal(componentsList, ref this.journalItems, this.entity);
+            }
             
             this.serializedObj = new SerializedObject(this.tempObject);
 
@@ -347,8 +373,11 @@ namespace ME.BECS.Editor {
             
         }
 
-        private System.Collections.Generic.List<VisualElement> cachedFieldsComponents = new System.Collections.Generic.List<VisualElement>();
-        private System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
+        private VisualElement journalRoot;
+        private JournalEditorWindow.VisualElementData[] journalItems;
+
+        private readonly System.Collections.Generic.List<VisualElement> cachedFieldsComponents = new System.Collections.Generic.List<VisualElement>();
+        private readonly System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
         private void RedrawComponents(World world) {
             
             this.DrawFields(this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
@@ -367,6 +396,7 @@ namespace ME.BECS.Editor {
 
             this.FetchComponentsFromEntity(world);
             this.FetchSharedComponentsFromEntity(world);
+            
         }
         
         private void FetchComponentsFromEntity(World world) {
@@ -580,6 +610,10 @@ namespace ME.BECS.Editor {
             var gMethod = method.MakeGenericMethod(s1.GetType());
             var res = (bool)gMethod.Invoke(null, new object[] { s1, s2 });
             return res;
+        }
+
+        public void SetFoldoutState(bool value) {
+            EditorPrefs.SetBool($"ME.BECS.Foldouts.Entity.{this.propertyPath}", value);
         }
 
     }

@@ -26,7 +26,7 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct Pools {
+    /*public unsafe struct Pools {
 
         private struct StackItem {
 
@@ -60,7 +60,7 @@ namespace ME.BECS {
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
-            Pools.itemsPerThread.Data = new NativeArray<ThreadItem>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, ALLOCATOR);
+            Pools.itemsPerThread.Data = new NativeArray<ThreadItem>(Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount, Cuts.ALLOCATOR);
             
         }
 
@@ -190,6 +190,6 @@ namespace ME.BECS {
 
         }
 
-    }
+    }*/
 
 }

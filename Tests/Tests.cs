@@ -7,7 +7,6 @@ namespace ME.BECS.Tests {
         public static void Start() {
             Worlds.Initialize();
             WorldStaticCallbacks.Initialize();
-            Pools.Initialize();
             EntityConfigRegistry.Initialize();
             EntityConfigsRegistry.Initialize();
         }

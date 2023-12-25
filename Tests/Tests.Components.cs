@@ -223,6 +223,28 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void EnableDisable() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            ent.Set(new TestComponent() {
+                data = 1,
+            });
+            ent.Enable<TestComponent>();
+            Assert.AreEqual(true, ent.Has<TestComponent>());
+            ent.Disable<TestComponent>();
+            Assert.AreEqual(false, ent.Has<TestComponent>());
+            Assert.AreEqual(0, ent.Read<TestComponent>().data);
+            ent.Disable<TestComponent>();
+            Assert.AreEqual(false, ent.Has<TestComponent>());
+            Assert.AreEqual(0, ent.Read<TestComponent>().data);
+            ent.Enable<TestComponent>();
+            Assert.AreEqual(true, ent.Has<TestComponent>());
+            Assert.AreEqual(1, ent.Read<TestComponent>().data);
+
+        }
+
+        [Test]
         public void Read() {
             
             using var world = World.Create();

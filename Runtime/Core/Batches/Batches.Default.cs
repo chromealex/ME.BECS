@@ -84,6 +84,36 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
+        public static bool Enable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+            
+            E.IS_IN_TICK(state);
+            
+            if (state->components.Enable<T>(state, entId, gen) == true) {
+                var typeId = StaticTypes<T>.typeId;
+                batches.Set_INTERNAL(typeId, entId, state);
+                return true;
+            }
+            
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public static bool Disable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+
+            E.IS_IN_TICK(state);
+            
+            if (state->components.Disable<T>(state, entId, gen) == true) {
+                var typeId = StaticTypes<T>.typeId;
+                batches.Remove_INTERNAL(typeId, entId, state);
+                return true;
+            }
+            
+            return false;
+
+        }
+
     }
 
 }
