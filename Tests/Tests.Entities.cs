@@ -102,7 +102,7 @@ namespace ME.BECS.Tests {
                     world = world,
                 }.Schedule((int)amount, 64);
 
-                job = ME.BECS.Batches.Apply(job, world.state, world.id);
+                job = ME.BECS.Batches.Apply(job, world.state);
                 job = ME.BECS.Batches.BurstModeThreadTasks(job, world.state, false);
                 JobUtils.RunScheduled();
                 job.Complete();
@@ -136,7 +136,7 @@ namespace ME.BECS.Tests {
                 var world = World.Create(props);
 
                 CreateHugeAmountBurstMethod(ref world, amount);
-                ME.BECS.Batches.Apply(world.state, world.id);
+                ME.BECS.Batches.Apply(world.state);
                 
                 Assert.AreEqual(amount, world.state->entities.EntitiesCount);
                 
@@ -260,14 +260,14 @@ namespace ME.BECS.Tests {
 
             {
                 CreateHugeAmountBurstMethod(ref world, amount);
-                ME.BECS.Batches.Apply(world.state, world.id);
+                ME.BECS.Batches.Apply(world.state);
             }
             Assert.AreEqual(amount, world.state->entities.EntitiesCount);
             Assert.AreEqual(0, world.state->archetypes.list[world.state->allocator, 0].entitiesList.Count);
 
             {
                 DestroyHugeAmountBurstMethod(ref world, amount);
-                ME.BECS.Batches.Apply(world.state, world.id);
+                ME.BECS.Batches.Apply(world.state);
             }
             Assert.AreEqual(0, world.state->entities.EntitiesCount);
             Assert.AreEqual(amount, world.state->entities.FreeCount);
@@ -286,7 +286,7 @@ namespace ME.BECS.Tests {
 
             {
                 CreateHugeAmountBurstMethod(ref world, amount);
-                ME.BECS.Batches.Apply(world.state, world.id);
+                ME.BECS.Batches.Apply(world.state);
             }
             Assert.AreEqual(amount, world.state->entities.EntitiesCount);
             Assert.AreEqual(0, world.state->archetypes.list[world.state->allocator, 0].entitiesList.Count);
@@ -295,7 +295,7 @@ namespace ME.BECS.Tests {
                 var job = new DestroyEntitiesJob() {
                     world = world,
                 }.Schedule((int)amount, 64);
-                job = ME.BECS.Batches.Apply(job, world.state, world.id);
+                job = ME.BECS.Batches.Apply(job, world.state);
                 JobUtils.RunScheduled();
                 job.Complete();
             }

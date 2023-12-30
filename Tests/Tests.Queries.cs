@@ -61,7 +61,7 @@ namespace ME.BECS.Tests {
         [Unity.Burst.BurstCompileAttribute]
         private struct JobComponents : IJobParallelForComponents<TestComponent> {
 
-            public void Execute(ref TestComponent component) {
+            public void Execute(in Ent ent, ref TestComponent component) {
 
                 component.data += 1;
 

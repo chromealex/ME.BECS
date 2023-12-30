@@ -27,8 +27,10 @@ namespace ME.BECS {
         SystemUpdateEnded   = 1 << 7,
         
         EntityUpVersion = 1 << 8,
+        CreateOneShotComponent = 1 << 9,
+        ResolveOneShotComponent = 1 << 10,
         
-        All = CreateComponent | UpdateComponent | RemoveComponent | EnableComponent | DisableComponent | SystemAdded | SystemUpdateStarted | SystemUpdateEnded | EntityUpVersion,
+        All = CreateComponent | UpdateComponent | RemoveComponent | EnableComponent | DisableComponent | SystemAdded | SystemUpdateStarted | SystemUpdateEnded | EntityUpVersion | CreateOneShotComponent | ResolveOneShotComponent,
         
     }
 
@@ -77,6 +79,26 @@ namespace ME.BECS {
 
     public unsafe partial struct Journal {
         
+        [INLINE(256)]
+        [Conditional(JournalConditionals.JOURNAL)]
+        public static void SetOneShotComponent(ushort worldId, in Ent ent, uint typeId, OneShotType type) {
+
+            var journal = JournalsStorage.Get(worldId);
+            if (journal == null) return;
+            journal->SetOneShotComponent(in ent, typeId, type);
+
+        }
+
+        [INLINE(256)]
+        [Conditional(JournalConditionals.JOURNAL)]
+        public static void ResolveOneShotComponent(ushort worldId, in Ent ent, uint typeId, OneShotType type) {
+
+            var journal = JournalsStorage.Get(worldId);
+            if (journal == null) return;
+            journal->ResolveOneShotComponent(in ent, typeId, type);
+
+        }
+
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
         public static void EnableComponent<T>(ushort worldId, in Ent ent) where T : unmanaged, IComponent {
@@ -305,7 +327,7 @@ namespace ME.BECS {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemAdded, name = name, });
-
+            
         }
 
         [INLINE(256)]
@@ -321,23 +343,23 @@ namespace ME.BECS {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemUpdateEnded, name = name, });
-
+            
         }
 
         [INLINE(256)]
         public void CreateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
-
+            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
+            
         }
 
         [INLINE(256)]
         public void UpdateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.UpdateComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
-
+            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.UpdateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
+            
         }
 
         [INLINE(256)]
@@ -345,6 +367,22 @@ namespace ME.BECS {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.RemoveComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
+
+        }
+
+        [INLINE(256)]
+        public void SetOneShotComponent(in Ent ent, uint typeId, OneShotType type) {
+
+            if (this.isCreated == false) return;
+            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateOneShotComponent, typeId = typeId, storeInHistory = true, });
+
+        }
+
+        [INLINE(256)]
+        public void ResolveOneShotComponent(in Ent ent, uint typeId, OneShotType type) {
+
+            if (this.isCreated == false) return;
+            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.ResolveOneShotComponent, typeId = typeId, storeInHistory = true, });
 
         }
 
@@ -404,13 +442,14 @@ namespace ME.BECS {
         public ulong tick;
         public Unity.Collections.FixedString64Bytes name;
         public long data;
+        public void* customData;
         public Ent ent;
         public JournalAction action;
         public uint typeId;
         public int threadIndex;
 
-        public void Dispose() {
-            //if (this.data != null) _free(ref this.data);
+        public void Dispose(State* state) {
+            if (this.customData != null) _free(ref this.customData);
             this = default;
         }
 
@@ -420,6 +459,23 @@ namespace ME.BECS {
 
         public string GetClass() {
             return this.action.ToString();
+        }
+
+        public string GetCustomDataString(State* state) {
+            if (this.customData == null) return string.Empty;
+            if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(this.typeId, out var type) == true) {
+                var gMethod = this.GetType().GetMethod(nameof(GetStringFromType)).MakeGenericMethod(type);
+                var str = (string)gMethod.Invoke(null, new object[] { type, (System.IntPtr)this.customData });
+                return str;
+            }
+            return string.Empty;
+        }
+
+        public static string GetStringFromType<T>(System.Type type, System.IntPtr data) where T : unmanaged {
+
+            var customData = *(T*)data;
+            return UnityEngine.JsonUtility.ToJson(customData);
+
         }
 
     }
@@ -442,55 +498,44 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Add(State* state, JournalItem journalItem) {
-            
+                
                 journalItem = JournalItem.Create(journalItem);
                 this.TryAddToHistory(state, journalItem);
                 if (this.items.Count >= this.properties.capacity) {
-                    var item = this.items.Dequeue(ref state->allocator);
-                    item.Dispose();
+                    this.items.Dequeue(ref state->allocator);
                 }
                 this.items.Enqueue(ref state->allocator, journalItem);
-
+                
             }
 
             [INLINE(256)]
             private void TryAddToHistory(State* state, JournalItem item) {
+                
                 if (item.storeInHistory == true) {
                     if (this.historyItems.Count >= this.properties.historyCapacity) {
                         var historyItem = this.historyItems.Dequeue(ref state->allocator);
                         this.historyStartTick = historyItem.tick + 1UL;
-                        historyItem.Dispose();
+                        historyItem.Dispose(state);
                     }
                     this.historyItems.Enqueue(ref state->allocator, item);
                 }
+                
             }
 
             [INLINE(256)]
             public void Clear(State* state) {
             
-                var e = this.items.GetEnumerator(state);
-                while (e.MoveNext() == true) {
-                    e.Current.Dispose();
-                }
-                e.Dispose();
                 this.items.Clear();
-
+            
             }
 
             [INLINE(256)]
             public void Dispose(State* state) {
 
                 {
-                    var e = this.items.GetEnumerator(state);
-                    while (e.MoveNext() == true) {
-                        e.Current.Dispose();
-                    }
-                    e.Dispose();
-                }
-                {
                     var e = this.historyItems.GetEnumerator(state);
                     while (e.MoveNext() == true) {
-                        e.Current.Dispose();
+                        e.Current.Dispose(state);
                     }
                     e.Dispose();
                 }

@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
@@ -33,13 +34,31 @@ namespace ME.BECS.Jobs {
         
     }
 
-    [JobProducerType(typeof(JobAspectExtensions_1.JobProcess<,,,>))]
-    public interface IJobAspect<T0,T1,T2> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect {
+    public static partial class EarlyInit {
+        public static void DoAspect<T, T0,T1,T2>()
+                where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect
+                where T : struct, IJobAspect<T0,T1,T2> => JobAspectExtensions.JobEarlyInitialize<T, T0,T1,T2>();
+    }
+
+    [JobProducerType(typeof(JobAspectExtensions.JobProcess<,,,>))]
+    public interface IJobAspect<T0,T1,T2> : IJobAspectBase where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect {
         void Execute(ref T0 c0,ref T1 c1,ref T2 c2);
     }
 
-    public static unsafe partial class JobAspectExtensions_1 {
+    public static unsafe partial class JobAspectExtensions {
         
+        public static void JobEarlyInitialize<T, T0,T1,T2>()
+            where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect
+            where T : struct, IJobAspect<T0,T1,T2> => JobProcess<T, T0,T1,T2>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T, T0,T1,T2>()
+            where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect
+            where T : struct, IJobAspect<T0,T1,T2> {
+            JobProcess<T, T0,T1,T2>.Initialize();
+            System.IntPtr reflectionData = JobProcess<T, T0,T1,T2>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
         public static JobHandle Schedule<T, T0,T1,T2>(this T jobData, in CommandBuffer* buffer, JobHandle dependsOn = default)
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect
             where T : struct, IJobAspect<T0,T1,T2> {
@@ -51,7 +70,7 @@ namespace ME.BECS.Jobs {
                 c0 = buffer->state->aspectsStorage.Initialize<T0>(buffer->state),c1 = buffer->state->aspectsStorage.Initialize<T1>(buffer->state),c2 = buffer->state->aspectsStorage.Initialize<T2>(buffer->state),
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, T0,T1,T2>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T, T0,T1,T2>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
 
         }
@@ -70,8 +89,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect
             where T : struct, IJobAspect<T0,T1,T2> {
 
-            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2>>();
 
+            [BurstDiscard]
             public static System.IntPtr Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1,T2>), typeof(T), (ExecuteJobFunction)Execute);

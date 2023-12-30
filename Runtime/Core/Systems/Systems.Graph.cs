@@ -170,7 +170,7 @@ namespace ME.BECS {
             ref var queue = ref this.runtimeQueue;
             queue.Clear();
             queue.Enqueue(this.rootNode);
-            this.rootNode->dependsOn = Batches.Apply(dependsOn, world.state, world.id);
+            this.rootNode->dependsOn = Batches.Apply(dependsOn, world.state);
             while (queue.Count > 0) {
 
                 var node = queue.Dequeue();
@@ -179,11 +179,11 @@ namespace ME.BECS {
                         node->isStarted = true;
                         if (node->AllParentsStarted(method) == true) {
                             var context = SystemContext.Create(dt, world, node->GetJobHandle());
-                            context.SetDependency(Batches.Apply(context.dependsOn, world.state, world.id));
+                            context.SetDependency(Batches.Apply(context.dependsOn, world.state));
                             Journal.UpdateSystemStarted(world.id, node->name);
                             this.RunSystem(node->systemData, node->GetMethod(method), ref context);
                             Journal.UpdateSystemEnded(world.id, node->name);
-                            node->dependsOn = Batches.Apply(context.dependsOn, world.state, world.id);
+                            node->dependsOn = Batches.Apply(context.dependsOn, world.state);
                             list.Add(new NodeData() { data = node });
                         } else {
                             node->isStarted = false;

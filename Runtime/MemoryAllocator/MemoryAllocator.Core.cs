@@ -314,6 +314,7 @@ namespace ME.BECS {
         #endif
         [INLINE(256)]
         public static void* ZmMalloc(MemZone* zone, int size) {
+            
             size = MemoryAllocator.ZmGetMemBlockSize(size);
 
             // scan through the block list,
@@ -372,7 +373,7 @@ namespace ME.BECS {
             @base->state = MemoryAllocator.BLOCK_STATE_USED;
             // next allocation will start looking here
             zone->rover = @base->next;
-
+            
             return (void*)((byte*)@base + TSize<MemBlock>.size);
         }
 

@@ -10,8 +10,6 @@ namespace ME.BECS {
 
     }
     
-    public interface IJobParallelForAspect {}
-    
     public unsafe struct RefRW<T> : IAspectData, IIsCreated where T : unmanaged, IComponent {
 
         [NativeDisableUnsafePtrRestriction]

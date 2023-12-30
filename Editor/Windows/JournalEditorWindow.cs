@@ -291,7 +291,7 @@ namespace ME.BECS.Editor {
             foreach (var kv in list.eventsPerTick) {
                 
                 var item = kv.Value;
-                var element = CreateEntityJournalItem(in item, ++i);
+                var element = CreateEntityJournalItem(journal, in item, ++i);
                 container.Add(element);
 
             }
@@ -300,7 +300,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static VisualElement CreateEntityJournalItem(in Journal.EntityJournal.Item item, int index) {
+        private static VisualElement CreateEntityJournalItem(Journal* journal, in Journal.EntityJournal.Item item, int index) {
 
             if (item.events.IsCreated == true) {
 
@@ -339,6 +339,14 @@ namespace ME.BECS.Editor {
                         action.AddToClassList("thread");
                         element.Add(action);
                     }
+                    {
+                        var str = evt.GetCustomDataString(journal->GetWorld()->state);
+                        if (string.IsNullOrEmpty(str) == false) {
+                            var customData = new Label(str);
+                            customData.AddToClassList("customData");
+                            element.Add(customData);
+                        }
+                    }
 
                     container.Add(element);
 
@@ -376,7 +384,7 @@ namespace ME.BECS.Editor {
             foreach (var kv in list.eventsPerTick) {
                 
                 var item = kv.Value;
-                var element = CreateEntityJournalItem(in item, ++i);
+                var element = CreateEntityJournalItem(journal, in item, ++i);
                 journalHistory.Add(element);
 
             }

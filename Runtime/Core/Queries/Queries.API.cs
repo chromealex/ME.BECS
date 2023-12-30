@@ -74,7 +74,7 @@ namespace ME.BECS {
 
         public static QueryBuilder Query(in QueryContext queryContext, JobHandle dependsOn = default) {
 
-            dependsOn = Batches.Apply(dependsOn, queryContext.state, queryContext.worldId);
+            dependsOn = Batches.Apply(dependsOn, queryContext.state);
             
             var builder = new QueryBuilder() {
                 queryData = _make(new QueryData()),
@@ -98,7 +98,7 @@ namespace ME.BECS {
 
         internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
 
-            dependsOn = Batches.Apply(dependsOn, queryContext.state, queryContext.worldId);
+            dependsOn = Batches.Apply(dependsOn, queryContext.state);
 
             var builder = new QueryBuilder() {
                 queryData = _make(new QueryData()),

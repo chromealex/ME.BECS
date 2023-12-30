@@ -289,7 +289,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public UIntListHash GetTrueBitsTemp(ref MemoryAllocator allocator) {
+        public UIntListHash GetTrueBitsPersistent(ref MemoryAllocator allocator) {
 
             var trueBits = new UIntListHash(ref allocator, this.Length);
             for (var i = 0; i < this.Length; ++i) {

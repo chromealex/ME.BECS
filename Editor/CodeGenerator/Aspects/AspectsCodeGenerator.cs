@@ -5,14 +5,6 @@ namespace ME.BECS.Editor.Network {
 
     public class AspectsCodeGenerator : CustomCodeGenerator {
 
-        private static string GetTypeName(System.Type type) {
-            return type.FullName.Replace("+", ".").Replace("`1", "");
-        }
-
-        private static string GetDataTypeName(System.Type type) {
-            return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
-        }
-
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
@@ -95,15 +87,6 @@ ref var aspect = ref world.InitializeAspect<{strType}>();
                     content.Add(str);
                 }
                 
-                var allJobs = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.IJobParallelForAspect>();
-                foreach (var job in allJobs) {
-                    if (this.IsValidTypeForAssembly(job) == false) continue;
-                    if (job.IsPublic == false || job.IsInterface == true) continue;
-                    var typeStr = GetTypeName(job);
-                    var str = $"//JobEarlyInitGenerator.Init<{typeStr}, {strType}>();";
-                    content.Add(str);
-                }
-
             }
             
             var def = new CodeGenerator.MethodDefinition() {

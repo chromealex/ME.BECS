@@ -45,8 +45,7 @@ namespace ME.BECS {
         public List(ref MemoryAllocator allocator, uint capacity) {
 
             if (capacity <= 0u) capacity = 1u;
-            this.arr = new MemArray<T>(ref allocator, capacity);
-            this.Count = 0u;
+            this = default;
             this.EnsureCapacity(ref allocator, capacity);
 
         }
@@ -160,8 +159,8 @@ namespace ME.BECS {
         [INLINE(256)]
         private bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
-            E.IS_CREATED(this);
             capacity = Helpers.NextPot(capacity);
+            if (this.arr.isCreated == false) this.arr.growFactor = 1;
             return this.arr.Resize(ref allocator, capacity, ClearOptions.UninitializedMemory);
             
         }

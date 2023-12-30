@@ -227,6 +227,7 @@ namespace ME.BECS {
                     }
                     // alloc block again
                     var newPtr = MemoryAllocator.ZmAlloc(zone, block, size + TSize<MemoryAllocator.MemBlock>.sizeInt);
+                    #if MEMORY_ALLOCATOR_BOUNDS_CHECK
                     {
                         var memPtr = allocator.GetSafePtr(newPtr, ptr.zoneId);
                         if (memPtr != ptr) {
@@ -235,6 +236,7 @@ namespace ME.BECS {
                             throw new System.Exception();
                         }
                     }
+                    #endif
                     voidPtr = newPtr;
                     JobUtils.Unlock(ref allocator.lockIndex);
                     return ptr;
@@ -301,32 +303,29 @@ namespace ME.BECS {
             ValidateConsistency(allocator);
 
             JobUtils.Lock(ref allocator.lockIndex);
-
-            for (uint i = 0u; i < allocator.zonesListCount; ++i) {
+            
+            for (uint i = 0u, cnt = allocator.zonesListCount; i < cnt; ++i) {
                 var zone = allocator.zonesList[i];
-
                 if (zone == null) continue;
 
                 ptr = MemoryAllocator.ZmMalloc(zone, (int)size);
-
                 if (ptr != null) {
                     var memPtr = allocator.GetSafePtr(ptr, i);
                     #if LOGS_ENABLED
                     MemoryAllocator.LogAdd(memPtr, size);
                     #endif
-                    
                     JobUtils.Unlock(ref allocator.lockIndex);
 
                     return memPtr;
                 }
+                
             }
 
             {
-                var zone = MemoryAllocator.ZmCreateZone((int)math.max(size, MemoryAllocator.MIN_ZONE_SIZE));
+
+                var zone = MemoryAllocator.ZmCreateZone((int)math.max(size, allocator.initialSize));
                 var zoneIndex = allocator.AddZone(zone);
-
                 ptr = MemoryAllocator.ZmMalloc(zone, (int)size);
-
                 var memPtr = allocator.GetSafePtr(ptr, zoneIndex);
                 #if LOGS_ENABLED
                 MemoryAllocator.LogAdd(memPtr, size);
@@ -436,9 +435,28 @@ namespace ME.BECS {
         public uint zonesListCount;
         internal uint zonesListCapacity;
         internal long maxSize;
+        internal int initialSize;
         public ushort version;
         
         public bool isValid => this.zonesList != null;
+
+        [INLINE(256)]
+        public readonly void GetSize(out int reservedSize, out int usedSize, out int freeSize) {
+
+            usedSize = 0;
+            reservedSize = 0;
+            for (int i = 0; i < this.zonesListCount; i++) {
+                var zone = this.zonesList[i];
+                if (zone != null) {
+                    reservedSize += zone->size;
+                    usedSize = reservedSize;
+                    usedSize -= MemoryAllocator.GetZmFreeMemory(zone);
+                }
+            }
+
+            freeSize = reservedSize - usedSize;
+
+        }
 
         [INLINE(256)]
         public readonly int GetReservedSize() {
@@ -493,8 +511,9 @@ namespace ME.BECS {
         public MemoryAllocator Initialize(long initialSize, long maxSize = -1L) {
 
             if (maxSize < initialSize) maxSize = initialSize;
-            
-            this.AddZone(MemoryAllocator.ZmCreateZone((int)math.max(initialSize, MemoryAllocator.MIN_ZONE_SIZE)));
+
+            this.initialSize = (int)math.max(initialSize, MemoryAllocator.MIN_ZONE_SIZE);
+            this.AddZone(MemoryAllocator.ZmCreateZone(this.initialSize));
             this.maxSize = maxSize;
             this.threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             this.version = 1;
@@ -595,7 +614,8 @@ namespace ME.BECS {
             ++this.version;
             this.threadId = other.threadId;
             this.maxSize = other.maxSize;
-	    
+            this.initialSize = other.initialSize;
+
         }
 
         [INLINE(256)]
@@ -688,6 +708,7 @@ namespace ME.BECS {
             ++this.version;
             this.threadId = other.threadId;
             this.maxSize = other.maxSize;
+            this.initialSize = other.initialSize;
 
         }
 
@@ -726,9 +747,6 @@ namespace ME.BECS {
 
                 if (this.zonesList != null) {
                     _memcpy(this.zonesList, list, (uint)sizeof(MemZone*) * this.zonesListCount);
-                    /*for (int i = 0; i < this.zonesListCount; i++) {
-                        list[i] = this.zonesList[i];
-                    }*/
                     _free(this.zonesList, Constants.ALLOCATOR_PERSISTENT);
                 }
                 
@@ -842,7 +860,7 @@ namespace ME.BECS {
                 }
             }
  
-            this.AddZone(MemoryAllocator.ZmCreateZone((int)math.max(size, MemoryAllocator.MIN_ZONE_SIZE)));
+            this.AddZone(MemoryAllocator.ZmCreateZone((int)math.max(size, this.initialSize)));
             
         }
 

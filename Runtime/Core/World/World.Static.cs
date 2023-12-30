@@ -13,22 +13,26 @@ namespace ME.BECS {
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
             internal T* ptr;
 
+            [INLINE(256)]
             public ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(this.ptr + index);
             }
 
+            [INLINE(256)]
             public ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(this.ptr + index);
             }
 
+            [INLINE(256)]
             public void Resize(uint length) {
 
                 _resizeArray(ref this.ptr, ref this.Length, length);
                 
             }
 
+            [INLINE(256)]
             public void Dispose() {
                 _free(this.ptr);
                 this = default;
@@ -51,6 +55,7 @@ namespace ME.BECS {
 
             public bool isCreated => this.root != null;
 
+            [INLINE(256)]
             public ushort[] ToArray() {
 
                 var result = new ushort[this.Count];

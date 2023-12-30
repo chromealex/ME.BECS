@@ -20,6 +20,17 @@ namespace ME.BECS.Jobs {
             return reflectionData;
         }
         
+        public static JobHandle ScheduleSingleDeps<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
+            if (inputDeps.IsCompleted == true) {
+                jobData.Execute();
+                return inputDeps;
+            }
+            
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
+            return JobsUtility.Schedule(ref parameters);
+            
+        }
+
         public static JobHandle ScheduleSingle<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
             var parameters = new JobsUtility.JobScheduleParameters(_address(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);

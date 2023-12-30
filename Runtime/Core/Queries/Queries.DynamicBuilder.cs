@@ -389,12 +389,8 @@ namespace ME.BECS {
         /// <returns></returns>
         public Unity.Collections.NativeArray<Ent> ToArray(Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {
             
-            var job = new SetEntitiesJob() {
-                buffer = this.commandBuffer,
-                queryData = this.queryData,
-                state = this.commandBuffer->state,
-            };
-            job.Execute();
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn.Complete();
             var cnt = (int)this.commandBuffer->count;
             var result = new Unity.Collections.NativeArray<Ent>(cnt, allocator);
             for (int i = 0; i < cnt; ++i) {

@@ -82,6 +82,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.saveButton.SetEnabled(true);//this.hasUnsavedChanges);
         }
 
+        protected override void Update() {
+            
+            base.Update();
+            
+            if (this.background != null) this.background.MarkDirtyRepaint();
+            
+        }
+
         private Vector3 prevScale;
         private Vector3 prevPos;
         private void OnTransformChanged(UnityEditor.Experimental.GraphView.GraphView graphview) {
@@ -207,6 +215,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
                     DrawGrid(Vector2.zero, size, gridSpacing * this.graphView.viewTransform.scale.x, gridColor, this.graphView.viewTransform.position, this.background.style.opacity.value);
                     DrawGrid(Vector2.zero, size, gridBlockSpacing * this.graphView.viewTransform.scale.x, gridBlockColor, this.graphView.viewTransform.position, 1f);
                 });
+                back.MarkDirtyRepaint();
                 back.AddToClassList("background");
                 this.background = back;
                 view.Add(back);

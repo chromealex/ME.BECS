@@ -449,7 +449,7 @@ namespace ME.BECS {
                 }
 
                 if (this.archetypes.isCreated == true) this.archetypes.Dispose(ref state->allocator);
-                this.archetypes = queryRef->archetypesBits.GetTrueBitsTemp(ref state->allocator);
+                this.archetypes = queryRef->archetypesBits.GetTrueBitsPersistent(ref state->allocator);
                 queryRef->Dispose();
                 
             }

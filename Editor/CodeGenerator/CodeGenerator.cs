@@ -28,6 +28,14 @@ namespace ME.BECS.Editor {
             return new CodeGenerator.MethodDefinition();
         }
 
+        public static string GetTypeName(System.Type type) {
+            return type.FullName.Replace("+", ".").Replace("`1", "");
+        }
+
+        public static string GetDataTypeName(System.Type type) {
+            return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
+        }
+
     }
     
     public static class CodeGenerator {

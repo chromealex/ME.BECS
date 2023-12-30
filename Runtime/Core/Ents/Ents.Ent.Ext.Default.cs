@@ -33,16 +33,12 @@ namespace ME.BECS {
                 state->components.ClearShared(state, ent.id);
             }
             JobUtils.Unlock(ref state->components.lockSharedIndex);
-            JobUtils.Lock(ref state->batches.lockIndex);
             {
                 state->batches.Clear(state, ent.id);
             }
-            JobUtils.Unlock(ref state->batches.lockIndex);
-            JobUtils.Lock(ref state->archetypes.lockIndex);
             {
                 state->archetypes.RemoveEntity(state, ent.id);
             }
-            JobUtils.Unlock(ref state->archetypes.lockIndex);
             
         }
 

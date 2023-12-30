@@ -57,6 +57,10 @@ namespace ME.BECS.Tests {
 
     }
     
+    public struct TestComponentTag : IComponent {
+
+    }
+    
     public struct Test1Component : IComponent {
 
         public int data;

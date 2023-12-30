@@ -47,6 +47,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public void Set(ref MemoryAllocator allocator, BitArray source) {
+
+            var sizeInBytes = Bitwise.AlignULongBits(source.Length);
+            this.Resize(ref allocator, source.Length);
+            var sourcePtr = MemoryAllocatorExt.GetUnsafePtr(in allocator, in source.ptr);
+            _memcpy(sourcePtr, MemoryAllocatorExt.GetUnsafePtr(in allocator, in this.ptr), sizeInBytes);
+            
+        }
+
+        [INLINE(256)]
         public bool ContainsAll(in MemoryAllocator allocator, BitArray other) {
 
             var len = Bitwise.GetMinLength(other.Length, this.Length);
@@ -130,13 +140,12 @@ namespace ME.BECS {
         public void Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (newLength > this.Length) {
-                var newArr = new BitArray(ref allocator, newLength, clearOptions);
-                if (this.isCreated == true) {
-                    allocator.MemCopy(newArr.ptr, 0L, this.ptr, 0L, Bitwise.AlignULongBits(this.Length));
-                    allocator.Free(this.ptr);
+                this.ptr = allocator.ReAllocArray(in this.ptr, Bitwise.AlignULongBits(this.Length), out this.cachedPtr);
+                if (clearOptions == ClearOptions.ClearMemory) {
+                    var clearSize = Bitwise.AlignULongBits(newLength - this.Length);
+                    _memclear((byte*)this.cachedPtr + Bitwise.AlignULongBits(this.Length), clearSize);
                 }
-
-                this = newArr;
+                this.Length = newLength;
             }
             
         }
@@ -180,6 +189,7 @@ namespace ME.BECS {
         /// <summary>
         /// Sets the value of the bit at the specified index to the specified value.
         /// </summary>
+        /// <param name="allocator"></param>
         /// <param name="index">The index of the bit to set.</param>
         /// <param name="value">The value to set the bit to.</param>
         /// <returns>The instance of the modified bitmap.</returns>

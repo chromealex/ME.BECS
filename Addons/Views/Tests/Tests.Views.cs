@@ -39,7 +39,7 @@ namespace ME.BECS.Tests {
                     var ent = world.NewEnt();
                     ent.Set<ME.BECS.TransformAspect.TransformAspect>();
                     ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
-                    Batches.Apply(world.state, world.id);
+                    Batches.Apply(world.state);
                     firstEnt = ent;
                 }
                 {
@@ -53,7 +53,7 @@ namespace ME.BECS.Tests {
                         var ent = world.NewEnt();
                         ent.Set<ME.BECS.TransformAspect.TransformAspect>();
                         ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
-                        Batches.Apply(world.state, world.id);
+                        Batches.Apply(world.state);
                     }
                     views.Update(dt).Complete();
                     Assert.AreEqual(2, views.data->renderingOnSceneEntToRenderIndex.Count);
@@ -65,7 +65,7 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(2, views.data->renderingOnScene.Count);
                     {
                         ME.BECS.Views.UnsafeViewsModule.DestroyView(firstEnt);
-                        Batches.Apply(world.state, world.id);
+                        Batches.Apply(world.state);
                     }
                     views.Update(dt).Complete();
                     Assert.IsFalse(firstEnt.Has<ViewComponent>());

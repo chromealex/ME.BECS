@@ -26,7 +26,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(world);
             var buffer = new StreamBufferWriter();
-            Batches.Apply(world.state, world.id);
+            Batches.Apply(world.state);
             State.BurstMode(world.state, false, default);
             (*world.state).Serialize(ref buffer);
             State.BurstMode(world.state, true, default);

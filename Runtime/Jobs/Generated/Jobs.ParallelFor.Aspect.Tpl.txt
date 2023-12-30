@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
@@ -33,12 +34,18 @@ namespace ME.BECS.Jobs {
         
     }
 
-    [JobProducerType(typeof(JobParallelForAspectExtensions_{{count}}.JobProcess<{count[,]}>))]
-    public interface IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+    public static partial class EarlyInit {
+        public static void DoParallelForAspect<T, {count(,)[T#i#]}>()
+                {count( )[where T#i# : unmanaged, IAspect]}
+                where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> => JobParallelForAspectExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
+    }
+
+    [JobProducerType(typeof(JobParallelForAspectExtensions.JobProcess<{count[,]}>))]
+    public interface IJobParallelForAspect<{count(,)[T#i#]}> : IJobParallelForAspectBase {count( )[where T#i# : unmanaged, IAspect]} {
         void Execute({count(,)[{{inref}} T#i# c#i#]});
     }
 
-    public static unsafe partial class JobParallelForAspectExtensions_{{count}} {
+    public static unsafe partial class JobParallelForAspectExtensions {
         
         public static void JobEarlyInitialize<T, {count(,)[T#i#]}>() {count( )[where T#i# : unmanaged, IAspect]} where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
         
@@ -52,7 +59,7 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {
             
-            if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;
+            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             buffer->sync = false;
             var data = new JobData<T, {count(,)[T#i#]}>() {
@@ -80,8 +87,9 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {
 
-            public static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();
 
+            [BurstDiscard]
             public static void Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);

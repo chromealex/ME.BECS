@@ -80,11 +80,13 @@ namespace ME.BECS {
 
             dependsOn = State.BurstMode(this.state, true, dependsOn);
             dependsOn = Batches.BurstModeThreadTasks(dependsOn, this.state, true);
+            dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.NextTick, dependsOn);
             {
                 dependsOn = State.NextTick(this.state, dependsOn);
                 dependsOn = this.TickRootSystemGroup(dt, dependsOn);
-                dependsOn = Batches.Apply(dependsOn, this.state, this.id);
+                dependsOn = Batches.Apply(dependsOn, this.state);
             }
+            dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.CurrentTick, dependsOn);
             dependsOn = Batches.BurstModeThreadTasks(dependsOn, this.state, false);
             dependsOn = State.BurstMode(this.state, false, dependsOn);
 

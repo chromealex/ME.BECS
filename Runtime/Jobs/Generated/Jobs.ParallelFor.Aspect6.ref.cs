@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
@@ -33,12 +34,18 @@ namespace ME.BECS.Jobs {
         
     }
 
-    [JobProducerType(typeof(JobParallelForAspectExtensions_1.JobProcess<,,,,,,>))]
-    public interface IJobParallelForAspect<T0,T1,T2,T3,T4,T5> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect {
+    public static partial class EarlyInit {
+        public static void DoParallelForAspect<T, T0,T1,T2,T3,T4,T5>()
+                where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect
+                where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5> => JobParallelForAspectExtensions.JobEarlyInitialize<T, T0,T1,T2,T3,T4,T5>();
+    }
+
+    [JobProducerType(typeof(JobParallelForAspectExtensions.JobProcess<,,,,,,>))]
+    public interface IJobParallelForAspect<T0,T1,T2,T3,T4,T5> : IJobParallelForAspectBase where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect {
         void Execute(ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5);
     }
 
-    public static unsafe partial class JobParallelForAspectExtensions_1 {
+    public static unsafe partial class JobParallelForAspectExtensions {
         
         public static void JobEarlyInitialize<T, T0,T1,T2,T3,T4,T5>() where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5> => JobProcess<T, T0,T1,T2,T3,T4,T5>.Initialize();
         
@@ -52,7 +59,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect
             where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5> {
             
-            if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;
+            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             buffer->sync = false;
             var data = new JobData<T, T0,T1,T2,T3,T4,T5>() {
@@ -80,8 +87,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect
             where T : struct, IJobParallelForAspect<T0,T1,T2,T3,T4,T5> {
 
-            public static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3,T4,T5>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3,T4,T5>>();
 
+            [BurstDiscard]
             public static void Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1,T2,T3,T4,T5>), typeof(T), (ExecuteJobFunction)Execute);

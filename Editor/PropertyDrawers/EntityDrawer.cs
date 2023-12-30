@@ -326,8 +326,7 @@ namespace ME.BECS.Editor {
                     var componentContainer = new VisualElement();
                     componentContainer.AddToClassList("fields-container");
                     componentsList.Add(componentContainer);
-                    var componentContainerComponents = componentContainer;
-                    this.componentContainerComponents = componentContainerComponents;
+                    this.componentContainerComponents = componentContainer;
                 }
             }
             {
@@ -348,8 +347,7 @@ namespace ME.BECS.Editor {
                     var componentContainer = new VisualElement();
                     componentContainer.AddToClassList("fields-container");
                     componentsList.Add(componentContainer);
-                    var componentContainerSharedComponents = componentContainer;
-                    this.componentContainerSharedComponents = componentContainerSharedComponents;
+                    this.componentContainerSharedComponents = componentContainer;
                 }
             }
             {
@@ -380,8 +378,8 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
         private void RedrawComponents(World world) {
             
-            this.DrawFields(this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
-            this.DrawFields(this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
+            DrawFields(this.entity, this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
+            DrawFields(this.entity, this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
             
         }
         
@@ -488,7 +486,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private void DrawFields(VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet, System.Reflection.MethodInfo methodRead) {
+        public static void DrawFields(Ent entity, VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet, System.Reflection.MethodInfo methodRead) {
 
             var dataArr = serializedObject.FindProperty(fieldName);
             var delta = dataArr.arraySize - fields.Count;
@@ -525,28 +523,29 @@ namespace ME.BECS.Editor {
                                         arrData[idx] = newValue;
                                         var value = arrData[idx];
                                         if (value == null) {
-                                            Logger.Editor.Error($"Value is null at index {idx} in entity {this.entity}");
+                                            Logger.Editor.Error($"Value is null at index {idx} in entity {entity}");
                                             return;
                                         }
-                                        
+
                                         object prevData;
                                         {
                                             var gMethod = methodRead.MakeGenericMethod(value.GetType());
-                                            prevData = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                                            prevData = gMethod.Invoke(world.state->components, new object[] { entity });
                                         }
                                         var hasChanged = StructsAreEqual(prevData, newValue) == false;
                                         if (hasChanged == true) {
                                             var gMethod = methodSet.MakeGenericMethod(value.GetType());
-                                            gMethod.Invoke(world.state->components, new object[] { this.entity, value });
+                                            gMethod.Invoke(world.state->components, new object[] { entity, value });
                                         }
-                                        this.version = this.entity.Version;
                                     }
 
                                 });
                             }
                         };
-                        propertyField.RegisterCallback<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
-                        propertyField.RegisterCallback<AttachToPanelEvent>(new EventCallback<AttachToPanelEvent>((evt) => { rebuild.Invoke(); }));
+                        if (entity.IsAlive() == true) {
+                            propertyField.RegisterCallback<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
+                            propertyField.RegisterCallback<AttachToPanelEvent>(new EventCallback<AttachToPanelEvent>((evt) => { rebuild.Invoke(); }));
+                        }
                         rootContainer.Add(propertyField);
                         fields.Add(propertyField);
                     } else {

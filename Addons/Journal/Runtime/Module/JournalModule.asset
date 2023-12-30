@@ -13,4 +13,5 @@ MonoBehaviour:
   m_Name: JournalModule
   m_EditorClassIdentifier: 
   properties:
-    capacity: 1000
+    capacity: 10000
+    historyCapacity: 30000

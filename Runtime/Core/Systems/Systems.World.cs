@@ -12,14 +12,14 @@ namespace ME.BECS {
     public static unsafe class SystemsWorldExt {
 
         public static void Awake(this ref World world) {
-            Batches.Apply(world.state, world.id);
+            Batches.Apply(world.state);
             world.Awake(default).Complete();
         }
 
         public static JobHandle Awake(this ref World world, JobHandle dependsOn) {
             
             E.IS_CREATED(world);
-            dependsOn = Batches.Apply(dependsOn, world.state, world.id);
+            dependsOn = Batches.Apply(dependsOn, world.state);
             var address = world.id;
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
                 

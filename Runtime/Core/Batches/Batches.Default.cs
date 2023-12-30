@@ -85,6 +85,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool Remove(this ref Batches batches, uint entId, ushort gen, uint typeId, uint groupId, State* state) {
+
+            E.IS_IN_TICK(state);
+            
+            if (state->components.Remove(state, entId, gen, typeId, groupId) == true) {
+                batches.Remove_INTERNAL(typeId, entId, state);
+                return true;
+            }
+            
+            return false;
+
+        }
+
+        [INLINE(256)]
         public static bool Enable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
             
             E.IS_IN_TICK(state);

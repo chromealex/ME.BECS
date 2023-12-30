@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryScheduleExtensions {
         
@@ -32,19 +33,37 @@ namespace ME.BECS.Jobs {
         }
         
     }
+    
+    public static partial class EarlyInit {
+        public static void DoParallelForComponents<T, T0>()
+                where T0 : unmanaged, IComponent
+                where T : struct, IJobParallelForComponents<T0> => JobParallelForComponentsExtensions.JobEarlyInitialize<T, T0>();
+    }
 
     [JobProducerType(typeof(JobParallelForComponentsExtensions.JobProcess<,>))]
-    public interface IJobParallelForComponents<T0> where T0 : unmanaged, IComponent {
-        void Execute(ref T0 c0);
+    public interface IJobParallelForComponents<T0> : IJobParallelForComponentsBase where T0 : unmanaged, IComponent {
+        void Execute(in Ent ent, ref T0 c0);
     }
 
     public static unsafe partial class JobParallelForComponentsExtensions {
         
+        public static void JobEarlyInitialize<T, T0>()
+            where T0 : unmanaged, IComponent
+            where T : struct, IJobParallelForComponents<T0> => JobProcess<T, T0>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T, T0>()
+            where T0 : unmanaged, IComponent
+            where T : struct, IJobParallelForComponents<T0> {
+            JobProcess<T, T0>.Initialize();
+            System.IntPtr reflectionData = JobProcess<T, T0>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
         public static JobHandle ScheduleParallelFor<T, T0>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
             where T0 : unmanaged, IComponent
             where T : struct, IJobParallelForComponents<T0> {
             
-            if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;
+            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             buffer->sync = false;
             var data = new JobData<T, T0>() {
@@ -53,7 +72,7 @@ namespace ME.BECS.Jobs {
                 c0 = buffer->state->components.GetRW<T0>(buffer->state, buffer->worldId),
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, T0>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T, T0>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
 
         }
@@ -72,8 +91,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponent
             where T : struct, IJobParallelForComponents<T0> {
 
-            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0>>();
 
+            [BurstDiscard]
             public static System.IntPtr Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0>), typeof(T), (ExecuteJobFunction)Execute);
@@ -91,7 +111,8 @@ namespace ME.BECS.Jobs {
                     for (uint i = (uint)begin; i < end; ++i) {
                         var entId = *(jobData.buffer->entities + i);
                         var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
-                        jobData.jobData.Execute(ref jobData.c0.Get(entId, gen));
+                        var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                        jobData.jobData.Execute(in ent, ref jobData.c0.Get(entId, gen));
                     }
                     jobData.buffer->EndForEachRange();
                     

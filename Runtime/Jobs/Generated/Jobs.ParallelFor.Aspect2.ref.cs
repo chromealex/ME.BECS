@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
@@ -33,12 +34,18 @@ namespace ME.BECS.Jobs {
         
     }
 
-    [JobProducerType(typeof(JobParallelForAspectExtensions_1.JobProcess<,,>))]
-    public interface IJobParallelForAspect<T0,T1> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect {
+    public static partial class EarlyInit {
+        public static void DoParallelForAspect<T, T0,T1>()
+                where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect
+                where T : struct, IJobParallelForAspect<T0,T1> => JobParallelForAspectExtensions.JobEarlyInitialize<T, T0,T1>();
+    }
+
+    [JobProducerType(typeof(JobParallelForAspectExtensions.JobProcess<,,>))]
+    public interface IJobParallelForAspect<T0,T1> : IJobParallelForAspectBase where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect {
         void Execute(ref T0 c0,ref T1 c1);
     }
 
-    public static unsafe partial class JobParallelForAspectExtensions_1 {
+    public static unsafe partial class JobParallelForAspectExtensions {
         
         public static void JobEarlyInitialize<T, T0,T1>() where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T : struct, IJobParallelForAspect<T0,T1> => JobProcess<T, T0,T1>.Initialize();
         
@@ -52,7 +59,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect
             where T : struct, IJobParallelForAspect<T0,T1> {
             
-            if (innerLoopBatchCount == 0u) innerLoopBatchCount = 64u;
+            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             buffer->sync = false;
             var data = new JobData<T, T0,T1>() {
@@ -80,8 +87,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect
             where T : struct, IJobParallelForAspect<T0,T1> {
 
-            public static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1>>();
 
+            [BurstDiscard]
             public static void Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1>), typeof(T), (ExecuteJobFunction)Execute);

@@ -30,7 +30,19 @@ namespace ME.BECS.Tests {
             }
 
         }
-        
+
+        public struct SetJobTag : Unity.Jobs.IJobParallelFor {
+
+            public Unity.Collections.NativeArray<Ent> entities;
+
+            public void Execute(int index) {
+
+                this.entities[index].Set(new TestComponentTag());
+                
+            }
+
+        }
+
         [Test]
         public void SparseSet() {
 
@@ -117,6 +129,33 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void SetMultithreadedTag() {
+
+            {
+                var amount = 10_000;
+                var props = WorldProperties.Default;
+                props.stateProperties.entitiesCapacity = 10;
+                using var world = World.Create(props);
+                var arr = new Unity.Collections.NativeArray<Ent>(amount, Constants.ALLOCATOR_TEMPJOB);
+                for (int i = 0; i < amount; ++i) {
+                    var ent = Ent.New();
+                    arr[i] = ent;
+                }
+
+                new SetJobTag() {
+                    entities = arr,
+                }.Schedule(amount, 64).Complete();
+
+                for (int i = 0; i < amount; ++i) {
+                    Assert.IsTrue(arr[i].Has<TestComponentTag>());
+                }
+
+                arr.Dispose();
+            }
+
+        }
+
+        [Test]
         public void Set() {
 
             {
@@ -189,7 +228,7 @@ namespace ME.BECS.Tests {
         public void StressTest() {
 
             {
-                var amount = 10_000;
+                var amount = 100_000;
                 using var world = World.Create();
                 var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(amount, Constants.ALLOCATOR_TEMP);
                 for (int j = 0; j < 2; ++j) {
@@ -234,10 +273,10 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(true, ent.Has<TestComponent>());
             ent.Disable<TestComponent>();
             Assert.AreEqual(false, ent.Has<TestComponent>());
-            Assert.AreEqual(0, ent.Read<TestComponent>().data);
+            Assert.AreEqual(1, ent.Read<TestComponent>().data);
             ent.Disable<TestComponent>();
             Assert.AreEqual(false, ent.Has<TestComponent>());
-            Assert.AreEqual(0, ent.Read<TestComponent>().data);
+            Assert.AreEqual(1, ent.Read<TestComponent>().data);
             ent.Enable<TestComponent>();
             Assert.AreEqual(true, ent.Has<TestComponent>());
             Assert.AreEqual(1, ent.Read<TestComponent>().data);

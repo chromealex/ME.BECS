@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryScheduleExtensions {
         
@@ -33,13 +34,31 @@ namespace ME.BECS.Jobs {
         
     }
 
-    [JobProducerType(typeof(JobComponentsExtensions_1.JobProcess<,,,,>))]
-    public interface IJobComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
+    public static partial class EarlyInit {
+        public static void DoComponents<T, T0,T1,T2,T3>()
+                where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+                where T : struct, IJobComponents<T0,T1,T2,T3> => JobComponentsExtensions.JobEarlyInitialize<T, T0,T1,T2,T3>();
+    }
+
+    [JobProducerType(typeof(JobComponentsExtensions.JobProcess<,,,,>))]
+    public interface IJobComponents<T0,T1,T2,T3> : IJobComponentsBase where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
         void Execute(ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3);
     }
 
-    public static unsafe partial class JobComponentsExtensions_1 {
+    public static unsafe partial class JobComponentsExtensions {
         
+        public static void JobEarlyInitialize<T, T0,T1,T2,T3>()
+            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T : struct, IJobComponents<T0,T1,T2,T3> => JobProcess<T, T0,T1,T2,T3>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T, T0,T1,T2,T3>()
+            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T : struct, IJobComponents<T0,T1,T2,T3> {
+            JobProcess<T, T0,T1,T2,T3>.Initialize();
+            System.IntPtr reflectionData = JobProcess<T, T0,T1,T2,T3>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
         public static JobHandle Schedule<T, T0,T1,T2,T3>(this T jobData, in CommandBuffer* buffer, JobHandle dependsOn = default)
             where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
             where T : struct, IJobComponents<T0,T1,T2,T3> {
@@ -51,7 +70,7 @@ namespace ME.BECS.Jobs {
                 c0 = buffer->state->components.GetRW<T0>(buffer->state, buffer->worldId),c1 = buffer->state->components.GetRW<T1>(buffer->state, buffer->worldId),c2 = buffer->state->components.GetRW<T2>(buffer->state, buffer->worldId),c3 = buffer->state->components.GetRW<T3>(buffer->state, buffer->worldId),
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, T0,T1,T2,T3>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T, T0,T1,T2,T3>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
 
         }
@@ -70,8 +89,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
             where T : struct, IJobComponents<T0,T1,T2,T3> {
 
-            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3>>();
 
+            [BurstDiscard]
             public static System.IntPtr Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1,T2,T3>), typeof(T), (ExecuteJobFunction)Execute);

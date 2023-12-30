@@ -12,6 +12,7 @@ namespace ME.BECS {
         public MemoryAllocator allocator;
         public Ents entities;
         public Batches batches;
+        [UnityEngine.Serialization.FormerlySerializedAsAttribute("tasks")] public OneShotTasks oneShotTasks;
         public Components components;
         public Archetypes archetypes;
         public Queries queries;
@@ -63,6 +64,7 @@ namespace ME.BECS {
             this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
             this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
             this.batches = Batches.Create(statePtr, stateProperties.entitiesCapacity);
+            this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.entitiesCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             this.random = RandomData.Create(statePtr);
@@ -118,7 +120,7 @@ namespace ME.BECS {
             dependsOn = new SetWorldStateJob() {
                 world = world,
                 worldState = worldState,
-            }.ScheduleSingle(dependsOn);
+            }.ScheduleSingleDeps(dependsOn);
             return dependsOn;
         }
 
@@ -126,25 +128,16 @@ namespace ME.BECS {
         public static Unity.Jobs.JobHandle NextTick(State* state, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new NextTickJob() {
                 state = state,
-            }.ScheduleSingle(dependsOn);
+            }.ScheduleSingleDeps(dependsOn);
             return dependsOn;
         }
 
         [INLINE(256)]
         public static Unity.Jobs.JobHandle BurstMode(State* state, bool mode, Unity.Jobs.JobHandle dependsOn) {
-
-            if (dependsOn.IsCompleted == true) {
-                new BurstModeJob() {
-                    state = state,
-                    mode = mode,
-                }.Execute();
-            } else {
-                dependsOn = new BurstModeJob() {
-                    state = state,
-                    mode = mode,
-                }.ScheduleSingle(dependsOn);
-            }
-
+            dependsOn = new BurstModeJob() {
+                state = state,
+                mode = mode,
+            }.ScheduleSingleDeps(dependsOn);
             return dependsOn;
         }
 

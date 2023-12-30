@@ -93,11 +93,9 @@ namespace ME.BECS {
                 }
             }
             JobUtils.Unlock(ref world.state->entities.lockIndex);
-            JobUtils.Lock(ref world.state->archetypes.lockIndex);
             {
                 world.state->archetypes.AddEntity(world.state, newEnt);
             }
-            JobUtils.Unlock(ref world.state->archetypes.lockIndex);
 
             return newEnt;
 

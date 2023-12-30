@@ -25,12 +25,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public UIntListHash(ref MemoryAllocator allocator, uint capacity) {
+        public UIntListHash(ref MemoryAllocator allocator, uint capacity, ushort growFactor = 1) {
 
             if (capacity <= 0u) capacity = 1u;
-            this.arr = new MemArray<uint>(ref allocator, capacity);
-            this.Count = 0u;
-            this.hash = 0u;
+            this = default;
+            this.arr.growFactor = growFactor;
             this.EnsureCapacity(ref allocator, capacity);
 
         }
@@ -101,8 +100,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
-            E.IS_CREATED(this);
             capacity = Helpers.NextPot(capacity);
+            if (this.arr.isCreated == false) this.arr.growFactor = 1;
             return this.arr.Resize(ref allocator, capacity, ClearOptions.UninitializedMemory);
             
         }

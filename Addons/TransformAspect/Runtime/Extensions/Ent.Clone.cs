@@ -39,7 +39,7 @@ namespace ME.BECS.TransformAspect {
 
             var sourceState = source.World.state;
             var targetState = target.World.state;
-            Batches.Apply(sourceState, source.worldId);
+            Batches.Apply(sourceState);
             sourceState->components.CopyFrom(sourceState, source.id, targetState, target.id, target.gen);
 
         }

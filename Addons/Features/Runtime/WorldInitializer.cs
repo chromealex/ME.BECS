@@ -106,13 +106,17 @@ namespace ME.BECS {
         }
 
         public virtual JobHandle OnUpdate(JobHandle dependsOn) {
+            if (this.world.isCreated == true) {
+                ProfilerCounters.Initialize();
+                ProfilerCounters.SampleWorldBeginFrame(in this.world);
+            }
             return dependsOn;
         }
 
         protected virtual void LateUpdate() {
 
             if (this.world.isCreated == true) {
-                ProfilerCounters.SampleWorld(in this.world);
+                ProfilerCounters.SampleWorldEndFrame(in this.world);
             }
 
             WorldsTempAllocator.Reset();

@@ -2,3 +2,4 @@
 
 -define:LOGS_CORE_ERROR
 -define:LOGS_CORE_WARNING
+-define:JOURNAL

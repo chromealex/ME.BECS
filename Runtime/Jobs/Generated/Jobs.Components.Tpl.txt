@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     public static unsafe partial class QueryScheduleExtensions {
         
@@ -33,13 +34,31 @@ namespace ME.BECS.Jobs {
         
     }
 
-    [JobProducerType(typeof(JobComponentsExtensions_{{count}}.JobProcess<{count[,]}>))]
-    public interface IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+    public static partial class EarlyInit {
+        public static void DoComponents<T, {count(,)[T#i#]}>()
+                {count( )[where T#i# : unmanaged, IComponent]}
+                where T : struct, IJobComponents<{count(,)[T#i#]}> => JobComponentsExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
+    }
+
+    [JobProducerType(typeof(JobComponentsExtensions.JobProcess<{count[,]}>))]
+    public interface IJobComponents<{count(,)[T#i#]}> : IJobComponentsBase {count( )[where T#i# : unmanaged, IComponent]} {
         void Execute({count(,)[{{inref}} T#i# c#i#]});
     }
 
-    public static unsafe partial class JobComponentsExtensions_{{count}} {
+    public static unsafe partial class JobComponentsExtensions {
         
+        public static void JobEarlyInitialize<T, {count(,)[T#i#]}>()
+            {count( )[where T#i# : unmanaged, IComponent]}
+            where T : struct, IJobComponents<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T, {count(,)[T#i#]}>()
+            {count( )[where T#i# : unmanaged, IComponent]}
+            where T : struct, IJobComponents<{count(,)[T#i#]}> {
+            JobProcess<T, {count(,)[T#i#]}>.Initialize();
+            System.IntPtr reflectionData = JobProcess<T, {count(,)[T#i#]}>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IComponent]}
             where T : struct, IJobComponents<{count(,)[T#i#]}> {
@@ -51,7 +70,7 @@ namespace ME.BECS.Jobs {
                 {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state, buffer->worldId),]}
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T, {count(,)[T#i#]}>.Initialize(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
 
         }
@@ -70,8 +89,9 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IComponent]}
             where T : struct, IJobComponents<{count(,)[T#i#]}> {
 
-            private static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();
 
+            [BurstDiscard]
             public static System.IntPtr Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
                     jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
