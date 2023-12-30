@@ -1,7 +1,6 @@
 namespace ME.BECS {
     
     using static Cuts;
-    using MemPtr = System.Int64;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
@@ -39,6 +38,13 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
+            return this.RemoveUnknownType(state, typeId, groupId, entId, gen);
+
+        }
+
+        [INLINE(256)]
+        public bool Remove(State* state, uint entId, ushort gen, uint typeId, uint groupId) {
+
             return this.RemoveUnknownType(state, typeId, groupId, entId, gen);
 
         }

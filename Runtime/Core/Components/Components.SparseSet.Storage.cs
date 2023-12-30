@@ -32,6 +32,7 @@ namespace ME.BECS {
                 if (page.generations.isCreated == false) {
                     page.entToDataIdx = new MemArray<uint>(ref state->allocator, ENTITIES_PER_PAGE);
                     page.dataIdxToEnt = new MemArray<uint>(ref state->allocator, ENTITIES_PER_PAGE);
+                    page.states = new MemArray<byte>(ref state->allocator, ENTITIES_PER_PAGE);
                     page.generations = new MemArray<ushort>(ref state->allocator, ENTITIES_PER_PAGE);
                 }
                 JobUtils.Unlock(ref page.lockIndex);
@@ -85,10 +86,12 @@ namespace ME.BECS {
         private const uint PAGE_SIZE_BYTES_PER_PAGE = 1024u; // 1 KB
 
         private MemArray<IndexPage> indexPages;
-        private uint version;
         private MemArray<DataPage> dataPages;
         private readonly uint dataSize;
         private readonly uint dataPerPage;
+        
+        private ReadWriteSpinner spinnerIndexPage;
+        private ReadWriteSpinner spinnerDataPage;
 
         [INLINE(256)]
         public SparseSetUnknownType(State* state, uint dataSize, uint capacity, uint entitiesCapacity) {
@@ -98,7 +101,8 @@ namespace ME.BECS {
             this.dataPerPage = PAGE_SIZE_BYTES_PER_PAGE / dataSize;
             this.indexPages = new MemArray<IndexPage>(ref state->allocator, _size(entitiesCapacity), growFactor: 2);
             this.dataPages = new MemArray<DataPage>(ref state->allocator, _sizeData(entitiesCapacity, this.dataPerPage), growFactor: 2);
-            this.version = state->allocator.version;
+            this.spinnerIndexPage = default;
+            this.spinnerDataPage = default;
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
 
         }
@@ -122,19 +126,21 @@ namespace ME.BECS {
             {
                 var length = _size(newLength);
                 if (length >= this.indexPages.Length) {
+                    this.spinnerIndexPage.WhiteBegin();
                     this.indexPages.Resize(ref state->allocator, length);
+                    this.spinnerIndexPage.WhiteEnd();
                 }
             }
 
             {
                 var length = _sizeData(newLength, this.dataPerPage);
                 if (length >= this.dataPages.Length) {
+                    this.spinnerDataPage.WhiteBegin();
                     this.dataPages.Resize(ref state->allocator, length);
+                    this.spinnerDataPage.WhiteEnd();
                 }
             }
 
-            this.version = state->allocator.version;
-            
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
             
         }
@@ -148,30 +154,32 @@ namespace ME.BECS {
         public void Set(State* state, uint entityId, ushort entityGen, void* data, out bool isNew) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out var pageIndex);
-            JobUtils.Lock(ref page.lockIndex);
+            this.spinnerIndexPage.ReadEnd();
             isNew = false;
             ref var gen = ref page.generations[in state->allocator, entityId];
             ref var headIndex = ref page.entToDataIdx[state, entityId];
             if (gen != entityGen) {
+                JobUtils.Lock(ref page.lockIndex);
                 isNew = true;
                 if (headIndex == 0u) headIndex = ++page.headIndex;
                 page.dataIdxToEnt[state, headIndex - 1u] = entityId;
                 gen = entityGen;
+                JobUtils.Unlock(ref page.lockIndex);
             }
-            JobUtils.Unlock(ref page.lockIndex);
             
             var globalHeadIndex = _index(headIndex, pageIndex);
+            this.spinnerDataPage.ReadBegin();
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
-            JobUtils.Lock(ref dataPage.lockIndex);
+            this.spinnerDataPage.ReadEnd();
             byte* ptr = MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
             if (data == null) {
                 _memclear(ptr, this.dataSize);
             } else {
                 _memcpy(data, ptr, this.dataSize);
             }
-            JobUtils.Unlock(ref dataPage.lockIndex);
-
+            
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
             
         }
@@ -180,25 +188,27 @@ namespace ME.BECS {
         public void Set<T>(State* state, uint entityId, ushort entityGen, in T data, out bool isNew) where T : unmanaged {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out var pageIndex);
-            JobUtils.Lock(ref page.lockIndex);
+            this.spinnerIndexPage.ReadEnd();
             isNew = false;
             ref var gen = ref page.generations[in state->allocator, entityId];
             ref var headIndex = ref page.entToDataIdx[state, entityId];
             if (gen != entityGen) {
+                JobUtils.Lock(ref page.lockIndex);
                 isNew = true;
                 if (headIndex == 0u) headIndex = ++page.headIndex;
                 page.dataIdxToEnt[state, headIndex - 1u] = entityId;
                 gen = entityGen;
+                JobUtils.Unlock(ref page.lockIndex);
             }
-            JobUtils.Unlock(ref page.lockIndex);
             
             var globalHeadIndex = _index(headIndex, pageIndex);
+            this.spinnerDataPage.ReadBegin();
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
-            JobUtils.Lock(ref dataPage.lockIndex);
+            this.spinnerDataPage.ReadEnd();
             var vPtr = MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
             *(T*)vPtr = data;
-            JobUtils.Unlock(ref dataPage.lockIndex);
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
             
         }
@@ -207,11 +217,13 @@ namespace ME.BECS {
         public bool Remove(State* state, uint entityId, ushort entityGen) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out var pageIndex);
-            JobUtils.Lock(ref page.lockIndex);
+            this.spinnerIndexPage.ReadEnd();
             var res = false;
             ref var gen = ref page.generations[in state->allocator, entityId];
             if (gen == entityGen) {
+                JobUtils.Lock(ref page.lockIndex);
                 E.RANGE(page.headIndex, 1u, ENTITIES_PER_PAGE + 1u);
                 var targetIdx = page.entToDataIdx[state, entityId];
                 E.RANGE(targetIdx, 1u, ENTITIES_PER_PAGE + 1u);
@@ -254,8 +266,8 @@ namespace ME.BECS {
                 --page.headIndex;
                 res = true;
                 --gen;
+                JobUtils.Unlock(ref page.lockIndex);
             }
-            JobUtils.Unlock(ref page.lockIndex);
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
 
             return res;
@@ -267,19 +279,19 @@ namespace ME.BECS {
 
             var result = false;
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out _);
-            JobUtils.Lock(ref page.lockIndex);
-            ref var gen = ref page.generations[in state->allocator, entityId];
-            if (value == true && gen == entityGen - 1) {
+            this.spinnerIndexPage.ReadEnd();
+            ref var val = ref page.states[in state->allocator, entityId];
+            if (value == true && val == 1) {
                 // if we want to enable component and it was disabled
                 result = true;
-                ++gen;
-            } else if (value == false && gen == entityGen) {
+                val = 0;
+            } else if (value == false && val == 0) {
                 // if we want to disable component and it was enabled
                 result = true;
-                --gen;
+                val = 1;
             }
-            JobUtils.Unlock(ref page.lockIndex);
             
             return result;
 
@@ -290,23 +302,19 @@ namespace ME.BECS {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
             exists = true;
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out var pageIndex, true);
-            if (page.IsCreated == false) {
+            this.spinnerIndexPage.ReadEnd();
+            if (page.IsCreated == false || page.generations[in state->allocator, entityId] != entityGen) {
                 exists = false;
-                return (byte*)0;
-            }
-            JobUtils.Lock(ref page.lockIndex);
-            ref var gen = ref page.generations[in state->allocator, entityId];
-            if (gen != entityGen) {
-                exists = false;
-                JobUtils.Unlock(ref page.lockIndex);
                 return (byte*)0;
             }
 
             var globalHeadIndex = _index(page.entToDataIdx[in state->allocator, entityId], pageIndex);
+            this.spinnerDataPage.ReadBegin();
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
+            this.spinnerDataPage.ReadEnd();
             var ptr =  MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
-            JobUtils.Unlock(ref page.lockIndex);
             return ptr;
 
         }
@@ -315,15 +323,17 @@ namespace ME.BECS {
         public byte* Read(State* state, uint entityId) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out var pageIndex, true);
+            this.spinnerIndexPage.ReadEnd();
             if (page.IsCreated == false) {
                 return (byte*)0;
             }
-            JobUtils.Lock(ref page.lockIndex);
             var globalHeadIndex = _index(page.entToDataIdx[in state->allocator, entityId], pageIndex);
+            this.spinnerDataPage.ReadBegin();
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
+            this.spinnerDataPage.ReadEnd();
             var ptr =  MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
-            JobUtils.Unlock(ref page.lockIndex);
             return ptr;
 
         }
@@ -332,27 +342,29 @@ namespace ME.BECS {
         public byte* Get(State* state, uint entityId, ushort entityGen, out bool isNew) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out var pageIndex);
-            JobUtils.Lock(ref page.lockIndex);
+            this.spinnerIndexPage.ReadEnd();
             isNew = false;
             ref var gen = ref page.generations[in state->allocator, entityId];
             ref var headIndex = ref page.entToDataIdx[state, entityId];
             if (gen != entityGen) {
+                JobUtils.Lock(ref page.lockIndex);
                 isNew = true;
                 if (headIndex == 0u) headIndex = ++page.headIndex;
                 page.dataIdxToEnt[state, headIndex - 1u] = entityId;
                 gen = entityGen;
+                JobUtils.Unlock(ref page.lockIndex);
             }
-            JobUtils.Unlock(ref page.lockIndex);
             
             var globalHeadIndex = _index(headIndex, pageIndex);
+            this.spinnerDataPage.ReadBegin();
             ref var dataPage = ref _pageData(state, in this.dataPages, globalHeadIndex, this.dataSize, this.dataPerPage, out var pageDataIndex);
-            JobUtils.Lock(ref dataPage.lockIndex);
+            this.spinnerDataPage.ReadEnd();
             byte* ptr = MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataPage.data, _dataIndex(globalHeadIndex, pageDataIndex, this.dataPerPage) * this.dataSize);
             if (isNew == true) {
                 _memclear(ptr, this.dataSize);
             }
-            JobUtils.Unlock(ref dataPage.lockIndex);
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
 
@@ -363,12 +375,15 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Has(State* state, uint entityId, ushort entityGen) {
 
+            this.spinnerIndexPage.ReadBegin();
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId, out _, true);
+            this.spinnerIndexPage.ReadEnd();
             if (page.IsCreated == false) {
                 return false;
             }
-            return page.generations[in state->allocator, entityId] == entityGen;
-            
+            var result = page.generations[in state->allocator, entityId] == entityGen && page.states[in state->allocator, entityId] == 0;
+            return result;
+
         }
 
     }

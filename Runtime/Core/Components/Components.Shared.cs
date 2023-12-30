@@ -1,7 +1,6 @@
 namespace ME.BECS {
     
     using static Cuts;
-    using MemPtr = System.Int64;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
 

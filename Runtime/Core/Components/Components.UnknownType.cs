@@ -1,6 +1,5 @@
 namespace ME.BECS {
 
-    using MemPtr = System.Int64;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
     public unsafe partial struct Components {

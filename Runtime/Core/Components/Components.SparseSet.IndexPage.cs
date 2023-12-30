@@ -10,6 +10,7 @@ namespace ME.BECS {
         public MemArray<uint> entToDataIdx;
         public MemArray<uint> dataIdxToEnt;
         public MemArray<ushort> generations;
+        public MemArray<byte> states;
         public uint headIndex;
         public LockSpinner lockIndex;
 
@@ -19,6 +20,7 @@ namespace ME.BECS {
             if (this.generations.isCreated == true) {
                 size += this.entToDataIdx.GetReservedSizeInBytes();
                 size += this.dataIdxToEnt.GetReservedSizeInBytes();
+                size += this.states.GetReservedSizeInBytes();
                 size += this.generations.GetReservedSizeInBytes();
             }
 
@@ -31,6 +33,7 @@ namespace ME.BECS {
             
             this.entToDataIdx.BurstMode(in allocator, state);
             this.dataIdxToEnt.BurstMode(in allocator, state);
+            this.states.BurstMode(in allocator, state);
             this.generations.BurstMode(in allocator, state);
             
         }

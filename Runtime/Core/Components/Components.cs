@@ -2,7 +2,6 @@ namespace ME.BECS {
     
     using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
-    using MemPtr = System.Int64;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
     public interface IComponent {}
@@ -59,7 +58,10 @@ namespace ME.BECS {
         }
 
     }
-    
+
+    /// <summary>
+    /// Components groups are used for components to update entity version by group
+    /// </summary>
     public class ComponentGroupAttribute : System.Attribute {
 
         public System.Type groupType;
