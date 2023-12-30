@@ -207,9 +207,9 @@ namespace ME.BECS {
                     return;
                 }
                 
-                var bits = arch.archetypesWithTypeIdBits[this.state, this.typeId];
+                ref var bits = ref arch.archetypesWithTypeIdBits[this.state, this.typeId];
                 if (bits.isCreated == true) {
-                    this.queryData->archetypesBits.Intersect(in this.state->allocator, bits);
+                    this.queryData->archetypesBits.Intersect(in this.state->allocator, in bits);
                 } else {
                     this.queryData->archetypesBits.Clear();
                 }

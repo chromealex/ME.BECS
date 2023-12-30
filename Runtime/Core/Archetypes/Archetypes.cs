@@ -3,6 +3,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Mathematics;
     
     public unsafe struct Archetypes {
 
@@ -26,7 +27,7 @@ namespace ME.BECS {
                     componentsCount = componentsCount,
                     components = new UIntHashSet(ref state->allocator, componentsCount),
                     componentBits = new BitArray(ref state->allocator, StaticTypes.counter + 1u),
-                    entitiesList = new UIntListHash(ref state->allocator, entitiesCapacityPerArchetype),
+                    entitiesList = new UIntListHash(ref state->allocator, entitiesCapacityPerArchetype, 2),
                 };
             }
 
@@ -79,7 +80,7 @@ namespace ME.BECS {
                 MemoryAllocatorExt.ValidateConsistency(state->allocator);
                 var newArchetype = Archetype.Create(state, targetCount, 1u);
                 newArchetype.components.CopyFrom(ref state->allocator, this.components);
-                newArchetype.componentBits = new BitArray(ref state->allocator, this.componentBits);
+                newArchetype.componentBits.Set(ref state->allocator, this.componentBits);
                 if (removeItems.Count > 0u) {
                     newArchetype.components.Remove(ref state->allocator, removeItems);
                     newArchetype.componentBits.Remove(in state->allocator, removeItems.root);
@@ -156,7 +157,7 @@ namespace ME.BECS {
 
         }
 
-        public LockSpinner lockIndex;
+        private LockSpinner lockIndex;
         public List<Archetype> list;
         public List<uint> allArchetypes;
         public BitArray allArchetypesForQuery;
@@ -217,8 +218,12 @@ namespace ME.BECS {
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
             ref var allocator = ref state->allocator;
             idx = this.list.Add(ref allocator, archetype);
+            var idxLength = idx + 1u;
+            var len = math.max(idxLength, this.allArchetypes.Capacity);
             this.allArchetypes.Add(ref allocator, idx);
-            this.allArchetypesForQuery.Resize(ref allocator, idx + 1u);
+            // archetypesWithTypeIdBits[index] (bits) length must be less or equals than allArchetypesForQuery's length
+            // because we use intersects method to find out bits overlapping, so we need to use len parameter in both
+            this.allArchetypesForQuery.Resize(ref allocator, len);
             this.allArchetypesForQuery.Set(in allocator, (int)idx, true);
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
             { // collect with
@@ -227,11 +232,10 @@ namespace ME.BECS {
                     var cId = e.Current;
                     {
                         MemoryAllocatorExt.ValidateConsistency(state->allocator);
-                        this.archetypesWithTypeIdBits.Resize(ref allocator, cId + 1u);
                         ref var list = ref this.archetypesWithTypeIdBits[in allocator, cId];
                         MemoryAllocatorExt.ValidateConsistency(state->allocator);
-                        if (list.isCreated == false) list = new BitArray(ref allocator, idx + 1u);
-                        list.Resize(ref allocator, idx + 1u);
+                        if (list.isCreated == false) list = new BitArray(ref allocator, len);
+                        list.Resize(ref allocator, len);
                         MemoryAllocatorExt.ValidateConsistency(state->allocator);
                         list.Set(in allocator, (int)idx, true);
                         MemoryAllocatorExt.ValidateConsistency(state->allocator);
@@ -282,10 +286,12 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
+            JobUtils.Lock(ref this.lockIndex);
             this.entToArchetypeIdx.Resize(ref state->allocator, ent.id + 1u);
             this.entToIdxInArchetype.Resize(ref state->allocator, ent.id + 1u);
             this.list[in state->allocator, 0].AddEntity(state, ent.id);
             this.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
+            JobUtils.Unlock(ref this.lockIndex);
             
         }
 
@@ -294,9 +300,11 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
+            JobUtils.Lock(ref this.lockIndex);
             var idx = this.entToArchetypeIdx[in state->allocator, entId];
             this.list[in state->allocator, idx].RemoveEntity(state, entId);
             this.entToArchetypeIdx[in state->allocator, entId] = 0u;
+            JobUtils.Unlock(ref this.lockIndex);
             
         }
 
@@ -304,10 +312,12 @@ namespace ME.BECS {
         public void ApplyBatch(State* state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
 
             if (addItems.Count > 0 || removeItems.Count > 0) {
+                JobUtils.Lock(ref this.lockIndex);
                 var idx = this.entToArchetypeIdx[in state->allocator, entId];
                 ref var archetype = ref this.list[in state->allocator, idx];
                 // Look up for new archetype
                 this.entToArchetypeIdx[in state->allocator, entId] = archetype.GetNext(state, entId, in addItems, in removeItems, ref this);
+                JobUtils.Unlock(ref this.lockIndex);
             }
 
         }
@@ -320,7 +330,7 @@ namespace ME.BECS {
                 entToArchetypeIdx = new MemArray<uint>(ref state->allocator, capacity, growFactor: 2),
                 entToIdxInArchetype = new MemArray<uint>(ref state->allocator, capacity, growFactor: 2),
                 componentsCountToArchetypeIds = new MemArray<UIntDictionary<List<uint>>>(ref state->allocator, capacity, growFactor: 2),
-                archetypesWithTypeIdBits = new MemArray<BitArray>(ref state->allocator, capacity, growFactor: 2),
+                archetypesWithTypeIdBits = new MemArray<BitArray>(ref state->allocator, StaticTypes.counter + 1u),
                 allArchetypes = new List<uint>(ref state->allocator, capacity),
                 allArchetypesForQuery = new BitArray(ref state->allocator, capacity),
             };
