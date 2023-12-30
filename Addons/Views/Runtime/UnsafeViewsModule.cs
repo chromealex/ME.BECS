@@ -13,8 +13,8 @@ namespace ME.BECS.Views {
     public unsafe interface IViewProvider<TEntityView> where TEntityView : IView {
 
         void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties);
-        JobHandle Spawn(ViewsModuleData* data, UnsafeList<SpawnInstanceInfo> list, JobHandle dependsOn);
-        JobHandle Despawn(ViewsModuleData* data, UnsafeList<SceneInstanceInfo> list, JobHandle dependsOn);
+        JobHandle Spawn(ViewsModuleData* data, JobHandle dependsOn);
+        JobHandle Despawn(ViewsModuleData* data, JobHandle dependsOn);
         /// <summary>
         /// Apply Spawn/Despawn commands
         /// </summary>
@@ -497,19 +497,18 @@ namespace ME.BECS.Views {
 
             }
             JobUtils.RunScheduled();
-            dependsOn.Complete();
             
             {
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Provider::Despawn");
                     marker.Begin();
-                    dependsOn = this.provider.Despawn(this.data, this.data->toRemoveTemp, dependsOn);
+                    dependsOn = this.provider.Despawn(this.data, dependsOn);
                     marker.End();
                 }
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Provider::Spawn");
                     marker.Begin();
-                    dependsOn = this.provider.Spawn(this.data, this.data->toAddTemp, dependsOn);
+                    dependsOn = this.provider.Spawn(this.data, dependsOn);
                     marker.End();
                 }
                 {

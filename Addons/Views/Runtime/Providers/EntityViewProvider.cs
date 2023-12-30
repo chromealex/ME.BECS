@@ -76,39 +76,50 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public JobHandle Commit(ViewsModuleData* data, JobHandle dependsOn) {
 
-            dependsOn.Complete();
-            foreach (var instance in this.tempViews) {
-                //instance.transform.SetParent(this.disabledRoot);
-                instance.gameObject.SetActive(false);
-                this.UnassignRoot(instance.rootInfo);
-            }
-            this.tempViews.Clear();
+            {
+                var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
+                marker.Begin();
+                dependsOn.Complete();
+                foreach (var instance in this.tempViews) {
+                    //instance.transform.SetParent(this.disabledRoot);
+                    instance.gameObject.SetActive(false);
+                    this.UnassignRoot(instance.rootInfo);
+                }
 
-            foreach (var item in data->toChange) {
-                var entId = item.Key;
-                if (data->renderingOnSceneEntToRenderIndex.TryGetValue(in data->viewsWorld.state->allocator, entId, out var index) == true) {
-                    var instanceInfo = data->renderingOnScene[data->viewsWorld.state, index];
-                    var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-                    {
-                        // call despawn methods
+                this.tempViews.Clear();
+                marker.End();
+            }
+
+            if (data->toChange.Count() > 0) {
+                var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Processing changed entities");
+                marker.Begin();
+                foreach (var item in data->toChange) {
+                    var entId = item.Key;
+                    if (data->renderingOnSceneEntToRenderIndex.TryGetValue(in data->viewsWorld.state->allocator, entId, out var index) == true) {
+                        var instanceInfo = data->renderingOnScene[data->viewsWorld.state, index];
+                        var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         {
-                            if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
-                            if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {
-                                instance.DoDisableToPoolChildren();
+                            // call despawn methods
+                            {
+                                if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
+                                if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {
+                                    instance.DoDisableToPoolChildren();
+                                }
+                            }
+                        }
+                        {
+                            // call spawn methods
+                            instance.ent = data->renderingOnSceneEnts[(int)index].element.ent;
+                            if (instanceInfo.prefabInfo->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
+                            if (instanceInfo.prefabInfo->HasEnableFromPoolModules == true) {
+                                instance.DoEnableFromPoolChildren(instance.ent);
                             }
                         }
                     }
-                    {
-                        // call spawn methods
-                        instance.ent = data->renderingOnSceneEnts[(int)index].element.ent;
-                        if (instanceInfo.prefabInfo->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
-                        if (instanceInfo.prefabInfo->HasEnableFromPoolModules == true) {
-                            instance.DoEnableFromPoolChildren(instance.ent);
-                        }
-                    }
                 }
+                marker.End();
             }
-            
+
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Schedule JobUpdateTransforms");
                 marker.Begin();
@@ -170,11 +181,11 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Spawn(ViewsModuleData* data, UnsafeList<SpawnInstanceInfo> list, JobHandle dependsOn) {
+        public JobHandle Spawn(ViewsModuleData* data, JobHandle dependsOn) {
             
             dependsOn.Complete();
-            for (int i = 0; i < list.Length; ++i) {
-                var item = list[i];
+            for (int i = 0; i < data->toAddTemp.Length; ++i) {
+                var item = data->toAddTemp[i];
                 var instanceInfo = this.Spawn(item.prefabInfo.info, in item.ent, out var isNew);
                 data->renderingOnScene.Add(ref data->viewsWorld.state->allocator, instanceInfo);
             }
@@ -184,11 +195,11 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Despawn(ViewsModuleData* data, UnsafeList<SceneInstanceInfo> list, JobHandle dependsOn) {
+        public JobHandle Despawn(ViewsModuleData* data, JobHandle dependsOn) {
             
             dependsOn.Complete();
-            for (int i = 0; i < list.Length; ++i) {
-                var item = list[i];
+            for (int i = 0; i < data->toRemoveTemp.Length; ++i) {
+                var item = data->toRemoveTemp[i];
                 this.Despawn(item);
             }
             

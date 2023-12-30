@@ -138,46 +138,64 @@ namespace ME.BECS.Views {
 
         [INLINE(256)]
         public JobHandle Commit(ViewsModuleData* data, JobHandle dependsOn) {
+            
+            {
+                var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
+                marker.Begin();
+                dependsOn.Complete();
+                var handles = new NativeList<JobHandle>(this.objectsPerMeshAndMaterial.Count, Allocator.Temp);
+                foreach (var kv in this.objectsPerMeshAndMaterial) {
+                    var item = kv.Value;
 
-            dependsOn.Complete();
-            foreach (var kv in this.objectsPerMeshAndMaterial) {
-                var item = kv.Value;
-                var info = kv.Key;
+                    {
+                        var job = new UpdateMatricesJob() {
+                            matrices = item.matrices.AsParallelWriter(),
+                            entities = item.entities,
+                            prefabWorldMatrices = item.prefabWorldMatrices,
+                        };
+                        var handle = job.ScheduleByRef(item.matrices.Length, JobUtils.GetScheduleBatchCount(item.matrices.Length));
+                        handles.Add(handle);
+                    }
 
-                {
-                    var job = new UpdateMatricesJob() {
-                        matrices = item.matrices.AsParallelWriter(),
-                        entities = item.entities,
-                        prefabWorldMatrices = item.prefabWorldMatrices,
-                    };
-                    var handle = job.ScheduleByRef(item.matrices.Length, 64);
-                    handle.Complete();
                 }
-                
-                if (info.renderingInstanced == true) {
-                    UnityEngine.Graphics.RenderMeshInstanced(info.renderParams, info.mesh, info.submeshIndex, item.matrices.AsArray(), item.matrices.Length, 0);
-                } else {
-                    for (int i = 0; i < item.matrices.Length; ++i) {
-                        UnityEngine.Graphics.RenderMesh(in info.renderParams, info.mesh, info.submeshIndex, item.matrices[i]);
+
+                JobHandle.CompleteAll(handles.AsArray());
+                marker.End();
+            }
+
+            {
+                var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Draw");
+                marker.Begin();
+                foreach (var kv in this.objectsPerMeshAndMaterial) {
+                    var item = kv.Value;
+                    var info = kv.Key;
+
+                    if (info.renderingInstanced == true) {
+                        UnityEngine.Graphics.RenderMeshInstanced(info.renderParams, info.mesh, info.submeshIndex, item.matrices.AsArray(), item.matrices.Length, 0);
+                    } else {
+                        for (int i = 0; i < item.matrices.Length; ++i) {
+                            UnityEngine.Graphics.RenderMesh(in info.renderParams, info.mesh, info.submeshIndex, item.matrices[i]);
+                        }
                     }
                 }
+                marker.End();
             }
-            
+
             return dependsOn;
 
         }
 
         [INLINE(256)]
-        public JobHandle Spawn(ViewsModuleData* data, UnsafeList<SpawnInstanceInfo> list, JobHandle dependsOn) {
+        public JobHandle Spawn(ViewsModuleData* data, JobHandle dependsOn) {
 
             dependsOn.Complete();
-            for (int i = 0; i < list.Length; ++i) {
-                var entId = (uint)list[i].prefabInfo.info->prefabPtr;
+            for (int i = 0; i < data->toAddTemp.Length; ++i) {
+                var entId = (uint)data->toAddTemp[i].prefabInfo.info->prefabPtr;
                 var ent = new Ent(entId, data->viewsWorld);
-                var worldEnt = list[i].ent;
+                var worldEnt = data->toAddTemp[i].ent;
                 this.SpawnInstanceHierarchy(data, in data->viewsWorld, in worldEnt, in ent);
                 
-                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), list[i].prefabInfo.info);
+                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), data->toAddTemp[i].prefabInfo.info);
                 data->renderingOnScene.Add(ref data->viewsWorld.state->allocator, instanceInfo);
             }
 
@@ -235,13 +253,13 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Despawn(ViewsModuleData* data, UnsafeList<SceneInstanceInfo> list, JobHandle dependsOn) {
+        public JobHandle Despawn(ViewsModuleData* data, JobHandle dependsOn) {
             
             dependsOn.Complete();
-            for (int i = 0; i < list.Length; ++i) {
-                var entId = (uint)list[i].prefabInfo->prefabPtr;
+            for (int i = 0; i < data->toRemoveTemp.Length; ++i) {
+                var entId = (uint)data->toRemoveTemp[i].prefabInfo->prefabPtr;
                 var ent = new Ent(entId, data->viewsWorld);
-                var worldEnt = new Ent((ulong)list[i].obj);
+                var worldEnt = new Ent((ulong)data->toRemoveTemp[i].obj);
                 this.DespawnInstanceHierarchy(data, in worldEnt, in ent);
             }
             
