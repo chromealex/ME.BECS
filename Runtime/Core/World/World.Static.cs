@@ -7,6 +7,41 @@ namespace ME.BECS {
 
     namespace Internal {
 
+        public unsafe struct ArrayCacheLine<T> where T : unmanaged {
+
+            public const uint CACHE_LINE_SIZE = JobUtils.CacheLineSize;
+
+            public readonly uint Length => JobUtils.ThreadsCount;
+            [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
+            internal T* ptr;
+
+            [INLINE(256)]
+            public void Initialize() {
+                var size = TSize<T>.size;
+                var length = JobUtils.ThreadsCount;
+                this.ptr = (T*)_make(size * CACHE_LINE_SIZE * length);
+            }
+
+            [INLINE(256)]
+            public ref T Get(int index) {
+                E.RANGE(index, 0, this.Length);
+                return ref *(this.ptr + index * CACHE_LINE_SIZE);
+            }
+
+            [INLINE(256)]
+            public ref T Get(uint index) {
+                E.RANGE(index, 0, this.Length);
+                return ref *(this.ptr + index * CACHE_LINE_SIZE);
+            }
+
+            [INLINE(256)]
+            public void Dispose() {
+                _free(this.ptr);
+                this = default;
+            }
+
+        }
+
         public unsafe struct Array<T> where T : unmanaged {
 
             public uint Length;
@@ -39,7 +74,6 @@ namespace ME.BECS {
             }
 
         }
-
 
         public unsafe struct ListUShort {
 
@@ -186,6 +220,7 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
+            if (allocatorPersistentValidBurst.Data.Value == false) return;
             allocatorPersistentValidBurst.Data.Value = false;
             allocatorPersistent.Dispose();
             
@@ -241,6 +276,12 @@ namespace ME.BECS {
             if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
             ResetWorldsCounter();
 
+        }
+
+        public static void Dispose() {
+            
+            WorldsPersistentAllocator.Dispose();
+            
         }
 
         [INLINE(256)]

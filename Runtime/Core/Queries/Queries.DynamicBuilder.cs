@@ -612,8 +612,6 @@ namespace ME.BECS {
                             elementsCount += size;
                         }
 
-                        temp.Dispose();
-
                     } else {
 
                         for (uint i = 0u; i < archCount; ++i) {

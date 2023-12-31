@@ -154,7 +154,7 @@ namespace ME.BECS {
         }
         
         // ThreadId => ThreadTaskList
-        private MemArray<ThreadTaskList> lists;
+        private MemArrayThreadCacheLine<ThreadTaskList> lists;
         private int availableTasksCount;
 
         private LockSpinner isThreadWorking;
@@ -165,7 +165,7 @@ namespace ME.BECS {
 
             // Create lists for each thread
             // We don't care about tasks order
-            this.lists = new MemArray<ThreadTaskList>(ref state->allocator, (uint)JobsUtility.ThreadIndexCount);
+            this.lists = new MemArrayThreadCacheLine<ThreadTaskList>(ref state->allocator);
 
         }
 

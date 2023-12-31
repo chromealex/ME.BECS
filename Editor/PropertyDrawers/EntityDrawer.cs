@@ -138,8 +138,10 @@ namespace ME.BECS.Editor {
         private void UpdateData() {
 
             this.versionLabel.text = this.entity.Version.ToString();
-            if (this.journalRoot != null) this.journalRoot.Clear();
-            JournalEditorWindow.UpdateEntityJournal(this.journalRoot, ref this.journalItems, this.entity);
+            if (this.journalRoot != null) {
+                this.journalRoot.Clear();
+                JournalEditorWindow.UpdateEntityJournal(this.journalRoot, ref this.journalItems, this.entity);
+            }
 
         }
 

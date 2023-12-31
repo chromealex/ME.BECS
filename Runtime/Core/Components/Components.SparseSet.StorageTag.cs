@@ -8,6 +8,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
+            this.spinner.BurstMode(in allocator, state);
             this.indexPages.BurstMode(in allocator, state);
             for (uint i = 0; i < this.indexPages.Length; ++i) {
                 ref var pageIndex = ref this.indexPages[in allocator, i];
@@ -48,7 +49,7 @@ namespace ME.BECS {
         public SparseSetUnknownTypeTag(State* state, uint capacity, uint entitiesCapacity) {
 
             this.indexPages = new MemArray<IndexPage>(ref state->allocator, _size(entitiesCapacity), growFactor: 2);
-            this.spinner = default;
+            this.spinner = ReadWriteSpinner.Create(state);
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
 
         }
@@ -69,9 +70,9 @@ namespace ME.BECS {
             {
                 var length = _size(newLength);
                 if (length >= this.indexPages.Length) {
-                    this.spinner.WhiteBegin();
+                    this.spinner.WriteBegin(state);
                     this.indexPages.Resize(ref state->allocator, length);
-                    this.spinner.WhiteEnd();
+                    this.spinner.WriteEnd();
                 }
             }
 
@@ -88,9 +89,9 @@ namespace ME.BECS {
         public void Set(State* state, uint entityId, ushort entityGen, out bool isNew) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
-            this.spinner.ReadBegin();
+            this.spinner.ReadBegin(state);
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId);
-            this.spinner.ReadEnd();
+            this.spinner.ReadEnd(state);
             
             isNew = false;
             ref var gen = ref page.generations[in state->allocator, entityId];
@@ -109,9 +110,9 @@ namespace ME.BECS {
         public bool Remove(State* state, uint entityId, ushort entityGen) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
-            this.spinner.ReadBegin();
+            this.spinner.ReadBegin(state);
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId);
-            this.spinner.ReadEnd();
+            this.spinner.ReadEnd(state);
             
             var res = false;
             ref var gen = ref page.generations[in state->allocator, entityId];
@@ -134,9 +135,9 @@ namespace ME.BECS {
         public bool Has(State* state, uint entityId, ushort entityGen) {
 
             MemoryAllocatorExt.ValidateConsistency(state->allocator);
-            this.spinner.ReadBegin();
+            this.spinner.ReadBegin(state);
             ref var page = ref _pageIndex(state, in this.indexPages, ref entityId);
-            this.spinner.ReadEnd();
+            this.spinner.ReadEnd(state);
             var result = page.generations[in state->allocator, entityId] == entityGen;
             return result;
 

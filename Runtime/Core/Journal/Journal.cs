@@ -545,15 +545,15 @@ namespace ME.BECS {
 
         }
 
-        private MemArray<ThreadItem> threads;
+        private MemArrayThreadCacheLine<ThreadItem> threads;
 
-        public MemArray<ThreadItem> GetData() => this.threads;
+        public MemArrayThreadCacheLine<ThreadItem> GetData() => this.threads;
 
         [INLINE(256)]
         public static JournalData Create(State* state, in JournalProperties properties) {
             
             var journal = new JournalData {
-                threads = new MemArray<ThreadItem>(ref state->allocator, (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount),
+                threads = new MemArrayThreadCacheLine<ThreadItem>(ref state->allocator),
             };
             for (uint i = 0u; i < journal.threads.Length; ++i) {
                 journal.threads[state, i] = new ThreadItem(state, properties);

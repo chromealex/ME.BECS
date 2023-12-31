@@ -4,18 +4,18 @@ namespace ME.BECS.TransformAspect {
     using Jobs;
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
-    [BURST]
+    //[BURST]
     public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
         
         [BURST]
         public struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
 
             public State* state;
-            
+
             public void Execute(ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateMatrixHierarchy(this.state, ref aspect);
-                
+
             }
 
         }

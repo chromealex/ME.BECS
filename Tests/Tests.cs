@@ -12,7 +12,7 @@ namespace ME.BECS.Tests {
         }
 
         public static void Dispose() {
-            
+            Worlds.ResetWorldsCounter();
         }
 
     }

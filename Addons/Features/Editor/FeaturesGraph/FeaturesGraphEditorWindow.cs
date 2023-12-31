@@ -92,9 +92,15 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private Vector3 prevScale;
         private Vector3 prevPos;
-        private void OnTransformChanged(UnityEditor.Experimental.GraphView.GraphView graphview) {
 
-            if (this.prevScale == this.graphView.viewTransform.scale &&
+        private void OnTransformChanged(UnityEditor.Experimental.GraphView.GraphView graphview) {
+            this.OnTransformChanged(graphview, false);
+        }
+
+        private void OnTransformChanged(UnityEditor.Experimental.GraphView.GraphView graphview, bool forced) {
+
+            if (forced == false &&
+                this.prevScale == this.graphView.viewTransform.scale &&
                 this.prevPos == this.graphView.viewTransform.position) return;
 
             this.prevScale = this.graphView.viewTransform.scale;
@@ -111,6 +117,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             } else {
                 this.background.style.backgroundSize = new StyleBackgroundSize(new BackgroundSize(512f * scaleX, 512f * scaleY));
             }
+            this.background.MarkDirtyRepaint();
             
         }
 
@@ -159,10 +166,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 icon.SendToBack();
             }*/
             {
-                var gridSpacing = 20f;
+                var gridSpacing = 10f;
                 var gridBlockSpacing = gridSpacing * 10f;
-                var gridColor = new Color(0f, 0f, 0f, 0.6f);
-                var gridBlockColor = new Color(0f, 0f, 0f, 1f);
+                var gridColor = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+                var gridBlockColor = new Color(0.1f, 0.1f, 0.1f, 1f);
                 var back = new IMGUIContainer(() => {
                     static void DrawGrid(Vector2 min, Vector2 max, float spacing, Color gridColor, Vector2 offset, float opacity) {
                         
@@ -245,7 +252,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.rootView.Add(toolbar);
             
             this.UpdateToolbar();
-            if (this.graphView != null) this.OnTransformChanged(view);
+            if (this.graphView != null) this.OnTransformChanged(view, true);
         }
 
     }

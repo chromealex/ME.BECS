@@ -39,7 +39,7 @@ namespace ME.BECS.FeaturesGraph.Nodes {
 
         protected override void Process() {
 
-            //UnityEngine.Debug.Log("Graph Node: " + this.graphValue);
+            //UnityEngine.Debug.Log("Graph Node: " + this.name);
             // Skip nodes without input connections
             if (this.inputNodes == null || this.inputNodes.Count == 0) return;
             var handle = (this.inputNodes.Count == 1 ? this.inputNodes[0] : this.runtimeSystemGroup.Combine(this.inputNodes));
@@ -49,23 +49,23 @@ namespace ME.BECS.FeaturesGraph.Nodes {
                 var processor = new Extensions.GraphProcessor.ProcessGraphProcessor(this.graphValue);
                 var systemGroup = SystemGroup.Create();
                 this.graphValue.runtimeRootSystemGroup = systemGroup;
-                /*for (int i = 0; i < processor.processList.Count; ++i) {
+                for (int i = 0; i < processor.processList.Count; ++i) {
                     ((FeaturesGraphNode)processor.processList[i]).customRuntimeSystemRoot = this.featuresGraph;
-                }*/
+                }
                 
-                /*foreach (var node in processor.processList) {
+                foreach (var node in processor.processList) {
                     if (node is StartNode startNode) {
                         startNode.rootDependsOn = this.runtimeHandle;
                         break;
                     }
-                }*/
+                }
                 processor.Run();
-                /*foreach (var node in processor.processList) {
+                foreach (var node in processor.processList) {
                     if (node is ExitNode exitNode) {
                         this.runtimeHandle = exitNode.runtimeHandle;
                         break;
                     }
-                }*/
+                }
                 
                 this.runtimeHandle = this.runtimeSystemGroup.Add(this.graphValue.runtimeRootSystemGroup, this.runtimeHandle);
 

@@ -10,7 +10,7 @@ namespace ME.BECS {
 
         }
         
-        private MemArray<ThreadItem> threadItems;
+        private MemArrayThreadCacheLine<ThreadItem> threadItems;
 
         [INLINE(256)]
         public void Add<T>(State* state, in Ent ent, in T data, OneShotType type) where T : unmanaged {
@@ -78,7 +78,7 @@ namespace ME.BECS {
         [NotThreadSafe]
         public static OneShotTasks Create(State* state, uint capacity) {
             var tasks = new OneShotTasks() {
-                threadItems = new MemArray<ThreadItem>(ref state->allocator, (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount),
+                threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state->allocator),
             };
             for (uint i = 0; i < tasks.threadItems.Length; ++i) {
                 ref var threadItem = ref tasks.threadItems[state, i];

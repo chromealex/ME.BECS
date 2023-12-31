@@ -92,6 +92,30 @@ namespace ME.BECS {
 
     }
 
+    public unsafe class MemArrayThreadCacheLineProxy<T> where T : unmanaged {
+
+        private MemArrayThreadCacheLine<T> arr;
+        
+        public MemArrayThreadCacheLineProxy(MemArrayThreadCacheLine<T> arr) {
+
+            this.arr = arr;
+
+        }
+
+        public T[] items {
+            get {
+                var world = Context.world;
+                var arr = new T[this.arr.Length];
+                for (int i = 0; i < this.arr.Length; ++i) {
+                    arr[i] = this.arr[world.state->allocator, i];
+                }
+
+                return arr;
+            }
+        }
+
+    }
+
     public unsafe class ListProxy<T> where T : unmanaged {
 
         private List<T> arr;

@@ -19,6 +19,7 @@ namespace ME.BECS {
 
                     var ent = Ent.New(in world);
                     if (this.config != null) this.config.Apply(in ent);
+                    ent.Set<ME.BECS.TransformAspect.TransformAspect>();
                     var tr = ent.GetAspect<ME.BECS.TransformAspect.TransformAspect>();
                     tr.localPosition = this.transform.localPosition;
                     tr.localRotation = this.transform.localRotation;
