@@ -7,9 +7,9 @@ namespace ME.BECS {
     public interface IAspect {
 
         Ent ent { get; set; }
-
+        
     }
-    
+
     public unsafe struct RefRW<T> : IAspectData, IIsCreated where T : unmanaged, IComponent {
 
         [NativeDisableUnsafePtrRestriction]
@@ -93,13 +93,28 @@ namespace ME.BECS {
     public static class AspectExt {
 
         [INLINE(256)]
+        public static bool IsAlive<T>(this ref T aspect) where T : unmanaged, IAspect {
+
+            return aspect.ent.IsAlive();
+
+        }
+
+        [INLINE(256)]
         public static T GetAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
 
-            if (ent.IsAlive() == false) return default;
-            //ent.Set<T>();
+            E.IS_ALIVE(in ent);
             T aspect = AspectStorage<T>.GetAspect(in ent.World);
             aspect.ent = ent;
             return aspect;
+
+        }
+
+        [INLINE(256)]
+        public static T GetOrCreateAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
+
+            E.IS_ALIVE(in ent);
+            ent.Set<T>();
+            return GetAspect<T>(in ent);
 
         }
 

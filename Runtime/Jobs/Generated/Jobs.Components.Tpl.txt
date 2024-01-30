@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryScheduleExtensions {
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
             {count( )[builder.With<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.builderDependsOn);
@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobComponentsExtensions.JobProcess<{count[,]}>))]
     public interface IJobComponents<{count(,)[T#i#]}> : IJobComponentsBase {count( )[where T#i# : unmanaged, IComponent]} {
-        void Execute({count(,)[{{inref}} T#i# c#i#]});
+        void Execute(in Ent ent, {count(,)[{{inref}} T#i# c#i#]});
     }
 
     public static unsafe partial class JobComponentsExtensions {
@@ -108,7 +108,8 @@ namespace ME.BECS.Jobs {
                 for (int i = 0; i < jobData.buffer->count; ++i) {
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
-                    jobData.jobData.Execute({count(,)[{{inref}} jobData.c#i#.Get(entId, gen)]});
+                    var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                    jobData.jobData.Execute(in ent, {count(,)[{{inref}} jobData.c#i#.Get(entId, gen)]});
                 }
                 jobData.buffer->EndForEachRange();
                 

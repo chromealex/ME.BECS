@@ -1,9 +1,11 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using System.Runtime.InteropServices;
 
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
+    [StructLayout(LayoutKind.Explicit)]
     public
         // Unity bug: readonly struct inside SerializeReference do not serialized
         #if !UNITY_EDITOR
@@ -14,14 +16,23 @@ namespace ME.BECS {
         public static Ent Null => new Ent();
 
         #if !UNITY_EDITOR
+        [FieldOffset(0)]
         public readonly uint id;
+        [FieldOffset(4)]
         public readonly ushort gen;
+        [FieldOffset(6)]
         public readonly ushort worldId;
         #else
+        [FieldOffset(0)]
         public uint id;
+        [FieldOffset(4)]
         public ushort gen;
+        [FieldOffset(6)]
         public ushort worldId;
         #endif
+        [FieldOffset(0)]
+        public readonly ulong pack;
+        
         public readonly uint Version {
             [INLINE(256)]
             get {
@@ -36,14 +47,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly uint GetVersion(ushort groupId) {
+        public readonly uint GetVersion(uint groupId) {
             var world = this.World;
             return world.state->entities.GetVersion(world.state, this.id, groupId);
         }
 
         [INLINE(256)]
-        public ulong ToULong() {
-            return ((ulong)this.id << 32) | ((uint)this.gen << 16 | this.worldId);
+        public readonly ulong ToULong() {
+            return this.pack;
         }
 
         /// <summary>
@@ -52,6 +63,7 @@ namespace ME.BECS {
         /// <param name="id"></param>
         [INLINE(256)]
         public Ent(uint id) {
+            this.pack = default;
             this.id = id;
             this.worldId = Context.world.id;
             this.gen = default;
@@ -84,15 +96,14 @@ namespace ME.BECS {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
             Ent newEnt;
-            JobUtils.Lock(ref world.state->entities.lockIndex);
             {
                 newEnt = world.state->entities.Add(world.state, worldId, out var reused);
                 if (reused == false) {
                     world.state->components.OnEntityAdd(world.state, newEnt.id);
                     world.state->batches.OnEntityAdd(world.state, newEnt.id);
+                    world.state->collectionsRegistry.OnEntityAdd(world.state, newEnt.id);
                 }
             }
-            JobUtils.Unlock(ref world.state->entities.lockIndex);
             {
                 world.state->archetypes.AddEntity(world.state, newEnt);
             }
@@ -103,14 +114,13 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public Ent(ulong value) {
-            this.id = (uint)(value >> 32);
-            var key = value & 0xffffffff;
-            this.gen = (ushort)(key >> 16);
-            this.worldId = (ushort)(key & 0xffff);
+            this = default;
+            this.pack = value;
         }
 
         [INLINE(256)]
         public Ent(uint id, World world) {
+            this.pack = default;
             this.id = id;
             this.gen = world.state->entities.GetGeneration(world.state, id);
             this.worldId = world.id;
@@ -118,6 +128,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public Ent(uint id, State* state, ushort worldId) {
+            this.pack = default;
             this.id = id;
             this.gen = state->entities.GetGeneration(state, id);
             this.worldId = worldId;
@@ -125,6 +136,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public Ent(uint id, ushort gen, ushort worldId) {
+            this.pack = default;
             this.id = id;
             this.gen = gen;
             this.worldId = worldId;

@@ -32,7 +32,7 @@ namespace ME.BECS.Editor {
             tempObjects.Add(this.entity.ToULong(), c);
         }
         
-        private void LoadStyle() {
+        protected void LoadStyle() {
             if (EntityDrawer.styleSheetBase == null) {
                 EntityDrawer.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Entity.uss");
             }
@@ -123,7 +123,7 @@ namespace ME.BECS.Editor {
         }
 
         private uint version;
-        private Ent entity;
+        protected Ent entity;
         private uint archId;
         private VisualElement rootVisualElement;
         private SerializedObject serializedObj;
@@ -515,12 +515,13 @@ namespace ME.BECS.Editor {
                                 child.userData = propertyField.userData;
                                 child.RegisterValueChangeCallback((evt) => {
 
-                                    if (evt.target == null) return;
+                                    /*if (evt.target == null) return;
                                     var userData = ((PropertyField)evt.target).userData;
                                     if (userData == null) return;
-
                                     var idx = (int)userData;
-                                    var newValue = dataArr.GetArrayElementAtIndex(idx).managedReferenceValue;
+                                    if (idx >= dataArr.arraySize) return;
+
+                                    var newValue = dataArr.GetArrayElementAtIndex(idx)?.managedReferenceValue;
                                     {
                                         arrData[idx] = newValue;
                                         var value = arrData[idx];
@@ -539,7 +540,7 @@ namespace ME.BECS.Editor {
                                             var gMethod = methodSet.MakeGenericMethod(value.GetType());
                                             gMethod.Invoke(world.state->components, new object[] { entity, value });
                                         }
-                                    }
+                                    }*/
 
                                 });
                             }
@@ -555,6 +556,7 @@ namespace ME.BECS.Editor {
                         var labelField = new Foldout();
                         labelField.text = label;
                         labelField.AddToClassList("field");
+                        rootContainer.Add(labelField);
                         fields.Add(labelField);
                     }
 

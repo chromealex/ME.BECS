@@ -1,0 +1,26 @@
+{
+    "name": "ME.BECS.Attack",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "Unity.Burst",
+        "ME.BECS.Trees",
+        "ME.BECS.Units",
+        "ME.BECS.Aspects.TransformAspect",
+        "Unity.Mathematics",
+        "ME.BECS.Players",
+        "ME.BECS.Destroy",
+        "Unity.Collections",
+        "ME.BECS.Bullets",
+        "ME.BECS.Views"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,4 +1,4 @@
-namespace ME.BECS.TransformAspect {
+namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
@@ -19,14 +19,13 @@ namespace ME.BECS.TransformAspect {
             var ent = Ent.New(worldId);
             ent.CopyFrom(in source);
             {
-                var state = source.World.state;
                 ref readonly var children = ref source.Read<ChildrenComponent>().list;
                 if (children.Count > 0u) {
                     ref var childrenTarget = ref ent.Get<ChildrenComponent>().list;
-                    childrenTarget = new List<Ent>(ref ent.World.state->allocator, children.Count);
+                    childrenTarget = new ListAuto<Ent>(ent, children.Count);
                     for (uint i = 0u; i < children.Count; ++i) {
-                        var child = children[state, i];
-                        childrenTarget.Add(ref state->allocator, child.Clone(worldId, true));
+                        var child = children[i];
+                        childrenTarget.Add(child.Clone(worldId, true));
                     }
                 }
             }
@@ -40,7 +39,7 @@ namespace ME.BECS.TransformAspect {
             var sourceState = source.World.state;
             var targetState = target.World.state;
             Batches.Apply(sourceState);
-            sourceState->components.CopyFrom(sourceState, source.id, targetState, target.id, target.gen);
+            sourceState->components.CopyFrom(sourceState, source.id, source.gen, targetState, target.id, target.gen);
 
         }
 

@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryScheduleExtensions {
         
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job) where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
             {count( )[builder.With<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.ScheduleParallelFor<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);

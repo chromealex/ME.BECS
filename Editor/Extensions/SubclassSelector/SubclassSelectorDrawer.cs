@@ -246,9 +246,16 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                 );
                 popup.OnItemSelected += item => {
                     var type = item.Type;
+                    object instance = null;
+                    if (type != null) {
+                        var methodInfo = type.GetMember("Default", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        if (methodInfo.Length == 1) {
+                            instance = ((System.Reflection.PropertyInfo)methodInfo[0]).GetMethod.Invoke(null, null);
+                        }
+                    }
                     this.m_TargetProperty.serializedObject.ApplyModifiedProperties();
                     this.m_TargetProperty.serializedObject.Update();
-                    var obj = this.m_TargetProperty.SetManagedReference(type);
+                    var obj = this.m_TargetProperty.SetManagedReference(type, instance);
                     this.m_TargetProperty.isExpanded = obj != null;
                     this.m_TargetProperty.serializedObject.ApplyModifiedProperties();
                     this.m_TargetProperty.serializedObject.Update();

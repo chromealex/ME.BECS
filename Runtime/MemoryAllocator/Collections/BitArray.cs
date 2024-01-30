@@ -40,9 +40,9 @@ namespace ME.BECS {
             this.cachedPtr = (ulong*)ptr;
             this.Length = source.Length;
             var sourcePtr = MemoryAllocatorExt.GetUnsafePtr(in allocator, source.ptr);
-            MemoryAllocatorExt.ValidateConsistency(allocator);
+            MemoryAllocatorExt.ValidateConsistency(ref allocator);
             _memcpy(sourcePtr, ptr, sizeInBytes);
-            MemoryAllocatorExt.ValidateConsistency(allocator);
+            MemoryAllocatorExt.ValidateConsistency(ref allocator);
 
         }
 

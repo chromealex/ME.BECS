@@ -52,9 +52,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has<T>() where T : unmanaged, IComponent {
+        public bool Has<T>(bool checkEnabled = true) where T : unmanaged, IComponent {
 
-            return this.buffer->Has<T>(this.entId, this.entGen);
+            return this.buffer->Has<T>(this.entId, this.entGen, checkEnabled);
 
         }
 
@@ -107,10 +107,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has<T>(uint index) where T : unmanaged, IComponent {
+        public bool Has<T>(uint index, bool checkEnabled = true) where T : unmanaged, IComponent {
             
             var entId = this.buffer->entities[index];
-            return this.buffer->Has<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId));
+            return this.buffer->Has<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId), checkEnabled);
 
         }
 
@@ -160,9 +160,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has<T>() where T : unmanaged, IComponent {
+        public bool Has<T>(bool checkEnabled = true) where T : unmanaged, IComponent {
 
-            return this.buffer->Has<T>(this.entId, this.entGen);
+            return this.buffer->Has<T>(this.entId, this.entGen, checkEnabled);
 
         }
 
@@ -212,7 +212,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public ref T Get<T>(uint entId, ushort gen) where T : unmanaged, IComponent {
             
-            if (this.sync == false && this.Has<T>(entId, gen) == false) {
+            if (this.sync == false && this.Has<T>(entId, gen, checkEnabled: true) == false) {
                 E.THREAD_CHECK(nameof(this.Get));
             }
             E.IS_IN_TICK(this.state);
@@ -224,7 +224,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Set<T>(uint entId, ushort gen, in T data) where T : unmanaged, IComponent {
 
-            if (this.sync == false && this.Has<T>(entId, gen) == false) {
+            if (this.sync == false && this.Has<T>(entId, gen, checkEnabled: true) == false) {
                 E.THREAD_CHECK(nameof(this.Set));
                 return false;
             }
@@ -249,9 +249,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has<T>(uint entId, ushort gen) where T : unmanaged, IComponent {
+        public bool Has<T>(uint entId, ushort gen, bool checkEnabled) where T : unmanaged, IComponent {
 
-            return this.state->components.Has<T>(this.state, entId, gen);
+            return this.state->components.Has<T>(this.state, entId, gen, checkEnabled);
 
         }
 

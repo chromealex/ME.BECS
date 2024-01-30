@@ -2,7 +2,7 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
-    public readonly struct UIntPair {
+    public readonly struct UIntPair : System.IEquatable<UIntPair> {
 
         public readonly uint typeId1;
         public readonly uint typeId2;

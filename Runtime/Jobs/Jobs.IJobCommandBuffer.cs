@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     [JobProducerType(typeof(ICommandBufferJobExtensions.JobProcess<>))]
     public interface IJobCommandBuffer {
@@ -11,6 +12,15 @@ namespace ME.BECS.Jobs {
     }
 
     public static unsafe class ICommandBufferJobExtensions {
+        
+        public static void JobEarlyInit<T>() where T : struct, IJobCommandBuffer => JobProcess<T>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T>()
+            where T : struct, IJobCommandBuffer {
+            JobProcess<T>.Initialize();
+            System.IntPtr reflectionData = JobProcess<T>.jobReflectionData.Data;
+            return reflectionData;
+        }
         
         public static JobHandle Schedule<T>(this T jobData, in CommandBuffer* buffer, JobHandle inputDeps = default) where T : struct, IJobCommandBuffer {
             
@@ -20,7 +30,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
 
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
             
         }
@@ -33,7 +43,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
 
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), JobProcess<T>.Initialize(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
             
         }
@@ -46,13 +56,13 @@ namespace ME.BECS.Jobs {
 
         internal struct JobProcess<T> where T : struct, IJobCommandBuffer {
             
-            private static System.IntPtr jobReflectionData;
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T>>();
 
-            public static System.IntPtr Initialize() {
-                if (jobReflectionData == System.IntPtr.Zero) {
-                    jobReflectionData = JobsUtility.CreateJobReflectionData(typeof(JobData<T>), typeof(T), (ExecuteJobFunction)Execute);
+            [BurstDiscard]
+            public static void Initialize() {
+                if (jobReflectionData.Data == System.IntPtr.Zero) {
+                    jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T>), typeof(T), (ExecuteJobFunction)Execute);
                 }
-                return jobReflectionData;
             }
 
             public delegate void ExecuteJobFunction(ref JobData<T> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex);

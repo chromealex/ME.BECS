@@ -4,7 +4,17 @@ namespace ME.BECS {
     /// Use this interface to assign to unmanaged type
     /// to show in EntityConfig static list
     /// </summary>
-    public interface IComponentStatic { }
+    public interface IComponentStatic : IComponent { }
+
+    /// <summary>
+    /// Use this interface to initialize entity
+    /// when you apply EntityConfig
+    /// </summary>
+    public interface IConfigInitialize {
+
+        void OnInitialize(in Ent ent);
+
+    }
 
     /// <summary>
     /// Use this interface to assign to unmanaged type

@@ -30,7 +30,8 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void IS_IN_TICK(State* state) {
 
-            if (state->worldState == WorldState.Initialized ||
+            if (state->tickCheck == 0 ||
+                state->worldState == WorldState.Initialized ||
                 state->worldState == WorldState.BeginTick) {
                 return;
             }

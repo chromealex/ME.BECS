@@ -17,7 +17,7 @@ namespace ME.BECS.Views {
 
     public struct DrawMeshProviderTag : IComponent {}
 
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public unsafe struct DrawMeshProvider : IViewProvider<EntityView> {
 
         public struct Info : System.IEquatable<Info> {
@@ -101,12 +101,12 @@ namespace ME.BECS.Views {
             builder.With<DrawMeshProviderTag>();
         }
         
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public static void InstantiateViewRegistry(in Ent ent, in ViewSource viewSource) {
             ent.Set(new DrawMeshProviderTag());
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public static void DestroyViewRegistry(in Ent ent) {
             ent.Remove<DrawMeshProviderTag>();
         }
@@ -121,7 +121,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct UpdateMatricesJob : IJobParallelFor {
 
             public NativeList<UnityEngine.Matrix4x4>.ParallelWriter matrices;
@@ -131,7 +131,7 @@ namespace ME.BECS.Views {
             public NativeList<Unity.Mathematics.float4x4> prefabWorldMatrices;
             
             public void Execute(int i) {
-                (*this.matrices.ListData)[i] = math.mul(this.entities[i].Read<ME.BECS.TransformAspect.WorldMatrixComponent>().value, this.prefabWorldMatrices[i]);
+                (*this.matrices.ListData)[i] = math.mul(this.entities[i].Read<ME.BECS.Transforms.WorldMatrixComponent>().value, this.prefabWorldMatrices[i]);
             }
 
         }
@@ -227,12 +227,12 @@ namespace ME.BECS.Views {
                     this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
                 }
 
-                objectsPerInfo.matrices.Add(worldEnt.Read<ME.BECS.TransformAspect.WorldMatrixComponent>().value);
+                objectsPerInfo.matrices.Add(worldEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
                 objectsPerInfo.entities.Add(worldEnt);
-                objectsPerInfo.prefabWorldMatrices.Add(prefabEnt.Read<ME.BECS.TransformAspect.WorldMatrixComponent>().value);
+                objectsPerInfo.prefabWorldMatrices.Add(prefabEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
             }
             
-            ref readonly var children = ref prefabEnt.Read<ME.BECS.TransformAspect.ChildrenComponent>();
+            ref readonly var children = ref prefabEnt.Read<ME.BECS.Transforms.ChildrenComponent>();
             for (uint i = 0u; i < children.list.Count; ++i) {
                 this.SpawnInstanceHierarchy(data, in world, in worldEnt, in children.list[in data->viewsWorld.state->allocator, i]);
             }
@@ -292,7 +292,7 @@ namespace ME.BECS.Views {
                 }
             }
             
-            ref readonly var children = ref prefabEnt.Read<ME.BECS.TransformAspect.ChildrenComponent>();
+            ref readonly var children = ref prefabEnt.Read<ME.BECS.Transforms.ChildrenComponent>();
             for (uint i = 0u; i < children.list.Count; ++i) {
                 this.DespawnInstanceHierarchy(data, in worldEnt, in children.list[in data->viewsWorld.state->allocator, i]);
             }
@@ -338,8 +338,8 @@ namespace ME.BECS.Views {
             }
 
             var instanceId = prefab.GetInstanceID();
-            if (instanceId < 0 && checkPrefab == true) {
-                throw new System.Exception("Value is not a prefab");
+            if (checkPrefab == true && instanceId <= 0 && prefab.gameObject.scene.name != null && prefab.gameObject.scene.rootCount > 0) {
+                throw new System.Exception($"Value {prefab} is not a prefab");
             }
 
             if (sceneSource == true) {

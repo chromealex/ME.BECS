@@ -47,6 +47,8 @@ namespace ME.BECS {
 
         }
 
+        public ushort updateType;
+        public int graphId;
         private GroupData* data;
         internal ref Node* rootNode => ref this.data->rootNode;
         internal ref NodeData* nodes => ref this.data->nodes;
@@ -55,11 +57,12 @@ namespace ME.BECS {
         private Queue runtimeQueue;
 
         [INLINE(256)]
-        public static SystemGroup Create() {
+        public static SystemGroup Create(ushort updateType = 0) {
             var group = new SystemGroup() {
                 data = _make(new GroupData() {
                     rootNode = _make(new Node()),
                 }),
+                updateType = updateType,
             };
             return group;
         }
@@ -138,88 +141,130 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public JobHandle Awake(ref World world, JobHandle dependsOn = default) {
+        public JobHandle DrawGizmos(ref World world, JobHandle dependsOn = default) {
 
-            return this.Run(ref world, 0f, Method.Awake, dependsOn);
-
-        }
-
-        [INLINE(256)]
-        public JobHandle Update(ref World world, float dt, JobHandle dependsOn = default) {
-
-            return this.Run(ref world, dt, Method.Update, dependsOn);
+            return this.Run(ref world, 0f, Method.DrawGizmos, 0, dependsOn);
 
         }
 
         [INLINE(256)]
-        public JobHandle Destroy(ref World world, JobHandle dependsOn = default) {
+        public JobHandle Awake(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
+
+            return this.Run(ref world, 0f, Method.Awake, subId, dependsOn);
+
+        }
+
+        [INLINE(256)]
+        public JobHandle Update(ref World world, float dt, ushort subId = 0, JobHandle dependsOn = default) {
+
+            return this.Run(ref world, dt, Method.Update, subId, dependsOn);
+
+        }
+
+        [INLINE(256)]
+        public JobHandle Destroy(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
             
-            return this.Run(ref world, 0f, Method.Destroy, dependsOn);
+            return this.Run(ref world, 0f, Method.Destroy, subId, dependsOn);
             
         }
 
-        private static string Debug(JobHandle jobHandle) {
+        internal static string DebugParent(Node* node) {
+            var str = string.Empty;
+            if (node->parentIndex == 1u) {
+                str += node->parents[0].data->name;
+            } else if (node->parentIndex == 2u) {
+                str += node->parents[0].data->name + ", ";
+                str += node->parents[1].data->name;
+            } else if (node->parentIndex == 3u) {
+                str += node->parents[0].data->name + ", ";
+                str += node->parents[1].data->name + ", ";
+                str += node->parents[2].data->name;
+            } else if (node->parentIndex > 3u) {
+                for (uint i = 0; i < node->parentIndex; ++i) {
+                    str += node->parents[i].data->name + ", ";
+                }
+            }
+
+            return str;
+        }
+
+        internal static string DebugHandle(JobHandle jobHandle) {
             var field = jobHandle.GetType().GetField("debugInfo", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             return ((int)(System.IntPtr)field.GetValue(jobHandle)).ToString();
         }
 
         [INLINE(256)]
-        private JobHandle Run(ref World world, float dt, Method method, JobHandle dependsOn = default) {
+        private JobHandle Run(ref World world, float dt, Method method, ushort subId, JobHandle dependsOn = default) {
             
             var list = new UnsafeList<NodeData>((int)this.index, Constants.ALLOCATOR_TEMP);
             ref var queue = ref this.runtimeQueue;
             queue.Clear();
             queue.Enqueue(this.rootNode);
             this.rootNode->dependsOn = Batches.Apply(dependsOn, world.state);
-            while (queue.Count > 0) {
+            try {
+                while (queue.Count > 0) {
 
-                var node = queue.Dequeue();
-                if (node->HasMethod(method) == true) {
-                    if (node->isStarted == false) {
-                        node->isStarted = true;
-                        if (node->AllParentsStarted(method) == true) {
-                            var context = SystemContext.Create(dt, world, node->GetJobHandle());
-                            context.SetDependency(Batches.Apply(context.dependsOn, world.state));
-                            Journal.UpdateSystemStarted(world.id, node->name);
-                            this.RunSystem(node->systemData, node->GetMethod(method), ref context);
-                            Journal.UpdateSystemEnded(world.id, node->name);
-                            node->dependsOn = Batches.Apply(context.dependsOn, world.state);
-                            list.Add(new NodeData() { data = node });
-                        } else {
-                            node->isStarted = false;
-                            queue.Enqueue(node);
+                    var node = queue.Dequeue();
+                    
+                    if (node->HasMethod(method) == true) {
+                        if (node->isStarted == false) {
+                            node->isStarted = true;
+                            if (node->AllParentsStarted(method) == true) {
+                                var dj = node->GetJobHandle();
+                                var context = SystemContext.Create(dt, world, dj);
+                                //context.SetDependency(Batches.Apply(context.dependsOn, world.state));
+                                Journal.UpdateSystemStarted(world.id, node->name);
+                                //UnityEngine.Debug.Log("Started: " + node->name + " :: " + DebugHandle(dj) + " => " + DebugHandle(node->dependsOn) + " :: " + DebugParent(node) + ", subId: " + subId);
+                                list.Add(new NodeData() { data = node });
+                                this.RunSystem(node->systemData, node->GetMethod(method), ref context);
+                                Journal.UpdateSystemEnded(world.id, node->name);
+                                node->dependsOn = Batches.Apply(context.dependsOn, world.state);
+                                //UnityEngine.Debug.Log("Ended: " + node->name + " :: " + DebugHandle(dj) + " => " + DebugHandle(node->dependsOn));
+                            } else {
+                                node->isStarted = false;
+                                queue.Enqueue(node);
+                            }
                         }
-                    }
-                } else if (node->graph != null) {
-                    if (node->isStarted == false) {
-                        node->isStarted = true;
-                        node->dependsOn = node->graph->Run(ref world, dt, method, node->GetJobHandle());
+                    } else if (node->graph != null) {
+                        // Check if subId is valid for this graph
+                        if (subId > 0 && node->graph->updateType > 0 && node->graph->updateType != subId) continue;
+                        if (node->isStarted == false) {
+                            var dj = node->GetJobHandle();
+                            //UnityEngine.Debug.Log("Graph: " + node->name + " :: " + DebugHandle(dj));
+                            node->isStarted = true;
+                            node->dependsOn = node->graph->Run(ref world, dt, method, subId, dj);
+                            list.Add(new NodeData() { data = node });
+                        }
+                    } else {
                         list.Add(new NodeData() { data = node });
+                        node->dependsOn = node->GetJobHandle();
+                        //UnityEngine.Debug.Log("Skip: " + node->name + " :: " + DebugHandle(node->dependsOn));
                     }
-                } else {
-                    list.Add(new NodeData() { data = node });
-                    node->dependsOn = node->GetJobHandle();
-                }
 
-                for (uint i = 0; i < node->childrenIndex; ++i) {
-                    var child = node->children[i].data;
-                    queue.Enqueue(child);
-                }
+                    for (uint i = 0; i < node->childrenIndex; ++i) {
+                        var child = node->children[i].data;
+                        if (child->isStarted == false) queue.Enqueue(child);
+                    }
 
+                }
+            } catch (System.Exception ex) {
+                Logger.Core.Exception(ex, showCallstack: true);
             }
-
+            
             var arrDepends = new Unity.Collections.NativeArray<JobHandle>(list.Length + 1, Constants.ALLOCATOR_TEMP);
             {
                 int i = 0;
                 for (i = 0; i < list.Length; ++i) {
                     list[i].data->isStarted = false;
+                    //UnityEngine.Debug.Log("Complete: " + DebugHandle(list[i].data->dependsOn) + " :: " + list[i].data->dependsOn.IsCompleted + " :: " + list[i].data->name);
                     arrDepends[i] = list[i].data->dependsOn;
                 }
+
                 arrDepends[i] = dependsOn;
             }
-            
             var resultDepends = JobHandle.CombineDependencies(arrDepends);
             JobUtils.RunScheduled();
+
             return resultDepends;
 
         }

@@ -21,6 +21,10 @@
     margin-bottom: 2px;
 }
 
+.aspect-view .entity-header {
+    background-color: rgba(124, 128, 0, 0.3);
+}
+
 .entity-header .unity-label {
     overflow: hidden;
     -unity-text-overflow-position: middle;
@@ -66,6 +70,18 @@
 
 .entity-mini .entity-header.toggle-checked {
     background-color: rgba(0, 90, 128, 0.2);
+}
+
+.aspect-view .entity-header:hover {
+    background-color: rgba(124, 128, 0, 0.6);
+}
+
+.aspect-view .entity-header.toggle-checked:hover {
+    background-color: rgba(128, 111, 0, 0.6);
+}
+
+.aspect-view .entity-header.toggle-checked {
+    background-color: rgba(128, 117, 0, 0.2);
 }
 
 .entity-mini.entity-not-alive .entity-header:hover {

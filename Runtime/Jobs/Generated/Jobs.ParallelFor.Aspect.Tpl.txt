@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             {count( )[builder.WithAspect<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.ScheduleParallelFor<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
@@ -100,14 +100,15 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, {count(,)[T#i#]}> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
 
+                {count[var aspect#i# = jobData.c#i#;]}
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                     for (uint i = (uint)begin; i < end; ++i) {
                         var entId = *(jobData.buffer->entities + i);
                         var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
-                        {count[jobData.c#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
-                        jobData.jobData.Execute({count(,)[{{inref}} jobData.c#i#]});
+                        {count[aspect#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
+                        jobData.jobData.Execute({count(,)[{{inref}} aspect#i#]});
                     }
                     jobData.buffer->EndForEachRange();
                     

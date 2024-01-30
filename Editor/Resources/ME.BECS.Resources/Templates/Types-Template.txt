@@ -1,4 +1,10 @@
 namespace ME.BECS{{EDITOR}} {
+    
+    using BURST = Unity.Burst.BurstCompileAttribute;
+    using Unity.Collections;
+    using Unity.Collections.LowLevel.Unsafe;
+    using static Cuts;
+    
     [UnityEngine.Scripting.PreserveAttribute]
     public static unsafe class AOTBurstHelper {
         [UnityEngine.Scripting.PreserveAttribute] 
@@ -20,7 +26,9 @@ namespace ME.BECS{{EDITOR}} {
     #endif
     [UnityEngine.Scripting.PreserveAttribute]
     [UnityEngine.DefaultExecutionOrder(-100_000)]
+    [BURST]
     public static unsafe class StaticMethods {
+        
         [UnityEngine.Scripting.PreserveAttribute] 
         static StaticMethods() {
             Load();
@@ -32,6 +40,8 @@ namespace ME.BECS{{EDITOR}} {
             StaticTypesInitializer.Load();
             WorldStaticCallbacks.Initialize();
             {{CUSTOM_METHOD_REGISTRY}}
+            EntityConfigsRegistry.Initialize();
+            EntityConfigRegistry.Initialize();
         }
         {{CUSTOM_METHODS}}
     }

@@ -112,6 +112,29 @@ namespace ME.BECS.Tests {
 
         }
 
+        [Test]
+        public void CreateHugeAmountThreadedResize() {
+
+            {
+                var amount = 100_000u;
+                var props = WorldProperties.Default;
+                props.stateProperties.entitiesCapacity = 1000;
+                using var world = World.Create(props);
+
+                var job = new CreateEntitiesJob() {
+                    world = world,
+                }.Schedule((int)amount, 64);
+
+                job = ME.BECS.Batches.Apply(job, world.state);
+                job = ME.BECS.Batches.BurstModeThreadTasks(job, world.state, false);
+                JobUtils.RunScheduled();
+                job.Complete();
+
+                Assert.AreEqual(amount, world.state->entities.EntitiesCount);
+            }
+
+        }
+
         [Unity.Burst.BurstCompileAttribute]
         public static void CreateHugeAmountBurstMethod(ref World world, uint amount) {
             

@@ -48,10 +48,11 @@ namespace ME.BECS.Tests {
 
             {
                 using var world = World.Create();
-                var test = new TestComponent() {
+                var testData = new TestComponent() {
                     data = 1,
                 };
-                var sp = new SparseSetUnknownType(world.state, TSize<TestComponent>.size, 10, 10);
+                var test = &testData;
+                var sp = new DataDenseSet(world.state, TSize<TestComponent>.size, 10);
                 sp.Set(world.state, 1, 1, test, out _);
                 sp.Set(world.state, 2, 1, test, out _);
                 sp.Set(world.state, 3, 1, test, out _);
@@ -76,10 +77,11 @@ namespace ME.BECS.Tests {
             
             {
                 using var world = World.Create();
-                var test = new TestComponent() {
+                var testData = new TestComponent() {
                     data = 1,
                 };
-                var sp = new SparseSetUnknownType(world.state, TSize<TestComponent>.size, 10, 10);
+                var test = &testData;
+                var sp = new DataDenseSet(world.state, TSize<TestComponent>.size, 10);
                 sp.Set(world.state, 1, 1, test, out _);
                 sp.Set(world.state, 2, 1, test, out _);
                 sp.Set(world.state, 3, 1, test, out _);
@@ -103,7 +105,7 @@ namespace ME.BECS.Tests {
         public void SetMultithreaded() {
 
             {
-                var amount = 10_000;
+                var amount = 10000;
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = 10;
                 using var world = World.Create(props);
@@ -115,13 +117,17 @@ namespace ME.BECS.Tests {
 
                 new SetJob() {
                     entities = arr,
-                }.Schedule(amount, 64).Complete();
+                }.Schedule(amount, 10).Complete();
+
+                MemoryAllocatorExt.CheckConsistency(ref world.state->allocator);
 
                 for (int i = 0; i < amount; ++i) {
                     var v = arr[i].Read<TestComponent>().data;
                     Assert.IsTrue(arr[i].Has<TestComponent>());
                     Assert.IsTrue(v == i);
                 }
+                
+                MemoryAllocatorExt.CheckConsistency(ref world.state->allocator);
 
                 arr.Dispose();
             }

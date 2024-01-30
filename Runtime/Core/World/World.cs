@@ -59,12 +59,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Unity.Jobs.JobHandle Tick(float dt, Unity.Jobs.JobHandle dependsOn = default) {
+        public Unity.Jobs.JobHandle Tick(float dt, ushort updateType = 0, Unity.Jobs.JobHandle dependsOn = default) {
 
             E.IS_CREATED(this);
             
             dependsOn = State.SetWorldState(in this, WorldState.BeginTick, dependsOn);
-            dependsOn = this.TickWithoutWorldState(dt, dependsOn);
+            dependsOn = this.TickWithoutWorldState(dt, updateType, dependsOn);
             dependsOn = State.SetWorldState(in this, WorldState.EndTick, dependsOn);
 
             return dependsOn;
@@ -72,7 +72,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Unity.Jobs.JobHandle TickWithoutWorldState(float dt, Unity.Jobs.JobHandle dependsOn = default) {
+        public Unity.Jobs.JobHandle TickWithoutWorldState(float dt, ushort updateType, Unity.Jobs.JobHandle dependsOn = default) {
 
             E.IS_CREATED(this);
             
@@ -83,7 +83,7 @@ namespace ME.BECS {
             dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.NextTick, dependsOn);
             {
                 dependsOn = State.NextTick(this.state, dependsOn);
-                dependsOn = this.TickRootSystemGroup(dt, dependsOn);
+                dependsOn = this.TickRootSystemGroup(dt, updateType, dependsOn);
                 dependsOn = Batches.Apply(dependsOn, this.state);
             }
             dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.CurrentTick, dependsOn);
@@ -108,7 +108,7 @@ namespace ME.BECS {
             if (this.state == null) return;
 
             if (Context.world.state == this.state) Context.world = default;
-            
+
             this.UnassignRootSystemGroup(dependsOn);
             Worlds.ReleaseWorld(this);
             this.state->Dispose();

@@ -47,7 +47,7 @@ namespace ME.BECS.FeaturesGraph.Nodes {
             if (this.enabled == true && this.IsGroupEnabled() == true && this.graphValue != null) {
                 
                 var processor = new Extensions.GraphProcessor.ProcessGraphProcessor(this.graphValue);
-                var systemGroup = SystemGroup.Create();
+                var systemGroup = SystemGroup.Create(this.runtimeSystemGroup.updateType);
                 this.graphValue.runtimeRootSystemGroup = systemGroup;
                 for (int i = 0; i < processor.processList.Count; ++i) {
                     ((FeaturesGraphNode)processor.processList[i]).customRuntimeSystemRoot = this.featuresGraph;

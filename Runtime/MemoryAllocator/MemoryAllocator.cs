@@ -1,15 +1,14 @@
 ﻿//#define MEMORY_ALLOCATOR_BOUNDS_CHECK
 //#define LOGS_ENABLED
 //#define BURST
-
-using System;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
-using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-using BURST = Unity.Burst.BurstCompileAttribute;
+//#define ALLOCATOR_VALIDATION
 
 namespace ME.BECS {
     
+    using Unity.Collections.LowLevel.Unsafe;
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using BURST = Unity.Burst.BurstCompileAttribute;
+    using System.Runtime.InteropServices;
     using math = Unity.Mathematics.math;
     using static Cuts;
 
@@ -20,7 +19,8 @@ namespace ME.BECS {
 
     }
 
-    public readonly struct MemPtr {
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MemPtr : System.IEquatable<MemPtr> {
 
         public static readonly MemPtr Invalid = new MemPtr(0u, 0u);
         
@@ -58,7 +58,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public override int GetHashCode() {
-            return HashCode.Combine(this.zoneId, this.offset);
+            return System.HashCode.Combine(this.zoneId, this.offset);
         }
 
         [INLINE(256)]
@@ -67,6 +67,8 @@ namespace ME.BECS {
             var offset = (long)this.offset;
             return index | offset;
         }
+
+        public override string ToString() => $"zoneId: {this.zoneId}, offset: {this.offset}";
 
     }
     
@@ -112,6 +114,62 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Set<T>(ref MemoryAllocator allocator, in T data) where T : unmanaged {
+
+            this.ptr = allocator.Alloc<T>();
+            allocator.Ref<T>(this.ptr) = data;
+
+        }
+
+        [INLINE(256)]
+        public void Set(ref MemoryAllocator allocator, void* data, uint dataSize) {
+
+            this.ptr = MemoryAllocatorExt.Alloc(ref allocator, dataSize, out var ptr);
+            if (data != null) {
+                _memcpy(data, ptr, dataSize);
+            } else {
+                _memclear(ptr, dataSize);
+            }
+
+        }
+
+        [INLINE(256)]
+        public void Dispose(ref MemoryAllocator allocator) {
+
+            allocator.Free(this.ptr);
+            this = default;
+
+        }
+
+    }
+
+    public unsafe struct MemAllocatorPtr<T> where T : unmanaged {
+
+        internal MemPtr ptr;
+
+        [INLINE(256)]
+        public long AsLong() => this.ptr.AsLong();
+
+        [INLINE(256)]
+        public bool IsValid() {
+            return this.ptr.IsValid();
+        }
+
+        [INLINE(256)]
+        public readonly ref T As(in MemoryAllocator allocator) {
+
+            return ref allocator.Ref<T>(this.ptr);
+
+        }
+
+        [INLINE(256)]
+        public readonly T* AsPtr(in MemoryAllocator allocator, uint offset = 0u) {
+
+            return (T*)MemoryAllocatorExt.GetUnsafePtr(in allocator, this.ptr, offset);
+
+        }
+
+        [INLINE(256)]
+        public void Set(ref MemoryAllocator allocator, in T data) {
 
             this.ptr = allocator.Alloc<T>();
             allocator.Ref<T>(this.ptr) = data;
@@ -188,11 +246,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static MemPtr ReAlloc(ref MemoryAllocator allocator, in MemPtr ptr, int size, out void* voidPtr) {
 
-            ValidateThread(allocator);
-            ValidateConsistency(allocator);
-
             if (ptr.IsValid() == false) return MemoryAllocatorExt.Alloc(ref allocator, size, out voidPtr);
 
+            ValidateConsistency(ref allocator);
             JobUtils.Lock(ref allocator.lockIndex);
 
             voidPtr = MemoryAllocatorExt.GetUnsafePtr(in allocator, ptr);
@@ -201,11 +257,13 @@ namespace ME.BECS {
             var blockDataSize = blockSize - TSize<MemoryAllocator.MemBlock>.sizeInt;
             if (blockDataSize > size) {
                 JobUtils.Unlock(ref allocator.lockIndex);
+                ValidateConsistency(ref allocator);
                 return ptr;
             }
 
             if (blockDataSize < 0) {
                 JobUtils.Unlock(ref allocator.lockIndex);
+                ValidateConsistency(ref allocator);
                 throw new System.Exception();
             }
 
@@ -223,6 +281,7 @@ namespace ME.BECS {
                     if (MemoryAllocator.ZmFree(zone, (byte*)block + TSize<MemoryAllocator.MemBlock>.size, freePrev: false) == false) {
                         // Something went wrong
                         JobUtils.Unlock(ref allocator.lockIndex);
+                        ValidateConsistency(ref allocator);
                         throw new System.Exception();
                     }
                     // alloc block again
@@ -239,11 +298,13 @@ namespace ME.BECS {
                     #endif
                     voidPtr = newPtr;
                     JobUtils.Unlock(ref allocator.lockIndex);
+                    ValidateConsistency(ref allocator);
                     return ptr;
                 }
             }
             
             JobUtils.Unlock(ref allocator.lockIndex);
+            ValidateConsistency(ref allocator);
 
             {
                 var newPtr = MemoryAllocatorExt.Alloc(ref allocator, size, out voidPtr);
@@ -266,30 +327,26 @@ namespace ME.BECS {
         }
 
         [System.Diagnostics.ConditionalAttribute(COND.ALLOCATOR_VALIDATION)]
-        [Unity.Burst.BurstDiscardAttribute]
-        public static void ValidateConsistency(MemoryAllocator allocator) {
+        public static void ValidateConsistency(ref MemoryAllocator allocator) {
 
+            CheckConsistency(ref allocator);
+
+        }
+
+        public static void CheckConsistency(ref MemoryAllocator allocator) {
+
+            allocator.lockIndex.Lock();
             for (int i = 0; i < allocator.zonesListCount; ++i) {
                 var zone = allocator.zonesList[i];
                 if (zone == null) {
                     continue;
                 }
 
-                if (MemoryAllocator.ZmCheckHeap(zone) == false) {
-                    throw new System.Exception();
+                if (MemoryAllocator.ZmCheckHeap(zone, out var blockIndex, out var index) == false) {
+                    UnityEngine.Debug.LogError($"zone {i}, block {blockIndex}, index {index}, thread {Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex}");
                 }
             }
-            
-        }
-
-        [System.Diagnostics.ConditionalAttribute(COND.EXCEPTIONS_ALLOCATOR)]
-        [Unity.Burst.BurstDiscardAttribute]
-        public static void ValidateThread(MemoryAllocator allocator) {
-
-            // Do not check thread
-            /*if (System.Threading.Thread.CurrentThread.ManagedThreadId != allocator.threadId) {
-                throw new System.Exception();
-            }*/
+            allocator.lockIndex.Unlock();
             
         }
 
@@ -299,8 +356,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static MemPtr Alloc(ref MemoryAllocator allocator, long size, out void* ptr) {
 
-            ValidateThread(allocator);
-            ValidateConsistency(allocator);
+            ValidateConsistency(ref allocator);
 
             JobUtils.Lock(ref allocator.lockIndex);
             
@@ -315,6 +371,7 @@ namespace ME.BECS {
                     MemoryAllocator.LogAdd(memPtr, size);
                     #endif
                     JobUtils.Unlock(ref allocator.lockIndex);
+                    ValidateConsistency(ref allocator);
 
                     return memPtr;
                 }
@@ -332,6 +389,7 @@ namespace ME.BECS {
                 #endif
                 
                 JobUtils.Unlock(ref allocator.lockIndex);
+                ValidateConsistency(ref allocator);
 
                 return memPtr;
             }
@@ -344,18 +402,17 @@ namespace ME.BECS {
         [INLINE(256)]
         public static bool Free(this ref MemoryAllocator allocator, in MemPtr ptr) {
 
-            ValidateThread(allocator);
-            ValidateConsistency(allocator);
-
             if (ptr.IsValid() == false) return false;
+
+            ValidateConsistency(ref allocator);
 
             JobUtils.Lock(ref allocator.lockIndex);
 
             var zoneIndex = ptr.zoneId; //ptr >> 32;
 
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (zoneIndex >= allocator.zonesListCount || allocator.zonesList[zoneIndex] == null || allocator.zonesList[zoneIndex]->size < (ptr & MemoryAllocator.OFFSET_MASK)) {
-                throw new OutOfBoundsException();
+            if (zoneIndex >= allocator.zonesListCount || allocator.zonesList[zoneIndex] == null) {
+                throw new System.Exception();
             }
             #endif
 
@@ -380,12 +437,14 @@ namespace ME.BECS {
 
             JobUtils.Unlock(ref allocator.lockIndex);
 
+            ValidateConsistency(ref allocator);
+
             return success;
         }
 
     }
 
-    public unsafe partial struct MemoryAllocator : IDisposable {
+    public unsafe partial struct MemoryAllocator : System.IDisposable {
 
         public LockSpinner lockIndex;
         public int threadId;
@@ -792,10 +851,10 @@ namespace ME.BECS {
         public readonly void MemCopy(in MemPtr dest, long destOffset, in MemPtr source, long sourceOffset, long length) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            var destZoneIndex = dest >> 32;
-            var sourceZoneIndex = source >> 32;
-            var destMaxOffset = (dest & MemoryAllocator.OFFSET_MASK) + destOffset + length;
-            var sourceMaxOffset = (source & MemoryAllocator.OFFSET_MASK) + sourceOffset + length;
+            var destZoneIndex = dest.zoneId;
+            var sourceZoneIndex = source.zoneId;
+            var destMaxOffset = dest.offset + destOffset + length;
+            var sourceMaxOffset = source.offset + sourceOffset + length;
             
             if (destZoneIndex >= this.zonesListCount || sourceZoneIndex >= this.zonesListCount) {
                 throw new System.Exception();
@@ -814,10 +873,10 @@ namespace ME.BECS {
         public readonly void MemMove(in MemPtr dest, long destOffset, in MemPtr source, long sourceOffset, long length) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            var destZoneIndex = dest >> 32;
-            var sourceZoneIndex = source >> 32;
-            var destMaxOffset = (dest & MemoryAllocator.OFFSET_MASK) + destOffset + length;
-            var sourceMaxOffset = (source & MemoryAllocator.OFFSET_MASK) + sourceOffset + length;
+            var destZoneIndex = dest.zoneId;
+            var sourceZoneIndex = source.zoneId;
+            var destMaxOffset = dest.offset + destOffset + length;
+            var sourceMaxOffset = source.offset + sourceOffset + length;
             
             if (destZoneIndex >= this.zonesListCount || sourceZoneIndex >= this.zonesListCount) {
                 throw new System.Exception();
@@ -836,10 +895,10 @@ namespace ME.BECS {
         public readonly void MemClear(in MemPtr dest, long destOffset, long length) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            var zoneIndex = dest >> 32;
+            var zoneIndex = dest.zoneId;
             
-            if (zoneIndex >= this.zonesListCount || this.zonesList[zoneIndex]->size < ((dest & MemoryAllocator.OFFSET_MASK) + destOffset + length)) {
-                throw new OutOfBoundsException();
+            if (zoneIndex >= this.zonesListCount || this.zonesList[zoneIndex]->size < (dest.offset + destOffset + length)) {
+                throw new System.Exception();
             }
             #endif
 
@@ -868,8 +927,8 @@ namespace ME.BECS {
         internal readonly MemPtr GetSafePtr(void* ptr, uint zoneIndex) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (zoneIndex < this.zonesListCount && this.zonesList[zoneIndex] != null) {
-                throw new OutOfBoundsException();
+            if (zoneIndex >= this.zonesListCount || this.zonesList[zoneIndex] == null) {
+                throw new System.Exception();
             }
             #endif
             
@@ -963,8 +1022,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public MemPtr AllocArray(int length, int sizeOf) {
-            var size = sizeOf;
-            return MemoryAllocatorExt.Alloc(ref this, size * length);
+            return MemoryAllocatorExt.Alloc(ref this, sizeOf * length);
+        }
+
+        [INLINE(256)]
+        public MemPtr AllocArray(uint length, uint sizeOf) {
+            return MemoryAllocatorExt.Alloc(ref this, sizeOf * length);
         }
 
         [INLINE(256)]

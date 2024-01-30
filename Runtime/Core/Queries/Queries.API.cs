@@ -44,7 +44,7 @@ namespace ME.BECS {
 
     public static unsafe class API {
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct BuilderArchetypesJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
@@ -75,6 +75,7 @@ namespace ME.BECS {
         public static QueryBuilder Query(in QueryContext queryContext, JobHandle dependsOn = default) {
 
             dependsOn = Batches.Apply(dependsOn, queryContext.state);
+            dependsOn = Batches.Open(dependsOn, queryContext.state);
             
             var builder = new QueryBuilder() {
                 queryData = _make(new QueryData()),
@@ -89,8 +90,8 @@ namespace ME.BECS {
                 state = queryContext.state,
                 queryData = builder.queryData,
             };
-            var jobHandle = job.Schedule(dependsOn);
-            builder.builderDependsOn = jobHandle;
+            dependsOn = job.Schedule(dependsOn);
+            builder.builderDependsOn = Batches.Close(dependsOn, queryContext.state);
             
             return builder;
             
@@ -99,16 +100,17 @@ namespace ME.BECS {
         internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
 
             dependsOn = Batches.Apply(dependsOn, queryContext.state);
+            dependsOn = Batches.Open(dependsOn, queryContext.state);
 
-            var builder = new QueryBuilder() {
+            var builder = new QueryBuilder {
                 queryData = _make(new QueryData()),
                 commandBuffer = _make(new CommandBuffer() {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
                 }),
                 isCreated = true,
+                builderDependsOn = Batches.Close(dependsOn, queryContext.state),
             };
-            builder.builderDependsOn = dependsOn;
             return builder;
             
         }

@@ -1001,6 +1001,71 @@ namespace ME.BECS.Tests {
             
         }
 
+        [Unity.Burst.BurstCompileAttribute]
+        public struct Job1 : IJobParallelForCommandBuffer {
+            
+            public void Execute(in CommandBufferJobParallel commandBuffer) {
+                commandBuffer.ent.Set(new Test2Component());
+            }
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct Job2 : IJobParallelForCommandBuffer {
+            
+            public void Execute(in CommandBufferJobParallel commandBuffer) {
+                commandBuffer.ent.Set(new Test3Component());
+            }
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct Job0 : IJob {
+
+            public int amount;
+            
+            public void Execute() {
+                
+                for (int i = 0; i < this.amount; ++i) {
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent() {
+                        data = 1,
+                    });
+                }
+                
+            }
+
+        }
+
+        [Test]
+        public void ParallelSet() {
+
+            {
+                var world = World.Create();
+
+                var amount = 10_000;
+                var dep = new Job0() {
+                    amount = amount,
+                }.Schedule();
+
+                var d1 = API.Query(world, dep).With<TestComponent>().ScheduleParallelFor<Job1>();
+                var d2 = API.Query(world, dep).With<TestComponent>().ScheduleParallelFor<Job2>();
+
+                var d3 = JobHandle.CombineDependencies(d1, d2);
+                
+                var arr = API.Query(world, d3).With<TestComponent>().ToArray();
+                Assert.AreEqual(arr.Length, amount);
+                for (int i = 0; i < arr.Length; ++i) {
+                    Assert.IsTrue(arr[i].Has<TestComponent>(), "index: " + i);
+                    Assert.IsTrue(arr[i].Has<Test2Component>(), "index: " + i);
+                    Assert.IsTrue(arr[i].Has<Test3Component>(), "index: " + i);
+                }
+                
+                world.Dispose();
+
+            }
+        }
+
     }
 
 }

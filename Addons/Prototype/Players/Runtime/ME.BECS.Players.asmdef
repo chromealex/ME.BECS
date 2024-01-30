@@ -1,0 +1,17 @@
+{
+    "name": "ME.BECS.Players",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "Unity.Burst"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

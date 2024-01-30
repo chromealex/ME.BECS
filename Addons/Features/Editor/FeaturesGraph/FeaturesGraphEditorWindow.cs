@@ -99,6 +99,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private void OnTransformChanged(UnityEditor.Experimental.GraphView.GraphView graphview, bool forced) {
 
+            if (this.graphView == null) return;
             if (forced == false &&
                 this.prevScale == this.graphView.viewTransform.scale &&
                 this.prevPos == this.graphView.viewTransform.position) return;
@@ -248,6 +249,13 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 });
                 centerButton.text = "Center Graph";
                 toolbar.Add(centerButton);
+            }
+            {
+                var compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                    CodeGenerator.RegenerateBurstAOT();
+                });
+                compileButton.text = "Compile Graphs";
+                toolbar.Add(compileButton);
             }
             this.rootView.Add(toolbar);
             

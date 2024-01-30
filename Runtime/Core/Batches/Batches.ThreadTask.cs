@@ -117,7 +117,7 @@ namespace ME.BECS {
 
             }
 
-            [BURST]
+            [BURST(CompileSynchronously = true)]
             private struct DisposeJob : IJobSingle {
 
                 [NativeDisableUnsafePtrRestriction]
@@ -169,7 +169,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public struct BurstModeThreadTasksJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]
@@ -209,6 +209,7 @@ namespace ME.BECS {
 
         }
 
+        /*
         [INLINE(256)]
         public void ApplyThreadTasks(State* state, ushort worldId) {
             
@@ -243,8 +244,9 @@ namespace ME.BECS {
             }
             //UnityEngine.Debug.Log("ApplyThreadTasks END: " + JobsUtility.ThreadIndex);
 
-        }
+        }*/
 
+        /*
         [INLINE(256)]
         private void ApplyTasks(State* state, ushort worldId, int count, int createDestroyCount, ref int readCount, ref ThreadTaskList.Node* rover, ref int maxCount) {
 
@@ -341,7 +343,7 @@ namespace ME.BECS {
             rover = tmpRover;
             readCount = tmpReadCount;
             
-        }
+        }*/
 
         [INLINE(256)]
         public void AddThreadTask(State* state, ThreadTaskCreateEntity task) {

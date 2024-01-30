@@ -57,10 +57,13 @@ namespace ME.BECS {
 
     public static unsafe partial class Logger {
 
+        private const Unity.Collections.Allocator ALLOCATOR = Constants.ALLOCATOR_DOMAIN;
+
         internal static void* logger = _make(new DummyLogger());
         
         public static void SetLogger<T>(T logger) where T : unmanaged, ILogger {
-            Logger.logger = _make(logger);
+            Logger.logger = _make(TSize<T>.size, TAlign<T>.alignInt, ALLOCATOR);
+            _memcpy(&logger, Logger.logger, TSize<T>.size);
         }
 
     }

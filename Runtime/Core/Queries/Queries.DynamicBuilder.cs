@@ -22,7 +22,7 @@ namespace ME.BECS {
 
     }
 
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public unsafe ref struct QueryBuilder {
         
         internal CommandBuffer* commandBuffer;
@@ -34,7 +34,7 @@ namespace ME.BECS {
         internal bool isCreated;
         public ushort WorldId => this.commandBuffer->worldId;
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct DisposeJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
@@ -215,7 +215,7 @@ namespace ME.BECS {
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct JobBurst : IJobCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);
@@ -229,7 +229,7 @@ namespace ME.BECS {
             }
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct JobParallelForBurst : IJobParallelForCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJobParallel commandBuffer) {
@@ -517,7 +517,7 @@ namespace ME.BECS {
             return handle;
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct FromQueryDataJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
@@ -553,7 +553,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct SetEntitiesJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]

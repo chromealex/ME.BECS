@@ -6,14 +6,14 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public static unsafe class ArchetypeQueries {
         
         [INLINE(256)]
-        public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged
-                                                                                 where T1 : unmanaged
-                                                                                 where T2 : unmanaged
-                                                                                 where T3 : unmanaged {
+        public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponent
+                                                                                 where T1 : unmanaged, IComponent
+                                                                                 where T2 : unmanaged, IComponent
+                                                                                 where T3 : unmanaged, IComponent {
 
             builder.WaitForAllJobs();
             WithAny(ref builder, StaticTypes<T0>.typeId, StaticTypes<T1>.typeId, StaticTypes<T2>.typeId, StaticTypes<T3>.typeId);
@@ -21,7 +21,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void WithSync<T>(ref QueryBuilder builder) where T : unmanaged {
+        public static void WithSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
 
             builder.WaitForAllJobs();
             With(ref builder, StaticTypes<T>.typeId);
@@ -29,7 +29,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void WithoutSync<T>(ref QueryBuilder builder) where T : unmanaged {
+        public static void WithoutSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
 
             builder.WaitForAllJobs();
             Without(ref builder, StaticTypes<T>.typeId);
@@ -120,7 +120,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct WithAnyJob : IJob {
 
             public uint typeId1;
@@ -173,10 +173,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle WithAny<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged
-                                                                                  where T1 : unmanaged
-                                                                                  where T2 : unmanaged
-                                                                                  where T3 : unmanaged {
+        public static JobHandle WithAny<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponent
+                                                                                  where T1 : unmanaged, IComponent
+                                                                                  where T2 : unmanaged, IComponent
+                                                                                  where T3 : unmanaged, IComponent {
 
             return new WithAnyJob() {
                 state = builder.commandBuffer->state,
@@ -189,7 +189,7 @@ namespace ME.BECS {
             
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct WithJob : IJob {
 
             public uint typeId;
@@ -218,7 +218,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct WithArrJob : IJob {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
@@ -252,7 +252,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle With<T>(ref QueryBuilder builder) where T : unmanaged {
+        public static JobHandle With<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
 
             return new WithJob() {
                 typeId = StaticTypes<T>.typeId,
@@ -262,7 +262,7 @@ namespace ME.BECS {
             
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct WithoutJob : IJob {
 
             public uint typeId;
@@ -294,7 +294,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static JobHandle Without<T>(ref QueryBuilder builder) where T : unmanaged {
+        public static JobHandle Without<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
 
             return new WithoutJob() {
                 typeId = StaticTypes<T>.typeId,

@@ -1,16 +1,24 @@
 namespace ME.BECS.Network {
 
-    using UnityEngine;
     using ME.BECS.Views;
     
-    public class NetworkWorldInitializer : WorldInitializer {
+    [UnityEngine.DefaultExecutionOrder(-10_000)]
+    public class NetworkWorldInitializer : BaseWorldInitializer {
 
+        public FeaturesGraph.SystemsGraph featuresGraph;
         protected NetworkModule networkModule;
         
         protected override void Awake() {
             
             base.Awake();
             
+            if (this.featuresGraph == null) {
+                Logger.Features.Error("Graph is null");
+                return;
+            }
+
+            if (this.featuresGraph != null) this.featuresGraph.DoAwake(ref this.world, UpdateType.FIXED_UPDATE);
+
             this.networkModule = this.modules.Get<NetworkModule>();
 
             WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.ViewsLoad);
@@ -46,18 +54,25 @@ namespace ME.BECS.Network {
 
         }
 
-        protected override void Update() {
-
+        public void FixedUpdate() {
             if (this.networkModule is null) {
-                // Use default initializer behaviour if network module not found
-                base.Update();
+                // Use default initializer behaviour if network module not found as FIXED_UPDATE
+                this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+            }
+        }
+
+        public void Update() {
+
+            this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
+            
+            if (this.networkModule is null) {
                 return;
             }
             
             // From here there are some code which overrides default world initializer behaviour
             if (this.world.isCreated == true) {
 
-                var dt = Time.deltaTime;
+                var dt = UnityEngine.Time.deltaTime;
                 // Update logic - depends on tick time
                 var handle = this.networkModule.UpdateInitializer(dt, this, this.previousFrameDependsOn, ref this.world);
                 handle.Complete();

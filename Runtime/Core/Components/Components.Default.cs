@@ -7,8 +7,8 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
-        public bool Enable<T>(State* state, uint entId, ushort gen) where T : unmanaged {
-
+        public bool Enable<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
+            
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
             return this.SetState<T>(state, typeId, groupId, entId, gen, true);
@@ -16,7 +16,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Disable<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+        public bool Disable<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
@@ -25,7 +25,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Set<T>(State* state, uint entId, ushort gen, in T data) where T : unmanaged {
+        public bool Set<T>(State* state, uint entId, ushort gen, in T data) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
@@ -34,7 +34,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Remove<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+        public bool Remove<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
@@ -50,7 +50,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly ref readonly T Read<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged {
+        public readonly ref readonly T Read<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var data = this.ReadUnknownType(state, typeId, entId, gen, out exists);
@@ -60,7 +60,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly ref readonly T Read<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+        public readonly ref readonly T Read<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var data = this.ReadUnknownType(state, typeId, entId, gen, out var exists);
@@ -70,7 +70,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly T* ReadPtr<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged {
+        public readonly T* ReadPtr<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var data = this.ReadUnknownType(state, typeId, entId, gen, out exists);
@@ -80,7 +80,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly T* ReadPtr<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+        public readonly T* ReadPtr<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var data = this.ReadUnknownType(state, typeId, entId, gen, out var exists);
@@ -90,15 +90,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+        public bool Has<T>(State* state, uint entId, ushort gen, bool checkEnabled) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
-            return this.HasUnknownType(state, typeId, entId, gen);
+            return this.HasUnknownType(state, typeId, entId, gen, checkEnabled);
 
         }
 
         [INLINE(256)]
-        public ref T Get<T>(State* state, uint entId, ushort gen) where T : unmanaged {
+        public ref T Get<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
@@ -108,7 +108,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public T* Get<T>(State* state, uint entId, ushort gen, out bool isNew) where T : unmanaged {
+        public T* Get<T>(State* state, uint entId, ushort gen, out bool isNew) where T : unmanaged, IComponent {
             
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
@@ -117,13 +117,13 @@ namespace ME.BECS {
 
         }
 
-        public bool HasDirect<T>(Ent ent) where T : unmanaged {
+        public bool HasDirect<T>(Ent ent) where T : unmanaged, IComponent {
 
-            return this.Has<T>(ent.World.state, ent.id, ent.gen);
+            return this.Has<T>(ent.World.state, ent.id, ent.gen, checkEnabled: false);
 
         }
 
-        public T ReadDirect<T>(Ent ent) where T : unmanaged {
+        public T ReadDirect<T>(Ent ent) where T : unmanaged, IComponent {
 
             if (StaticTypes<T>.isTag == true) return StaticTypes<T>.defaultValue;
 
@@ -131,7 +131,7 @@ namespace ME.BECS {
 
         }
 
-        public void SetDirect<T>(Ent ent, T data) where T : unmanaged {
+        public void SetDirect<T>(Ent ent, T data) where T : unmanaged, IComponent {
 
             if (StaticTypes<T>.isTag == true) return;
 

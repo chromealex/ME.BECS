@@ -149,7 +149,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		scg::List< string >				messages = new scg::List<string>();
 
 		[NonSerialized]
-		protected BaseGraph			graph;
+		public BaseGraph			graph;
 
 		internal class NodeFieldInformation
 		{
@@ -189,7 +189,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 		// Used in port update algorithm
 		scg::Stack<PortUpdate> fieldsToUpdate = new scg::Stack<PortUpdate>();
-		HashSet<PortUpdate> updatedFields = new HashSet<PortUpdate>();
+		scg::HashSet<PortUpdate> updatedFields = new scg::HashSet<PortUpdate>();
 
 		public bool IsGroupEnabled() {
 
@@ -528,7 +528,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			return changed;
 		}
 
-		HashSet<BaseNode> portUpdateHashSet = new HashSet<BaseNode>();
+		scg::HashSet<BaseNode> portUpdateHashSet = new scg::HashSet<BaseNode>();
 
 		internal void DisableInternal()
 		{

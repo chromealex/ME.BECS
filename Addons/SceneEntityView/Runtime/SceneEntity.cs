@@ -19,14 +19,15 @@ namespace ME.BECS {
 
                     var ent = Ent.New(in world);
                     if (this.config != null) this.config.Apply(in ent);
-                    ent.Set<ME.BECS.TransformAspect.TransformAspect>();
-                    var tr = ent.GetAspect<ME.BECS.TransformAspect.TransformAspect>();
+                    ent.Set<ME.BECS.Transforms.TransformAspect>();
+                    var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                     tr.localPosition = this.transform.localPosition;
                     tr.localRotation = this.transform.localRotation;
                     tr.localScale = this.transform.localScale;
                     var viewsModule = this.worldInitializer.modules.Get<ViewsModule>();
                     var viewSource = viewsModule.RegisterViewSource(this.entityView, this.providerId, sceneSource: true);
                     ent.InstantiateView(viewSource);
+                    this.OnCreate(in ent);
                     Object.DestroyImmediate(this);
 
                 }
@@ -34,6 +35,8 @@ namespace ME.BECS {
             }
             
         }
+        
+        protected virtual void OnCreate(in Ent ent) {}
 
     }
 

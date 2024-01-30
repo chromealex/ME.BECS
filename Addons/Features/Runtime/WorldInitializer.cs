@@ -5,135 +5,38 @@ namespace ME.BECS {
     using Unity.Jobs;
 
     [DefaultExecutionOrder(-10_000)]
-    public class WorldInitializer : MonoBehaviour {
+    public class WorldInitializer : BaseWorldInitializer {
 
-        [System.Serializable]
-        public struct Modules {
-
-            public OptionalModule[] list;
-
-            public bool Has<T>() where T : Module {
-                for (int i = 0; i < this.list.Length; ++i) {
-                    if (this.list[i].IsEnabled() == true && this.list[i].obj is T) return true;
-                }
-                return false;
-            }
-
-            public T Get<T>() where T : Module {
-                for (int i = 0; i < this.list.Length; ++i) {
-                    if (this.list[i].IsEnabled() == true && this.list[i].obj is T module) return module;
-                }
-                return null;
-            }
-
-        }
-
-        public WorldProperties properties = WorldProperties.Default;
-        public Modules modules = new Modules() {
-            list = System.Array.Empty<OptionalModule>(),
-        };
         public FeaturesGraph.SystemsGraph featuresGraph;
-        public World world;
-        protected JobHandle previousFrameDependsOn;
-        private static WorldInitializer instance;
-        
-        public static WorldInitializer GetInstance() => instance;
+        public FeaturesGraph.SystemsGraph featuresGraphFixedUpdate;
 
-        protected virtual void Awake() {
-
-            instance = this;
-
-            if (this.featuresGraph == null) {
-                Logger.Features.Error("Graph is null");
+        protected override void Awake() {
+            
+            base.Awake();
+            
+            if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null) {
+                Logger.Features.Error("Graphs are null");
                 return;
             }
-            
-            this.world = World.Create(this.properties);
-            this.featuresGraph.DoAwake(ref this.world);
+
+            var group = SystemGroup.Create(UpdateType.ANY);
+            if (this.featuresGraph != null) group.Add(this.featuresGraph.DoAwake(ref this.world, UpdateType.UPDATE));
+            if (this.featuresGraphFixedUpdate != null) group.Add(this.featuresGraphFixedUpdate.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
+            this.world.AssignRootSystemGroup(group);
 
         }
 
-        protected virtual void Start() {
+        public void Update() {
 
-            if (this.world.isCreated == true) {
-                
-                for (var i = 0; i < this.modules.list.Length; ++i) {
-                    var module = this.modules.list[i];
-                    if (module.IsEnabled() == false) continue;
-                    module.obj.worldProperties = this.properties;
-                    module.obj.OnAwake(ref this.world);
-                }
-
-                this.OnAwake();
-
-                this.previousFrameDependsOn = this.world.Awake(this.previousFrameDependsOn);
-                
-                for (var i = 0; i < this.modules.list.Length; ++i) {
-                    var module = this.modules.list[i];
-                    if (module.IsEnabled() == false) continue;
-                    module.obj.worldProperties = this.properties;
-                    this.previousFrameDependsOn = module.obj.OnStart(ref this.world, this.previousFrameDependsOn);
-                }
-                
-                this.previousFrameDependsOn = this.OnStart(this.previousFrameDependsOn);
-
-            }
-
-        }
-
-        public virtual void OnAwake() {
+            this.previousFrameDependsOn.Complete();
+            this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             
         }
 
-        public virtual JobHandle OnStart(JobHandle dependsOn) {
-            return dependsOn;
-        }
-
-        protected virtual void Update() {
-
-            if (this.world.isCreated == true) {
-                this.previousFrameDependsOn.Complete();
-                var dependsOn = this.world.Tick(Time.deltaTime);
-                this.previousFrameDependsOn = this.OnUpdate(dependsOn);
-                
-                for (var i = 0; i < this.modules.list.Length; ++i) {
-                    var module = this.modules.list[i];
-                    if (module.IsEnabled() == false) continue;
-                    this.previousFrameDependsOn = module.obj.OnUpdate(this.previousFrameDependsOn);
-                }
-            }
+        public void FixedUpdate() {
             
-        }
-
-        public virtual JobHandle OnUpdate(JobHandle dependsOn) {
-            if (this.world.isCreated == true) {
-                ProfilerCounters.Initialize();
-                ProfilerCounters.SampleWorldBeginFrame(in this.world);
-            }
-            return dependsOn;
-        }
-
-        protected virtual void LateUpdate() {
-
-            if (this.world.isCreated == true) {
-                ProfilerCounters.SampleWorldEndFrame(in this.world);
-            }
-
-            WorldsTempAllocator.Reset();
-            
-        }
-
-        protected virtual void OnDestroy() {
-
-            for (var i = 0; i < this.modules.list.Length; ++i) {
-                var module = this.modules.list[i];
-                if (module.IsEnabled() == false) continue;
-                module.obj.OnDestroy();
-            }
-            
-            if (this.world.isCreated == true) {
-                this.world.Dispose();
-            }
+            this.previousFrameDependsOn.Complete();
+            this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
             
         }
 

@@ -81,6 +81,7 @@ namespace ME.BECS {
         Awake,
         Update,
         Destroy,
+        DrawGizmos,
 
     }
 
@@ -127,6 +128,7 @@ namespace ME.BECS {
         internal Data* dataAwake;
         internal Data* dataUpdate;
         internal Data* dataDestroy;
+        internal Data* dataDrawGizmos;
 
         [INLINE(256)]
         public bool AllParentsStarted(Method method) {
@@ -159,6 +161,9 @@ namespace ME.BECS {
                 case Method.Destroy:
                     ptr = this.dataDestroy;
                     break;
+                case Method.DrawGizmos:
+                    ptr = this.dataDrawGizmos;
+                    break;
             }
 
             return ptr;
@@ -175,6 +180,9 @@ namespace ME.BECS {
                     break;
                 case Method.Destroy:
                     this.dataDestroy = ptr;
+                    break;
+                case Method.DrawGizmos:
+                    this.dataDrawGizmos = ptr;
                     break;
             }
         }
@@ -196,16 +204,20 @@ namespace ME.BECS {
             JobHandle handle = default;
             if (this.parentIndex == 1u) {
                 handle = this.parents[0].data->dependsOn;
+                //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle));
             } else if (this.parentIndex == 2u) {
                 handle = JobHandle.CombineDependencies(this.parents[0].data->dependsOn, this.parents[1].data->dependsOn);
+                //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle) + " parent1: " + SystemGroup.DebugHandle(this.parents[0].data->dependsOn) + " parent2: " + SystemGroup.DebugHandle(this.parents[1].data->dependsOn));
             } else if (this.parentIndex == 3u) {
                 handle = JobHandle.CombineDependencies(this.parents[0].data->dependsOn, this.parents[1].data->dependsOn, this.parents[2].data->dependsOn);
+                //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle) + " parent1: " + SystemGroup.DebugHandle(this.parents[0].data->dependsOn) + " parent2: " + SystemGroup.DebugHandle(this.parents[1].data->dependsOn) + " parent3: " + SystemGroup.DebugHandle(this.parents[2].data->dependsOn));
             } else if (this.parentIndex > 3u) {
                 using var list = new Unity.Collections.NativeList<JobHandle>((int)this.parentIndex, Constants.ALLOCATOR_TEMP);
                 for (uint i = 0; i < this.parentIndex; ++i) {
                     list.Add(this.parents[i].data->dependsOn);
                 }
                 handle = JobHandle.CombineDependencies(list.AsArray());
+                //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle));
             }
 
             if (this.dependsOn.IsCompleted == true) return handle;
@@ -233,7 +245,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void AddChild(Node* node, Node* parent) {
-            
+
             if (this.childrenIndex >= this.childrenCount) {
                 var newLength = (this.childrenIndex + 1u) * 2u;
                 _resizeArray(ref this.children, ref this.childrenCount, newLength);
@@ -277,6 +289,11 @@ namespace ME.BECS {
             if (this.dataDestroy != null) {
                 this.dataDestroy->Dispose();
                 _free(this.dataDestroy);
+            }
+
+            if (this.dataDrawGizmos != null) {
+                this.dataDrawGizmos->Dispose();
+                _free(this.dataDrawGizmos);
             }
 
             if (this.systemData != null) {

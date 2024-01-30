@@ -54,12 +54,12 @@ namespace ME.BECS.Editor {
                 var so = property.serializedObject;
                 var prop = property;
                 var choices = GetComponentGroups();
-                var nameField = new DropdownField(choices.Select(x => x.value).ToList(), choices.FirstOrDefault(x => x.type.FullName == prop.stringValue).index - 1);
+                var nameField = new DropdownField(choices.Select(x => x.value).ToList(), choices.FirstOrDefault(x => x.type.AssemblyQualifiedName == prop.stringValue).index - 1);
                 nameField.RegisterValueChangedCallback((evt) => {
                     so.Update();
                     var val = evt.newValue;
                     var idx = choices.FirstOrDefault(x => x.value == val);
-                    prop.stringValue = idx.type.FullName;
+                    prop.stringValue = idx.type.AssemblyQualifiedName;
                     nameField.index = idx.index - 1;
                     so.ApplyModifiedProperties();
                     so.Update();

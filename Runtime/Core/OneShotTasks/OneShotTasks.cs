@@ -13,7 +13,7 @@ namespace ME.BECS {
         private MemArrayThreadCacheLine<ThreadItem> threadItems;
 
         [INLINE(256)]
-        public void Add<T>(State* state, in Ent ent, in T data, OneShotType type) where T : unmanaged {
+        public void Add<T>(State* state, in Ent ent, in T data, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             var dataPtr = new MemAllocatorPtr();

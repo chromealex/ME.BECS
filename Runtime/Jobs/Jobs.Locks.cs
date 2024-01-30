@@ -4,7 +4,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Jobs.LowLevel.Unsafe;
 
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
 
         private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
@@ -39,7 +39,13 @@ namespace ME.BECS {
         public void ReadBegin(State* state) {
             E.IS_CREATED(this);
             // wait if we have write op running
+            var i = 100_000_000;
             while (System.Threading.Volatile.Read(ref this.writeValue) == 1) {
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // acquire read op
@@ -57,11 +63,23 @@ namespace ME.BECS {
         public void WriteBegin(State* state) {
             E.IS_CREATED(this);
             // acquire write op
+            var i = 100_000_000;
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // wait if we have read op running
+            i = 100_000_000;
             while (this.ReadCount(state) > 0) {
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
                 Unity.Burst.Intrinsics.Common.Pause();
             }
         }
@@ -70,7 +88,13 @@ namespace ME.BECS {
         public void WriteEnd() {
             E.IS_CREATED(this);
             // release write op
+            var i = 100_000_000;
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 1) != 1) {
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
                 Unity.Burst.Intrinsics.Common.Pause();
             }
         }
@@ -84,7 +108,7 @@ namespace ME.BECS {
 
     }
     
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public struct Spinner {
         
         private int lockIndex;
@@ -149,13 +173,19 @@ namespace ME.BECS {
         }
     }
 
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public struct LockSpinner {
         
         private int value;
         [INLINE(256)]
         public void Lock() {
+            var i = 100_000_000;
             while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             System.Threading.Interlocked.MemoryBarrier();
@@ -163,6 +193,28 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public void Unlock() {
+            var i = 100_000_000;
+            System.Threading.Interlocked.MemoryBarrier();
+            while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max unlock iter");
+                    return;
+                }
+                Unity.Burst.Intrinsics.Common.Pause();
+            }
+        }
+        
+        [INLINE(256)]
+        public void LockWhile() {
+            while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
+                Unity.Burst.Intrinsics.Common.Pause();
+            }
+            System.Threading.Interlocked.MemoryBarrier();
+        }
+        
+        [INLINE(256)]
+        public void UnlockWhile() {
             System.Threading.Interlocked.MemoryBarrier();
             while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
                 Unity.Burst.Intrinsics.Common.Pause();

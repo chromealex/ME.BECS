@@ -1,7 +1,38 @@
-namespace ME.BECS.TransformAspect {
+namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
+    public static class TransformHierarchy {
+
+        [INLINE(256)]
+        public static void DestroyHierarchy(this in Ent entity) {
+
+            E.THREAD_CHECK("DestroyHierarchy");
+
+            if (entity.Has<ChildrenComponent>() == true) {
+
+                var queue = new Unity.Collections.UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
+                queue.Enqueue(entity);
+                while (queue.Count > 0) {
+                    var ent = queue.Dequeue();
+                    var nodes = ent.Read<ChildrenComponent>();
+                    for (uint i = 0u; i < nodes.list.Count; ++i) {
+                        var node = nodes.list[i];
+                        queue.Enqueue(node);
+                    }
+                    ent.Destroy();
+                }
+
+            } else {
+
+                entity.Destroy();
+
+            }
+
+        }
+
+    }
+    
     /*
     public static class TransformHierarchyExt {
 

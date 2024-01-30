@@ -23,7 +23,7 @@ namespace ME.BECS.Views {
     
     public struct EntityViewProviderTag : IComponent {}
     
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public unsafe struct EntityViewProvider : IViewProvider<EntityView> {
 
         private const int BATCH_PER_ROOT = 256;
@@ -47,12 +47,12 @@ namespace ME.BECS.Views {
             builder.With<EntityViewProviderTag>();
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public static void InstantiateViewRegistry(in Ent ent, in ViewSource viewSource) {
             ent.Set(new EntityViewProviderTag());
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public static void DestroyViewRegistry(in Ent ent) {
             ent.Remove<EntityViewProviderTag>();
         }
@@ -231,7 +231,8 @@ namespace ME.BECS.Views {
 
                     var root = this.AssignToRoot();
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
-                    var instance = EntityView.Instantiate((EntityView)handle.Target, root.tr);
+                    var prefab = (EntityView)handle.Target;
+                    var instance = EntityView.Instantiate(prefab, root.tr);
                     instance.rootInfo = root;
                     isNew = true;
                     objInstance = instance;
@@ -399,8 +400,8 @@ namespace ME.BECS.Views {
             }
 
             var instanceId = prefab.GetInstanceID();
-            if (instanceId <= 0 && checkPrefab == true) {
-                throw new System.Exception("Value is not a prefab");
+            if (checkPrefab == true && instanceId <= 0 && prefab.gameObject.scene.name != null && prefab.gameObject.scene.rootCount > 0) {
+                throw new System.Exception($"Value {prefab} is not a prefab");
             }
 
             var id = (uint)instanceId;

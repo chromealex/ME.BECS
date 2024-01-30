@@ -1,4 +1,4 @@
-namespace ME.BECS.TransformAspect {
+namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using float3 = Unity.Mathematics.float3;
@@ -10,15 +10,19 @@ namespace ME.BECS.TransformAspect {
     public static unsafe class Transform3DExt {
 
         [INLINE(256)]
+        public static Ent GetParent(this in Ent ent) {
+            return ent.Read<ParentComponent>().value;
+        }
+
+        [INLINE(256)]
         public static void SetParent(this in Ent ent, Ent parent) {
 
-            var world = ent.World;
             ref var currentParent = ref ent.Get<ParentComponent>().value;
             if (currentParent.IsAlive() == true) {
                 
                 // Move out from current parent
                 ref var children = ref currentParent.Get<ChildrenComponent>().list;
-                children.Remove(ref world.state->allocator, ent);
+                children.Remove(ent);
                 currentParent = default;
 
             }
@@ -34,8 +38,8 @@ namespace ME.BECS.TransformAspect {
             {
                 // Move to the new parent
                 ref var parentChildren = ref parent.Get<ChildrenComponent>().list;
-                if (parentChildren.isCreated == false) parentChildren = new List<Ent>(ref world.state->allocator, 1u); 
-                parentChildren.Add(ref world.state->allocator, ent);
+                if (parentChildren.isCreated == false) parentChildren = new ListAuto<Ent>(parent, 1u); 
+                parentChildren.Add(ent);
                 currentParent = parent;
             }
 

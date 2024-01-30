@@ -58,7 +58,7 @@ namespace ME.BECS {
     }
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayProxy<>))]
-    public unsafe struct MemArray<T> where T : unmanaged {
+    public unsafe struct MemArray<T> : IIsCreated where T : unmanaged {
 
         public static readonly MemArray<T> Empty = new MemArray<T>() {
             arrPtr = MemPtr.Invalid,
@@ -365,6 +365,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Clear(ref MemoryAllocator allocator, uint index, uint length) {
+
+            E.IS_CREATED(this);
 
             var size = TSize<T>.size;
             allocator.MemClear(this.arrPtr, index * size, length * size);

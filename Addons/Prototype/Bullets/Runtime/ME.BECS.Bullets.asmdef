@@ -1,0 +1,26 @@
+{
+    "name": "ME.BECS.Bullets",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "Unity.Burst",
+        "ME.BECS.Trees",
+        "ME.BECS.Units",
+        "ME.BECS.Aspects.TransformAspect",
+        "Unity.Mathematics",
+        "ME.BECS.Players",
+        "ME.BECS.Destroy",
+        "Unity.Collections",
+        "ME.BECS.Views",
+        "ME.BECS.Effects"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

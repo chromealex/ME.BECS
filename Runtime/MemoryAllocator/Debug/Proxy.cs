@@ -92,6 +92,30 @@ namespace ME.BECS {
 
     }
 
+    public unsafe class MemArrayAutoProxy<T> where T : unmanaged {
+
+        private MemArrayAuto<T> arr;
+        
+        public MemArrayAutoProxy(MemArrayAuto<T> arr) {
+
+            this.arr = arr;
+
+        }
+
+        public T[] items {
+            get {
+                var world = Context.world;
+                var arr = new T[this.arr.Length];
+                for (int i = 0; i < this.arr.Length; ++i) {
+                    arr[i] = this.arr[world.state->allocator, i];
+                }
+
+                return arr;
+            }
+        }
+
+    }
+
     public unsafe class MemArrayThreadCacheLineProxy<T> where T : unmanaged {
 
         private MemArrayThreadCacheLine<T> arr;
@@ -311,6 +335,44 @@ namespace ME.BECS {
 
         public MemArray<uint> buckets => this.arr.buckets;
         public MemArray<ULongDictionary<V>.Entry> entries => this.arr.entries;
+        public uint count => this.arr.count;
+        public uint version => this.arr.version;
+        public int freeList => this.arr.freeList;
+        public uint freeCount => this.arr.freeCount;
+
+        public System.Collections.Generic.KeyValuePair<ulong, V>[] items {
+            get {
+                var arr = new System.Collections.Generic.KeyValuePair<ulong, V>[this.arr.Count];
+                var i = 0;
+                var e = this.arr.GetEnumerator(Context.world);
+                while (e.MoveNext() == true) {
+                    arr[i++] = new System.Collections.Generic.KeyValuePair<ulong, V>(e.Current.key, e.Current.value);
+                }
+                
+                return arr;
+            }
+        }
+
+    }
+
+    public class ULongDictionaryAutoProxy<V> where V : unmanaged {
+
+        private ULongDictionaryAuto<V> arr;
+        
+        public ULongDictionaryAutoProxy(ULongDictionaryAuto<V> arr) {
+
+            this.arr = arr;
+
+        }
+
+        public uint Count {
+            get {
+                return this.arr.Count;
+            }
+        }
+
+        public MemArrayAuto<uint> buckets => this.arr.buckets;
+        public MemArrayAuto<ULongDictionaryAuto<V>.Entry> entries => this.arr.entries;
         public uint count => this.arr.count;
         public uint version => this.arr.version;
         public int freeList => this.arr.freeList;

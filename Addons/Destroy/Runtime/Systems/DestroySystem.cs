@@ -4,10 +4,10 @@ namespace ME.BECS {
     using Jobs;
     
     [UnityEngine.Tooltip("Update entities with lifetime component (ent.Destroy(lifetime) API).")]
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public struct DestroyWithLifetimeSystem : IUpdate {
         
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public struct UpdateLifetimeJob : IJobParallelForComponents<DestroyWithLifetime> {
 
             public float deltaTime;

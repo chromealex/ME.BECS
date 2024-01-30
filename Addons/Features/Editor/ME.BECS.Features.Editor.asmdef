@@ -5,7 +5,8 @@
         "ME.BECS",
         "ME.BECS.Editor",
         "ME.BECS.Features",
-        "Unity.Burst"
+        "Unity.Burst",
+        "Unity.Collections"
     ],
     "includePlatforms": [
         "Editor"

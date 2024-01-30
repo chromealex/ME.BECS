@@ -28,7 +28,7 @@ namespace ME.BECS.Tests {
                 var dt = 0.01f;
                 
                 var world = World.Create();
-                ME.BECS.TransformAspect.TransformAspect.TestInitialize(in world);
+                ME.BECS.Transforms.TransformAspect.TestInitialize(in world);
                 ME.BECS.Views.ViewsTypeInfo.RegisterType<ME.BECS.Views.DefaultView>(new ME.BECS.Views.ViewTypeInfo() {
                     flags = (ME.BECS.Views.TypeFlags)0,
                 });
@@ -37,7 +37,7 @@ namespace ME.BECS.Tests {
                 Ent firstEnt;
                 {
                     var ent = world.NewEnt();
-                    ent.Set<ME.BECS.TransformAspect.TransformAspect>();
+                    ent.Set<ME.BECS.Transforms.TransformAspect>();
                     ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
                     Batches.Apply(world.state);
                     firstEnt = ent;
@@ -51,7 +51,7 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(1, views.data->renderingOnScene.Count);
                     {
                         var ent = world.NewEnt();
-                        ent.Set<ME.BECS.TransformAspect.TransformAspect>();
+                        ent.Set<ME.BECS.Transforms.TransformAspect>();
                         ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
                         Batches.Apply(world.state);
                     }

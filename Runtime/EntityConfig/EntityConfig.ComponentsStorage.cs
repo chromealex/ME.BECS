@@ -23,7 +23,7 @@ namespace ME.BECS {
             
         }
 
-        public void AOT<TComponent>() where TComponent : unmanaged {
+        public void AOT<TComponent>() where TComponent : unmanaged, IComponent {
             
             new CacheData<TComponent>();
             
@@ -64,7 +64,7 @@ namespace ME.BECS {
 
             }
 
-            public bool TryRead<TComponent>(out TComponent component) where TComponent : unmanaged, T {
+            public bool TryRead<TComponent>(out TComponent component) where TComponent : unmanaged, T, IComponent {
 
                 component = default;
                 var type = typeof(TComponent);
@@ -113,7 +113,7 @@ namespace ME.BECS {
 
         }
 
-        public bool TryRead<TComponent>(out TComponent component) where TComponent : unmanaged, T {
+        public bool TryRead<TComponent>(out TComponent component) where TComponent : unmanaged, T, IComponent {
 
             this.BuildCache();
             return this.cache.TryRead(out component);

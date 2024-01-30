@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
-        public static JobHandle ScheduleParallelFor<T, T0>(this QueryBuilder builder, in T job) where T : struct, IJobParallelForAspect<T0> where T0 : unmanaged, IAspect {
+        public static JobHandle ScheduleParallelFor<T, T0>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspect<T0> where T0 : unmanaged, IAspect {
             builder.WithAspect<T0>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.ScheduleParallelFor<T, T0>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
@@ -100,14 +100,15 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
 
+                var aspect0 = jobData.c0;
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                     for (uint i = (uint)begin; i < end; ++i) {
                         var entId = *(jobData.buffer->entities + i);
                         var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
-                        jobData.c0.ent = new Ent(entId, gen, jobData.buffer->worldId);
-                        jobData.jobData.Execute(ref jobData.c0);
+                        aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);
+                        jobData.jobData.Execute(ref aspect0);
                     }
                     jobData.buffer->EndForEachRange();
                     

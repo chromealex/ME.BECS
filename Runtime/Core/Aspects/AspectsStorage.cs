@@ -5,31 +5,6 @@ namespace ME.BECS {
 
     public class QueryWithAttribute : System.Attribute {}
     
-    public struct T1 : IComponent {
-
-        public int data;
-        public byte test;
-
-    }
-
-    public struct T2 : IComponent {
-
-        public int data;
-
-    }
-
-    public struct TestAspect : IAspect {
-        
-        public Ent ent { get; set; }
-
-        public AspectDataPtr<T1> t1Value;
-        public AspectDataPtr<T2> t2Value;
-
-        public ref T1 t1 => ref this.t1Value.Get(this.ent.id, this.ent.gen);
-        public ref T2 t2 => ref this.t2Value.Get(this.ent.id, this.ent.gen);
-
-    }
-
     public interface IAspectData {}
 
     public unsafe struct AspectDataPtr<T> : IAspectData where T : unmanaged, IComponent {
@@ -66,7 +41,7 @@ namespace ME.BECS {
 
     public struct AspectTypeInfoWith<T> where T : unmanaged, IAspect {
 
-        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> withBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<AspectTypeInfoWith<T>>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10400);
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> withBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<AspectTypeInfoWith<T>>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10401);
 
     }
 
@@ -88,13 +63,14 @@ namespace ME.BECS {
 
     public static unsafe class EntAspectsExt {
 
+        [INLINE(256)]
         public static void Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
             var world = ent.World;
             for (uint i = 0u; i < AspectTypeInfo<T>.with.Length; ++i) {
 
                 var typeId = AspectTypeInfo<T>.with.Get(i);
-                var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen);
+                var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     world.state->components.SetUnknownType(world.state, typeId, 0u, ent.id, ent.gen, null);
                     world.state->batches.Set_INTERNAL(typeId, ent.id, world.state);

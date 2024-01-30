@@ -48,6 +48,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="JsonElement"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
 		[SerializeField, Obsolete("Use BaseGraph.nodes instead")]
 		public scg::List< JsonElement >						serializedNodes = new scg::List< JsonElement >();
 
@@ -56,6 +57,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="BaseNode"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
 		[SerializeReference]
 		public scg::List< BaseNode >							nodes = new scg::List< BaseNode >();
 
@@ -65,7 +67,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// <typeparam name="string"></typeparam>
 		/// <typeparam name="BaseNode"></typeparam>
 		/// <returns></returns>
-		[System.NonSerialized]
+		//[System.NonSerialized]
 		public Dictionary< string, BaseNode >			nodesPerGUID = new Dictionary< string, BaseNode >();
 
 		/// <summary>
@@ -73,6 +75,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="SerializableEdge"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
 		[SerializeField]
 		public scg::List< SerializableEdge >					edges = new scg::List< SerializableEdge >();
 		/// <summary>
@@ -89,6 +92,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="Group"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
         [SerializeField, FormerlySerializedAs("commentBlocks")]
         public scg::List< Group >                     		groups = new scg::List< Group >();
 
@@ -97,6 +101,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="stackNodes"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
 		[SerializeField, SerializeReference] // Polymorphic serialization
 		public scg::List< BaseStackNode >					stackNodes = new scg::List< BaseStackNode >();
 
@@ -105,6 +110,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="PinnedElement"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
 		[SerializeField]
 		public scg::List< PinnedElement >					pinnedElements = new scg::List< PinnedElement >();
 
@@ -113,12 +119,15 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		/// <typeparam name="ExposedParameter"></typeparam>
 		/// <returns></returns>
+		//[HideInInspector]
 		[SerializeField, SerializeReference]
 		public scg::List< ExposedParameter >					exposedParameters = new scg::List< ExposedParameter >();
 
+		//[HideInInspector]
 		[SerializeField, FormerlySerializedAs("exposedParameters")] // We keep this for upgrade
 		scg::List< ExposedParameter >						serializedParameterList = new scg::List<ExposedParameter>();
 
+		//[HideInInspector]
 		[SerializeField]
 		public scg::List< StickyNote >						stickyNotes = new scg::List<StickyNote>();
 
@@ -129,6 +138,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		Scene							linkedScene;
 
 		// Trick to keep the node inspector alive during the editor session
+		//[HideInInspector]
 		[SerializeField]
 		internal UnityEngine.Object		nodeInspectorReference;
 
@@ -162,10 +172,17 @@ namespace ME.BECS.Extensions.GraphProcessor
 		bool _isEnabled = false;
 		public bool isEnabled { get => _isEnabled; private set => _isEnabled = value; }
 		
-		public HashSet< BaseNode >		graphOutputs { get; private set; } = new HashSet<BaseNode>();
+		public scg::HashSet< BaseNode >		graphOutputs { get; private set; } = new scg::HashSet<BaseNode>();
 
 		public virtual void InitializeValidation() { }
-
+		
+		public int GetNodeIndex(ME.BECS.Extensions.GraphProcessor.BaseNode node) {
+			for (int i = 0; i < this.nodes.Count; ++i) {
+				if (this.nodes[i] == node) return i;
+			}
+			return -1;
+		}
+		
 		protected virtual void OnEnable()
         {
 			if (isEnabled)
@@ -728,7 +745,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		public Scene GetLinkedScene() => linkedScene;
 
-		HashSet<BaseNode> infiniteLoopTracker = new HashSet<BaseNode>();
+		scg::HashSet<BaseNode> infiniteLoopTracker = new scg::HashSet<BaseNode>();
 		int UpdateComputeOrderBreadthFirst(int depth, BaseNode node)
 		{
 			int computeOrder = 0;
@@ -797,7 +814,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		void PropagateComputeOrder(BaseNode node, int computeOrder)
 		{
 			scg::Stack<BaseNode> deps = new scg::Stack<BaseNode>();
-			HashSet<BaseNode> loop = new HashSet<BaseNode>();
+			scg::HashSet<BaseNode> loop = new scg::HashSet<BaseNode>();
 
 			deps.Push(node);
 			while (deps.Count > 0)

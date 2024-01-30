@@ -1,17 +1,28 @@
 namespace ME.BECS {
 
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    
     [System.Serializable]
     public struct Config : System.IEquatable<Config> {
 
         public uint sourceId;
 
-        public void Apply(in Ent ent) {
-            var entityConfig = EntityConfigsRegistry.GetEntityConfigBySourceId(this.sourceId);
-            entityConfig.Apply(in ent);
+        [INLINE(256)]
+        public readonly bool Apply(in Ent ent) {
+            var entityConfig = EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);
+            if (entityConfig.IsValid() == true) {
+                entityConfig.Apply(in ent);
+                return true;
+            }
+
+            return false;
         }
         
-        public UnsafeEntityConfig AsUnsafeConfig() => EntityConfigsRegistry.GetEntityConfigBySourceId(this.sourceId).AsUnsafeConfig();
-        
+        [INLINE(256)]
+        public readonly UnsafeEntityConfig AsUnsafeConfig() {
+            return EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);
+        }
+
         public bool Equals(Config other) {
             return this.sourceId == other.sourceId;
         }

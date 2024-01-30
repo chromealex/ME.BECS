@@ -5,16 +5,46 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Jobs;
     
-    [BURST]
-    public unsafe struct ApplyJobParallel : IJobParallelFor {
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct ApplyJob : IJob {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
             
         [INLINE(256)]
-        public void Execute(int index) {
+        public void Execute() {
+
+            this.state->batches.ApplyFromJob(this.state);
             
-            this.state->batches.ApplyFromJobThread(this.state, (uint)index);
+        }
+
+    }
+
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct OpenJob : IJob {
+
+        [NativeDisableUnsafePtrRestriction]
+        public State* state;
+            
+        [INLINE(256)]
+        public void Execute() {
+
+            this.state->batches.OpenFromJob(this.state);
+            
+        }
+
+    }
+
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct CloseJob : IJob {
+
+        [NativeDisableUnsafePtrRestriction]
+        public State* state;
+            
+        [INLINE(256)]
+        public void Execute() {
+
+            this.state->batches.CloseFromJob(this.state);
             
         }
 

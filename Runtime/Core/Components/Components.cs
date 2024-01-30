@@ -7,7 +7,7 @@ namespace ME.BECS {
     public interface IComponent {}
 
     // ReSharper disable once InconsistentNaming
-    public readonly struct TNull { }
+    public readonly struct TNull : IComponent { }
 
     [System.Serializable]
     public struct GroupChangedTracker {
@@ -116,8 +116,7 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         public MemArray<MemAllocatorPtr> items;
-        public LockSpinner lockIndex;
-
+        
         [INLINE(256)]
         public static Components Create(State* state, in StateProperties stateProperties) {
 
@@ -128,11 +127,7 @@ namespace ME.BECS {
             for (uint i = 1u; i < components.items.Length; ++i) {
                 ref var ptr = ref components.items[in state->allocator, i];
                 var dataSize = StaticTypes.sizes.Get(i);
-                if (dataSize == 0u) {
-                    ptr.Set(ref state->allocator, new SparseSetUnknownTypeTag(state, stateProperties.storageCapacity, stateProperties.entitiesCapacity));
-                } else {
-                    ptr.Set(ref state->allocator, new SparseSetUnknownType(state, dataSize, stateProperties.storageCapacity, stateProperties.entitiesCapacity));
-                }
+                ptr.Set(ref state->allocator, new DataDenseSet(state, dataSize, stateProperties.entitiesCapacity));
             }
 
             return components;
@@ -144,17 +139,13 @@ namespace ME.BECS {
             this.items.BurstMode(in allocator, state);
             for (uint i = 1u; i < this.items.Length; ++i) {
                 ref var ptr = ref this.items[in allocator, i];
-                var dataSize = StaticTypes.sizes.Get(i);
-                if (dataSize == 0u) {
-                    ptr.AsPtr<SparseSetUnknownTypeTag>(in allocator)->BurstMode(in allocator, state);
-                } else {
-                    ptr.AsPtr<SparseSetUnknownType>(in allocator)->BurstMode(in allocator, state);
-                }
+                ptr.AsPtr<DataDenseSet>(in allocator)->BurstMode(in allocator, state);
             }
         }
 
         [INLINE(256)]
         public RefRW<T> GetRW<T>(State* state, ushort worldId) where T : unmanaged, IComponent {
+            if (StaticTypes<T>.isTag == true) return default;
             return new RefRW<T>() {
                 state = state,
                 storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -164,6 +155,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public RefRO<T> GetRO<T>(State* state) where T : unmanaged, IComponent {
+            if (StaticTypes<T>.isTag == true) return default;
             return new RefRO<T>() {
                 state = state,
                 storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),

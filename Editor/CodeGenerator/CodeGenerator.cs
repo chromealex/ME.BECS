@@ -4,13 +4,18 @@ namespace ME.BECS.Editor {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
     using System.Linq;
+    using scg = System.Collections.Generic;
 
     public abstract class CustomCodeGenerator {
 
         public System.Collections.Generic.List<CodeGenerator.AssemblyInfo> asms;
         public bool editorAssembly;
-        
-        protected bool IsValidTypeForAssembly(System.Type type) {
+        public UnityEditor.TypeCache.TypeCollection burstedTypes;
+        public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
+
+        public bool IsValidTypeForAssembly(System.Type type) {
+
+            if (type == null) return false;
             
             var asm = type.Assembly.GetName().Name;
             var info = this.asms.FirstOrDefault(x => x.name == asm);
@@ -24,16 +29,24 @@ namespace ME.BECS.Editor {
             
         }
 
-        public virtual CodeGenerator.MethodDefinition AddMethod(System.Collections.Generic.List<System.Type> references) {
-            return new CodeGenerator.MethodDefinition();
+        public virtual scg::List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
+            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
         }
 
         public static string GetTypeName(System.Type type) {
+            if (type.IsGenericType == true) {
+                var first = type.FullName.Split('[')[0].Replace("+", ".").Replace("`1", "");
+                return $"{first}<{GetTypeName(type.GenericTypeArguments[0])}>";
+            }
             return type.FullName.Replace("+", ".").Replace("`1", "");
         }
 
         public static string GetDataTypeName(System.Type type) {
             return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
+        }
+
+        public virtual string AddPublicContent() {
+            return string.Empty;
         }
 
     }
@@ -94,6 +107,7 @@ namespace ME.BECS.Editor {
         public const string AWAKE_METHOD = "BurstCompileOnAwake";
         public const string UPDATE_METHOD = "BurstCompileOnUpdate";
         public const string DESTROY_METHOD = "BurstCompileOnDestroy";
+        public const string DRAWGIZMOS_METHOD = "BurstCompileOnDrawGizmos";
 
         private static System.Collections.Generic.List<AssemblyInfo> loadedAssemblies;
         public static System.Collections.Generic.List<AssemblyInfo> GetAssembliesInfo() {
@@ -232,7 +246,7 @@ namespace ME.BECS.Editor {
                     stackTrace.Contains($"{ECS}.BurstHelper.cs") == true) {
                     if (condition.Contains("does not exist in the namespace") == true) {
                         // Remove files
-                        {
+                        /*{
                             var dir = $"Assets/{ECS}.BurstHelper/Runtime";
                             var path = @$"{dir}/{ECS}.BurstHelper.cs";
                             UnityEditor.AssetDatabase.DeleteAsset(path);
@@ -241,7 +255,7 @@ namespace ME.BECS.Editor {
                             var dir = $"Assets/{ECS}.BurstHelper/Editor";
                             var path = @$"{dir}/{ECS}.BurstHelper.cs";
                             UnityEditor.AssetDatabase.DeleteAsset(path);
-                        }
+                        }*/
                     }
                 }
             }
@@ -277,6 +291,7 @@ namespace ME.BECS.Editor {
                 var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake));
                 var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate));
                 var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy));
+                var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos));
                 foreach (var type in types) {
 
                     if (type.IsValueType == false) continue;
@@ -295,11 +310,13 @@ namespace ME.BECS.Editor {
                     var hasAwake = typesAwake.Contains(type);
                     var hasUpdate = typesUpdate.Contains(type);
                     var hasDestroy = typesDestroy.Contains(type);
+                    var hasDrawGizmos = typesDrawGizmos.Contains(type);
                     //if (burstedTypes.Contains(type) == false) continue;
                     
                     var awakeBurst = hasAwake == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IAwake.OnAwake))) == false;
                     var updateBurst = hasUpdate == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IUpdate.OnUpdate))) == false;
                     var destroyBurst = hasDestroy == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDestroy.OnDestroy))) == false;
+                    var drawGizmosBurst = hasDrawGizmos == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDrawGizmos.OnDrawGizmos))) == false;
                     if (awakeBurst == true) {
                         if (isBursted == true) content.Add($"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
                     }
@@ -311,14 +328,20 @@ namespace ME.BECS.Editor {
                     if (destroyBurst == true) {
                         if (isBursted == true) content.Add($"{DESTROY_METHOD}<{systemType}>.MakeMethod(null);");
                     }
-                    
+
+                    if (drawGizmosBurst == true) {
+                        if (isBursted == true) content.Add($"{DRAWGIZMOS_METHOD}<{systemType}>.MakeMethod(null);");
+                    }
+
                     if (hasAwake == true) content.Add($"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
                     if (hasUpdate == true) content.Add($"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
                     if (hasDestroy == true) content.Add($"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasDrawGizmos == true) content.Add($"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
 
                     if (awakeBurst == true) content.Add($"BurstCompileMethod.MakeAwake<{systemType}>(default);");
                     if (updateBurst == true) content.Add($"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
                     if (destroyBurst == true) content.Add($"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
+                    if (drawGizmosBurst == true) content.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
 
                 }
                 
@@ -409,19 +432,23 @@ namespace ME.BECS.Editor {
                 var methodRegistryContents = System.Array.Empty<string>();
                 var methodContents = System.Array.Empty<string>();
                 var methods = new System.Collections.Generic.List<MethodDefinition>();
+                var publicContent = new System.Collections.Generic.List<string>();
                 {
                     
                     foreach (var customCodeGenerator in generators) {
                         customCodeGenerator.asms = asms;
                         customCodeGenerator.editorAssembly = editorAssembly;
+                        customCodeGenerator.burstedTypes = burstedTypes;
+                        customCodeGenerator.burstDiscardedTypes = burstDiscardedTypes;
                         customCodeGenerator.AddInitialization(typesContent, componentTypes);
-                        methods.Add(customCodeGenerator.AddMethod(componentTypes));
+                        publicContent.Add(customCodeGenerator.AddPublicContent());
+                        methods.AddRange(customCodeGenerator.AddMethods(componentTypes));
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
 
                 }
 
-                methodRegistryContents = methods.Where(x => x.definition != null).Select(x => {
+                methodRegistryContents = methods.Where(x => x.definition != null && x.type != null).Select(x => {
                     return $"WorldStaticCallbacks.RegisterCallback<{x.type}>({x.methodName});";
                 }).ToArray();
 
@@ -431,7 +458,7 @@ namespace ME.BECS.Editor {
 
                 var newContent = template.Replace("{{CONTENT}}", string.Join("\n", content));
                 newContent = newContent.Replace("{{CUSTOM_METHOD_REGISTRY}}", string.Join("\n", methodRegistryContents));
-                newContent = newContent.Replace("{{CUSTOM_METHODS}}", string.Join("\n", methodContents));
+                newContent = newContent.Replace("{{CUSTOM_METHODS}}", string.Join("\n", publicContent) + "\n" + string.Join("\n", methodContents));
                 newContent = newContent.Replace("{{CONTENT_TYPES}}", string.Join("\n", typesContent));
                 newContent = newContent.Replace("{{EDITOR}}", editorAssembly == true ? ".Editor" : string.Empty);
                 var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;

@@ -64,7 +64,7 @@ namespace ME.BECS.Extensions.GraphProcessor
         {
             // Sort menu by alphabetical order and submenus
             var nodeEntries = graphView.FilterCreateNodeMenuEntries().OrderBy(k => k.path);
-            var titlePaths = new HashSet< string >();
+            var titlePaths = new scg::HashSet< string >();
             
 			foreach (var nodeMenuItem in nodeEntries)
 			{
@@ -108,7 +108,7 @@ namespace ME.BECS.Extensions.GraphProcessor
         {
             var entries = NodeProvider.GetEdgeCreationNodeMenuEntry((edgeFilter.input ?? edgeFilter.output) as PortView, graphView.graph);
 
-            var titlePaths = new HashSet< string >();
+            var titlePaths = new scg::HashSet< string >();
 
             var nodePaths = NodeProvider.GetNodeMenuEntries(graphView.graph);
 

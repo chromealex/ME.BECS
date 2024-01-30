@@ -5,7 +5,7 @@ namespace ME.BECS.Network.Editor {
     
     public class NetworkCodeGenerator : CustomCodeGenerator {
         
-        public override CodeGenerator.MethodDefinition AddMethod(System.Collections.Generic.List<System.Type> references) {
+        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
             var methods = UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>();
@@ -28,7 +28,7 @@ namespace ME.BECS.Network.Editor {
                 definition = "ref ME.BECS.Network.UnsafeNetworkModule.MethodsStorage methods",
                 content = string.Join("\n", content.ToArray()),
             };
-            return def;
+            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
             
         }
 

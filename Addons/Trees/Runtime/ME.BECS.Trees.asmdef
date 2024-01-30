@@ -1,0 +1,22 @@
+{
+    "name": "ME.BECS.Trees",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Aspects.TransformAspect",
+        "com.bartofzo.nativetrees",
+        "Unity.Mathematics",
+        "Unity.Burst",
+        "Unity.Collections",
+        "KNN"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

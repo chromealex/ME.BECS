@@ -143,20 +143,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
-            
-            return UnsafeUtility.Malloc(size, align, allocator);
-
-        }
-
-        [INLINE(256)]
-        public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
-            
-            return UnsafeUtility.Malloc(size, align, allocator);
-
-        }
-
-        [INLINE(256)]
         public static byte* _make(uint size) {
             
             return (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
@@ -290,23 +276,49 @@ namespace ME.BECS {
 
         }
 
+        #region MAKE/FREE unity allocator
+        [INLINE(256)]
+        public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
+
+            if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
+                return Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
+            }
+            return UnsafeUtility.Malloc(size, align, allocator);
+
+        }
+
+        [INLINE(256)]
+        public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
+            
+            if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
+                return Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
+            }
+            return UnsafeUtility.Malloc(size, align, allocator);
+
+        }
+
         [INLINE(256)]
         public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
-            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
-            //UnsafeUtility.Free(obj, allocator);
+            if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
+                Unity.Collections.AllocatorManager.Free(allocator, obj);
+                return;
+            }
+            UnsafeUtility.Free(obj, allocator);
 
         }
 
         [INLINE(256)]
         public static void _free(void* obj, Unity.Collections.Allocator allocator) {
             
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
-            Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
-            //UnsafeUtility.Free(obj, allocator);
+            if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
+                Unity.Collections.AllocatorManager.Free(allocator, obj);
+                return;
+            }
+            UnsafeUtility.Free(obj, allocator);
 
         }
+        #endregion
 
     }
 

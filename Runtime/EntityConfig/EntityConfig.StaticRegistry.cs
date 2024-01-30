@@ -1,16 +1,24 @@
 namespace ME.BECS {
+    
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
 
     #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoadAttribute]
     #endif
-    public static class EntityConfigsRegistry {
+    public class EntityConfigsRegistry {
+        
+        public static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
 
         public static EntityConfigsRegistryData data;
         
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
 
-            if (data != null) return;
+            if (data != null) {
+                InitializeConfigs();
+                return;
+            }
             
             {
                 // Validate Resources directory
@@ -31,9 +39,36 @@ namespace ME.BECS {
             }
 
             data = UnityEngine.Resources.Load<EntityConfigsRegistryData>("EntityConfigsRegistry");
+            InitializeConfigs();
+            
+        }
+
+        private static void InitializeConfigs() {
+
+            if (data == null) return;
+
+            try {
+
+                configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(data.items.Length, Constants.ALLOCATOR_DOMAIN);
+                foreach (var item in data.items) {
+                    configs.Data.Add(item.sourceId, item.source.AsUnsafeConfig());
+                }
+
+            } catch (System.Exception) {
+                
+            }
 
         }
 
+        [INLINE(256)]
+        public static UnsafeEntityConfig GetUnsafeEntityConfigBySourceId(uint sourceId) {
+
+            configs.Data.TryGetValue(sourceId, out var config);
+            return config;
+
+        }
+
+        [INLINE(256)]
         public static EntityConfig GetEntityConfigBySourceId(uint sourceId) {
 
             if (EntityConfigsRegistry.data == null) return null;
@@ -42,6 +77,7 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
         public static uint Assign(EntityConfig previousValue, EntityConfig newValue) {
             
             if (EntityConfigsRegistry.data == null) return 0u;

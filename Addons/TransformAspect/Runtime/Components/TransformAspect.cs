@@ -1,4 +1,4 @@
-namespace ME.BECS.TransformAspect {
+namespace ME.BECS.Transforms {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
@@ -18,7 +18,37 @@ namespace ME.BECS.TransformAspect {
         internal AspectDataPtr<ChildrenComponent> childrenData;
         [QueryWith]
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
+        
+        public readonly float3 forward {
+            [INLINE(256)] get => math.mul(this.rotation, math.forward());
+            [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.forward(), value); 
+        }
+        
+        public readonly float3 back {
+            [INLINE(256)] get => math.mul(this.rotation, math.back());
+            [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.back(), value); 
+        }
+        
+        public readonly float3 right {
+            [INLINE(256)] get => math.mul(this.rotation, math.right());
+            [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.right(), value); 
+        }
+        
+        public readonly float3 left {
+            [INLINE(256)] get => math.mul(this.rotation, math.left());
+            [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.left(), value); 
+        }
 
+        public readonly float3 up {
+            [INLINE(256)] get => math.mul(this.rotation, math.up());
+            [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.up(), value); 
+        }
+
+        public readonly float3 down {
+            [INLINE(256)] get => math.mul(this.rotation, math.down());
+            [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.down(), value); 
+        }
+        
         public readonly ref float3 localPosition => ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
         public readonly ref quaternion localRotation => ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
         public readonly ref float3 localScale => ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
@@ -26,12 +56,12 @@ namespace ME.BECS.TransformAspect {
         public readonly ref readonly quaternion readLocalRotation => ref this.localRotationData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id, this.ent.gen).value;
-        public readonly ref readonly List<Ent> children => ref this.childrenData.Read(this.ent.id, this.ent.gen).list;
+        public readonly ref readonly ListAuto<Ent> children => ref this.childrenData.Read(this.ent.id, this.ent.gen).list;
         public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
         public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Read(this.ent.id, this.ent.gen).value, this.localRotationData.Read(this.ent.id, this.ent.gen).value, this.localScaleData.Read(this.ent.id, this.ent.gen).value);
 
-        public float3 position {
+        public readonly float3 position {
             [INLINE(256)]
             set {
                 ref readonly var parent = ref this.parent;
@@ -64,7 +94,7 @@ namespace ME.BECS.TransformAspect {
             }
         }
 
-        public quaternion rotation {
+        public readonly quaternion rotation {
             [INLINE(256)]
             set {
                 ref readonly var container = ref this.parent;
@@ -134,6 +164,7 @@ namespace ME.BECS.TransformAspect {
 
         [INLINE(256)]
         public static implicit operator TransformAspect(in Ent ent) {
+            if (ent.IsAlive() == false) return default;
             return ent.GetAspect<TransformAspect>();
         }
 

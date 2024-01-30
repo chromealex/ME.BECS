@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 using BURST = Unity.Burst.BurstCompileAttribute;
+using System.Runtime.InteropServices;
 
 namespace ME.BECS {
 
@@ -87,6 +88,7 @@ namespace ME.BECS {
         public const byte BLOCK_STATE_FREE = 0;
         public const byte BLOCK_STATE_USED = 1;
         
+        [StructLayout(LayoutKind.Sequential)]
         public struct MemZone {
 
             public int size;           // total bytes malloced, including header
@@ -95,6 +97,7 @@ namespace ME.BECS {
 
         }
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct MemBlock {
 
             public int size;    // including the header and possibly tiny fragments
@@ -225,6 +228,9 @@ namespace ME.BECS {
                 newblock->size = extra;
 
                 newblock->state = MemoryAllocator.BLOCK_STATE_FREE;
+                #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+                newblock->id = MemoryAllocator.ZONE_ID;
+                #endif
                 newblock->prev = new MemBlockOffset(top, newZone);
                 newblock->next = top->next;
                 newblock->next.Ptr(newZone)->prev = newblockOffset;
@@ -246,21 +252,33 @@ namespace ME.BECS {
             _free(zone, Constants.ALLOCATOR_PERSISTENT);
         }
 
+        [System.Diagnostics.ConditionalAttribute("MEMORY_ALLOCATOR_BOUNDS_CHECK")]
+        public static void CHECK_PTR(void* ptr) {
+            if (ptr == null) {
+                throw new System.ArgumentException("CHECK_PTR failed");
+            }
+        }
+
+        [System.Diagnostics.ConditionalAttribute("MEMORY_ALLOCATOR_BOUNDS_CHECK")]
+        public static void CHECK_ZONE_ID(int id) {
+            if (id != MemoryAllocator.ZONE_ID) {
+                throw new System.ArgumentException("ZmFree: freed a pointer without ZONEID");
+            }
+        }
+
         #if BURST
         [BURST(CompileSynchronously = true)]
         #endif
         [INLINE(256)]
         public static bool ZmFree(MemZone* zone, void* ptr, bool freePrev = true) {
+            MemoryAllocator.CHECK_PTR(ptr);
             var block = (MemBlock*)((byte*)ptr - TSize<MemBlock>.size);
             var blockOffset = new MemBlockOffset(block, zone);
 
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (block->id != MemoryAllocator.ZONE_ID) {
-                //return false;
-                throw new System.ArgumentException("ZmFree: freed a pointer without ZONEID");
-            }
+            MemoryAllocator.CHECK_ZONE_ID(block->id);
             #endif
-
+            
             // mark as free
             block->state = MemoryAllocator.BLOCK_STATE_FREE;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
@@ -472,35 +490,43 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static bool ZmCheckHeap(MemZone* zone) {
+        public static bool ZmCheckHeap(MemZone* zone, out int blockIndex, out int index) {
+            blockIndex = -1;
+            index = -1;
             for (var block = zone->blocklist.next.Ptr(zone);; block = block->next.Ptr(zone)) {
                 if (block->next.Ptr(zone) == &zone->blocklist) {
                     // all blocks have been hit
                     break;
                 }
 
-                if (MemoryAllocator.ZmCheckBlock(zone, block) == false) return false;
+                ++blockIndex;
+                if (MemoryAllocator.ZmCheckBlock(zone, block, out index) == false) return false;
             }
 
             return true;
         }
 
         [INLINE(256)]
-        private static bool ZmCheckBlock(MemZone* zone, MemBlock* block) {
+        private static bool ZmCheckBlock(MemZone* zone, MemBlock* block, out int index) {
+            index = -1;
             var next = (byte*)block->next.Ptr(zone);
             if (next == null) {
+                index = 0;
                 return false;
             }
 
             if ((byte*)block + block->size != (byte*)block->next.Ptr(zone)) {
+                index = 1;
                 return false;
             }
 
             if (block->next.Ptr(zone)->prev.Ptr(zone) != block) {
+                index = 2;
                 return false;
             }
 
             if (block->state == MemoryAllocator.BLOCK_STATE_FREE && block->next.Ptr(zone)->state == MemoryAllocator.BLOCK_STATE_FREE) {
+                index = 3;
                 return false;
             }
 

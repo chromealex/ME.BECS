@@ -6,7 +6,7 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Collections;
-    using static CutsPool;
+    using static Cuts;
 
     public readonly unsafe struct UnsafeEntityConfig {
 
@@ -83,9 +83,9 @@ namespace ME.BECS {
             public void Dispose() {
 
                 _free(this.data, Constants.ALLOCATOR_PERSISTENT);
-                _freeArray(this.hashes, this.count);
-                _freeArray(this.offsets, this.count);
-                _freeArray(this.typeIds, this.count);
+                CutsPool._freeArray(this.hashes, this.count);
+                CutsPool._freeArray(this.offsets, this.count);
+                CutsPool._freeArray(this.typeIds, this.count);
 
             }
 
@@ -154,8 +154,8 @@ namespace ME.BECS {
             public void Dispose() {
 
                 _free(this.data);
-                _freeArray(this.offsets, this.count);
-                _freeArray(this.typeIds, this.count);
+                CutsPool._freeArray(this.offsets, this.count);
+                CutsPool._freeArray(this.typeIds, this.count);
 
             }
 
@@ -191,10 +191,134 @@ namespace ME.BECS {
 
         }
 
+        private readonly struct DataInitialize {
+
+            public struct Func {
+
+                public System.IntPtr pointer;
+                public System.Runtime.InteropServices.GCHandle handle;
+
+                public void Call(byte* comp, in Ent ent) {
+                    var del = new Unity.Burst.FunctionPointer<MethodCallerDelegate>(this.pointer);
+                    del.Invoke(comp, in ent);
+                }
+
+                public void Dispose() {
+                    
+                    // TODO: FREE
+                    //this.handle.Free();
+                    this = default;
+
+                }
+
+            }
+
+            [NativeDisableUnsafePtrRestriction]
+            private readonly byte* data;
+            [NativeDisableUnsafePtrRestriction]
+            private readonly uint* offsets;
+            private readonly uint count;
+            [NativeDisableUnsafePtrRestriction]
+            private readonly uint* typeIds;
+            [NativeDisableUnsafePtrRestriction]
+            private readonly Func* functionPointers;
+            
+            [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
+            public delegate void MethodCallerDelegate(void* component, in Ent ent);
+            
+            internal static class MethodCaller<T> where T : unmanaged, IConfigInitialize {
+
+                [UnityEngine.Scripting.PreserveAttribute]
+                [AOT.MonoPInvokeCallbackAttribute(typeof(MethodCallerDelegate))]
+                public static void CallNoBurst(void* component, in Ent ent) {
+
+                    _ptrToStruct(component, out T tempData);
+                    tempData.OnInitialize(in ent);
+                    _structToPtr(ref tempData, component);
+
+                }
+
+            }
+            
+            [INLINE(256)]
+            public DataInitialize(IConfigInitialize[] components) {
+                
+                var cnt = (uint)components.Length;
+                if (cnt == 0u) {
+                    this = default;
+                    return;
+                }
+                this.offsets = _makeArray<uint>(cnt);
+                this.typeIds = _makeArray<uint>(cnt);
+                this.functionPointers = _makeArray<Func>(cnt);
+                this.count = cnt;
+                
+                var offset = 0u;
+                var size = 0u;
+                for (uint i = 0u; i < components.Length; ++i) {
+                    var comp = components[i];
+                    StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
+                    E.IS_VALID_TYPE_ID(typeId);
+                    var elemSize = StaticTypes.sizes.Get(typeId);
+                    size += elemSize;
+                    this.offsets[i] = offset;
+                    this.typeIds[i] = typeId;
+                    offset += elemSize;
+                }
+                this.data = (byte*)_make(size);
+
+                for (int i = 0; i < components.Length; ++i) {
+                    var comp = components[i];
+                    var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
+                    var ptr = gcHandle.AddrOfPinnedObject();
+                    var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
+                    Cuts._memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
+                    {
+                        var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
+                        var method = caller.GetMethod("CallNoBurst");
+                        var del = System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
+                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
+                        this.functionPointers[i] = new Func() {
+                            pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
+                            handle = handle,
+                        };
+                    }
+                    gcHandle.Free();
+                }
+
+            }
+
+            [INLINE(256)]
+            public void Apply(in Ent ent) {
+
+                for (uint i = 0; i < this.count; ++i) {
+                    var data = this.data + this.offsets[i];
+                    this.functionPointers[i].Call(data, in ent);
+                }
+
+            }
+
+            [INLINE(256)]
+            public void Dispose() {
+
+                for (uint i = 0; i < this.count; ++i) {
+                    this.functionPointers[i].Dispose();
+                }
+                
+                _free(this.data);
+                CutsPool._freeArray(this.offsets, this.count);
+                CutsPool._freeArray(this.typeIds, this.count);
+                CutsPool._freeArray(this.functionPointers, this.count);
+
+            }
+
+        }
+
         [NativeDisableUnsafePtrRestriction]
         private readonly UnsafeEntityConfig* baseConfig;
         private readonly Data<IConfigComponent> data;
         private readonly SharedData<IConfigComponentShared> dataShared;
+        private readonly DataInitialize dataInitialize;
         private readonly uint id;
         private readonly Ent staticDataEnt;
 
@@ -204,6 +328,7 @@ namespace ME.BECS {
             this.id = id > 0u ? id : EntityConfigRegistry.Register(config, out _);
             this.data = new Data<IConfigComponent>(config.data.components);
             this.dataShared = new SharedData<IConfigComponentShared>(config.sharedData.components);
+            this.dataInitialize = new DataInitialize(config.dataInitialize.components);
             this.staticDataEnt = staticDataEnt;
             var state = staticDataEnt.World.state;
             
@@ -236,10 +361,11 @@ namespace ME.BECS {
 
             this.data.Apply(ent);
             this.dataShared.Apply(ent);
+            this.dataInitialize.Apply(ent);
             
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct ConfigDisposeJob : Unity.Jobs.IJob {
 
             public UnsafeEntityConfig config;
@@ -262,6 +388,7 @@ namespace ME.BECS {
 
             this.data.Dispose();
             this.dataShared.Dispose();
+            this.dataInitialize.Dispose();
             if (this.baseConfig != null) this.baseConfig->Dispose();
 
         }
@@ -275,13 +402,13 @@ namespace ME.BECS {
         public bool HasStatic<T>() where T : unmanaged, IComponentStatic {
 
             var state = this.staticDataEnt.World.state;
-            return state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen);
+            return state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen, checkEnabled: false);
 
         }
 
         [INLINE(256)]
         public T ReadStatic<T>() where T : unmanaged, IComponentStatic {
-
+            
             var state = this.staticDataEnt.World.state;
             return state->components.Read<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen);
 

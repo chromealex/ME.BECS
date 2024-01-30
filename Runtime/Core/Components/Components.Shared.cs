@@ -4,7 +4,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
 
-    public interface IComponentShared {
+    public interface IComponentShared : IComponent {
 
         /// <summary>
         /// Returns static hash of instance

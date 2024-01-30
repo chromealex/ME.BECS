@@ -50,13 +50,13 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(1, ent.Version);
                 ent.Set(new TestComponent());
                 Assert.AreEqual(2, ent.Version);
-                Assert.AreEqual(1, ent.GetVersion(1));
+                Assert.AreEqual(1, ent.GetVersion(StaticTypes<TestComponent>.groupId));
                 ent.Set(new Test2Component());
                 Assert.AreEqual(3, ent.Version);
-                Assert.AreEqual(1, ent.GetVersion(1));
+                Assert.AreEqual(1, ent.GetVersion(StaticTypes<TestComponent>.groupId));
                 ++ent.Get<TestComponent>().data;
                 Assert.AreEqual(4, ent.Version);
-                Assert.AreEqual(2, ent.GetVersion(1));
+                Assert.AreEqual(2, ent.GetVersion(StaticTypes<TestComponent>.groupId));
             }
 
         }

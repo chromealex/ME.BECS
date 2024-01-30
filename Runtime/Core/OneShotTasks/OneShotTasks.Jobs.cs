@@ -8,7 +8,7 @@ namespace ME.BECS {
 
     public unsafe partial struct OneShotTasks {
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct ResolveTasksJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]

@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace ME.BECS {
@@ -9,6 +10,14 @@ namespace ME.BECS {
         public ComponentsStorage<IConfigComponent> data = new() { isShared = false, components = System.Array.Empty<IConfigComponent>() };
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
         public ComponentsStorage<IComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IComponentStatic>() };
+        public ComponentsStorage<IConfigInitialize> dataInitialize = new() { isShared = false, components = System.Array.Empty<IConfigInitialize>() };
+
+        public void OnValidate() {
+            this.dataInitialize = new ComponentsStorage<IConfigInitialize>() {
+                isShared = false,
+                components = this.data.components.OfType<IConfigInitialize>().ToArray(),
+            };
+        }
 
         public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u, Ent ent = default) {
             return new UnsafeEntityConfig(this, id, ent);

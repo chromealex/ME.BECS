@@ -8,7 +8,7 @@ namespace ME.BECS {
 
     }
 
-    internal unsafe class CacheData<TComponent> : CacheBase where TComponent : unmanaged {
+    internal unsafe class CacheData<TComponent> : CacheBase where TComponent : unmanaged, IComponent {
 
         public TComponent data;
         private System.Type type;

@@ -2,6 +2,7 @@ namespace ME.BECS {
     
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using BURST = Unity.Burst.BurstCompileAttribute;
     using System.Runtime.InteropServices;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs.LowLevel.Unsafe;
@@ -12,16 +13,42 @@ namespace ME.BECS {
     public interface IJobComponentsBase { }
     public interface IJobAspectBase { }
 
+    [BURST(CompileSynchronously = true)]
     public unsafe struct DisposeJob : Unity.Jobs.IJob {
         public MemPtr ptr;
         public ushort worldId;
         public void Execute() => Worlds.GetWorld(this.worldId).state->allocator.Free(this.ptr);
     }
 
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct DisposeAutoJob : Unity.Jobs.IJob {
+        public MemPtr ptr;
+        public Ent ent;
+        public ushort worldId;
+
+        public void Execute() {
+            var state = Worlds.GetWorld(this.worldId).state;
+            state->collectionsRegistry.Remove(state, in this.ent, in this.ptr);
+            state->allocator.Free(this.ptr);
+        }
+
+    }
+
+    [BURST(CompileSynchronously = true)]
     public unsafe struct DisposePtrJob : Unity.Jobs.IJob {
         [NativeDisableUnsafePtrRestriction]
         public void* ptr;
         public void Execute() => _free(ref this.ptr);
+    }
+
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct DisposeWithAllocatorPtrJob : Unity.Jobs.IJob {
+
+        public Unity.Collections.AllocatorManager.AllocatorHandle allocator;
+        [NativeDisableUnsafePtrRestriction]
+        public void* ptr;
+        public void Execute() => Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
+
     }
 
     public struct DisposeHandleJob : Unity.Jobs.IJob {
@@ -114,6 +141,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void Increment(ref float value, float count) {
+            float initialValue;
+            float computedValue;
+            do {
+                initialValue = value;
+                computedValue = initialValue + count;
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
+        }
+
+        [INLINE(256)]
         public static void Increment(ref int value, int count) {
             int initialValue;
             int computedValue;
@@ -124,9 +161,29 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void Increment(ref uint value, uint count) {
+            int initialValue;
+            int computedValue;
+            do {
+                initialValue = (int)value;
+                computedValue = initialValue + (int)count;
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref value), computedValue, initialValue));
+        }
+
+        [INLINE(256)]
         public static void Decrement(ref int value, int count) {
             int initialValue;
             int computedValue;
+            do {
+                initialValue = value;
+                computedValue = initialValue - count;
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
+        }
+
+        [INLINE(256)]
+        public static void Decrement(ref float value, float count) {
+            float initialValue;
+            float computedValue;
             do {
                 initialValue = value;
                 computedValue = initialValue - count;

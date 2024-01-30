@@ -34,20 +34,6 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
-            
-            return Cuts._make(size, align, allocator);
-
-        }
-        
-        [INLINE(256)]
-        public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
-
-            return Cuts._make(size, align, allocator);
-
-        }
-
-        [INLINE(256)]
         public static T* _make<T>() where T : unmanaged {
 
             return Cuts._makeDefault<T>();
@@ -100,20 +86,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
-
-            Cuts._free(obj, allocator);
-
-        }
-
-        [INLINE(256)]
-        public static void _free(void* obj, Unity.Collections.Allocator allocator) {
-            
-            Cuts._free(obj, allocator);
-
-        }
-
-        [INLINE(256)]
         public static void _free<T>(ref T* obj) where T : unmanaged {
             
             Cuts._free(ref obj);
@@ -136,6 +108,36 @@ namespace ME.BECS {
             //Pools.Push(obj, elementsCount);
 
         }
+
+        #region MAKE/FREE unity allocator
+        [INLINE(256)]
+        public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
+            
+            return Cuts._make(size, align, allocator);
+
+        }
+        
+        [INLINE(256)]
+        public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
+
+            return Cuts._make(size, align, allocator);
+
+        }
+
+        [INLINE(256)]
+        public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+
+            Cuts._free(obj, allocator);
+
+        }
+
+        [INLINE(256)]
+        public static void _free(void* obj, Unity.Collections.Allocator allocator) {
+            
+            Cuts._free(obj, allocator);
+
+        }
+        #endregion
 
     }
 

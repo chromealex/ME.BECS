@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -36,16 +34,40 @@ namespace ME.BECS.FeaturesGraph {
 
         }
 
-        public void DoAwake(ref World world) {
+        public SystemGroup DoAwake(ref World world, ushort updateType) {
             
-            var rootSystemGroup = SystemGroup.Create();
-            this.runtimeRootSystemGroup = rootSystemGroup;
-            
-            var processor = new Extensions.GraphProcessor.ProcessGraphProcessor(this);
-            processor.Run();
+            var rootSystemGroup = SystemGroup.Create(updateType);
 
-            world.AssignRootSystemGroup(rootSystemGroup);
+            if (SystemsStatic.RaiseInitialize(this.GetInstanceID(), ref rootSystemGroup) == false) {
+                
+                this.runtimeRootSystemGroup = rootSystemGroup;
+                var processor = new Extensions.GraphProcessor.ProcessGraphProcessor(this);
+                processor.Run();
+                world.AssignRootSystemGroup(rootSystemGroup);
+                return this.runtimeRootSystemGroup;
 
+            }
+
+            return rootSystemGroup;
+
+        }
+
+        public ME.BECS.Extensions.GraphProcessor.BaseNode GetStartNode() {
+            foreach (var node in this.nodes) {
+                if (node is ME.BECS.FeaturesGraph.Nodes.StartNode n) {
+                    return n;
+                }
+            }
+            return null;
+        }
+
+        public ME.BECS.Extensions.GraphProcessor.BaseNode GetEndNode() {
+            foreach (var node in this.nodes) {
+                if (node is ME.BECS.FeaturesGraph.Nodes.ExitNode n) {
+                    return n;
+                }
+            }
+            return null;
         }
 
     }

@@ -1,0 +1,19 @@
+{
+    "name": "com.bartofzo.nativetrees.samples",
+    "rootNamespace": "NativeTrees.Samples",
+    "references": [
+        "Unity.Burst",
+        "com.bartofzo.nativetrees",
+        "Unity.Collections",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

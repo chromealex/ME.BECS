@@ -10,7 +10,7 @@ namespace ME.BECS {
     public static unsafe partial class BatchesExt {
 
         [INLINE(256)]
-        public static T* GetPtr<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+        public static T* GetPtr<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             
@@ -25,7 +25,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static ref T Get<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+        public static ref T Get<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             
@@ -40,7 +40,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool Set<T>(this ref Batches batches, uint entId, ushort gen, in T data, State* state) where T : unmanaged {
+        public static bool Set<T>(this ref Batches batches, uint entId, ushort gen, in T data, State* state) where T : unmanaged, IComponent {
             
             E.IS_IN_TICK(state);
             
@@ -70,7 +70,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool Remove<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+        public static bool Remove<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             
@@ -99,7 +99,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool Enable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+        public static bool Enable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged, IComponent {
             
             E.IS_IN_TICK(state);
             
@@ -114,7 +114,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool Disable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged {
+        public static bool Disable<T>(this ref Batches batches, uint entId, ushort gen, State* state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             

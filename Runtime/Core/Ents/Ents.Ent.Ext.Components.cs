@@ -8,6 +8,8 @@ namespace ME.BECS {
         public static bool Enable<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
+            E.REQUIRED<T>(in ent);
+
             var world = ent.World;
             Journal.EnableComponent<T>(world.id, in ent);
             return world.state->batches.Enable<T>(ent.id, ent.gen, world.state);
@@ -18,6 +20,8 @@ namespace ME.BECS {
         public static bool Disable<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
+            E.REQUIRED<T>(in ent);
+            
             var world = ent.World;
             Journal.DisableComponent<T>(world.id, in ent);
             return world.state->batches.Disable<T>(ent.id, ent.gen, world.state);
@@ -54,11 +58,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool Has<T>(in this Ent ent) where T : unmanaged, IComponent {
+        public static bool Has<T>(in this Ent ent, bool checkEnabled = true) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->components.Has<T>(world.state, ent.id, ent.gen);
+            return world.state->components.Has<T>(world.state, ent.id, ent.gen, checkEnabled);
 
         }
 

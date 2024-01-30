@@ -11,13 +11,25 @@ namespace ME.BECS {
         public MemArray<uint> versionsGroup;
         public BitArray aliveBits;
         public Stack<uint> free;
-        public LockSpinner lockIndex;
+        public MemArray<LockSpinner> locksPerEntity;
+        public ReadWriteSpinner readWriteSpinner;
+        public LockSpinner popLock;
         public uint Capacity => this.generations.Length;
         public uint FreeCount => this.free.Count;
         public uint EntitiesCount => this.aliveCount;
 
         private uint entitiesCount;
         private uint aliveCount;
+
+        [INLINE(256)]
+        public void Lock(State* state, in Ent ent) {
+            this.locksPerEntity[state, ent.id].Lock();
+        }
+
+        [INLINE(256)]
+        public void Unlock(State* state, in Ent ent) {
+            this.locksPerEntity[state, ent.id].Unlock();
+        }
 
         public uint GetReservedSizeInBytes(State* state) {
 
@@ -54,7 +66,8 @@ namespace ME.BECS {
                 versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u), growFactor: 2),
                 aliveBits = new BitArray(ref state->allocator, entityCapacity),
                 free = new Stack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
-                lockIndex = default,
+                locksPerEntity = new MemArray<LockSpinner>(ref state->allocator, entityCapacity, growFactor: 2),
+                readWriteSpinner = ReadWriteSpinner.Create(state),
             };
             var ptr = (uint*)ents.free.GetUnsafePtr(in state->allocator);
             for (uint i = ents.generations.Length, k = 0u; i > 0u; --i, ++k) {
@@ -69,8 +82,9 @@ namespace ME.BECS {
         public bool IsAlive(State* state, in Ent ent) {
 
             if (ent.id > this.entitiesCount) return false;
-            //if (JobUtils.IsInParallelJob() == true) return true;
+            this.readWriteSpinner.ReadBegin(state);
             var gen = this.generations[in state->allocator, ent.id];
+            this.readWriteSpinner.ReadEnd(state);
             return gen > 0 && ent.gen == gen;
 
         }
@@ -81,7 +95,9 @@ namespace ME.BECS {
             gen = 0;
             if (entId > this.entitiesCount) return false;
             if (entId >= this.aliveBits.Length || this.aliveBits.IsSet(in state->allocator, (int)entId) == false) return false;
+            this.readWriteSpinner.ReadBegin(state);
             gen = this.generations[in state->allocator, entId];
+            this.readWriteSpinner.ReadEnd(state);
             return true;
 
         }
@@ -114,16 +130,28 @@ namespace ME.BECS {
             
             const ushort version = 1;
             
-            if (this.free.Count > 0u) {
+            var idx = 0u;
+            var cnt = this.free.Count;
+            if (cnt > 0u) {
+                this.popLock.Lock();
+                cnt = this.free.Count;
+                if (cnt > 0u) {
+                    idx = this.free.Pop(in state->allocator);
+                }
+                this.popLock.Unlock();
+            }
+            
+            if (cnt > 0u) {
 
                 reused = true;
                 JobUtils.Increment(ref this.aliveCount);
-                var idx = this.free.Pop(in state->allocator);
+                this.readWriteSpinner.ReadBegin(state);
                 var nextGen = ++this.generations[in state->allocator, idx];
                 this.versions[in state->allocator, idx] = version;
                 var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * idx;
                 _memclear((byte*)this.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * sizeof(int), StaticTypesGroupsBurst.maxId + 1u);
                 this.aliveBits.Set(in state->allocator, (int)idx, true);
+                this.readWriteSpinner.ReadEnd(state);
                 return new Ent(idx, nextGen, worldId);
 
             } else {
@@ -131,9 +159,11 @@ namespace ME.BECS {
                 reused = false;
                 const ushort gen = 1;
                 JobUtils.Increment(ref this.aliveCount);
-                var idx = JobUtils.Increment(ref this.entitiesCount);
+                idx = JobUtils.Increment(ref this.entitiesCount);
                 var ent = new Ent(idx - 1u, gen, worldId);
                 idx = ent.id;
+                this.readWriteSpinner.WriteBegin(state);
+                this.locksPerEntity.Resize(ref state->allocator, idx + 1u);
                 this.generations.Resize(ref state->allocator, idx + 1u);
                 this.generations[in state->allocator, idx] = gen;
                 this.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
@@ -141,6 +171,7 @@ namespace ME.BECS {
                 this.versions[in state->allocator, idx] = version;
                 this.aliveBits.Resize(ref state->allocator, idx + 1u);
                 this.aliveBits.Set(in state->allocator, (int)idx, true);
+                this.readWriteSpinner.WriteEnd();
                 return ent;
 
             }
@@ -151,9 +182,11 @@ namespace ME.BECS {
         public void RemoveThreaded(State* state, uint entId) {
             
             JobUtils.Decrement(ref this.aliveCount);
+            this.readWriteSpinner.ReadBegin(state);
             ++this.generations[in state->allocator, entId];
             this.aliveBits.Set(in state->allocator, (int)entId, false);
-            
+            this.readWriteSpinner.ReadEnd(state);
+
         }
 
         [INLINE(256)]
@@ -169,7 +202,10 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             this.RemoveThreaded(state, entId);
+            
+            this.popLock.Lock();
             this.free.Push(ref state->allocator, entId);
+            this.popLock.Unlock();
 
         }
 
@@ -177,7 +213,10 @@ namespace ME.BECS {
         public ushort GetGeneration(State* state, uint id) {
 
             if (id >= this.generations.Length) return 0;
-            return this.generations[in state->allocator, id];
+            this.readWriteSpinner.ReadBegin(state);
+            var gen = this.generations[in state->allocator, id];
+            this.readWriteSpinner.ReadEnd(state);
+            return gen;
 
         }
 
@@ -185,7 +224,10 @@ namespace ME.BECS {
         public uint GetVersion(State* state, uint id) {
 
             if (id >= this.versions.Length) return 0u;
-            return this.versions[in state->allocator, id];
+            this.readWriteSpinner.ReadBegin(state);
+            var version = this.versions[in state->allocator, id];
+            this.readWriteSpinner.ReadEnd(state);
+            return version;
 
         }
 
@@ -200,7 +242,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void UpVersion<T>(State* state, uint id) where T : unmanaged {
+        public void UpVersion<T>(State* state, uint id) where T : unmanaged, IComponent {
 
             this.UpVersion(state, id, StaticTypes<T>.groupId);
             

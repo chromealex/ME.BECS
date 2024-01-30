@@ -75,13 +75,13 @@ namespace ME.BECS.Extensions.GraphProcessor
         /// <summary>Previously selected object by the inspector</summary>
         public Object previouslySelectedObject;
         /// <summary>List of currently selected nodes</summary>
-        public HashSet<BaseNodeView> selectedNodes { get; private set; } = new HashSet<BaseNodeView>();
+        public scg::HashSet<BaseNodeView> selectedNodes { get; private set; } = new scg::HashSet<BaseNodeView>();
 
         /// <summary>Triggered when the selection is updated</summary>
         public event Action nodeSelectionUpdated;
 
         /// <summary>Updates the selection from the graph</summary>
-        public virtual void UpdateSelectedNodes(HashSet<BaseNodeView> views)
+        public virtual void UpdateSelectedNodes(scg::HashSet<BaseNodeView> views)
         {
             selectedNodes = views;
             nodeSelectionUpdated?.Invoke();

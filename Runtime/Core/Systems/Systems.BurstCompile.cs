@@ -47,7 +47,17 @@ namespace ME.BECS {
                 return destroyMethodCache;
             }
         }
-        
+
+        private static MethodInfo drawGizmosMethodCache;
+        private static MethodInfo drawGizmosMethod {
+            get {
+                if (drawGizmosMethodCache == null) {
+                    drawGizmosMethodCache = typeof(BurstCompileMethod).GetMethod(nameof(BurstCompileMethod.MakeDrawGizmos)); 
+                }
+                return drawGizmosMethodCache;
+            }
+        }
+
         private static object[] parameters = new object[1];
 
         [Preserve]
@@ -68,6 +78,13 @@ namespace ME.BECS {
         public static void MakeDestroy<T>(System.IntPtr node) where T : unmanaged, IDestroy {
             
             BurstCompileOnDestroy<T>.MakeMethod((Node*)node);
+            
+        }
+
+        [Preserve]
+        public static void MakeDrawGizmos<T>(System.IntPtr node) where T : unmanaged, IDrawGizmos {
+            
+            BurstCompileOnDrawGizmos<T>.MakeMethod((Node*)node);
             
         }
 
@@ -101,7 +118,14 @@ namespace ME.BECS {
                 node->SetMethod(method, methodPtr);
                 BurstCompileMethod.MakeMethod_INTERNAL<T>(node, destroyMethod);
             }
-            
+
+            if (typeof(IDrawGizmos).IsAssignableFrom(typeof(T))) {
+                method = Method.DrawGizmos;
+                var methodPtr = _make(new Node.Data());
+                node->SetMethod(method, methodPtr);
+                BurstCompileMethod.MakeMethod_INTERNAL<T>(node, drawGizmosMethod);
+            }
+
             return method;
         }
 

@@ -51,7 +51,7 @@ namespace ME.BECS.Tests {
             var last_handle = rootGraph.Add<TestGraphSystem2_2>(rootGraph.Combine(sys_g_1, sys_g_2, sys_g_3));
 
             var handle = rootGraph.Awake(ref world);
-            handle = rootGraph.Update(ref world, UnityEngine.Time.deltaTime, handle);
+            handle = rootGraph.Update(ref world, UnityEngine.Time.deltaTime, dependsOn: handle);
             handle.Complete();
             rootGraph.Destroy(ref world).Complete();
 
@@ -91,7 +91,7 @@ namespace ME.BECS.Tests {
             }
 
             var handle = rootGraph.Awake(ref world);
-            handle = rootGraph.Update(ref world, UnityEngine.Time.deltaTime, handle);
+            handle = rootGraph.Update(ref world, UnityEngine.Time.deltaTime, dependsOn: handle);
             handle.Complete();
             rootGraph.Destroy(ref world).Complete();
             
@@ -139,7 +139,7 @@ namespace ME.BECS.Tests {
             }
 
             var handle = rootGraph.Awake(ref world);
-            handle = rootGraph.Update(ref world, UnityEngine.Time.deltaTime, handle);
+            handle = rootGraph.Update(ref world, UnityEngine.Time.deltaTime, dependsOn: handle);
             handle.Complete();
             rootGraph.Destroy(ref world).Complete();
 

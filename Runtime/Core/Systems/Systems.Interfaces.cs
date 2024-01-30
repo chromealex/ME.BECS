@@ -24,4 +24,10 @@ namespace ME.BECS {
 
     }
 
+    public interface IDrawGizmos : ISystem {
+
+        void OnDrawGizmos(ref SystemContext context);
+
+    }
+
 }

@@ -1,0 +1,29 @@
+{
+    "name": "ME.BECS.Pathfinding",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "Unity.Mathematics",
+        "Unity.Collections",
+        "ME.BECS.Aspects.TransformAspect",
+        "Unity.Burst",
+        "Unity.Jobs",
+        "ME.BECS.Units",
+        "ME.BECS.Players",
+        "ME.BECS.Views",
+        "ME.BECS.Trees",
+        "ME.BECS.SceneEntityView",
+        "ME.BECS.ObjectReference.Runtime",
+        "ME.BECS.Attack",
+        "ME.BECS.Bullets"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -16,7 +16,7 @@ namespace ME.BECS.Views.Editor {
             new (nameof(EntityView.OnDisableToPool), (ref ViewTypeInfo x) => x.flags |= TypeFlags.DisableToPool),
         };
         
-        public override CodeGenerator.MethodDefinition AddMethod(System.Collections.Generic.List<System.Type> references) {
+        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
             var views = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.Views.EntityView>();
@@ -50,7 +50,7 @@ namespace ME.BECS.Views.Editor {
                 definition = "ref ME.BECS.Views.ViewsModuleData viewsModule",
                 content = string.Join("\n", content.ToArray()),
             };
-            return def;
+            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
             
         }
 

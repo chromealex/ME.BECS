@@ -55,3 +55,6 @@
 - Static Queries refactoring: store QueryData and CommandBuffer inside static data
 - Views Module: add BRG provider
 - Views Module: add Particles provider
++ CodeGen: generate systems flow
+- Transform: add DestroyHierarchy method
+- Views: investigate bug: wrong view getting from pool 

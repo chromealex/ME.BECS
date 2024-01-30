@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryScheduleExtensions {
         
-        public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6>(this QueryBuilder builder, in T job) where T : struct, IJobComponents<T0,T1,T2,T3,T4,T5,T6> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent where T6 : unmanaged, IComponent {
+        public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6>(this QueryBuilder builder, in T job = default) where T : struct, IJobComponents<T0,T1,T2,T3,T4,T5,T6> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent where T6 : unmanaged, IComponent {
             builder.With<T0>(); builder.With<T1>(); builder.With<T2>(); builder.With<T3>(); builder.With<T4>(); builder.With<T5>(); builder.With<T6>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6>(in builder.commandBuffer, builder.builderDependsOn);
@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobComponentsExtensions.JobProcess<,,,,,,,>))]
     public interface IJobComponents<T0,T1,T2,T3,T4,T5,T6> : IJobComponentsBase where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent where T6 : unmanaged, IComponent {
-        void Execute(ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5,ref T6 c6);
+        void Execute(in Ent ent, ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5,ref T6 c6);
     }
 
     public static unsafe partial class JobComponentsExtensions {
@@ -108,7 +108,8 @@ namespace ME.BECS.Jobs {
                 for (int i = 0; i < jobData.buffer->count; ++i) {
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
-                    jobData.jobData.Execute(ref jobData.c0.Get(entId, gen),ref jobData.c1.Get(entId, gen),ref jobData.c2.Get(entId, gen),ref jobData.c3.Get(entId, gen),ref jobData.c4.Get(entId, gen),ref jobData.c5.Get(entId, gen),ref jobData.c6.Get(entId, gen));
+                    var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                    jobData.jobData.Execute(in ent, ref jobData.c0.Get(entId, gen),ref jobData.c1.Get(entId, gen),ref jobData.c2.Get(entId, gen),ref jobData.c3.Get(entId, gen),ref jobData.c4.Get(entId, gen),ref jobData.c5.Get(entId, gen),ref jobData.c6.Get(entId, gen));
                 }
                 jobData.buffer->EndForEachRange();
                 

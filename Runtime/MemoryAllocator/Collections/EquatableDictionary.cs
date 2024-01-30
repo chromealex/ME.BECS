@@ -228,7 +228,7 @@ namespace ME.BECS {
             var index = -1;
             var num1 = 0;
             if (this.buckets.isCreated == true) {
-                var num2 = key.GetHashCode() & int.MaxValue;
+                var num2 = GetHashCode(key) & int.MaxValue;
                 index = (int)this.buckets[in allocator, (uint)(num2 % this.buckets.Length)] - 1;
                 while ((uint)index < (uint)this.entries.Length &&
                        (this.entries[in allocator, index].hashCode != num2 || !this.entries[in allocator, index].key.Equals(key))) {
@@ -261,7 +261,7 @@ namespace ME.BECS {
             }
 
             ref var entries = ref this.entries;
-            var num1 = key.GetHashCode() & int.MaxValue;
+            var num1 = GetHashCode(key) & int.MaxValue;
             var num2 = 0u;
             ref var local1 = ref this.buckets[in allocator, (uint)(num1 % this.buckets.Length)];
             var index1 = (int)local1 - 1;
@@ -360,7 +360,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Remove(ref MemoryAllocator allocator, TKey key) {
             if (this.buckets.isCreated == true) {
-                var num = key.GetHashCode() & int.MaxValue;
+                var num = GetHashCode(key) & int.MaxValue;
                 var index1 = (int)(num % this.buckets.Length);
                 var index2 = -1;
                 // ISSUE: variable of a reference type
@@ -400,7 +400,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Remove(ref MemoryAllocator allocator, TKey key, out TValue value) {
             if (this.buckets.isCreated == true) {
-                var num = key.GetHashCode() & int.MaxValue;
+                var num = GetHashCode(key) & int.MaxValue;
                 var index1 = (int)(num % this.buckets.Length);
                 var index2 = -1;
                 // ISSUE: variable of a reference type
@@ -472,6 +472,11 @@ namespace ME.BECS {
             var prime = HashHelpers.GetPrime(capacity);
             this.Resize(ref allocator, prime);
             return prime;
+        }
+
+        [INLINE(256)]
+        public static int GetHashCode(TKey key) {
+            return key.GetHashCode();
         }
         
     }

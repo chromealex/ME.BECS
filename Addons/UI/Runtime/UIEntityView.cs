@@ -13,7 +13,7 @@ namespace ME.BECS.UI {
 
         public void Start() {
 
-            var instance = WorldInitializer.GetInstance();
+            var instance = BaseWorldInitializer.GetInstance();
             var uiModule = instance.modules.Get<UIModule>();
             if (uiModule != null) {
 

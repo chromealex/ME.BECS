@@ -21,13 +21,13 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var state = ent.World.state;
+            state->entities.Lock(state, in ent);
+            E.IS_ALIVE(ent);
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref state->entities.lockIndex);
             {
                 state->entities.Remove(state, ent.id);
             }
-            JobUtils.Unlock(ref state->entities.lockIndex);
             JobUtils.Lock(ref state->components.lockSharedIndex);
             {
                 state->components.ClearShared(state, ent.id);
@@ -39,6 +39,8 @@ namespace ME.BECS {
             {
                 state->archetypes.RemoveEntity(state, ent.id);
             }
+            state->collectionsRegistry.Destroy(state, in ent);
+            state->entities.Unlock(state, in ent);
             
         }
 

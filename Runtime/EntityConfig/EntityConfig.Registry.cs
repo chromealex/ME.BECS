@@ -14,7 +14,6 @@ namespace ME.BECS {
         public static UIntDictionary<UnsafeEntityConfig> registryFromId;
         public static uint nextId;
 
-        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             var props = WorldProperties.Default;
             props.name = "EntityConfig Static World";

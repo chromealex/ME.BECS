@@ -25,7 +25,7 @@ namespace ME.BECS {
             var sourceState = source.World.state;
             var targetState = target.World.state;
             Batches.Apply(sourceState);
-            sourceState->components.CopyFrom(sourceState, source.id, targetState, target.id, target.gen);
+            sourceState->components.CopyFrom(sourceState, source.id, source.gen, targetState, target.id, target.gen);
 
         }
 

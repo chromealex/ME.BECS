@@ -1,13 +1,13 @@
-namespace ME.BECS.TransformAspect {
+namespace ME.BECS.Transforms {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
-    //[BURST]
+    [BURST(CompileSynchronously = true)]
     public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
         
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         public struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
 
             public State* state;

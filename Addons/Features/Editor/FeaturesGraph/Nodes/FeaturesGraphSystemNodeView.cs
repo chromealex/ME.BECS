@@ -73,6 +73,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 var awakeBurst = IsBurstMethod(node.system, typeof(IAwake), isBurst, out var hasAwake);
                 var updateBurst = IsBurstMethod(node.system, typeof(IUpdate), isBurst, out var hasUpdate);
                 var disposeBurst = IsBurstMethod(node.system, typeof(IDestroy), isBurst, out var hasDestroy);
+                var drawGizmosBurst = IsBurstMethod(node.system, typeof(IDrawGizmos), isBurst, out var hasDrawGizmos);
                 
                 if (awakeBurst == true && updateBurst == true && disposeBurst == true && isBurst == true) {
                     AddLabel(container, "Burst", "System run with Burst Compiler", true);
@@ -102,6 +103,10 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                             AddLabel(container, "Destroy No Burst", "Method run without Burst Compiler", false);
                         }
                     }
+                    
+                    if (hasDrawGizmos == true) {
+                        AddLabel(container, "Draw Gizmos", "Method run without Burst Compiler", true);
+                    }
                 }
             }
             
@@ -120,7 +125,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
 
             var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode).system;
             if (system != null) {
-                var script = FindScriptFromClassName(system.GetType().Name);
+                var script = FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
                 if (script != null) return UnityEngine.UIElements.DropdownMenuAction.Status.Normal;
             }
             
@@ -132,13 +137,13 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
             var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode).system;
             if (system != null) {
-                var script = FindScriptFromClassName(system.GetType().Name);
+                var script = FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
                 if (script != null) AssetDatabase.OpenAsset(script.GetInstanceID(), 0, 0);
             }
             
         }
         
-        static MonoScript FindScriptFromClassName(string className)
+        static MonoScript FindScriptFromClassName(string className, string @namespace)
         {
             var scriptGUIDs = AssetDatabase.FindAssets($"t:script {className}");
 
@@ -150,7 +155,8 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 var assetPath = AssetDatabase.GUIDToAssetPath(scriptGUID);
                 var script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
 
-                if (script != null && string.Equals(className, System.IO.Path.GetFileNameWithoutExtension(assetPath), System.StringComparison.OrdinalIgnoreCase))
+                if (script != null && string.Equals(className, System.IO.Path.GetFileNameWithoutExtension(assetPath), System.StringComparison.OrdinalIgnoreCase) &&
+                    (string.IsNullOrEmpty(@namespace) == true || System.Text.RegularExpressions.Regex.IsMatch(script.text, @$"namespace\s+{@namespace}", System.Text.RegularExpressions.RegexOptions.Singleline) == true))
                     return script;
             }
 

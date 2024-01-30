@@ -6,20 +6,22 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Jobs;
 
-    [BURST]
+    [BURST(CompileSynchronously = true)]
     public unsafe struct State {
 
         public MemoryAllocator allocator;
         public Ents entities;
         public Batches batches;
-        [UnityEngine.Serialization.FormerlySerializedAsAttribute("tasks")] public OneShotTasks oneShotTasks;
+        public OneShotTasks oneShotTasks;
         public Components components;
         public Archetypes archetypes;
         public Queries queries;
         public AspectsStorage aspectsStorage;
         public RandomData random;
+        public CollectionsRegistry collectionsRegistry;
         public ulong tick;
         public WorldState worldState;
+        public byte tickCheck;
 
         public bool IsCreated => this.tick != 0UL;
 
@@ -68,11 +70,12 @@ namespace ME.BECS {
             this.components = Components.Create(statePtr, in stateProperties);
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             this.random = RandomData.Create(statePtr);
+            this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.entitiesCapacity);
             return this;
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct SetWorldStateJob : IJobSingle {
 
             public World world;
@@ -81,11 +84,12 @@ namespace ME.BECS {
             public void Execute() {
                 if (this.worldState == WorldState.BeginTick) Context.Switch(in this.world);
                 this.world.state->worldState = this.worldState;
+                this.world.state->tickCheck = 1;
             }
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct NextTickJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]
@@ -97,7 +101,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST]
+        [BURST(CompileSynchronously = true)]
         private struct BurstModeJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]

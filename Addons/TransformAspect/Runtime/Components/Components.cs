@@ -1,4 +1,4 @@
-namespace ME.BECS.TransformAspect {
+namespace ME.BECS.Transforms {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
@@ -48,7 +48,7 @@ namespace ME.BECS.TransformAspect {
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct ChildrenComponent : IComponent {
 
-        public List<Ent> list;
+        public ListAuto<Ent> list;
 
     }
 

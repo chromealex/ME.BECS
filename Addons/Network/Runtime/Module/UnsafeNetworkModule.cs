@@ -358,7 +358,7 @@ namespace ME.BECS.Network {
                 return this.resetState;
             }
 
-            [BURST]
+            [BURST(CompileSynchronously = true)]
             private struct CopyStatePrepareJob : IJobSingle {
 
                 [NativeDisableUnsafePtrRestriction]
@@ -376,7 +376,7 @@ namespace ME.BECS.Network {
 
             }
 
-            [BURST]
+            [BURST(CompileSynchronously = true)]
             private struct CopyStateCompleteJob : IJobParallelFor {
 
                 [NativeDisableUnsafePtrRestriction]
@@ -814,7 +814,7 @@ namespace ME.BECS.Network {
                         dependsOn = this.data->Tick(tick, deltaTime, in world, dependsOn);
                     }
                     
-                    dependsOn = world.Tick(deltaTime, dependsOn);
+                    dependsOn = world.Tick(deltaTime, UpdateType.FIXED_UPDATE, dependsOn);
                     dependsOn = State.SetWorldState(in world, WorldState.EndTick, dependsOn);
                     dependsOn.Complete();
                     // End tick

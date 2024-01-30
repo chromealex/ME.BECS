@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
-        public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(this QueryBuilder builder, in T job) where T : struct, IJobAspect<T0,T1,T2,T3,T4,T5,T6,T7> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect {
+        public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(this QueryBuilder builder, in T job = default) where T : struct, IJobAspect<T0,T1,T2,T3,T4,T5,T6,T7> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect {
             builder.WithAspect<T0>(); builder.WithAspect<T1>(); builder.WithAspect<T2>(); builder.WithAspect<T3>(); builder.WithAspect<T4>(); builder.WithAspect<T5>(); builder.WithAspect<T6>(); builder.WithAspect<T7>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in builder.commandBuffer, builder.builderDependsOn);
@@ -104,12 +104,13 @@ namespace ME.BECS.Jobs {
             
                 JobUtils.SetCurrentThreadAsSingle(true);
                 
+                var aspect0 = jobData.c0;var aspect1 = jobData.c1;var aspect2 = jobData.c2;var aspect3 = jobData.c3;var aspect4 = jobData.c4;var aspect5 = jobData.c5;var aspect6 = jobData.c6;var aspect7 = jobData.c7;
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                 for (int i = 0; i < jobData.buffer->count; ++i) {
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
-                    jobData.c0.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c1.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c2.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c3.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c4.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c5.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c6.ent = new Ent(entId, gen, jobData.buffer->worldId);jobData.c7.ent = new Ent(entId, gen, jobData.buffer->worldId);
-                    jobData.jobData.Execute(ref jobData.c0,ref jobData.c1,ref jobData.c2,ref jobData.c3,ref jobData.c4,ref jobData.c5,ref jobData.c6,ref jobData.c7);
+                    aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect1.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect2.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect3.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect4.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect5.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect6.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect7.ent = new Ent(entId, gen, jobData.buffer->worldId);
+                    jobData.jobData.Execute(ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7);
                 }
                 jobData.buffer->EndForEachRange();
                 

@@ -243,7 +243,7 @@ namespace ME.BECS.Editor {
                 var headers = new VisualElement();
                 headers.AddToClassList("threads-headers");
                 threadsContainer.Add(headers);
-                {
+                if (journal != null) {
                     var threads = journal->GetData()->GetData();
                     for (int i = 0; i < threads.Length; ++i) {
                         var thread = new Label($"Thread #{(i + 1)}");

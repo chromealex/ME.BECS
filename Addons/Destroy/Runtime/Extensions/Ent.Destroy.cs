@@ -8,6 +8,12 @@ namespace ME.BECS {
             
         }
 
+        public static void DestroyEndTick(this in Ent ent) {
+
+            ent.Set(new DestroyWithLifetime() { lifetime = 0f, });
+            
+        }
+
     }
 
 }

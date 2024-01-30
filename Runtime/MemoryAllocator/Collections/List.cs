@@ -1,8 +1,10 @@
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using static Cuts;
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListProxy<>))]
     public unsafe struct List<T> : IIsCreated where T : unmanaged {
@@ -92,7 +94,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly unsafe void* GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(allocator);
@@ -379,6 +381,36 @@ namespace ME.BECS {
                     this.CopyFrom(ref allocator, collection, index);
                 }
 
+                this.Count += count;
+            }
+        }
+
+        [INLINE(256)]
+        public void AddRange(ref MemoryAllocator allocator, Unity.Collections.NativeArray<T> collection) {
+
+            E.IS_CREATED(this);
+            
+            var index = this.Count;
+            var count = (uint)collection.Length;
+            if (count > 0u) {
+                this.EnsureCapacity(ref allocator, this.Count + count);
+                var size = sizeof(T);
+                _memcpy(collection.GetUnsafeReadOnlyPtr(), (byte*)this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
+                this.Count += count;
+            }
+        }
+
+        [INLINE(256)]
+        public void AddRange(ref MemoryAllocator allocator, in UnsafeList<T> collection) {
+
+            E.IS_CREATED(this);
+            
+            var index = this.Count;
+            var count = (uint)collection.Length;
+            if (count > 0u) {
+                this.EnsureCapacity(ref allocator, this.Count + count);
+                var size = sizeof(T);
+                _memcpy(collection.Ptr, (byte*)this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
                 this.Count += count;
             }
         }

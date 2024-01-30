@@ -10,7 +10,7 @@ namespace ME.BECS {
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayThreadCacheLineProxy<>))]
     public unsafe struct MemArrayThreadCacheLine<T> : IIsCreated where T : unmanaged {
 
-        private static readonly uint CACHE_LINE_SIZE = math.min(JobUtils.CacheLineSize / TSize<T>.size, 1u);
+        private static readonly uint CACHE_LINE_SIZE = math.max(JobUtils.CacheLineSize / TSize<T>.size, 1u);
 
         private readonly MemPtr arrPtr;
         public readonly uint Length => JobUtils.ThreadsCount;
@@ -57,8 +57,6 @@ namespace ME.BECS {
                 worldId = worldId,
             }.Schedule(inputDeps);
             
-            this = default;
-
             return jobHandle;
 
         }

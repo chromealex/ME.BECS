@@ -940,7 +940,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			if (nodeInspector.previouslySelectedObject != Selection.activeObject)
 				nodeInspector.previouslySelectedObject = Selection.activeObject;
 
-			HashSet<BaseNodeView> selectedNodeViews = new HashSet<BaseNodeView>();
+			scg::HashSet<BaseNodeView> selectedNodeViews = new scg::HashSet<BaseNodeView>();
 			nodeInspector.selectedNodes.Clear();
 			foreach (var e in selection)
 			{
