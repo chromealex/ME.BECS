@@ -4,7 +4,7 @@
     "references": [
         "ME.BECS",
         "ME.BECS.Features",
-        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Transforms",
         "Unity.Burst",
         "Unity.Mathematics",
         "Unity.Collections",

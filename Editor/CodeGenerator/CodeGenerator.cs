@@ -379,9 +379,7 @@ namespace ME.BECS.Editor {
                         componentTypes.Add(component);
                         if (isTagType == false) {
                             if (component.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
-                                str = $"StaticTypesDefaultValue<{type}>.value.Data = {type}.Default;";
-                                typesContent.Add(str);
-                                str = $"StaticTypesHasDefaultValue<{type}>.value.Data = true;";
+                                str = $"StaticTypes<{type}>.SetDefaultValue({type}.Default);";
                                 typesContent.Add(str);
                             }
                         }

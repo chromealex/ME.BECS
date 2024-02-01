@@ -9,8 +9,9 @@ namespace ME.BECS.Units {
 
         public float maxSpeed;
         public float accelerationSpeed;
-        public float deaccelerationSpeed;
+        public float decelerationSpeed;
         public float rotationSpeed;
+        public float sightRangeSqr;
 
     }
 
@@ -27,13 +28,15 @@ namespace ME.BECS.Units {
         public float3 cohesionVector;
         public float3 desiredDirection;
         public float3 randomVector;
-        public bool pathFollow;
         public bool collideWithEnd;
         public float3 velocity;
 
         public Ent attackSensor;
 
     }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct PathFollowComponent : IComponent {}
 
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitHealthComponent : IConfigComponent {
@@ -46,19 +49,44 @@ namespace ME.BECS.Units {
     }
     
     [ComponentGroup(typeof(UnitComponentGroup))]
-    public struct UnitGroupComponent : IComponent {
+    public struct UnitCommandGroupComponent : IComponent {
 
-        public Ent unitGroup;
-
+        public Ent unitCommandGroup;
+        
     }
 
     [ComponentGroup(typeof(UnitComponentGroup))]
-    public struct GroupComponent : IComponent {
+    public struct UnitSelectionGroupComponent : IComponent {
+
+        public Ent unitSelectionGroup;
+        
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct CommandGroupComponent : IComponent {
 
         public ListAuto<Ent> units;
         public MemArrayAuto<Ent> targets;
         public float volume;
+        public LockSpinner lockIndex;
 
+    }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct DamageTookComponent : IComponent {
+
+        public Ent sourceUnit;
+
+    }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitHoldComponent : IComponent {}
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct SelectionGroupComponent : IComponent {
+
+        public ListAuto<Ent> units;
+        
     }
 
 }

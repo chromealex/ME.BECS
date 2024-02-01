@@ -54,8 +54,8 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, float2 size, byte cost = Graph.UNWALKABLE, float height = 0f) {
 
-            ent.Set<ME.BECS.Transforms.TransformAspect>();
-            var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+            var buildGraphSystem = ent.World.GetSystem<BuildGraphSystem>();
+            var tr = ent.GetOrCreateAspect<ME.BECS.Transforms.TransformAspect>();
             tr.position = position;
             tr.rotation = rotation;
             ent.Set(new GraphMaskComponent() {
@@ -65,8 +65,8 @@ namespace ME.BECS.Pathfinding {
                 cost = cost,
                 isDirty = true,
             });
-            var aspect = ent.GetAspect<QuadTreeAspect>();
-            aspect.quadTreeElement.treeIndex = 1;
+            var aspect = ent.GetOrCreateAspect<QuadTreeAspect>();
+            aspect.quadTreeElement.treeIndex = buildGraphSystem.obstaclesTreeIndex;
             aspect.quadTreeElement.ignoreY = true;
             return ent;
 

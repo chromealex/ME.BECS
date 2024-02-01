@@ -54,8 +54,11 @@ namespace ME.BECS {
                     configs.Data.Add(item.sourceId, item.source.AsUnsafeConfig());
                 }
 
-            } catch (System.Exception) {
-                
+            } catch (System.Exception ex) {
+
+                UnityEngine.Debug.LogError("Error while initializing configs");
+                UnityEngine.Debug.LogException(ex);
+
             }
 
         }

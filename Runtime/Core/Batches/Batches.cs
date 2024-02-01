@@ -198,7 +198,9 @@ namespace ME.BECS {
                 return;
             }
             ref var item = ref this.arr[state, entId];
+            item.lockIndex.Lock();
             item.Clear();
+            item.lockIndex.Unlock();
             this.lockReadWrite.ReadEnd(state);
 
         }
@@ -226,7 +228,7 @@ namespace ME.BECS {
             this.workingLock.WriteBegin(state);
             
             // Collect
-            var temp = new UnsafeList<uint>((int)this.items.Length, Allocator.Temp);
+            var temp = new UnsafeList<uint>((int)this.items.Length, Constants.ALLOCATOR_TEMP);
             for (uint i = 0u; i < this.items.Length; ++i) {
 
                 this.ApplyFromJobThread(state, i, ref temp);

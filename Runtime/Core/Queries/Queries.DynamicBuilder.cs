@@ -395,7 +395,7 @@ namespace ME.BECS {
             var result = new Unity.Collections.NativeArray<Ent>(cnt, allocator);
             for (int i = 0; i < cnt; ++i) {
                 var entId = this.commandBuffer->entities[i];
-                result[i] = new Ent(entId);
+                result[i] = new Ent(entId, Worlds.GetWorld(this.commandBuffer->worldId));
             }
             return result;
 

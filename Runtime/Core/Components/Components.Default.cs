@@ -7,45 +7,45 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
-        public bool Enable<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
+        public bool Enable<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
             
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            return this.SetState<T>(state, typeId, groupId, entId, gen, true);
-            
-        }
-
-        [INLINE(256)]
-        public bool Disable<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
-
-            var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
-            return this.SetState<T>(state, typeId, groupId, entId, gen, false);
+            return this.SetState<T>(state, typeId, groupId, in ent, true);
             
         }
 
         [INLINE(256)]
-        public bool Set<T>(State* state, uint entId, ushort gen, in T data) where T : unmanaged, IComponent {
+        public bool Disable<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            return this.SetUnknownType(state, typeId, groupId, entId, gen, in data);
+            return this.SetState<T>(state, typeId, groupId, in ent, false);
             
         }
 
         [INLINE(256)]
-        public bool Remove<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
+        public bool Set<T>(State* state, in Ent ent, in T data) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            return this.RemoveUnknownType(state, typeId, groupId, entId, gen);
+            return this.SetUnknownType(state, typeId, groupId, in ent, in data);
+            
+        }
+
+        [INLINE(256)]
+        public bool Remove<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
+
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.groupId;
+            return this.RemoveUnknownType(state, typeId, groupId, in ent);
 
         }
 
         [INLINE(256)]
-        public bool Remove(State* state, uint entId, ushort gen, uint typeId, uint groupId) {
+        public bool Remove(State* state, in Ent ent, uint typeId, uint groupId) {
 
-            return this.RemoveUnknownType(state, typeId, groupId, entId, gen);
+            return this.RemoveUnknownType(state, typeId, groupId, in ent);
 
         }
 
@@ -98,21 +98,24 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T Get<T>(State* state, uint entId, ushort gen) where T : unmanaged, IComponent {
+        public ref T Get<T>(State* state, in Ent ent) where T : unmanaged, IComponent => ref this.Get<T>(state, ent);
+
+        [INLINE(256)]
+        public ref T Get<T>(State* state, Ent ent) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            var data = this.GetUnknownType(state, typeId, groupId, entId, gen, out _);
+            var data = this.GetUnknownType(state, typeId, groupId, in ent, out _);
             return ref *(T*)data;
 
         }
 
         [INLINE(256)]
-        public T* Get<T>(State* state, uint entId, ushort gen, out bool isNew) where T : unmanaged, IComponent {
+        public T* Get<T>(State* state, in Ent ent, out bool isNew) where T : unmanaged, IComponent {
             
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            var data = this.GetUnknownType(state, typeId, groupId, entId, gen, out isNew);
+            var data = this.GetUnknownType(state, typeId, groupId, in ent, out isNew);
             return (T*)data;
 
         }
@@ -135,7 +138,7 @@ namespace ME.BECS {
 
             if (StaticTypes<T>.isTag == true) return;
 
-            this.Set(ent.World.state, ent.id, ent.gen, in data);
+            this.Set(ent.World.state, in ent, in data);
 
         }
 

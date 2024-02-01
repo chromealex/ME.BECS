@@ -165,7 +165,7 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static implicit operator TransformAspect(in Ent ent) {
             if (ent.IsAlive() == false) return default;
-            return ent.GetAspect<TransformAspect>();
+            return ent.GetOrCreateAspect<TransformAspect>();
         }
 
         public static void TestInitialize(in World world) {

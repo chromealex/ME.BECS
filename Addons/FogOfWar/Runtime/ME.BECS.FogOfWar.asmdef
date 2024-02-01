@@ -1,11 +1,16 @@
 {
-    "name": "ME.BECS.Aspects.TransformAspect",
+    "name": "ME.BECS.FogOfWar",
     "rootNamespace": "",
     "references": [
         "ME.BECS",
-        "Unity.Mathematics",
+        "ME.BECS.Units",
+        "ME.BECS.Transforms",
         "Unity.Burst",
-        "Unity.Collections"
+        "ME.BECS.Players",
+        "Unity.Mathematics",
+        "ME.BECS.Pathfinding",
+        "ME.BECS.ObjectReference.Runtime",
+        "ME.BECS.Views"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

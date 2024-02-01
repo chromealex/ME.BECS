@@ -200,7 +200,7 @@ namespace ME.BECS.Editor.Systems {
                                 }
                             }
 
-                            var dependsOn = GetDeps(depNode, out var schemeDependsOn, out var deps);
+                            var dependsOn = GetDeps(depNode, out var schemeDependsOn, out var deps, collectedDeps);
                             
                             // we must already print all deps
                             var allPrinted = true;
@@ -236,17 +236,17 @@ namespace ME.BECS.Editor.Systems {
                                     n = parentNode;
                                     var dep = GetIndex(n, n.graph);
                                     printedDependencies.Add($"dep{dep}");
-                                    var dependsOnExit = GetDeps(exitNode, out var schemeDependsOnExit, out var depsExit);
+                                    var dependsOnExit = GetDeps(exitNode, out var schemeDependsOnExit, out var depsExit, collectedDeps);
                                     scheme.Add($" * EXIT dep{dep} = {schemeDependsOnExit};");
                                     methodContent.Add($"dep{dep} = {dependsOnExit};");
                                     collectedDeps.Add($"dep{dep}");
 
                                 } else {
                                     
-                                    var dependsOnExit = GetDeps(exitNode, out var schemeDependsOnExit, out var depsExit);
+                                    var dependsOnExit = GetDeps(exitNode, out var schemeDependsOnExit, out var depsExit, collectedDeps);
                                     scheme.Add($" * EXIT dependsOn = {schemeDependsOnExit};");
                                     methodContent.Add($"dependsOn = {dependsOnExit};");
-                                    collectedDeps.Add(dependsOnExit);
+                                    //collectedDeps.Add(dependsOnExit);
                                     lastDependency = dependsOnExit;
 
                                 }
@@ -397,150 +397,6 @@ namespace ME.BECS.Editor.Systems {
 
                     }
 
-                    /*
-                    static string MoveNext(CustomCodeGenerator generator, string method, scg::List<string> scheme, scg::List<string> arrMethodDef, scg::List<string> containers, scg::List<string> baseContainer, ref int prevOpenIndexDeps, ref int prevOpenIndex, ref bool isInBurst, ref bool isOpened, scg::List<string> collectedDeps, scg::List<string> content, ME.BECS.Extensions.GraphProcessor.BaseNode node, SystemsGraph graph, scg::HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode> continuousQueue, scg::HashSet<SystemsGraph> rootGraphs, ME.BECS.Extensions.GraphProcessor.BaseNode dependenciesForced = null) {
-                        var next = new System.Collections.Generic.List<ME.BECS.Extensions.GraphProcessor.BaseNode>();
-                        //UnityEngine.Debug.Log(" -- !!Node: " + node.name);
-                        foreach (var port in node.outputPorts) {
-                            var edges = port.GetEdges();
-                            foreach (var edge in edges) {
-                                if (edge.inputNode.inputPorts[0].GetEdges().Count == 1) {
-                                    next.Add(edge.inputNode);
-                                } else {
-                                    continuousQueue.Add(edge.inputNode);
-                                }
-                            }
-                        }
-
-                        string lastDependency;
-                        {
-                            var index = GetIndex(node, rootGraphs);
-                            string dependsOn;
-                            string schemeDependsOn;
-                            if (dependenciesForced != null) {
-                                dependsOn = GetDeps(dependenciesForced, rootGraphs, out schemeDependsOn);
-                            } else {
-                                dependsOn = GetDeps(node, rootGraphs, out schemeDependsOn);
-                            }
-
-                            var systemNode = node as ME.BECS.FeaturesGraph.Nodes.SystemNode;
-                            if (systemNode != null) {
-                                var isBursted = IsBursted(generator, systemNode, method);
-                                if (isOpened == false || isInBurst != isBursted) {
-                                    if (isOpened == true) {
-                                        // insert output nodes
-                                        if (collectedDeps.Count - prevOpenIndexDeps > 0) {
-                                            var data = $", {GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}) {{";
-                                            content.Insert(prevOpenIndex, data);
-                                            var dataDef = $", {GetMethodDeps("ref", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}";
-                                            containers.Add(dataDef);
-                                        }
-                                        content.Add("}"); // close previous
-                                        containers.Add(");\n");
-                                    }
-
-                                    var deps = GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, 0, collectedDeps.Count);
-                                    var depsDef = GetMethodDeps("ref", collectedDeps, 0, collectedDeps.Count);
-                                    var methodData = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(float dt, in World world, ref Unity.Jobs.JobHandle dependsOn, {GetMethodDeps("System.IntPtr*", arrMethodDef, 0, arrMethodDef.Count)}, {deps}";
-                                    content.Add($"{(isBursted == true ? "[BURST] " : string.Empty)}private static void {methodData}"); // open next
-                                    var methodDef = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(dt, in world, ref dependsOn, {GetMethodDeps("", arrMethodDef, 0, arrMethodDef.Count)}, {depsDef}";
-                                    containers.Add(methodDef);
-                                    prevOpenIndex = content.Count;
-                                    prevOpenIndexDeps = collectedDeps.Count;
-                                    isOpened = true;
-                                    isInBurst = isBursted;
-                                }
-                            }
-
-                            var hasMethod = HasMethod<T>(systemNode);
-                            if (node is ME.BECS.FeaturesGraph.Nodes.StartNode ||
-                                hasMethod == false ||
-                                node.enabled == false || node.IsGroupEnabled() == false) {
-
-                                if (isOpened == false) {
-                                    baseContainer.Add($"dep{index.ToString()} = {dependsOn};");
-                                } else {
-                                    content.Add($"dep{index.ToString()} = {dependsOn};");
-                                }
-
-                                collectedDeps.Add($"dep{index.ToString()}");
-
-                                var notUsedDescr = "Empty Node";
-                                if (hasMethod == false) {
-                                    notUsedDescr = $"Required method {typeof(T)} was not found. Node skipped.";
-                                }
-                                scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(node.name, 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}] - {notUsedDescr}");
-
-                            } else if (systemNode != null) {
-                                
-                                content.Add($"// {node.name} ({graph.name})");
-                                content.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});");
-                                //content.Add("Unity.Jobs.LowLevel.Unsafe.JobsUtility.JobWorkerCount = 0;");
-                                //var test = systemNode.system.GetType().FullName;
-                                content.Add($"(({GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
-                                
-                                //content.Add("Unity.Jobs.LowLevel.Unsafe.JobsUtility.ResetJobWorkerCount();");
-                                content.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
-                    
-                                collectedDeps.Add($"dep{index.ToString()}");
-                                scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(node.name, 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]");
-
-                            }
-                            
-                            lastDependency = $"dep{index.ToString()}";
-                        }
-
-                        foreach (var nextNode in next) {
-                            //UnityEngine.Debug.Log("NODE: " + nextNode.name);
-                            if (nextNode is ME.BECS.FeaturesGraph.Nodes.ExitNode) continue;
-                            if (nextNode is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                                rootGraphs.Add(graphNode.graphValue);
-                                lastDependency = MoveNext(generator, method, scheme, arrMethodDef, containers, baseContainer, ref prevOpenIndexDeps, ref prevOpenIndex, ref isInBurst, ref isOpened, collectedDeps, content, graphNode.graphValue.GetStartNode(), graphNode.graphValue, continuousQueue, rootGraphs, graphNode);
-                                continuousQueue.Add(graphNode);
-                                //lastDependency = MoveNext(generator, method, scheme, arrMethodDef, containers, baseContainer, ref prevOpenIndexDeps, ref prevOpenIndex, ref isInBurst, ref isOpened, collectedDeps, content, nextNode, graph, continuousQueue, rootGraphs, graphNode);
-                            } else {
-                                lastDependency = MoveNext(generator, method, scheme, arrMethodDef, containers, baseContainer, ref prevOpenIndexDeps, ref prevOpenIndex, ref isInBurst, ref isOpened, collectedDeps, content, nextNode, graph, continuousQueue, rootGraphs);
-                            }
-                        }
-
-                        return lastDependency;
-                    }
-
-                    var rootGraphs = new scg::HashSet<SystemsGraph>();
-                    rootGraphs.Add(graph);
-                    var queue = new scg::HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
-                    var node = (ME.BECS.Extensions.GraphProcessor.BaseNode)startNode;
-                    var isOpened = false;
-                    var isInBurst = false;
-                    var prevOpenIndex = -1;
-                    var prevOpenIndexDeps = 0;
-                    while (true) {
-                        lastDependency = MoveNext(generator, method, scheme, arrMethodDef, containers, content, ref prevOpenIndexDeps, ref prevOpenIndex, ref isInBurst, ref isOpened, collectedDeps, innerMethods, node, graph, queue, rootGraphs);
-                        if (queue.Count > 0) {
-                            node = queue.First();
-                            queue.Remove(node);
-                        } else {
-                            break;
-                        }
-                    }
-
-                    if (isOpened == true) {
-                        if (collectedDeps.Count - prevOpenIndexDeps > 0) {
-                            var data = $", {GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}) {{";
-                            innerMethods.Insert(prevOpenIndex, data);
-                            var dataDef = $", {GetMethodDeps("ref", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}";
-                            containers.Add(dataDef);
-                        }
-                        innerMethods.Add("}"); // close last
-                        containers.Add(");\n");
-                    }
-                    
-                    foreach (var dep in collectedDeps) {
-                        content.Insert(insertIndex, $"Unity.Jobs.JobHandle {dep} = default;");
-                    }
-
-                    */
-                    
                     foreach (var dep in collectedDeps) {
                         content.Insert(insertIndex, $"Unity.Jobs.JobHandle {dep} = default;");
                     }
@@ -619,7 +475,7 @@ namespace ME.BECS.Editor.Systems {
             return default;
         }
 
-        private static string GetDeps(ME.BECS.Extensions.GraphProcessor.BaseNode node, out string scheme) {
+        private static string GetDeps(ME.BECS.Extensions.GraphProcessor.BaseNode node, out string scheme, scg::HashSet<string> collectedDeps) {
             var result = string.Empty;
             scheme = string.Empty;
             if (node.inputPorts.Count == 0) {
@@ -627,6 +483,9 @@ namespace ME.BECS.Editor.Systems {
                 scheme = result;
             } else {
                 var arr = node.inputPorts[0].GetEdges().Select(x => "dep" + GetIndex(x.outputNode, x.outputNode.graph).ToString()).Distinct().ToArray();
+                foreach (var item in arr) {
+                    collectedDeps.Add(item);
+                }
                 if (arr.Length == 1) {
                     result = $"{arr[0]}";
                     scheme = result;
@@ -640,7 +499,7 @@ namespace ME.BECS.Editor.Systems {
             return result;
         }
 
-        private static string GetDeps(ME.BECS.Extensions.GraphProcessor.BaseNode node, out string scheme, out string[] deps) {
+        private static string GetDeps(ME.BECS.Extensions.GraphProcessor.BaseNode node, out string scheme, out string[] deps, scg::HashSet<string> collectedDeps) {
             var result = string.Empty;
             scheme = string.Empty;
             if (node.inputPorts.Count == 0) {
@@ -648,7 +507,10 @@ namespace ME.BECS.Editor.Systems {
                 scheme = result;
                 deps = System.Array.Empty<string>();
             } else {
-                var arr = node.inputPorts[0].GetEdges().Select(x => "dep" + GetIndex(x.outputNode, x.outputNode.graph).ToString()).Distinct().ToArray();
+                var arr = node.inputPorts[0].GetEdges().Where(x => x.outputNode.graph != null).Select(x => "dep" + GetIndex(x.outputNode, x.outputNode.graph).ToString()).Distinct().ToArray();
+                foreach (var item in arr) {
+                    collectedDeps.Add(item);
+                }
                 if (arr.Length == 1) {
                     deps = new[] { arr[0] };
                     result = $"{arr[0]}";
@@ -720,7 +582,7 @@ namespace ME.BECS.Editor.Systems {
                         //content.Add($"_memclear(item{name}_{k}, TSize<{type}>.size);");
                         content.Add($"*({systemType}*)item{id}_{k} = {GetDefinition(systemNode.system)};");
                         content.Add($"TSystem<{systemType}>.index.Data = {k};");
-                        content.Add($"TSystemGraph<{systemType}>.index.Data = {id};");
+                        content.Add($"TSystemGraph<{systemType}>.index.Data = {graph.GetInstanceID()};");
                         content.Add($"graphNodes{id}_{generator.GetType().Name}[{k}] = (System.IntPtr)item{id}_{k};");
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
@@ -735,11 +597,14 @@ namespace ME.BECS.Editor.Systems {
             var result = $"new {GetTypeName(system.GetType())}() {{\n";
             var fields = system.GetType().GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
             foreach (var field in fields) {
-                var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
+                //var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
                 if (field.IsInitOnly == true) continue;
+                if (field.IsPublic == false) continue;
                 //if (field.IsPublic == false && field.GetCustomAttribute<UnityEngine.SerializeField>() == null) continue;
-                if (isSerializable == false) continue;
-                if (field.FieldType.IsPrimitive == true) {
+                //if (isSerializable == false) continue;
+                if (field.FieldType.IsEnum == true) {
+                    result += field.Name + " = " + field.FieldType.FullName + "." + field.GetValue(system) + ",\n";
+                } else if (field.FieldType.IsPrimitive == true) {
                     var val = field.GetValue(system);
                     if (val is double) {
                         result += field.Name + " = " + val.ToString() + "d,\n";

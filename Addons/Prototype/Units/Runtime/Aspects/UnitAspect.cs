@@ -2,6 +2,7 @@ namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
+    using ME.BECS.Players;
 
     public struct UnitAspect : IAspect {
         
@@ -11,12 +12,16 @@ namespace ME.BECS.Units {
         public AspectDataPtr<NavAgentComponent> navAgentDataPtr;
         public AspectDataPtr<NavAgentRuntimeComponent> navAgentRuntimeDataPtr;
         [QueryWith]
-        public AspectDataPtr<UnitGroupComponent> unitGroupDataPtr;
+        public AspectDataPtr<UnitCommandGroupComponent> unitCommandGroupDataPtr;
+        [QueryWith]
+        public AspectDataPtr<UnitSelectionGroupComponent> unitSelectionGroupDataPtr;
         [QueryWith]
         public AspectDataPtr<UnitHealthComponent> healthDataPtr;
         [QueryWith]
-        public AspectDataPtr<ME.BECS.Players.OwnerComponent> ownerDataPtr;
+        public AspectDataPtr<OwnerComponent> ownerDataPtr;
 
+        public readonly ref float sightRangeSqr => ref this.component.sightRangeSqr;
+        public readonly ref float height => ref this.componentRuntime.properties.height;
         public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;
         public readonly ref float health => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).health;
         public readonly ref float healthMax => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).healthMax;
@@ -27,24 +32,41 @@ namespace ME.BECS.Units {
         public readonly ref float speed => ref this.componentRuntime.speed;
         public readonly ref float maxSpeed => ref this.component.maxSpeed;
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
-        public readonly ref float deaccelerationSpeed => ref this.component.deaccelerationSpeed;
+        public readonly ref float decelerationSpeed => ref this.component.decelerationSpeed;
         public readonly ref float rotationSpeed => ref this.component.rotationSpeed;
-        public readonly ref Ent unitGroup => ref this.unitGroupDataPtr.Get(this.ent.id, this.ent.gen).unitGroup;
-        public readonly ref bool pathFollow => ref this.componentRuntime.pathFollow;
+        public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.Get(this.ent.id, this.ent.gen).unitCommandGroup;
+        public readonly ref Ent unitSelectionGroup => ref this.unitSelectionGroupDataPtr.Get(this.ent.id, this.ent.gen).unitSelectionGroup;
+        
         public readonly ref bool collideWithEnd => ref this.componentRuntime.collideWithEnd;
         public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
 
-        public readonly bool RemoveFromGroup() => Utils.RemoveFromGroup(in this);
+        public readonly bool RemoveFromCommandGroup() => UnitUtils.RemoveFromCommandGroup(in this);
 
-        public readonly bool WillRemoveGroup() => Utils.WillRemoveGroup(in this);
+        public readonly bool WillRemoveCommandGroup() => UnitUtils.WillRemoveCommandGroup(in this);
+
+        public readonly bool RemoveFromSelectionGroup() => UnitUtils.RemoveFromSelectionGroup(in this);
+
+        public readonly bool WillRemoveSelectionGroup() => UnitUtils.WillRemoveSelectionGroup(in this);
+
+        public readonly bool IsPathFollow {
+            get => this.ent.Has<PathFollowComponent>();
+            set => this.ent.SetTag<PathFollowComponent>(value);
+        }
+
+        public bool IsHold {
+            get => this.ent.Has<UnitHoldComponent>();
+            set => this.ent.SetTag<UnitHoldComponent>(value);
+        }
 
         [INLINE(256)]
-        public void Hit(float damage) {
+        public void Hit(float damage, in Ent source) {
             if (this.health > 0f) {
-                //JobUtils.Decrement(ref this.health, damage);
-                this.health -= damage;
+                JobUtils.Decrement(ref this.health, damage);
+                this.ent.SetOneShot(new DamageTookComponent() {
+                    sourceUnit = source,
+                }, OneShotType.NextTick);
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, in this.ent.Read<UnitHealthComponent>().effectOnHit);
             }

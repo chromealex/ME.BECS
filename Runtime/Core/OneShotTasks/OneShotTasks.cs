@@ -1,6 +1,9 @@
+using Unity.Collections;
+
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Collections.LowLevel.Unsafe;
     
     public unsafe partial struct OneShotTasks {
 
@@ -13,62 +16,83 @@ namespace ME.BECS {
         private MemArrayThreadCacheLine<ThreadItem> threadItems;
 
         [INLINE(256)]
-        public void Add<T>(State* state, in Ent ent, in T data, OneShotType type) where T : unmanaged, IComponent {
+        public void Add<T>(State* state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             var dataPtr = new MemAllocatorPtr();
             if (type == OneShotType.NextTick) dataPtr.Set(ref state->allocator, in data);
-            this.Add(state, in ent, StaticTypes<T>.typeId, StaticTypes<T>.groupId, dataPtr, type);
+            this.Add(state, in ent, StaticTypes<T>.typeId, StaticTypes<T>.groupId, updateType, dataPtr, type);
 
         }
 
         [INLINE(256)]
-        public void Add(State* state, in Ent ent, uint typeId, uint groupId, MemAllocatorPtr data, OneShotType type) {
+        public void Add(State* state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
             var threadIndex = Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex;
-            Journal.SetOneShotComponent(ent.World.id, in ent, typeId, type);
+            Journal.SetOneShotComponent(in ent, typeId, type);
             this.threadItems[state, threadIndex].items.Add(ref state->allocator, new Task() {
                 typeId = typeId,
                 groupId = groupId,
                 ent = ent,
                 type = type,
                 data = data,
+                updateType = updateType,
             });
 
         }
 
         [INLINE(256)]
         [NotThreadSafe]
-        public void ResolveTasks(State* state, OneShotType type) {
+        public void ResolveTasks(State* state, OneShotType type, ushort updateType) {
 
+            E.THREAD_CHECK("ResolveTasks");
+            
+            var capacity = (int)this.threadItems.Length;
+            var temp = new UnsafeList<Task>(capacity, Constants.ALLOCATOR_TEMP);
+            var tempContains = new UnsafeHashSet<Task>(capacity, Constants.ALLOCATOR_TEMP);
             for (uint i = 0; i < this.threadItems.Length; ++i) {
                 
                 ref var threadItem = ref this.threadItems[state, i];
                 for (int j = (int)threadItem.items.Count - 1; j >= 0; --j) {
 
                     var item = threadItem.items[state, (uint)j];
-                    if (item.type == type) {
+                    if (item.type == type && item.updateType == updateType) {
                         switch (type) {
                             case OneShotType.CurrentTick:
                                 // if we processing current tick - remove component
-                                Journal.ResolveOneShotComponent(item.ent.World.id, in item.ent, item.typeId, type);
-                                state->batches.Remove(item.ent.id, item.ent.gen, item.typeId, item.groupId, state);
+                                if (item.ent.IsAlive() == true) {
+                                    Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
+                                    state->batches.Remove(in item.ent, item.typeId, item.groupId, state);
+                                }
+                                item.Dispose(ref state->allocator);
                                 break;
 
                             case OneShotType.NextTick:
-                                Journal.ResolveOneShotComponent(item.ent.World.id, in item.ent, item.typeId, type);
-                                // if we processing begin of tick - add component
-                                state->batches.Set(item.ent.id, item.ent.gen, item.typeId, item.GetData(state), state);
-                                // add new task to remove at the end of the tick
-                                this.Add(state, in item.ent, item.typeId, item.groupId, default, OneShotType.CurrentTick);
-                                item.Dispose(ref state->allocator);
+                                if (tempContains.Add(item) == true) {
+                                    temp.Add(item);
+                                }
                                 break;
                         }
                         threadItem.items.RemoveAtFast(in state->allocator, (uint)j);
                     }
 
                 }
+
+            }
+
+            { // sort
+                temp.Sort();
+            }
+
+            foreach (var item in temp) {
+
+                Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
+                // if we processing begin of tick - add component
+                state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
+                // add new task to remove at the end of the tick
+                this.Add(state, in item.ent, item.typeId, item.groupId, item.updateType, default, OneShotType.CurrentTick);
+                item.Dispose(ref state->allocator);
 
             }
 

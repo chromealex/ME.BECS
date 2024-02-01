@@ -10,10 +10,15 @@ namespace ME.BECS.Pathfinding {
 
         public ME.BECS.Addons.ObjectReference<AgentTypesConfig> agentTypesConfig;
 
+        [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeArray<Ent> graphs;
+        [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeArray<ME.BECS.Units.AgentType> types;
         public Heights heights;
-        
+        public Unity.Collections.NativeArray<bool> changedChunks;
+
+        public int obstaclesTreeIndex;
+
         public void OnAwake(ref SystemContext context) {
 
             Heights heights = default;
@@ -42,6 +47,9 @@ namespace ME.BECS.Pathfinding {
                 this.types[i] = agentConfig;
             }
 
+            var chunksLength = graphProperties.chunksCountX * graphProperties.chunksCountY;
+            this.changedChunks = new Unity.Collections.NativeArray<bool>((int)chunksLength, Unity.Collections.Allocator.Persistent);
+
             var deps = Unity.Jobs.JobHandle.CombineDependencies(dependencies);
             context.SetDependency(deps);
             
@@ -49,6 +57,7 @@ namespace ME.BECS.Pathfinding {
         
         public void OnDestroy(ref SystemContext context) {
 
+            this.changedChunks.Dispose();
             this.graphs.Dispose();
             this.types.Dispose();
             this.heights.Dispose();

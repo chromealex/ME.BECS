@@ -31,6 +31,7 @@ namespace ME.BECS.Bullets {
         /// <summary>
         /// Create bullet entity
         /// </summary>
+        /// <param name="sourceUnit">Source unit</param>
         /// <param name="position">Initial bullet position</param>
         /// <param name="rotation">Initial bullet rotation</param>
         /// <param name="targetsMask">Targets tree mask</param>
@@ -42,7 +43,7 @@ namespace ME.BECS.Bullets {
         /// <param name="muzzleLifetime">Muzzle lifetime</param>
         /// <returns></returns>
         [INLINE(256)]
-        public static BulletAspect CreateBullet(in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View view, in View muzzleView, float muzzleLifetime = 0.2f) {
+        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View view, in View muzzleView, float muzzleLifetime = 0.2f) {
 
             {
                 var muzzleEnt = Ent.New();
@@ -66,6 +67,7 @@ namespace ME.BECS.Bullets {
                 var bullet = ent.GetOrCreateAspect<BulletAspect>();
                 bullet.component.targetEnt = target;
                 bullet.component.targetWorldPos = target.IsAlive() == true ? target.GetAspect<TransformAspect>().position : targetPosition;
+                bullet.component.sourceUnit = sourceUnit;
                 return bullet;
             }
 

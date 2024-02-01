@@ -31,7 +31,7 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         private UnsafeList<System.IntPtr> quadTrees;
-        public int treesCount;
+        public int treesCount => this.quadTrees.Length;
 
         [BURST(CompileSynchronously = true)]
         public struct CollectJob : IJobParallelForAspect<QuadTreeAspect, Transforms.TransformAspect> {
@@ -66,19 +66,22 @@ namespace ME.BECS {
 
         }
 
-        public KNN.KnnContainer<Ent>* GetTree(int treeIndex) {
+        public readonly KNN.KnnContainer<Ent>* GetTree(int treeIndex) {
 
             return (KNN.KnnContainer<Ent>*)this.quadTrees[treeIndex];
 
         }
 
+        public int AddTree() {
+
+            this.quadTrees.Add((System.IntPtr)_make(new KNN.KnnContainer<Ent>().Initialize(100, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator)));
+            return this.quadTrees.Length - 1;
+
+        }
+
         public void OnAwake(ref SystemContext context) {
 
-            this.quadTrees = new UnsafeList<System.IntPtr>(this.treesCount, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
-            this.quadTrees.Length = this.treesCount;
-            for (int i = 0; i < this.treesCount; ++i) {
-                this.quadTrees[i] = (System.IntPtr)_make(new KNN.KnnContainer<Ent>().Initialize(100, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator));
-            }
+            this.quadTrees = new UnsafeList<System.IntPtr>(10, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
             
         }
 
@@ -96,14 +99,14 @@ namespace ME.BECS {
             var job = new ApplyJob() {
                 quadTrees = this.quadTrees,
             };
-            var resultHandle = job.Schedule(this.treesCount, 1, handle);
+            var resultHandle = job.Schedule(this.quadTrees.Length, 1, handle);
             context.SetDependency(resultHandle);
 
         }
 
         public void OnDestroy(ref SystemContext context) {
 
-            for (int i = 0; i < this.treesCount; ++i) {
+            for (int i = 0; i < this.quadTrees.Length; ++i) {
                 var item = (KNN.KnnContainer<Ent>*)this.quadTrees[i];
                 item->Dispose();
                 _free(item);

@@ -28,7 +28,7 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<ReloadedComponent>().ScheduleParallelFor<ReloadJob, AttackAspect>(new ReloadJob() {
+            var dependsOn = context.Query().Without<ReloadedComponent>().ScheduleParallelFor<ReloadJob, AttackAspect>(new ReloadJob() {
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);

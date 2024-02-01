@@ -14,10 +14,11 @@ namespace ME.BECS {
             [NativeDisableUnsafePtrRestriction]
             public State* state;
             public OneShotType type;
+            public ushort updateType;
 
             public void Execute() {
 
-                this.state->oneShotTasks.ResolveTasks(this.state, this.type);
+                this.state->oneShotTasks.ResolveTasks(this.state, this.type, this.updateType);
 
             }
 
@@ -25,20 +26,13 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [NotThreadSafe]
-        public static JobHandle ResolveTasks(State* state, OneShotType type, JobHandle dependsOn) {
-            if (dependsOn.IsCompleted == true) {
-                new ResolveTasksJob() {
-                    state = state,
-                    type = type,
-                }.Execute();
-                return dependsOn;
-            } else {
-                var job = new ResolveTasksJob() {
-                    state = state,
-                    type = type,
-                };
-                return job.ScheduleSingleByRef(dependsOn);
-            }
+        public static JobHandle ResolveTasks(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
+            var job = new ResolveTasksJob() {
+                state = state,
+                type = type,
+                updateType = updateType,
+            };
+            return job.ScheduleSingleByRef(dependsOn);
         }
 
     }

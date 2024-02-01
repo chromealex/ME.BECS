@@ -203,12 +203,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly bool Contains<U>(in MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<T> {
+        public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
             E.IS_CREATED(this);
             for (uint i = 0, cnt = this.Count; i < cnt; ++i) {
 
-                if (obj.Equals(this.arr[in allocator, i]) == true) {
+                if (obj.Equals(this.arr[i]) == true) {
 
                     return true;
 
@@ -337,36 +337,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void AddRange(in ListAuto<uint> collection, uint fromIdx, uint toIdx) {
-
-            E.IS_CREATED(this);
-            E.IS_CREATED(collection);
-            
-            var index = this.Count;
-            
-            var state = this.ent.World.state;
-            var srcOffset = fromIdx;
-            var count = toIdx - fromIdx;
-            if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                if (index < this.Count) {
-                    state->allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
-                }
-
-                if (this.arr.arrPtr == collection.arr.arrPtr) {
-                    state->allocator.MemMove(this.arr.arrPtr, index * size, this.arr.arrPtr, 0, index * size);
-                    state->allocator.MemMove(this.arr.arrPtr, (index * 2) * size, this.arr.arrPtr, (index + count) * size, (this.Count - index) * size);
-                } else {
-                    collection.CopyTo(this.arr.arrPtr, srcOffset, index, count);
-                }
-
-                this.Count += count;
-            }
-            
-        }
-
-        [INLINE(256)]
         public void AddRange(in UnsafeList<T> collection) {
 
             E.IS_CREATED(this);
@@ -446,7 +416,7 @@ namespace ME.BECS {
             
             E.IS_CREATED(this);
 
-            const int size = sizeof(uint);
+            var size = TSize<T>.size;
             this.ent.World.state->allocator.MemCopy(arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
             
         }

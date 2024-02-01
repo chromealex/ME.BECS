@@ -22,6 +22,8 @@ namespace ME.BECS {
         public ulong tick;
         public WorldState worldState;
         public byte tickCheck;
+        public ushort updateType;
+        public WorldMode mode;
 
         public bool IsCreated => this.tick != 0UL;
 
@@ -71,6 +73,7 @@ namespace ME.BECS {
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             this.random = RandomData.Create(statePtr);
             this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.entitiesCapacity);
+            this.mode = stateProperties.mode;
             return this;
 
         }
@@ -80,11 +83,13 @@ namespace ME.BECS {
 
             public World world;
             public WorldState worldState;
+            public ushort updateType;
             
             public void Execute() {
                 if (this.worldState == WorldState.BeginTick) Context.Switch(in this.world);
                 this.world.state->worldState = this.worldState;
                 this.world.state->tickCheck = 1;
+                this.world.state->updateType = this.updateType;
             }
 
         }
@@ -120,10 +125,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Unity.Jobs.JobHandle SetWorldState(in World world, WorldState worldState, Unity.Jobs.JobHandle dependsOn) {
+        public static Unity.Jobs.JobHandle SetWorldState(in World world, WorldState worldState, ushort updateType, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new SetWorldStateJob() {
                 world = world,
                 worldState = worldState,
+                updateType = updateType,
             }.ScheduleSingleDeps(dependsOn);
             return dependsOn;
         }

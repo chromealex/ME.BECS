@@ -51,24 +51,8 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         internal static JobHandle PathUpdate(in World world, ref Path path, in Ent graph, MemArrayAuto<bool> chunksToUpdate, in Filter filter, Unity.Collections.NativeReference<bool> updateRequired, JobHandle dependsOn = default) {
 
-            var root = graph.Read<RootGraphComponent>();
+            CollectStartPortals(in world, ref path, in graph, chunksToUpdate);
             
-            // collect all different unique areas in this chunk
-            path.from.As(in world.state->allocator).Clear();
-            var pointsAreas = new Unity.Collections.NativeHashSet<uint2>(4, Unity.Collections.Allocator.Temp);
-            for (int i = 0; i < chunksToUpdate.Length; ++i) {
-                if (chunksToUpdate[i] == true) {
-                    var chunk = root.chunks[world.state, i];
-                    for (uint j = 0; j < chunk.portals.list.Count; ++j) {
-                        var portal = chunk.portals.list[world.state, j];
-                        var key = new uint2(portal.portalInfo.chunkIndex, portal.area);
-                        if (pointsAreas.Add(key) == true) {
-                            path.from.As(in world.state->allocator).Add(ref world.state->allocator, portal.position);
-                        }
-                    }
-                }
-            }
-
             // construct missed chunks
             dependsOn = new PathJob() {
                 needToRepath = updateRequired,
@@ -83,26 +67,43 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static void PathUpdateSync(in World world, ref Path path, in Ent graph, MemArrayAuto<bool> chunksToUpdate, in Filter filter, Unity.Collections.NativeReference<bool> updateRequired) {
-
-            var root = graph.Read<RootGraphComponent>();
+        private static void CollectStartPortals(in World world, ref Path path, in Ent graph, MemArrayAuto<bool> chunksToUpdate) {
             
+            var root = graph.Read<RootGraphComponent>();
+
+            var toPoint = path.to;
+
             // collect all different unique areas in this chunk
             path.from.As(in world.state->allocator).Clear();
-            var pointsAreas = new Unity.Collections.NativeHashSet<uint2>(4, Unity.Collections.Allocator.Temp);
+            var pointsAreas = new Unity.Collections.NativeHashMap<uint2, Portal>(4, Unity.Collections.Allocator.Temp);
             for (int i = 0; i < chunksToUpdate.Length; ++i) {
                 if (chunksToUpdate[i] == true) {
                     var chunk = root.chunks[world.state, i];
                     for (uint j = 0; j < chunk.portals.list.Count; ++j) {
                         var portal = chunk.portals.list[world.state, j];
                         var key = new uint2(portal.portalInfo.chunkIndex, portal.area);
-                        if (pointsAreas.Add(key) == true) {
-                            path.from.As(in world.state->allocator).Add(ref world.state->allocator, portal.position);
+                        if (pointsAreas.TryAdd(key, portal) == false) {
+                            var d = math.lengthsq(portal.position - toPoint);
+                            var dist = math.lengthsq(pointsAreas[key].position - toPoint);
+                            if (d < dist) {
+                                pointsAreas[key] = portal;
+                            }
                         }
                     }
                 }
             }
 
+            foreach (var kv in pointsAreas) {
+                path.from.As(in world.state->allocator).Add(ref world.state->allocator, kv.Value.position);
+            }
+
+        }
+
+        [INLINE(256)]
+        public static void PathUpdateSync(in World world, ref Path path, in Ent graph, MemArrayAuto<bool> chunksToUpdate, in Filter filter, Unity.Collections.NativeReference<bool> updateRequired) {
+
+            CollectStartPortals(in world, ref path, in graph, chunksToUpdate);
+            
             // construct missed chunks
             new PathJob() {
                 needToRepath = updateRequired,
@@ -194,7 +195,9 @@ namespace ME.BECS.Pathfinding {
             var item = chunk.flowField[world.state, nodeIndex];
             complete = (item.direction == Graph.TARGET_BYTE);
             if (item.hasLineOfSight == true) {
-                return math.normalizesafe(path.to - position);
+                var to = path.to;
+                to.y = position.y;
+                return math.normalizesafe(to - position);
             }
             return GetDirection(item.direction);
 
@@ -783,7 +786,7 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        internal static float3 GetPosition(in RootGraphComponent root, in ChunkComponent chunk, uint index) {
+        public static float3 GetPosition(in RootGraphComponent root, in ChunkComponent chunk, uint index) {
 
             var x = index % root.chunkWidth;
             var y = index / root.chunkWidth;
@@ -920,6 +923,7 @@ namespace ME.BECS.Pathfinding {
         public static JobHandle Build(in World world, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default) {
 
             graph = Ent.New();
+            graph.Set<TransformAspect>();
             return Build(in graph, in heights, in world, in properties, in agentConfig, dependsOn);
 
         }
@@ -1007,14 +1011,13 @@ namespace ME.BECS.Pathfinding {
                 obstaclesQuery = Ent.New(),
             };
             graphComponent.obstaclesQuery.SetParent(graph);
-            graphComponent.obstaclesQuery.Set<TransformAspect>();
-            graphComponent.obstaclesQuery.Set<QuadTreeQueryAspect>();
-            var tr = graphComponent.obstaclesQuery.GetAspect<TransformAspect>();
+            graphComponent.obstaclesQuery.Set(new ChunkObstacleQuery());
+            var tr = graphComponent.obstaclesQuery.GetOrCreateAspect<TransformAspect>();
             tr.position = center;
-            var query = graphComponent.obstaclesQuery.GetAspect<QuadTreeQueryAspect>();
+            var query = graphComponent.obstaclesQuery.GetOrCreateAspect<QuadTreeQueryAspect>();
             var size = new float3(root.chunkWidth * root.nodeSize * 0.5f, 0f, root.chunkHeight * root.nodeSize * 0.5f);
             query.query.ignoreY = true;
-            query.query.treeMask = 1 << 1;
+            query.query.treeMask = 0;//1 << buildGraphSystem.obstaclesTreeIndex;
             query.query.range = math.length(size) * 2f;
             
             UpdateChunk(in world, in graph, chunkIndex, ref graphComponent, default, true);

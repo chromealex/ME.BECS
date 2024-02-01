@@ -23,19 +23,20 @@ namespace ME.BECS {
         public RefRW(in World world) {
             this = world.state->components.GetRW<T>(world.state, world.id);
         }
-        
+
         [INLINE(256)]
         public readonly ref T Get(uint entId, ushort gen) {
             E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, entId, gen, out var isNew);
+            var ent = new Ent(entId, gen, this.worldId);
+            ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, in ent, out var isNew);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
-                Journal.CreateComponent<T>(this.worldId, new Ent(entId, gen, this.worldId), in res);
-                this.state->batches.Set_INTERNAL(typeId, entId, this.state);
+                Journal.CreateComponent<T>(in ent, in res);
+                this.state->batches.Set_INTERNAL(typeId, ent.id, this.state);
             } else {
-                Journal.UpdateComponent<T>(this.worldId, new Ent(entId, gen, this.worldId), in res);
+                Journal.UpdateComponent<T>(in ent, in res);
             }
             return ref res;
         }
@@ -100,9 +101,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static T GetAspect<T>(this in EntRO ent) where T : unmanaged, IAspect => ent.ent.GetAspect<T>();
+
+        [INLINE(256)]
+        public static T GetOrCreateAspect<T>(this in EntRO ent) where T : unmanaged, IAspect => ent.ent.GetOrCreateAspect<T>();
+
+        [INLINE(256)]
         public static T GetAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
 
             E.IS_ALIVE(in ent);
+            E.IS_VALID_FOR_ASPECT<T>(in ent);
             T aspect = AspectStorage<T>.GetAspect(in ent.World);
             aspect.ent = ent;
             return aspect;

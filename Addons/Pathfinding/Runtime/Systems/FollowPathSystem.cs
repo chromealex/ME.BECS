@@ -10,6 +10,7 @@ namespace ME.BECS.Pathfinding {
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Schedule building a path.")]
+    [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct FollowPathSystem : IUpdate {
 
         public static FollowPathSystem Default => new FollowPathSystem() {
@@ -40,17 +41,17 @@ namespace ME.BECS.Pathfinding {
 
                 var pos = tr.position;
 
-                if (unit.pathFollow == false) {
+                if (unit.IsPathFollow == false) {
                     // just apply rvo direction
                     this.Move(ref tr, ref unit, in float3.zero, false);
                     return;
                 }
 
-                if (unit.unitGroup.IsAlive() == false) {
+                if (unit.unitCommandGroup.IsAlive() == false) {
                     return;
                 }
 
-                var group = unit.unitGroup.GetAspect<UnitGroupAspect>();
+                var group = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
                 var target = group.targets[unit.typeId];
                 if (target.IsAlive() == false) return;
                 
@@ -70,7 +71,7 @@ namespace ME.BECS.Pathfinding {
                     (path.IsCreated == true && complete == true)) {
                     // complete path
                     PathUtils.SetArrived(in unit);
-                    unit.pathFollow = false;
+                    unit.IsPathFollow = false;
                     return;
                 }
 
@@ -87,12 +88,12 @@ namespace ME.BECS.Pathfinding {
             [INLINE(256)]
             private void Move(ref ME.BECS.Transforms.TransformAspect tr, ref UnitAspect unit, in float3 movementDirection, bool isMoving) {
 
-                var desiredDirection = math.normalizesafe(movementDirection * this.followPathSystem.movementForce +  
-                    unit.componentRuntime.collisionDirection * this.followPathSystem.collisionForce + 
-                    unit.componentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
-                    unit.componentRuntime.separationVector * this.followPathSystem.separationForce + 
-                    unit.componentRuntime.avoidanceVector * this.followPathSystem.avoidanceForce + 
-                    unit.componentRuntime.alignmentVector * this.followPathSystem.alignmentForce);
+                var desiredDirection = math.normalizesafe(movementDirection * this.followPathSystem.movementForce + 
+                                                          unit.componentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
+                                                          unit.componentRuntime.collisionDirection * this.followPathSystem.collisionForce +
+                                                          unit.componentRuntime.separationVector * this.followPathSystem.separationForce + 
+                                                          unit.componentRuntime.avoidanceVector * this.followPathSystem.avoidanceForce + 
+                                                          unit.componentRuntime.alignmentVector * this.followPathSystem.alignmentForce);
 
                 unit.componentRuntime.desiredDirection = desiredDirection;
                 var lengthSq = math.lengthsq(unit.componentRuntime.desiredDirection);
@@ -106,8 +107,7 @@ namespace ME.BECS.Pathfinding {
                 }
 
                 if (isMoving == false && lengthSq <= math.EPSILON) {
-                    var accSpeed = unit.deaccelerationSpeed;
-                    unit.speed = math.lerp(unit.speed, 0f, this.dt * accSpeed);
+                    unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.decelerationSpeed);
                 } else {
                     var accSpeed = unit.accelerationSpeed;
                     unit.speed = math.lerp(unit.speed, math.select(0f, math.select(unit.speed * 0.5f, unit.maxSpeed, force * 0.5f > 0.4f), force > 0.5f), this.dt * accSpeed);

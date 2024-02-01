@@ -11,8 +11,8 @@ namespace ME.BECS {
             E.REQUIRED<T>(in ent);
 
             var world = ent.World;
-            Journal.EnableComponent<T>(world.id, in ent);
-            return world.state->batches.Enable<T>(ent.id, ent.gen, world.state);
+            Journal.EnableComponent<T>(in ent);
+            return world.state->batches.Enable<T>(in ent, world.state);
 
         }
 
@@ -23,8 +23,8 @@ namespace ME.BECS {
             E.REQUIRED<T>(in ent);
             
             var world = ent.World;
-            Journal.DisableComponent<T>(world.id, in ent);
-            return world.state->batches.Disable<T>(ent.id, ent.gen, world.state);
+            Journal.DisableComponent<T>(in ent);
+            return world.state->batches.Disable<T>(in ent, world.state);
 
         }
 
@@ -33,8 +33,8 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            Journal.SetComponent<T>(world.id, in ent, in data);
-            return world.state->batches.Set(ent.id, ent.gen, in data, world.state);
+            Journal.SetComponent<T>(in ent, in data);
+            return world.state->batches.Set(in ent, in data, world.state);
 
         }
 
@@ -43,8 +43,8 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            Journal.RemoveComponent<T>(world.id, in ent);
-            return world.state->batches.Remove<T>(ent.id, ent.gen, world.state);
+            Journal.RemoveComponent<T>(in ent);
+            return world.state->batches.Remove<T>(in ent, world.state);
 
         }
 
@@ -53,7 +53,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return ref world.state->batches.Get<T>(ent.id, ent.gen, world.state);
+            return ref world.state->batches.Get<T>(in ent, world.state);
 
         }
 
@@ -94,6 +94,19 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
+        public static void SetTag<T>(in this Ent ent, bool value) where T : unmanaged, IComponent {
+
+            E.IS_ALIVE(ent);
+            if (value == true) {
+                T comp = default;
+                ent.Set(comp);
+            } else {
+                ent.Remove<T>();
+            }
+
+        }
+        
     }
 
 }

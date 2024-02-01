@@ -324,8 +324,8 @@ namespace ME.BECS.Views {
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             var hasChanged = instanceObj.groupChangedTracker.HasChanged(in ent);
             if (hasChanged == true) {
-                instanceObj.DoApplyState(in ent);
-                if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in ent);
+                instanceObj.DoApplyState(ent);
+                if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(ent);
             }
             
         }
@@ -334,8 +334,8 @@ namespace ME.BECS.Views {
         public void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
             
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            instanceObj.DoOnUpdate(in ent, dt);
-            if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(in ent, dt);
+            instanceObj.DoOnUpdate(ent, dt);
+            if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
             
         }
 

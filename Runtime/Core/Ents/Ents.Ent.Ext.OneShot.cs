@@ -42,8 +42,8 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            var result = (type == OneShotType.CurrentTick && world.state->batches.Set(ent.id, ent.gen, in data, world.state));
-            world.state->oneShotTasks.Add(world.state, in ent, in data, type);
+            var result = (type == OneShotType.CurrentTick && world.state->batches.Set(in ent, in data, world.state));
+            world.state->oneShotTasks.Add(world.state, in ent, in data, world.state->updateType, type);
             return result;
 
         }

@@ -37,7 +37,7 @@ namespace ME.BECS.Views {
         public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, Ent parentEnt, in World world) {
 
             var ent = Ent.New(world);
-            var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+            var tr = ent.GetOrCreateAspect<ME.BECS.Transforms.TransformAspect>();
             ent.SetParent(parentEnt);
             tr.Set(prefab);
             if (parentEnt.IsAlive() == true) {

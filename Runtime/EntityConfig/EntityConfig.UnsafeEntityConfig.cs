@@ -74,7 +74,7 @@ namespace ME.BECS {
                     var dataSize = StaticTypes.sizes.Get(typeId);
                     var sharedTypeId = StaticTypes.sharedTypeId.Get(typeId);
                     var hash = this.hashes[i];
-                    state->batches.SetShared(ent.id, groupId, data, dataSize, typeId, sharedTypeId, state, hash);
+                    state->batches.SetShared(in ent, groupId, data, dataSize, typeId, sharedTypeId, state, hash);
                 }
 
             }
@@ -145,7 +145,7 @@ namespace ME.BECS {
                 for (uint i = 0; i < this.count; ++i) {
                     var data = this.data + this.offsets[i];
                     var typeId = this.typeIds[i];
-                    state->batches.Set(ent.id, ent.gen, typeId, data, state);
+                    state->batches.Set(in ent, typeId, data, state);
                 }
 
             }
@@ -342,7 +342,7 @@ namespace ME.BECS {
                 StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
                 var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                 var ptr = gcHandle.AddrOfPinnedObject();
-                state->batches.Set(staticDataEnt.id, staticDataEnt.gen, typeId, (void*)ptr, staticDataEnt.World.state);
+                state->batches.Set(in this.staticDataEnt, typeId, (void*)ptr, staticDataEnt.World.state);
                 gcHandle.Free();
             }
 

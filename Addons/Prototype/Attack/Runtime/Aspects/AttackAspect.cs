@@ -10,7 +10,6 @@ namespace ME.BECS.Attack {
 
         public ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
         public ref float attackRangeSqr => ref this.component.attackRangeSqr;
-        public ref float sightRangeSqr => ref this.component.sightRangeSqr;
         
         public Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 

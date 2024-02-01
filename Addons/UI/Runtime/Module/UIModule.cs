@@ -28,7 +28,7 @@ namespace ME.BECS {
         
         public override void OnAwake(ref World world) {
 
-            this.uiWorld = World.Create(this.properties);
+            this.uiWorld = World.Create(this.properties, false);
 
         }
 

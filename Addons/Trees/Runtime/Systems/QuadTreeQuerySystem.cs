@@ -50,7 +50,8 @@ namespace ME.BECS {
     }
     
     [BURST(CompileSynchronously = true)]
-    public unsafe struct QuadTreeQuerySystem : IAwake, IUpdate {
+    [RequiredDependencies(typeof(QuadTreeInsertSystem))]
+    public unsafe struct QuadTreeQuerySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
         public struct Job : IJobParallelForAspect<QuadTreeQueryAspect> {
@@ -99,18 +100,11 @@ namespace ME.BECS {
 
         }
         
-        private QuadTreeInsertSystem querySystem;
-        
-        public void OnAwake(ref SystemContext context) {
-
-            this.querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            
-        }
-
         public void OnUpdate(ref SystemContext context) {
 
+            var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
             var handle = API.Query(in context).ScheduleParallelFor<Job, QuadTreeQueryAspect>(new Job() {
-                system = this.querySystem,
+                system = querySystem,
             });
             context.SetDependency(handle);
 

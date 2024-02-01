@@ -35,6 +35,9 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> staticTypeIdBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10204);
         public static ref ME.BECS.Internal.Array<uint> staticTypeId => ref staticTypeIdBurst.Data;
 
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<System.IntPtr>> defaultValuesBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<System.IntPtr>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<System.IntPtr>>.align, 10205);
+        public static ref ME.BECS.Internal.Array<System.IntPtr> defaultValues => ref defaultValuesBurst.Data;
+
     }
 
     public struct StaticSharedTypes {
@@ -178,9 +181,21 @@ namespace ME.BECS {
                 StaticTypes.sizes.Get(StaticTypes<T>.typeId) = isTag == true ? 0u : TSize<T>.size;
                 StaticTypes.groups.Resize(StaticTypes<T>.typeId + 1u);
                 StaticTypes.groups.Get(StaticTypes<T>.typeId) = groupId;
+                StaticTypes.defaultValues.Resize(StaticTypes<T>.typeId + 1u);
                 StaticTypes<T>.AddTypeToCache();
             }
 
+        }
+
+        [INLINE(256)]
+        public static unsafe void SetDefaultValue(T data) {
+
+            StaticTypesDefaultValue<T>.value.Data = data;
+            StaticTypesHasDefaultValue<T>.value.Data = true; 
+            var defaultValuePtr = (T*)_make(TSize<T>.sizeInt, TAlign<T>.alignInt, Constants.ALLOCATOR_DOMAIN);
+            *defaultValuePtr = StaticTypes<T>.defaultValue;
+            StaticTypes.defaultValues.Get(StaticTypes<T>.typeId) = (System.IntPtr)defaultValuePtr;
+            
         }
 
         [INLINE(256)]

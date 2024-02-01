@@ -10,7 +10,8 @@ namespace ME.BECS.Units {
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Steering behaviour for units.")]
-    public struct SteeringSystem : IUpdate {
+    [RequiredDependencies(typeof(QuadTreeQuerySystem))]
+    public struct SteeringSystem : IUpdate, IDrawGizmos {
 
         public static SteeringSystem Default => new SteeringSystem() {
             calculateAvoidance = true,
@@ -27,6 +28,7 @@ namespace ME.BECS.Units {
         public bool calculateAlignment;
         public float alignmentSpeed;
         public float maxAgentRadius;
+        public bool drawGizmos;
 
         [BURST(CompileSynchronously = true)]
         public unsafe struct Job : ME.BECS.Jobs.IJobParallelForAspect<Transforms.TransformAspect, UnitAspect> {
@@ -51,10 +53,19 @@ namespace ME.BECS.Units {
                 srcPos.y = 0f;
                 for (uint i = 0, size = query.results.results.Count; i < size; ++i) {
                     var ent = query.results.results[this.world.state, i];
+                    if (ent.IsAlive() == false) continue;
                     if (ent == unit.ent) continue;
 
                     var entTr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                     var entUnit = ent.GetAspect<UnitAspect>();
+                    
+                    if (entUnit.IsPathFollow == false && 
+                        entUnit.IsHold == false &&
+                        unit.IsPathFollow == true) {
+                        // unit is not moving and not on hold - so we can skip this unit
+                        // if we are follow the path
+                        continue;
+                    }
                     var targetPos = entTr.position;
                     targetPos.y = 0f;
                     var vec = targetPos - srcPos;
@@ -66,14 +77,14 @@ namespace ME.BECS.Units {
                     // check collide with end
                     // if unit collides with another unit which stops
                     // and belongs to the same group
-                    var isGroupEquals = entUnit.pathFollow == false &&
-                                        entUnit.unitGroup == unit.unitGroup;
+                    var isGroupEquals = entUnit.IsPathFollow == false &&
+                                        entUnit.unitCommandGroup == unit.unitCommandGroup;
 
-                    var radiusSumSq = unit.radius + entUnit.radius;
-                    radiusSumSq *= radiusSumSq;
+                    var radiusSum = unit.radius + entUnit.radius;
+                    var radiusSumSq = radiusSum * radiusSum;
                     
                     var lengthSqr = math.lengthsq(vec);
-                    if (isGroupEquals == false && lengthSqr <= rangeSq) {
+                    if (isGroupEquals == false && lengthSqr <= rangeSq && unit.IsPathFollow == true) {
                         var isFacing = IsFacing(tr.right, normal, facingCone);
                         var relativePos = srcPos - targetPos;
                         var relativeVel = unit.velocity - entUnit.velocity;
@@ -116,10 +127,14 @@ namespace ME.BECS.Units {
                             }
                         }
                     }
-                    if (lengthSqr <= radiusSumSq) {
+
+                    var length = math.sqrt(lengthSqr);
+                    if (length <= radiusSum) {
                         {
                             // move to normal
-                            collisionDir += -normal * unit.radius;
+                            var collision = -normal * (radiusSum - length);
+                            collisionDir += collision;
+                            //tr.position += collision;
                         }
                         {
                             // set the flag
@@ -156,12 +171,27 @@ namespace ME.BECS.Units {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).ScheduleParallelFor<Job, Transforms.TransformAspect, UnitAspect>(new Job() {
+            var dependsOn = API.Query(in context).Without<UnitHoldComponent>().ScheduleParallelFor<Job, Transforms.TransformAspect, UnitAspect>(new Job() {
                 world = context.world,
                 system = this,
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);
+            
+        }
+
+        public void OnDrawGizmos(ref SystemContext context) {
+
+            if (this.drawGizmos == false) return;
+            
+            var arr = API.Query(in context).Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<Transforms.TransformAspect>().ToArray();
+            foreach (var unitEnt in arr) {
+
+                var tr = unitEnt.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                var unit = unitEnt.GetAspect<UnitAspect>();
+                UnityEngine.Gizmos.DrawWireSphere(tr.position, unit.radius);
+
+            }
             
         }
 

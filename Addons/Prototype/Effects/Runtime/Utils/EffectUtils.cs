@@ -1,9 +1,8 @@
-
-using ME.BECS.Views;
-
 namespace ME.BECS.Effects {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using ME.BECS.Views;
+    using ME.BECS.Transforms;
     using Unity.Mathematics;
 
     public static class EffectUtils {
@@ -19,7 +18,7 @@ namespace ME.BECS.Effects {
             var ent = Ent.New();
             effect.config.Apply(ent);
             ent.InstantiateView(effect.view);
-            var tr = ent.GetOrCreateAspect<ME.BECS.Transforms.TransformAspect>();
+            var tr = ent.GetOrCreateAspect<TransformAspect>();
             tr.position = position;
             tr.rotation = rotation;
             ent.Destroy(effect.lifetime);

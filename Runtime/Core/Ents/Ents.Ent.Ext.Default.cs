@@ -26,7 +26,7 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             {
-                state->entities.Remove(state, ent.id);
+                state->entities.Remove(state, in ent);
             }
             JobUtils.Lock(ref state->components.lockSharedIndex);
             {

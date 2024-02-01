@@ -9,7 +9,8 @@ namespace ME.BECS.Units {
         public float radius;
         public float avoidanceRange;
         public float maxSlope;
-        
+        public float height;
+
     }
 
 }

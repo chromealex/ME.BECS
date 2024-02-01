@@ -18,6 +18,9 @@ namespace ME.BECS {
         [UnityEngine.MinAttribute(0)]
         [UnityEngine.Tooltip("Resize shared components storage. Set up this value to fit max shared components count.")]
         public uint sharedComponentsCapacity;
+        [UnityEngine.MinAttribute(0)]
+        [UnityEngine.Tooltip("Use Logic for logic worlds, Visual for client-only local worlds.")]
+        public WorldMode mode;
 
     }
 
@@ -40,6 +43,7 @@ namespace ME.BECS {
                 storageCapacity = 1u,
                 queriesCapacity = 100u,
                 sharedComponentsCapacity = 10u,
+                mode = WorldMode.Logic,
             },
             allocatorProperties = new AllocatorProperties() {
                 sizeInBytesCapacity = 1024 * 1024, // 1MB

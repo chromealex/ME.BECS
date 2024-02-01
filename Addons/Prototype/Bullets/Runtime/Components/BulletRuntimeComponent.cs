@@ -10,7 +10,11 @@ namespace ME.BECS.Bullets {
         /// </summary>
         public Ent targetEnt;
         public float3 targetWorldPos;
-        
+        /// <summary>
+        /// Unit source
+        /// </summary>
+        public Ent sourceUnit;
+
     }
     
 }

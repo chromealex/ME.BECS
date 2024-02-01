@@ -16,6 +16,7 @@ namespace ME.BECS {
         public const string ALLOCATOR_VALIDATION = "ALLOCATOR_VALIDATION";
         public const string SPARSESET_VALIDATION = "SPARSESET_VALIDATION";
         public const string EXCEPTIONS_THREAD_SAFE = "EXCEPTIONS_THREAD_SAFE";
+        public const string EXCEPTIONS_ASPECTS = "EXCEPTIONS_ASPECTS";
 
     }
 

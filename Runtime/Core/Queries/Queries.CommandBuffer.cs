@@ -122,7 +122,7 @@ namespace ME.BECS {
         private readonly ushort entGen;
         public readonly CommandBuffer* buffer;
         public uint Count => this.buffer->count;
-        public Ent ent => new Ent(this.entId, this.buffer->state, this.buffer->worldId);
+        public Ent ent => new Ent(this.entId, this.entGen, this.buffer->worldId);
         
         [INLINE(256)]
         public CommandBufferJob(in uint entId, ushort gen, CommandBuffer* buffer) {
@@ -203,55 +203,55 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref readonly T Read<T>(uint entId, ushort gen) where T : unmanaged, IComponent {
+        public ref readonly T Read<T>(uint id, ushort gen) where T : unmanaged, IComponent {
 
-            return ref this.state->components.Read<T>(this.state, entId, gen);
+            return ref this.state->components.Read<T>(this.state, id, gen);
 
         }
 
         [INLINE(256)]
-        public ref T Get<T>(uint entId, ushort gen) where T : unmanaged, IComponent {
+        public ref T Get<T>(uint id, ushort gen) where T : unmanaged, IComponent {
             
-            if (this.sync == false && this.Has<T>(entId, gen, checkEnabled: true) == false) {
+            if (this.sync == false && this.Has<T>(id, gen, checkEnabled: true) == false) {
                 E.THREAD_CHECK(nameof(this.Get));
             }
             E.IS_IN_TICK(this.state);
-            ref var res = ref this.state->components.Get<T>(this.state, entId, gen);
-            return ref res;
+            var ent = new Ent(id, gen, this.worldId);
+            return ref this.state->components.Get<T>(this.state, ent);
 
         }
 
         [INLINE(256)]
-        public bool Set<T>(uint entId, ushort gen, in T data) where T : unmanaged, IComponent {
+        public bool Set<T>(uint id, ushort gen, in T data) where T : unmanaged, IComponent {
 
-            if (this.sync == false && this.Has<T>(entId, gen, checkEnabled: true) == false) {
+            if (this.sync == false && this.Has<T>(id, gen, checkEnabled: true) == false) {
                 E.THREAD_CHECK(nameof(this.Set));
                 return false;
             }
             E.IS_IN_TICK(this.state);
-            var res = this.state->components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, entId, gen, in data);
-            return res;
+            var ent = new Ent(id, gen, this.worldId);
+            return this.state->components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent, in data);
 
         }
 
         [INLINE(256)]
-        public bool Remove<T>(uint entId, ushort gen) where T : unmanaged, IComponent {
+        public bool Remove<T>(uint id, ushort gen) where T : unmanaged, IComponent {
 
             if (this.sync == false) {
                 E.THREAD_CHECK(nameof(this.Remove));
                 return false;
             } else {
                 E.IS_IN_TICK(this.state);
-                var res = this.state->components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, entId, gen);
-                return res;
+                var ent = new Ent(id, gen, this.worldId);
+                return this.state->components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent);
             }
 
         }
 
         [INLINE(256)]
-        public bool Has<T>(uint entId, ushort gen, bool checkEnabled) where T : unmanaged, IComponent {
+        public bool Has<T>(uint id, ushort gen, bool checkEnabled) where T : unmanaged, IComponent {
 
-            return this.state->components.Has<T>(this.state, entId, gen, checkEnabled);
+            return this.state->components.Has<T>(this.state, id, gen, checkEnabled);
 
         }
 

@@ -6,6 +6,16 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
+    public class RequiredDependenciesAttribute : System.Attribute {
+
+        public System.Type[] types;
+
+        public RequiredDependenciesAttribute(params System.Type[] types) {
+            this.types = types;
+        }
+
+    }
+
     public readonly struct SystemHandle {
 
         internal readonly uint id;

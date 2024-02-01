@@ -24,6 +24,27 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         this.Add(label);
 
                     }
+                    
+                    var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
+                    var types = new System.Collections.Generic.HashSet<System.Type>();
+                    foreach (var dep in dependenciesAttributes) {
+                        foreach (var depType in dep.types) types.Add(depType);
+                    }
+
+                    if (types.Count > 0) {
+                        var requiredContainer = new UnityEngine.UIElements.VisualElement();
+                        var label = new UnityEngine.UIElements.Label("Dependencies:");
+                        label.AddToClassList("required-dependencies-header");
+                        requiredContainer.Add(label);
+                        requiredContainer.AddToClassList("required-dependencies");
+                        this.Add(requiredContainer);
+                        foreach (var uniqueType in types) {
+                            var typeStr = EditorUtils.GetComponentFullName(uniqueType);
+                            label = new UnityEngine.UIElements.Label($"{typeStr}");
+                            label.AddToClassList("node-required-dependency");
+                            requiredContainer.Add(label);
+                        }
+                    }
 
                 }
 

@@ -331,35 +331,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void AddRange(ref MemoryAllocator allocator, in List<uint> collection, uint fromIdx, uint toIdx) {
-
-            E.IS_CREATED(this);
-            E.IS_CREATED(collection);
-            
-            var index = this.Count;
-            
-            var srcOffset = fromIdx;
-            var count = toIdx - fromIdx;
-            if (count > 0u) {
-                this.EnsureCapacity(ref allocator, this.Count + count);
-                var size = sizeof(T);
-                if (index < this.Count) {
-                    allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
-                }
-
-                if (this.arr.arrPtr == collection.arr.arrPtr) {
-                    allocator.MemMove(this.arr.arrPtr, index * size, this.arr.arrPtr, 0, index * size);
-                    allocator.MemMove(this.arr.arrPtr, (index * 2) * size, this.arr.arrPtr, (index + count) * size, (this.Count - index) * size);
-                } else {
-                    collection.CopyTo(ref allocator, this.arr.arrPtr, srcOffset, index, count);
-                }
-
-                this.Count += count;
-            }
-            
-        }
-
-        [INLINE(256)]
         public void AddRange(ref MemoryAllocator allocator, MemArray<T> collection) {
 
             E.IS_CREATED(this);
@@ -431,7 +402,7 @@ namespace ME.BECS {
             
             E.IS_CREATED(this);
 
-            const int size = sizeof(uint);
+            var size = sizeof(T);
             allocator.MemCopy(arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
             
         }

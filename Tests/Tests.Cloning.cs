@@ -33,6 +33,7 @@ namespace ME.BECS.Tests {
             }
 
             {
+                var prevWorld = world;
                 var cloneWorld = world.Clone();
                 TestAspect.TestInitialize(in cloneWorld);
                 Context.Switch(cloneWorld);
@@ -46,6 +47,7 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(100300, ent.GetAspect<TestAspect>().data.data);
                 Assert.AreEqual(100200, srcEnt.GetAspect<TestAspect>().data.data);
                 cloneWorld.Dispose();
+                Context.Switch(prevWorld);
             }
 
             world.Dispose();
@@ -93,6 +95,7 @@ namespace ME.BECS.Tests {
                 }
                 Assert.AreEqual(100200, srcEnt.GetAspect<TestAspect>().data.data);
                 newWorld.Dispose();
+                Context.Switch(world);
             }
 
             world.Dispose();

@@ -2,7 +2,7 @@ namespace ME.BECS {
 
     internal abstract unsafe class CacheBase {
 
-        public abstract void Apply(State* state, uint entId, ushort entGen);
+        public abstract void Apply(State* state, in Ent ent);
         public abstract void BuildCache(object component);
         public abstract bool Is<TComponent>() where TComponent : unmanaged;
 
@@ -13,8 +13,8 @@ namespace ME.BECS {
         public TComponent data;
         private System.Type type;
         
-        public override void Apply(State* state, uint entId, ushort entGen) {
-            state->batches.Set(entId, entGen, this.data, state);
+        public override void Apply(State* state, in Ent ent) {
+            state->batches.Set(in ent, this.data, state);
         }
 
         public override void BuildCache(object component) {
@@ -33,8 +33,8 @@ namespace ME.BECS {
         public TComponent data;
         private System.Type type;
         
-        public override void Apply(State* state, uint entId, ushort entGen) {
-            state->batches.SetShared<TComponent>(entId, this.data, state);
+        public override void Apply(State* state, in Ent ent) {
+            state->batches.SetShared<TComponent>(in ent, this.data, state);
         }
 
         public override void BuildCache(object component) {

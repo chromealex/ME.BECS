@@ -21,9 +21,9 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public void CopyFrom(State* sourceState, uint sourceId, ushort sourceGen, State* targetState, uint targetId, ushort targetGen) {
+        public void CopyFrom(State* sourceState, in Ent ent, State* targetState, in Ent targetEnt) {
 
-            var srcArchId = sourceState->archetypes.entToArchetypeIdx[sourceState, sourceId];
+            var srcArchId = sourceState->archetypes.entToArchetypeIdx[sourceState, ent.id];
             ref var srcArch = ref sourceState->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
             while (e.MoveNext() == true) {
@@ -31,9 +31,9 @@ namespace ME.BECS {
                 var groupId = StaticTypes.groups.Get(typeId);
                 ref var ptr = ref this.items[in sourceState->allocator, typeId];
                 ref var storage = ref ptr.As<DataDenseSet>(in sourceState->allocator);
-                var data = storage.Get(sourceState, sourceId, sourceGen, true, out _);
-                targetState->components.SetUnknownType(targetState, typeId, groupId, targetId, targetGen, data);
-                targetState->batches.Set_INTERNAL(typeId, targetId, targetState);
+                var data = storage.Get(sourceState, ent.id, ent.gen, true, out _);
+                targetState->components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data);
+                targetState->batches.Set_INTERNAL(typeId, targetEnt.id, targetState);
             }
             
         }
@@ -51,72 +51,72 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public bool SetUnknownType(State* state, uint typeId, uint groupId, uint entId, ushort gen, void* data) {
+        public bool SetUnknownType(State* state, uint typeId, uint groupId, in Ent ent, void* data) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
             ref var ptr = ref this.items[in state->allocator, typeId];
             ref var storage = ref ptr.As<DataDenseSet>(in state->allocator);
-            var isNew = storage.Set(state, entId, gen, data, out var changed);
-            if (changed == true) state->entities.UpVersion(state, entId, groupId);
+            var isNew = storage.Set(state, ent.id, ent.gen, data, out var changed);
+            if (changed == true) state->entities.UpVersion(state, in ent, groupId);
             return isNew;
 
         }
 
         [INLINE(256)]
-        public bool SetUnknownType<T>(State* state, uint typeId, uint groupId, uint entId, ushort gen, in T data) where T : unmanaged, IComponent {
+        public bool SetUnknownType<T>(State* state, uint typeId, uint groupId, in Ent ent, in T data) where T : unmanaged, IComponent {
 
             fixed (T* dataPtr = &data) {
-                return this.SetUnknownType(state, typeId, groupId, entId, gen, dataPtr);
+                return this.SetUnknownType(state, typeId, groupId, in ent, dataPtr);
             }
 
         }
 
         [INLINE(256)]
-        public bool SetState<T>(State* state, uint typeId, uint groupId, uint entId, ushort gen, bool value) where T : unmanaged {
+        public bool SetState<T>(State* state, uint typeId, uint groupId, in Ent ent, bool value) where T : unmanaged {
 
             E.IS_VALID_TYPE_ID(typeId);
             
             ref var ptr = ref this.items[in state->allocator, typeId];
             ref var storage = ref ptr.As<DataDenseSet>(in state->allocator);
-            var res = storage.SetState(state, entId, gen, value);
-            state->entities.UpVersion(state, entId, groupId);
+            var res = storage.SetState(state, ent.id, ent.gen, value);
+            state->entities.UpVersion(state, in ent, groupId);
             return res;
 
         }
 
         [INLINE(256)]
-        public byte* GetUnknownType(State* state, uint typeId, uint groupId, uint entId, ushort gen, out bool isNew) {
+        public byte* GetUnknownType(State* state, uint typeId, uint groupId, in Ent ent, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
 
             ref var ptr = ref this.items[in state->allocator, typeId];
-            return GetUnknownType(state, in ptr, typeId, groupId, entId, gen, out isNew);
+            return GetUnknownType(state, in ptr, typeId, groupId, in ent, out isNew);
 
         }
 
         [INLINE(256)]
-        public static byte* GetUnknownType(State* state, in MemAllocatorPtr storage, uint typeId, uint groupId, uint entId, ushort gen, out bool isNew) {
+        public static byte* GetUnknownType(State* state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state->allocator)->Get(state, entId, gen, false, out isNew);
-            state->entities.UpVersion(state, entId, groupId);
+            var data = storage.AsPtr<DataDenseSet>(in state->allocator)->Get(state, ent.id, ent.gen, false, out isNew);
+            state->entities.UpVersion(state, in ent, groupId);
             return data;
 
         }
 
         [INLINE(256)]
-        public bool RemoveUnknownType(State* state, uint typeId, uint groupId, uint entId, ushort gen) {
+        public bool RemoveUnknownType(State* state, uint typeId, uint groupId, in Ent ent) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
             ref var ptr = ref this.items[state, typeId];
             ref var storage = ref ptr.As<DataDenseSet>(in state->allocator);
-            if (storage.Remove(state, entId, gen) == true) {
-                state->entities.UpVersion(state, entId, groupId);
+            if (storage.Remove(state, ent.id, ent.gen) == true) {
+                state->entities.UpVersion(state, in ent, groupId);
                 return true;
             }
             

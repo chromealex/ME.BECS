@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace ME.BECS.Editor {
     
     using UnityEngine.UIElements;
@@ -138,6 +140,32 @@ namespace ME.BECS.Editor {
                 var val = evt.newValue;
                 if (val <= minValue) val = minValue;
                 prop.uintValue = (uint)val;
+                nameField.value = val;
+                so.ApplyModifiedProperties();
+                so.Update();
+            });
+            container.Add(nameField);
+            
+            DrawTooltip(container, property);
+
+        }
+
+        public static void DrawEnumField<T>(VisualElement foldout, SerializedProperty property) where T : struct, System.Enum {
+
+            var container = new VisualElement();
+            container.AddToClassList("field");
+            foldout.Add(container);
+            
+            var so = property.serializedObject;
+            var prop = property;
+            var nameField = new PopupField<string>(prop.displayName, prop.enumNames.ToList(), 0, (str) => {
+                return prop.enumDisplayNames[System.Array.IndexOf(System.Enum.GetNames(typeof(T)), str)];
+            });
+            nameField.value = prop.enumNames[prop.enumValueIndex];
+            nameField.RegisterValueChangedCallback((evt) => {
+                so.Update();
+                var val = evt.newValue;
+                prop.enumValueIndex = System.Array.IndexOf(System.Enum.GetNames(typeof(T)), val);
                 nameField.value = val;
                 so.ApplyModifiedProperties();
                 so.Update();

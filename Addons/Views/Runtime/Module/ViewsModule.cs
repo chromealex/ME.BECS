@@ -27,11 +27,15 @@ namespace ME.BECS {
         public ViewsModuleProperties properties = ViewsModuleProperties.Default;
         private UnsafeViewsModule<EntityView> viewsGameObjects;
         private UnsafeViewsModule<EntityView> viewsDrawMeshes;
+        private bool isActive;
 
         public override void OnAwake(ref World world) {
+
+            if (this.isActive == true) return;
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects = UnsafeViewsModule<EntityView>.Create(GAMEOBJECT_PROVIDER_ID, ref world, new EntityViewProvider(), this.worldProperties.stateProperties.entitiesCapacity, this.properties);
             if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes = UnsafeViewsModule<EntityView>.Create(DRAW_MESH_PROVIDER_ID, ref world, new DrawMeshProvider(), this.worldProperties.stateProperties.entitiesCapacity, this.properties);
+            this.isActive = true;
 
         }
 
@@ -41,6 +45,8 @@ namespace ME.BECS {
 
         public override JobHandle OnUpdate(JobHandle dependsOn) {
 
+            if (this.isActive == false) return dependsOn;
+            
             var provider1Handle = (this.properties.viewsGameObjects == true ? this.viewsGameObjects.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
             var provider2Handle = (this.properties.viewsDrawMeshes == true ? this.viewsDrawMeshes.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
             return JobHandle.CombineDependencies(provider1Handle, provider2Handle);
@@ -48,9 +54,12 @@ namespace ME.BECS {
         }
 
         public override void OnDestroy() {
+
+            if (this.isActive == false) return;
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects.Dispose();
             if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes.Dispose();
+            this.isActive = false;
 
         }
 

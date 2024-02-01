@@ -170,11 +170,9 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public static Heights Create(float3 offset, UnityEngine.TerrainData terrain, Unity.Collections.Allocator allocator) {
-            
             return new Heights() {
                 data = new GraphHeights(offset, terrain, allocator),
             };
-
         }
 
         [INLINE(256)]

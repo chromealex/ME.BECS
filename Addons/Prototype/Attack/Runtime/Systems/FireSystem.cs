@@ -5,6 +5,7 @@ namespace ME.BECS.Attack {
     using ME.BECS.Transforms;
     using ME.BECS.Jobs;
     using ME.BECS.Bullets;
+    using Unity.Mathematics;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Fire system")]
@@ -18,15 +19,16 @@ namespace ME.BECS.Attack {
                 if (aspect.target.IsAlive() == true) {
 
                     var firePoint = ME.BECS.Bullets.BulletUtils.GetFirePoint(aspect.ent);
-                    var pos = tr.position;
-                    var rot = tr.rotation;
+                    var pos = tr.GetWorldMatrixPosition();
+                    var rot = tr.GetWorldMatrixRotation();
                     if (firePoint.IsAlive() == true) {
                         var firePointTr = firePoint.GetAspect<TransformAspect>();
-                        pos = firePointTr.position;
-                        rot = firePointTr.rotation;
+                        pos = firePointTr.GetWorldMatrixPosition();
+                        rot = firePointTr.GetWorldMatrixRotation();
                     }
 
-                    BulletUtils.CreateBullet(pos, rot, query.query.treeMask, aspect.target, default, aspect.component.bulletConfig, aspect.component.bulletView, aspect.component.muzzleView);
+                    BulletUtils.CreateBullet(aspect.ent, pos, rot, query.query.treeMask, aspect.target, default, aspect.component.bulletConfig, aspect.component.bulletView,
+                                             aspect.component.muzzleView);
 
                     // fire - reset target and reload
                     aspect.IsReloaded = false;
@@ -39,10 +41,10 @@ namespace ME.BECS.Attack {
             }
 
         }
-        
+
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context)
+            var dependsOn = context.Query()
                                .With<ReloadedComponent>()
                                .With<AttackTargetComponent>()
                                .ScheduleParallelFor<FireJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>();

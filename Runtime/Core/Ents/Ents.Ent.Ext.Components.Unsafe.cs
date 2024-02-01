@@ -9,7 +9,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->batches.Set(ent.id, ent.gen, StaticTypes<T>.typeId, data, world.state);
+            return world.state->batches.Set(in ent, StaticTypes<T>.typeId, data, world.state);
 
         }
 
@@ -18,7 +18,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->batches.GetPtr<T>(ent.id, ent.gen, world.state);
+            return world.state->batches.GetPtr<T>(in ent, world.state);
 
         }
 

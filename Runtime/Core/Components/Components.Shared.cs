@@ -105,7 +105,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool SetShared<T>(State* state, uint entId, in T data, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public bool SetShared<T>(State* state, in Ent ent, in T data, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             var typeId = StaticTypes<T>.typeId;
             // No custom hash provided - use data hash
@@ -114,12 +114,12 @@ namespace ME.BECS {
             }
 
             var rData = data;
-            return this.SetShared(state, entId, StaticTypes<T>.groupId, _address(ref rData), TSize<T>.size, StaticTypes<T>.sharedTypeId, hash);
+            return this.SetShared(state, in ent, StaticTypes<T>.groupId, _address(ref rData), TSize<T>.size, StaticTypes<T>.sharedTypeId, hash);
             
         }
 
         [INLINE(256)]
-        public bool SetShared(State* state, uint entId, uint groupId, void* data, uint dataSize, uint sharedTypeId, uint hash) {
+        public bool SetShared(State* state, in Ent ent, uint groupId, void* data, uint dataSize, uint sharedTypeId, uint hash) {
 
             // No custom hash provided - use data hash
             if (hash == Components.COMPONENT_SHARED_DEFAULT_HASH) {
@@ -136,12 +136,12 @@ namespace ME.BECS {
             var dataMemPtr = storage.data.ptr;
             var dataPtr = MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataMemPtr);
             if (dataSize > 0u) _memcpy(data, dataPtr, dataSize);
-            var added = storage.entities.Add(ref state->allocator, entId);
+            var added = storage.entities.Add(ref state->allocator, ent.id);
             
             // update indexer
-            SetSharedHash(state, ref this, entId, sharedTypeId, hash);
+            SetSharedHash(state, ref this, ent.id, sharedTypeId, hash);
             
-            if (added == true) state->entities.UpVersion(state, entId, groupId);
+            if (added == true) state->entities.UpVersion(state, in ent, groupId);
             return added;
 
         }
@@ -174,11 +174,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool RemoveShared<T>(State* state, uint entId, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public bool RemoveShared<T>(State* state, in Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            if (entId >= this.entityIdToHash.Length) return false;
+            if (ent.id >= this.entityIdToHash.Length) return false;
             
-            hash = GetSharedHash(default(T), state, in this, entId, hash);
+            hash = GetSharedHash(default(T), state, in this, ent.id, hash);
             
             // get shared storage for component by hash
             if (this.sharedData.TryGetValue(in state->allocator, hash, out var ptr) == false) {
@@ -187,7 +187,7 @@ namespace ME.BECS {
             
             // get data from storage
             ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state->allocator);
-            var exist = storage.entities.Remove(ref state->allocator, entId);
+            var exist = storage.entities.Remove(ref state->allocator, ent.id);
             if (exist == true && storage.entities.Count == 0u) {
                 // remove data from storage
                 storage.Dispose(ref state->allocator);
@@ -195,7 +195,7 @@ namespace ME.BECS {
                 this.sharedData.Remove(in state->allocator, hash);
             }
             
-            if (exist == true) state->entities.UpVersion<T>(state, entId);
+            if (exist == true) state->entities.UpVersion<T>(state, in ent);
             return exist;
 
         }
@@ -217,11 +217,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T GetShared<T>(State* state, uint entId, uint hash, out bool isNew) where T : unmanaged, IComponentShared {
+        public ref T GetShared<T>(State* state, in Ent ent, uint hash, out bool isNew) where T : unmanaged, IComponentShared {
 
             isNew = false;
-            if (entId >= this.entityIdToHash.Length) this.entityIdToHash.Resize(ref state->allocator, entId + 1u);
-            hash = GetSharedHash(default(T), state, in this, entId, hash);
+            if (ent.id >= this.entityIdToHash.Length) this.entityIdToHash.Resize(ref state->allocator, ent.id + 1u);
+            hash = GetSharedHash(default(T), state, in this, ent.id, hash);
             
             // get shared storage for component by hash
             ref var ptr = ref this.sharedData.GetValue(ref state->allocator, hash, out var exist);
@@ -229,11 +229,11 @@ namespace ME.BECS {
 
             // get data from storage
             ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state->allocator);
-            if (storage.entities.Add(ref state->allocator, entId) == true) {
+            if (storage.entities.Add(ref state->allocator, ent.id) == true) {
                 isNew = true;
             }
             
-            state->entities.UpVersion<T>(state, entId);
+            state->entities.UpVersion<T>(state, in ent);
             return ref *storage.data.AsPtr<T>(in state->allocator);
             
         }
@@ -269,7 +269,7 @@ namespace ME.BECS {
 
         public void SetSharedDirect<T>(Ent ent, T data) where T : unmanaged, IComponentShared {
 
-            this.SetShared(ent.World.state, ent.id, in data);
+            this.SetShared(ent.World.state, in ent, in data);
 
         }
 

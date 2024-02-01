@@ -5,7 +5,7 @@
         "ME.BECS",
         "Unity.Mathematics",
         "Unity.Collections",
-        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Transforms",
         "Unity.Burst",
         "Unity.Jobs",
         "ME.BECS.Units",
@@ -13,9 +13,7 @@
         "ME.BECS.Views",
         "ME.BECS.Trees",
         "ME.BECS.SceneEntityView",
-        "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.Attack",
-        "ME.BECS.Bullets"
+        "ME.BECS.ObjectReference.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -76,10 +76,10 @@ namespace ME.BECS.Views {
 
     public interface IView {
 
-        void DoInitialize(in Ent ent);
-        void DoInitializeChildren(in Ent ent);
-        void DoEnableFromPool(in Ent ent);
-        void DoEnableFromPoolChildren(in Ent ent);
+        void DoInitialize(in EntRO ent);
+        void DoInitializeChildren(in EntRO ent);
+        void DoEnableFromPool(in EntRO ent);
+        void DoEnableFromPoolChildren(in EntRO ent);
         void DoDeInitialize();
 
     }
@@ -374,8 +374,11 @@ namespace ME.BECS.Views {
             var viewsWorldProperties = WorldProperties.Default;
             viewsWorldProperties.allocatorProperties.sizeInBytesCapacity = (uint)MemoryAllocator.MIN_ZONE_SIZE; // Use min allocator size
             viewsWorldProperties.name = ViewsModule.providerInfos[providerId].editorName;
+            viewsWorldProperties.stateProperties.mode = WorldMode.Visual;
 
-            var viewsWorld = World.Create(viewsWorldProperties);
+            var viewsWorld = World.Create(viewsWorldProperties, false);
+            var prevContext = Context.world;
+            Context.Switch(in viewsWorld);
             provider.Initialize(providerId, viewsWorld, properties);
 
             var module = new UnsafeViewsModule<TEntityView> {
@@ -386,7 +389,7 @@ namespace ME.BECS.Views {
             module.data->viewsWorld = viewsWorld;
             WorldStaticCallbacks.RaiseCallback(ref *module.data);
             module.provider.Load(module.data, ViewsRegistry.data);
-            Context.Switch(in connectedWorld);
+            Context.Switch(in prevContext);
             return module;
 
         }

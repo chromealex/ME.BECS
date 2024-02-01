@@ -9,30 +9,30 @@ namespace ME.BECS {
     public static unsafe partial class BatchesExt {
 
         [INLINE(256)]
-        public static ref T GetShared<T>(this ref Batches batches, uint entId, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public static ref T GetShared<T>(this ref Batches batches, in Ent ent, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            var result = _addressT(ref state->components.GetShared<T>(state, entId, hash, out var isNew));
+            var result = _addressT(ref state->components.GetShared<T>(state, in ent, hash, out var isNew));
             if (isNew == true) {
                 var typeId = StaticTypes<T>.typeId;
-                batches.Set_INTERNAL(typeId, entId, state);
+                batches.Set_INTERNAL(typeId, ent.id, state);
             }
             return ref _ref(result);
 
         }
 
         [INLINE(256)]
-        public static ref readonly T ReadShared<T>(this ref Batches batches, uint entId, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public static ref readonly T ReadShared<T>(this ref Batches batches, in Ent ent, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            return ref state->components.ReadShared<T>(state, entId, hash);
+            return ref state->components.ReadShared<T>(state, ent.id, hash);
 
         }
 
         [INLINE(256)]
-        public static bool SetShared<T>(this ref Batches batches, uint entId, in T data, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public static bool SetShared<T>(this ref Batches batches, in Ent ent, in T data, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            if (state->components.SetShared(state, entId, in data, hash) == true) {
+            if (state->components.SetShared(state, in ent, in data, hash) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                batches.Set_INTERNAL(typeId, entId, state);
+                batches.Set_INTERNAL(typeId, ent.id, state);
                 return true;
             }
 
@@ -41,10 +41,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool SetShared(this ref Batches batches, uint entId, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, State* state, uint hash) {
+        public static bool SetShared(this ref Batches batches, in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, State* state, uint hash) {
 
-            if (state->components.SetShared(state, entId, groupId, data, dataSize, sharedTypeId, hash) == true) {
-                batches.Set_INTERNAL(typeId, entId, state);
+            if (state->components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash) == true) {
+                batches.Set_INTERNAL(typeId, ent.id, state);
                 return true;
             }
 
@@ -53,11 +53,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool RemoveShared<T>(this ref Batches batches, uint entId, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public static bool RemoveShared<T>(this ref Batches batches, in Ent ent, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            if (state->components.RemoveShared<T>(state, entId, hash) == true) {
+            if (state->components.RemoveShared<T>(state, in ent, hash) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                batches.Remove_INTERNAL(typeId, entId, state);
+                batches.Remove_INTERNAL(typeId, ent.id, state);
                 return true;
             }
 
@@ -66,9 +66,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool HasShared<T>(this in Batches batches, uint entId, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
+        public static bool HasShared<T>(this in Batches batches, in Ent ent, State* state, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            return state->components.HasShared<T>(state, entId, hash);
+            return state->components.HasShared<T>(state, ent.id, hash);
 
         }
 

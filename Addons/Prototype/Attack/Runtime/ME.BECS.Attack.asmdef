@@ -6,13 +6,16 @@
         "Unity.Burst",
         "ME.BECS.Trees",
         "ME.BECS.Units",
-        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Transforms",
         "Unity.Mathematics",
         "ME.BECS.Players",
         "ME.BECS.Destroy",
         "Unity.Collections",
         "ME.BECS.Bullets",
-        "ME.BECS.Views"
+        "ME.BECS.Views",
+        "ME.BECS.Pathfinding",
+        "ME.BECS.ObjectReference.Runtime",
+        "ME.BECS.FogOfWar"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

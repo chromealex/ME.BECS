@@ -4,14 +4,6 @@ namespace ME.BECS {
     
     using Unity.Jobs;
 
-    public static class UpdateType {
-
-        public const ushort ANY = 0;
-        public const ushort UPDATE = 1;
-        public const ushort FIXED_UPDATE = 2;
-
-    }
-
     public abstract class BaseWorldInitializer : MonoBehaviour {
 
         [System.Serializable]

@@ -177,6 +177,8 @@ namespace ME.BECS {
     public struct LockSpinner {
         
         private int value;
+        public bool IsLocked => this.value != 0;
+
         [INLINE(256)]
         public void Lock() {
             var i = 100_000_000;

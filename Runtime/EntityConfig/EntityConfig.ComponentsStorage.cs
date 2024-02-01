@@ -56,10 +56,10 @@ namespace ME.BECS {
 
             }
 
-            public void Apply(State* worldState, uint entId, ushort entGen) {
+            public void Apply(State* worldState, in Ent ent) {
 
                 foreach (var kv in this.dictionary) {
-                    kv.Value.Apply(worldState, entId, entGen);
+                    kv.Value.Apply(worldState, in ent);
                 }
 
             }
@@ -109,7 +109,7 @@ namespace ME.BECS {
         public void Apply(in Ent ent) {
 
             this.BuildCache();
-            this.cache.Apply(ent.World.state, ent.id, ent.gen);
+            this.cache.Apply(ent.World.state, in ent);
 
         }
 

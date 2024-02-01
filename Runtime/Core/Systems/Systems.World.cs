@@ -110,7 +110,7 @@ namespace ME.BECS {
 
         }
         
-        internal static void UnassignRootSystemGroup(this ref World world, JobHandle dependsOn) {
+        internal static JobHandle UnassignRootSystemGroup(this ref World world, JobHandle dependsOn) {
 
             E.IS_CREATED(world);
             var address = world.id;
@@ -127,7 +127,9 @@ namespace ME.BECS {
                 WorldSystemRegistry.systemGroups.Remove(address);
 
             }
-            
+
+            return dependsOn;
+
         }
 
         public static ref T GetSystem<T>(this in World world) where T : unmanaged, ISystem {

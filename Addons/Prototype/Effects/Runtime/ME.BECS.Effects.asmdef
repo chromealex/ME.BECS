@@ -3,7 +3,7 @@
     "rootNamespace": "",
     "references": [
         "ME.BECS",
-        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Transforms",
         "Unity.Mathematics",
         "ME.BECS.Trees",
         "Unity.Burst",

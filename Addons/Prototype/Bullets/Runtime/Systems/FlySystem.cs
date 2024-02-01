@@ -34,7 +34,7 @@ namespace ME.BECS.Bullets {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<TargetReachedComponent>().ScheduleParallelFor<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
+            var dependsOn = context.Query().Without<TargetReachedComponent>().ScheduleParallelFor<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);

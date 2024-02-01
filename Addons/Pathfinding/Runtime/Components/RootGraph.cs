@@ -16,7 +16,6 @@ namespace ME.BECS.Pathfinding {
         public float agentRadius;
         public float agentMaxSlope;
         public GraphProperties properties;
-        public Heights heights;
 
     }
 

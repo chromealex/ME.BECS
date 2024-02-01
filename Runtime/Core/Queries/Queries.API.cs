@@ -29,15 +29,19 @@ namespace ME.BECS {
     public static class APIExt {
 
         public static QueryBuilder Query(this in SystemContext context) {
-            return API.Query(context);
+            return API.Query(in context);
+        }
+
+        public static QueryBuilder Query(this in SystemContext context, JobHandle dependsOn) {
+            return API.Query(in context, dependsOn);
         }
 
         public static QueryBuilder Query<T>(this T system, in SystemContext context) where T : unmanaged, ISystem {
-            return API.Query(context);
+            return API.Query(in context);
         }
 
         public static QueryBuilder Query<T>(this T system, in SystemContext context, JobHandle dependsOn) where T : unmanaged, ISystem {
-            return API.Query(context, dependsOn);
+            return API.Query(in context, dependsOn);
         }
 
     }

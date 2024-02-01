@@ -11,7 +11,7 @@ namespace ME.BECS {
         #if !UNITY_EDITOR
         readonly 
         #endif
-        unsafe struct Ent : System.IEquatable<Ent> {
+        unsafe struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
 
         public static Ent Null => new Ent();
 
@@ -37,7 +37,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 var world = this.World;
-                return world.state->entities.GetVersion(world.state, this.id);
+                return world.state->entities.GetVersion(world.state, in this);
             }
         }
 
@@ -49,27 +49,12 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly uint GetVersion(uint groupId) {
             var world = this.World;
-            return world.state->entities.GetVersion(world.state, this.id, groupId);
+            return world.state->entities.GetVersion(world.state, in this, groupId);
         }
 
         [INLINE(256)]
         public readonly ulong ToULong() {
             return this.pack;
-        }
-
-        /// <summary>
-        /// Get entity from Context.world
-        /// </summary>
-        /// <param name="id"></param>
-        [INLINE(256)]
-        public Ent(uint id) {
-            this.pack = default;
-            this.id = id;
-            this.worldId = Context.world.id;
-            this.gen = default;
-            if (Context.world.state->entities.IsAlive(Context.world.state, id, out var gen) == true) {
-                this.gen = gen;
-            }
         }
 
         /// <summary>
@@ -190,6 +175,21 @@ namespace ME.BECS {
             } else {
                 return $"Ent #{this.id} Gen: {this.gen}";
             }
+        }
+
+        [INLINE(256)]
+        public int CompareTo(Ent other) {
+            var idComparison = this.id.CompareTo(other.id);
+            if (idComparison != 0) {
+                return idComparison;
+            }
+
+            var genComparison = this.gen.CompareTo(other.gen);
+            if (genComparison != 0) {
+                return genComparison;
+            }
+
+            return this.worldId.CompareTo(other.worldId);
         }
 
     }

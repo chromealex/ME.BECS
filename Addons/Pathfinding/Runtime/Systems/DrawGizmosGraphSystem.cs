@@ -5,7 +5,7 @@ namespace ME.BECS.Pathfinding {
     using Unity.Collections;
 
     [UnityEngine.Tooltip("Draw graph in gizmos.")]
-    public unsafe struct DrawGizmosGraphSystem : IDrawGizmos {
+    public struct DrawGizmosGraphSystem : IDrawGizmos {
 
         public bool drawGraph;
         public bool drawPath;
@@ -21,10 +21,10 @@ namespace ME.BECS.Pathfinding {
 
             if (this.drawPath == true) {
 
-                var arr = API.Query(in context).With<ME.BECS.Units.GroupComponent>().ToArray();
+                var arr = API.Query(in context).With<ME.BECS.Units.CommandGroupComponent>().ToArray();
                 foreach (var group in arr) {
 
-                    var groupAspect = group.GetAspect<ME.BECS.Units.UnitGroupAspect>();
+                    var groupAspect = group.GetAspect<ME.BECS.Units.UnitCommandGroupAspect>();
                     for (int t = 0; t < groupAspect.targets.Length; ++t) {
 
                         var target = groupAspect.targets[t];
@@ -40,16 +40,6 @@ namespace ME.BECS.Pathfinding {
                         UnityEngine.Gizmos.DrawWireSphere(target.Read<TargetPathComponent>().path.to, math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)));
                         UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                         UnityEngine.Gizmos.DrawWireSphere(target.Read<TargetPathComponent>().path.to, math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)));
-
-                        /*var firstChunk = graphEnt.Read<RootGraphComponent>().chunks[world.state, 0];
-                        for (uint i = 0; i < group.units.Count; ++i) {
-                            var unit = group.units[i];
-                            var tr = unit.GetAspect<ME.BECS.TransformAspect.TransformAspect>();
-                            var targetChunkIndex = Graph.GetChunkIndex(firstChunk.center, firstChunk.width, firstChunk.height, root.width, root.height, firstChunk.nodeSize, tr.position, true);
-                            var targetChunk = root.chunks[world.state, targetChunkIndex];
-                            UnityEngine.Gizmos.color = UnityEngine.Color.white;
-                            UnityEngine.Gizmos.DrawLine(tr.position, targetChunk.center);
-                        }*/
 
                     }
 

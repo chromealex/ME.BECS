@@ -1,14 +1,18 @@
 using ME.BECS.Jobs;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace ME.BECS.Pathfinding {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Mathematics;
     using Unity.Collections;
+    using Unity.Jobs;
+    using static Cuts;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Schedule update a pathfinding graph.")]
-    public struct UpdateGraphSystem : IUpdate {
+    [RequiredDependencies(typeof(BuildGraphSystem), typeof(QuadTreeInsertSystem))]
+    public struct UpdateGraphSystem : IAwake, IUpdate {
 
         [BURST(CompileSynchronously = true)]
         public unsafe struct ResetPathJob : ME.BECS.Jobs.IJobParallelForComponents<TargetPathComponent> {
@@ -38,21 +42,65 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        [BURST(CompileSynchronously = true)]
+        public unsafe struct CopyJob : Unity.Jobs.IJob {
+
+            [ReadOnly]
+            public NativeArray<bool> tempDirty;
+            public NativeArray<bool> target;
+
+            public void Execute() {
+
+                _memcpy(this.tempDirty.GetUnsafeReadOnlyPtr(), this.target.GetUnsafePtr(), this.target.Length * TSize<bool>.size);
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct SetObstaclesTreeMaskJob : IJobParallelForAspect<QuadTreeQueryAspect> {
+
+            public int obstaclesTreeIndex;
+
+            public void Execute(ref QuadTreeQueryAspect aspect) {
+                aspect.query.treeMask = 1 << this.obstaclesTreeIndex;
+            }
+
+        }
+
+        public void OnAwake(ref SystemContext context) {
+            
+            ref var trees = ref context.world.GetSystem<QuadTreeInsertSystem>();
+            ref var buildGraphSystem = ref context.world.GetSystem<BuildGraphSystem>();
+            buildGraphSystem.obstaclesTreeIndex = trees.AddTree();
+
+            var dependsOn = context.Query().With<ChunkObstacleQuery>().ScheduleParallelFor<SetObstaclesTreeMaskJob, QuadTreeQueryAspect>(new SetObstaclesTreeMaskJob() {
+                obstaclesTreeIndex = buildGraphSystem.obstaclesTreeIndex,
+            });
+            context.SetDependency(dependsOn);
+            
+        }
+        
         public void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();
             var dependencies = new NativeArray<Unity.Jobs.JobHandle>(graphSystem.graphs.Length, Allocator.Temp);
             for (var i = 0; i < graphSystem.graphs.Length; ++i) {
                 var graphEnt = graphSystem.graphs[i];
-                var root = graphEnt.Read<RootGraphComponent>();
-                var changedChunks = new Unity.Collections.NativeArray<bool>((int)root.chunks.Length, Unity.Collections.Allocator.TempJob);
-                var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, changedChunks, context.dependsOn);
+                var tempDirty = new NativeArray<bool>(graphSystem.changedChunks.Length, Allocator.TempJob);
+                var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, tempDirty, context.dependsOn);
                 // reset all changed chunks in all existing paths
                 dependsOn = API.Query(in context.world, dependsOn).ScheduleParallelFor<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
                     world = context.world,
-                    invalidateChunks = changedChunks,
+                    invalidateChunks = tempDirty,
                 });
-                dependsOn = changedChunks.Dispose(dependsOn);
+                if (i == 0) {
+                    dependsOn = new CopyJob() {
+                        tempDirty = tempDirty,
+                        target = graphSystem.changedChunks,
+                    }.Schedule(dependsOn);
+                }
+                dependsOn = tempDirty.Dispose(dependsOn);
                 dependencies[i] = dependsOn;
             }
 

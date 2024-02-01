@@ -17,7 +17,7 @@ namespace ME.BECS {
         public static void Initialize() {
             var props = WorldProperties.Default;
             props.name = "EntityConfig Static World";
-            staticWorld = World.Create(props);
+            staticWorld = World.Create(props, false);
             registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state->allocator, 10u);
             registryToId.Clear();
             nextId = 0u;

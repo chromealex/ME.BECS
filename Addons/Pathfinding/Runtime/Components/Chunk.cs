@@ -12,4 +12,6 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    public struct ChunkObstacleQuery : IComponent { }
+
 }

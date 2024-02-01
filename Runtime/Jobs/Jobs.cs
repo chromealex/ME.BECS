@@ -126,6 +126,42 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool SetIfSmaller(ref int target, int newValue) {
+            int snapshot;
+            bool stillLess;
+            do {
+                snapshot = target;
+                stillLess = newValue < snapshot;
+            } while (stillLess && System.Threading.Interlocked.CompareExchange(ref target, newValue, snapshot) != snapshot);
+
+            return stillLess;
+        }
+
+        [INLINE(256)]
+        public static bool SetIfGreater(ref int target, int newValue) {
+            int snapshot;
+            bool stillMore;
+            do {
+                snapshot = target;
+                stillMore = newValue > snapshot;
+            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target, newValue, snapshot) != snapshot);
+
+            return stillMore;
+        }
+
+        [INLINE(256)]
+        public static bool SetIfGreaterOrEquals(ref int target, int newValue) {
+            int snapshot;
+            bool stillMore;
+            do {
+                snapshot = target;
+                stillMore = newValue >= snapshot;
+            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target, newValue, snapshot) != snapshot);
+
+            return stillMore;
+        }
+
+        [INLINE(256)]
         public static uint Increment(ref uint value) {
             return (uint)System.Threading.Interlocked.Increment(ref _as<uint, int>(ref value));
         }

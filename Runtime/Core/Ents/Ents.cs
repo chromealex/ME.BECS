@@ -197,14 +197,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Remove(State* state, uint entId) {
+        public void Remove(State* state, in Ent ent) {
             
             E.IS_IN_TICK(state);
             
-            this.RemoveThreaded(state, entId);
+            this.RemoveThreaded(state, ent.id);
             
             this.popLock.Lock();
-            this.free.Push(ref state->allocator, entId);
+            this.free.Push(ref state->allocator, ent.id);
             this.popLock.Unlock();
 
         }
@@ -221,20 +221,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public uint GetVersion(State* state, uint id) {
+        public uint GetVersion(State* state, in Ent ent) {
 
-            if (id >= this.versions.Length) return 0u;
+            if (ent.id >= this.versions.Length) return 0u;
             this.readWriteSpinner.ReadBegin(state);
-            var version = this.versions[in state->allocator, id];
+            var version = this.versions[in state->allocator, ent.id];
             this.readWriteSpinner.ReadEnd(state);
             return version;
 
         }
 
         [INLINE(256)]
-        public uint GetVersion(State* state, uint id, uint groupId) {
+        public uint GetVersion(State* state, in Ent ent, uint groupId) {
 
-            var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * id;
+            var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * ent.id;
             var idx = groupsIndex + groupId;
             if (idx >= this.versionsGroup.Length) return 0u;
             return this.versionsGroup[in state->allocator, idx];
@@ -242,20 +242,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void UpVersion<T>(State* state, uint id) where T : unmanaged, IComponent {
+        public void UpVersion<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
 
-            this.UpVersion(state, id, StaticTypes<T>.groupId);
+            this.UpVersion(state, in ent, StaticTypes<T>.groupId);
             
         }
 
         [INLINE(256)]
-        public void UpVersion(State* state, uint id, uint groupId) {
+        public void UpVersion(State* state, in Ent ent, uint groupId) {
             
-            JobUtils.Increment(ref this.versions[in state->allocator, id]);
-            Journal.VersionUp(Context.world.id, new Ent(id));
+            JobUtils.Increment(ref this.versions[in state->allocator, ent.id]);
+            Journal.VersionUp(in ent);
 
             if (groupId > 0u) {
-                this.UpVersionGroup(state, id, groupId);
+                this.UpVersionGroup(state, ent.id, groupId);
             }
 
         }

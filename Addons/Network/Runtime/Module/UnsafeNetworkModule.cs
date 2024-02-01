@@ -505,6 +505,9 @@ namespace ME.BECS.Network {
                     allocatorProperties = new AllocatorProperties() {
                         sizeInBytesCapacity = (uint)MemoryAllocator.MIN_ZONE_SIZE,
                     },
+                    stateProperties = new StateProperties() {
+                        mode = WorldMode.Visual,
+                    },
                     name = "Network World",
                 };
                 this.networkWorld = World.CreateUninitialized(worldProperties);
@@ -807,15 +810,15 @@ namespace ME.BECS.Network {
                 for (ulong tick = currentTick; tick < targetTick; ++tick) {
 
                     // Begin tick
-                    dependsOn = State.SetWorldState(in world, WorldState.BeginTick, dependsOn);
+                    dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, dependsOn);
                     {
                         // Apply events for this tick
                         //dependsOn.Complete();
                         dependsOn = this.data->Tick(tick, deltaTime, in world, dependsOn);
                     }
                     
-                    dependsOn = world.Tick(deltaTime, UpdateType.FIXED_UPDATE, dependsOn);
-                    dependsOn = State.SetWorldState(in world, WorldState.EndTick, dependsOn);
+                    dependsOn = world.TickWithoutWorldState(deltaTime, UpdateType.FIXED_UPDATE, dependsOn);
+                    dependsOn = State.SetWorldState(in world, WorldState.EndTick, UpdateType.FIXED_UPDATE, dependsOn);
                     dependsOn.Complete();
                     // End tick
 

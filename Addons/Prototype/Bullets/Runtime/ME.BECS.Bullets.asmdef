@@ -6,7 +6,7 @@
         "Unity.Burst",
         "ME.BECS.Trees",
         "ME.BECS.Units",
-        "ME.BECS.Aspects.TransformAspect",
+        "ME.BECS.Transforms",
         "Unity.Mathematics",
         "ME.BECS.Players",
         "ME.BECS.Destroy",

@@ -81,85 +81,85 @@ namespace ME.BECS {
         
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void SetOneShotComponent(ushort worldId, in Ent ent, uint typeId, OneShotType type) {
+        public static void SetOneShotComponent(in Ent ent, uint typeId, OneShotType type) {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->SetOneShotComponent(in ent, typeId, type);
+            journal->SetOneShotComponent_INTERNAL(in ent, typeId, type);
 
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void ResolveOneShotComponent(ushort worldId, in Ent ent, uint typeId, OneShotType type) {
+        public static void ResolveOneShotComponent(in Ent ent, uint typeId, OneShotType type) {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->ResolveOneShotComponent(in ent, typeId, type);
+            journal->ResolveOneShotComponent_INTERNAL(in ent, typeId, type);
 
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void EnableComponent<T>(ushort worldId, in Ent ent) where T : unmanaged, IComponent {
+        public static void EnableComponent<T>(in Ent ent) where T : unmanaged, IComponent {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->EnableComponent<T>(in ent);
+            journal->EnableComponent_INTERNAL<T>(in ent);
 
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void DisableComponent<T>(ushort worldId, in Ent ent) where T : unmanaged, IComponent {
+        public static void DisableComponent<T>(in Ent ent) where T : unmanaged, IComponent {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->DisableComponent<T>(in ent);
+            journal->DisableComponent_INTERNAL<T>(in ent);
 
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void SetComponent<T>(ushort worldId, in Ent ent, in T data) where T : unmanaged, IComponent {
+        public static void SetComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
             if (ent.Has<T>() == true) {
-                journal->UpdateComponent<T>(in ent, in data);
+                journal->UpdateComponent_INTERNAL<T>(in ent, in data);
             } else {
-                journal->CreateComponent<T>(in ent, in data);
+                journal->CreateComponent_INTERNAL<T>(in ent, in data);
             }
 
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void CreateComponent<T>(ushort worldId, in Ent ent, in T data) where T : unmanaged, IComponent {
+        public static void CreateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->CreateComponent<T>(in ent, in data);
+            journal->CreateComponent_INTERNAL<T>(in ent, in data);
             
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void UpdateComponent<T>(ushort worldId, in Ent ent, in T data) where T : unmanaged, IComponent {
+        public static void UpdateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->UpdateComponent<T>(in ent, in data);
+            journal->UpdateComponent_INTERNAL<T>(in ent, in data);
             
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void RemoveComponent<T>(ushort worldId, in Ent ent) where T : unmanaged, IComponent {
+        public static void RemoveComponent<T>(in Ent ent) where T : unmanaged, IComponent {
 
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->RemoveComponent<T>(in ent);
+            journal->RemoveComponent_INTERNAL<T>(in ent);
 
         }
 
@@ -169,7 +169,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->AddSystem(name);
+            journal->AddSystem_INTERNAL(name);
             
         }
 
@@ -179,7 +179,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->UpdateSystemStarted(name);
+            journal->UpdateSystemStarted_INTERNAL(name);
             
         }
 
@@ -189,7 +189,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->UpdateSystemEnded(name);
+            journal->UpdateSystemEnded_INTERNAL(name);
             
         }
 
@@ -199,7 +199,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->BeginFrame();
+            journal->BeginFrame_INTERNAL();
             
         }
 
@@ -209,17 +209,17 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->EndFrame();
+            journal->EndFrame_INTERNAL();
             
         }
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void VersionUp(ushort worldId, in Ent ent) {
+        public static void VersionUp(in Ent ent) {
             
-            var journal = JournalsStorage.Get(worldId);
+            var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->VersionUp(in ent);
+            journal->VersionUp_INTERNAL(in ent);
 
         }
 
@@ -239,7 +239,7 @@ namespace ME.BECS {
 
             var props = WorldProperties.Default;
             props.name = $"Journal for #{connectedWorld.id}";
-            var world = World.Create(props);
+            var world = World.Create(props, false);
             var journal = new Journal {
                 world = _make(world),
                 data = _make(JournalData.Create(world.state, properties)),
@@ -323,7 +323,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public void AddSystem(Unity.Collections.FixedString64Bytes name) {
+        public void AddSystem_INTERNAL(Unity.Collections.FixedString64Bytes name) {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemAdded, name = name, });
@@ -331,7 +331,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void UpdateSystemStarted(Unity.Collections.FixedString64Bytes name) {
+        public void UpdateSystemStarted_INTERNAL(Unity.Collections.FixedString64Bytes name) {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemUpdateStarted, name = name, });
@@ -339,7 +339,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public void UpdateSystemEnded(Unity.Collections.FixedString64Bytes name) {
+        public void UpdateSystemEnded_INTERNAL(Unity.Collections.FixedString64Bytes name) {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemUpdateEnded, name = name, });
@@ -347,7 +347,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void CreateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
+        public void CreateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
@@ -355,7 +355,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void UpdateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
+        public void UpdateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.UpdateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
@@ -363,7 +363,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void RemoveComponent<T>(in Ent ent) where T : unmanaged, IComponent {
+        public void RemoveComponent_INTERNAL<T>(in Ent ent) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.RemoveComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
@@ -371,7 +371,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void SetOneShotComponent(in Ent ent, uint typeId, OneShotType type) {
+        public void SetOneShotComponent_INTERNAL(in Ent ent, uint typeId, OneShotType type) {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateOneShotComponent, typeId = typeId, storeInHistory = true, });
@@ -379,7 +379,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void ResolveOneShotComponent(in Ent ent, uint typeId, OneShotType type) {
+        public void ResolveOneShotComponent_INTERNAL(in Ent ent, uint typeId, OneShotType type) {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.ResolveOneShotComponent, typeId = typeId, storeInHistory = true, });
@@ -387,7 +387,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void EnableComponent<T>(in Ent ent) where T : unmanaged, IComponent {
+        public void EnableComponent_INTERNAL<T>(in Ent ent) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.EnableComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
@@ -395,7 +395,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void DisableComponent<T>(in Ent ent) where T : unmanaged, IComponent {
+        public void DisableComponent_INTERNAL<T>(in Ent ent) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.DisableComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
@@ -403,7 +403,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void VersionUp(in Ent ent) {
+        public void VersionUp_INTERNAL(in Ent ent) {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.EntityUpVersion, data = ent.Version, storeInHistory = true, });
@@ -411,7 +411,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void BeginFrame() {
+        public void BeginFrame_INTERNAL() {
 
             if (this.isCreated == false) return;
             this.data->Clear(this.world->state);
@@ -419,7 +419,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void EndFrame() {
+        public void EndFrame_INTERNAL() {
 
         }
 
