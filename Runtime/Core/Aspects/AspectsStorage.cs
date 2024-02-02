@@ -73,7 +73,7 @@ namespace ME.BECS {
                 var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     world.state->components.SetUnknownType(world.state, typeId, StaticTypes.groups.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
-                    world.state->batches.Set_INTERNAL(typeId, ent.id, world.state);
+                    world.state->batches.Set_INTERNAL(typeId, in ent, world.state);
                 }
 
             }

@@ -57,6 +57,7 @@ namespace ME.BECS {
     
     public unsafe struct BatchItem {
 
+        public Ent ent;
         private BatchList addItems;
         private BatchList removeItems;
         public LockSpinner lockIndex;
@@ -66,6 +67,12 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Apply(State* state, ref uint count, uint entId, ref Archetypes archetypes) {
 
+            if (this.ent.IsAlive() == false) {
+                if (this.addItems.Count > 0u) this.addItems.Clear();
+                if (this.removeItems.Count > 0u) this.removeItems.Clear();
+                return;
+            }
+            
             var addItems = ComponentsFastTrack.Create(this.addItems);
             var removeItems = ComponentsFastTrack.Create(this.removeItems);
             MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
@@ -382,7 +389,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal static void Set_INTERNAL(this ref Batches batches, uint typeId, uint entId, State* state) {
+        internal static void Set_INTERNAL(this ref Batches batches, uint typeId, in Ent ent, State* state) {
             
             E.IS_IN_TICK(state);
             
@@ -390,8 +397,9 @@ namespace ME.BECS {
             JobUtils.Lock(ref threadItem.lockIndex);
             {
                 batches.lockReadWrite.ReadBegin(state);
-                ref var item = ref batches.arr[state, entId];
+                ref var item = ref batches.arr[state, ent.id];
                 JobUtils.Lock(ref item.lockIndex);
+                item.ent = ent;
                 {
                     var wasCount = item.Count;
                     {
@@ -400,7 +408,7 @@ namespace ME.BECS {
                         threadItem.Count += item.Count;
                     }
                     if (wasCount == 0u && item.Count > 0u) {
-                        threadItem.items.Add(ref state->allocator, entId);
+                        threadItem.items.Add(ref state->allocator, ent.id);
                     }
                 }
                 JobUtils.Unlock(ref item.lockIndex);
@@ -411,7 +419,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal static void Remove_INTERNAL(this ref Batches batches, uint typeId, uint entId, State* state) {
+        internal static void Remove_INTERNAL(this ref Batches batches, uint typeId, in Ent ent, State* state) {
             
             E.IS_IN_TICK(state);
             
@@ -419,8 +427,9 @@ namespace ME.BECS {
             JobUtils.Lock(ref threadItem.lockIndex);
             {
                 batches.lockReadWrite.ReadBegin(state);
-                ref var item = ref batches.arr[state, entId];
+                ref var item = ref batches.arr[state, ent.id];
                 JobUtils.Lock(ref item.lockIndex);
+                item.ent = ent;
                 {
                     var wasCount = item.Count;
                     {
@@ -429,7 +438,7 @@ namespace ME.BECS {
                         threadItem.Count += item.Count;
                     }
                     if (wasCount == 0u && item.Count > 0u) {
-                        threadItem.items.Add(ref state->allocator, entId);
+                        threadItem.items.Add(ref state->allocator, ent.id);
                     }
                 }
                 JobUtils.Unlock(ref item.lockIndex);

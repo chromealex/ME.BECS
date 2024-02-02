@@ -27,7 +27,7 @@ namespace ME.BECS.Tests {
             Ent srcEnt;
             {
                 var ent = Ent.New(world);
-                ent.GetAspect<TestAspect>().data.data = 100200;
+                ent.GetOrCreateAspect<TestAspect>().data.data = 100200;
                 entId = ent.id;
                 srcEnt = ent;
             }
@@ -38,14 +38,14 @@ namespace ME.BECS.Tests {
                 TestAspect.TestInitialize(in cloneWorld);
                 Context.Switch(cloneWorld);
                 var newEnt = Ent.New(cloneWorld);
-                newEnt.GetAspect<TestAspect>().data.data = 100500;
+                newEnt.GetOrCreateAspect<TestAspect>().data.data = 100500;
                 var ent = new Ent(entId, cloneWorld);
-                var aspect = ent.GetAspect<TestAspect>();
+                var aspect = ent.GetOrCreateAspect<TestAspect>();
                 Assert.IsTrue(ent.IsAlive());
                 Assert.AreEqual(100200, aspect.data.data);
-                ent.GetAspect<TestAspect>().data.data = 100300;
-                Assert.AreEqual(100300, ent.GetAspect<TestAspect>().data.data);
-                Assert.AreEqual(100200, srcEnt.GetAspect<TestAspect>().data.data);
+                ent.GetOrCreateAspect<TestAspect>().data.data = 100300;
+                Assert.AreEqual(100300, ent.GetOrCreateAspect<TestAspect>().data.data);
+                Assert.AreEqual(100200, srcEnt.GetOrCreateAspect<TestAspect>().data.data);
                 cloneWorld.Dispose();
                 Context.Switch(prevWorld);
             }
@@ -63,7 +63,7 @@ namespace ME.BECS.Tests {
             Ent srcEnt;
             {
                 var ent = Ent.New(world);
-                ent.GetAspect<TestAspect>().data.data = 100200;
+                ent.GetOrCreateAspect<TestAspect>().data.data = 100200;
                 entId = ent.id;
                 srcEnt = ent;
             }
@@ -74,7 +74,7 @@ namespace ME.BECS.Tests {
                 Ent e;
                 {
                     e = Ent.New(newWorld);
-                    e.GetAspect<TestAspect>().data.data = 500;
+                    e.GetOrCreateAspect<TestAspect>().data.data = 500;
                 }
                 newWorld.CopyFrom(world);
                 TestAspect.TestInitialize(in newWorld);
@@ -82,18 +82,18 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(e.IsAlive());
                 {
                     var ent = new Ent(entId, newWorld);
-                    Assert.AreEqual(100200, ent.GetAspect<TestAspect>().data.data);
+                    Assert.AreEqual(100200, ent.GetOrCreateAspect<TestAspect>().data.data);
                 }
                 var newEnt = Ent.New(newWorld);
-                newEnt.GetAspect<TestAspect>().data.data = 100500;
+                newEnt.GetOrCreateAspect<TestAspect>().data.data = 100500;
                 {
                     var ent = new Ent(entId, newWorld);
                     Assert.IsTrue(ent.IsAlive());
-                    Assert.AreEqual(100200, ent.GetAspect<TestAspect>().data.data);
-                    ent.GetAspect<TestAspect>().data.data = 100300;
-                    Assert.AreEqual(100300, ent.GetAspect<TestAspect>().data.data);
+                    Assert.AreEqual(100200, ent.GetOrCreateAspect<TestAspect>().data.data);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 100300;
+                    Assert.AreEqual(100300, ent.GetOrCreateAspect<TestAspect>().data.data);
                 }
-                Assert.AreEqual(100200, srcEnt.GetAspect<TestAspect>().data.data);
+                Assert.AreEqual(100200, srcEnt.GetOrCreateAspect<TestAspect>().data.data);
                 newWorld.Dispose();
                 Context.Switch(world);
             }
@@ -109,7 +109,7 @@ namespace ME.BECS.Tests {
             TestAspect.TestInitialize(in world);
             for (int i = 0; i < 10000; ++i) {
                 var ent = Ent.New(world);
-                var aspect = ent.GetAspect<TestAspect>();
+                var aspect = ent.GetOrCreateAspect<TestAspect>();
                 aspect.data.data = 100200;
                 aspect.data2.data = 100200;
                 aspect.data3.data = 100200;

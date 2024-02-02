@@ -14,7 +14,7 @@ namespace ME.BECS {
             var result = _addressT(ref state->components.GetShared<T>(state, in ent, hash, out var isNew));
             if (isNew == true) {
                 var typeId = StaticTypes<T>.typeId;
-                batches.Set_INTERNAL(typeId, ent.id, state);
+                batches.Set_INTERNAL(typeId, in ent, state);
             }
             return ref _ref(result);
 
@@ -32,7 +32,7 @@ namespace ME.BECS {
 
             if (state->components.SetShared(state, in ent, in data, hash) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                batches.Set_INTERNAL(typeId, ent.id, state);
+                batches.Set_INTERNAL(typeId, in ent, state);
                 return true;
             }
 
@@ -44,7 +44,7 @@ namespace ME.BECS {
         public static bool SetShared(this ref Batches batches, in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, State* state, uint hash) {
 
             if (state->components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash) == true) {
-                batches.Set_INTERNAL(typeId, ent.id, state);
+                batches.Set_INTERNAL(typeId, in ent, state);
                 return true;
             }
 
@@ -57,7 +57,7 @@ namespace ME.BECS {
 
             if (state->components.RemoveShared<T>(state, in ent, hash) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                batches.Remove_INTERNAL(typeId, ent.id, state);
+                batches.Remove_INTERNAL(typeId, in ent, state);
                 return true;
             }
 

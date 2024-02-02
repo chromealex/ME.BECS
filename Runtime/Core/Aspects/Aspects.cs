@@ -34,7 +34,7 @@ namespace ME.BECS {
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 Journal.CreateComponent<T>(in ent, in res);
-                this.state->batches.Set_INTERNAL(typeId, ent.id, this.state);
+                this.state->batches.Set_INTERNAL(typeId, in ent, this.state);
             } else {
                 Journal.UpdateComponent<T>(in ent, in res);
             }

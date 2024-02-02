@@ -64,7 +64,7 @@ namespace ME.BECS.Tests {
                 for (int i = 0; i < amount; ++i) {
 
                     var ent = Ent.New(world);
-                    ent.GetAspect<TestAspect>().data.data = 1;
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
                     
                 }
 

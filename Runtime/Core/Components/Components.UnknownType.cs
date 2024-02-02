@@ -33,7 +33,7 @@ namespace ME.BECS {
                 ref var storage = ref ptr.As<DataDenseSet>(in sourceState->allocator);
                 var data = storage.Get(sourceState, ent.id, ent.gen, true, out _);
                 targetState->components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data);
-                targetState->batches.Set_INTERNAL(typeId, targetEnt.id, targetState);
+                targetState->batches.Set_INTERNAL(typeId, in targetEnt, targetState);
             }
             
         }
