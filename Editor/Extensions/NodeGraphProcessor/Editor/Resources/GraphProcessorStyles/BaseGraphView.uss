@@ -110,6 +110,10 @@
     border-color: rgba(169, 54, 54, 0.5);
 }
 
+.required-dependencies.dependencies-warning {
+    border-color: rgba(169, 142, 54, 0.5);
+}
+
 .required-dependencies .required-dependencies-header {
     -unity-font-style: bold;
     position: absolute;
@@ -137,12 +141,17 @@
 }
 
 .node-required-dependency-true,
-.node-required-dependency-false {
+.node-required-dependency-false,
+.node-required-dependency-Warning {
     display: none;
 }
 
 .node-required-dependency-false {
     color: rgb(217, 16, 16);
+}
+
+.node-required-dependency-warning {
+    color: rgb(217, 153, 16);
 }
 
 .node-required-dependency-true {
@@ -153,11 +162,13 @@
     
 }
 
-.node-required-dependency-false {
+.node-required-dependency-false,
+.node-required-dependency-warning {
     display: flex;
 }
 
-.node-required-dependency-checked .node-required-dependency-false {
+.node-required-dependency-checked .node-required-dependency-false,
+.node-required-dependency-checked .node-required-dependency-warning {
     display: none;
 }
 

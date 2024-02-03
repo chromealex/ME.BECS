@@ -20,6 +20,22 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
 
             if (fromInspector == false) {
 
+                if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode &&
+                    systemNode.system != null) {
+
+                    var type = systemNode.system.GetType();
+                    var tooltip = type.GetCustomAttribute<UnityEngine.TooltipAttribute>();
+                    if (tooltip != null) {
+
+                        var typeStr = EditorUtils.GetComponentName(type);
+                        var label = new UnityEngine.UIElements.Label($"<b>{typeStr}</b>\n{tooltip.tooltip}");
+                        label.AddToClassList("node-tooltip");
+                        this.Add(label);
+
+                    }
+                
+                }
+                
                 var container = new UnityEngine.UIElements.VisualElement();
                 this.container = container;
                 this.Add(this.container);
@@ -71,25 +87,10 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
         protected virtual void Draw() {
 
             var types = new System.Collections.Generic.HashSet<System.Type>();
-            if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode &&
-                systemNode.system != null) {
-
-                var type = systemNode.system.GetType();
-                var tooltip = type.GetCustomAttribute<UnityEngine.TooltipAttribute>();
-                if (tooltip != null) {
-
-                    var typeStr = EditorUtils.GetComponentName(type);
-                    var label = new UnityEngine.UIElements.Label($"<b>{typeStr}</b>\n{tooltip.tooltip}");
-                    label.AddToClassList("node-tooltip");
-                    this.container.Add(label);
-
-                }
-                
-            }
-            
             this.CollectDependencies(this.nodeTarget, types);
             
             if (types.Count > 0) {
+                var isInnerGraph = this.nodeTarget.graph is ME.BECS.FeaturesGraph.SystemsGraph systemsGraph && systemsGraph.isInnerGraph;
                 var requiredContainer = new UnityEngine.UIElements.VisualElement();
                 var label = new UnityEngine.UIElements.Label("Dependencies:");
                 label.AddToClassList("required-dependencies-header");
@@ -117,7 +118,11 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         lbl.AddToClassList("node-required-dependency-true");
                         checkbox.Add(lbl);
                     }
-                    {
+                    if (isInnerGraph == true) {
+                        var lbl = new UnityEngine.UIElements.Label("\u26A0");
+                        lbl.AddToClassList("node-required-dependency-warning");
+                        checkbox.Add(lbl);
+                    } else {
                         var lbl = new UnityEngine.UIElements.Label("✕");
                         lbl.AddToClassList("node-required-dependency-false");
                         checkbox.Add(lbl);
@@ -139,7 +144,14 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         typeContainer.Add(label);
                     }
                 }
-                if (hasFailed == true) requiredContainer.AddToClassList("dependencies-failed");
+
+                if (hasFailed == true) {
+                    if (isInnerGraph == true) {
+                        requiredContainer.AddToClassList("dependencies-warning");
+                    } else {
+                        requiredContainer.AddToClassList("dependencies-failed");
+                    }
+                }
             }
 
         }

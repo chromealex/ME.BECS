@@ -6,6 +6,7 @@ namespace ME.BECS.FeaturesGraph {
     [CreateAssetMenu(menuName = "ME.BECS/Features Graph")]
     public class SystemsGraph : Extensions.GraphProcessor.BaseGraph {
 
+        public bool isInnerGraph;
         public SystemGroup runtimeRootSystemGroup;
         
         public override void InitializeValidation() {

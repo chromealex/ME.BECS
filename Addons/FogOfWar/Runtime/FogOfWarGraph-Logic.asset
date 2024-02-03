@@ -84,8 +84,9 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 250.5, y: 432, z: 0}
+  position: {x: 21.5, y: 298, z: 0}
   scale: {x: 1, y: 1, z: 1}
+  isInnerGraph: 1
   references:
     version: 2
     RefIds:
@@ -197,7 +198,8 @@ MonoBehaviour:
           rid: 8346928923441103776
     - rid: 8346928923441103776
       type: {class: DrawGizmosSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
-      data: 
+      data:
+        drawGizmos: 0
     - rid: 8346928929818279973
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

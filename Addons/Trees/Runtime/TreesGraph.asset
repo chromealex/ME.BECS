@@ -52,6 +52,7 @@ MonoBehaviour:
   nodeInspectorReference: {fileID: 0}
   position: {x: -21, y: 186, z: 0}
   scale: {x: 1, y: 1, z: 1}
+  isInnerGraph: 1
   references:
     version: 2
     RefIds:
@@ -77,8 +78,7 @@ MonoBehaviour:
           rid: 8346928920201003091
     - rid: 8346928920201003091
       type: {class: QuadTreeInsertSystem, ns: ME.BECS, asm: ME.BECS.Trees}
-      data:
-        treesCount: 10
+      data: 
     - rid: 8346928920201003092
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

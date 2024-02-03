@@ -52,6 +52,7 @@ MonoBehaviour:
   nodeInspectorReference: {fileID: 0}
   position: {x: 63, y: 231, z: 0}
   scale: {x: 1, y: 1, z: 1}
+  isInnerGraph: 1
   references:
     version: 2
     RefIds:
