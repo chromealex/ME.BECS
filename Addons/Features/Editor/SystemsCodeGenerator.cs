@@ -252,6 +252,7 @@ namespace ME.BECS.Editor.Systems {
                                 }
                                 
                             } else if (n is ME.BECS.FeaturesGraph.Nodes.SystemNode ||
+                                       n is ME.BECS.Extensions.GraphProcessor.RelayNode ||
                                 n is ME.BECS.FeaturesGraph.Nodes.StartNode) {
                                 
                                 if (n is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode && systemNode.system != null &&
@@ -317,9 +318,9 @@ namespace ME.BECS.Editor.Systems {
                                             isInBurst = isBursted;
                                         }
 
-                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});{dependsOn}.Complete();");
+                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});");
                                         methodContent.Add($"(({GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
-                                        methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);dep{index.ToString()}.Complete();");
+                                        methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
                                         collectedDeps.Add($"dep{index.ToString()}");
                                         
                                     }

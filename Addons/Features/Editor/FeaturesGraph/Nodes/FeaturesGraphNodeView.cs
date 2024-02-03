@@ -32,6 +32,42 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
+        private void CollectDependencies(ME.BECS.Extensions.GraphProcessor.BaseNode root, System.Collections.Generic.HashSet<System.Type> results) {
+            
+            if (root is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode && systemNode.system != null) {
+
+                var type = systemNode.system.GetType();
+                var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
+                foreach (var dep in dependenciesAttributes) {
+                    foreach (var depType in dep.types) results.Add(depType);
+                }
+
+            } else if (root is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode && graphNode.graphValue != null) {
+
+                foreach (var node in graphNode.graphValue.nodes) {
+
+                    if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode sysNode && sysNode.system != null) {
+
+                        var type = sysNode.system.GetType();
+                        var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
+                        foreach (var dep in dependenciesAttributes) {
+                            foreach (var depType in dep.types) {
+                                if (this.IsTypeContainsInGraph(depType, graphNode.graphValue) == false) {
+                                    results.Add(depType);
+                                }
+                            }
+                        }
+
+                    } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNodeInner && graphNodeInner.graphValue != null) {
+                        this.CollectDependencies(node, results);
+                    }
+
+                }
+                
+            }
+            
+        }
+
         protected virtual void Draw() {
 
             var types = new System.Collections.Generic.HashSet<System.Type>();
@@ -48,36 +84,10 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     this.container.Add(label);
 
                 }
-                    
-                var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
-                foreach (var dep in dependenciesAttributes) {
-                    foreach (var depType in dep.types) types.Add(depType);
-                }
-
-            } else if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode &&
-                       graphNode.graphValue != null) {
-
-                foreach (var node in graphNode.graphValue.nodes) {
-
-                    if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode sysNode &&
-                        sysNode.system != null) {
-
-                        var type = sysNode.system.GetType();
-
-                        var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
-                        foreach (var dep in dependenciesAttributes) {
-                            foreach (var depType in dep.types) {
-                                if (this.IsTypeContainsInGraph(depType, graphNode.graphValue) == false) {
-                                    types.Add(depType);
-                                }
-                            }
-                        }
-
-                    }
-
-                }
                 
             }
+            
+            this.CollectDependencies(this.nodeTarget, types);
             
             if (types.Count > 0) {
                 var requiredContainer = new UnityEngine.UIElements.VisualElement();
@@ -167,6 +177,11 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     systemNode.system != null) {
 
                     if (systemNode.system.GetType() == type) return true;
+
+                } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode &&
+                           graphNode.graphValue != null) {
+
+                    if (IsTypeContainsInGraph(type, graphNode.graphValue) == true) return true;
 
                 }
 
