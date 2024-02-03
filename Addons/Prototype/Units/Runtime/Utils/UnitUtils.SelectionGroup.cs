@@ -269,7 +269,7 @@ namespace ME.BECS.Units {
 
         [INLINE(256)]
         public static bool IsSelected(ME.BECS.Players.PlayerAspect activePlayer, in EntRO ent) {
-            return activePlayer.currentSelection.IsAlive() == true && ent.GetAspect<UnitAspect>().unitSelectionGroup == activePlayer.currentSelection;
+            return activePlayer.readCurrentSelection.IsAlive() == true && ent.GetAspect<UnitAspect>().readUnitSelectionGroup == activePlayer.readCurrentSelection;
         }
 
     }

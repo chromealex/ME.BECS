@@ -27,6 +27,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly ref T Get(uint entId, ushort gen) {
             E.IS_CREATED(this);
+            E.IS_IN_TICK(this.state);
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
             var ent = new Ent(entId, gen, this.worldId);

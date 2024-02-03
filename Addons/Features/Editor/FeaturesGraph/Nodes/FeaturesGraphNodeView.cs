@@ -48,35 +48,33 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
-        private void CollectDependencies(ME.BECS.Extensions.GraphProcessor.BaseNode root, System.Collections.Generic.HashSet<System.Type> results) {
+        private void CollectDependencies(ref int iter, ME.BECS.Extensions.GraphProcessor.BaseNode root, System.Collections.Generic.HashSet<System.Type> results) {
+
+            ++iter;
+            if (iter == 10000) {
+                UnityEngine.Debug.LogWarning("Max iterations while CollectDependencies");
+                return;
+            }
             
             if (root is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode && systemNode.system != null) {
 
                 var type = systemNode.system.GetType();
                 var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
                 foreach (var dep in dependenciesAttributes) {
-                    foreach (var depType in dep.types) results.Add(depType);
+                    foreach (var depType in dep.types) {
+                        var i = 0;
+                        if (this.IsTypeContainsInGraph(ref i, depType, root.graph) == false) {
+                            results.Add(depType);
+                        }
+                        results.Add(depType);
+                    }
                 }
 
             } else if (root is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode && graphNode.graphValue != null) {
 
                 foreach (var node in graphNode.graphValue.nodes) {
 
-                    if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode sysNode && sysNode.system != null) {
-
-                        var type = sysNode.system.GetType();
-                        var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
-                        foreach (var dep in dependenciesAttributes) {
-                            foreach (var depType in dep.types) {
-                                if (this.IsTypeContainsInGraph(depType, graphNode.graphValue) == false) {
-                                    results.Add(depType);
-                                }
-                            }
-                        }
-
-                    } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNodeInner && graphNodeInner.graphValue != null) {
-                        this.CollectDependencies(node, results);
-                    }
+                    this.CollectDependencies(ref iter, node, results);
 
                 }
                 
@@ -87,7 +85,8 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
         protected virtual void Draw() {
 
             var types = new System.Collections.Generic.HashSet<System.Type>();
-            this.CollectDependencies(this.nodeTarget, types);
+            var iter = 0;
+            this.CollectDependencies(ref iter, this.nodeTarget, types);
             
             if (types.Count > 0) {
                 var isInnerGraph = this.nodeTarget.graph is ME.BECS.FeaturesGraph.SystemsGraph systemsGraph && systemsGraph.isInnerGraph;
@@ -103,7 +102,8 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     var namespaceStr = EditorUtils.GetComponentNamespace(uniqueType);
                     var depContainer = new UnityEngine.UIElements.VisualElement();
                     depContainer.AddToClassList("required-dependencies-container");
-                    if (this.HasDependency(this.nodeTarget, uniqueType) == true) {
+                    iter = 0;
+                    if (this.HasDependency(ref iter, this.nodeTarget, uniqueType) == true) {
                         depContainer.AddToClassList("node-required-dependency-checked");
                     } else {
                         hasFailed = true;
@@ -156,14 +156,21 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
 
         }
 
-        private bool HasDependency(ME.BECS.Extensions.GraphProcessor.BaseNode node, System.Type type) {
-
+        private bool HasDependency(ref int iter, ME.BECS.Extensions.GraphProcessor.BaseNode node, System.Type type) {
+            
+            ++iter;
+            if (iter == 10000) {
+                UnityEngine.Debug.LogWarning("Max iterations while HasDependency");
+                return false;
+            }
+            
             foreach (var port in node.inputPorts) {
 
                 foreach (var edge in port.GetEdges()) {
                     var checkNode = edge.outputPort.owner;
                     if (checkNode is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode && graphNode.graphValue != null) {
-                        if (this.IsTypeContainsInGraph(type, graphNode.graphValue) == true) {
+                        var i = 0;
+                        if (this.IsTypeContainsInGraph(ref i, type, graphNode.graphValue) == true) {
                             return true;
                         }
                     }
@@ -172,7 +179,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         if (systemNode.system.GetType() == type) return true;
                     }
                     
-                    if (this.HasDependency(checkNode, type) == true) return true;
+                    if (this.HasDependency(ref iter, checkNode, type) == true) return true;
                 }
                 
             }
@@ -181,7 +188,13 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
 
-        private bool IsTypeContainsInGraph(System.Type type, ME.BECS.FeaturesGraph.SystemsGraph graph) {
+        private bool IsTypeContainsInGraph(ref int iter, System.Type type, ME.BECS.Extensions.GraphProcessor.BaseGraph graph) {
+
+            ++iter;
+            if (iter == 10000) {
+                UnityEngine.Debug.LogWarning("Max iterations while HasDependency");
+                return false;
+            }
 
             foreach (var node in graph.nodes) {
 
@@ -193,7 +206,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode &&
                            graphNode.graphValue != null) {
 
-                    if (IsTypeContainsInGraph(type, graphNode.graphValue) == true) return true;
+                    if (this.IsTypeContainsInGraph(ref iter, type, graphNode.graphValue) == true) return true;
 
                 }
 

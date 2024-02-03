@@ -1287,7 +1287,8 @@ namespace ME.BECS.Editor {
                     var searchHeader = new Label("Search");
                     searchContainer.AddToClassList("search-header");
                     searchContainer.Add(searchHeader);
-                    var search = new TextField(this.searchStr);
+                    var search = new TextField();
+                    search.value = this.searchStr;
                     searchContainer.Add(search);
                     search.AddToClassList("search-field");
                     search.RegisterValueChangedCallback((evt) => {

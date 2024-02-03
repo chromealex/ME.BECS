@@ -19,11 +19,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void OnEntityAdd(State* state, uint capacity) {
+        public void OnEntityAdd(State* state, uint entId) {
             
-            if (capacity > this.list.Length) {
+            if (entId >= this.list.Length) {
                 this.readWriteSpinner.WriteBegin(state);
-                this.list.Resize(ref state->allocator, capacity);
+                this.list.Resize(ref state->allocator, entId + 1u);
                 this.readWriteSpinner.WriteEnd();
             }
             

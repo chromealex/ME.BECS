@@ -25,9 +25,9 @@ namespace ME.BECS.Pathfinding {
                 foreach (var group in arr) {
 
                     var groupAspect = group.GetAspect<ME.BECS.Units.UnitCommandGroupAspect>();
-                    for (int t = 0; t < groupAspect.targets.Length; ++t) {
+                    for (int t = 0; t < groupAspect.readTargets.Length; ++t) {
 
-                        var target = groupAspect.targets[t];
+                        var target = groupAspect.readTargets[t];
                         if (target.IsAlive() == false) continue;
                         
                         var targetComponent = target.Read<TargetComponent>();

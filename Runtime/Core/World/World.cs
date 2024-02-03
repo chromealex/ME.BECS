@@ -45,6 +45,7 @@ namespace ME.BECS {
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name);
+            statePtr->worldId = world.id;
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;

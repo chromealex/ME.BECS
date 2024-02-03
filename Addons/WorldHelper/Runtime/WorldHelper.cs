@@ -64,6 +64,7 @@ namespace ME.BECS {
             foreach (var module in initializerInstance.modules.list) {
                 if (module.IsEnabled() == true && module.obj is ViewsModule vm) {
                     viewsModule = UnityEngine.Object.Instantiate(vm);
+                    viewsModule.Setup(properties);
                     break;
                 }
             }

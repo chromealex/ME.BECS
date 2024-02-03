@@ -16,7 +16,9 @@ namespace ME.BECS.Units {
 
         public readonly ref ListAuto<Ent> units => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).units;
         public readonly ref MemArrayAuto<Ent> targets => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).targets;
+        public readonly ref readonly MemArrayAuto<Ent> readTargets => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).targets;
         public readonly ref float volume => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).volume;
+        public readonly ref readonly float readVolume => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).volume;
 
         public readonly void Add(in UnitAspect unit) => UnitUtils.AddToCommandGroup(in this, in unit);
 

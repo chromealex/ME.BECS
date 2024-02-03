@@ -279,7 +279,12 @@ namespace ME.BECS.Views {
                     var prefabId = this.viewsModuleData->renderingOnSceneEntToPrefabId[this.state, entId];
                     if (prefabId > 0u) {
 
-                        if (commandBuffer.ent.Read<ViewComponent>().source.prefabId != prefabId) {
+                        // Check tow points:
+                        //   if prefab changed
+                        //   if ent generation changed
+                        var idx = this.viewsModuleData->renderingOnSceneEntToRenderIndex.ReadValue(in this.state->allocator, entId);
+                        if (commandBuffer.ent != this.viewsModuleData->renderingOnSceneEnts[(int)idx].element.ent ||
+                            commandBuffer.ent.Read<ViewComponent>().source.prefabId != prefabId) {
 
                             // We need to remove and spawn again for changed entities
                             if (this.toRemove.TryAdd(entId, false) == true) {
@@ -312,8 +317,10 @@ namespace ME.BECS.Views {
             public void Execute() {
 
                 var entitiesCapacity = this.connectedWorld.state->entities.Capacity;
-                this.viewsModuleData->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT);
-                if (entitiesCapacity > this.viewsModuleData->renderingOnSceneEntToPrefabId.Length) this.viewsModuleData->renderingOnSceneEntToPrefabId.Resize(ref this.state->allocator, entitiesCapacity);
+                this.viewsModuleData->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+                if (entitiesCapacity > this.viewsModuleData->renderingOnSceneEntToPrefabId.Length) {
+                    this.viewsModuleData->renderingOnSceneEntToPrefabId.Resize(ref this.state->allocator, entitiesCapacity);
+                }
                 if (entitiesCapacity > this.viewsModuleData->toRemove.Capacity) this.viewsModuleData->toRemove.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->toAdd.Capacity) this.viewsModuleData->toAdd.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->dirty.Length) {

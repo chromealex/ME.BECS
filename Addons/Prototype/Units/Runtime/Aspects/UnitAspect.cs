@@ -36,6 +36,7 @@ namespace ME.BECS.Units {
         public readonly ref float rotationSpeed => ref this.component.rotationSpeed;
         public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.Get(this.ent.id, this.ent.gen).unitCommandGroup;
         public readonly ref Ent unitSelectionGroup => ref this.unitSelectionGroupDataPtr.Get(this.ent.id, this.ent.gen).unitSelectionGroup;
+        public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;
         
         public readonly ref bool collideWithEnd => ref this.componentRuntime.collideWithEnd;
         public readonly float3 randomVector => this.componentRuntime.randomVector;
@@ -55,13 +56,13 @@ namespace ME.BECS.Units {
             set => this.ent.SetTag<PathFollowComponent>(value);
         }
 
-        public bool IsHold {
+        public readonly bool IsHold {
             get => this.ent.Has<UnitHoldComponent>();
             set => this.ent.SetTag<UnitHoldComponent>(value);
         }
 
         [INLINE(256)]
-        public void Hit(float damage, in Ent source) {
+        public readonly void Hit(float damage, in Ent source) {
             if (this.health > 0f) {
                 JobUtils.Decrement(ref this.health, damage);
                 this.ent.SetOneShot(new DamageTookComponent() {

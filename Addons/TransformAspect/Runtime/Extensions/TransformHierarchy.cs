@@ -7,6 +7,11 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void DestroyHierarchy(this in Ent entity) {
 
+            if (entity.Has<ParentComponent>() == true) {
+                // remove from parent
+                entity.SetParent(default);
+            }
+            
             if (entity.Has<ChildrenComponent>() == true) {
 
                 var queue = new Unity.Collections.UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);

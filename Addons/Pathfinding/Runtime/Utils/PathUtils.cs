@@ -176,7 +176,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static float GetGroupRadiusSqr(in UnitCommandGroupAspect commandGroup) {
 
-            return commandGroup.volume / math.PI * RADIUS_FACTOR;
+            return commandGroup.readVolume / math.PI * RADIUS_FACTOR;
 
         }
         

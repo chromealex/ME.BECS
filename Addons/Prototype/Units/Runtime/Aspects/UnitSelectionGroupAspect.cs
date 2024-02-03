@@ -14,7 +14,9 @@ namespace ME.BECS.Units {
         public AspectDataPtr<SelectionGroupComponent> groupDataPtr;
 
         public readonly ref ListAuto<Ent> units => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).units;
-        
+
+        public readonly ref readonly ListAuto<Ent> readUnits => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).units;
+
         [INLINE(256)]
         public readonly void Add(in UnitAspect unit) => UnitUtils.AddToSelectionGroup(in this, in unit);
 

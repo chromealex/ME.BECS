@@ -41,6 +41,21 @@ namespace ME.BECS {
             
         }
 
+        [Conditional(COND.EXCEPTIONS)]
+        [HIDE_CALLSTACK]
+        public static void IS_NOT_IN_TICK(State* state) {
+
+            if (state->mode == WorldMode.Visual ||
+                state->tickCheck == 0 ||
+                state->worldState == WorldState.Initialized ||
+                state->worldState == WorldState.EndTick) {
+                return;
+            }
+            
+            WorldStateException.Throw(state->worldState);
+
+        }
+
     }
 
 }

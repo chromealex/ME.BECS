@@ -5,6 +5,10 @@ namespace ME.BECS {
     public abstract class Module : UnityEngine.ScriptableObject {
 
         protected internal WorldProperties worldProperties;
+
+        public void Setup(in WorldProperties properties) {
+            this.worldProperties = properties;
+        }
         
         public abstract void OnAwake(ref World world);
         public abstract JobHandle OnStart(ref World world, JobHandle dependsOn);

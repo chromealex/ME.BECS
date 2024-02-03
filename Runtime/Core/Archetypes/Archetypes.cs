@@ -209,7 +209,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         internal void Add(State* state, in Archetype archetype, out uint idx) {
-            
+
             MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
             ref var allocator = ref state->allocator;
             idx = this.list.Add(ref allocator, archetype);
@@ -463,6 +463,16 @@ namespace ME.BECS {
             for (uint i = 0; i < entitiesList.Count; ++i) {
                 var ent = entitiesList[state->allocator, i];
                 str += ", " + ent + ":" + archetypes.entToIdxInArchetype[state, ent];
+            }
+
+            return str;
+        }
+
+        private static string ListStr(State* state, UIntHashSet componentsList) {
+            var str = string.Empty;
+            var e = componentsList.GetEnumerator(state);
+            while (e.MoveNext() == true) {
+                str += ", " + e.Current;
             }
 
             return str;

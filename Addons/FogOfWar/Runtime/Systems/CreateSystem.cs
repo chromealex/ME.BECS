@@ -117,7 +117,7 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public bool IsVisible(in PlayerAspect player, in ME.BECS.Units.UnitAspect unit) {
             
-            var fow = player.team.Read<ME.BECS.FogOfWar.FogOfWarComponent>();
+            var fow = player.readTeam.Read<ME.BECS.FogOfWar.FogOfWarComponent>();
             var props = this.heights.Read<ME.BECS.FogOfWar.FogOfWarStaticComponent>();
             var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition());
             return ME.BECS.FogOfWar.FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);

@@ -21,7 +21,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Add(uint value) {
 
-            if (this.list.isCreated == false) this.list = new TempBitArray(StaticTypes.counter + 1u, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP_ST);
+            if (this.list.isCreated == false) this.list = new TempBitArray(StaticTypes.counter + 1u, ClearOptions.ClearMemory, Constants.ALLOCATOR_PERSISTENT_ST);
             
             ++this.Count;
             if (value > this.maxId) this.maxId = value;
@@ -58,7 +58,7 @@ namespace ME.BECS {
     public unsafe struct BatchItem {
 
         public Ent ent;
-        private BatchList addItems;
+        internal BatchList addItems;
         private BatchList removeItems;
         public LockSpinner lockIndex;
         public uint Count;
