@@ -14,7 +14,7 @@ namespace ME.BECS {
         /// </summary>
         /// <returns>Original entity</returns>
         [INLINE(256)]
-        public Ent GetEntity() => this.ent;
+        public readonly Ent GetEntity() => this.ent;
 
         public readonly uint Version => this.ent.Version;
 

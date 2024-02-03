@@ -28,7 +28,7 @@ namespace ME.BECS.Attack {
                     if (ent.IsAlive() == false) continue;
                     var result = ent.GetAspect<ME.BECS.Units.UnitAspect>();
                     if (ME.BECS.Units.UnitUtils.GetTeam(in result) == team) continue;
-                    if (this.fogOfWar.IsVisible(in player, in result) == false) continue;
+                    if (this.fogOfWar.IsVisible(in player, result.ent) == false) continue;
                     
                     var dist = math.lengthsq(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
                     if (dist <= aspect.attackRangeSqr) {

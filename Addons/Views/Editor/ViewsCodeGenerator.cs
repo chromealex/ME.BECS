@@ -30,13 +30,12 @@ namespace ME.BECS.Views.Editor {
                 
                 var info = new ME.BECS.Views.ViewTypeInfo();
                 foreach (var method in methods) {
-                    var methodInfo = viewType.GetMethod(method.Key,
-                                                                  System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    var methodInfo = viewType.GetMethod(method.Key, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                     if (ViewsCodeGenerator.HasOverrideAndNotEmpty(methodInfo) == true) {
                         method.Value.Invoke(ref info);
                     }
                 }
-                
+
                 var str = $"ME.BECS.Views.ViewsTypeInfo.RegisterType<{viewType.FullName}>({ViewsCodeGenerator.InfoToString(info)});";
                 content.Add(str);
                 

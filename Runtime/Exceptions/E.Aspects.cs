@@ -16,11 +16,17 @@ namespace ME.BECS {
                 var typeId = AspectTypeInfo<T>.with.Get(i);
                 var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
-                    throw new RequiredComponentException($"Entity has no component {typeId}, but it is required");
+                    IS_VALID_FOR_ASPECT_BurstDiscard(in ent, typeId);
+                    throw new RequiredComponentException($"Entity {ent.ToString()} has no component {typeId}, but it is required");
                 }
 
             }
             
+        }
+
+        [BURST_DISCARD]
+        private static void IS_VALID_FOR_ASPECT_BurstDiscard(in Ent ent, uint typeId) {
+            throw new RequiredComponentException($"Entity {ent.ToString()} has no component {typeId} ({StaticTypesLoadedManaged.loadedTypes[typeId].Name}), but it is required");
         }
 
     }

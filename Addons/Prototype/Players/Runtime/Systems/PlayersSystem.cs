@@ -103,7 +103,8 @@ namespace ME.BECS.Players {
         }
 
         [INLINE(256)]
-        public PlayerAspect SetActivePlayer(uint index) {
+        public unsafe PlayerAspect SetActivePlayer(uint index) {
+            E.IS_NOT_IN_TICK(Context.world.state);
             this.activePlayer = index;
             return this.GetActivePlayer();
         }

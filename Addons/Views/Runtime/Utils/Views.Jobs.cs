@@ -65,8 +65,8 @@ namespace ME.BECS.Views {
                                 prefabInfo = prefabInfo,
                             });
                             var updateIdx = this.data->renderingOnSceneCount++;
-                            if (prefabInfo.info->typeInfo.HasApplyState == true) this.data->renderingOnSceneApplyState.Add(ref allocator, entId);
-                            if (prefabInfo.info->typeInfo.HasUpdate == true) this.data->renderingOnSceneUpdate.Add(ref allocator, entId);
+                            if (prefabInfo.info->typeInfo.HasApplyState == true || prefabInfo.info->HasApplyStateModules == true) this.data->renderingOnSceneApplyState.Add(ref allocator, entId);
+                            if (prefabInfo.info->typeInfo.HasUpdate == true || prefabInfo.info->HasUpdateModules == true) this.data->renderingOnSceneUpdate.Add(ref allocator, entId);
                             this.data->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, entId) = updateIdx;
                             this.data->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = entId;
                             this.data->renderingOnSceneBits.Set((int)entId, true);
@@ -111,8 +111,8 @@ namespace ME.BECS.Views {
                             this.data->renderingOnSceneBits.Set((int)entId, false);
                             {
                                 // Remove and swap back
-                                if (info.prefabInfo->typeInfo.HasApplyState == true) this.data->renderingOnSceneApplyState.Remove(in allocator, entId);
-                                if (info.prefabInfo->typeInfo.HasUpdate == true) this.data->renderingOnSceneUpdate.Remove(in allocator, entId);
+                                if (info.prefabInfo->typeInfo.HasApplyState == true || info.prefabInfo->HasApplyStateModules == true) this.data->renderingOnSceneApplyState.Remove(in allocator, entId);
+                                if (info.prefabInfo->typeInfo.HasUpdate == true || info.prefabInfo->HasUpdateModules == true) this.data->renderingOnSceneUpdate.Remove(in allocator, entId);
                                 --this.data->renderingOnSceneCount;
                                 this.data->renderingOnScene.RemoveAtFast(in allocator, idx);
                                 this.data->renderingOnSceneEnts.RemoveAtSwapBack(index);
