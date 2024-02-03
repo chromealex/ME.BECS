@@ -317,9 +317,9 @@ namespace ME.BECS.Editor.Systems {
                                             isInBurst = isBursted;
                                         }
 
-                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});");
+                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});{dependsOn}.Complete();");
                                         methodContent.Add($"(({GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
-                                        methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
+                                        methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);dep{index.ToString()}.Complete();");
                                         collectedDeps.Add($"dep{index.ToString()}");
                                         
                                     }

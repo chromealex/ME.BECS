@@ -345,18 +345,18 @@ namespace ME.BECS {
 
     internal sealed unsafe class BitArrayDebugView {
 
-        private BitArray Data;
+        private BitArray data;
 
         public BitArrayDebugView(BitArray data) {
-            this.Data = data;
+            this.data = data;
         }
 
         public bool[] Bits {
             get {
                 var allocator = Context.world.state->allocator;
-                var array = new bool[this.Data.Length];
-                for (var i = 0; i < this.Data.Length; ++i) {
-                    array[i] = this.Data.IsSet(in allocator, i);
+                var array = new bool[this.data.Length];
+                for (var i = 0; i < this.data.Length; ++i) {
+                    array[i] = this.data.IsSet(in allocator, i);
                 }
 
                 return array;
@@ -366,9 +366,9 @@ namespace ME.BECS {
         public int[] BitIndexes {
             get {
                 var allocator = Context.world.state->allocator;
-                var array = new System.Collections.Generic.List<int>((int)this.Data.Length);
-                for (var i = 0; i < this.Data.Length; ++i) {
-                    if (this.Data.IsSet(in allocator, i) == true) array.Add(i);
+                var array = new System.Collections.Generic.List<int>((int)this.data.Length);
+                for (var i = 0; i < this.data.Length; ++i) {
+                    if (this.data.IsSet(in allocator, i) == true) array.Add(i);
                 }
 
                 return array.ToArray();

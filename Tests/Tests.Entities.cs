@@ -103,7 +103,6 @@ namespace ME.BECS.Tests {
                 }.Schedule((int)amount, 64);
 
                 job = ME.BECS.Batches.Apply(job, world.state);
-                job = ME.BECS.Batches.BurstModeThreadTasks(job, world.state, false);
                 JobUtils.RunScheduled();
                 job.Complete();
 
@@ -126,7 +125,6 @@ namespace ME.BECS.Tests {
                 }.Schedule((int)amount, 64);
 
                 job = ME.BECS.Batches.Apply(job, world.state);
-                job = ME.BECS.Batches.BurstModeThreadTasks(job, world.state, false);
                 JobUtils.RunScheduled();
                 job.Complete();
 

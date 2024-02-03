@@ -106,9 +106,8 @@ namespace ME.BECS {
             return this.root.IsSet((int)value);
         }
         
-        [INLINE(256)]
-        public void Dispose() {
-            if (this.root.isCreated == true) this.root.Dispose();
+        public override string ToString() {
+            return string.Join(", ", new TempBitArrayDebugView(this.root).BitIndexes);
         }
 
     }

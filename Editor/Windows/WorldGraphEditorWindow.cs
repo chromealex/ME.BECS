@@ -1275,11 +1275,10 @@ namespace ME.BECS.Editor {
             container.AddToClassList("archetype-container");
             this.rootContainer.Add(container);
 
-            var label = new Label("Archetype");
+            var label = new Label($"Archetype #{node.id}");
             label.AddToClassList("archetype-label");
             container.Add(label);
 
-            this.searchStr = string.Empty;
             {
                 var searchContainer = new VisualElement();
                 searchContainer.AddToClassList("search-container");
@@ -1288,7 +1287,7 @@ namespace ME.BECS.Editor {
                     var searchHeader = new Label("Search");
                     searchContainer.AddToClassList("search-header");
                     searchContainer.Add(searchHeader);
-                    var search = new TextField();
+                    var search = new TextField(this.searchStr);
                     searchContainer.Add(search);
                     search.AddToClassList("search-field");
                     search.RegisterValueChangedCallback((evt) => {

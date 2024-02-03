@@ -58,7 +58,7 @@ namespace ME.BECS {
         public static bool Set(this ref Batches batches, in Ent ent, uint typeId, void* data, State* state) {
             
             E.IS_IN_TICK(state);
-
+            
             var groupId = StaticTypes.groups.Get(typeId);
             if (state->components.SetUnknownType(state, typeId, groupId, in ent, data) == true) {
                 batches.Set_INTERNAL(typeId, in ent, state);

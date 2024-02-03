@@ -968,34 +968,39 @@ namespace ME.BECS.Extensions.GraphProcessor
 			element.Bind(owner.serializedGraph);
 
 			System.Action rebuild = () => {
-				var allChilds = element.Query<PropertyField>().ToList();
+				/*var allChilds = element.Query<PropertyField>().ToList();
 				foreach (var child in allChilds) {
 					child.RegisterValueChangeCallback((evt) => {
 
 						if (evt.changedProperty.propertyType != SerializedPropertyType.ManagedReference) {
+							Debug.Log("Changed: " + evt.changedProperty.propertyPath);
 							UpdateTitle();
 							NotifyNodeChanged();
 							return;
 						}
+						
 						if (evt.changedProperty.managedReferenceFullTypename == prevManagedReferenceFullTypename) {
 							return;
 						}
-						//Debug.Log("Changed: " + evt.changedProperty.propertyPath + " :: " + prevManagedReferenceFullTypename + "="+ evt.changedProperty.managedReferenceFullTypename);
-						prevManagedReferenceFullTypename = evt.changedProperty.managedReferenceFullTypename;
-						UpdateFieldVisibility(field.Name, field.GetValue(nodeTarget));
-						valueChangedCallback?.Invoke();
-						NotifyNodeChanged();
-						//this.SyncSerializedPropertyPathes();
-						UpdateTitle();
-						{
-							var container = element.parent;
-							container.Remove(element);
-							var newElem = AddControlField(field, label, showInputDrawer, valueChangedCallback);
-							container.Add(newElem);
+						
+						if (string.IsNullOrEmpty(prevManagedReferenceFullTypename) == false) {
+							Debug.Log("Changed: " + evt.changedProperty.propertyPath + " :: " + prevManagedReferenceFullTypename + "="+ evt.changedProperty.managedReferenceFullTypename);
+							UpdateFieldVisibility(field.Name, field.GetValue(nodeTarget));
+							valueChangedCallback?.Invoke();
+							NotifyNodeChanged();
+							this.SyncSerializedPropertyPathes();
+							UpdateTitle();
+							{
+								var container = element.parent;
+								container.Remove(element);
+								var newElem = AddControlField(field, label, showInputDrawer, valueChangedCallback);
+								container.Add(newElem);
+							}
 						}
+						prevManagedReferenceFullTypename = evt.changedProperty.managedReferenceFullTypename;
 
 					});
-				}
+				}*/
 			};
 			/*element.RegisterCallback<UnityEngine.UIElements.GeometryChangedEvent>((evt) => {
 				rebuild.Invoke();

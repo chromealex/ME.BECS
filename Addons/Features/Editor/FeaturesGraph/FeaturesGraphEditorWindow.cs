@@ -44,7 +44,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
         protected override void OnDestroy() {
             
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
-            
+            if (this.graph != null) { 
+                this.graph.onGraphChanges -= this.OnGraphChanged;
+            }
             base.OnDestroy();
             
         }
@@ -62,9 +64,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private void SelectAsset(BaseGraph graph) {
             
+            if (this.graph != null) { 
+                this.graph.onGraphChanges -= this.OnGraphChanged;
+            }
+            
             this.titleContent = new GUIContent(graph.name, this.titleContent.image);
             this.graph = graph;
             this.graph.InitializeValidation();
+            this.graph.onGraphChanges -= this.OnGraphChanged;
             this.graph.onGraphChanges += this.OnGraphChanged;
             this.hasUnsavedChanges = false;
             this.graphView = null;
@@ -74,6 +81,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
 
         private void OnGraphChanged(GraphChanges obj) {
+        
+            Debug.Log("Dirty");
             this.hasUnsavedChanges = true;
             this.UpdateToolbar();
         }

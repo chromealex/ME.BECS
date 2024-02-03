@@ -531,7 +531,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void CopyFrom(ref MemoryAllocator allocator, in HashSet<T> other) {
 
-            this.buckets.CopyFrom(ref allocator, other.buckets);
+            NativeArrayUtils.CopyExact(ref allocator, in other.buckets, ref this.buckets);
             this.slots.CopyFrom(ref allocator, other.slots);
             var thisBuckets = this.buckets;
             var thisSlots = this.slots;

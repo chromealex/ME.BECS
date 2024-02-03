@@ -80,17 +80,23 @@ namespace ME.BECS {
         public static Ent New(ushort worldId) {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
+            E.IS_IN_TICK(world.state);
+
             Ent newEnt;
             {
                 newEnt = world.state->entities.Add(world.state, worldId, out var reused);
                 if (reused == false) {
+                    world.state->entities.Lock(world.state, in newEnt);
                     world.state->components.OnEntityAdd(world.state, newEnt.id);
                     world.state->batches.OnEntityAdd(world.state, newEnt.id);
                     world.state->collectionsRegistry.OnEntityAdd(world.state, newEnt.id);
+                    world.state->entities.Unlock(world.state, in newEnt);
                 }
             }
             {
+                world.state->entities.Lock(world.state, in newEnt);
                 world.state->archetypes.AddEntity(world.state, newEnt);
+                world.state->entities.Unlock(world.state, in newEnt);
             }
 
             return newEnt;

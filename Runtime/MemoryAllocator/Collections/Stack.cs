@@ -151,6 +151,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public void PushLock(ref LockSpinner spinner, ref MemoryAllocator allocator, T item) {
+            if (this.size == this.array.Length) {
+                spinner.Lock();
+                if (this.size == this.array.Length) {
+                    this.array.Resize(ref allocator, this.array.Length == 0 ? Stack<T>.DEFAULT_CAPACITY : 2 * this.array.Length);
+                }
+                spinner.Unlock();
+            }
+
+            var idx = JobUtils.Increment(ref this.size);
+            this.array[in allocator, idx - 1u] = item;
+        }
+
+        [INLINE(256)]
         public void PushRange(ref MemoryAllocator allocator, Unity.Collections.LowLevel.Unsafe.UnsafeList<uint>* list) {
             var freeItems = this.array.Length - this.size;
             if (list->Length >= freeItems) {

@@ -246,6 +246,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static MemPtr ReAlloc(ref MemoryAllocator allocator, in MemPtr ptr, int size, out void* voidPtr) {
 
+            size = MemoryAllocator.Align(size);
+            
             if (ptr.IsValid() == false) return MemoryAllocatorExt.Alloc(ref allocator, size, out voidPtr);
 
             ValidateConsistency(ref allocator);
@@ -356,6 +358,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static MemPtr Alloc(ref MemoryAllocator allocator, long size, out void* ptr) {
 
+            size = MemoryAllocator.Align(size);
+            
             ValidateConsistency(ref allocator);
 
             JobUtils.Lock(ref allocator.lockIndex);

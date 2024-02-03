@@ -22,24 +22,26 @@ namespace ME.BECS {
             E.IS_ALIVE(ent);
             var state = ent.World.state;
             state->entities.Lock(state, in ent);
+            //UnityEngine.Debug.Log("Destroy Request: " + ent + " :: " + state->archetypes.entToArchetypeIdx[state, ent.id]);
             E.IS_ALIVE(ent);
             E.IS_IN_TICK(state);
             
             {
                 state->entities.Remove(state, in ent);
             }
-            JobUtils.Lock(ref state->components.lockSharedIndex);
             {
                 state->components.ClearShared(state, ent.id);
             }
-            JobUtils.Unlock(ref state->components.lockSharedIndex);
             {
-                state->batches.Clear(state, ent.id);
+                state->batches.Clear(state, in ent);
             }
             {
-                state->archetypes.RemoveEntity(state, ent.id);
+                state->archetypes.RemoveEntity(state, in ent);
             }
-            state->collectionsRegistry.Destroy(state, in ent);
+            {
+                state->collectionsRegistry.Destroy(state, in ent);
+            }
+            //UnityEngine.Debug.Log("Destroy Request Complete: " + ent + " :: " + state->archetypes.entToArchetypeIdx[state, ent.id]);
             state->entities.Unlock(state, in ent);
             
         }

@@ -275,6 +275,17 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public readonly void DisposeReadonly() {
+
+            if (((Unity.Collections.AllocatorManager.AllocatorHandle)this.allocator).IsCustomAllocator == true) {
+                Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
+            } else {
+                _free(this.ptr, this.allocator);
+            }
+
+        }
+
+        [INLINE(256)]
         public UnsafeList<uint> GetTrueBitsTemp() {
 
             var trueBits = new UnsafeList<uint>((int)this.Length, Constants.ALLOCATOR_TEMP);
@@ -310,17 +321,17 @@ namespace ME.BECS {
 
     internal sealed class TempBitArrayDebugView {
 
-        private TempBitArray Data;
+        private TempBitArray data;
 
         public TempBitArrayDebugView(TempBitArray data) {
-            this.Data = data;
+            this.data = data;
         }
 
         public bool[] Bits {
             get {
-                var array = new bool[this.Data.Length];
-                for (var i = 0; i < this.Data.Length; ++i) {
-                    array[i] = this.Data.IsSet(i);
+                var array = new bool[this.data.Length];
+                for (var i = 0; i < this.data.Length; ++i) {
+                    array[i] = this.data.IsSet(i);
                 }
 
                 return array;
@@ -329,9 +340,9 @@ namespace ME.BECS {
 
         public int[] BitIndexes {
             get {
-                var array = new System.Collections.Generic.List<int>((int)this.Data.Length);
-                for (var i = 0; i < this.Data.Length; ++i) {
-                    if (this.Data.IsSet(i) == true) array.Add(i);
+                var array = new System.Collections.Generic.List<int>((int)this.data.Length);
+                for (var i = 0; i < this.data.Length; ++i) {
+                    if (this.data.IsSet(i) == true) array.Add(i);
                 }
 
                 return array.ToArray();

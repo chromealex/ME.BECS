@@ -10,6 +10,7 @@ namespace ME.BECS {
         private struct ThreadItem {
 
             public List<Task> items;
+            public LockSpinner lockIndex;
 
         }
         
@@ -31,7 +32,9 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             var threadIndex = Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex;
             Journal.SetOneShotComponent(in ent, typeId, type);
-            this.threadItems[state, threadIndex].items.Add(ref state->allocator, new Task() {
+            ref var threadItem = ref this.threadItems[state, threadIndex];
+            threadItem.lockIndex.Lock();
+            threadItem.items.Add(ref state->allocator, new Task() {
                 typeId = typeId,
                 groupId = groupId,
                 ent = ent,
@@ -39,6 +42,7 @@ namespace ME.BECS {
                 data = data,
                 updateType = updateType,
             });
+            threadItem.lockIndex.Unlock();
 
         }
 
@@ -54,6 +58,7 @@ namespace ME.BECS {
             for (uint i = 0; i < this.threadItems.Length; ++i) {
                 
                 ref var threadItem = ref this.threadItems[state, i];
+                threadItem.lockIndex.Lock();
                 for (int j = (int)threadItem.items.Count - 1; j >= 0; --j) {
 
                     var item = threadItem.items[state, (uint)j];
@@ -69,7 +74,7 @@ namespace ME.BECS {
                                 break;
 
                             case OneShotType.NextTick:
-                                if (tempContains.Add(item) == true) {
+                                if (item.ent.IsAlive() == true && tempContains.Add(item) == true) {
                                     temp.Add(item);
                                 }
                                 break;
@@ -78,6 +83,7 @@ namespace ME.BECS {
                     }
 
                 }
+                threadItem.lockIndex.Unlock();
 
             }
 
@@ -87,11 +93,13 @@ namespace ME.BECS {
 
             foreach (var item in temp) {
 
-                Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
-                // if we processing begin of tick - add component
-                state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
-                // add new task to remove at the end of the tick
-                this.Add(state, in item.ent, item.typeId, item.groupId, item.updateType, default, OneShotType.CurrentTick);
+                {
+                    Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
+                    // if we processing begin of tick - add component
+                    state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
+                    // add new task to remove at the end of the tick
+                    this.Add(state, in item.ent, item.typeId, item.groupId, item.updateType, default, OneShotType.CurrentTick);
+                }
                 item.Dispose(ref state->allocator);
 
             }

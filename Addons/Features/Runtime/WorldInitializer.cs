@@ -34,7 +34,7 @@ namespace ME.BECS {
         }
 
         public void FixedUpdate() {
-            
+
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
             

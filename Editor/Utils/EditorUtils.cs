@@ -171,14 +171,21 @@ namespace ME.BECS.Editor {
                 var dirPath = GetDirGUID("Assets", paths);
                 if (dirPath != null) {
 
-                    return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(UnityEditor.AssetDatabase.GUIDToAssetPath(dirPath));
+                    var obj = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(UnityEditor.AssetDatabase.GUIDToAssetPath(dirPath));
+                    if (obj != null) return obj;
 
                 }
             }
 
+            {
+                var fileNameWithoutExtension = System.IO.Path.GetDirectoryName(path) + System.IO.Path.GetFileNameWithoutExtension(path);
+                var obj = UnityEngine.Resources.Load<T>(fileNameWithoutExtension);
+                if (obj != null) return obj;
+            }
+
             if (isRequired == true) {
 
-                throw new System.IO.FileNotFoundException($"Could not find editor resource {path} of type {typeof(T)}");
+                throw new System.IO.FileNotFoundException($"Could not find editor resource {path} of type {typeof(T)} (resource path: {System.IO.Path.GetDirectoryName(path) + System.IO.Path.GetFileNameWithoutExtension(path)})");
 
             }
             

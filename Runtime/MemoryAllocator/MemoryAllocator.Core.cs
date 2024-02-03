@@ -324,8 +324,13 @@ namespace ME.BECS {
         #endif
         [INLINE(256)]
         private static int ZmGetMemBlockSize(int size) {
-            return ((size + 3) & ~3) + TSize<MemBlock>.sizeInt;
+            return Align(size) + TSize<MemBlock>.sizeInt;
         }
+        
+        [INLINE(256)]
+        internal static int Align(int size) => ((size + 3) & ~3);
+        [INLINE(256)]
+        internal static long Align(long size) => ((size + 3) & ~3);
 
         #if BURST
         [BURST(CompileSynchronously = true)]

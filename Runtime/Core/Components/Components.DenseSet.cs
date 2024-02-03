@@ -204,10 +204,10 @@ namespace ME.BECS {
                     page.Lock();
                     if (*gen != entityGen) {
                         *gen = entityGen;
+                        changed = true;
+                        isNew = true;
                     }
                     page.Unlock();
-                    changed = true;
-                    isNew = true;
                 }
             }
             this.readWriteSpinner.ReadEnd(state);
@@ -247,9 +247,9 @@ namespace ME.BECS {
                     page.Lock();
                     if (*gen != entityGen) {
                         *gen = entityGen;
+                        isNew = true;
                     }
                     page.Unlock();
-                    isNew = true;
                 }
             }
             var dataPtr = _offsetData(ptr);
@@ -275,13 +275,15 @@ namespace ME.BECS {
             { // update gen
                 var gen = _offsetGen(ptr);
                 if (*gen == entityGen) {
+                    var hasRemoved = false;
                     page.Lock();
                     if (*gen == entityGen) {
                         *gen = 0;
+                        hasRemoved = true;
                     }
                     page.Unlock();
                     this.readWriteSpinner.ReadEnd(state);
-                    return true;
+                    return hasRemoved;
                 }
             }
             this.readWriteSpinner.ReadEnd(state);

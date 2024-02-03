@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
@@ -266,4 +267,195 @@ namespace ME.BECS.Tests {
 
     }
 
+    public unsafe class Tests_Collections_HashSet {
+
+        [UnityEngine.TestTools.UnitySetUpAttribute]
+        public System.Collections.IEnumerator SetUp() {
+            AllTests.Start();
+            yield return null;
+        }
+
+        [UnityEngine.TestTools.UnityTearDownAttribute]
+        public System.Collections.IEnumerator TearDown() {
+            AllTests.Dispose();
+            yield return null;
+        }
+
+        [Test]
+        public void Add() {
+
+            var world = World.Create();
+            {
+                var hs = new UIntHashSet(ref world.state->allocator, 1u);
+                for (int i = 0; i < 100; ++i) {
+                    hs.Add(ref world.state->allocator, (uint)i);
+                }
+                for (int i = 0; i < 100; ++i) {
+                    hs.Remove(ref world.state->allocator, (uint)i);
+                }
+                hs.Add(ref world.state->allocator, 21);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 24);
+                hs.Add(ref world.state->allocator, 25);
+                hs.Add(ref world.state->allocator, 26);
+                hs.Add(ref world.state->allocator, 28);
+                hs.Add(ref world.state->allocator, 61);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 70);
+                hs.Add(ref world.state->allocator, 22);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 24);
+                hs.Add(ref world.state->allocator, 25);
+                hs.Add(ref world.state->allocator, 26);
+                hs.Add(ref world.state->allocator, 28);
+                hs.Add(ref world.state->allocator, 61);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 70);
+                hs.Add(ref world.state->allocator, 22);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 68);
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 21));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 23));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 24));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 25));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 26));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 28));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 69));
+                Assert.IsTrue(hs.Remove(ref world.state->allocator, 69));
+                Assert.IsFalse(hs.Contains(in world.state->allocator, 69));
+            }
+            world.Dispose();
+
+        }
+
+        [Test]
+        public void Copy() {
+
+            var world = World.Create();
+            {
+                var hs2 = new UIntHashSet(ref world.state->allocator, 1u);
+                var hs = new UIntHashSet(ref world.state->allocator, 1u);
+                for (int i = 0; i < 100; ++i) {
+                    hs.Add(ref world.state->allocator, (uint)i);
+                }
+                for (int i = 0; i < 100; ++i) {
+                    hs.Remove(ref world.state->allocator, (uint)i);
+                }
+                hs.Add(ref world.state->allocator, 21);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 24);
+                hs.Add(ref world.state->allocator, 25);
+                hs.Add(ref world.state->allocator, 26);
+                hs.Add(ref world.state->allocator, 28);
+                hs.Add(ref world.state->allocator, 61);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 70);
+                hs.Add(ref world.state->allocator, 22);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 23);
+                hs.Add(ref world.state->allocator, 24);
+                hs.Add(ref world.state->allocator, 25);
+                hs.Add(ref world.state->allocator, 26);
+                hs.Add(ref world.state->allocator, 28);
+                hs.Add(ref world.state->allocator, 61);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 63);
+                hs.Add(ref world.state->allocator, 70);
+                hs.Add(ref world.state->allocator, 22);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 69);
+                hs.Add(ref world.state->allocator, 68);
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 21));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 23));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 24));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 25));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 26));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 28));
+                Assert.IsTrue(hs.Contains(in world.state->allocator, 69));
+                Assert.IsTrue(hs.Remove(ref world.state->allocator, 69));
+                Assert.IsFalse(hs.Contains(in world.state->allocator, 69));
+                hs2.CopyFrom(ref world.state->allocator, hs);
+                hs2.Add(ref world.state->allocator, 126);
+                hs2.Add(ref world.state->allocator, 128);
+                hs2.Add(ref world.state->allocator, 161);
+                hs2.Add(ref world.state->allocator, 169);
+                hs2.Add(ref world.state->allocator, 128);
+                hs2.Add(ref world.state->allocator, 168);
+                hs2.Add(ref world.state->allocator, 123);
+                hs2.Add(ref world.state->allocator, 163);
+                hs2.Add(ref world.state->allocator, 163);
+                hs2.Add(ref world.state->allocator, 170);
+                hs2.Add(ref world.state->allocator, 121);
+                hs2.Add(ref world.state->allocator, 122);
+                hs2.Add(ref world.state->allocator, 169);
+                hs2.Add(ref world.state->allocator, 126);
+                hs2.Add(ref world.state->allocator, 169);
+                hs2.Add(ref world.state->allocator, 124);
+                hs2.Add(ref world.state->allocator, 125);
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 121));
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 123));
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 124));
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 125));
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 126));
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 128));
+                Assert.IsTrue(hs2.Contains(in world.state->allocator, 169));
+                Assert.IsTrue(hs2.Remove(ref world.state->allocator, 169));
+                Assert.IsFalse(hs2.Contains(in world.state->allocator, 169));
+            }
+            world.Dispose();
+
+        }
+
+        [Test]
+        public void Equals() {
+
+            var world = World.Create();
+            {
+                var seed = UnityEngine.Random.Range(0, 9999999);
+                UnityEngine.Random.InitState(seed);
+                var list = new System.Collections.Generic.List<uint>();
+                var hs = new UIntHashSet(ref world.state->allocator, 1u);
+                for (int i = 0; i < 100; ++i) {
+                    list.Add((uint)UnityEngine.Random.Range(0, 100));
+                }
+
+                foreach (var item in list) {
+                    hs.Add(ref world.state->allocator, item);
+                }
+
+                list = list.OrderBy(x => UnityEngine.Random.value).ToList();
+                
+                var hs2 = new UIntHashSet(ref world.state->allocator, 1u);
+                foreach (var item in list) {
+                    hs2.Add(ref world.state->allocator, item);
+                }
+
+                Assert.IsTrue(hs.Equals(in world.state->allocator, hs2));
+                
+            }
+            world.Dispose();
+
+        }
+
+    }
+    
 }

@@ -8,13 +8,14 @@ namespace ME.BECS {
 
     public static unsafe class EntityConfigRegistry {
 
-        public static ref World staticWorld => ref EntityConfigRegistryShared.staticWorld.Data;
-        
-        public static System.Collections.Generic.Dictionary<EntityConfig, uint> registryToId = new System.Collections.Generic.Dictionary<EntityConfig, uint>();
-        public static UIntDictionary<UnsafeEntityConfig> registryFromId;
-        public static uint nextId;
+        private static ref World staticWorld => ref EntityConfigRegistryShared.staticWorld.Data;
+
+        private static System.Collections.Generic.Dictionary<EntityConfig, uint> registryToId = new System.Collections.Generic.Dictionary<EntityConfig, uint>();
+        private static UIntDictionary<UnsafeEntityConfig> registryFromId;
+        private static uint nextId;
 
         public static void Initialize() {
+            UnityEngine.Debug.Log("Initialize static world for configs");
             var props = WorldProperties.Default;
             props.name = "EntityConfig Static World";
             staticWorld = World.Create(props, false);

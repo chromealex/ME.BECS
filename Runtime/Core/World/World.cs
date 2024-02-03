@@ -94,7 +94,7 @@ namespace ME.BECS {
             Journal.BeginFrame(this.id);
 
             dependsOn = State.BurstMode(this.state, true, dependsOn);
-            dependsOn = Batches.BurstModeThreadTasks(dependsOn, this.state, true);
+            dependsOn = Batches.Apply(dependsOn, this.state);
             dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.NextTick, updateType, dependsOn);
             {
                 dependsOn = State.NextTick(this.state, dependsOn);
@@ -102,7 +102,7 @@ namespace ME.BECS {
                 dependsOn = Batches.Apply(dependsOn, this.state);
             }
             dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.CurrentTick, updateType, dependsOn);
-            dependsOn = Batches.BurstModeThreadTasks(dependsOn, this.state, false);
+            dependsOn = Batches.Apply(dependsOn, this.state);
             dependsOn = State.BurstMode(this.state, false, dependsOn);
 
             Journal.EndFrame(this.id);

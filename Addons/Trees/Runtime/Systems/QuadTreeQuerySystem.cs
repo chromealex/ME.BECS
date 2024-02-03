@@ -6,6 +6,7 @@ namespace ME.BECS {
     using Unity.Mathematics;
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
+    using ME.BECS.Transforms;
 
     public struct QuadTreeQuery : IComponent {
 
@@ -54,14 +55,13 @@ namespace ME.BECS {
     public unsafe struct QuadTreeQuerySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<QuadTreeQueryAspect> {
+        public struct Job : IJobParallelForAspect<QuadTreeQueryAspect, TransformAspect> {
 
             public QuadTreeInsertSystem system;
 
-            public void Execute(ref QuadTreeQueryAspect query) {
+            public void Execute(ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 var data = query.query;
-                var tr = query.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 var worldPos = tr.GetWorldMatrixPosition();
                 if (data.ignoreY == true) worldPos.y = 0f;
                 
@@ -103,7 +103,7 @@ namespace ME.BECS {
         public void OnUpdate(ref SystemContext context) {
 
             var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            var handle = API.Query(in context).ScheduleParallelFor<Job, QuadTreeQueryAspect>(new Job() {
+            var handle = API.Query(in context).ScheduleParallelFor<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
                 system = querySystem,
             });
             context.SetDependency(handle);

@@ -452,13 +452,13 @@ namespace ME.BECS {
             }
         }
         
-        public MemArray<uint> buckets => this.arr.buckets;
+        public MemArray<int> buckets => this.arr.buckets;
         public MemArray<UIntHashSet.Slot> slots => this.arr.slots;
         public uint hash => this.arr.hash;
-        public uint count => this.arr.count;
-        public uint version => this.arr.version;
+        public uint count => (uint)this.arr.count;
+        public uint version => (uint)this.arr.version;
         public int freeList => this.arr.freeList;
-        public uint lastIndex => this.arr.lastIndex;
+        public uint lastIndex => (uint)this.arr.lastIndex;
 
         public uint[] items {
             get {

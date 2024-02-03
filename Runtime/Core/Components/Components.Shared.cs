@@ -14,6 +14,9 @@ namespace ME.BECS {
 
     }
 
+    /// <summary>
+    /// TODO: Locks improvement required
+    /// </summary>
     public unsafe partial struct Components {
 
         public const uint COMPONENT_SHARED_DEFAULT_HASH = 0u;
@@ -127,6 +130,7 @@ namespace ME.BECS {
                 hash = sharedTypeId;
             }
             
+            state->components.lockSharedIndex.Lock();
             // get shared storage for component by hash
             ref var ptr = ref this.sharedData.GetValue(ref state->allocator, hash, out var exist);
             if (exist == false) ptr.Set(ref state->allocator, new SharedComponentStorageUnknown(state, data, dataSize));
@@ -142,6 +146,8 @@ namespace ME.BECS {
             SetSharedHash(state, ref this, ent.id, sharedTypeId, hash);
             
             if (added == true) state->entities.UpVersion(state, in ent, groupId);
+            state->components.lockSharedIndex.Unlock();
+            
             return added;
 
         }
@@ -151,6 +157,7 @@ namespace ME.BECS {
             
             if (entId >= this.entityIdToHash.Length) return;
             
+            state->components.lockSharedIndex.Lock();
             ref var typeIdToHash = ref this.entityIdToHash[state, entId];
             for (uint i = 0; i < typeIdToHash.Length; ++i) {
                 
@@ -170,6 +177,7 @@ namespace ME.BECS {
                 }
 
             }
+            state->components.lockSharedIndex.Unlock();
             
         }
 
@@ -180,6 +188,7 @@ namespace ME.BECS {
             
             hash = GetSharedHash(default(T), state, in this, ent.id, hash);
             
+            state->components.lockSharedIndex.Lock();
             // get shared storage for component by hash
             if (this.sharedData.TryGetValue(in state->allocator, hash, out var ptr) == false) {
                 return false;
@@ -196,6 +205,8 @@ namespace ME.BECS {
             }
             
             if (exist == true) state->entities.UpVersion<T>(state, in ent);
+            state->components.lockSharedIndex.Unlock();
+            
             return exist;
 
         }
@@ -219,6 +230,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public ref T GetShared<T>(State* state, in Ent ent, uint hash, out bool isNew) where T : unmanaged, IComponentShared {
 
+            state->components.lockSharedIndex.Lock();
             isNew = false;
             if (ent.id >= this.entityIdToHash.Length) this.entityIdToHash.Resize(ref state->allocator, ent.id + 1u);
             hash = GetSharedHash(default(T), state, in this, ent.id, hash);
@@ -234,6 +246,7 @@ namespace ME.BECS {
             }
             
             state->entities.UpVersion<T>(state, in ent);
+            state->components.lockSharedIndex.Unlock();
             return ref *storage.data.AsPtr<T>(in state->allocator);
             
         }

@@ -27,6 +27,7 @@ namespace ME.BECS.Players {
                     id = i + 1u,
                 });
                 this.teams[(int)i] = team;
+                //UnityEngine.Debug.Log("Team: " + team);
             }
 
             for (uint i = 0u; i < this.players.Length; ++i) {
@@ -34,12 +35,15 @@ namespace ME.BECS.Players {
             }
             
             this.UpdateTeams();
+            
+            //UnityEngine.Debug.Log("Players Ready");
 
         }
 
         public void OnDestroy(ref SystemContext context) {
 
             this.players.Dispose();
+            this.teams.Dispose();
 
         }
 

@@ -8,10 +8,10 @@ namespace ME.BECS {
     [UnityEditor.InitializeOnLoadAttribute]
     #endif
     public class EntityConfigsRegistry {
-        
-        public static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
 
-        public static EntityConfigsRegistryData data;
+        private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
+
+        private static EntityConfigsRegistryData data;
         
         public static void Initialize() {
 

@@ -115,7 +115,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                             property.objectReferenceValue = item;
                             property.serializedObject.ApplyModifiedProperties();
                             property.serializedObject.Update();
-                            button.text = this.GetTypeName(property).text;
+                            button.Q<Label>(className: "button-text").text = this.GetTypeName(property).text;
                         });
                         UnityEditor.Experimental.GraphView.SearchWindow.Open(new UnityEditor.Experimental.GraphView.SearchWindowContext(new Vector2(button.worldBound.center.x, button.worldBound.center.y) + EditorWindow.focusedWindow.position.position), this.findGraphAssetsWindow);
                         return;
@@ -143,6 +143,8 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     buttonText.AddToClassList("button-text");
                     button.Add(buttonText);
                 }
+
+                button.text = string.Empty;
 
                 //button.text = this.GetTypeName(property).text;
                 container.Add(button);
