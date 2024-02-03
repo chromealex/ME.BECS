@@ -1195,6 +1195,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}).ExecuteLater(1);
 
 			e.isConnected = true;
+			
+			UpdateNodes();
 
 			return true;
 		}
@@ -1232,12 +1234,22 @@ namespace ME.BECS.Extensions.GraphProcessor
 			var outputPort = outputNodeView.nodeTarget.GetPort(outputPortView.fieldName, outputPortView.portData.identifier);
 
 			e.userData = graph.Connect(inputPort, outputPort, autoDisconnectInputs);
-
+			
 			ConnectView(e, autoDisconnectInputs);
 
 			UpdateComputeOrder();
 
+			UpdateNodes();
+
 			return true;
+		}
+
+		private void UpdateNodes() {
+
+			foreach (var node in this.nodeViews) {
+				node.RedrawInspector();
+			}
+			
 		}
 
 		public void DisconnectView(EdgeView e, bool refreshPorts = true)
@@ -1261,6 +1273,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 
 			edgeViews.Remove(e);
+			
+			UpdateNodes();
+
 		}
 
 		public void Disconnect(EdgeView e, bool refreshPorts = true)
@@ -1272,6 +1287,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 			DisconnectView(e, refreshPorts);
 
 			UpdateComputeOrder();
+			
+			UpdateNodes();
+
 		}
 
 		public void RemoveEdges()

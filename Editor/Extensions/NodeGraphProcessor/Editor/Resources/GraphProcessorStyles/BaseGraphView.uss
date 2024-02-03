@@ -97,19 +97,70 @@
 }
 
 .required-dependencies {
-    background-color: rgba(0, 0, 0, 1);
+    background-color: rgba(0, 0, 0, 0.2);
     border-radius: 5px;
     border-color: rgba(54, 169, 152, 0.5);
     border-width: 2px;
     padding: 10px;
     margin: 5px;
+    padding-top: 30px;
+}
+
+.required-dependencies.dependencies-failed {
+    border-color: rgba(169, 54, 54, 0.5);
 }
 
 .required-dependencies .required-dependencies-header {
     -unity-font-style: bold;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    padding: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+}
+
+.required-dependencies-container {
+    align-items: flex-start;
+    flex-direction: row;
     padding-bottom: 4px;
 }
 
-.required-dependencies .node-required-dependency {
+.required-dependencies-container .node-required-dependency-typename {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.required-dependencies-container .node-required-dependency-namespace {
+    font-size: 9px;
     color: rgba(255, 255, 255, 0.5);
+}
+
+.node-required-dependency-true,
+.node-required-dependency-false {
+    display: none;
+}
+
+.node-required-dependency-false {
+    color: rgb(217, 16, 16);
+}
+
+.node-required-dependency-true {
+    color: rgb(125, 217, 14);
+}
+
+.required-dependencies-container .node-required-dependency-checkbox {
+    
+}
+
+.node-required-dependency-false {
+    display: flex;
+}
+
+.node-required-dependency-checked .node-required-dependency-false {
+    display: none;
+}
+
+.node-required-dependency-checked .node-required-dependency-true {
+    display: flex;
 }

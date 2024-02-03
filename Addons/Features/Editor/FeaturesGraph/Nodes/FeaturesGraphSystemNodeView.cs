@@ -7,53 +7,6 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.FeaturesGraph.Nodes.SystemNode))]
     public class FeaturesGraphSystemNodeView : FeaturesGraphNodeView {
 
-        protected override void DrawDefaultInspector(bool fromInspector = false) {
-
-            if (fromInspector == false) {
-
-                if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode &&
-                    systemNode.system != null) {
-
-                    var type = systemNode.system.GetType();
-                    var tooltip = type.GetCustomAttribute<UnityEngine.TooltipAttribute>();
-                    if (tooltip != null) {
-
-                        var typeStr = EditorUtils.GetComponentName(type);
-                        var label = new UnityEngine.UIElements.Label($"<b>{typeStr}</b>\n{tooltip.tooltip}");
-                        label.AddToClassList("node-tooltip");
-                        this.Add(label);
-
-                    }
-                    
-                    var dependenciesAttributes = type.GetCustomAttributes<RequiredDependenciesAttribute>();
-                    var types = new System.Collections.Generic.HashSet<System.Type>();
-                    foreach (var dep in dependenciesAttributes) {
-                        foreach (var depType in dep.types) types.Add(depType);
-                    }
-
-                    if (types.Count > 0) {
-                        var requiredContainer = new UnityEngine.UIElements.VisualElement();
-                        var label = new UnityEngine.UIElements.Label("Dependencies:");
-                        label.AddToClassList("required-dependencies-header");
-                        requiredContainer.Add(label);
-                        requiredContainer.AddToClassList("required-dependencies");
-                        this.Add(requiredContainer);
-                        foreach (var uniqueType in types) {
-                            var typeStr = EditorUtils.GetComponentFullName(uniqueType);
-                            label = new UnityEngine.UIElements.Label($"{typeStr}");
-                            label.AddToClassList("node-required-dependency");
-                            requiredContainer.Add(label);
-                        }
-                    }
-
-                }
-
-            }
-            
-            base.DrawDefaultInspector(fromInspector);
-            
-        }
-
         private static void AddLabel(UnityEngine.UIElements.VisualElement container, string label, string tooltip, bool burst) {
             
             var burstLabel = new UnityEngine.UIElements.Label(label);
@@ -126,7 +79,11 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     }
                     
                     if (hasDrawGizmos == true) {
-                        AddLabel(container, "Draw Gizmos", "Method run without Burst Compiler", true);
+                        if (drawGizmosBurst == true) {
+                            AddLabel(container, "Draw Gizmos Burst", "Method run with Burst Compiler", true);
+                        } else {
+                            AddLabel(container, "Draw Gizmos No Burst", "Method run without Burst Compiler", false);
+                        }
                     }
                 }
             }
@@ -164,15 +121,12 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
         }
         
-        static MonoScript FindScriptFromClassName(string className, string @namespace)
-        {
+        private static MonoScript FindScriptFromClassName(string className, string @namespace) {
+            
             var scriptGUIDs = AssetDatabase.FindAssets($"t:script {className}");
+            if (scriptGUIDs.Length == 0) return null;
 
-            if (scriptGUIDs.Length == 0)
-                return null;
-
-            foreach (var scriptGUID in scriptGUIDs)
-            {
+            foreach (var scriptGUID in scriptGUIDs) {
                 var assetPath = AssetDatabase.GUIDToAssetPath(scriptGUID);
                 var script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
 

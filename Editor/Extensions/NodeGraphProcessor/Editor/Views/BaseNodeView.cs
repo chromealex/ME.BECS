@@ -769,6 +769,10 @@ namespace ME.BECS.Extensions.GraphProcessor
 			public BaseNode node;
 
 		}*/
+
+		public virtual void RedrawInspector(bool fromInspector = false) {
+			
+		}
 		
 		protected virtual void DrawDefaultInspector(bool fromInspector = false)
 		{
