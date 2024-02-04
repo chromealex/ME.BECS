@@ -314,6 +314,17 @@ namespace ME.BECS {
             return query.ScheduleParallelForBatch(in job);
         }
 
+        public uint Count(in SystemContext systemContext) {
+
+            var world = systemContext.world;
+            var state = systemContext.world.state;
+            var dependsOn = systemContext.dependsOn;
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
+
+            return query.commandBuffer->count;
+
+        }
+
     }
 
     public unsafe struct Queries {
