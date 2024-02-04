@@ -4,12 +4,14 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
-    public struct ClassPtr<T> where T : class {
+    public unsafe struct ClassPtr<T> where T : class {
 
         [NativeDisableUnsafePtrRestriction]
         private System.IntPtr ptr;
         [NativeDisableUnsafePtrRestriction]
         private System.Runtime.InteropServices.GCHandle gcHandle;
+
+        public bool IsValid => this.ptr.ToPointer() != null;
 
         public T Value => (T)this.gcHandle.Target;
 

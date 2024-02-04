@@ -29,6 +29,7 @@ namespace ME.BECS.Units {
         public readonly ref uint typeId => ref this.componentRuntime.properties.typeId;
         public readonly ref float3 velocity => ref this.componentRuntime.velocity;
         public readonly ref float radius => ref this.componentRuntime.properties.radius;
+        public readonly ref readonly float readRadius => ref this.readComponentRuntime.properties.radius;
         public readonly ref float speed => ref this.componentRuntime.speed;
         public readonly ref float maxSpeed => ref this.component.maxSpeed;
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
@@ -42,6 +43,7 @@ namespace ME.BECS.Units {
         public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly NavAgentRuntimeComponent readComponentRuntime => ref this.navAgentRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
 
         public readonly bool RemoveFromCommandGroup() => UnitUtils.RemoveFromCommandGroup(in this);
 

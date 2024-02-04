@@ -65,8 +65,17 @@ namespace ME.BECS.Views {
                                 prefabInfo = prefabInfo,
                             });
                             var updateIdx = this.data->renderingOnSceneCount++;
-                            if (prefabInfo.info->typeInfo.HasApplyState == true || prefabInfo.info->HasApplyStateModules == true) this.data->renderingOnSceneApplyState.Add(ref allocator, entId);
-                            if (prefabInfo.info->typeInfo.HasUpdate == true || prefabInfo.info->HasUpdateModules == true) this.data->renderingOnSceneUpdate.Add(ref allocator, entId);
+                            this.data->renderingOnSceneApplyStateCulling[in allocator, entId] = false;
+                            this.data->renderingOnSceneUpdateCulling[in allocator, entId] = false;
+                            if (prefabInfo.info->typeInfo.HasApplyState == true || prefabInfo.info->HasApplyStateModules == true) {
+                                this.data->renderingOnSceneApplyState.Add(ref allocator, entId);
+                                *this.data->applyStateCounter = this.data->renderingOnSceneApplyState.Count;
+                            }
+
+                            if (prefabInfo.info->typeInfo.HasUpdate == true || prefabInfo.info->HasUpdateModules == true) {
+                                this.data->renderingOnSceneUpdate.Add(ref allocator, entId);
+                                *this.data->updateCounter = this.data->renderingOnSceneUpdate.Count;
+                            }
                             this.data->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, entId) = updateIdx;
                             this.data->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = entId;
                             this.data->renderingOnSceneBits.Set((int)entId, true);
@@ -111,8 +120,17 @@ namespace ME.BECS.Views {
                             this.data->renderingOnSceneBits.Set((int)entId, false);
                             {
                                 // Remove and swap back
-                                if (info.prefabInfo->typeInfo.HasApplyState == true || info.prefabInfo->HasApplyStateModules == true) this.data->renderingOnSceneApplyState.Remove(in allocator, entId);
-                                if (info.prefabInfo->typeInfo.HasUpdate == true || info.prefabInfo->HasUpdateModules == true) this.data->renderingOnSceneUpdate.Remove(in allocator, entId);
+                                this.data->renderingOnSceneApplyStateCulling[in allocator, entId] = false;
+                                this.data->renderingOnSceneUpdateCulling[in allocator, entId] = false;
+                                if (info.prefabInfo->typeInfo.HasApplyState == true || info.prefabInfo->HasApplyStateModules == true) {
+                                    this.data->renderingOnSceneApplyState.Remove(in allocator, entId);
+                                    *this.data->applyStateCounter = this.data->renderingOnSceneApplyState.Count;
+                                }
+
+                                if (info.prefabInfo->typeInfo.HasUpdate == true || info.prefabInfo->HasUpdateModules == true) {
+                                    this.data->renderingOnSceneUpdate.Remove(in allocator, entId);
+                                    *this.data->updateCounter = this.data->renderingOnSceneUpdate.Count;
+                                }
                                 --this.data->renderingOnSceneCount;
                                 this.data->renderingOnScene.RemoveAtFast(in allocator, idx);
                                 this.data->renderingOnSceneEnts.RemoveAtSwapBack(index);
@@ -318,6 +336,8 @@ namespace ME.BECS.Views {
 
                 var entitiesCapacity = this.connectedWorld.state->entities.Capacity;
                 this.viewsModuleData->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+                this.viewsModuleData->renderingOnSceneApplyStateCulling.Resize(ref this.state->allocator, entitiesCapacity);
+                this.viewsModuleData->renderingOnSceneUpdateCulling.Resize(ref this.state->allocator, entitiesCapacity);
                 if (entitiesCapacity > this.viewsModuleData->renderingOnSceneEntToPrefabId.Length) {
                     this.viewsModuleData->renderingOnSceneEntToPrefabId.Resize(ref this.state->allocator, entitiesCapacity);
                 }
@@ -334,7 +354,48 @@ namespace ME.BECS.Views {
             }
 
         }
-        
+
+        [BURST(CompileSynchronously = true)]
+        public struct UpdateCullingApplyStateJob : IJobParallelForDefer {
+
+            [NativeDisableUnsafePtrRestriction]
+            public State* state;
+            [NativeDisableUnsafePtrRestriction]
+            public ViewsModuleData* viewsModuleData;
+            
+            public void Execute(int index) {
+
+                var entId = this.viewsModuleData->renderingOnSceneApplyState.sparseSet.dense[in this.state->allocator, (uint)index];
+                var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
+                var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
+                var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
+                var isVisible = CameraUtils.IsVisible(in camera, in bounds);
+                this.viewsModuleData->renderingOnSceneApplyStateCulling[in this.state->allocator, entId] = isVisible == false;
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct UpdateCullingUpdateJob : IJobParallelForDefer {
+            
+            [NativeDisableUnsafePtrRestriction]
+            public State* state;
+            [NativeDisableUnsafePtrRestriction]
+            public ViewsModuleData* viewsModuleData;
+            
+            public void Execute(int index) {
+
+                var entId = this.viewsModuleData->renderingOnSceneUpdate.sparseSet.dense[in this.state->allocator, (uint)index];
+                var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
+                var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
+                var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
+                var isVisible = CameraUtils.IsVisible(in camera, in bounds);
+                this.viewsModuleData->renderingOnSceneUpdateCulling[in this.state->allocator, entId] = isVisible == false;
+
+            }
+
+        }
 
     }
 

@@ -1,6 +1,7 @@
-using ME.BECS.Transforms;
-
 namespace ME.BECS.Views {
+    
+    using ME.BECS.Transforms;
+    using Unity.Mathematics;
 
     public struct MeshFilterComponent : IComponent {
 
@@ -22,7 +23,7 @@ namespace ME.BECS.Views {
 
     public static class TransformAspectExt {
 
-        public static void Set(this ref ME.BECS.Transforms.TransformAspect aspect, UnityEngine.Transform tr) {
+        public static void Set(this ref TransformAspect aspect, UnityEngine.Transform tr) {
 
             aspect.localPosition = tr.localPosition;
             aspect.localRotation = tr.localRotation;
@@ -37,13 +38,13 @@ namespace ME.BECS.Views {
         public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, Ent parentEnt, in World world) {
 
             var ent = Ent.New(world);
-            var tr = ent.GetOrCreateAspect<ME.BECS.Transforms.TransformAspect>();
+            var tr = ent.GetOrCreateAspect<TransformAspect>();
             ent.SetParent(parentEnt);
             tr.Set(prefab);
             if (parentEnt.IsAlive() == true) {
-                tr.worldMatrix = Unity.Mathematics.math.mul(prefab.localToWorldMatrix, prefab.root.localToWorldMatrix.inverse);
+                tr.worldMatrix = math.mul(prefab.localToWorldMatrix, prefab.root.localToWorldMatrix.inverse);
             } else {
-                tr.worldMatrix = Unity.Mathematics.float4x4.identity;
+                tr.worldMatrix = float4x4.identity;
             }
             {
                 // Get mesh

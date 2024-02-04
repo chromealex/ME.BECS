@@ -52,4 +52,9 @@ namespace ME.BECS.Transforms {
 
     }
 
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct IsFirstLevelComponent : IComponent {
+
+    }
+
 }

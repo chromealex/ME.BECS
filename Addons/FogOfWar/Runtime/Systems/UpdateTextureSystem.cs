@@ -3,6 +3,7 @@ namespace ME.BECS.FogOfWar {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Jobs;
     using ME.BECS.Players;
+    using Unity.Collections;
 
     //[BURST(CompileSynchronously = true)]
     public struct UpdateTextureSystem : IUpdate {
@@ -11,7 +12,7 @@ namespace ME.BECS.FogOfWar {
         public float fadeOutSpeed;
 
         [BURST(CompileSynchronously = true)]
-        public struct UpdateJob : Unity.Jobs.IJob {
+        public struct UpdateJob : Unity.Jobs.IJobParallelFor {
 
             public float dt;
             public float fadeInSpeed;
@@ -20,13 +21,15 @@ namespace ME.BECS.FogOfWar {
             public FogOfWarComponent fow;
             public int textureWidth;
             public int textureHeight;
+            [NativeDisableParallelForRestriction]
             public Unity.Collections.NativeArray<UnityEngine.Color32> currentBuffer;
             
-            public void Execute() {
+            public void Execute(int index) {
 
                 var w = this.textureWidth / 4;
                 var h = this.textureHeight;
-                for (int i = 0; i < this.currentBuffer.Length; ++i) {
+                var i = index;
+                {
                     var pixelIndex = i;
                     var x = pixelIndex % w;
                     var y = pixelIndex / w;
@@ -65,7 +68,8 @@ namespace ME.BECS.FogOfWar {
             var activePlayer = playersSystem.GetActivePlayer();
             var fow = activePlayer.team.Read<FogOfWarComponent>();
             var props = context.world.GetSystem<CreateSystem>().heights.Read<FogOfWarStaticComponent>();
-            
+
+            var buffer = createTexture.GetBuffer();
             var handle = new UpdateJob() {
                 dt = context.deltaTime,
                 fadeInSpeed = this.fadeInSpeed,
@@ -74,9 +78,8 @@ namespace ME.BECS.FogOfWar {
                 fow = fow,
                 textureWidth = createTexture.textureWidth,
                 textureHeight = createTexture.textureHeight,
-                currentBuffer = createTexture.GetBuffer(),
-            }.Schedule();
-            handle.Complete();
+                currentBuffer = buffer,
+            }.Schedule(buffer.Length, JobUtils.GetScheduleBatchCount(buffer.Length));
             createTexture.GetTexture().Apply(false);
             context.SetDependency(handle);
             

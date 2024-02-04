@@ -22,7 +22,7 @@ namespace ME.BECS.Transforms {
                 ref readonly var children = ref source.Read<ChildrenComponent>().list;
                 if (children.Count > 0u) {
                     ref var childrenTarget = ref ent.Get<ChildrenComponent>().list;
-                    childrenTarget = new ListAuto<Ent>(ent, children.Count);
+                    childrenTarget = new ListAuto<Ent>(in ent, children.Count);
                     for (uint i = 0u; i < children.Count; ++i) {
                         var child = children[i];
                         childrenTarget.Add(child.Clone(worldId, true));

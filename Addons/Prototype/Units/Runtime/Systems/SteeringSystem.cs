@@ -189,7 +189,7 @@ namespace ME.BECS.Units {
 
                 var tr = unitEnt.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 var unit = unitEnt.GetAspect<UnitAspect>();
-                UnityEngine.Gizmos.DrawWireSphere(tr.position, unit.radius);
+                UnityEngine.Gizmos.DrawWireSphere(tr.position, unit.readRadius);
 
             }
             
