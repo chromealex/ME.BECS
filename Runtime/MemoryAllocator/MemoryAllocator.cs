@@ -86,12 +86,17 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct MemAllocatorPtr {
+    public unsafe struct MemAllocatorPtr : IIsCreated {
 
         internal MemPtr ptr;
 
         [INLINE(256)]
         public long AsLong() => this.ptr.AsLong();
+        
+        public readonly bool isCreated {
+            [INLINE(256)]
+            get => this.ptr.IsValid();
+        }
 
         [INLINE(256)]
         public bool IsValid() {
@@ -115,6 +120,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Set<T>(ref MemoryAllocator allocator, in T data) where T : unmanaged {
 
+            E.IS_ALREADY_CREATED(this);
             this.ptr = allocator.Alloc<T>();
             allocator.Ref<T>(this.ptr) = data;
 
@@ -123,6 +129,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, void* data, uint dataSize) {
 
+            E.IS_ALREADY_CREATED(this);
             this.ptr = MemoryAllocatorExt.Alloc(ref allocator, dataSize, out var ptr);
             if (data != null) {
                 _memcpy(data, ptr, dataSize);
@@ -142,12 +149,17 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct MemAllocatorPtr<T> where T : unmanaged {
+    public unsafe struct MemAllocatorPtr<T> : IIsCreated where T : unmanaged {
 
         internal MemPtr ptr;
 
         [INLINE(256)]
         public long AsLong() => this.ptr.AsLong();
+        
+        public readonly bool isCreated {
+            [INLINE(256)]
+            get => this.ptr.IsValid();
+        }
 
         [INLINE(256)]
         public bool IsValid() {
@@ -171,6 +183,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, in T data) {
 
+            E.IS_ALREADY_CREATED(this);
             this.ptr = allocator.Alloc<T>();
             allocator.Ref<T>(this.ptr) = data;
 
@@ -179,6 +192,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, void* data, uint dataSize) {
 
+            E.IS_ALREADY_CREATED(this);
             this.ptr = MemoryAllocatorExt.Alloc(ref allocator, dataSize, out var ptr);
             if (data != null) {
                 _memcpy(data, ptr, dataSize);
