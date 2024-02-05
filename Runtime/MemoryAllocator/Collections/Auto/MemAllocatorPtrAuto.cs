@@ -13,6 +13,8 @@ namespace ME.BECS {
 
         internal MemPtr ptr;
         public Ent ent;
+
+        public MemPtr memPtr => this.ptr;
         
         public readonly bool isCreated {
             [INLINE(256)]
@@ -32,6 +34,14 @@ namespace ME.BECS {
             this.ent = ent;
             this.ptr = MemPtr.Invalid;
             this.Set(obj);
+
+        }
+        
+        public MemAllocatorPtrAuto(in Ent ent, void* data, uint dataSize) {
+
+            this.ent = ent;
+            this.ptr = MemPtr.Invalid;
+            this.Set(data, dataSize);
 
         }
         

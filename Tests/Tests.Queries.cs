@@ -1066,6 +1066,55 @@ namespace ME.BECS.Tests {
             }
         }
 
+        [Test]
+        public void CountMany() {
+            
+            var world = World.Create();
+            
+            var amount = 10_000;
+            var dep = new Job0() {
+                amount = amount,
+            }.Schedule();
+
+            var query = Query.With<TestComponent>(world, dep).Build();
+
+            var count = query.Count(world, dep);
+            Assert.AreEqual(amount, count);
+            
+            world.Dispose();
+
+        }
+        
+        [Test]
+        public void CountWithDispose() {
+            
+            var world = World.Create();
+
+            var ent1 = Ent.New(in world);
+            ent1.Set(new TestComponent());
+            
+            var ent2 = Ent.New(in world);
+            ent2.Set(new TestComponent());
+
+            var query = Query.With<TestComponent>(world, new JobHandle()).Build();
+
+            var count = query.Count(world, new JobHandle());
+            Assert.AreEqual(2, count);
+            
+            ent1.Destroy();
+            
+            count = query.Count(world, new JobHandle());
+            Assert.AreEqual(1, count);
+            
+            ent2.Destroy();
+            
+            count = query.Count(world, new JobHandle());
+            Assert.AreEqual(0, count);
+            
+            world.Dispose();
+
+        }
+
     }
 
 }

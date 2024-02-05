@@ -316,10 +316,15 @@ namespace ME.BECS {
 
         public uint Count(in SystemContext systemContext) {
 
-            var world = systemContext.world;
-            var state = systemContext.world.state;
-            var dependsOn = systemContext.dependsOn;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
+            return this.Count(systemContext.world, systemContext.dependsOn);
+
+        }
+        
+        public uint Count(in World world, JobHandle dependsOn) {
+
+            var state = world.state;
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).ParallelFor(64).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
+            query.WaitForAllJobs();
 
             return query.commandBuffer->count;
 
