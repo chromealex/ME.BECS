@@ -105,6 +105,10 @@
     background-color: black;
 }
 
+.shared-counter .label-counter-count-count {
+    color: #8fbd41;
+}
+
 .small-counter {
     border-radius: 8px;
     border-top-left-radius: 0px;

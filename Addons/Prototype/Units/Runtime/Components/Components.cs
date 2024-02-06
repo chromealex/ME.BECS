@@ -45,6 +45,7 @@ namespace ME.BECS.Units {
         public float health;
 
         public ME.BECS.Effects.EffectConfig effectOnHit;
+        public ME.BECS.Effects.EffectConfig effectOnDestroy;
 
     }
     

@@ -5,6 +5,24 @@ namespace ME.BECS {
     public static unsafe partial class EntExt {
 
         [INLINE(256)]
+        public static bool Set(in this Ent ent, uint typeId, void* data) {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            return world.state->batches.Set(in ent, typeId, data, world.state);
+
+        }
+
+        [INLINE(256)]
+        public static bool Remove(in this Ent ent, uint typeId) {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            return world.state->batches.Remove(in ent, typeId, world.state);
+
+        }
+
+        [INLINE(256)]
         public static bool SetPtr<T>(in this Ent ent, T* data) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

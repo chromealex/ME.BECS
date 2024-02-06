@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: FogOfWarGraph-Logic
   m_EditorClassIdentifier: 
+  id: 5
+  builtInGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928923441103769
@@ -61,18 +63,18 @@ MonoBehaviour:
     outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: 38fbc587-305d-4fc8-91bc-2f5543fb2e0b
-    owner: {fileID: 11400000}
-    inputNodeGUID: 59f276f0-dc35-48e5-9058-945103675ed4
-    outputNodeGUID: StartNode
-    inputFieldName: inputNodes
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
   - GUID: 4518cabd-fbb6-4468-8704-ad9c1a95d985
     owner: {fileID: 11400000}
     inputNodeGUID: EndNode
     outputNodeGUID: 59f276f0-dc35-48e5-9058-945103675ed4
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: c6de6c00-d859-4399-8d9f-82b85e743228
+    owner: {fileID: 11400000}
+    inputNodeGUID: 59f276f0-dc35-48e5-9058-945103675ed4
+    outputNodeGUID: 0e9ec525-76ba-44e8-a90b-b7c6a0cbfe26
     inputFieldName: inputNodes
     outputFieldName: outputNodes
     inputPortIdentifier: 
@@ -84,7 +86,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 21.5, y: 298, z: 0}
+  position: {x: 184.5, y: 342, z: 0}
   scale: {x: 1, y: 1, z: 1}
   isInnerGraph: 1
   references:
@@ -209,10 +211,10 @@ MonoBehaviour:
         computeOrder: 4
         position:
           serializedVersion: 2
-          x: 350
-          y: 360
+          x: 547
+          y: -52
           width: 300
-          height: 145
+          height: 149
         expanded: 1
         enabled: 1
         debug: 0

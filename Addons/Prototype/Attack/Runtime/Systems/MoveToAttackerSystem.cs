@@ -18,6 +18,8 @@ namespace ME.BECS.Attack {
 
             public BuildGraphSystem buildGraphSystem;
             
+            // TODO: Make this job as parallel
+            // may be we need to group by DamageTookComponent.sourceUnit first?
             public void Execute(ref UnitAspect unit, ref TransformAspect tr) {
 
                 var attacker = unit.ent.Read<DamageTookComponent>().sourceUnit;

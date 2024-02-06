@@ -1,9 +1,13 @@
-using Unity.Collections.LowLevel.Unsafe;
-using Unity.Jobs;
 
 namespace ME.BECS {
 
+    #if NO_INLINE
+    using INLINE = NoInlineAttribute;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
+    using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Jobs;
     using static Cuts;
 
     [System.SerializableAttribute]

@@ -176,9 +176,21 @@ namespace ME.BECS.Editor {
             this.batchesSize.text = EditorUtils.BytesToString((int)this.world.state->batches.GetReservedSizeInBytes(this.world.state));
             this.entitiesSize.text = EditorUtils.BytesToString((int)this.world.state->entities.GetReservedSizeInBytes(this.world.state));
             this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state->aspectsStorage.GetReservedSizeInBytes(this.world.state));
+            this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)this.world.state->collectionsRegistry.GetReservedSizeInBytes(this.world.state));
+            {
+                var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Allocator;
+                this.persistantAllocatorSize.text =
+                    $"{EditorUtils.BytesToString((int)allocatorInstance.BytesUsed)}/{EditorUtils.BytesToString((int)allocatorInstance.BytesAllocated)} (Blocks: {allocatorInstance.BlocksUsed}/{allocatorInstance.BlocksAllocated})";
+            }
+            {
+                var allocatorInstance = WorldsTempAllocator.allocatorTemp.Allocator;
+                this.tempAllocatorSize.text = 
+                    $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+            }
 
         }
-        
+
+        private static readonly System.Reflection.PropertyInfo allocatorBytesAllocatedProperty = typeof(Unity.Collections.RewindableAllocator).GetProperty("BytesAllocated", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         private Label reservedSize;
         private Label usedSize;
         private Label componentsSize;
@@ -186,6 +198,9 @@ namespace ME.BECS.Editor {
         private Label batchesSize;
         private Label entitiesSize;
         private Label aspectsSize;
+        private Label collectionsRegistrySize;
+        private Label persistantAllocatorSize;
+        private Label tempAllocatorSize;
         private void DrawAllocator(VisualElement root, in MemoryAllocator allocator) {
 
             var container = new VisualElement();
@@ -198,18 +213,22 @@ namespace ME.BECS.Editor {
             this.batchesSize = this.AddCounter(container, "Batches Size", className: "small-counter");
             this.entitiesSize = this.AddCounter(container, "Entities Size", className: "small-counter");
             this.aspectsSize = this.AddCounter(container, "Aspects Size", className: "small-counter");
-
+            this.collectionsRegistrySize = this.AddCounter(container, "Collections Registry Size", className: "small-counter");
+            this.persistantAllocatorSize = this.AddCounter(container, "Persistant Allocator Size", className: "small-counter", true);
+            this.tempAllocatorSize = this.AddCounter(container, "Temp Allocator Size", className: "small-counter", true);
+            
             this.scrollRoot = new ScrollView();
             this.scrollRoot.AddToClassList("scroll-view");
             root.Add(this.scrollRoot);
 
         }
         
-        private Label AddCounter(VisualElement root, string text, string className = null) {
+        private Label AddCounter(VisualElement root, string text, string className = null, bool isShared = false) {
             
             var container = new Label();
             container.AddToClassList("label-counter-count");
             if (className != null) container.AddToClassList(className);
+            if (isShared == true) container.AddToClassList("shared-counter");
             var label = new Label(text);
             label.AddToClassList("label-counter-count-label");
             container.Add(label);

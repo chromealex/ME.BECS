@@ -32,4 +32,4 @@ MonoBehaviour:
     radius: 1.25
     avoidanceRange: 5
     maxSlope: 30
-    height: 0.5
+    height: 0.2

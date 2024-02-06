@@ -84,6 +84,7 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorFree = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99008);
         
         private static bool initialized = false;
+        [Conditional("ENABLE_PROFILER")]
         public static void Initialize() {
 
             if (initialized == true) return;

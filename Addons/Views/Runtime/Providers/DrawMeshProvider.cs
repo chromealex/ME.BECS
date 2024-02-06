@@ -101,20 +101,10 @@ namespace ME.BECS.Views {
             builder.With<DrawMeshProviderTag>();
         }
         
-        [BURST(CompileSynchronously = true)]
-        public static void InstantiateViewRegistry(in Ent ent, in ViewSource viewSource) {
-            ent.Set(new DrawMeshProviderTag());
-        }
-
-        [BURST(CompileSynchronously = true)]
-        public static void DestroyViewRegistry(in Ent ent) {
-            ent.Remove<DrawMeshProviderTag>();
-        }
-
         [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
-            UnsafeViewsModule.RegisterProviderCallbacks(providerId, InstantiateViewRegistry, DestroyViewRegistry);
+            UnsafeViewsModule.RegisterProviderType<DrawMeshProviderTag>(providerId);
 
             this.properties = properties;
             this.objectsPerMeshAndMaterial = new System.Collections.Generic.Dictionary<Info, ObjectsPerInfo>((int)properties.instancesRegistryCapacity);
@@ -133,7 +123,7 @@ namespace ME.BECS.Views {
             public void Execute(int i) {
                 (*this.matrices.ListData)[i] = math.mul(this.entities[i].Read<ME.BECS.Transforms.WorldMatrixComponent>().value, this.prefabWorldMatrices[i]);
             }
-
+            
         }
 
         [INLINE(256)]
@@ -249,6 +239,7 @@ namespace ME.BECS.Views {
             renderParams.renderingLayerMask = rendering.renderingLayerMask;
             renderParams.rendererPriority = rendering.rendererPriority;
             renderParams.instanceID = rendering.instanceID;
+            renderParams.camera = null;
             return renderParams;
         }
 

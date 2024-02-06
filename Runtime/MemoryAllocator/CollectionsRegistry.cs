@@ -66,6 +66,21 @@ namespace ME.BECS {
             
         }
 
+        public uint GetReservedSizeInBytes(State* state) {
+
+            var size = 0u;
+            for (uint i = 0u; i < this.list.Length; ++i) {
+                var item = this.list[state, i];
+                size += item.GetReservedSizeInBytes();
+                for (uint j = 0u; j < item.Count; ++j) {
+                    var obj = item[state, j];
+                    size += obj.GetSizeInBytes(state);
+                }
+            }
+            return size;
+
+        }
+
     }
     
 }

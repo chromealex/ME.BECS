@@ -65,6 +65,21 @@ namespace ME.BECS {
             }
 
         }
+        
+        [BURST(CompileSynchronously = true)]
+        public struct ClearJob : Unity.Jobs.IJobParallelFor {
+
+            [NativeDisableUnsafePtrRestriction]
+            public UnsafeList<System.IntPtr> quadTrees;
+
+            public void Execute(int index) {
+
+                var item = (KNN.KnnContainer<Ent>*)this.quadTrees[index];
+                item->Clear();
+                
+            }
+
+        }
 
         public readonly KNN.KnnContainer<Ent>* GetTree(int treeIndex) {
 
@@ -87,12 +102,12 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
 
-            for (int i = 0; i < this.quadTrees.Length; ++i) {
-                var item = (KNN.KnnContainer<Ent>*)this.quadTrees[i];
-                item->Clear();
-            }
+            var clearJob = new ClearJob() {
+                quadTrees = this.quadTrees,
+            };
+            var clearJobHandle = clearJob.Schedule(this.quadTrees.Length, 1, context.dependsOn);
             
-            var handle = API.Query(in context).ScheduleParallelFor<CollectJob, QuadTreeAspect, Transforms.TransformAspect>(new CollectJob() {
+            var handle = API.Query(in context, clearJobHandle).ScheduleParallelFor<CollectJob, QuadTreeAspect, Transforms.TransformAspect>(new CollectJob() {
                 quadTrees = this.quadTrees,
             });
 

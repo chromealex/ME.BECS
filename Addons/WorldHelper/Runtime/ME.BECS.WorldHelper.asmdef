@@ -2,10 +2,11 @@
     "name": "ME.BECS.WorldHelper",
     "rootNamespace": "",
     "references": [
-        "GUID:c86be02c705c6464297ae4152f281812",
-        "GUID:84a08fc9a52ad49a7a919aadbe79f2d9",
-        "GUID:04978f0bf2c2d4039a9ee9db59e6740a",
-        "GUID:3060f017167674cd99b29813204e19d2"
+        "ME.BECS",
+        "ME.BECS.Transforms",
+        "ME.BECS.Views",
+        "ME.BECS.Features",
+        "ME.BECS.Destroy"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

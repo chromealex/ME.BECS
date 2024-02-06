@@ -39,7 +39,7 @@ namespace ME.BECS.FeaturesGraph {
             
             var rootSystemGroup = SystemGroup.Create(updateType);
 
-            if (SystemsStatic.RaiseInitialize(this.GetInstanceID(), ref rootSystemGroup) == false) {
+            if (SystemsStatic.RaiseInitialize(this.GetId(), ref rootSystemGroup) == false) {
                 
                 this.runtimeRootSystemGroup = rootSystemGroup;
                 var processor = new Extensions.GraphProcessor.ProcessGraphProcessor(this);

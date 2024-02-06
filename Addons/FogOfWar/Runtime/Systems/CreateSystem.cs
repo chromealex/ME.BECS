@@ -8,6 +8,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using ME.BECS.Pathfinding;
     using Unity.Jobs;
+    using ME.BECS.Transforms;
 
     [BURST(CompileSynchronously = true)]
     public struct CreateSystem : IAwake, IUpdate {
@@ -33,7 +34,6 @@ namespace ME.BECS.FogOfWar {
         }
 
         public void OnAwake(ref SystemContext context) {
-            
             // for each player
             // create fog of war
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
@@ -110,29 +110,22 @@ namespace ME.BECS.FogOfWar {
                 graph = firstGraph,
                 heights = this.heights,
             }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), context.dependsOn);
-            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(cleanUpHandle, updateHeightHandle));
+            context.SetDependency(JobHandle.CombineDependencies(cleanUpHandle, updateHeightHandle));
 
         }
 
         [INLINE(256)]
         public bool IsVisible(in PlayerAspect player, in Ent unit) {
             
-            var fow = player.readTeam.Read<ME.BECS.FogOfWar.FogOfWarComponent>();
-            var props = this.heights.Read<ME.BECS.FogOfWar.FogOfWarStaticComponent>();
-            var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition());
-            return ME.BECS.FogOfWar.FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);
+            ref readonly var fow = ref player.readTeam.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
+            var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+            return FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);
 
         }
 
         [INLINE(256)]
-        public bool IsVisible(in PlayerAspect player, Ent unit) {
-            
-            var fow = player.readTeam.Read<ME.BECS.FogOfWar.FogOfWarComponent>();
-            var props = this.heights.Read<ME.BECS.FogOfWar.FogOfWarStaticComponent>();
-            var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition());
-            return ME.BECS.FogOfWar.FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);
-
-        }
+        public bool IsVisible(in PlayerAspect player, Ent unit) => this.IsVisible(in player, in unit);
 
     }
 

@@ -1,7 +1,11 @@
-
+#define NO_INLINE
 namespace ME.BECS.Pathfinding {
     
+    #if NO_INLINE
+    using INLINE = NoInlineAttribute;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using Unity.Mathematics;
     using ME.BECS.Transforms;
     using Unity.Jobs;
@@ -1043,7 +1047,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static bool UpdateChunk(in World world, in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent,  Unity.Collections.NativeArray<bool> changedChunks, bool forced = false) {
+        public static bool UpdateChunk(in World world, in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, Unity.Collections.NativeArray<bool> changedChunks, bool forced = false) {
             
             var root = graph.Read<RootGraphComponent>();
             var changed = false;
@@ -1105,7 +1109,7 @@ namespace ME.BECS.Pathfinding {
 
                 marker.End();
             }
-
+            
             if (forced == true || changed == true) {
                 // calculate portals
                 var marker = new Unity.Profiling.ProfilerMarker("Calculate Portals");
@@ -1114,7 +1118,7 @@ namespace ME.BECS.Pathfinding {
                 CalculatePortals(in graph, chunkIndex, ref chunkComponent, in world, changedChunks);
                 marker.End();
             }
-
+            
             if (changedChunks.IsCreated == true && changed == true) {
                 changedChunks[(int)chunkIndex] = true;
             }

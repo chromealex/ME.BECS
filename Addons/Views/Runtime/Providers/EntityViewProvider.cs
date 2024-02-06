@@ -47,20 +47,10 @@ namespace ME.BECS.Views {
             builder.With<EntityViewProviderTag>();
         }
 
-        [BURST(CompileSynchronously = true)]
-        public static void InstantiateViewRegistry(in Ent ent, in ViewSource viewSource) {
-            ent.Set(new EntityViewProviderTag());
-        }
-
-        [BURST(CompileSynchronously = true)]
-        public static void DestroyViewRegistry(in Ent ent) {
-            ent.Remove<EntityViewProviderTag>();
-        }
-
         [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
-            UnsafeViewsModule.RegisterProviderCallbacks(providerId, InstantiateViewRegistry, DestroyViewRegistry);
+            UnsafeViewsModule.RegisterProviderType<EntityViewProviderTag>(providerId);
             
             //this.disabledRoot = new UnityEngine.GameObject("[Views Module] Disabled Root").transform;
             //if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
@@ -156,7 +146,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        private ViewRoot AssignToRoot() {
+        private ViewRoot AssignToRoot(in Ent ent) {
 
             for (int i = 0; i < this.roots.Count; ++i) {
 
@@ -170,7 +160,7 @@ namespace ME.BECS.Views {
             }
 
             var newRoot = new ViewRoot() {
-                tr = new UnityEngine.GameObject("ViewsModule::Root").transform,
+                tr = new UnityEngine.GameObject($"ViewsModule[World #{ent.worldId}]::Root").transform,
                 Count = 1,
                 index = this.roots.Count,
             };
@@ -219,7 +209,7 @@ namespace ME.BECS.Views {
                     if (this.tempViews.Contains(instance.obj) == true) {
                         this.tempViews.Remove(instance.obj);
                     } else {
-                        var root = this.AssignToRoot();
+                        var root = this.AssignToRoot(in ent);
                         if (instance.obj.transform.parent != root.tr) instance.obj.transform.SetParent(root.tr);
                         instance.obj.gameObject.SetActive(true);
                     }
@@ -229,7 +219,7 @@ namespace ME.BECS.Views {
 
                 } else {
 
-                    var root = this.AssignToRoot();
+                    var root = this.AssignToRoot(in ent);
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
                     var prefab = (EntityView)handle.Target;
                     var instance = EntityView.Instantiate(prefab, root.tr);
@@ -241,7 +231,7 @@ namespace ME.BECS.Views {
 
             } else {
                 
-                var root = this.AssignToRoot();
+                var root = this.AssignToRoot(in ent);
                 var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
                 var instance = (EntityView)handle.Target;
                 instance.transform.SetParent(root.tr);

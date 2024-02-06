@@ -6,6 +6,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Jobs;
 
+    [Unity.Collections.GenerateTestsForBurstCompatibility]
     [BURST(CompileSynchronously = true)]
     public unsafe struct State {
 

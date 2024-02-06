@@ -5,7 +5,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(TempBitArrayDebugView))]
-    public unsafe struct TempBitArray {
+    public unsafe struct TempBitArray : IIsCreated {
 
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;
 
@@ -64,6 +64,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Resize(uint newLength, Unity.Collections.Allocator allocator) {
+            E.IS_CREATED(this);
 
             if (newLength > this.Length) {
                 var newArr = new TempBitArray(newLength, ClearOptions.ClearMemory, allocator);
@@ -81,6 +82,7 @@ namespace ME.BECS {
         /// <returns>The instance of the modified bitmap.</returns>
         [INLINE(256)]
         public void SetAllBits(bool value) {
+            E.IS_CREATED(this);
             var len = Bitwise.GetLength(this.Length);
             var setValue = value ? ulong.MaxValue : ulong.MinValue;
             for (var index = 0; index < len; index++) {
@@ -95,6 +97,7 @@ namespace ME.BECS {
         /// <returns>The value of the bit at the specified index.</returns>
         [INLINE(256)]
         public readonly bool IsSet(int index) {
+            E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
             return (this.ptr[index / TempBitArray.BITS_IN_ULONG] & (0x1ul << (index % TempBitArray.BITS_IN_ULONG))) > 0;
         }
@@ -107,6 +110,7 @@ namespace ME.BECS {
         /// <returns>The instance of the modified bitmap.</returns>
         [INLINE(256)]
         public void Set(int index, bool value) {
+            E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
             if (value == true) {
                 this.ptr[index / TempBitArray.BITS_IN_ULONG] |= 0x1ul << (index % TempBitArray.BITS_IN_ULONG);
@@ -123,6 +127,7 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void Union(TempBitArray bitmap) {
+            E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
@@ -134,6 +139,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Union(in MemoryAllocator allocator, BitArray bitmap) {
+            E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
@@ -152,6 +158,7 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void Intersect(TempBitArray bitmap) {
+            E.IS_CREATED(this);
             if (bitmap.Length == 0) {
                 this.SetAllBits(false);
                 return;
@@ -169,6 +176,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, in BitArray bitmap) {
+            E.IS_CREATED(this);
             if (bitmap.Length == 0) {
                 this.SetAllBits(false);
                 return;
@@ -186,6 +194,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Remove(TempBitArray bitmap) {
+            E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
@@ -197,6 +206,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Remove(in MemoryAllocator allocator, in BitArray bitmap) {
+            E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (ulong*)MemoryAllocatorExt.GetUnsafePtr(in allocator, bitmap.ptr);
@@ -212,6 +222,7 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void Invert() {
+            E.IS_CREATED(this);
             var len = Bitwise.GetLength(this.Length);
             for (var index = 0; index < len; ++index) {
                 this.ptr[index] = ~this.ptr[index];
@@ -227,6 +238,7 @@ namespace ME.BECS {
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
         public void SetRange(int start, int end, bool value) {
+            E.IS_CREATED(this);
             if (start == end) {
                 this.Set(start, value);
                 return;
@@ -257,6 +269,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Clear() {
 
+            E.IS_CREATED(this);
             this.SetAllBits(false);
 
         }
@@ -264,6 +277,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
+            E.IS_CREATED(this);
             if (((Unity.Collections.AllocatorManager.AllocatorHandle)this.allocator).IsCustomAllocator == true) {
                 Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
             } else {

@@ -68,7 +68,7 @@ namespace ME.BECS {
                                 // if we processing current tick - remove component
                                 if (item.ent.IsAlive() == true) {
                                     Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
-                                    state->batches.Remove(in item.ent, item.typeId, item.groupId, state);
+                                    item.ent.Remove(item.typeId);
                                 }
                                 item.Dispose(ref state->allocator);
                                 break;

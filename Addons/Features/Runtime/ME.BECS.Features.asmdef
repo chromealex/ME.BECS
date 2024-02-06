@@ -3,7 +3,6 @@
     "rootNamespace": "",
     "references": [
         "ME.BECS",
-        "ME.BECS.Editor",
         "Unity.Collections"
     ],
     "includePlatforms": [],

@@ -232,7 +232,7 @@ namespace ME.BECS.Views {
                             viewSource.providerId < this.registeredProviders.Length) {
                             ref var item = ref *(this.registeredProviders.Ptr + viewSource.providerId);
                             E.IS_CREATED(item);
-                            item.destroyMethod.Invoke(in ent);
+                            ent.Remove(item.typeId);
                         }
                         ent.Remove<ViewComponent>();
 

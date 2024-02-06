@@ -31,7 +31,7 @@ namespace ME.BECS {
     public static unsafe class Cuts {
 
         public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator;
-
+        
         [INLINE(256)]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {
             return new ClassPtr<T>(data);
@@ -80,7 +80,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static T* _makeDefault<T>() where T : unmanaged {
-            
+
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
             return (T*)ptr;
@@ -147,7 +147,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static byte* _make(uint size) {
             
-            return (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
+            var ptr = (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
+            return ptr;
             //var ptr = UnsafeUtility.Malloc(size, TAlign<byte>.alignInt, ALLOCATOR);
             //return (byte*)ptr;
 
@@ -167,7 +168,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static T* _makeArray<T>(in T firstElement, uint length, bool clearMemory = false) where T : unmanaged {
             
-            var size = TSize<T>.sizeInt * length;
+            var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
             //var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
@@ -283,7 +284,8 @@ namespace ME.BECS {
         public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
 
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
-                return Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
+                var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
+                return ptr;
             }
             return UnsafeUtility.Malloc(size, align, allocator);
 
@@ -293,7 +295,8 @@ namespace ME.BECS {
         public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
-                return Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
+                var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
+                return ptr;
             }
             return UnsafeUtility.Malloc(size, align, allocator);
 

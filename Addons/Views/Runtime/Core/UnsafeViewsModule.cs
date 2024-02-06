@@ -322,22 +322,18 @@ namespace ME.BECS.Views {
 
     }
 
-    public delegate void ProviderInstantiateView(in Ent ent, in ViewSource viewSource);
-    public delegate void ProviderDestroyView(in Ent ent);
-    
     public unsafe struct UnsafeViewsModule {
 
         public struct ProviderInfo : IIsCreated {
 
             public bool isCreated { get; set; }
-            public Unity.Burst.FunctionPointer<ProviderInstantiateView> instantiateMethod;
-            public Unity.Burst.FunctionPointer<ProviderDestroyView> destroyMethod;
+            public uint typeId;
 
         }
         
         internal static readonly Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>> registeredProviders = Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>>.GetOrCreatePartiallyUnsafeWithHashCode<UnsafeViewsModule>(TAlign<UnsafeList<ProviderInfo>>.align, 20021);
         
-        public static void RegisterProviderCallbacks(uint providerId, ProviderInstantiateView instantiateView, ProviderDestroyView destroyView) {
+        public static void RegisterProviderType<T>(uint providerId) where T : unmanaged, IComponent {
 
             if (registeredProviders.Data.IsCreated == false) {
                 registeredProviders.Data = new UnsafeList<ProviderInfo>((int)providerId + 1, Constants.ALLOCATOR_DOMAIN);
@@ -346,8 +342,7 @@ namespace ME.BECS.Views {
 
             ref var item = ref *(registeredProviders.Data.Ptr + providerId);
             item.isCreated = true;
-            item.instantiateMethod = Unity.Burst.BurstCompiler.CompileFunctionPointer(instantiateView);
-            item.destroyMethod = Unity.Burst.BurstCompiler.CompileFunctionPointer(destroyView);
+            item.typeId = StaticTypes<T>.typeId;
 
         }
         
@@ -363,7 +358,7 @@ namespace ME.BECS.Views {
             if (viewSource.providerId < registeredProviders.Data.Length) {
                 ref var item = ref *(registeredProviders.Data.Ptr + viewSource.providerId);
                 E.IS_CREATED(item);
-                item.instantiateMethod.Invoke(in ent, in viewSource);
+                ent.Set(item.typeId, null);
             }
             
             return true;

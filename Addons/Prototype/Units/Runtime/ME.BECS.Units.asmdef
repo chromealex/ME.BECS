@@ -10,8 +10,7 @@
         "ME.BECS.Players",
         "Unity.Collections",
         "ME.BECS.Effects",
-        "ME.BECS.Views",
-        "KNN"
+        "ME.BECS.Views"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

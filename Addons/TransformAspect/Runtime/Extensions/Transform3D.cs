@@ -1,9 +1,6 @@
 namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using float3 = Unity.Mathematics.float3;
-    using float4x4 = Unity.Mathematics.float4x4;
-    using quaternion = Unity.Mathematics.quaternion;
     using tfloat = System.Single;
     using math = Unity.Mathematics.math;
     

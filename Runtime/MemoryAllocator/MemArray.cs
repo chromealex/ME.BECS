@@ -1,9 +1,13 @@
-using Unity.Jobs;
 
 namespace ME.BECS {
     
-    using Unity.Collections.LowLevel.Unsafe;
+    #if NO_INLINE
+    using INLINE = NoInlineAttribute;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
+    using Unity.Jobs;
+    using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
 
     public readonly unsafe struct CachedPtr<T> where T : unmanaged {

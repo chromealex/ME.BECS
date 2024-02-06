@@ -91,10 +91,19 @@ namespace ME.BECS {
             
         }
 
+        /// <summary>
+        /// Create new visual world with default properties
+        /// </summary>
+        /// <param name="visualWorld"></param>
+        /// <param name="dependsOn"></param>
+        /// <param name="systemsGraph"></param>
+        /// <param name="initializerInstance"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         [INLINE(256)]
-        public static JobHandle CreateVisualWorld(out VisualWorld visualWorld, JobHandle dependsOn, BaseWorldInitializer initializerInstance = null) {
+        public static JobHandle CreateVisualWorld(out VisualWorld visualWorld, JobHandle dependsOn, ME.BECS.FeaturesGraph.SystemsGraph systemsGraph = null, BaseWorldInitializer initializerInstance = null) {
             
-            return CreateVisualWorld(WorldProperties.Default, out visualWorld, dependsOn, initializerInstance);
+            return CreateVisualWorld(WorldProperties.Default, out visualWorld, dependsOn, systemsGraph, initializerInstance);
             
         }
 
@@ -104,11 +113,12 @@ namespace ME.BECS {
         /// <param name="properties"></param>
         /// <param name="visualWorld"></param>
         /// <param name="dependsOn"></param>
+        /// <param name="systemsGraph"></param>
         /// <param name="initializerInstance"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         [INLINE(256)]
-        public static JobHandle CreateVisualWorld(WorldProperties properties, out VisualWorld visualWorld, JobHandle dependsOn, BaseWorldInitializer initializerInstance = null) {
+        public static JobHandle CreateVisualWorld(WorldProperties properties, out VisualWorld visualWorld, JobHandle dependsOn, ME.BECS.FeaturesGraph.SystemsGraph systemsGraph = null, BaseWorldInitializer initializerInstance = null) {
 
             if (initializerInstance == null) initializerInstance = BaseWorldInitializer.GetInstance();
 
@@ -121,9 +131,12 @@ namespace ME.BECS {
             properties.stateProperties.mode = WorldMode.Visual;
             var viewsWorld = World.Create(properties, false);
 
-            var systemGroup = SystemGroup.Create(UpdateType.UPDATE);
-            systemGroup.Add<ME.BECS.Transforms.TransformWorldMatrixUpdateSystem>();
-            viewsWorld.AssignRootSystemGroup(systemGroup);
+            var group = SystemGroup.Create(UpdateType.ANY);
+            if (systemsGraph != null) {
+                group.Add(systemsGraph.DoAwake(ref viewsWorld, UpdateType.UPDATE));
+            }
+            viewsWorld.AssignRootSystemGroup(group);
+            
             ViewsModule viewsModule = null;
             foreach (var module in initializerInstance.modules.list) {
                 if (module.IsEnabled() == true && module.obj is ViewsModule vm) {

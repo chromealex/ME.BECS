@@ -586,8 +586,10 @@ namespace ME.BECS.Editor {
 
                     foreach (var item in this.tmpList) {
 
-                        this.AddArchetype(world, this.idToNode[item], center);
-                        
+                        if (this.idToNode.TryGetValue(item, out var node) == true) {
+                            this.AddArchetype(world, node, center);
+                        }
+
                     }
 
                 }

@@ -85,10 +85,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool Remove(this ref Batches batches, in Ent ent, uint typeId, uint groupId, State* state) {
+        public static bool Remove(this ref Batches batches, in Ent ent, uint typeId, State* state) {
 
             E.IS_IN_TICK(state);
             
+            var groupId = StaticTypes.groups.Get(typeId);
             if (state->components.Remove(state, in ent, typeId, groupId) == true) {
                 batches.Remove_INTERNAL(typeId, in ent, state);
                 return true;

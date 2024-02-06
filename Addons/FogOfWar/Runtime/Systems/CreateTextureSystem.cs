@@ -9,6 +9,7 @@ namespace ME.BECS.FogOfWar {
     using Unity.Jobs;
     using ME.BECS.Players;
 
+    [RequiredDependencies(typeof(CreateSystem))]
     public struct CreateTextureSystem : IAwake, IDestroy {
 
         public View renderView;
