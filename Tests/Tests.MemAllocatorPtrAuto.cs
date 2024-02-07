@@ -114,7 +114,7 @@ namespace ME.BECS.Tests {
             var allocator = world.state->allocator;
             
             // need to find memory block from this allocator
-            var savedMemPtr = memAllocator.memPtr;
+            var savedMemPtr = memAllocator.memBeginPtr;
             Assert.True(this.CheckZoneState(allocator, savedMemPtr));
             
             ent.Set(new TestComponentAllocator() {
@@ -154,7 +154,7 @@ namespace ME.BECS.Tests {
             
             var allocator = world.state->allocator;
             // need to find memory block from this allocator
-            var savedMemPtr = memAllocator.memPtr;
+            var savedMemPtr = memAllocator.memBeginPtr;
             Assert.True(this.CheckZoneState(allocator, savedMemPtr));
 
             memAllocator.Dispose();
@@ -187,7 +187,7 @@ namespace ME.BECS.Tests {
             
             var allocator = world.state->allocator;
             // need to find memory block from this allocator
-            var savedMemPtr = memAllocator.memPtr;
+            var savedMemPtr = memAllocator.memBeginPtr;
             Assert.True(this.CheckZoneState(allocator, savedMemPtr));
 
             var dep = memAllocator.Dispose(new JobHandle());

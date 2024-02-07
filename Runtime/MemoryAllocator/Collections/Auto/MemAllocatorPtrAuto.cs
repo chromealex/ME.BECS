@@ -7,40 +7,51 @@ namespace ME.BECS {
     public unsafe struct MemAllocatorPtrAuto<T> : IIsCreated where T : unmanaged {
         
         public static readonly MemAllocatorPtrAuto<T> Empty = new MemAllocatorPtrAuto<T>() {
-            ptr = MemPtr.Invalid,
+            beginPtr = MemPtr.Invalid,
+            dataPtr = MemPtr.Invalid,
+            alignment = 0,
             ent = Ent.Null,
         };
 
-        internal MemPtr ptr;
-        public Ent ent;
+        internal MemPtr beginPtr; // 8
+        private MemPtr dataPtr; // 8
+        private uint alignment; // 4
+        public Ent ent; // 8
+        // 28 bytes total
 
-        public MemPtr memPtr => this.ptr;
+        public MemPtr memBeginPtr => this.beginPtr;
+        public MemPtr memDataPtr => this.dataPtr;
         
         public readonly bool isCreated {
             [INLINE(256)]
-            get => this.ptr.IsValid();
+            get => this.beginPtr.IsValid();
         }
-
-        [INLINE(256)]
-        public long AsLong() => this.ptr.AsLong();
 
         [INLINE(256)]
         public bool IsValid() {
-            return this.ptr.IsValid();
+            return this.ent.IsAlive() && this.beginPtr.IsValid();
         }
+        
+        internal uint AlignSize(uint size) => this.alignment > 0 ? size + (this.alignment - 1) : size;
 
-        public MemAllocatorPtrAuto(in Ent ent, in T obj) {
+        internal void* AlignPtr(void* ptr) => this.alignment > 0 ? (void*)(((ulong)ptr + (this.alignment - 1)) & ~((ulong)this.alignment - 1)) : ptr;
+
+        public MemAllocatorPtrAuto(in Ent ent, in T obj, uint alignment = 0) {
 
             this.ent = ent;
-            this.ptr = MemPtr.Invalid;
+            this.beginPtr = MemPtr.Invalid;
+            this.dataPtr = MemPtr.Invalid;
+            this.alignment = alignment;
             this.Set(obj);
 
         }
         
-        public MemAllocatorPtrAuto(in Ent ent, void* data, uint dataSize) {
+        public MemAllocatorPtrAuto(in Ent ent, void* data, uint dataSize, uint alignment = 0) {
 
             this.ent = ent;
-            this.ptr = MemPtr.Invalid;
+            this.beginPtr = MemPtr.Invalid;
+            this.dataPtr = MemPtr.Invalid;
+            this.alignment = alignment;
             this.Set(data, dataSize);
 
         }
@@ -48,7 +59,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void ReplaceWith(in MemAllocatorPtrAuto<T> other) {
             
-            if (other.ptr == this.ptr) {
+            if (other.beginPtr == this.beginPtr) {
                 return;
             }
             
@@ -61,7 +72,7 @@ namespace ME.BECS {
         public readonly ref T As() {
 
             var state = this.ent.World.state;
-            return ref state->allocator.Ref<T>(this.ptr);
+            return ref state->allocator.Ref<T>(this.dataPtr);
 
         }
 
@@ -75,33 +86,38 @@ namespace ME.BECS {
         public readonly void* GetUnsafePtr(uint offset = 0u) {
 
             var state = this.ent.World.state;
-            return (T*)MemoryAllocatorExt.GetUnsafePtr(in state->allocator, this.ptr, offset);
+            return (T*)MemoryAllocatorExt.GetUnsafePtr(in state->allocator, this.dataPtr, offset);
 
         }
 
         [INLINE(256)]
-        public void Set(in T data) {
+        private void Set(in T data) {
 
             E.IS_ALREADY_CREATED(this);
             var state = this.ent.World.state;
-            this.ptr = state->allocator.Alloc<T>();
-            state->allocator.Ref<T>(this.ptr) = data;
-            state->collectionsRegistry.Add(state, in ent, in this.ptr);
+            this.beginPtr = MemoryAllocatorExt.Alloc(ref state->allocator, this.AlignSize((uint)sizeof(T)), out var ptr);
+            ptr = this.AlignPtr(ptr);
+            this.dataPtr = state->allocator.GetSafePtr(ptr, this.beginPtr.zoneId);
+            state->allocator.Ref<T>(this.dataPtr) = data;
+            state->collectionsRegistry.Add(state, in ent, in this.beginPtr);
 
         }
 
         [INLINE(256)]
-        public void Set(void* data, uint dataSize) {
+        private void Set(void* data, uint dataSize) {
 
             E.IS_ALREADY_CREATED(this);
             var state = this.ent.World.state;
-            this.ptr = MemoryAllocatorExt.Alloc(ref state->allocator, dataSize, out var ptr);
+            var alignedSize = this.AlignSize(dataSize);
+            this.beginPtr = MemoryAllocatorExt.Alloc(ref state->allocator, alignedSize, out var outPtr);
+            var alignedPtr = this.AlignPtr(outPtr);
             if (data != null) {
-                Cuts._memcpy(data, ptr, dataSize);
+                Cuts._memcpy(data, alignedPtr, dataSize);
             } else {
-                Cuts._memclear(ptr, dataSize);
+                Cuts._memclear(alignedPtr, dataSize);
             }
-            state->collectionsRegistry.Add(state, in ent, in this.ptr);
+            this.dataPtr = state->allocator.GetSafePtr(alignedPtr, this.beginPtr.zoneId);
+            state->collectionsRegistry.Add(state, in ent, in this.beginPtr);
 
         }
         
@@ -109,9 +125,9 @@ namespace ME.BECS {
         public void Dispose() {
 
             var state = this.ent.World.state;
-            state->collectionsRegistry.Remove(state, in this.ent, in this.ptr);
-            if (this.ptr.IsValid() == true) {
-                state->allocator.Free(this.ptr);
+            state->collectionsRegistry.Remove(state, in this.ent, in this.beginPtr);
+            if (this.beginPtr.IsValid() == true) {
+                state->allocator.Free(this.beginPtr);
             }
             this = default;
 
@@ -121,7 +137,7 @@ namespace ME.BECS {
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle inputDeps) {
             
             var jobHandle = new DisposeAutoJob() {
-                ptr = this.ptr,
+                ptr = this.beginPtr,
                 ent = this.ent,
                 worldId = this.ent.World.id,
             }.Schedule(inputDeps);
