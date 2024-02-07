@@ -325,8 +325,11 @@ namespace ME.BECS {
             var state = world.state;
             var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).ParallelFor(64).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
             query.WaitForAllJobs();
+            var result = query.commandBuffer->count;
 
-            return query.commandBuffer->count;
+            query.Dispose();
+
+            return result;
 
         }
 
