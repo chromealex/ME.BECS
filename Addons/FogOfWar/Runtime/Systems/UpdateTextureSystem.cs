@@ -6,13 +6,14 @@ namespace ME.BECS.FogOfWar {
     using Unity.Collections;
 
     //[BURST(CompileSynchronously = true)]
+    [RequiredDependencies(typeof(CreateTextureSystem), typeof(CreateSystem), typeof(PlayersSystem))]
     public struct UpdateTextureSystem : IUpdate {
 
         public float fadeInSpeed;
         public float fadeOutSpeed;
 
         [BURST(CompileSynchronously = true)]
-        public struct UpdateJob : Unity.Jobs.IJobParallelFor {
+        public struct UpdateJob : IJobParallelFor {
 
             public float dt;
             public float fadeInSpeed;
@@ -28,21 +29,19 @@ namespace ME.BECS.FogOfWar {
 
                 var w = this.textureWidth / 4;
                 var h = this.textureHeight;
-                var i = index;
                 {
-                    var pixelIndex = i;
-                    var x = pixelIndex % w;
-                    var y = pixelIndex / w;
+                    var x = index % w;
+                    var y = index / w;
                     (var fowX, var fowY) = FogOfWarUtils.GetPixelPosition(in this.props, x, y, w, h);
                     if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {
                         var targetColor = new UnityEngine.Color32(255, 255, 255, 255);
-                        this.Place(i, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i + 1, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i - 1, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i + w, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i - w, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index + 1, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index - 1, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index + w, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index - w, targetColor, this.dt * this.fadeInSpeed);
                     } else {
-                        this.currentBuffer[i] = UnityEngine.Color32.Lerp(this.currentBuffer[i], new UnityEngine.Color32(0, 0, 0, 0), this.dt * this.fadeOutSpeed);
+                        this.currentBuffer[index] = UnityEngine.Color32.Lerp(this.currentBuffer[index], new UnityEngine.Color32(0, 0, 0, 0), this.dt * this.fadeOutSpeed);
                     }
                 }
                 

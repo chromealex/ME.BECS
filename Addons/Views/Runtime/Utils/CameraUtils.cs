@@ -26,6 +26,8 @@ namespace ME.BECS.Views {
             comp.fieldOfViewVertical = math.radians(camera.fieldOfView);
             comp.aspect = camera.aspect;
             comp.bounds = CalculateLocalBounds(camera, tr.rotation);
+            comp.orthographic = camera.orthographic;
+            comp.orthographicSize = camera.orthographicSize;
             
             var radFov = 2f * math.atan(math.tan(math.radians(camera.fieldOfView) * 0.5f) * camera.aspect);
             comp.fieldOfViewHorizontal = radFov;

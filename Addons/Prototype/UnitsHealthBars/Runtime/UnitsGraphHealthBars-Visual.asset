@@ -10,28 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
-  m_Name: FogOfWarGraph-Visual
+  m_Name: UnitsGraphHealthBars-Visual
   m_EditorClassIdentifier: 
-  id: 21
+  id: 70
   builtInGraph: 1
   serializedNodes: []
   nodes:
-  - rid: 8346928923441103769
-  - rid: 8346928923441103770
-  - rid: 8346928923441103775
+  - rid: 8346928920201003080
+  - rid: 8346928920201003081
+  - rid: 4603152874872242266
   edges:
-  - GUID: f5647dbc-eb8f-491c-b491-e9854578565a
+  - GUID: 6cc53b02-c5ee-497c-9a48-3a99cc75b93d
     owner: {fileID: 11400000}
-    inputNodeGUID: 37b28351-46ed-4aeb-b7d4-f48fd39cdc77
+    inputNodeGUID: b8df3fe9-e032-40db-9148-635a000c92ba
     outputNodeGUID: StartNode
     inputFieldName: inputNodes
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: 562ff8d2-0166-4d61-bf8a-35e7e14079c5
+  - GUID: b4027191-f165-455a-bdb3-a0b8971ea885
     owner: {fileID: 11400000}
     inputNodeGUID: EndNode
-    outputNodeGUID: 37b28351-46ed-4aeb-b7d4-f48fd39cdc77
+    outputNodeGUID: b8df3fe9-e032-40db-9148-635a000c92ba
     inputFieldName: inputNodes
     outputFieldName: outputNodes
     inputPortIdentifier: 
@@ -43,13 +43,41 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 303.5, y: 406.5, z: 0}
+  position: {x: -26.5, y: 144, z: 0}
   scale: {x: 1, y: 1, z: 1}
   isInnerGraph: 1
   references:
     version: 2
     RefIds:
-    - rid: 8346928923441103769
+    - rid: 4603152874872242266
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: b8df3fe9-e032-40db-9148-635a000c92ba
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 277.5
+          y: 0
+          width: 300
+          height: 110.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 4603152880298623404
+    - rid: 4603152880298623404
+      type: {class: DrawHealthBarsSystem, ns: ME.BECS.UnitsHealthBars, asm: ME.BECS.UnitsHealthBars}
+      data:
+        healthBarMaterial:
+          id: 3
+        barSettings:
+          sectionWidth: 4
+          height: 1
+    - rid: 8346928920201003080
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         nodeCustomName: 
@@ -67,7 +95,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
-    - rid: 8346928923441103770
+    - rid: 8346928920201003081
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         nodeCustomName: 
@@ -76,8 +104,8 @@ MonoBehaviour:
         computeOrder: 2
         position:
           serializedVersion: 2
-          x: 978.0801
-          y: -6
+          x: 819.5
+          y: -8.5
           width: 100
           height: 79.5
         expanded: 1
@@ -85,28 +113,3 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
-    - rid: 8346928923441103775
-      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
-      data:
-        nodeCustomName: 
-        GUID: 37b28351-46ed-4aeb-b7d4-f48fd39cdc77
-        groupGUID: 
-        computeOrder: 1
-        position:
-          serializedVersion: 2
-          x: 350
-          y: -6
-          width: 300
-          height: 305.5
-        expanded: 1
-        enabled: 1
-        debug: 0
-        nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
-        system:
-          rid: 8346928929818279971
-    - rid: 8346928929818279971
-      type: {class: UpdateTextureSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
-      data:
-        fadeInSpeed: 8
-        fadeOutSpeed: 3

@@ -23,6 +23,11 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static int GetHeight(in FogOfWarStaticComponent props, uint x, uint y) {
+            return props.heights[y * props.size.x + x];
+        }
+
+        [INLINE(256)]
         public static (uint pixelX, uint pixelY) GetPixelPosition(in FogOfWarStaticComponent props, int x, int y, int textureWidth, int textureHeight) {
             
             var xf = x / (float)textureWidth * props.size.x;

@@ -17,6 +17,7 @@ namespace ME.BECS.FogOfWar {
         public float2 worldSize;
         public uint2 size;
         public MemArrayAuto<int> heights;
+        public int maxHeight;
 
     }
 

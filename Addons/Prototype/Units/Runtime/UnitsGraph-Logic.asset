@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
-  m_Name: UnitsGraph
+  m_Name: UnitsGraph-Logic
   m_EditorClassIdentifier: 
-  id: 8
+  id: 50
   builtInGraph: 1
   serializedNodes: []
   nodes:

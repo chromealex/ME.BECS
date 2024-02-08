@@ -6,59 +6,62 @@ namespace ME.BECS.FogOfWar {
 
     public class FogOfWarView : EntityView {
 
-        public MeshFilter meshFilter;
-        public MeshRenderer meshRenderer;
+        public Material material;
         
         protected override void OnInitialize(in EntRO ent) {
 
             var fowSystem = ent.World.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
-            var texture = system.GetTexture();
-            this.meshFilter.sharedMesh = CreateQuad(fowSystem.mapSize.x, fowSystem.mapSize.y);
-            this.meshRenderer.sharedMaterial.mainTexture = texture;
+            var heightResolution = fowSystem.resolution;
+            this.material.SetTexture("_FogTex", system.GetTexture());
+            this.material.SetFloat("_HeightResolution", heightResolution);
 
-        }
+            var comp = Camera.main.gameObject.AddComponent<CameraFogOfWarTexture>();
+            comp.material = this.material;
+            comp.worldSize = fowSystem.mapSize.x;
+            comp.offset = new Vector3(0f, 0f, 0f);
 
-        private static Mesh CreateQuad(float width, float height) {
-
-            Mesh mesh = new Mesh();
-
-            var vertices = new Vector3[] {
-                new Vector3(0, 0, 0),
-                new Vector3(width, 0, 0),
-                new Vector3(0, 0, height),
-                new Vector3(width, 0, height),
-            };
-            mesh.vertices = vertices;
-
-            int[] tris = new int[6] {
-                // lower left triangle
-                0, 2, 1,
-                // upper right triangle
-                2, 3, 1,
-            };
-            mesh.triangles = tris;
-
-            var normals = new Vector3[] {
-                -Vector3.forward,
-                -Vector3.forward,
-                -Vector3.forward,
-                -Vector3.forward,
-            };
-            mesh.normals = normals;
-
-            var uv = new Vector2[] {
-                new Vector2(0, 0),
-                new Vector2(1, 0),
-                new Vector2(0, 1),
-                new Vector2(1, 1)
-            };
-            mesh.uv = uv;
-
-            return mesh;
-            
         }
 
     }
 
+    public class CameraFogOfWarTexture : MonoBehaviour {
+
+        public Material material;
+        public float2 worldSize;
+        public Vector3 offset;
+        private Camera objCamera;
+
+        public void Awake() {
+            this.objCamera = this.GetComponent<Camera>();
+        }
+
+        private void OnRenderImage(RenderTexture src, RenderTexture dest) {
+            
+            var inverseMVP = (this.objCamera.projectionMatrix * this.objCamera.worldToCameraMatrix).inverse;
+
+            float invScaleX = 1f / this.worldSize.x;
+            float invScaleY = 1f / this.worldSize.y;
+            float x = this.offset.x - this.worldSize.x * 0.5f;
+            float y = this.offset.z - this.worldSize.y * 0.5f;
+            Vector4 camPos = this.objCamera.transform.position;
+            if (QualitySettings.antiAliasing > 0) {
+                RuntimePlatform pl = Application.platform;
+                if (pl == RuntimePlatform.WindowsEditor ||
+                    pl == RuntimePlatform.WindowsPlayer ||
+                    pl == RuntimePlatform.WebGLPlayer) {
+                    camPos.w = 1f;
+                }
+            }
+            
+            Vector4 p = new Vector4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
+            this.material.SetMatrix("_InverseMVP", inverseMVP);
+            this.material.SetVector("_CamPos", camPos);
+            this.material.SetVector("_Params", p);
+            
+            Graphics.Blit(src, dest, this.material);
+        }
+
+    }
+    
 }

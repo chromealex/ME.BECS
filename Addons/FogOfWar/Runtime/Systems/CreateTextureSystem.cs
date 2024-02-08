@@ -15,6 +15,7 @@ namespace ME.BECS.FogOfWar {
         public View renderView;
         
         private ClassPtr<UnityEngine.Texture2D> texture;
+        private ClassPtr<UnityEngine.Texture2D> heightTexture;
         internal int textureWidth;
         internal int textureHeight;
 
@@ -28,10 +29,17 @@ namespace ME.BECS.FogOfWar {
             var size = FogOfWarUtils.WorldToFogMapPosition(in props, system.mapSize.xyy);
             this.textureWidth = (int)math.ceilpow2(size.x);
             this.textureHeight = (int)math.ceilpow2(size.y);
-            var tex = new UnityEngine.Texture2D(this.textureWidth, this.textureHeight, UnityEngine.TextureFormat.R8, false);
-            tex.wrapMode = UnityEngine.TextureWrapMode.Clamp;
-            this.texture = new ClassPtr<UnityEngine.Texture2D>(tex);
-            
+            {
+                var tex = new UnityEngine.Texture2D(this.textureWidth, this.textureHeight, UnityEngine.TextureFormat.R8, false);
+                tex.wrapMode = UnityEngine.TextureWrapMode.Clamp;
+                this.texture = new ClassPtr<UnityEngine.Texture2D>(tex);
+            }
+            {
+                var tex = new UnityEngine.Texture2D(this.textureWidth, this.textureHeight, UnityEngine.TextureFormat.R8, false);
+                tex.wrapMode = UnityEngine.TextureWrapMode.Clamp;
+                this.heightTexture = new ClassPtr<UnityEngine.Texture2D>(tex);
+            }
+
             var render = Ent.New();
             var tr = render.GetOrCreateAspect<TransformAspect>();
             var pos = tr.position;
@@ -45,14 +53,18 @@ namespace ME.BECS.FogOfWar {
 
         public Unity.Collections.NativeArray<UnityEngine.Color32> GetBuffer() => this.texture.Value.GetPixelData<UnityEngine.Color32>(0);
 
-        public ClassPtr<UnityEngine.Texture2D> GetTexturePtr() => this.texture;
+        public Unity.Collections.NativeArray<UnityEngine.Color32> GetHeightBuffer() => this.heightTexture.Value.GetPixelData<UnityEngine.Color32>(0);
 
         public UnityEngine.Texture2D GetTexture() => this.texture.Value;
+
+        public UnityEngine.Texture2D GetHeightTexture() => this.heightTexture.Value;
 
         [WithoutBurst]
         public void OnDestroy(ref SystemContext context) {
             UnityEngine.Object.DestroyImmediate(this.texture.Value);
             this.texture.Dispose();
+            UnityEngine.Object.DestroyImmediate(this.heightTexture.Value);
+            this.heightTexture.Dispose();
         }
 
     }

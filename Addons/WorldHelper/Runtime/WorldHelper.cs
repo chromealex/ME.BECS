@@ -45,6 +45,14 @@ namespace ME.BECS {
             
         }
 
+        public UnityEngine.Camera GetCameraObject() {
+            return this.cameraPtr.Value;
+        }
+        
+        public ClassPtr<UnityEngine.Camera> GetCameraObjectPtr() {
+            return this.cameraPtr;
+        }
+
     }
     
     public static class WorldHelper {

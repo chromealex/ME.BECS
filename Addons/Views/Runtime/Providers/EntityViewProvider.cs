@@ -32,12 +32,14 @@ namespace ME.BECS.Views {
 
             public SourceRegistry.Info* info;
             public EntityView obj;
+            public System.IntPtr ptr;
 
         }
 
         private scg::Dictionary<uint, scg::Stack<Item>> prefabIdToPool;
         private scg::HashSet<EntityView> tempViews;
         private scg::List<ViewRoot> roots;
+        private scg::List<HeapReference> heaps;
         private TransformAccessArray renderingOnSceneTransforms;
         private int batchPerRoot;
         //private UnityEngine.Transform disabledRoot;
@@ -55,6 +57,7 @@ namespace ME.BECS.Views {
             //this.disabledRoot = new UnityEngine.GameObject("[Views Module] Disabled Root").transform;
             //if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
             //this.disabledRoot.localScale = UnityEngine.Vector3.zero;
+            this.heaps = new scg::List<HeapReference>();
             this.prefabIdToPool = new scg::Dictionary<uint, scg::Stack<Item>>();
             this.tempViews = new scg::HashSet<EntityView>();
             this.roots = new scg::List<ViewRoot>();
@@ -200,6 +203,7 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public SceneInstanceInfo Spawn(SourceRegistry.Info* prefabInfo, in Ent ent, out bool isNew) {
 
+            System.IntPtr objPtr;
             EntityView objInstance;
             if (prefabInfo->sceneSource == false) {
 
@@ -216,6 +220,7 @@ namespace ME.BECS.Views {
 
                     isNew = false;
                     objInstance = instance.obj;
+                    objPtr = instance.ptr;
 
                 } else {
 
@@ -226,6 +231,7 @@ namespace ME.BECS.Views {
                     instance.rootInfo = root;
                     isNew = true;
                     objInstance = instance;
+                    objPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(new HeapReference<EntityView>(objInstance).handle);
 
                 }
 
@@ -238,6 +244,7 @@ namespace ME.BECS.Views {
                 instance.rootInfo = root;
                 isNew = true;
                 objInstance = instance;
+                objPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(handle);
 
             }
 
@@ -246,9 +253,7 @@ namespace ME.BECS.Views {
             SceneInstanceInfo info;
             {
                 this.renderingOnSceneTransforms.Add(objInstance.transform);
-                var r = new HeapReference<EntityView>(objInstance);
-                var ptr = System.Runtime.InteropServices.GCHandle.ToIntPtr(r.handle);
-                info = new SceneInstanceInfo(ptr, prefabInfo);
+                info = new SceneInstanceInfo(objPtr, prefabInfo);
             }
 
             {
@@ -291,6 +296,7 @@ namespace ME.BECS.Views {
                 list.Push(new Item() {
                     info = instanceInfo.prefabInfo,
                     obj = instance,
+                    ptr = instanceInfo.obj,
                 });
                 
             } else {
@@ -299,6 +305,7 @@ namespace ME.BECS.Views {
                 stack.Push(new Item() {
                     info = instanceInfo.prefabInfo,
                     obj = instance,
+                    ptr = instanceInfo.obj,
                 });
                 this.prefabIdToPool.Add(instanceInfo.prefabInfo->prefabId, stack);
                 
@@ -351,6 +358,10 @@ namespace ME.BECS.Views {
                     
                 }
 
+            }
+
+            foreach (var heap in this.heaps) {
+                heap.Dispose();
             }
 
             //if (this.disabledRoot != null) UnityEngine.GameObject.DestroyImmediate(this.disabledRoot.gameObject);

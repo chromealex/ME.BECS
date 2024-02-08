@@ -117,10 +117,10 @@ namespace ME.BECS.Pathfinding {
                 var prevPos = tr.position;
                 prevPos.y = 0f;
                 var newPos = prevPos;
-                unit.velocity = tr.forward * unit.speed;
-                newPos += unit.velocity * this.dt;
+                newPos += tr.forward * unit.speed * this.dt;
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
                 newPos = GraphUtils.GetPositionWithMapBorders(graph, out var collisionDirection, in newPos, in prevPos, in agent.filter);
+                unit.velocity = newPos - prevPos;
                 var delta = collisionDirection * this.followPathSystem.collisionForce * this.dt;
                 if (GraphUtils.GetPositionWithMapBordersNode(out var node, in graph, newPos + delta) == true) {
                     if (agent.filter.IsValid(in node) == true) {

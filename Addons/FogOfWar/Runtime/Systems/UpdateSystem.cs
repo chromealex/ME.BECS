@@ -7,6 +7,7 @@ namespace ME.BECS.FogOfWar {
     using Transforms;
 
     [BURST(CompileSynchronously = true)]
+    [RequiredDependencies(typeof(CreateSystem))]
     public struct UpdateSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]

@@ -46,7 +46,23 @@ namespace ME.BECS.Views {
         }
 
     }
-    
+
+    public struct HeapReference {
+
+        public System.Runtime.InteropServices.GCHandle handle;
+
+        [INLINE(256)]
+        public HeapReference(object obj) {
+            this.handle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
+        }
+
+        [INLINE(256)]
+        public void Dispose() {
+            if (this.handle.IsAllocated == true) this.handle.Free();
+        }
+
+    }
+
     [System.Serializable]
     public struct ViewsModuleProperties {
 

@@ -1,5 +1,5 @@
 {
-    "name": "ME.BECS.Units",
+    "name": "ME.BECS.UnitsHealthBars",
     "rootNamespace": "",
     "references": [
         "ME.BECS",
@@ -9,10 +9,11 @@
         "Unity.Burst",
         "ME.BECS.Players",
         "Unity.Collections",
-        "ME.BECS.Effects",
+        "ME.BECS.WorldHelper",
+        "ME.BECS.FogOfWar",
+        "ME.BECS.Units",
         "ME.BECS.Views",
-        "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.WorldHelper"
+        "ME.BECS.ObjectReference.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -89,14 +89,14 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static Ent GetTeam(in Ent ent) {
 
-            return ME.BECS.Players.PlayerUtils.GetOwner(in ent).team;
+            return ME.BECS.Players.PlayerUtils.GetOwner(in ent).readTeam;
 
         }
 
         [INLINE(256)]
         public static Ent GetTeam(in UnitAspect unit) {
 
-            return unit.owner.GetAspect<ME.BECS.Players.PlayerAspect>().team;
+            return unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>().readTeam;
 
         }
 

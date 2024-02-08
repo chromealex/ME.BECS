@@ -9,6 +9,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Pathfinding;
     using Unity.Jobs;
     using ME.BECS.Transforms;
+    using ME.BECS.Units;
 
     [BURST(CompileSynchronously = true)]
     public struct CreateSystem : IAwake, IUpdate {
@@ -79,8 +80,9 @@ namespace ME.BECS.FogOfWar {
                 
                 if (this.dirtyChunks[index] == false) return;
 
-                var fow = this.heights.Read<FogOfWarStaticComponent>();
+                ref var fow = ref this.heights.Get<FogOfWarStaticComponent>();
                 var chunk = this.graph.chunks[index];
+                var maxHeight = 0;
                 for (uint i = 0; i < chunk.nodes.Length; ++i) {
                     var nodeHeight = chunk.nodes[this.world.state, i].height;
                     var worldPos = Graph.GetPosition(this.graph, in chunk, i);
@@ -88,7 +90,12 @@ namespace ME.BECS.FogOfWar {
                     var heightMap = FogOfWarUtils.WorldToFogMapValue(in fow, height);
                     var xy = FogOfWarUtils.WorldToFogMapPosition(in fow, in worldPos);
                     fow.heights[xy.y * this.fowSize.x + xy.x] = heightMap;
+                    if (heightMap > maxHeight) {
+                        maxHeight = heightMap;
+                    }
                 }
+
+                JobUtils.SetIfGreater(ref fow.maxHeight, maxHeight);
 
             }
 
@@ -117,6 +124,7 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public bool IsVisible(in PlayerAspect player, in Ent unit) {
             
+            if (unit.Has<OwnerComponent>() == true && player.readTeam == UnitUtils.GetTeam(unit.GetAspect<UnitAspect>())) return true;
             ref readonly var fow = ref player.readTeam.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
             var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<TransformAspect>().GetWorldMatrixPosition());
