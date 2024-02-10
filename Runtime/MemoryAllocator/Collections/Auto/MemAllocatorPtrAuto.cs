@@ -3,7 +3,7 @@ using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
 namespace ME.BECS {
 
-    [System.Serializable]
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 4, Size = 28)]
     public unsafe struct MemAllocatorPtrAuto<T> : IIsCreated where T : unmanaged {
         
         public static readonly MemAllocatorPtrAuto<T> Empty = new MemAllocatorPtrAuto<T>() {
@@ -13,10 +13,10 @@ namespace ME.BECS {
             ent = Ent.Null,
         };
 
-        internal MemPtr beginPtr; // 8
+        private MemPtr beginPtr; // 8
         private MemPtr dataPtr; // 8
+        private Ent ent; // 8
         private uint alignment; // 4
-        public Ent ent; // 8
         // 28 bytes total
 
         public MemPtr memBeginPtr => this.beginPtr;
@@ -86,7 +86,7 @@ namespace ME.BECS {
         public readonly void* GetUnsafePtr(uint offset = 0u) {
 
             var state = this.ent.World.state;
-            return (T*)MemoryAllocatorExt.GetUnsafePtr(in state->allocator, this.dataPtr, offset);
+            return MemoryAllocatorExt.GetUnsafePtr(in state->allocator, this.dataPtr, offset);
 
         }
 
