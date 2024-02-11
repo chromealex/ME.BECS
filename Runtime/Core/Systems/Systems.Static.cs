@@ -57,7 +57,7 @@ namespace ME.BECS {
         public delegate void OnUpdate(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
         public delegate void OnDestroy(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
         public delegate void OnDrawGizmos(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
-        public delegate void* GetSystem(int index);
+        public delegate void GetSystem(int index, out void* ptr);
 
         private static void Register<T>(ref UnsafeHashMap<int, System.IntPtr> registry, T callback, int graphId, bool isBurst) where T : class {
 
@@ -97,7 +97,7 @@ namespace ME.BECS {
         }
 
         public static void RegisterUpdateMethod(OnUpdate callback, int graphId, bool isBurst) {
-            
+
             Register(ref SystemsStaticOnUpdate.dic.Data, callback, graphId, isBurst);
 
         }
@@ -159,13 +159,16 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode != null) {
+                //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + rootGroup.rootNode->childrenIndex + ", updateType: " + updateType);
                 for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
                     var child = rootGroup.rootNode->children[i];
                     if (child.data->graph != null) {
                         if (updateType == 0 || child.data->graph->updateType == updateType) {
-                            
+
+                            //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + SystemsStaticOnUpdate.dic.Data.Count + ", child.data->graph->graphId: " + child.data->graph->graphId + ", updateType: " + updateType);
                             if (SystemsStaticOnUpdate.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
 
+                                //UnityEngine.Debug.Log("static systems call RaiseOnUpdate: " + child.data->graph->graphId + ", updateType: " + updateType);
                                 var func = new Unity.Burst.FunctionPointer<OnUpdate>(ptr);
                                 func.Invoke(dt, ref world, ref dependsOn);
                                 result = true;
@@ -237,7 +240,8 @@ namespace ME.BECS {
             if (SystemsStaticGetSystem.dic.Data.TryGetValue(TSystemGraph<T>.index.Data, out var ptr) == true) {
 
                 var func = new Unity.Burst.FunctionPointer<GetSystem>(ptr);
-                system = (T*)func.Invoke(TSystem<T>.index.Data);
+                func.Invoke(TSystem<T>.index.Data, out var sysPtr);
+                system = (T*)sysPtr;
                 return true;
 
             }

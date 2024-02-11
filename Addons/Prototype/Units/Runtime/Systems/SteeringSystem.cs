@@ -1,12 +1,11 @@
-using ME.BECS.Jobs;
 
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Mathematics;
-    using Unity.Collections;
-    using ME.BECS.Units;
+    using ME.BECS.Jobs;
+    using ME.BECS.Transforms;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Steering behaviour for units.")]
@@ -31,13 +30,13 @@ namespace ME.BECS.Units {
         public bool drawGizmos;
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct Job : ME.BECS.Jobs.IJobParallelForAspect<Transforms.TransformAspect, UnitAspect> {
+        public unsafe struct Job : IJobParallelForAspect<TransformAspect, UnitAspect> {
 
             public SteeringSystem system;
             public float dt;
             public World world;
             
-            public void Execute(ref ME.BECS.Transforms.TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(ref TransformAspect tr, ref UnitAspect unit) {
 
                 var facingCone = math.cos(math.radians(120f));
                 var collisionDir = float3.zero;
@@ -56,7 +55,7 @@ namespace ME.BECS.Units {
                     if (ent.IsAlive() == false) continue;
                     if (ent == unit.ent) continue;
 
-                    var entTr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                    var entTr = ent.GetAspect<TransformAspect>();
                     var entUnit = ent.GetAspect<UnitAspect>();
                     
                     if (entUnit.IsPathFollow == false && 
@@ -171,7 +170,7 @@ namespace ME.BECS.Units {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<UnitHoldComponent>().ScheduleParallelFor<Job, Transforms.TransformAspect, UnitAspect>(new Job() {
+            var dependsOn = API.Query(in context).Without<UnitHoldComponent>().ScheduleParallelFor<Job, TransformAspect, UnitAspect>(new Job() {
                 world = context.world,
                 system = this,
                 dt = context.deltaTime,
@@ -184,12 +183,12 @@ namespace ME.BECS.Units {
 
             if (this.drawGizmos == false) return;
             
-            var arr = API.Query(in context).Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<Transforms.TransformAspect>().ToArray();
+            var arr = API.Query(in context).Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<TransformAspect>().ToArray();
             foreach (var unitEnt in arr) {
 
-                var tr = unitEnt.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                var tr = unitEnt.GetAspect<TransformAspect>();
                 var unit = unitEnt.GetAspect<UnitAspect>();
-                UnityEngine.Gizmos.DrawWireSphere(tr.position, unit.radius);
+                UnityEngine.Gizmos.DrawWireSphere(tr.position, unit.readRadius);
 
             }
             

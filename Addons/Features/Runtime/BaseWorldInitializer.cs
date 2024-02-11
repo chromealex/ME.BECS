@@ -37,6 +37,18 @@ namespace ME.BECS {
         
         public static BaseWorldInitializer GetInstance() => instance;
 
+        public T GetModule<T>() where T : Module {
+            
+            for (var i = 0; i < this.modules.list.Length; ++i) {
+                var module = this.modules.list[i];
+                if (module.IsEnabled() == false) continue;
+                if (module.obj is T moduleInstance) return moduleInstance;
+            }
+
+            return null;
+
+        }
+        
         protected virtual void Awake() {
 
             instance = this;

@@ -32,12 +32,14 @@ namespace ME.BECS.Views {
 
             public SourceRegistry.Info* info;
             public EntityView obj;
+            public System.IntPtr ptr;
 
         }
 
         private scg::Dictionary<uint, scg::Stack<Item>> prefabIdToPool;
         private scg::HashSet<EntityView> tempViews;
         private scg::List<ViewRoot> roots;
+        private scg::List<HeapReference> heaps;
         private TransformAccessArray renderingOnSceneTransforms;
         private int batchPerRoot;
         //private UnityEngine.Transform disabledRoot;
@@ -47,24 +49,15 @@ namespace ME.BECS.Views {
             builder.With<EntityViewProviderTag>();
         }
 
-        [BURST(CompileSynchronously = true)]
-        public static void InstantiateViewRegistry(in Ent ent, in ViewSource viewSource) {
-            ent.Set(new EntityViewProviderTag());
-        }
-
-        [BURST(CompileSynchronously = true)]
-        public static void DestroyViewRegistry(in Ent ent) {
-            ent.Remove<EntityViewProviderTag>();
-        }
-
         [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
-            UnsafeViewsModule.RegisterProviderCallbacks(providerId, InstantiateViewRegistry, DestroyViewRegistry);
+            UnsafeViewsModule.RegisterProviderType<EntityViewProviderTag>(providerId);
             
             //this.disabledRoot = new UnityEngine.GameObject("[Views Module] Disabled Root").transform;
             //if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
             //this.disabledRoot.localScale = UnityEngine.Vector3.zero;
+            this.heaps = new scg::List<HeapReference>();
             this.prefabIdToPool = new scg::Dictionary<uint, scg::Stack<Item>>();
             this.tempViews = new scg::HashSet<EntityView>();
             this.roots = new scg::List<ViewRoot>();
@@ -156,7 +149,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        private ViewRoot AssignToRoot() {
+        private ViewRoot AssignToRoot(in Ent ent) {
 
             for (int i = 0; i < this.roots.Count; ++i) {
 
@@ -170,7 +163,7 @@ namespace ME.BECS.Views {
             }
 
             var newRoot = new ViewRoot() {
-                tr = new UnityEngine.GameObject("ViewsModule::Root").transform,
+                tr = new UnityEngine.GameObject($"ViewsModule[World #{ent.worldId}]::Root").transform,
                 Count = 1,
                 index = this.roots.Count,
             };
@@ -210,6 +203,7 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public SceneInstanceInfo Spawn(SourceRegistry.Info* prefabInfo, in Ent ent, out bool isNew) {
 
+            System.IntPtr objPtr;
             EntityView objInstance;
             if (prefabInfo->sceneSource == false) {
 
@@ -219,35 +213,38 @@ namespace ME.BECS.Views {
                     if (this.tempViews.Contains(instance.obj) == true) {
                         this.tempViews.Remove(instance.obj);
                     } else {
-                        var root = this.AssignToRoot();
+                        var root = this.AssignToRoot(in ent);
                         if (instance.obj.transform.parent != root.tr) instance.obj.transform.SetParent(root.tr);
                         instance.obj.gameObject.SetActive(true);
                     }
 
                     isNew = false;
                     objInstance = instance.obj;
+                    objPtr = instance.ptr;
 
                 } else {
 
-                    var root = this.AssignToRoot();
+                    var root = this.AssignToRoot(in ent);
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
                     var prefab = (EntityView)handle.Target;
                     var instance = EntityView.Instantiate(prefab, root.tr);
                     instance.rootInfo = root;
                     isNew = true;
                     objInstance = instance;
+                    objPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(new HeapReference<EntityView>(objInstance).handle);
 
                 }
 
             } else {
                 
-                var root = this.AssignToRoot();
+                var root = this.AssignToRoot(in ent);
                 var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
                 var instance = (EntityView)handle.Target;
                 instance.transform.SetParent(root.tr);
                 instance.rootInfo = root;
                 isNew = true;
                 objInstance = instance;
+                objPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(handle);
 
             }
 
@@ -256,9 +253,7 @@ namespace ME.BECS.Views {
             SceneInstanceInfo info;
             {
                 this.renderingOnSceneTransforms.Add(objInstance.transform);
-                var r = new HeapReference<EntityView>(objInstance);
-                var ptr = System.Runtime.InteropServices.GCHandle.ToIntPtr(r.handle);
-                info = new SceneInstanceInfo(ptr, prefabInfo);
+                info = new SceneInstanceInfo(objPtr, prefabInfo);
             }
 
             {
@@ -301,6 +296,7 @@ namespace ME.BECS.Views {
                 list.Push(new Item() {
                     info = instanceInfo.prefabInfo,
                     obj = instance,
+                    ptr = instanceInfo.obj,
                 });
                 
             } else {
@@ -309,6 +305,7 @@ namespace ME.BECS.Views {
                 stack.Push(new Item() {
                     info = instanceInfo.prefabInfo,
                     obj = instance,
+                    ptr = instanceInfo.obj,
                 });
                 this.prefabIdToPool.Add(instanceInfo.prefabInfo->prefabId, stack);
                 
@@ -361,6 +358,10 @@ namespace ME.BECS.Views {
                     
                 }
 
+            }
+
+            foreach (var heap in this.heaps) {
+                heap.Dispose();
             }
 
             //if (this.disabledRoot != null) UnityEngine.GameObject.DestroyImmediate(this.disabledRoot.gameObject);

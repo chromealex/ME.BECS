@@ -37,9 +37,11 @@ namespace ME.BECS {
                 
                 // Migrate to archetype with addItems and removeItems
                 var removeItemsCount = removeItems.Count;
+                var removeItemsHash = removeItems.hash;
                 if (this.componentsCount == 0u) {
                     // Migrating from zero archetype - ignore removeItems
                     removeItemsCount = 0u;
+                    removeItemsHash = 0u;
                 }
                 E.RANGE_INVERSE(this.componentsCount + addItems.Count, removeItemsCount);
                 var targetCount = this.componentsCount - removeItemsCount + addItems.Count;
@@ -55,14 +57,14 @@ namespace ME.BECS {
 
                 if (targetCount < archetypes.componentsCountToArchetypeIds.Length) {
                     // Look up archetype by targetCount
-                    var hash = addItems.hash ^ (this.components.hash ^ removeItems.hash);
+                    var hash = addItems.hash ^ (this.components.hash ^ removeItemsHash);
                     ref var dic = ref archetypes.componentsCountToArchetypeIds[state, targetCount];
                     if (dic.isCreated == true) {
                         ref var list = ref dic.GetValue(ref state->allocator, hash, out var exist);
                         if (exist == true) {
                             var currentBits = new TempBitArray(in state->allocator, this.componentBits, Constants.ALLOCATOR_TEMP);
                             currentBits.Union(addItems.root);
-                            currentBits.Remove(removeItems.root);
+                            if (removeItemsCount > 0u) currentBits.Remove(removeItems.root);
                             //var fastComponentsRead = UIntHashSetRead.Create(in state->allocator, in this.components);
                             for (uint i = 0u; i < list.Count; ++i) {
                                 var archIdx = list[in state->allocator, i];
@@ -209,7 +211,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         internal void Add(State* state, in Archetype archetype, out uint idx) {
-
+            
             MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
             ref var allocator = ref state->allocator;
             idx = this.list.Add(ref allocator, archetype);
@@ -393,7 +395,7 @@ namespace ME.BECS {
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
         private static void CheckNoEntity(State* state, uint entId, int archIdx) {
 
-            NUnit.Framework.Assert.IsFalse(state->archetypes.list[state->allocator, (uint)archIdx].entitiesList.Contains(state->allocator, entId));
+            UnityEngine.Debug.Assert(state->archetypes.list[state->allocator, (uint)archIdx].entitiesList.Contains(state->allocator, entId) == false);
 
         }
 
@@ -410,8 +412,7 @@ namespace ME.BECS {
                 }
             }
             if (listedIdx >= 0) UnityEngine.Debug.LogError("EntId: " + entId + " belongs to " + listId + " and listed in " + listedIdx + " (cnt: " + cnt + "), but it is required not be listed in any");
-            //NUnit.Framework.Assert.IsFalse(state->archetypes.list[state->allocator, (uint)archIdx].entitiesList.Contains(state->allocator, entId));
-
+            
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]

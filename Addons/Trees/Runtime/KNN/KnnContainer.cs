@@ -33,12 +33,16 @@ using ME.BECS.NativeCollections;
 
 namespace KNN {
 	[NativeContainerSupportsDeallocateOnJobCompletion, NativeContainer, System.Diagnostics.DebuggerDisplay("Length = {Points.Length}")]
-	public unsafe struct KnnContainer<T> : IDisposable where T : unmanaged {
+	public unsafe struct KnnContainer<T> : IDisposable where T : unmanaged, IComparable<T> {
 
-		public struct Node {
+		public struct Node : IComparable<Node> {
 
 			public float3 position;
 			public T data;
+
+			public int CompareTo(Node other) {
+				return this.data.CompareTo(other.data);
+			}
 
 		}
 		
@@ -130,9 +134,7 @@ namespace KNN {
 
 		public KnnContainer<T> Initialize(int capacity, Allocator allocator) {
 			this = default;
-			this.Points = new UnsafeList<Node>(capacity, allocator);
 			this.PointsHashWriter = new ME.BECS.NativeCollections.NativeParallelList<Node>(capacity, allocator);
-			
 			this.m_nodes = new UnsafeList<KdNode>(1, allocator);
 			this.m_rootNodeIndex = new NativeReference<int>(-1, allocator);//CollectionHelper.CreateNativeArray<int>(1, allocator);
 			return this;
@@ -143,6 +145,7 @@ namespace KNN {
 			if (this.PointsHashWriter.Count == 0) return;
 			if (this.Points.IsCreated == true) this.Points.Dispose();
 			this.Points = this.PointsHashWriter.ToList(allocator);
+			this.Points.Sort();
 			int nodeCountEstimate = 4 * (int) math.ceil(this.Points.Length / (float) c_maxPointsPerLeafNode + 1) + 1;
 			
 			// Both arrays are filled in as we go, so start with uninitialized mem
@@ -157,34 +160,6 @@ namespace KNN {
 			if (this.m_permutation.Length != this.Points.Length) {
 				if (this.m_permutation.IsCreated == true) this.m_permutation.Dispose();
 				this.m_permutation = CollectionHelper.CreateNativeArray<int>(this.Points.Length, allocator, NativeArrayOptions.UninitializedMemory);
-				for (int i = 0; i < this.m_permutation.Length; ++i) {
-					this.m_permutation[i] = i;
-				}
-			}
-
-			//if (this.m_rootNodeIndex.IsCreated == false) this.m_rootNodeIndex = CollectionHelper.CreateNativeArray<int>(1, allocator);
-			this.m_rootNodeIndex.Value = -1;
-			if (this.m_buildQueue.IsCreated == false) this.m_buildQueue = new NativeQueue<int>(allocator);
-			this.m_buildQueue.Clear();
-		}
-
-		public void SetPoints(NativeArray<Node> points, bool buildNow, Allocator allocator) {
-			int nodeCountEstimate = 4 * (int) math.ceil(points.Length / (float) c_maxPointsPerLeafNode + 1) + 1;
-			if (this.Points.IsCreated == true) this.Points.Dispose();
-			this.Points = new UnsafeList<Node>((Node*)points.GetUnsafePtr(), points.Length);
-
-			// Both arrays are filled in as we go, so start with uninitialized mem
-			if (this.m_nodes.IsCreated == false || this.m_nodes.Capacity != points.Length) {
-				if (this.m_nodes.IsCreated == true) this.m_nodes.Dispose();
-				this.m_nodes = new UnsafeList<KdNode>(nodeCountEstimate, allocator);
-			}
-
-			this.m_nodes.Clear();
-
-			// Dumb way to create an int* essentially..
-			if (this.m_permutation.Length != points.Length) {
-				if (this.m_permutation.IsCreated == true) this.m_permutation.Dispose();
-				this.m_permutation = CollectionHelper.CreateNativeArray<int>(points.Length, allocator, NativeArrayOptions.UninitializedMemory);
 				for (int i = 0; i < this.m_permutation.Length; ++i) {
 					this.m_permutation[i] = i;
 				}
@@ -223,6 +198,7 @@ namespace KNN {
 
 		public void Dispose() {
 
+			this.Points.Dispose();
 			this.m_permutation.Dispose();
 			this.m_nodes.Dispose();
 			this.m_rootNodeIndex.Dispose();

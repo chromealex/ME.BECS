@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: FogOfWarGraph-Visual
   m_EditorClassIdentifier: 
+  id: 21
+  builtInGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928923441103769
@@ -41,7 +43,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -76.5, y: 303, z: 0}
+  position: {x: 303.5, y: 406.5, z: 0}
   scale: {x: 1, y: 1, z: 1}
   isInnerGraph: 1
   references:
@@ -92,10 +94,10 @@ MonoBehaviour:
         computeOrder: 1
         position:
           serializedVersion: 2
-          x: 349
+          x: 350
           y: -6
           width: 300
-          height: 110.5
+          height: 305.5
         expanded: 1
         enabled: 1
         debug: 0
@@ -106,5 +108,5 @@ MonoBehaviour:
     - rid: 8346928929818279971
       type: {class: UpdateTextureSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
       data:
-        fadeInSpeed: 10
+        fadeInSpeed: 8
         fadeOutSpeed: 3

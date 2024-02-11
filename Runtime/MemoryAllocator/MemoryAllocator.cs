@@ -70,6 +70,11 @@ namespace ME.BECS {
 
         public override string ToString() => $"zoneId: {this.zoneId}, offset: {this.offset}";
 
+        public unsafe uint GetSizeInBytes(State* state) {
+            if (this.IsValid() == false) return TSize<MemPtr>.size;
+            return state->allocator.GetSize(in this);
+        }
+
     }
     
     public struct TSize<T> where T : struct {
@@ -517,6 +522,13 @@ namespace ME.BECS {
         
         public bool isValid => this.zonesList != null;
 
+        public uint GetSize(in MemPtr ptr) {
+
+            var block = (MemBlock*)((byte*)this.zonesList[ptr.zoneId] + ptr.offset - sizeof(MemBlock));
+            return (uint)block->size;
+
+        }
+        
         [INLINE(256)]
         public readonly void GetSize(out int reservedSize, out int usedSize, out int freeSize) {
 

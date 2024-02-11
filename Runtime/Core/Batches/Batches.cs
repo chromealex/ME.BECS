@@ -65,7 +65,7 @@ namespace ME.BECS {
         public bool isCreated => this.addItems.isCreated == true || this.removeItems.isCreated == true;
 
         [INLINE(256)]
-        public void Apply(State* state, ref uint count, uint entId, ref Archetypes archetypes) {
+        public void Apply(State* state, uint entId, ref Archetypes archetypes) {
 
             if (this.ent.IsAlive() == false) {
                 this.addItems.Dispose();
@@ -80,7 +80,6 @@ namespace ME.BECS {
                 archetypes.ApplyBatch(state, entId, in addItems, in removeItems);
                 this.addItems.Dispose();
                 this.removeItems.Dispose();
-                count -= this.Count;
                 this.Count = 0u;
             }
 
@@ -247,7 +246,6 @@ namespace ME.BECS {
             }
             // Apply
             {
-                var count = 0u;
                 this.lockReadWrite.ReadBegin(state);
                 for (int i = 0; i < temp.Length; ++i) {
                     var entId = temp[i];
@@ -255,7 +253,7 @@ namespace ME.BECS {
                     if (element.Count > 0u) {
                         JobUtils.Lock(ref element.lockIndex);
                         if (element.Count > 0u) {
-                            element.Apply(state, ref count, entId, ref state->archetypes);
+                            element.Apply(state, entId, ref state->archetypes);
                         }
                         JobUtils.Unlock(ref element.lockIndex);
                     }

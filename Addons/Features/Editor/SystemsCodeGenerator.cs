@@ -12,6 +12,7 @@ namespace ME.BECS.Editor.Systems {
         private void AddMethod<T>(SystemsGraph graph, string methodName, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
             //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
             content = new scg::List<string>();
+            content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.{methodName}))]");
             content.Add($"public static void Graph{methodName}_{GetId(graph)}_{this.GetType().Name}(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {{");
             //content.Add("/*");
             {
@@ -39,10 +40,11 @@ namespace ME.BECS.Editor.Systems {
                     content.Add($"private static NativeArray<System.IntPtr> graphNodes{GetId(graph)}_{this.GetType().Name};");
 
                     { // initialize method
+                        content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.InitializeGraph))]");
                         content.Add($"public static void GraphInitialize_{GetId(graph)}_{this.GetType().Name}() {{"); 
                         {
                             content.Add($"// {graph.name}");
-                            content.Add("var allocator = Constants.ALLOCATOR_PERSISTENT_ST;");
+                            content.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
                             InitializeGraph(this, content, graph);
                         }
                         content.Add("}");
@@ -68,8 +70,9 @@ namespace ME.BECS.Editor.Systems {
                         content.AddRange(caller);
                     }
                     {
-                        content.Add($"public static void* GraphGetSystem_{id}_{this.GetType().Name}(int index) {{");
-                        content.Add($"  return (void*)graphNodes{id}_{this.GetType().Name}[index];");
+                        content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.GetSystem))]");
+                        content.Add($"public static void GraphGetSystem_{id}_{this.GetType().Name}(int index, out void* ptr) {{");
+                        content.Add($"ptr = (void*)graphNodes{id}_{this.GetType().Name}[index];");
                         content.Add("}");
                     }
 
@@ -84,7 +87,7 @@ namespace ME.BECS.Editor.Systems {
                     var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                     var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
                     var id = GetId(graph);
-                    var graphId = graph.GetInstanceID();
+                    var graphId = graph.GetId();
                     content.Add($"// Graph: {graph.name}");
                     content.Add("{");
                     content.Add($"SystemsStatic.RegisterMethod(GraphInitialize_{id}_{this.GetType().Name}, {graphId}, false);");
@@ -528,7 +531,7 @@ namespace ME.BECS.Editor.Systems {
         }
 
         private static int GetId(ME.BECS.Extensions.GraphProcessor.BaseGraph graph) {
-            var id = graph.GetInstanceID();
+            var id = graph.GetId();
             if (id < 0) return -id;
             return id;
         }
@@ -569,7 +572,7 @@ namespace ME.BECS.Editor.Systems {
         public static void InitializeGraph(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph) {
             var id = GetId(graph);
             content.Add($"// {graph.name}");
-            content.Add($"graphNodes{id}_{generator.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({graph.nodes.Count}, Constants.ALLOCATOR_PERSISTENT_ST);");
+            content.Add($"graphNodes{id}_{generator.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({graph.nodes.Count}, allocator);");
             var k = 0;
             foreach (var node in graph.nodes) {
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
@@ -583,7 +586,7 @@ namespace ME.BECS.Editor.Systems {
                         //content.Add($"_memclear(item{name}_{k}, TSize<{type}>.size);");
                         content.Add($"*({systemType}*)item{id}_{k} = {GetDefinition(systemNode.system)};");
                         content.Add($"TSystem<{systemType}>.index.Data = {k};");
-                        content.Add($"TSystemGraph<{systemType}>.index.Data = {graph.GetInstanceID()};");
+                        content.Add($"TSystemGraph<{systemType}>.index.Data = {graph.GetId()};");
                         content.Add($"graphNodes{id}_{generator.GetType().Name}[{k}] = (System.IntPtr)item{id}_{k};");
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {

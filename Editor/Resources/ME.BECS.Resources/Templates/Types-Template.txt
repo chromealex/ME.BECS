@@ -3,6 +3,7 @@ namespace ME.BECS{{EDITOR}} {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
+    using UnityEngine.Scripting;
     using static Cuts;
     
     [UnityEngine.Scripting.PreserveAttribute]
@@ -21,9 +22,6 @@ namespace ME.BECS{{EDITOR}} {
         }
     }
     
-    #if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoadAttribute]
-    #endif
     [UnityEngine.Scripting.PreserveAttribute]
     [UnityEngine.DefaultExecutionOrder(-100_000)]
     [BURST]

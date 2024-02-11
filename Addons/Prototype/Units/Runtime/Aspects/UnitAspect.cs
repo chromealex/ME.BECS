@@ -22,13 +22,18 @@ namespace ME.BECS.Units {
 
         public readonly ref float sightRangeSqr => ref this.component.sightRangeSqr;
         public readonly ref float height => ref this.componentRuntime.properties.height;
+        public readonly ref readonly float readHeight => ref this.readComponentRuntime.properties.height;
         public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;
+        public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
         public readonly ref float health => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).health;
         public readonly ref float healthMax => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).healthMax;
+        public readonly ref readonly float readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
+        public readonly ref readonly float readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
         public readonly ref AgentType agentProperties => ref this.componentRuntime.properties;
         public readonly ref uint typeId => ref this.componentRuntime.properties.typeId;
         public readonly ref float3 velocity => ref this.componentRuntime.velocity;
         public readonly ref float radius => ref this.componentRuntime.properties.radius;
+        public readonly ref readonly float readRadius => ref this.readComponentRuntime.properties.radius;
         public readonly ref float speed => ref this.componentRuntime.speed;
         public readonly ref float maxSpeed => ref this.component.maxSpeed;
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
@@ -42,6 +47,7 @@ namespace ME.BECS.Units {
         public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly NavAgentRuntimeComponent readComponentRuntime => ref this.navAgentRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
 
         public readonly bool RemoveFromCommandGroup() => UnitUtils.RemoveFromCommandGroup(in this);
 

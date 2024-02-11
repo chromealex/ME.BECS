@@ -1,4 +1,3 @@
-using System.Linq;
 using Unity.Collections;
 
 namespace ME.BECS.Views {
@@ -47,7 +46,23 @@ namespace ME.BECS.Views {
         }
 
     }
-    
+
+    public struct HeapReference {
+
+        public System.Runtime.InteropServices.GCHandle handle;
+
+        [INLINE(256)]
+        public HeapReference(object obj) {
+            this.handle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
+        }
+
+        [INLINE(256)]
+        public void Dispose() {
+            if (this.handle.IsAllocated == true) this.handle.Free();
+        }
+
+    }
+
     [System.Serializable]
     public struct ViewsModuleProperties {
 
@@ -254,7 +269,12 @@ namespace ME.BECS.Views {
         
         public RenderingSparseList renderingOnSceneApplyState;
         public RenderingSparseList renderingOnSceneUpdate;
-        
+        public uint* applyStateCounter;
+        public uint* updateCounter;
+
+        public MemArray<bool> renderingOnSceneApplyStateCulling;
+        public MemArray<bool> renderingOnSceneUpdateCulling;
+
         public uint renderingOnSceneCount;
         public UnsafeList<SceneInstanceInfo> toRemoveTemp;
         public UnsafeList<SpawnInstanceInfo> toAddTemp;
@@ -264,6 +284,8 @@ namespace ME.BECS.Views {
         public World connectedWorld;
         public World viewsWorld;
         public BeginFrameState* beginFrameState;
+
+        public Ent camera;
         
         public static ViewsModuleData Create(ref MemoryAllocator allocator, uint entitiesCapacity, ViewsModuleProperties properties) {
 
@@ -277,11 +299,15 @@ namespace ME.BECS.Views {
                 renderingOnScene = new List<SceneInstanceInfo>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyState = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
+                renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
+                renderingOnSceneUpdateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
                 renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: Constants.ALLOCATOR_DOMAIN),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneRenderIndexToEnt = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneEntToPrefabId = new MemArray<uint>(ref allocator, entitiesCapacity),
+                applyStateCounter = _make<uint>(0u),
+                updateCounter = _make<uint>(0u),
                 toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
@@ -292,9 +318,15 @@ namespace ME.BECS.Views {
 
         }
 
+        public void SetCamera(in CameraAspect camera) {
+            this.camera = camera.ent;
+        }
+
         public void Dispose(State* state) {
             
             _free(ref this.beginFrameState);
+            _free(ref this.applyStateCounter);
+            _free(ref this.updateCounter);
             if (this.renderingOnSceneEnts.IsCreated == true) this.renderingOnSceneEnts.Dispose();
             if (this.renderingOnSceneBits.isCreated == true) this.renderingOnSceneBits.Dispose();
             if (this.toRemove.IsCreated == true) this.toRemove.Dispose();
@@ -306,22 +338,18 @@ namespace ME.BECS.Views {
 
     }
 
-    public delegate void ProviderInstantiateView(in Ent ent, in ViewSource viewSource);
-    public delegate void ProviderDestroyView(in Ent ent);
-    
     public unsafe struct UnsafeViewsModule {
 
         public struct ProviderInfo : IIsCreated {
 
             public bool isCreated { get; set; }
-            public Unity.Burst.FunctionPointer<ProviderInstantiateView> instantiateMethod;
-            public Unity.Burst.FunctionPointer<ProviderDestroyView> destroyMethod;
+            public uint typeId;
 
         }
         
         internal static readonly Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>> registeredProviders = Unity.Burst.SharedStatic<UnsafeList<ProviderInfo>>.GetOrCreatePartiallyUnsafeWithHashCode<UnsafeViewsModule>(TAlign<UnsafeList<ProviderInfo>>.align, 20021);
         
-        public static void RegisterProviderCallbacks(uint providerId, ProviderInstantiateView instantiateView, ProviderDestroyView destroyView) {
+        public static void RegisterProviderType<T>(uint providerId) where T : unmanaged, IComponent {
 
             if (registeredProviders.Data.IsCreated == false) {
                 registeredProviders.Data = new UnsafeList<ProviderInfo>((int)providerId + 1, Constants.ALLOCATOR_DOMAIN);
@@ -330,8 +358,7 @@ namespace ME.BECS.Views {
 
             ref var item = ref *(registeredProviders.Data.Ptr + providerId);
             item.isCreated = true;
-            item.instantiateMethod = Unity.Burst.BurstCompiler.CompileFunctionPointer(instantiateView);
-            item.destroyMethod = Unity.Burst.BurstCompiler.CompileFunctionPointer(destroyView);
+            item.typeId = StaticTypes<T>.typeId;
 
         }
         
@@ -347,7 +374,7 @@ namespace ME.BECS.Views {
             if (viewSource.providerId < registeredProviders.Data.Length) {
                 ref var item = ref *(registeredProviders.Data.Ptr + viewSource.providerId);
                 E.IS_CREATED(item);
-                item.instantiateMethod.Invoke(in ent, in viewSource);
+                ent.Set(item.typeId, null);
             }
             
             return true;
@@ -401,6 +428,12 @@ namespace ME.BECS.Views {
             _free(this.data);
             this.data->viewsWorld.Dispose();
             this = default;
+
+        }
+
+        public void SetCamera(in CameraAspect camera) {
+
+            this.data->SetCamera(in camera);
 
         }
         
@@ -498,6 +531,23 @@ namespace ME.BECS.Views {
                 }
 
             }
+            
+            if (this.data->camera.IsAlive() == true) { // Update culling
+
+                var cullingApplyState = new Jobs.UpdateCullingApplyStateJob() {
+                    state = this.data->viewsWorld.state,
+                    viewsModuleData = this.data,
+                }.Schedule((int*)this.data->applyStateCounter, 64, dependsOn);
+
+                var cullingUpdateState = new Jobs.UpdateCullingUpdateJob() {
+                    state = this.data->viewsWorld.state,
+                    viewsModuleData = this.data,
+                }.Schedule((int*)this.data->updateCounter, 64, dependsOn);
+
+                dependsOn = JobHandle.CombineDependencies(cullingApplyState, cullingUpdateState);
+
+            }
+
             JobUtils.RunScheduled();
             
             {
@@ -523,12 +573,16 @@ namespace ME.BECS.Views {
             JobUtils.RunScheduled();
             
             {
+                // Complete all previous systems to be sure that
+                // renderingOnSceneApplyState and renderingOnSceneUpdate set up has been complete
+                dependsOn.Complete();
                 // Update views logic
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] ApplyState Views");
                     marker.Begin();
                     for (uint i = 0u; i < this.data->renderingOnSceneApplyState.Count; ++i) {
                         var entId = this.data->renderingOnSceneApplyState.sparseSet.dense[in allocator, i];
+                        if (this.data->renderingOnSceneApplyStateCulling[in allocator, entId] == true) continue;
                         var idx = this.data->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
                         ref var entData = ref *(this.data->renderingOnSceneEnts.Ptr + idx);
                         var view = this.data->renderingOnScene[in allocator, idx];
@@ -546,11 +600,12 @@ namespace ME.BECS.Views {
                     marker.Begin();
                     for (uint i = 0u; i < this.data->renderingOnSceneUpdate.Count; ++i) {
                         var entId = this.data->renderingOnSceneUpdate.sparseSet.dense[in allocator, i];
+                        if (this.data->renderingOnSceneUpdateCulling[in allocator, entId] == true) continue;
                         var idx = this.data->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
                         ref var entData = ref *(this.data->renderingOnSceneEnts.Ptr + idx);
                         var view = this.data->renderingOnScene[in allocator, idx];
                         var ent = entData.element.ent;
-                        if (view.prefabInfo->typeInfo.HasUpdate == true) {
+                        if (view.prefabInfo->typeInfo.HasUpdate == true || view.prefabInfo->HasUpdateModules == true) {
                             this.provider.OnUpdate(in view, in ent, dt);
                         }
                     }

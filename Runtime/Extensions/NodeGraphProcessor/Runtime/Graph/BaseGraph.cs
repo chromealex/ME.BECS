@@ -43,6 +43,23 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// <summary>Invalid compute order number of a node can't process</summary>
 		public static readonly int invalidComputeOrder = -1;
 
+		public int id;
+		public bool builtInGraph;
+		public int GetId() {
+			return this.id;
+		}
+
+		public void OnValidate() {
+			var id = this.GetInstanceID();
+			if (id < 0) id = -id;
+			if (id != this.id && this.builtInGraph == false) {
+				this.id = id;
+				#if UNITY_EDITOR
+				UnityEditor.EditorUtility.SetDirty(this);
+				#endif
+			}
+		}
+
 		/// <summary>
 		/// Json list of serialized nodes only used for copy pasting in the editor. Note that this field isn't serialized
 		/// </summary>

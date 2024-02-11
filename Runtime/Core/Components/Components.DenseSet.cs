@@ -46,7 +46,7 @@ namespace ME.BECS {
 
             public uint GetReservedSizeInBytes(uint dataSize, uint entitiesPerPage) {
                 if (this.IsCreated == false) return TSize<Page>.size;
-                var blockSize = TSize<ushort>.size + TSize<byte>.size + TSize<byte>.size + dataSize;
+                var blockSize = _blockSize(dataSize);
                 return blockSize * entitiesPerPage + TSize<Page>.size;
             }
 

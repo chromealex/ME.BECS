@@ -1,9 +1,6 @@
 namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using float3 = Unity.Mathematics.float3;
-    using float4x4 = Unity.Mathematics.float4x4;
-    using quaternion = Unity.Mathematics.quaternion;
     using tfloat = System.Single;
     using math = Unity.Mathematics.math;
     
@@ -23,13 +20,14 @@ namespace ME.BECS.Transforms {
                 // Move out from current parent
                 ref var children = ref currentParent.Get<ChildrenComponent>().list;
                 children.Remove(ent);
+                ent.Remove<IsFirstLevelComponent>();
                 currentParent = default;
 
             }
 
             if (parent.IsAlive() == false) {
                 
-                // Leave currentParent as null
+                // Clean up parent component
                 ent.Remove<ParentComponent>();
                 return;
 
@@ -41,6 +39,11 @@ namespace ME.BECS.Transforms {
                 if (parentChildren.isCreated == false) parentChildren = new ListAuto<Ent>(parent, 1u); 
                 parentChildren.Add(ent);
                 currentParent = parent;
+                // if new parent has no parent component
+                // set IsFirstLevelComponent
+                if (parent.Has<ParentComponent>() == false) {
+                    ent.Set(new IsFirstLevelComponent());
+                }
             }
 
         }
@@ -49,41 +52,58 @@ namespace ME.BECS.Transforms {
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
             var matrix = ent.localMatrix;
-            if (parent.ent.IsAlive() == true) matrix = math.mul(parent.worldMatrix, matrix);
+            if (parent.ent.IsAlive() == true) matrix = math.mul(parent.readWorldMatrix, matrix);
             ent.worldMatrix = matrix;
+
+        }
+
+        [INLINE(256)]
+        public static void CalculateMatrix(in TransformAspect ent) {
+
+            ent.worldMatrix = ent.localMatrix;
 
         }
 
         [INLINE(256)]
         public static void CalculateMatrixHierarchy(in CommandBufferJobParallel buffer) {
             var aspect = buffer.ent.GetAspect<TransformAspect>();
-            CalculateMatrixHierarchy(buffer.buffer->state, aspect.parent, aspect);
+            CalculateMatrixHierarchy(aspect.parent, aspect);
         }
 
         [INLINE(256)]
-        public static void CalculateMatrixHierarchy(State* state, ref TransformAspect aspect) {
-            CalculateMatrixHierarchy(state, aspect.parent, aspect);
+        public static void CalculateMatrixHierarchy(ref TransformAspect aspect) {
+            CalculateMatrixHierarchy(aspect.parent, aspect);
         }
 
         [INLINE(256)]
         public static void CalculateMatrixHierarchy(in CommandBufferJob buffer) {
-            CalculateMatrixHierarchy(buffer.buffer->state, buffer.Read<ParentComponent>().value, buffer.ent);
+            CalculateMatrixHierarchy(buffer.Read<ParentComponent>().value, buffer.ent);
         }
 
         [INLINE(256)]
-        public static void CalculateMatrixHierarchy(State* state, in TransformAspect parent, in TransformAspect ent) {
+        public static void CalculateMatrixHierarchy(in TransformAspect parent, in TransformAspect ent) {
 
-            CalculateMatrix(parent, ent);
-
+            CalculateMatrix(in parent, in ent);
+            
             var cnt = ent.children.Count;
-            if (cnt > 0) {
-                var children = (Ent*)ent.children.GetUnsafePtr(in state->allocator);
-                for (uint i = 0; i < cnt; ++i) {
+            if (cnt > 0u) {
 
-                    var child = *(children + i);
-                    CalculateMatrixHierarchy(state, in ent, child);
-
+                var queue = new Unity.Collections.NativeQueue<TransformAspect>(Constants.ALLOCATOR_TEMP);
+                queue.Enqueue(ent);
+                while (queue.Count > 0) {
+                    var entData = queue.Dequeue();
+                    cnt = entData.children.Count;
+                    if (cnt > 0u) {
+                        var children = (Ent*)entData.children.GetUnsafePtr(in entData.ent.World.state->allocator);
+                        for (uint i = 0; i < cnt; ++i) {
+                            var child = *(children + i);
+                            var tr = child.GetAspect<TransformAspect>();
+                            CalculateMatrix(in entData, in tr);
+                            queue.Enqueue(tr);
+                        }
+                    }
                 }
+                
             }
 
         }

@@ -88,14 +88,13 @@ namespace ME.BECS {
 
                         var results = new UnsafeList<Ent>(tree.Points.Length, Unity.Collections.Allocator.Temp);
                         tree.QueryRange(worldPos, data.range, ref results);
-                        //UnityEngine.Debug.Log(i + " :: " + query.ent);
                         if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
                         query.results.results.AddRange(in results);
                         
                     }
 
                 }
-                
+
             }
 
         }

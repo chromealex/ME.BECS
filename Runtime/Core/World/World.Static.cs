@@ -201,17 +201,17 @@ namespace ME.BECS {
     
     public struct WorldsPersistentAllocator {
 
-        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10006);
-        internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorPersistent => ref allocatorPersistentBurst.Data;
+        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10006);
+        internal static ref Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator> allocatorPersistent => ref allocatorPersistentBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorPersistentValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10007);
         internal static bool allocatorPersistentValid => allocatorPersistentValidBurst.Data.Value;
 
-        public static Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> Initialize() {
+        public static Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator> Initialize() {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Unity.Collections.Allocator.Domain);
+            allocatorPersistent = new Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator>(Unity.Collections.Allocator.Domain);
             allocatorPersistent.Allocator.Initialize(128 * 1024, true);
             allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Unity.Collections.Allocator.Domain);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
@@ -222,9 +222,9 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
-            if (allocatorPersistentValidBurst.Data.Value == false) return;
-            allocatorPersistentValidBurst.Data.Value = false;
-            allocatorPersistent.Dispose();
+            //if (allocatorPersistentValidBurst.Data.Value == false) return;
+            //allocatorPersistentValidBurst.Data.Value = false;
+            //allocatorPersistent.Dispose();
             
         }
 
@@ -241,6 +241,9 @@ namespace ME.BECS {
         private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorTempBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10005);
         internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorTemp => ref allocatorTempBurst.Data;
 
+        private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10007);
+        internal static bool allocatorTempValid => allocatorTempValidBurst.Data.Value;
+
         public static Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> Initialize() {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
@@ -255,6 +258,8 @@ namespace ME.BECS {
 
         public static void Dispose() {
             
+            if (allocatorTempValidBurst.Data.Value == false) return;
+            allocatorTempValidBurst.Data.Value = false;
             allocatorTemp.Dispose();
             
         }
@@ -274,6 +279,10 @@ namespace ME.BECS {
 
         public static void Initialize() {
 
+            #if UNITY_EDITOR
+            UnityEngine.Application.quitting += OnQuit;
+            #endif
+            
             if (WorldsStorage.worlds.Length > 0u) Dispose();
             WorldsTempAllocator.Initialize();
             WorldsPersistentAllocator.Initialize();
@@ -281,6 +290,14 @@ namespace ME.BECS {
             if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
             ResetWorldsCounter();
 
+        }
+
+        private static void OnQuit() {
+            #if UNITY_EDITOR
+            UnityEngine.Application.quitting -= OnQuit;
+            #endif
+
+            Dispose();
         }
 
         public static void Dispose() {

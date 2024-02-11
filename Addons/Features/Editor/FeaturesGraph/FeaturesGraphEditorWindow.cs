@@ -82,7 +82,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private void OnGraphChanged(GraphChanges obj) {
         
-            Debug.Log("Dirty");
+            //Debug.Log("Dirty");
             this.hasUnsavedChanges = true;
             this.UpdateToolbar();
         }

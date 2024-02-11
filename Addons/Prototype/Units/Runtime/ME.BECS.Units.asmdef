@@ -11,7 +11,8 @@
         "Unity.Collections",
         "ME.BECS.Effects",
         "ME.BECS.Views",
-        "KNN"
+        "ME.BECS.ObjectReference.Runtime",
+        "ME.BECS.WorldHelper"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

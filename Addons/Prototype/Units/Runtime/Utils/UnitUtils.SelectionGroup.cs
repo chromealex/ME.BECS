@@ -186,10 +186,12 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByRect(in SystemContext context, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4) {
 
+            /*
             UnityEngine.Debug.DrawLine(p1, p2, UnityEngine.Color.cyan, 3f);
             UnityEngine.Debug.DrawLine(p2, p3, UnityEngine.Color.cyan, 3f);
             UnityEngine.Debug.DrawLine(p3, p4, UnityEngine.Color.cyan, 3f);
             UnityEngine.Debug.DrawLine(p4, p1, UnityEngine.Color.cyan, 3f);
+            */
             
             var center = (p1 + p3) * 0.5f;
             var range = math.length(p3 - center);

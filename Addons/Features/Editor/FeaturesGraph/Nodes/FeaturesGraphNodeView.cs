@@ -66,7 +66,6 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         if (this.IsTypeContainsInGraph(ref i, depType, root.graph) == false) {
                             results.Add(depType);
                         }
-                        results.Add(depType);
                     }
                 }
 
@@ -194,6 +193,14 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             if (iter == 10000) {
                 UnityEngine.Debug.LogWarning("Max iterations while HasDependency");
                 return false;
+            }
+
+            if (graph == null) {
+                UnityEngine.Debug.LogError("graph is null: " + graph);
+            }
+
+            if (graph.nodes == null) {
+                UnityEngine.Debug.LogError("graph.nodes is null in graph " + graph);
             }
 
             foreach (var node in graph.nodes) {

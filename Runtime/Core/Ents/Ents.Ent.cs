@@ -6,30 +6,16 @@ namespace ME.BECS {
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
     [StructLayout(LayoutKind.Explicit)]
-    public
-        // Unity bug: readonly struct inside SerializeReference do not serialized
-        #if !UNITY_EDITOR
-        readonly 
-        #endif
-        unsafe struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
+    public unsafe struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
 
         public static Ent Null => new Ent();
 
-        #if !UNITY_EDITOR
-        [FieldOffset(0)]
-        public readonly uint id;
-        [FieldOffset(4)]
-        public readonly ushort gen;
-        [FieldOffset(6)]
-        public readonly ushort worldId;
-        #else
         [FieldOffset(0)]
         public uint id;
         [FieldOffset(4)]
         public ushort gen;
         [FieldOffset(6)]
         public ushort worldId;
-        #endif
         [FieldOffset(0)]
         public readonly ulong pack;
         

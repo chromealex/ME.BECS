@@ -1,0 +1,158 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
+  m_Name: DefaultEndGraph
+  m_EditorClassIdentifier: 
+  id: 1
+  builtInGraph: 1
+  serializedNodes: []
+  nodes:
+  - rid: 5232414874647134274
+  - rid: 5232414874647134275
+  - rid: 5232414874647134279
+  - rid: 5232414874647134280
+  edges:
+  - GUID: 1e0c1d70-35b2-4df6-b707-be15e13ef32c
+    owner: {fileID: 11400000}
+    inputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 36ce3440-f290-44e7-8cc0-6a866ca5cd5e
+    owner: {fileID: 11400000}
+    inputNodeGUID: 199e6da4-c752-47a3-b843-b969578961f5
+    outputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: ff566d2e-1b51-4003-8f8a-1a2b6af86b4d
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 199e6da4-c752-47a3-b843-b969578961f5
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: a340f785-306f-4daf-9b21-cd50e5f96522
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 199e6da4-c752-47a3-b843-b969578961f5
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 65fb1e94-779e-478f-b288-0d9a4a09f457
+    owner: {fileID: 11400000}
+    inputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  groups: []
+  stackNodes: []
+  pinnedElements: []
+  exposedParameters: []
+  serializedParameterList: []
+  stickyNotes: []
+  nodeInspectorReference: {fileID: 0}
+  position: {x: 188, y: 418.5, z: 0}
+  scale: {x: 1, y: 1, z: 1}
+  isInnerGraph: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 5232414874647134274
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 150
+          y: -9.5
+          width: 300
+          height: 106.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
+        system:
+          rid: 5232414874647134278
+    - rid: 5232414874647134275
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 199e6da4-c752-47a3-b843-b969578961f5
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 489
+          y: -9.5
+          width: 300
+          height: 106.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
+        system:
+          rid: 8346928896279576650
+    - rid: 5232414874647134278
+      type: {class: DestroyWithLifetimeSystem, ns: ME.BECS, asm: ME.BECS.Destroy}
+      data: 
+    - rid: 5232414874647134279
+      type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: StartNode
+        groupGUID: 
+        computeOrder: 0
+        position:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 100
+          height: 100
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
+    - rid: 5232414874647134280
+      type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: EndNode
+        groupGUID: 
+        computeOrder: 3
+        position:
+          serializedVersion: 2
+          x: 874.88
+          y: -9.5
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
+    - rid: 8346928896279576650
+      type: {class: TransformWorldMatrixUpdateSystem, ns: ME.BECS.Transforms, asm: ME.BECS.Transforms}
+      data: 

@@ -620,13 +620,15 @@ namespace ME.BECS {
                             elementsCount += arch.entitiesList.Count;
                         }
 
-                        arrPtr = _makeArray<uint>(elementsCount);
-                        var k = 0u;
-                        for (uint i = 0u; i < archCount; ++i) {
-                            var archIdx = archs[i];
-                            ref var arch = ref this.state->archetypes.list[in this.state->allocator, archIdx];
-                            _memcpy(arch.entitiesList.GetUnsafePtr(in this.state->allocator), arrPtr + k, TSize<uint>.sizeInt * (int)arch.entitiesList.Count);
-                            k += arch.entitiesList.Count;
+                        if (elementsCount > 0) {
+                            arrPtr = _makeArray<uint>(elementsCount);
+                            var k = 0u;
+                            for (uint i = 0u; i < archCount; ++i) {
+                                var archIdx = archs[i];
+                                ref var arch = ref this.state->archetypes.list[in this.state->allocator, archIdx];
+                                _memcpy(arch.entitiesList.GetUnsafePtr(in this.state->allocator), arrPtr + k, TSize<uint>.sizeInt * (int)arch.entitiesList.Count);
+                                k += arch.entitiesList.Count;
+                            }
                         }
 
                     }

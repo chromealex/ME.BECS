@@ -39,6 +39,13 @@ namespace ME.BECS {
 
         }
 
+        public void SetCamera(in CameraAspect camera) {
+            
+            if (this.properties.viewsGameObjects == true) this.viewsGameObjects.SetCamera(in camera);
+            if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes.SetCamera(in camera);
+            
+        }
+
         public override JobHandle OnStart(ref World world, JobHandle dependsOn) {
             return dependsOn;
         }

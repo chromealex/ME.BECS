@@ -170,7 +170,16 @@ namespace ME.BECS.Views {
                     onValidate.OnValidate(this.gameObject);
                 }
             }
-            
+
+            var systems = this.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var system in systems) {
+                var main = system.main;
+                if (main.stopAction == ParticleSystemStopAction.Destroy || main.stopAction == ParticleSystemStopAction.Disable) {
+                    Debug.LogWarning($"ParticleSystem on object {this} can't have an action {main.stopAction}", this);
+                    main.stopAction = ParticleSystemStopAction.None;
+                }
+            }
+
         }
 
         private void ValidateModules<T>(ref int[] indexes) {

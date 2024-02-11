@@ -8,6 +8,8 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using ME.BECS.Pathfinding;
     using Unity.Jobs;
+    using ME.BECS.Transforms;
+    using ME.BECS.Units;
 
     [BURST(CompileSynchronously = true)]
     public struct CreateSystem : IAwake, IUpdate {
@@ -33,7 +35,6 @@ namespace ME.BECS.FogOfWar {
         }
 
         public void OnAwake(ref SystemContext context) {
-            
             // for each player
             // create fog of war
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
@@ -79,8 +80,9 @@ namespace ME.BECS.FogOfWar {
                 
                 if (this.dirtyChunks[index] == false) return;
 
-                var fow = this.heights.Read<FogOfWarStaticComponent>();
+                ref var fow = ref this.heights.Get<FogOfWarStaticComponent>();
                 var chunk = this.graph.chunks[index];
+                var maxHeight = 0;
                 for (uint i = 0; i < chunk.nodes.Length; ++i) {
                     var nodeHeight = chunk.nodes[this.world.state, i].height;
                     var worldPos = Graph.GetPosition(this.graph, in chunk, i);
@@ -88,7 +90,12 @@ namespace ME.BECS.FogOfWar {
                     var heightMap = FogOfWarUtils.WorldToFogMapValue(in fow, height);
                     var xy = FogOfWarUtils.WorldToFogMapPosition(in fow, in worldPos);
                     fow.heights[xy.y * this.fowSize.x + xy.x] = heightMap;
+                    if (heightMap > maxHeight) {
+                        maxHeight = heightMap;
+                    }
                 }
+
+                JobUtils.SetIfGreater(ref fow.maxHeight, maxHeight);
 
             }
 
@@ -110,29 +117,23 @@ namespace ME.BECS.FogOfWar {
                 graph = firstGraph,
                 heights = this.heights,
             }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), context.dependsOn);
-            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(cleanUpHandle, updateHeightHandle));
+            context.SetDependency(JobHandle.CombineDependencies(cleanUpHandle, updateHeightHandle));
 
         }
 
         [INLINE(256)]
         public bool IsVisible(in PlayerAspect player, in Ent unit) {
             
-            var fow = player.readTeam.Read<ME.BECS.FogOfWar.FogOfWarComponent>();
-            var props = this.heights.Read<ME.BECS.FogOfWar.FogOfWarStaticComponent>();
-            var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition());
-            return ME.BECS.FogOfWar.FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);
+            if (unit.Has<OwnerComponent>() == true && player.readTeam == UnitUtils.GetTeam(unit.GetAspect<UnitAspect>())) return true;
+            ref readonly var fow = ref player.readTeam.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
+            var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+            return FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);
 
         }
 
         [INLINE(256)]
-        public bool IsVisible(in PlayerAspect player, Ent unit) {
-            
-            var fow = player.readTeam.Read<ME.BECS.FogOfWar.FogOfWarComponent>();
-            var props = this.heights.Read<ME.BECS.FogOfWar.FogOfWarStaticComponent>();
-            var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition());
-            return ME.BECS.FogOfWar.FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y);
-
-        }
+        public bool IsVisible(in PlayerAspect player, Ent unit) => this.IsVisible(in player, in unit);
 
     }
 

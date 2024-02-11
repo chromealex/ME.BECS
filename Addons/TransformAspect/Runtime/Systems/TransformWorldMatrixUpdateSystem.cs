@@ -2,19 +2,29 @@ namespace ME.BECS.Transforms {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
+    using Unity.Jobs;
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
     [BURST(CompileSynchronously = true)]
-    public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
+    public struct TransformWorldMatrixUpdateSystem : IUpdate {
         
         [BURST(CompileSynchronously = true)]
         public struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
 
-            public State* state;
+            public void Execute(ref TransformAspect aspect) {
+
+                Transform3DExt.CalculateMatrix(in aspect);
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct CalculateRootsWithChildrenJob : IJobParallelForAspect<TransformAspect> {
 
             public void Execute(ref TransformAspect aspect) {
 
-                Transform3DExt.CalculateMatrixHierarchy(this.state, ref aspect);
+                Transform3DExt.CalculateMatrixHierarchy(aspect.parent, in aspect);
 
             }
 
@@ -23,10 +33,10 @@ namespace ME.BECS.Transforms {
         public void OnUpdate(ref SystemContext context) {
             
             // update roots
-            var childHandle = API.Query(in context).ScheduleParallelFor<CalculateRootsJob, TransformAspect>(new CalculateRootsJob() {
-                state = context.world.state,
-            });
-            context.SetDependency(childHandle);
+            var rootsHandle = API.Query(in context).Without<ParentComponent>().ScheduleParallelFor<CalculateRootsJob, TransformAspect>();
+            // update children with roots
+            var rootsWithChildrenHandle = API.Query(in context, rootsHandle).With<ParentComponent>().With<IsFirstLevelComponent>().ScheduleParallelFor<CalculateRootsWithChildrenJob, TransformAspect>();
+            context.SetDependency(rootsWithChildrenHandle);
             
         }
 

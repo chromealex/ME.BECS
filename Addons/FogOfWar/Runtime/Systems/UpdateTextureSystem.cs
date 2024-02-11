@@ -3,15 +3,17 @@ namespace ME.BECS.FogOfWar {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Jobs;
     using ME.BECS.Players;
+    using Unity.Collections;
 
     //[BURST(CompileSynchronously = true)]
+    [RequiredDependencies(typeof(CreateTextureSystem), typeof(CreateSystem), typeof(PlayersSystem))]
     public struct UpdateTextureSystem : IUpdate {
 
         public float fadeInSpeed;
         public float fadeOutSpeed;
 
         [BURST(CompileSynchronously = true)]
-        public struct UpdateJob : Unity.Jobs.IJob {
+        public struct UpdateJob : IJobParallelFor {
 
             public float dt;
             public float fadeInSpeed;
@@ -20,26 +22,26 @@ namespace ME.BECS.FogOfWar {
             public FogOfWarComponent fow;
             public int textureWidth;
             public int textureHeight;
+            [NativeDisableParallelForRestriction]
             public Unity.Collections.NativeArray<UnityEngine.Color32> currentBuffer;
             
-            public void Execute() {
+            public void Execute(int index) {
 
                 var w = this.textureWidth / 4;
                 var h = this.textureHeight;
-                for (int i = 0; i < this.currentBuffer.Length; ++i) {
-                    var pixelIndex = i;
-                    var x = pixelIndex % w;
-                    var y = pixelIndex / w;
+                {
+                    var x = index % w;
+                    var y = index / w;
                     (var fowX, var fowY) = FogOfWarUtils.GetPixelPosition(in this.props, x, y, w, h);
                     if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {
                         var targetColor = new UnityEngine.Color32(255, 255, 255, 255);
-                        this.Place(i, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i + 1, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i - 1, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i + w, targetColor, this.dt * this.fadeInSpeed);
-                        this.Place(i - w, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index + 1, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index - 1, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index + w, targetColor, this.dt * this.fadeInSpeed);
+                        this.Place(index - w, targetColor, this.dt * this.fadeInSpeed);
                     } else {
-                        this.currentBuffer[i] = UnityEngine.Color32.Lerp(this.currentBuffer[i], new UnityEngine.Color32(0, 0, 0, 0), this.dt * this.fadeOutSpeed);
+                        this.currentBuffer[index] = UnityEngine.Color32.Lerp(this.currentBuffer[index], new UnityEngine.Color32(0, 0, 0, 0), this.dt * this.fadeOutSpeed);
                     }
                 }
                 
@@ -65,7 +67,8 @@ namespace ME.BECS.FogOfWar {
             var activePlayer = playersSystem.GetActivePlayer();
             var fow = activePlayer.team.Read<FogOfWarComponent>();
             var props = context.world.GetSystem<CreateSystem>().heights.Read<FogOfWarStaticComponent>();
-            
+
+            var buffer = createTexture.GetBuffer();
             var handle = new UpdateJob() {
                 dt = context.deltaTime,
                 fadeInSpeed = this.fadeInSpeed,
@@ -74,9 +77,8 @@ namespace ME.BECS.FogOfWar {
                 fow = fow,
                 textureWidth = createTexture.textureWidth,
                 textureHeight = createTexture.textureHeight,
-                currentBuffer = createTexture.GetBuffer(),
-            }.Schedule();
-            handle.Complete();
+                currentBuffer = buffer,
+            }.Schedule(buffer.Length, JobUtils.GetScheduleBatchCount(buffer.Length));
             createTexture.GetTexture().Apply(false);
             context.SetDependency(handle);
             

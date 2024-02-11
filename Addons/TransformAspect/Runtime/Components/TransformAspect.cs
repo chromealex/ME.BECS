@@ -76,7 +76,7 @@ namespace ME.BECS.Transforms {
             }
             [INLINE(256)]
             get {
-                var position = this.localPosition;
+                var position = this.readLocalPosition;
                 ref readonly var container = ref this.parent;
                 while (container.IsEmpty() == false) {
                     var parentTr = (TransformAspect)container;
@@ -116,7 +116,7 @@ namespace ME.BECS.Transforms {
                 ref readonly var container = ref this.parent;
                 while (container.IsEmpty() == false) {
                     var parentTr = (TransformAspect)container;
-                    worldRot = math.mul(parentTr.localRotation, worldRot);
+                    worldRot = math.mul(parentTr.readLocalRotation, worldRot);
                     container = ref parentTr.parent;
                 }
                 return worldRot;
@@ -153,14 +153,36 @@ namespace ME.BECS.Transforms {
 
         }
         
+        /// <summary>
+        /// Returns calculated world position of the object
+        /// It is faster than position method because it is already calculated
+        /// But you need to process TransformMatrixUpdateSystem first
+        /// </summary>
+        /// <returns>Object's world position</returns>
         [INLINE(256)]
         public readonly float3 GetWorldMatrixPosition() => MatrixUtils.GetPosition(in this.readWorldMatrix);
 
+        /// <summary>
+        /// Returns calculated world rotation of the object
+        /// It is faster than rotation method because it is already calculated
+        /// But you need to process TransformMatrixUpdateSystem first
+        /// </summary>
+        /// <returns>Object's world rotation (zero value will be returned if matrix was not calculated)</returns>
         [INLINE(256)]
         public readonly quaternion GetWorldMatrixRotation() => MatrixUtils.GetRotation(in this.readWorldMatrix);
  
+        /// <summary>
+        /// Returns calculated world scale of the object
+        /// But you need to process TransformMatrixUpdateSystem first
+        /// </summary>
+        /// <returns>Object's world scale</returns>
         [INLINE(256)]
         public readonly float3 GetWorldMatrixScale() => MatrixUtils.GetScale(in this.readWorldMatrix);
+
+        [INLINE(256)]
+        public readonly UnityEngine.Bounds GetBounds() {
+            return new UnityEngine.Bounds(this.GetWorldMatrixPosition(), new UnityEngine.Vector3(1f, 1f, 1f));
+        }
 
         [INLINE(256)]
         public static implicit operator TransformAspect(in Ent ent) {
