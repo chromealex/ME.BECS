@@ -1,0 +1,30 @@
+{
+    "name": "ME.BECS.Physics.Unity",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Mathematics",
+        "Unity.Entities"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.havok.physics",
+            "expression": "0.0.0",
+            "define": "HAVOK_PHYSICS_EXISTS"
+        },
+        {
+            "name": "com.unity.package-validation-suite",
+            "expression": "0.0.0",
+            "define": "UNITY_SKIP_UPDATES_WITH_VALIDATION_SUITE"
+        }
+    ],
+    "noEngineReferences": false
+}

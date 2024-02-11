@@ -1,0 +1,34 @@
+{
+    "name": "Unity.Entities",
+    "rootNamespace": "",
+    "references": [
+        "Unity.Collections",
+        "Unity.Burst",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.package-validation-suite",
+            "expression": "0.4.0-preview.6",
+            "define": "UNITY_SKIP_UPDATES_WITH_VALIDATION_SUITE"
+        },
+        {
+            "name": "Unity",
+            "expression": "2022.2.14f1",
+            "define": "UNITY_2022_2_14F1_OR_NEWER"
+        },
+        {
+            "name": "Unity",
+            "expression": "2022.3.11f1",
+            "define": "UNITY_2022_3_11F1_OR_NEWER"
+        }
+    ],
+    "noEngineReferences": false
+}
