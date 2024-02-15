@@ -463,14 +463,14 @@ namespace Unity.Entities
         public static BlobAssetReference<T> Create(void* ptr, int length)
         {
             byte* buffer =
-                (byte*) Memory.Unmanaged.Allocate(sizeof(BlobAssetHeader) + length, 16, Allocator.Persistent);
+                (byte*) Memory.Unmanaged.Allocate(sizeof(BlobAssetHeader) + length, 16, Allocator.TempJob);
             UnsafeUtility.MemCpy(buffer + sizeof(BlobAssetHeader), ptr, length);
 
             BlobAssetHeader* header = (BlobAssetHeader*) buffer;
             *header = new BlobAssetHeader();
 
             header->Length = length;
-            header->Allocator = Allocator.Persistent;
+            header->Allocator = Allocator.TempJob;
 
             // @TODO use 64bit hash
             header->Hash = math.hash(ptr, length);

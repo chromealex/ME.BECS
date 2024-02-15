@@ -72,10 +72,10 @@ namespace ME.BECS.Physics {
                 var index = (int) commandBuffer.index;
                 var entity = commandBuffer.ent;
 
-                var ptrCollider = entity.Read<PhysicsColliderBecs>().Value;
-
                 var physicsEntity = entity.ToPhysicsEntity();
-                var blobCollider = BlobAssetReference<Collider>.Create(ptrCollider.GetUnsafePtr(), sizeof(Collider));
+
+                var ptrCollider = entity.Read<PhysicsColliderBecs>().Value;
+                var blobCollider = BlobAssetReference<Collider>.Create(ptrCollider.GetUnsafePtr(), ptrCollider.As().MemorySize);
 
                 this.bodies[index] = new RigidBody() {
                     Entity = physicsEntity,
@@ -354,6 +354,7 @@ namespace ME.BECS.Physics {
                         result = buildStaticTree,
                     }, 64, context);
                 }
+                jobHandles.Add(checkStaticBodyHandle);
 
                 // Fill dynamic bodies here
                 var dependsOnDynamic = this.dynamicBodiesQuery.ScheduleParallelFor(new FillBodiesJob() {
@@ -361,6 +362,7 @@ namespace ME.BECS.Physics {
                     entityBodyIndexMap = this.physicsWorld.CollisionWorld.EntityBodyIndexMap,
                     initialIndex = 0,
                 }, 64, context);
+                jobHandles.Add(dependsOnDynamic);
             
                 // Fill static bodies here
                 var dependsOnStatic = this.staticBodiesQuery.ScheduleParallelFor(new FillBodiesJob() {
@@ -368,6 +370,7 @@ namespace ME.BECS.Physics {
                     entityBodyIndexMap = this.physicsWorld.CollisionWorld.EntityBodyIndexMap,
                     initialIndex = dynamicBodiesCount,
                 }, 64, context);
+                jobHandles.Add(dependsOnStatic);
             
                 JobHandle dependsOnFillBodies = JobHandle.CombineDependencies(dependsOnDynamic, dependsOnStatic);
 
@@ -387,26 +390,26 @@ namespace ME.BECS.Physics {
                         motionDatas = this.physicsWorld.MotionDatas,
                         motionVelocities = this.physicsWorld.MotionVelocities,
                         defaultPhysicsMass = PhysicsMassBecs.CreateDynamic(MassProperties.UnitSphere, 1f),
-                    }, 64, context, checkStaticBodyHandle);
+                    }, 64, context);
                 jobHandles.Add(dependsOnMotions);
-
-                var dependsOnBuildBroadphase = this.physicsWorld.CollisionWorld.ScheduleBuildBroadphaseJobs(
-                    ref this.physicsWorld,
-                    simulationParameters.TimeStep,
-                    this.gravity,
-                    buildStaticTree.AsReadOnly(),
-                    dependsOnMotions,
-                    true);
-                jobHandles.Add(dependsOnBuildBroadphase);
 
                 outputDependency = JobHandle.CombineDependencies(jobHandles);
 
             }
+            
+            // req checkStaticBodyHandle
+            var dependsOnBuildBroadphase = this.physicsWorld.CollisionWorld.ScheduleBuildBroadphaseJobs(
+                ref this.physicsWorld,
+                simulationParameters.TimeStep,
+                this.gravity,
+                buildStaticTree.AsReadOnly(),
+                outputDependency,
+                true);
 
             Simulation simulation = Simulation.Create();
 
             var jobs = simulation.ScheduleStepJobs(simulationParameters,
-                outputDependency,
+                dependsOnBuildBroadphase,
                 true);
             jobs.FinalExecutionHandle.Complete();
             simulation.Dispose();

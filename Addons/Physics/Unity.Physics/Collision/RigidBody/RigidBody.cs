@@ -10,7 +10,7 @@ namespace Unity.Physics
 {
     /// <summary>   An instance of a collider in a physics world. </summary>
     /// Using StructLayout to handle for an issue where there can be a mismatch between struct sizes for RigidBody in separate jobs
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Pack = 1, Size = 56)]
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Pack = 4, Size = 56)]
     public struct RigidBody : ICollidable, IAspectQueryable
     {
         /// <summary>   The rigid body's collider (allowed to be null) </summary>

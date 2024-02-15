@@ -8,7 +8,7 @@ namespace ME.BECS.Addons.Physics.Runtime.Extensions {
 
             return new Entity() {
                 Index = (int) ent.id,
-                Version = (int) ent.gen << 16 | (int) ent.worldId,
+                Version = (int) ent.Version,
             };
 
         }

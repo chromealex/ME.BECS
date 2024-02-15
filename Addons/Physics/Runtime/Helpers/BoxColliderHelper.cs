@@ -9,7 +9,7 @@ namespace ME.BECS.Addons.Physics.Runtime.Helpers {
             Material material) {
 
             var blobAssetRef = BoxCollider.Create(geometry, filter, material);
-            var memAllocatorPtr = new MemAllocatorPtrAuto<Collider>(in ent, blobAssetRef.GetUnsafePtr(), (uint)sizeof(Collider), alignment: 16);
+            var memAllocatorPtr = new MemAllocatorPtrAuto<Collider>(in ent, blobAssetRef.GetUnsafePtr(), (uint)blobAssetRef.Value.MemorySize);
             blobAssetRef.Dispose();
 
             return memAllocatorPtr;
