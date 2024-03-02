@@ -26,6 +26,7 @@ namespace ME.BECS.Physics {
         public float3 gravity;
 
         private PhysicsWorld physicsWorld;
+        private Simulation simulation;
 
         private Query staticBodiesQuery;
         private Query dynamicBodiesQuery;
@@ -283,6 +284,7 @@ namespace ME.BECS.Physics {
         public void OnAwake(ref SystemContext context) {
 
             this.physicsWorld = new PhysicsWorld(0, 0, 0);
+            this.simulation = Simulation.Create();
 
             this.staticBodiesQuery = Query
                 .With<LocalPositionComponent>(context)
@@ -323,6 +325,9 @@ namespace ME.BECS.Physics {
             var dynamicBodiesCount = (int) this.dynamicBodiesQuery.Count(context);
             var jointsCount = (int) this.jointsQuery.Count(context);
 
+            // com.unity.collections can stuck on inner structures extending size
+            // Resetting size to 1 can fix that
+            this.physicsWorld.Reset(1, 0, 0);
             this.physicsWorld.Reset(staticBodiesCount, dynamicBodiesCount, jointsCount);
 
             if (this.physicsWorld.Bodies.Length == 0) {
@@ -355,6 +360,8 @@ namespace ME.BECS.Physics {
                     }, 64, context);
                 }
                 jobHandles.Add(checkStaticBodyHandle);
+                
+                prevWorldState.numOfStaticBodies = staticBodiesCount;
 
                 // Fill dynamic bodies here
                 var dependsOnDynamic = this.dynamicBodiesQuery.ScheduleParallelFor(new FillBodiesJob() {
@@ -396,8 +403,7 @@ namespace ME.BECS.Physics {
                 outputDependency = JobHandle.CombineDependencies(jobHandles);
 
             }
-            
-            // req checkStaticBodyHandle
+
             var dependsOnBuildBroadphase = this.physicsWorld.CollisionWorld.ScheduleBuildBroadphaseJobs(
                 ref this.physicsWorld,
                 simulationParameters.TimeStep,
@@ -405,17 +411,12 @@ namespace ME.BECS.Physics {
                 buildStaticTree.AsReadOnly(),
                 outputDependency,
                 true);
+            
+            buildStaticTree.Dispose(dependsOnBuildBroadphase);
 
-            Simulation simulation = Simulation.Create();
-
-            var jobs = simulation.ScheduleStepJobs(simulationParameters,
+            var jobs = this.simulation.ScheduleStepJobs(simulationParameters,
                 dependsOnBuildBroadphase,
                 true);
-            jobs.FinalExecutionHandle.Complete();
-            simulation.Dispose();
-
-            buildStaticTree.Dispose();
-            prevWorldState.numOfStaticBodies = staticBodiesCount;
 
             // Apply movement to entities
 
@@ -424,7 +425,7 @@ namespace ME.BECS.Physics {
                         dynamicBodies = this.physicsWorld.DynamicBodies,
                         motionVelocities = this.physicsWorld.MotionVelocities,
                     }, 64,
-                    context);
+                    context, jobs.FinalExecutionHandle);
 
             // Cleanup blobs
             var dependsOnDispose = new DisposeJob() {
@@ -437,6 +438,7 @@ namespace ME.BECS.Physics {
 
         public void OnDestroy(ref SystemContext context) {
 
+            this.simulation.Dispose();
             this.physicsWorld.Dispose();
             // this.physicsWorldStateEnt.Destroy();
 
