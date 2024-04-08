@@ -190,7 +190,7 @@ namespace ME.BECS.Editor {
 
             if (isRequired == true) {
 
-                throw new System.IO.FileNotFoundException($"Could not find editor resource {path} of type {typeof(T)} (resource path: {System.IO.Path.GetDirectoryName(path) + System.IO.Path.GetFileNameWithoutExtension(path)})");
+                throw new System.IO.FileNotFoundException($"Could not find editor resource {path} of type {typeof(T)} (resource path: {System.IO.Path.GetDirectoryName(path) + "/" + System.IO.Path.GetFileNameWithoutExtension(path)})");
 
             }
             

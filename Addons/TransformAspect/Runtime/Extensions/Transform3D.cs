@@ -2,7 +2,7 @@ namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using tfloat = System.Single;
-    using math = Unity.Mathematics.math;
+    using Unity.Mathematics;
     
     public static unsafe class Transform3DExt {
 
@@ -12,7 +12,28 @@ namespace ME.BECS.Transforms {
         }
 
         [INLINE(256)]
-        public static void SetParent(this in Ent ent, Ent parent) {
+        public static void SetParent(this in Ent ent, in Ent parent, bool worldPositionStay = false) {
+
+            float3 prevPos = default;
+            quaternion prevRot = default;
+            if (parent.IsAlive() == true && worldPositionStay == true) {
+                var aspect = ent.GetOrCreateAspect<TransformAspect>();
+                prevPos = aspect.position;
+                prevRot = aspect.rotation;
+            }
+            
+            ent.SetParent_INTERNAL(in parent);
+            
+            if (parent.IsAlive() == true && worldPositionStay == true) {
+                var aspect = ent.GetOrCreateAspect<TransformAspect>();
+                aspect.position = prevPos;
+                aspect.rotation = prevRot;
+            }
+            
+        }
+
+        [INLINE(256)]
+        private static void SetParent_INTERNAL(this in Ent ent, in Ent parent) {
 
             ref var currentParent = ref ent.Get<ParentComponent>().value;
             if (currentParent.IsAlive() == true) {
@@ -54,6 +75,7 @@ namespace ME.BECS.Transforms {
             var matrix = ent.localMatrix;
             if (parent.ent.IsAlive() == true) matrix = math.mul(parent.readWorldMatrix, matrix);
             ent.worldMatrix = matrix;
+            ent.worldMatrixCalculated = 1;
 
         }
 
@@ -61,6 +83,7 @@ namespace ME.BECS.Transforms {
         public static void CalculateMatrix(in TransformAspect ent) {
 
             ent.worldMatrix = ent.localMatrix;
+            ent.worldMatrixCalculated = 1;
 
         }
 
@@ -88,10 +111,11 @@ namespace ME.BECS.Transforms {
             var cnt = ent.children.Count;
             if (cnt > 0u) {
 
-                var queue = new Unity.Collections.NativeQueue<TransformAspect>(Constants.ALLOCATOR_TEMP);
-                queue.Enqueue(ent);
-                while (queue.Count > 0) {
-                    var entData = queue.Dequeue();
+                var queue = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>((int)cnt, Constants.ALLOCATOR_TEMP_ST);
+                queue.Add(ent);
+                while (queue.Length > 0) {
+                    var entData = queue[0];
+                    queue.RemoveAtSwapBack(0);
                     cnt = entData.children.Count;
                     if (cnt > 0u) {
                         var children = (Ent*)entData.children.GetUnsafePtr(in entData.ent.World.state->allocator);
@@ -99,7 +123,7 @@ namespace ME.BECS.Transforms {
                             var child = *(children + i);
                             var tr = child.GetAspect<TransformAspect>();
                             CalculateMatrix(in entData, in tr);
-                            queue.Enqueue(tr);
+                            queue.Add(tr);
                         }
                     }
                 }

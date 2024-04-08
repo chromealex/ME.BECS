@@ -15,6 +15,7 @@ namespace ME.BECS.Views {
     public struct ViewTypeInfo {
 
         public TypeFlags flags;
+        public CullingType cullingType;
 
         public bool HasInitialize => (this.flags & TypeFlags.Initialize) != 0;
         public bool HasDeInitialize => (this.flags & TypeFlags.DeInitialize) != 0;

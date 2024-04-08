@@ -46,6 +46,8 @@ namespace ME.BECS.Players {
             this.teams.Dispose();
 
         }
+        
+        public Unity.Collections.NativeArray<Ent> GetTeams() => this.teams;
 
         /// <summary>
         /// Call this method every time you changed player's team
@@ -116,8 +118,8 @@ namespace ME.BECS.Players {
         }
 
         [INLINE(256)]
-        public PlayerAspect GetPlayerEntity(uint id) {
-            return this.players[(int)id].GetAspect<PlayerAspect>();
+        public PlayerAspect GetPlayerEntity(uint index) {
+            return this.players[(int)index].GetAspect<PlayerAspect>();
         }
 
     }

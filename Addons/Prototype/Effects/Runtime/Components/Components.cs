@@ -1,7 +1,5 @@
 namespace ME.BECS.Effects {
     
-    using ME.BECS.Views;
-    
     public struct EffectComponentGroup { }
     
     [ComponentGroup(typeof(EffectComponentGroup))]
@@ -16,7 +14,6 @@ namespace ME.BECS.Effects {
     public struct EffectConfig {
 
         public Config config;
-        public View view;
         public float lifetime;
 
     }

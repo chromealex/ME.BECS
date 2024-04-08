@@ -31,7 +31,7 @@ namespace ME.BECS {
     public struct EntityConfigComponent : IComponent {
 
         public uint id;
-        public UnsafeEntityConfig EntityConfig => EntityConfigRegistry.GetById(this.id);
+        public UnsafeEntityConfig EntityConfig => EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.id);
 
     }
 

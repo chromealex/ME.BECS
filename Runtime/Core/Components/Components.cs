@@ -62,6 +62,7 @@ namespace ME.BECS {
     /// <summary>
     /// Components groups are used for components to update entity version by group
     /// </summary>
+    [System.AttributeUsage(System.AttributeTargets.Struct, AllowMultiple = true, Inherited = false)]
     public class ComponentGroupAttribute : System.Attribute {
 
         public System.Type groupType;

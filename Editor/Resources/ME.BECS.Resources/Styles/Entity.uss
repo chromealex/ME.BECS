@@ -112,9 +112,15 @@
 .entity-header .entity-arch-label,
 .entity-header .entity-id-label,
 .entity-header .entity-gen-label,
-.entity-header .entity-version-label{
+.entity-header .entity-version-label,
+.entity-header .entity-world-label {
     font-size: 10px;
     color: rgba(255, 255, 255, 0.5);
+}
+
+.entity-header .entity-name-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .entity-components-label {

@@ -29,5 +29,7 @@ namespace KNN.Internal {
         public int NodeIndex;
         public float3 TempClosestPoint;
         public float Distance;
+        public float RadiusSqr;
+
     }
 }

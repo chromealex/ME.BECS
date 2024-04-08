@@ -4,9 +4,6 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
 
-    #if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoadAttribute]
-    #endif
     public class EntityConfigsRegistry {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
@@ -45,6 +42,7 @@ namespace ME.BECS {
 
         private static void InitializeConfigs() {
 
+            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (data == null) return;
 
             try {

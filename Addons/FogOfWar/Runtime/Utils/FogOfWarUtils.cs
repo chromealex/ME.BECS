@@ -1,29 +1,83 @@
+
 namespace ME.BECS.FogOfWar {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Units;
     using ME.BECS.Transforms;
     using Unity.Mathematics;
+    using static Cuts;
 
-    public static class FogOfWarUtils {
+    public static unsafe class FogOfWarUtils {
+
+        public const int BYTES_PER_NODE = 1;
         
         [INLINE(256)]
         public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect unitTr, in UnitAspect unit) {
 
             var pos = WorldToFogMapPosition(in props, unitTr.GetWorldMatrixPosition());
             var range = WorldToFogMapValue(in props, math.sqrt(unit.sightRangeSqr));
-            var height = WorldToFogMapValue(in props, unitTr.GetWorldMatrixPosition().y + unit.height);
+            var height = unitTr.GetWorldMatrixPosition().y + unit.height;
             SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, range, height);
 
         }
 
         [INLINE(256)]
         public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y) {
-            return fow.nodes[y * props.size.x + x] > 0;
+            return IsSet(in fow.nodes, in props, x, y, offset: 0);
         }
 
         [INLINE(256)]
-        public static int GetHeight(in FogOfWarStaticComponent props, uint x, uint y) {
+        public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, float radius) {
+            return IsSet(in fow.nodes, in props, x, y, radius, offset: 0);
+        }
+
+        [INLINE(256)]
+        public static bool IsExplored(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y) {
+            return IsSet(in fow.explored, in props, x, y, offset: 0);
+        }
+
+        [INLINE(256)]
+        public static bool IsExplored(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, float radius) {
+            return IsSet(in fow.explored, in props, x, y, radius, offset: 0);
+        }
+
+        [INLINE(256)]
+        public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, byte offset) {
+            return arr[(y * props.size.x + x) * BYTES_PER_NODE + offset] > 0;
+        }
+
+        [INLINE(256)]
+        public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, float radius, byte offset) {
+            if (IsSet(in arr, in props, x, y, offset) == true) return true;
+            if (radius <= 0f) return false;
+            
+            var steps = WorldToFogMapValue(in props, radius);
+            {
+                var py = y * props.size.x;
+                for (int px = -steps; px < steps; ++px) {
+                    var of = (x + px);
+                    if (of < 0 || of >= props.size.x) continue;
+                    var idx = py + (uint)of;
+                    if (arr[idx * BYTES_PER_NODE + offset] > 0) return true;
+                }
+            }
+
+            {
+                for (int py = -steps; py < steps; ++py) {
+                    var of = ((y + py) * props.size.x);
+                    if (of < 0 || of >= props.size.y) continue;
+                    of += x;
+                    var idx = (uint)of;
+                    if (arr[idx * BYTES_PER_NODE + offset] > 0) return true;
+                }
+            }
+
+            return false;
+        }
+
+        [INLINE(256)]
+        public static float GetHeight(in FogOfWarStaticComponent props, uint x, uint y) {
             return props.heights[y * props.size.x + x];
         }
 
@@ -47,7 +101,7 @@ namespace ME.BECS.FogOfWar {
             
             var xf = position.x / (float)props.size.x * props.worldSize.x;
             var yf = position.y / (float)props.size.y * props.worldSize.y;
-            var h = props.heights[position.y * props.size.x + position.x] / (float)props.size.x * props.worldSize.x;
+            var h = props.heights[position.y * props.size.x + position.x];
             return new float3(xf, h, yf);
 
         }
@@ -80,7 +134,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int radius, int height) {
+        public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int radius, float height) {
 
             var radiusSqr = radius * radius;
             for (var r = -radius; r < radius; r++) {
@@ -98,8 +152,9 @@ namespace ME.BECS.FogOfWar {
                     }
 
                     if (Raycast(in props, x0, y0, x, y, height) == true) {
-                        var index = y * (int)props.size.x + x; 
-                        map.nodes[index] = 1;
+                        var index = y * (int)props.size.x + x;
+                        map.nodes[index * BYTES_PER_NODE] = 255;
+                        map.explored[index * BYTES_PER_NODE] = 255;
                     }
 
                 }
@@ -134,16 +189,15 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        private static int GetTerrainHeight(in FogOfWarStaticComponent props,  uint x, uint y) {
+        private static float GetTerrainHeight(in FogOfWarStaticComponent props,  uint x, uint y) {
             return props.heights[y * props.size.x + x];
         }
 
         [INLINE(256)]
-        private static bool Raycast(in FogOfWarStaticComponent props, int x0, int y0, int x1, int y1, int terrainHeight) {
+        private static bool Raycast(in FogOfWarStaticComponent props, int x0, int y0, int x1, int y1, float terrainHeight) {
 
             var steep = math.abs(y1 - y0) > math.abs(x1 - x0);
-
-            if (steep) {
+            if (steep == true) {
                 var t = x0;
                 x0 = y0;
                 y0 = t;
@@ -188,6 +242,11 @@ namespace ME.BECS.FogOfWar {
             }
 
             return true;
+        }
+
+        [INLINE(256)]
+        public static void CleanUpTexture(Unity.Collections.NativeArray<byte> data) {
+            _memclear(data.GetUnsafePtr(), TSize<byte>.sizeInt * data.Length);
         }
 
     }

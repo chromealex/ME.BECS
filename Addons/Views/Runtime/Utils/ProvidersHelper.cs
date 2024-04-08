@@ -35,7 +35,7 @@ namespace ME.BECS.Views {
     
     public static class ProvidersHelper {
 
-        public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, Ent parentEnt, in World world) {
+        public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, in Ent parentEnt, in World world) {
 
             var ent = Ent.New(world);
             var tr = ent.GetOrCreateAspect<TransformAspect>();

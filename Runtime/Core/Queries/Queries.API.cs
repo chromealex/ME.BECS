@@ -96,6 +96,7 @@ namespace ME.BECS {
             };
             dependsOn = job.Schedule(dependsOn);
             builder.builderDependsOn = Batches.Close(dependsOn, queryContext.state);
+            builder.Without<IsInactive>();
             
             return builder;
             
@@ -115,6 +116,7 @@ namespace ME.BECS {
                 isCreated = true,
                 builderDependsOn = Batches.Close(dependsOn, queryContext.state),
             };
+            builder.Without<IsInactive>();
             return builder;
             
         }

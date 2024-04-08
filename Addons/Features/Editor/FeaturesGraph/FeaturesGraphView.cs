@@ -39,6 +39,13 @@ namespace ME.BECS.Editor.FeaturesGraph {
                     this.createNodeMenu.OnSelectEntry(new UnityEditor.Experimental.GraphView.SearchTreeEntry(null) {
                         userData = typeof(ME.BECS.FeaturesGraph.Nodes.GraphNode),
                     }, new UnityEditor.Experimental.GraphView.SearchWindowContext(evt.screenMousePosition));
+                } else if (evt.index == -5) {
+                    this.createNodeMenu.OnSelectEntry(new UnityEditor.Experimental.GraphView.SearchTreeEntry(null) {
+                        userData = typeof(ME.BECS.FeaturesGraph.Nodes.StartNode),
+                    }, new UnityEditor.Experimental.GraphView.SearchWindowContext(evt.screenMousePosition), (nodeTarget) => {
+                        var startNode = (ME.BECS.FeaturesGraph.Nodes.StartNode)nodeTarget;
+                        startNode.isInstance = true; 
+                    });
                 } else {
                     this.baseNodeCreationRequest?.Invoke(evt);
                 }
@@ -78,6 +85,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
             if (action != null) {
                 var pos = (evt.currentTarget as VisualElement).ChangeCoordinatesTo(this.contentViewContainer, evt.localMousePosition);
+                /*if (this.graph.isInnerGraph == true) {
+                    evt.menu.InsertAction(idx, "Create Start", new System.Action<DropdownMenuAction>((e) => this.nodeCreationRequest(
+                                                                                                         new UnityEditor.Experimental.GraphView.NodeCreationContext() {
+                                                                                                             index = -5,
+                                                                                                             screenMousePosition = this.GetPosition(e.eventInfo.mousePosition),
+                                                                                                         })),
+                                          new System.Func<DropdownMenuAction, DropdownMenuAction.Status>(DropdownMenuAction.AlwaysEnabled));
+                }*/
                 evt.menu.InsertAction(idx, "Create System", new System.Action<DropdownMenuAction>((e) => this.nodeCreationRequest(new UnityEditor.Experimental.GraphView.NodeCreationContext() {
                     index = -3,
                     screenMousePosition = this.GetPosition(e.eventInfo.mousePosition),

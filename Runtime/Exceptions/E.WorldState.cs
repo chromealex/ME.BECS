@@ -49,6 +49,7 @@ namespace ME.BECS {
             if (state->mode == WorldMode.Visual ||
                 state->tickCheck == 0 ||
                 state->updateType == UpdateType.UPDATE ||
+                state->updateType == UpdateType.LATE_UPDATE ||
                 state->worldState == WorldState.Initialized ||
                 state->worldState == WorldState.EndTick) {
                 return;

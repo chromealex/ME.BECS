@@ -1,0 +1,116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
+  m_Name: Pathfinding-Visual
+  m_EditorClassIdentifier: 
+  id: 12
+  builtInGraph: 1
+  isInnerGraph: 1
+  serializedNodes: []
+  nodes:
+  - rid: 8346928920201003110
+  - rid: 8346928920201003111
+  - rid: 4603152977822220372
+  edges:
+  - GUID: 20e690f7-789d-4f86-bf51-42b737951217
+    owner: {fileID: 11400000}
+    inputNodeGUID: 3fd31530-262b-45b6-9084-ba6ffac9eef4
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: edf00b20-5f08-49e3-ac7b-b1fe446c1024
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 3fd31530-262b-45b6-9084-ba6ffac9eef4
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  groups: []
+  stackNodes: []
+  pinnedElements: []
+  exposedParameters: []
+  serializedParameterList: []
+  stickyNotes: []
+  nodeInspectorReference: {fileID: 0}
+  position: {x: 63, y: 318.5, z: 0}
+  scale: {x: 1, y: 1, z: 1}
+  references:
+    version: 2
+    RefIds:
+    - rid: 4603152977822220372
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 3fd31530-262b-45b6-9084-ba6ffac9eef4
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 260
+          y: 0
+          width: 300
+          height: 201
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 4603152977822220373
+    - rid: 4603152977822220373
+      type: {class: DrawGizmosGraphSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
+      data:
+        drawGraph: 1
+        drawPath: 1
+        drawNormals: 0
+        drawNodes: 0
+    - rid: 8346928920201003110
+      type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: StartNode
+        groupGUID: 
+        computeOrder: 0
+        position:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 100
+          height: 100
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 8346928920201003111
+      type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: EndNode
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 741
+          y: 0
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0

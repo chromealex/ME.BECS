@@ -24,6 +24,11 @@ MonoBehaviour:
     chunksCountY: 20
   agentTypes:
   - typeId: 0
+    radius: 0
+    avoidanceRange: 0
+    maxSlope: 1
+    height: 0.5
+  - typeId: 0
     radius: 0.5
     avoidanceRange: 5
     maxSlope: 30

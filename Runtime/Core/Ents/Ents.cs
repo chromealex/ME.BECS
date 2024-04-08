@@ -8,6 +8,7 @@ namespace ME.BECS {
 
         public MemArray<ushort> generations;
         public MemArray<uint> versions;
+        public MemArray<uint> seeds;
         public MemArray<uint> versionsGroup;
         public MemArray<bool> aliveBits;
         public Stack<uint> free;
@@ -38,6 +39,7 @@ namespace ME.BECS {
             var size = 0u;
             size += this.generations.GetReservedSizeInBytes();
             size += this.versions.GetReservedSizeInBytes();
+            size += this.seeds.GetReservedSizeInBytes();
             size += this.versionsGroup.GetReservedSizeInBytes();
             size += this.aliveBits.GetReservedSizeInBytes();
             size += this.free.GetReservedSizeInBytes();
@@ -51,6 +53,7 @@ namespace ME.BECS {
             this.aliveBits.BurstMode(in allocator, mode);
             this.generations.BurstMode(in allocator, mode);
             this.versions.BurstMode(in allocator, mode);
+            this.seeds.BurstMode(in allocator, mode);
             this.versionsGroup.BurstMode(in allocator, mode);
             this.free.BurstMode(in allocator, mode);
         }
@@ -63,6 +66,7 @@ namespace ME.BECS {
             var ents = new Ents() {
                 generations = new MemArray<ushort>(ref state->allocator, entityCapacity, growFactor: 2),
                 versions = new MemArray<uint>(ref state->allocator, entityCapacity, growFactor: 2),
+                seeds = new MemArray<uint>(ref state->allocator, entityCapacity, growFactor: 2),
                 versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u), growFactor: 2),
                 aliveBits = new MemArray<bool>(ref state->allocator, entityCapacity),
                 free = new Stack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
@@ -113,6 +117,7 @@ namespace ME.BECS {
             this.generations.Resize(ref state->allocator, maxId + 1u);
             this.versionsGroup.Resize(ref state->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
             this.versions.Resize(ref state->allocator, maxId + 1u);
+            this.seeds.Resize(ref state->allocator, maxId + 1u);
             this.aliveBits.Resize(ref state->allocator, maxId + 1u);
             
             // Apply list
@@ -152,6 +157,7 @@ namespace ME.BECS {
                 this.readWriteSpinner.ReadBegin(state);
                 var nextGen = ++this.generations[in state->allocator, idx];
                 this.versions[in state->allocator, idx] = version;
+                this.seeds[in state->allocator, idx] = idx;
                 var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * idx;
                 _memclear((byte*)this.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * sizeof(int), (StaticTypesGroupsBurst.maxId + 1u) * sizeof(int));
                 this.aliveBits[in state->allocator, idx] = true;
@@ -173,6 +179,8 @@ namespace ME.BECS {
                 this.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
                 this.versions.Resize(ref state->allocator, idx + 1u);
                 this.versions[in state->allocator, idx] = version;
+                this.seeds.Resize(ref state->allocator, idx + 1u);
+                this.seeds[in state->allocator, idx] = idx;
                 this.aliveBits.Resize(ref state->allocator, idx + 1u);
                 this.aliveBits[in state->allocator, idx] = true;
                 this.readWriteSpinner.WriteEnd();
@@ -255,13 +263,20 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void UpVersion(State* state, in Ent ent, uint groupId) {
-            
-            JobUtils.Increment(ref this.versions[in state->allocator, ent.id]);
-            Journal.VersionUp(in ent);
+
+            this.UpVersion(state, in ent);
 
             if (groupId > 0u) {
                 this.UpVersionGroup(state, ent.id, groupId);
             }
+
+        }
+
+        [INLINE(256)]
+        public void UpVersion(State* state, in Ent ent) {
+            
+            JobUtils.Increment(ref this.versions[in state->allocator, ent.id]);
+            Journal.VersionUp(in ent);
 
         }
 
@@ -271,6 +286,11 @@ namespace ME.BECS {
             var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * id;
             JobUtils.Increment(ref this.versionsGroup[in state->allocator, groupsIndex + groupId]);
             
+        }
+
+        [INLINE(256)]
+        public uint GetNextSeed(State* state, in Ent ent) {
+            return JobUtils.Increment(ref this.seeds[in state->allocator, ent.id]);
         }
 
     }

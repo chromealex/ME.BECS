@@ -58,12 +58,13 @@ namespace ME.BECS.Units {
 
             var ent = Ent.New();
             var unit = ent.GetOrCreateAspect<UnitAspect>();
-            var rnd = ent.World.GetRandomVector2OnCircle(1f);
+            var rnd = ent.GetRandomVector2OnCircle(1f);
             var rndVec = new float3(rnd.x, 0f, rnd.y);
             unit.componentRuntime.randomVector = rndVec;
             ent.Set<TransformAspect>();
             ent.Set<QuadTreeQueryAspect>(); // to query nearby units
             var aspect = ent.GetOrCreateAspect<QuadTreeAspect>();
+            aspect.quadTreeElement.radius = agentType.radius;
             aspect.quadTreeElement.treeIndex = treeIndex;
             unit.agentProperties = agentType;
             return ent.GetAspect<UnitAspect>();
@@ -87,6 +88,13 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
+        public static void SetOwner(in Ent unit, in ME.BECS.Players.PlayerAspect player) {
+            unit.Set(new ME.BECS.Players.OwnerComponent() {
+                ent = player.ent,
+            });
+        }
+        
+        [INLINE(256)]
         public static Ent GetTeam(in Ent ent) {
 
             return ME.BECS.Players.PlayerUtils.GetOwner(in ent).readTeam;
@@ -98,6 +106,34 @@ namespace ME.BECS.Units {
 
             return unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>().readTeam;
 
+        }
+
+        /// <summary>
+        /// Calculate random target position
+        /// </summary>
+        /// <param name="sourceUnit">Source unit required to get random vector depend on its seed</param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        [INLINE(256)]
+        public static float3 GetTargetBulletPosition(in Ent sourceUnit, in Ent target) {
+            var tr = target.GetAspect<TransformAspect>();
+            var pos = tr.position;
+            if (target.Has<NavAgentRuntimeComponent>() == true) {
+                float3 rnd3d;
+                if (target.TryRead(out UnitQuadSizeComponent quad) == true) {
+                    var rnd = sourceUnit.GetRandomVector2(-(float2)quad.size * 0.5f, (float2)quad.size * 0.5f);
+                    rnd3d = new float3(rnd.x, 0f, rnd.y);
+                    rnd3d = math.mul(tr.rotation, rnd3d);
+                } else {
+                    var props = target.Read<NavAgentRuntimeComponent>().properties;
+                    var radius = props.radius;
+                    var rnd = sourceUnit.GetRandomVector2InCircle(radius);
+                    rnd3d = new float3(rnd.x, 0f, rnd.y);
+                }
+                pos += rnd3d;
+            }
+
+            return pos;
         }
 
     }

@@ -35,9 +35,14 @@ namespace ME.BECS.Players {
         }
 
         [INLINE(256)]
+        public static PlayerAspect GetOwner(in EntRO entity) {
+            E.REQUIRED<OwnerComponent>(entity.GetEntity());
+            return entity.Read<OwnerComponent>().ent.GetAspect<PlayerAspect>();
+        }
+
+        [INLINE(256)]
         public static void SetOwner(in Ent entity, in PlayerAspect player) {
             E.REQUIRED<PlayerComponent>(player.ent);
-            E.REQUIRED<OwnerComponent>(in entity);
             entity.Get<OwnerComponent>().ent = player.ent;
         }
 

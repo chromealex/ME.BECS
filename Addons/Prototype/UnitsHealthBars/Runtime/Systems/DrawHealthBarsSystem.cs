@@ -10,7 +10,7 @@ namespace ME.BECS.UnitsHealthBars {
     using ME.BECS.FogOfWar;
     using ME.BECS.Players;
     
-    //[BURST(CompileSynchronously = true)]
+    [BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(CreateSystem), typeof(PlayersSystem))]
     [UnityEngine.Tooltip("Drawing health bars via GL API")]
     public struct DrawHealthBarsSystem : IAwake, IUpdate, IDestroy {
@@ -112,6 +112,7 @@ namespace ME.BECS.UnitsHealthBars {
             
         }
 
+        [WithoutBurst]
         public void OnAwake(ref SystemContext context) {
 
             this.bars = new ME.BECS.NativeCollections.NativeParallelList<BarItem>(100, Constants.ALLOCATOR_DOMAIN);

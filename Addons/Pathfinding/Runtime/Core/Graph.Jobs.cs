@@ -42,7 +42,7 @@ namespace ME.BECS.Pathfinding {
                             ref var neighbourNode = ref this.chunks[this.world.state, neighbour.chunkIndex].nodes[this.world.state, neighbour.nodeIndex];
                             if (Graph.IsSlopeValid(root.agentMaxSlope, node.height, neighbourNode.height, root.nodeSize) == false) {
                                 // stamp
-                                Graph.Stamp(in this.world, in root, in chunk, Graph.GetPosition(in root, in chunk, i), quaternion.identity, new float3(root.agentRadius, 0f, root.agentRadius), Graph.UNWALKABLE);
+                                Graph.Stamp(in this.world, in root, in chunk, Graph.GetPosition(in root, in chunk, i), quaternion.identity, new float3(root.agentRadius * 2f, 0f, root.agentRadius * 2f), Graph.UNWALKABLE, ObstacleChannel.Slope);
                             }
                         }
                     }
@@ -85,7 +85,8 @@ namespace ME.BECS.Pathfinding {
         public Ent graph;
         public World world;
         public MemArrayAuto<ChunkComponent> chunks;
-        public Unity.Collections.NativeArray<bool> changedChunks;
+        [Unity.Collections.LowLevel.Unsafe.NativeDisableContainerSafetyRestriction]
+        public Unity.Collections.NativeArray<ulong> changedChunks;
 
         public void Execute() {
 
@@ -93,6 +94,12 @@ namespace ME.BECS.Pathfinding {
             for (uint idx = 0u; idx < root.chunks.Length; ++idx) {
                 ref var chunk = ref this.chunks[this.world.state, idx];
                 Graph.UpdateChunk(in this.world, this.graph, idx, ref chunk, this.changedChunks);
+            }
+            
+            for (uint idx = 0u; idx < root.chunks.Length; ++idx) {
+                ref var chunk = ref this.chunks[this.world.state, idx];
+                if (this.changedChunks.IsCreated == true && this.changedChunks[(int)idx] != this.world.state->tick) continue;
+                Graph.BuildPortals(in this.graph, idx, ref chunk, in this.world);
             }
 
         }
@@ -107,12 +114,13 @@ namespace ME.BECS.Pathfinding {
         public MemArrayAuto<ChunkComponent> chunks;
         public Unity.Collections.NativeList<ResultItem>.ParallelWriter results;
         [Unity.Collections.ReadOnlyAttribute]
-        public Unity.Collections.NativeArray<bool> changedChunks;
+        [Unity.Collections.LowLevel.Unsafe.NativeDisableContainerSafetyRestrictionAttribute]
+        public Unity.Collections.NativeArray<ulong> changedChunks;
 
         public void Execute(int index) {
 
             var chunkIndex = (uint)index;
-            if (this.changedChunks.Length == 1 || this.changedChunks[index] == true) {
+            if (this.changedChunks.IsCreated == false || this.changedChunks[index] == this.world.state->tick) {
                 // calculate portals connections
                 var root = this.graph.Read<RootGraphComponent>();
                 var chunk = this.chunks[this.world.state, chunkIndex];
@@ -134,14 +142,14 @@ namespace ME.BECS.Pathfinding {
                     }
 
                     { // remote connections
-                        var chunkIdx = Graph.GetNeighbourChunkIndex(chunkIndex, portal.side, root.width, root.height);
-                        if (chunkIdx == uint.MaxValue) continue;
-                        var neighbourChunk = root.chunks[this.world.state, chunkIdx];
+                        var neighbourChunkIdx = Graph.GetNeighbourChunkIndex(chunkIndex, portal.side, root.width, root.height);
+                        if (neighbourChunkIdx == uint.MaxValue) continue;
+                        var neighbourChunk = root.chunks[this.world.state, neighbourChunkIdx];
                         if (Graph.HasPortal(in this.world, in neighbourChunk, in portal, out var neighbourPortalIndex) == true) {
                             // add connection between portals
                             this.results.AddNoResize(new ResultItem() {
                                 chunkIndex = chunkIndex,
-                                toChunkIndex = chunkIdx,
+                                toChunkIndex = neighbourChunkIdx,
                                 length = 1u,
                                 from = i,
                                 to = neighbourPortalIndex,
@@ -231,6 +239,8 @@ namespace ME.BECS.Pathfinding {
 
             if (this.needToRepath.Value == false) return;
 
+            var marker = new Unity.Profiling.ProfilerMarker("Calculate Path Directions");
+            marker.Begin();
             var root = this.graph.Read<RootGraphComponent>();
             for (uint index = 0u; index < this.chunks.Length; ++index) {
 
@@ -284,6 +294,7 @@ namespace ME.BECS.Pathfinding {
                 }
 
             }
+            marker.End();
 
         }
 

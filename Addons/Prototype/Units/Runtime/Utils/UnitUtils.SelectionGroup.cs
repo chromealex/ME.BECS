@@ -85,17 +85,24 @@ namespace ME.BECS.Units {
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, float maxRange = 5f) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            var results = new Unity.Collections.NativeArray<Ent>(1, Unity.Collections.Allocator.Temp);
-            tree->QueryKNearest(position, maxRange, new Unity.Collections.NativeSlice<Ent>(results));
-            
-            var group = UnitUtils.CreateSelectionTempGroup((uint)results.Length);
-            foreach (var unit in results) {
+            var group = UnitUtils.CreateSelectionTempGroup(1u);
 
+            var visitor = new OctreeNearestAABBVisitor<Ent>();
+            tree->Nearest(position, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+            if (visitor.found == true) {
+                if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
+            }
+            /*
+            var results = new Unity.Collections.NativeArray<Ent>(1, Unity.Collections.Allocator.Temp);
+            tree->Range(new NativeTrees.AABB(position - maxRange, position + maxRange), ref visitor);
+            tree->QueryKNearest(position, maxRange, new Unity.Collections.NativeSlice<Ent>(results));
+            foreach (var unit in results) {
                 if (unit.IsAlive() == false) continue;
                 group.Add(unit.GetAspect<UnitAspect>());
-                
-            }
-
+            }*/
+            //var ent = tree->QueryNearest(position, maxRange);
+            //if (ent.IsAlive() == true) group.Add(ent.GetAspect<UnitAspect>());
+            
             return group;
 
         }
@@ -104,11 +111,16 @@ namespace ME.BECS.Units {
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, float range) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
-            tree->QueryRange(position, range, ref results);
+            //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
+            var visitor = new RangeAABBUniqueVisitor<Ent>() {
+                results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
+                rangeSqr = range * range,
+            };
+            tree->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
+            //tree->QueryRange(position, range, ref results);
             
-            var group = UnitUtils.CreateSelectionTempGroup((uint)results.Length);
-            foreach (var unit in results) {
+            var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count);
+            foreach (var unit in visitor.results) {
 
                 if (unit.IsAlive() == false) continue;
                 if (unit.GetAspect<UnitAspect>().agentProperties.typeId == unitTypeId) {
@@ -151,7 +163,6 @@ namespace ME.BECS.Units {
                 var ray = camera.ScreenPointToRay(sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
                     p1 = hit.point;
-                    p1.y = 0f;
                 }
             }
             {
@@ -159,7 +170,6 @@ namespace ME.BECS.Units {
                 var ray = camera.ScreenPointToRay(sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
                     p2 = hit.point;
-                    p2.y = 0f;
                 }
             }
             {
@@ -167,7 +177,6 @@ namespace ME.BECS.Units {
                 var ray = camera.ScreenPointToRay(sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
                     p3 = hit.point;
-                    p3.y = 0f;
                 }
             }
             {
@@ -175,7 +184,6 @@ namespace ME.BECS.Units {
                 var ray = camera.ScreenPointToRay(sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
                     p4 = hit.point;
-                    p4.y = 0f;
                 }
             }
             
@@ -197,17 +205,23 @@ namespace ME.BECS.Units {
             var range = math.length(p3 - center);
             
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
-            tree->QueryRange(center, range, ref results);
+            var visitor = new RangeAABBUniqueVisitor<Ent>() {
+                results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
+                rangeSqr = range * range,
+            };
+            tree->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+            //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
+            //tree->QueryRange(center, range, ref results);
 
-            var group = UnitUtils.CreateSelectionTempGroup((uint)results.Length);
-            foreach (var unit in results) {
+            var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count);
+            foreach (var unit in visitor.results) {
 
                 if (unit.IsAlive() == false) continue;
+                var unitAspect = unit.GetAspect<UnitAspect>();
                 var tr = unit.GetAspect<TransformAspect>();
                 if (Math.IsInPolygon(tr.position, p1, p2, p3, p4) == true) {
                     
-                    group.Add(unit.GetAspect<UnitAspect>());
+                    group.Add(unitAspect);
                     
                 }
 

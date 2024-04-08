@@ -66,7 +66,7 @@ namespace ME.BECS.Bullets {
                 tr.rotation = rotation;
                 var bullet = ent.GetOrCreateAspect<BulletAspect>();
                 bullet.component.targetEnt = target;
-                bullet.component.targetWorldPos = target.IsAlive() == true ? target.GetAspect<TransformAspect>().position : targetPosition;
+                bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
                 bullet.component.sourceUnit = sourceUnit;
                 return bullet;
             }

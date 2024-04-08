@@ -6,7 +6,6 @@ namespace ME.BECS.FeaturesGraph {
     [CreateAssetMenu(menuName = "ME.BECS/Features Graph")]
     public class SystemsGraph : Extensions.GraphProcessor.BaseGraph {
 
-        public bool isInnerGraph;
         public SystemGroup runtimeRootSystemGroup;
         
         public override void InitializeValidation() {
@@ -53,12 +52,32 @@ namespace ME.BECS.FeaturesGraph {
 
         }
 
-        public ME.BECS.Extensions.GraphProcessor.BaseNode GetStartNode() {
-            foreach (var node in this.nodes) {
+        public bool IsValidStartNodeOrOther(ME.BECS.Extensions.GraphProcessor.BaseNode pStartNode, int index) {
+            if (pStartNode is not ME.BECS.FeaturesGraph.Nodes.StartNode) return true;
+            var k = 0;
+            for (var i = 0; i < this.nodes.Count; ++i) {
+                var node = this.nodes[i];
                 if (node is ME.BECS.FeaturesGraph.Nodes.StartNode n) {
-                    return n;
+                    if (index == k) {
+                        return pStartNode == n;
+                    }
+                    ++k;
                 }
             }
+
+            return false;
+        }
+        
+        public ME.BECS.Extensions.GraphProcessor.BaseNode GetStartNode(int index) {
+            var k = 0;
+            for (var i = 0; i < this.nodes.Count; ++i) {
+                var node = this.nodes[i];
+                if (node is ME.BECS.FeaturesGraph.Nodes.StartNode n) {
+                    if (index == k) return n;
+                    ++k;
+                }
+            }
+
             return null;
         }
 

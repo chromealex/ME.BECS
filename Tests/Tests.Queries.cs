@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Unity.Jobs;
 using ME.BECS.Jobs;
+using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
     

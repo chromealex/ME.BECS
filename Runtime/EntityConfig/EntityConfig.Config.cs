@@ -7,6 +7,8 @@ namespace ME.BECS {
 
         public uint sourceId;
 
+        public bool IsValid => this.sourceId > 0u;
+
         [INLINE(256)]
         public readonly bool Apply(in Ent ent) {
             var entityConfig = EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);

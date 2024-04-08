@@ -1,0 +1,142 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
+  m_Name: Bullets-BulletsGraph
+  m_EditorClassIdentifier: 
+  id: 40
+  builtInGraph: 1
+  serializedNodes: []
+  nodes:
+  - rid: 8346928838201573445
+  - rid: 8346928838201573446
+  - rid: 8346928838201573451
+  - rid: 8346928838201573453
+  edges:
+  - GUID: 3eebe8cc-ef42-478f-aa73-aa9513670538
+    owner: {fileID: 11400000}
+    inputNodeGUID: 8f7458ea-71e7-432a-91e0-28e061f19696
+    outputNodeGUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: d7f22afa-cfe1-4a79-ad10-2d42be59f574
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 8f7458ea-71e7-432a-91e0-28e061f19696
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 9d47e837-8f7e-4c3a-9cfb-d763b50c0b8c
+    owner: {fileID: 11400000}
+    inputNodeGUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  groups: []
+  stackNodes: []
+  pinnedElements: []
+  exposedParameters: []
+  serializedParameterList: []
+  stickyNotes: []
+  nodeInspectorReference: {fileID: 0}
+  position: {x: -168, y: 260, z: 0}
+  scale: {x: 1, y: 1, z: 1}
+  isInnerGraph: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 8346928838201573445
+      type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: StartNode
+        groupGUID: 
+        computeOrder: 0
+        position:
+          serializedVersion: 2
+          x: 131
+          y: -13
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+    - rid: 8346928838201573446
+      type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: EndNode
+        groupGUID: 
+        computeOrder: 3
+        position:
+          serializedVersion: 2
+          x: 1002
+          y: -13
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+    - rid: 8346928838201573451
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 296
+          y: -13
+          width: 300
+          height: 110.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 8346928897455554629
+    - rid: 8346928838201573453
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 8f7458ea-71e7-432a-91e0-28e061f19696
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 656
+          y: -13
+          width: 300
+          height: 110.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 8346928897455554630
+    - rid: 8346928897455554629
+      type: {class: FlySystem, ns: ME.BECS.Bullets, asm: ME.BECS.Bullets}
+      data: 
+    - rid: 8346928897455554630
+      type: {class: DestroySystem, ns: ME.BECS.Bullets, asm: ME.BECS.Bullets}
+      data: 

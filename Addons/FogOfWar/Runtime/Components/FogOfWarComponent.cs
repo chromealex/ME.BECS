@@ -7,7 +7,8 @@ namespace ME.BECS.FogOfWar {
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarComponent : IComponent {
 
-        public MemArrayAuto<int> nodes;
+        public MemArrayAuto<byte> nodes;
+        public MemArrayAuto<byte> explored;
 
     }
 
@@ -16,8 +17,33 @@ namespace ME.BECS.FogOfWar {
 
         public float2 worldSize;
         public uint2 size;
-        public MemArrayAuto<int> heights;
-        public int maxHeight;
+        public MemArrayAuto<float> heights;
+        public float maxHeight;
+
+    }
+
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct FogOfWarHasShadowCopyComponent : IComponent {}
+
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct FogOfWarShadowCopyRequiredComponent : IComponent {}
+
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct FogOfWarShadowCopyComponent : IComponent {
+
+        public Ent forTeam;
+        public Ent original;
+
+    }
+
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct UnitShadowCopyViewComponent : IComponentStatic, IConfigInitialize {
+
+        public ME.BECS.Views.View view;
+
+        public void OnInitialize(in Ent ent) {
+            ent.Set(new FogOfWarShadowCopyRequiredComponent());
+        }
 
     }
 

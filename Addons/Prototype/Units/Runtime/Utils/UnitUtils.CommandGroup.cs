@@ -3,7 +3,6 @@ using ME.BECS.Transforms;
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
 
     public static partial class UnitUtils {
 
@@ -36,28 +35,32 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static void DestroyCommandGroup(in Ent commandGroup) {
-            
-            if (commandGroup.IsAlive() == true) commandGroup.Destroy();
-            
-        }
-
-        [INLINE(256)]
         public static void DestroyCommandGroup(in UnitCommandGroupAspect commandGroup) {
+
+            var cmd = commandGroup.prevChainTarget;
+            while (cmd.IsAlive() == true) {
+                var next = cmd.GetAspect<UnitCommandGroupAspect>().prevChainTarget;
+                cmd.DestroyHierarchy();
+                cmd = next;
+            }
             
-            if (commandGroup.ent.IsAlive() == true) commandGroup.ent.Destroy();
+            if (commandGroup.ent.IsAlive() == true) commandGroup.ent.DestroyHierarchy();
             
         }
 
         [INLINE(256)]
         public static uint AddToCommandGroup(in UnitCommandGroupAspect commandGroup, in UnitAspect unit) {
 
-            E.THREAD_CHECK("AddToCommandGroup");
+            //E.THREAD_CHECK("AddToCommandGroup");
 
             RemoveFromCommandGroup(in unit);
+            commandGroup.ent.SetTag<IsCommandGroupDirty>(true);
+            commandGroup.Lock();
             unit.unitCommandGroup = commandGroup.ent;
             commandGroup.volume += UnitUtils.GetVolume(in unit);
-            return commandGroup.units.Add(unit.ent) + 1u;
+            var idx = commandGroup.units.Add(unit.ent) + 1u;
+            commandGroup.Unlock();
+            return idx;
 
         }
 
@@ -73,22 +76,79 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static bool RemoveFromCommandGroup(in UnitAspect unit) {
 
-            E.THREAD_CHECK("RemoveFromCommandGroup");
+            //E.THREAD_CHECK("RemoveFromCommandGroup");
 
             if (unit.unitCommandGroup.IsAlive() == true) {
                 var aspect = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
+                aspect.Lock();
                 aspect.units.Remove(unit.ent);
+                aspect.Unlock();
+                JobUtils.Decrement(ref aspect.volume, UnitUtils.GetVolume(in unit));
                 if (aspect.units.Count == 0u) {
-                    // destroy group
-                    aspect.ent.DestroyHierarchy();
+                    // destroy group if it is not a chain group
+                    // and parent groups count is zero
+                    if (aspect.IsPartOfChain == false &&
+                        aspect.IsEmpty == true) {
+                        UnitUtils.DestroyCommandGroup(in aspect);
+                    }
+
                     return true;
-                } else {
-                    JobUtils.Decrement(ref aspect.volume, UnitUtils.GetVolume(in unit));
                 }
                 unit.unitCommandGroup = default;
             }
 
             return false;
+
+        }
+
+        [INLINE(256)]
+        public static bool SetNextTargetIfAvailable(in UnitAspect unit) {
+
+            var commandGroup = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
+            if (commandGroup.nextChainTarget.IsAlive() == true) {
+                
+                // if next command group is created
+                var next = commandGroup.nextChainTarget.GetAspect<UnitCommandGroupAspect>();
+                next.Add(in unit);
+                UnityEngine.Debug.Log("Unit " + unit.ent + " set cmd group: " + commandGroup.ent + " => " + next.ent);
+                return true;
+
+            }
+            
+            UnityEngine.Debug.Log("Unit " + unit.ent + " has no next group");
+
+            return false;
+
+        }
+
+        /// <summary>
+        /// Try to move all units which has no T component from this group to the next one
+        /// </summary>
+        /// <param name="commandGroup"></param>
+        /// <typeparam name="T"></typeparam>
+        [INLINE(256)]
+        public static void SetNextTargetIfAvailableExcept<T>(in UnitCommandGroupAspect commandGroup) where T : unmanaged, IComponent {
+
+            for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
+                var unit = commandGroup.readUnits[i];
+                if (unit.Has<T>() == false) {
+                    SetNextTargetIfAvailable(unit.GetAspect<UnitAspect>());
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Try to move all units from this group to the next one
+        /// </summary>
+        /// <param name="commandGroup"></param>
+        [INLINE(256)]
+        public static void SetNextTargetIfAvailable(in UnitCommandGroupAspect commandGroup) {
+
+            for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
+                var unit = commandGroup.readUnits[i];
+                SetNextTargetIfAvailable(unit.GetAspect<UnitAspect>());
+            }
 
         }
 

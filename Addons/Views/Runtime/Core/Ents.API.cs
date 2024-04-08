@@ -1,7 +1,6 @@
 namespace ME.BECS.Views {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using BECS;
     
     [System.Serializable]
     public struct ViewSource : System.IEquatable<ViewSource> {

@@ -13,9 +13,13 @@ namespace ME.BECS {
         public ComponentsStorage<IConfigInitialize> dataInitialize = new() { isShared = false, components = System.Array.Empty<IConfigInitialize>() };
 
         public void OnValidate() {
+            var list = new System.Collections.Generic.List<IConfigInitialize>();
+            list.AddRange(this.data.components.OfType<IConfigInitialize>());
+            list.AddRange(this.sharedData.components.OfType<IConfigInitialize>());
+            list.AddRange(this.staticData.components.OfType<IConfigInitialize>());
             this.dataInitialize = new ComponentsStorage<IConfigInitialize>() {
                 isShared = false,
-                components = this.data.components.OfType<IConfigInitialize>().ToArray(),
+                components = list.ToArray(),
             };
         }
 

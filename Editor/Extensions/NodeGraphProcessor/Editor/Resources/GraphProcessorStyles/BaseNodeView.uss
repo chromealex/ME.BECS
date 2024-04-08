@@ -300,6 +300,10 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
     -unity-font-style: bold;
 }
 
+#node-border .unity-text-field {
+    min-height: 25px;
+}
+
 .exit-node #node-border {
     background-color: #a61900;
     border-radius: 5px;

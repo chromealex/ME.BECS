@@ -36,6 +36,24 @@ namespace ME.BECS.Units {
     }
     
     [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct IsUnitStaticComponent : IComponent {}
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitQuadSizeComponent : IConfigComponent {
+
+        public uint2 size;
+        public float height;
+
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct TimeToBuildComponent : IConfigComponent {
+
+        public float value;
+
+    }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
     public struct PathFollowComponent : IComponent {}
 
     [ComponentGroup(typeof(UnitComponentGroup))]
@@ -68,10 +86,15 @@ namespace ME.BECS.Units {
 
         public ListAuto<Ent> units;
         public MemArrayAuto<Ent> targets;
+        public Ent nextChainTarget;
+        public Ent prevChainTarget;
         public float volume;
         public LockSpinner lockIndex;
 
     }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct IsCommandGroupDirty : IComponent {}
     
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct DamageTookComponent : IComponent {

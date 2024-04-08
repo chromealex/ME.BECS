@@ -10,6 +10,7 @@ namespace ME.BECS {
         public const ushort ANY = 0;
         public const ushort UPDATE = 1;
         public const ushort FIXED_UPDATE = 2;
+        public const ushort LATE_UPDATE = 3;
 
     }
 

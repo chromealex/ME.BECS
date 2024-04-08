@@ -58,12 +58,8 @@ namespace ME.BECS {
                 var point1 = Point(p1, p2, p3, p4, i);
                 var point2 = Point(p1, p2, p3, p4, j);
                 if (point1.z < position.z && point2.z >= position.z || 
-                    point2.z < position.z && point1.z >= position.z)
-                {
-                    if (point1.x + (position.z - point1.z) /
-                        (point2.z - point1.z) *
-                        (point2.x - point1.x) < position.x)
-                    {
+                    point2.z < position.z && point1.z >= position.z) {
+                    if (point1.x + (position.z - point1.z) / (point2.z - point1.z) * (point2.x - point1.x) < position.x) {
                         result = !result;
                     }
                 }

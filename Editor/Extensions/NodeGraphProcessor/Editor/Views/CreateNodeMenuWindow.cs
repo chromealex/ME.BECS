@@ -172,7 +172,11 @@ namespace ME.BECS.Extensions.GraphProcessor
         }
 
         // Node creation when validate a choice
-        public bool OnSelectEntry(SearchTreeEntry searchTreeEntry, SearchWindowContext context)
+        public bool OnSelectEntry(SearchTreeEntry searchTreeEntry, SearchWindowContext context) {
+            return this.OnSelectEntry(searchTreeEntry, context, null);
+        }
+
+        public bool OnSelectEntry(SearchTreeEntry searchTreeEntry, SearchWindowContext context, System.Action<BaseNode> onView)
         {
             // window to graph position
             var windowRoot = window.rootVisualElement;
@@ -182,8 +186,10 @@ namespace ME.BECS.Extensions.GraphProcessor
             var nodeType = searchTreeEntry.userData is Type ? (Type)searchTreeEntry.userData : ((NodeProvider.PortDescription)searchTreeEntry.userData).nodeType;
             
             graphView.RegisterCompleteObjectUndo("Added " + nodeType);
-            var view = graphView.AddNode(BaseNode.CreateFromType(nodeType, graphMousePosition));
-
+            var node = BaseNode.CreateFromType(nodeType, graphMousePosition);
+            onView?.Invoke(node);
+            var view = graphView.AddNode(node);
+            
             if (searchTreeEntry.userData is NodeProvider.PortDescription desc)
             {
                 var targetPort = view.GetPortViewFromFieldName(desc.portFieldName, desc.portIdentifier);

@@ -6,45 +6,48 @@ namespace ME.BECS.FogOfWar {
 
     public class FogOfWarView : EntityView {
 
-        public Material material;
+        private static readonly int fogTex = Shader.PropertyToID("_FogTex");
+        private static readonly int resolution = Shader.PropertyToID("_HeightResolution");
         
-        protected override void OnInitialize(in EntRO ent) {
+        private static readonly int inverseMvp = Shader.PropertyToID("_InverseMVP");
+        private static readonly int pos = Shader.PropertyToID("_CamPos");
+        private static readonly int @params = Shader.PropertyToID("_Params");
 
+        public Material material;
+        private float2 worldSize;
+        private Vector3 offset;
+
+        protected override void OnInitialize(in EntRO ent) {
+            
             var fowSystem = ent.World.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
             var heightResolution = fowSystem.resolution;
-            this.material.SetTexture("_FogTex", system.GetTexture());
-            this.material.SetFloat("_HeightResolution", heightResolution);
+            this.material.SetTexture(fogTex, system.GetTexture());
+            this.material.SetFloat(resolution, heightResolution);
 
-            var comp = Camera.main.gameObject.AddComponent<CameraFogOfWarTexture>();
-            comp.material = this.material;
-            comp.worldSize = fowSystem.mapSize.x;
-            comp.offset = new Vector3(0f, 0f, 0f);
+            this.worldSize = fowSystem.mapSize;
 
         }
 
-    }
-
-    public class CameraFogOfWarTexture : MonoBehaviour {
-
-        public Material material;
-        public float2 worldSize;
-        public Vector3 offset;
-        private Camera objCamera;
-
-        public void Awake() {
-            this.objCamera = this.GetComponent<Camera>();
-        }
-
-        private void OnRenderImage(RenderTexture src, RenderTexture dest) {
+        protected override void OnUpdate(in EntRO ent, float dt) {
             
-            var inverseMVP = (this.objCamera.projectionMatrix * this.objCamera.worldToCameraMatrix).inverse;
+            var fowSystem = ent.World.GetSystem<CreateSystem>();
+            var system = ent.World.GetSystem<CreateTextureSystem>();
+            var visualWorld = ent.World.GetSystem<UpdateTextureSystem>().GetVisualWorld();
+            this.material.SetTexture(fogTex, system.GetTexture());
 
-            float invScaleX = 1f / this.worldSize.x;
-            float invScaleY = 1f / this.worldSize.y;
-            float x = this.offset.x - this.worldSize.x * 0.5f;
-            float y = this.offset.z - this.worldSize.y * 0.5f;
-            Vector4 camPos = this.objCamera.transform.position;
+            var camera = visualWorld.Camera.GetAspect<CameraAspect>();
+            var proj = (Matrix4x4)camera.projectionMatrix;
+            var cam = (Matrix4x4)camera.worldToCameraMatrix;
+            var inverseMVP = (proj * cam).inverse;
+            //var inverseMVP = math.inverse(math.mul(camera.projectionMatrix, camera.worldToCameraMatrix));
+
+            var invScaleX = 1f / this.worldSize.x;
+            var invScaleY = 1f / this.worldSize.y;
+            var x = this.offset.x - this.worldSize.x * 0.5f;
+            var y = this.offset.z - this.worldSize.y * 0.5f;
+            var camPos3d = camera.ent.GetAspect<ME.BECS.Transforms.TransformAspect>().position;
+            var camPos = new float4(camPos3d.xyz, 0f);
             if (QualitySettings.antiAliasing > 0) {
                 RuntimePlatform pl = Application.platform;
                 if (pl == RuntimePlatform.WindowsEditor ||
@@ -54,12 +57,14 @@ namespace ME.BECS.FogOfWar {
                 }
             }
             
-            Vector4 p = new Vector4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
-            this.material.SetMatrix("_InverseMVP", inverseMVP);
-            this.material.SetVector("_CamPos", camPos);
-            this.material.SetVector("_Params", p);
+            var p = new Vector4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
+            this.material.SetTexture(fogTex, system.GetTexture());
+            var heightResolution = fowSystem.resolution;
+            this.material.SetFloat(resolution, heightResolution);
+            this.material.SetMatrix(inverseMvp, inverseMVP);
+            this.material.SetVector(pos, camPos);
+            this.material.SetVector(@params, p);
             
-            Graphics.Blit(src, dest, this.material);
         }
 
     }

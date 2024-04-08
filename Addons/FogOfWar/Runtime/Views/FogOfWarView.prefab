@@ -51,12 +51,9 @@ MonoBehaviour:
   disableToPoolModules: 
   applyStateModules: 
   updateModules: 
+  cullingType: 1
   groupChangedTracker:
-    groupIds:
-    - ME.BECS.Transforms.TransformComponentGroup, ME.BECS.Transforms, Version=0.0.0.0,
-      Culture=neutral, PublicKeyToken=null
-    - ME.BECS.FogOfWar.FogOfWarComponentGroup, ME.BECS.FogOfWar, Version=0.0.0.0,
-      Culture=neutral, PublicKeyToken=null
+    groupIds: []
   ent:
     ent:
       id: 0

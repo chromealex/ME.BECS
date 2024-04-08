@@ -6,6 +6,7 @@ namespace ME.BECS.Pathfinding {
     public struct RootGraphComponent : IComponent {
 
         public MemArrayAuto<ChunkComponent> chunks;
+        public MemArrayAuto<ulong> changedChunks;
         public uint width => this.properties.chunksCountX;
         public uint height => this.properties.chunksCountY;
         public float3 position => this.properties.position;

@@ -76,6 +76,7 @@ namespace ME.BECS {
                     world.state->components.OnEntityAdd(world.state, newEnt.id);
                     world.state->batches.OnEntityAdd(world.state, newEnt.id);
                     world.state->collectionsRegistry.OnEntityAdd(world.state, newEnt.id);
+                    world.state->autoDestroyRegistry.OnEntityAdd(world.state, newEnt.id);
                     world.state->entities.Unlock(world.state, in newEnt);
                 }
             }

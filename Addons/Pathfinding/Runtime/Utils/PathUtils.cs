@@ -8,14 +8,31 @@ namespace ME.BECS.Pathfinding {
 
         public const float DEFAULT_VOLUME_RADIUS = 2f;
         public const float RADIUS_FACTOR = math.PI;
-        
+
+        [INLINE(256)]
+        public static void AddChainTarget(UnitCommandGroupAspect rootCommandGroup, in UnitCommandGroupAspect unitCommandGroup) {
+
+            while (rootCommandGroup.nextChainTarget.IsAlive() == true) {
+                rootCommandGroup = rootCommandGroup.nextChainTarget.GetAspect<UnitCommandGroupAspect>();
+            }
+
+            rootCommandGroup.nextChainTarget = unitCommandGroup.ent;
+            unitCommandGroup.prevChainTarget = rootCommandGroup.ent;
+            
+        }
+
         [INLINE(256)]
         public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position) {
             
+            unitCommandGroup.ent.Set(new ME.BECS.Transforms.LocalPositionComponent() {
+                value = position,
+            });
+            
+            unitCommandGroup.Lock();
             var typeIds = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<uint>(buildGraphSystem.graphs.Length, Unity.Collections.Allocator.Temp);
             for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
                 var unit = unitCommandGroup.units[i].GetAspect<UnitAspect>();
-                typeIds.Add(unit.typeId);
+                if (unit.isStatic == false) typeIds.Add(unit.typeId);
             }
             
             // clamp position for each graph to find middle point
@@ -84,6 +101,8 @@ namespace ME.BECS.Pathfinding {
                 } else {
 
                     // we need to update last chunk only if last node has been changed
+                    // set path follow flag
+                    unitCommandGroup.Unlock();
                     return;
 
                 }
@@ -110,6 +129,8 @@ namespace ME.BECS.Pathfinding {
                 aspect.IsPathFollow = true;
                 aspect.collideWithEnd = false;
             }
+            
+            unitCommandGroup.Unlock();
 
         }
 
@@ -157,9 +178,14 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static void SetArrived(in UnitAspect unit) {
 
-            ref var target = ref unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>().targets[unit.typeId].Read<TargetComponent>().target.Get<TargetInfoComponent>();
+            var commandGroup = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
+            ref var target = ref commandGroup.targets[unit.typeId].Read<TargetComponent>().target.Get<TargetInfoComponent>();
             JobUtils.Increment(ref target.volume, Units.UnitUtils.GetVolume(in unit));
 
+            if (UnitUtils.SetNextTargetIfAvailable(in unit) == true) {
+                unit.IsPathFollow = true;
+            }
+            
         }
 
         [INLINE(256)]
@@ -196,9 +222,9 @@ namespace ME.BECS.Pathfinding {
                 // group will be removed - remove path
                 PathUtils.DestroyTargets(in group);
             }
+            group.Unlock();
 
             unit.RemoveFromCommandGroup();
-            group.Unlock();
 
         }
 

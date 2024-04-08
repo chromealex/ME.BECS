@@ -39,25 +39,34 @@ namespace ME.BECS.Views {
             }
         }
         
-        public float3 WorldToViewportPoint(float3 worldPosition) {
+        public float4x4 projectionMatrix {
+            [INLINE(256)]
+            get {
+                float4x4 projection;
+                if (this.readComponent.orthographic == true) {
+                    projection = float4x4.Ortho(this.readComponent.orthographicSize * this.readComponent.aspect, this.readComponent.orthographicSize, this.readComponent.nearClipPlane, this.readComponent.farClipPlane);
+                } else {
+                    projection = float4x4.PerspectiveFov(this.readComponent.fieldOfViewVertical, this.readComponent.aspect, this.readComponent.nearClipPlane,
+                                                         this.readComponent.farClipPlane);
+                }
 
-            float4x4 projection;
-            if (this.readComponent.orthographic == true) {
-                projection = float4x4.Ortho(this.readComponent.orthographicSize * this.readComponent.aspect, this.readComponent.orthographicSize, this.readComponent.nearClipPlane, this.readComponent.farClipPlane);
-            } else {
-                projection = float4x4.PerspectiveFov(this.readComponent.fieldOfViewVertical, this.readComponent.aspect, this.readComponent.nearClipPlane,
-                                                     this.readComponent.farClipPlane);
+                return projection;
             }
+        }
+
+        [INLINE(256)]
+        public float3 WorldToViewportPoint(float3 worldPosition) {
 
             var worldMatrix = this.worldToCameraMatrix;
             var viewPos = math.mul(worldMatrix, new float4(worldPosition.xyz, 1f));
-            var projPos = math.mul(projection, viewPos);
+            var projPos = math.mul(this.projectionMatrix, viewPos);
             var ndcPos = new float3(projPos.x / projPos.w, projPos.y / projPos.w, projPos.z / projPos.w);
             var viewportPos = new float3(ndcPos.x * 0.5f + 0.5f, ndcPos.y * 0.5f + 0.5f, -viewPos.z);
             return viewportPos;
 
         }
 
+        [INLINE(256)]
         public float3 WorldToScreenPoint(float3 worldPosition) {
 
             var viewport = this.WorldToViewportPoint(worldPosition);

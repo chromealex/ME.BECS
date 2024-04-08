@@ -12,7 +12,7 @@ namespace ME.BECS {
 
     [System.SerializableAttribute]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListProxy<>))]
-    public unsafe struct ListAuto<T> : IIsCreated where T : unmanaged {
+    public unsafe struct ListAuto<T> : IIsCreated, IUnmanagedList where T : unmanaged {
 
         public struct Enumerator {
             
@@ -37,6 +37,14 @@ namespace ME.BECS {
 
         public readonly Ent ent => this.arr.ent;
 
+        object[] IUnmanagedList.ToManagedArray() {
+            var arr = new object[this.Count];
+            for (uint i = 0u; i < this.Count; ++i) {
+                arr[i] = this[i];
+            }
+            return arr;
+        }
+        
         public readonly bool isCreated {
             [INLINE(256)]
             get => this.arr.isCreated;
@@ -381,6 +389,21 @@ namespace ME.BECS {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = sizeof(T);
                 _memcpy((byte*)collection.GetUnsafeReadOnlyPtr() + offset * TSize<T>.sizeInt, (byte*)this.arr.GetUnsafePtr(in this.ent.World.state->allocator) + index * size, count * size);
+                this.Count += count;
+            }
+        }
+
+        [INLINE(256)]
+        public void AddRange(in UnsafeList<T> collection, int offset, int collectionLength) {
+
+            E.IS_CREATED(this);
+            
+            var index = this.Count;
+            var count = (uint)collectionLength;
+            if (count > 0u) {
+                this.EnsureCapacity(this.ent, this.Count + count);
+                var size = sizeof(T);
+                _memcpy((byte*)collection.Ptr + offset * TSize<T>.sizeInt, (byte*)this.arr.GetUnsafePtr(in this.ent.World.state->allocator) + index * size, count * size);
                 this.Count += count;
             }
         }

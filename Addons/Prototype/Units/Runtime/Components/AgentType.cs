@@ -1,4 +1,6 @@
 namespace ME.BECS.Units {
+    
+    using Unity.Mathematics;
 
     [System.Serializable]
     public struct AgentType {

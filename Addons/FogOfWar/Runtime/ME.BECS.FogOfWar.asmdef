@@ -10,7 +10,11 @@
         "Unity.Mathematics",
         "ME.BECS.Pathfinding",
         "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.Views"
+        "ME.BECS.Views",
+        "ME.BECS.Effects",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "ME.BECS.WorldHelper"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

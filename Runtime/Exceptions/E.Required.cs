@@ -34,7 +34,7 @@ namespace ME.BECS {
             RequiredComponentException.Throw<T>(in ent);
             
         }
-   
+
     }
 
 }

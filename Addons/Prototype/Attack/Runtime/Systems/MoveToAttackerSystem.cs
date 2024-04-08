@@ -26,15 +26,10 @@ namespace ME.BECS.Attack {
                 if (attacker.IsAlive() == false) return;
                 
                 // move to attacker
-                // remove from current group
-                PathUtils.RemoveUnitFromGroup(in unit);
-                // create new group
-                var group = UnitUtils.CreateCommandGroup(this.buildGraphSystem.GetTargetsCapacity());
-                group.Add(in unit);
-
                 if (AttackUtils.GetPositionToAttack(in unit, in attacker, out var worldPos) == true) {
-                    // move unit to target
-                    PathUtils.UpdateTarget(this.buildGraphSystem, in group, worldPos);
+                    ME.BECS.Commands.CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
+                        targetPosition = worldPos,
+                    });
                 }
 
             }
@@ -44,6 +39,7 @@ namespace ME.BECS.Attack {
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query()
+                                   .Without<IsUnitStaticComponent>()
                                    .Without<PathFollowComponent>()
                                    .With<DamageTookComponent>()
                                    .Without<AttackTargetComponent>()

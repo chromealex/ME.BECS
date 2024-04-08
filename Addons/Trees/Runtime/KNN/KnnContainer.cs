@@ -38,6 +38,7 @@ namespace KNN {
 		public struct Node : IComparable<Node> {
 
 			public float3 position;
+			public float radiusSqr;
 			public T data;
 
 			public int CompareTo(Node other) {
@@ -86,13 +87,14 @@ namespace KNN {
 				return temp;
 			}
 
-			public void PushQueryNode(int index, float3 closestPoint, float3 queryPosition) {
+			public void PushQueryNode(int index, float3 closestPoint, float3 queryPosition, float radiusSqr) {
 				float lengthsq = math.lengthsq(closestPoint - queryPosition);
 
 				this.MinHeap.PushObjMin(new QueryNode {
 					NodeIndex = index,
 					TempClosestPoint = closestPoint,
-					Distance = lengthsq
+					Distance = lengthsq,
+					RadiusSqr = radiusSqr,
 				}, lengthsq);
 			}
 
@@ -127,9 +129,9 @@ namespace KNN {
 		}
 
 		[System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-		public void AddPoint(float3 point, in T data) {
+		public void AddPoint(float3 point, in T data, float radius) {
 			//Points.Add(point);
-			this.PointsHashWriter.Add(new Node() { position = point, data = data });
+			this.PointsHashWriter.Add(new Node() { position = point, data = data, radiusSqr = radius * radius });
 		}
 
 		public KnnContainer<T> Initialize(int capacity, Allocator allocator) {
@@ -505,12 +507,12 @@ namespace KNN {
 			float bssr = radius * radius;
 			float3 rootClosestPoint = this.RootNode.Bounds.ClosestPoint(queryPosition);
 			
-			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition);
+			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition, 0f);
 			
 			while (temp.MinHeap.Count > 0) {
 				QueryNode queryNode = temp.MinHeap.PopObjMin();
 
-				if (queryNode.Distance > bssr) {
+				if (queryNode.Distance > bssr + queryNode.RadiusSqr) {
 					continue;
 				}
 
@@ -525,32 +527,32 @@ namespace KNN {
 						// we already know we are on the side of negative bound/node,
 						// so we don't need to test for distance
 						// push to stack for later querying
-						temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
+						temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
 						if (node.Count != 0) {
-							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
+							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 						}
 					}
 					else {
 						// we already know we are on the side of positive bound/node,
 						// so we don't need to test for distance
 						// push to stack for later querying
-						temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
+						temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
 						if (node.Count != 0) {
-							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
+							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 						}
 					}
 				} else {
 					for (int i = node.Start; i < node.End; i++) {
 						int index = this.m_permutation[i];
-						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition);
+						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
 
 						if (sqrDist <= bssr) {
 							// Unlike the k-query we want to keep _all_ objects in range
@@ -585,12 +587,12 @@ namespace KNN {
 			//UnityEngine.Debug.Assert(this.m_rootNodeIndex.IsCreated);
 			float3 rootClosestPoint = this.RootNode.Bounds.ClosestPoint(queryPosition);
 			
-			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition);
+			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition, 0f);
 			
 			while (temp.MinHeap.Count > 0) {
 				QueryNode queryNode = temp.MinHeap.PopObjMin();
 
-				if (queryNode.Distance > bssr) {
+				if (queryNode.Distance > bssr + queryNode.RadiusSqr) {
 					continue;
 				}
 
@@ -605,32 +607,32 @@ namespace KNN {
 						// we already know we are on the side of negative bound/node,
 						// so we don't need to test for distance
 						// push to stack for later querying
-						temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
+						temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
 						if (node.Count != 0) {
-							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
+							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 						}
 					}
 					else {
 						// we already know we are on the side of positive bound/node,
 						// so we don't need to test for distance
 						// push to stack for later querying
-						temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
+						temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
 						if (node.Count != 0) {
-							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
+							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 						}
 					}
 				} else {
 					for (int i = node.Start; i < node.End; i++) {
 						int index = this.m_permutation[i];
-						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition);
+						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
 
 						if (sqrDist <= bssr) {
 							// Unlike the k-query we want to keep _all_ objects in range
@@ -667,12 +669,12 @@ namespace KNN {
 			float bssr = range * range;
 			float3 rootClosestPoint = this.RootNode.Bounds.ClosestPoint(queryPosition);
 			
-			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition);
+			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition, 0f);
 			
 			while (temp.MinHeap.Count > 0) {
 				QueryNode queryNode = temp.MinHeap.PopObjMin();
 
-				if (queryNode.Distance > bssr) {
+				if (queryNode.Distance > bssr + queryNode.RadiusSqr) {
 					continue;
 				}
 
@@ -687,31 +689,31 @@ namespace KNN {
 						// we already know we are on the side of negative bound/node,
 						// so we don't need to test for distance
 						// push to stack for later querying
-						temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
+						temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
 						if (node.Count != 0) {
-							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
+							temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 						}
 					} else {
 						// we already know we are on the side of positive bound/node,
 						// so we don't need to test for distance
 						// push to stack for later querying
-						temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition);
+						temp.PushQueryNode(node.PositiveChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 
 						// project the tempClosestPoint to other bound
 						tempClosestPoint[partitionAxis] = partitionCoord;
 
 						if (node.Count != 0) {
-							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition);
+							temp.PushQueryNode(node.NegativeChildIndex, tempClosestPoint, queryPosition, queryNode.RadiusSqr);
 						}
 					}
 				} else {
 					for (int i = node.Start; i < node.End; i++) {
 						int index = this.m_permutation[i];
-						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition);
+						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
 
 						if (sqrDist <= bssr) {
 							temp.MaxHeap.PushObjMax(index, sqrDist);

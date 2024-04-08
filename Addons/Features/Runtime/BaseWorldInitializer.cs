@@ -98,7 +98,7 @@ namespace ME.BECS {
             this.previousFrameDependsOn = dependsOn;
             if (this.world.isCreated == true) {
                 this.previousFrameDependsOn = this.world.Tick(Time.deltaTime, updateType, this.previousFrameDependsOn);
-                if (updateType == UpdateType.UPDATE) {
+                if (updateType == UpdateType.LATE_UPDATE) {
                     
                     // Update modules
                     this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);

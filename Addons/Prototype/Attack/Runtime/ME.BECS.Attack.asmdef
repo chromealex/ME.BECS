@@ -15,7 +15,8 @@
         "ME.BECS.Views",
         "ME.BECS.Pathfinding",
         "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.FogOfWar"
+        "ME.BECS.FogOfWar",
+        "ME.BECS.Commands"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

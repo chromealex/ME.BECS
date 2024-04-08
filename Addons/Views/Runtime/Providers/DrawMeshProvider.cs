@@ -347,6 +347,7 @@ namespace ME.BECS.Views {
                 };
                 viewsModuleData->instanceIdToPrefabId.Add(ref viewsModuleData->viewsWorld.state->allocator, id, prefabId);
                 ViewsTypeInfo.types.TryGetValue(prefab.GetType(), out var typeInfo);
+                typeInfo.cullingType = prefab.cullingType;
                 var info = new SourceRegistry.Info() {
                     prefabPtr = (System.IntPtr)ProvidersHelper.ConstructEntFromPrefab(prefab.transform, Ent.Null, in viewsModuleData->viewsWorld).id,
                     prefabId = prefabId,

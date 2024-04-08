@@ -5,14 +5,16 @@ namespace ME.BECS.Pathfinding {
     public class GraphMaskSceneEntity : SceneEntity {
 
         public byte cost;
+        public ObstacleChannel obstacleChannel;
         public float height;
+        public bool ignoreGraphRadius;
 
         protected override void OnCreate(in Ent ent) {
 
             var bounds = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh.bounds;
-            var size = bounds.size;
+            var size = new uint2((uint)(bounds.size.x + 0.5f), (uint)(bounds.size.z + 0.5f));
 
-            GraphUtils.CreateGraphMask(in ent, this.transform.position, this.transform.rotation, new float2(size.x, size.z), this.cost, this.height);
+            GraphUtils.CreateGraphMask(in ent, this.transform.position, this.transform.rotation, size, this.cost, this.height, this.obstacleChannel, this.ignoreGraphRadius);
 
         }
 

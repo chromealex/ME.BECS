@@ -128,6 +128,14 @@ namespace ME.BECS {
 
     }
 
+    public unsafe struct ConfigInitializeTypes<T> where T : unmanaged, IConfigInitialize {
+
+        public static void AOT() {
+            UnsafeEntityConfig.DataInitialize.MethodCaller<T>.CallNoBurst(null, default);
+        }
+
+    }
+
     public struct StaticTypesDefaultValue<T> where T : unmanaged, IComponent {
 
         public static readonly Unity.Burst.SharedStatic<T> value = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypesDefaultValue<T>>();
@@ -146,6 +154,25 @@ namespace ME.BECS {
 
     }
 
+    public struct StaticTypesDestroyRegistry {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>> registry = Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>>.GetOrCreate<StaticTypesDestroyRegistry>();
+
+    }
+    
+    public struct StaticTypesDestroy<T> where T : unmanaged, IComponentDestroy {
+
+        [INLINE(256)]
+        public static unsafe void RegisterAutoDestroy(bool isTag) {
+
+            var typeId = StaticTypes<T>.typeId;
+            StaticTypesDestroyRegistry.registry.Data.Resize(typeId + 1);
+            StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer<AutoDestroyRegistry.DestroyDelegate>(AutoDestroyRegistryStatic<T>.Destroy).Value;
+
+        }
+
+    }
+    
     public struct StaticTypes<T> where T : unmanaged, IComponent {
 
         private static readonly T defaultZero = default;

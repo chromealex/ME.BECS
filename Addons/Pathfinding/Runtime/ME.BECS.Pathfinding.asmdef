@@ -13,7 +13,8 @@
         "ME.BECS.Views",
         "ME.BECS.Trees",
         "ME.BECS.SceneEntityView",
-        "ME.BECS.ObjectReference.Runtime"
+        "ME.BECS.ObjectReference.Runtime",
+        "ME.BECS.WorldHelper"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

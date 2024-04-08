@@ -16,6 +16,8 @@ namespace ME.BECS.NativeCollections {
         [NativeDisableUnsafePtrRestriction]
         public Unity.Collections.LowLevel.Unsafe.UnsafeList<T>* lists;
         private AllocatorManager.AllocatorHandle allocator;
+
+        public bool isCreated => this.lists != null;
         
         public readonly uint Length => JobUtils.ThreadsCount;
 

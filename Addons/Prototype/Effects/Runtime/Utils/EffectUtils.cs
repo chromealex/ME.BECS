@@ -17,7 +17,6 @@ namespace ME.BECS.Effects {
 
             var ent = Ent.New();
             effect.config.Apply(ent);
-            ent.InstantiateView(effect.view);
             var tr = ent.GetOrCreateAspect<TransformAspect>();
             tr.position = position;
             tr.rotation = rotation;

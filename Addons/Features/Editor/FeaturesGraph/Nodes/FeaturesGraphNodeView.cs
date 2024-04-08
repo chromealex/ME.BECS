@@ -63,7 +63,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 foreach (var dep in dependenciesAttributes) {
                     foreach (var depType in dep.types) {
                         var i = 0;
-                        if (this.IsTypeContainsInGraph(ref i, depType, root.graph) == false) {
+                        if (this.nodeTarget.graph.isInnerGraph == true || root.graph == null || this.IsTypeContainsInGraph(ref i, depType, root.graph) == false) {
                             results.Add(depType);
                         }
                     }
@@ -95,6 +95,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 requiredContainer.Add(label);
                 requiredContainer.AddToClassList("required-dependencies");
                 this.container.Add(requiredContainer);
+                var hasWarning = false;
                 var hasFailed = false;
                 foreach (var uniqueType in types) {
                     var typeStr = EditorUtils.GetComponentName(uniqueType);
@@ -102,10 +103,23 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     var depContainer = new UnityEngine.UIElements.VisualElement();
                     depContainer.AddToClassList("required-dependencies-container");
                     iter = 0;
+                    var localState = 0;
                     if (this.HasDependency(ref iter, this.nodeTarget, uniqueType) == true) {
                         depContainer.AddToClassList("node-required-dependency-checked");
+                        localState = 0;
                     } else {
-                        hasFailed = true;
+                        var i = 0;
+                        if (isInnerGraph == false || this.IsTypeContainsInGraph(ref i, uniqueType, this.nodeTarget.graph) == true) {
+                            depContainer.AddToClassList("node-required-dependency-failed");
+                            depContainer.tooltip = "Dependency required by this system because it is contained in current graph or this graph is root!";
+                            localState = 1;
+                            hasFailed = true;
+                        } else {
+                            depContainer.AddToClassList("node-required-dependency-warning");
+                            depContainer.tooltip = "Dependency required by this system, so this graph must be connected at the upper level to required system!";
+                            localState = 2;
+                            hasWarning = true;
+                        }
                     }
                     requiredContainer.Add(depContainer);
 
@@ -117,11 +131,11 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                         lbl.AddToClassList("node-required-dependency-true");
                         checkbox.Add(lbl);
                     }
-                    if (isInnerGraph == true) {
+                    if (localState == 2) {
                         var lbl = new UnityEngine.UIElements.Label("\u26A0");
                         lbl.AddToClassList("node-required-dependency-warning");
                         checkbox.Add(lbl);
-                    } else {
+                    } else if (localState == 1) {
                         var lbl = new UnityEngine.UIElements.Label("✕");
                         lbl.AddToClassList("node-required-dependency-false");
                         checkbox.Add(lbl);
@@ -144,8 +158,8 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     }
                 }
 
-                if (hasFailed == true) {
-                    if (isInnerGraph == true) {
+                if (hasFailed == true || hasWarning == true) {
+                    if (hasFailed == false) {
                         requiredContainer.AddToClassList("dependencies-warning");
                     } else {
                         requiredContainer.AddToClassList("dependencies-failed");

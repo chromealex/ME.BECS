@@ -45,6 +45,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 		public int id;
 		public bool builtInGraph;
+		public bool isInnerGraph;
 		public int GetId() {
 			return this.id;
 		}

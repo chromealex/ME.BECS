@@ -1,0 +1,24 @@
+{
+    "name": "ME.BECS.Commands",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Units",
+        "ME.BECS.Pathfinding",
+        "ME.BECS.Transforms",
+        "ME.BECS.Players",
+        "Unity.Collections",
+        "Unity.Mathematics",
+        "Unity.Burst",
+        "ME.BECS.ObjectReference.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

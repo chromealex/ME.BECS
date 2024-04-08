@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: 21
   builtInGraph: 1
+  isInnerGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928923441103769
@@ -45,7 +46,6 @@ MonoBehaviour:
   nodeInspectorReference: {fileID: 0}
   position: {x: 303.5, y: 406.5, z: 0}
   scale: {x: 1, y: 1, z: 1}
-  isInnerGraph: 1
   references:
     version: 2
     RefIds:
@@ -67,6 +67,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928923441103770
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -85,6 +86,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928923441103775
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -109,4 +111,4 @@ MonoBehaviour:
       type: {class: UpdateTextureSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
       data:
         fadeInSpeed: 8
-        fadeOutSpeed: 3
+        fadeOutSpeed: 0.5

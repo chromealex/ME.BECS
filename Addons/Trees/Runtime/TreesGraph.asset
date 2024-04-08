@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: 60
   builtInGraph: 1
+  isInnerGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928920201003090
@@ -54,7 +55,6 @@ MonoBehaviour:
   nodeInspectorReference: {fileID: 0}
   position: {x: -21, y: 186, z: 0}
   scale: {x: 1, y: 1, z: 1}
-  isInnerGraph: 1
   references:
     version: 2
     RefIds:
@@ -80,7 +80,15 @@ MonoBehaviour:
           rid: 8346928920201003091
     - rid: 8346928920201003091
       type: {class: QuadTreeInsertSystem, ns: ME.BECS, asm: ME.BECS.Trees}
-      data: 
+      data:
+        mapPosition:
+          x: 0
+          y: 0
+          z: 0
+        mapSize:
+          x: 500
+          y: 100
+          z: 500
     - rid: 8346928920201003092
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -122,6 +130,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928920201003095
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -140,3 +149,4 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0

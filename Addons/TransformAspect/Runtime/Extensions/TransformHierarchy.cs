@@ -3,7 +3,39 @@ namespace ME.BECS.Transforms {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
     public static class TransformHierarchy {
+        
+        /// <summary>
+        /// Include (true) or exclude (false) entity from any filters with hierarchy.
+        /// By default all entities are included.
+        /// </summary>
+        /// <param name="ent">Entity</param>
+        /// <param name="state">State</param>
+        [INLINE(256)]
+        public static void SetActiveHierarchy(this Ent ent, bool state) {
+            
+            ent.SetActive(state);
+            if (ent.Has<ChildrenComponent>() == true) {
 
+                var queue = new Unity.Collections.UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
+                queue.Enqueue(ent);
+                while (queue.Count > 0) {
+                    var child = queue.Dequeue();
+                    var nodes = child.Read<ChildrenComponent>();
+                    for (uint i = 0u; i < nodes.list.Count; ++i) {
+                        var node = nodes.list[i];
+                        queue.Enqueue(node);
+                    }
+                    child.SetActive(state);
+                }
+
+            }
+            
+        }
+
+        /// <summary>
+        /// Destroy entity with all children entities
+        /// </summary>
+        /// <param name="entity"></param>
         [INLINE(256)]
         public static void DestroyHierarchy(this in Ent entity) {
 

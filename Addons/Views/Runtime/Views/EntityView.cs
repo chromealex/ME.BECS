@@ -34,6 +34,13 @@ namespace ME.BECS.Views {
     public interface IViewUpdate : IViewModule {
         void OnUpdate(in EntRO ent, float dt);
     }
+
+    public enum CullingType {
+
+        Frustum = 0,
+        Never = 1,
+
+    }
     
     public abstract class EntityView : MonoBehaviour, IView {
 
@@ -55,6 +62,7 @@ namespace ME.BECS.Views {
         [SerializeField]
         internal int[] updateModules;
 
+        public CullingType cullingType;
         public GroupChangedTracker groupChangedTracker;
         public ViewRoot rootInfo;
         public EntRO ent;

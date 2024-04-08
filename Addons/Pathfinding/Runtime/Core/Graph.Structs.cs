@@ -35,6 +35,14 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    public enum ObstacleChannel : uint {
+
+        Obstacle = 0u,
+        Building = 1u,
+        Slope = 2u,
+
+    }
+
     [System.Serializable]
     public struct GraphProperties {
             
@@ -192,11 +200,13 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    [System.Serializable]
     public struct Node {
 
         public bool walkable => this.cost < Graph.UNWALKABLE;
         public uint flags;
-        public byte cost;
+        public int cost;
+        public ObstacleChannel obstacleChannel;
         public float height;
         public float3 normal;
 

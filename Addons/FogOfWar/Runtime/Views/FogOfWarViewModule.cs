@@ -15,16 +15,17 @@ namespace ME.BECS.FogOfWar {
         public void OnInitialize(in EntRO ent) {
             
             this.fow = ent.World.GetSystem<CreateSystem>();
+            this.UpdateVisibility(in ent, true);
             
         }
 
-        public void UpdateVisibility(in EntRO ent) {
+        public void UpdateVisibility(in EntRO ent, bool forced) {
             var activePlayer = PlayerUtils.GetActivePlayer();
-            this.ApplyVisibility(this.fow.IsVisible(in activePlayer, ent.GetEntity()));
+            this.ApplyVisibility(this.fow.IsVisible(in activePlayer, ent.GetEntity()), forced);
         }
 
-        private void ApplyVisibility(bool state) {
-            if (state != this.isVisible) {
+        private void ApplyVisibility(bool state, bool forced = false) {
+            if (state != this.isVisible || forced == true) {
                 this.isVisible = state;
                 foreach (var rnd in this.allRenderers) {
                     rnd.enabled = state;
@@ -34,7 +35,7 @@ namespace ME.BECS.FogOfWar {
 
         public void ApplyState(in EntRO ent) {
             
-            this.UpdateVisibility(in ent);
+            this.UpdateVisibility(in ent, false);
             
         }
 

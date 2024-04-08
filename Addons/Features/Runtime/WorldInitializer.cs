@@ -9,6 +9,7 @@ namespace ME.BECS {
 
         public FeaturesGraph.SystemsGraph featuresGraph;
         public FeaturesGraph.SystemsGraph featuresGraphFixedUpdate;
+        public FeaturesGraph.SystemsGraph featuresGraphLateUpdate;
 
         protected override void Awake() {
             
@@ -22,6 +23,7 @@ namespace ME.BECS {
             var group = SystemGroup.Create(UpdateType.ANY);
             if (this.featuresGraph != null) group.Add(this.featuresGraph.DoAwake(ref this.world, UpdateType.UPDATE));
             if (this.featuresGraphFixedUpdate != null) group.Add(this.featuresGraphFixedUpdate.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
+            if (this.featuresGraphLateUpdate != null) group.Add(this.featuresGraphLateUpdate.DoAwake(ref this.world, UpdateType.LATE_UPDATE));
             this.world.AssignRootSystemGroup(group);
 
         }
@@ -38,6 +40,15 @@ namespace ME.BECS {
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
             
+        }
+
+        protected override void LateUpdate() {
+
+            this.previousFrameDependsOn.Complete();
+            this.previousFrameDependsOn = this.DoUpdate(UpdateType.LATE_UPDATE, this.previousFrameDependsOn);
+
+            base.LateUpdate();
+
         }
 
     }

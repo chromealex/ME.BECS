@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: 20
   builtInGraph: 1
+  isInnerGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928923441103769
@@ -22,6 +23,8 @@ MonoBehaviour:
   - rid: 8346928923441103773
   - rid: 8346928923441103775
   - rid: 8346928929818279973
+  - rid: 4603152931227959628
+  - rid: 4603152931227959632
   edges:
   - GUID: cc443ea1-4949-4089-bc0c-49d408637331
     owner: {fileID: 11400000}
@@ -79,6 +82,38 @@ MonoBehaviour:
     outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
+  - GUID: accde35c-b5a8-401c-b5cb-3345e83bc00d
+    owner: {fileID: 11400000}
+    inputNodeGUID: 0acb11e2-895d-45c3-9313-3d458bbb5f14
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 70c74f5e-5f04-4bf3-9656-f332fcd99482
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 21298705-10b9-4936-9a88-7bbe57006d1e
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: c3c88957-d5e7-4bb6-b62b-cea46d36287d
+    owner: {fileID: 11400000}
+    inputNodeGUID: 21298705-10b9-4936-9a88-7bbe57006d1e
+    outputNodeGUID: 0acb11e2-895d-45c3-9313-3d458bbb5f14
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 40ce2831-809e-41db-b406-edec031baeab
+    owner: {fileID: 11400000}
+    inputNodeGUID: 21298705-10b9-4936-9a88-7bbe57006d1e
+    outputNodeGUID: f322d675-e5e1-4dfc-839e-1f71fac83c18
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
   groups: []
   stackNodes: []
   pinnedElements: []
@@ -86,12 +121,57 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 267, y: 476, z: 0}
+  position: {x: 204.5, y: 744, z: 0}
   scale: {x: 1, y: 1, z: 1}
-  isInnerGraph: 1
   references:
     version: 2
     RefIds:
+    - rid: 4603152931227959628
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 0acb11e2-895d-45c3-9313-3d458bbb5f14
+        groupGUID: 
+        computeOrder: 5
+        position:
+          serializedVersion: 2
+          x: 174
+          y: -537
+          width: 300
+          height: 193
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 4603152931227959629
+    - rid: 4603152931227959629
+      type: {class: ShadowCopySystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
+      data: 
+    - rid: 4603152931227959632
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 21298705-10b9-4936-9a88-7bbe57006d1e
+        groupGUID: 
+        computeOrder: 6
+        position:
+          serializedVersion: 2
+          x: 917
+          y: -537
+          width: 300
+          height: 189
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 4603152931227959633
+    - rid: 4603152931227959633
+      type: {class: ShadowCopyUpdateSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
+      data: 
     - rid: 8346928923441103769
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -110,17 +190,18 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928923441103770
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
-        computeOrder: 5
+        computeOrder: 7
         position:
           serializedVersion: 2
-          x: 978.0801
-          y: -6
+          x: 1338
+          y: -7
           width: 100
           height: 79.5
         expanded: 1
@@ -128,6 +209,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928923441103771
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -165,9 +247,9 @@ MonoBehaviour:
         position:
           serializedVersion: 2
           x: 547
-          y: -194.67987
+          y: -355
           width: 300
-          height: 106.5
+          height: 193
         expanded: 1
         enabled: 1
         debug: 0
@@ -212,9 +294,9 @@ MonoBehaviour:
         position:
           serializedVersion: 2
           x: 547
-          y: -52
+          y: -122.75
           width: 300
-          height: 149
+          height: 231.5
         expanded: 1
         enabled: 1
         debug: 0

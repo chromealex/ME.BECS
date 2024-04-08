@@ -8,10 +8,7 @@ namespace ME.BECS.Pathfinding {
         public MemArray<Node> nodes;
         public ChunkCache cache;
         public ChunkPortals portals;
-        public Ent obstaclesQuery;
 
     }
-
-    public struct ChunkObstacleQuery : IComponent { }
 
 }

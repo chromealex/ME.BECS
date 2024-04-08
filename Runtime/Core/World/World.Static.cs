@@ -205,7 +205,7 @@ namespace ME.BECS {
         internal static ref Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator> allocatorPersistent => ref allocatorPersistentBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorPersistentValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10007);
-        internal static bool allocatorPersistentValid => allocatorPersistentValidBurst.Data.Value;
+        internal static bool allocatorPersistentValid => allocatorPersistentValidBurst.Data.IsCreated == true && allocatorPersistentValidBurst.Data.Value;
 
         public static Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator> Initialize() {
 

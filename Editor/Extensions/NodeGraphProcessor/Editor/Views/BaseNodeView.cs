@@ -310,13 +310,15 @@ namespace ME.BECS.Extensions.GraphProcessor
 				titleTextField.SetValueWithoutNotify(title);
 				titleTextField.Focus();
 				titleTextField.SelectAll();
+				titleTextField.userData = EditorApplication.timeSinceStartup;
 			}
 
-			void CloseAndSaveTitleEditor(string newTitle)
-			{
+			void CloseAndSaveTitleEditor(string newTitle) {
+				if (titleTextField.userData != null && EditorApplication.timeSinceStartup <= (double)titleTextField.userData + 1) return;
 				owner.RegisterCompleteObjectUndo("Renamed node " + newTitle);
 				nodeTarget.SetCustomName(newTitle);
-
+				
+				titleTextField.userData = null;
 				// hide title TextBox
 				titleTextField.style.display = DisplayStyle.None;
 				titleLabel.style.display = DisplayStyle.Flex;

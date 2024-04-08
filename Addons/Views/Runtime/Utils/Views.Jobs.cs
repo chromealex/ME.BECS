@@ -366,11 +366,15 @@ namespace ME.BECS.Views {
             public void Execute(int index) {
 
                 var entId = this.viewsModuleData->renderingOnSceneApplyState.sparseSet.dense[in this.state->allocator, (uint)index];
-                var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
-                var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
-                var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
-                var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                this.viewsModuleData->renderingOnSceneApplyStateCulling[in this.state->allocator, entId] = isVisible == false;
+                var prefabId = this.viewsModuleData->renderingOnSceneEntToPrefabId[in this.state->allocator, entId];
+                var cullingType = this.viewsModuleData->prefabIdToInfo[in this.state->allocator, prefabId].info->typeInfo.cullingType;
+                if (cullingType == CullingType.Frustum) {
+                    var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
+                    var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
+                    var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
+                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
+                    this.viewsModuleData->renderingOnSceneApplyStateCulling[in this.state->allocator, entId] = isVisible == false;
+                }
 
             }
 
@@ -387,11 +391,15 @@ namespace ME.BECS.Views {
             public void Execute(int index) {
 
                 var entId = this.viewsModuleData->renderingOnSceneUpdate.sparseSet.dense[in this.state->allocator, (uint)index];
-                var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
-                var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
-                var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
-                var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                this.viewsModuleData->renderingOnSceneUpdateCulling[in this.state->allocator, entId] = isVisible == false;
+                var prefabId = this.viewsModuleData->renderingOnSceneEntToPrefabId[in this.state->allocator, entId];
+                var cullingType = this.viewsModuleData->prefabIdToInfo[in this.state->allocator, prefabId].info->typeInfo.cullingType;
+                if (cullingType == CullingType.Frustum) {
+                    var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
+                    var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
+                    var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
+                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
+                    this.viewsModuleData->renderingOnSceneUpdateCulling[in this.state->allocator, entId] = isVisible == false;
+                }
 
             }
 

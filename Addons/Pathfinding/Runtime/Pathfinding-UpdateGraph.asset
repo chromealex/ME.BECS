@@ -1,0 +1,150 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
+  m_Name: Pathfinding-UpdateGraph
+  m_EditorClassIdentifier: 
+  id: 11
+  builtInGraph: 1
+  isInnerGraph: 1
+  serializedNodes: []
+  nodes:
+  - rid: 8346928920201003110
+  - rid: 8346928920201003111
+  - rid: 8346928920201003112
+  - rid: 8346928920201003114
+  edges:
+  - GUID: eebb4dbc-6bcd-403f-ac80-4dd147b08814
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 3afde76d-2cd9-4fc0-9833-024bcb6d5b37
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 83528d35-4636-47b9-8e1f-b76f52d0ddf0
+    owner: {fileID: 11400000}
+    inputNodeGUID: 8676df3e-3ddb-4a3b-a006-4ab38b94f254
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 53ad5c21-47f0-4ffd-858b-76584f2172c1
+    owner: {fileID: 11400000}
+    inputNodeGUID: 3afde76d-2cd9-4fc0-9833-024bcb6d5b37
+    outputNodeGUID: 8676df3e-3ddb-4a3b-a006-4ab38b94f254
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  groups: []
+  stackNodes: []
+  pinnedElements: []
+  exposedParameters: []
+  serializedParameterList: []
+  stickyNotes: []
+  nodeInspectorReference: {fileID: 0}
+  position: {x: 63, y: 318.5, z: 0}
+  scale: {x: 1, y: 1, z: 1}
+  references:
+    version: 2
+    RefIds:
+    - rid: 8346928920201003110
+      type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: StartNode
+        groupGUID: 
+        computeOrder: 0
+        position:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 100
+          height: 100
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 8346928920201003111
+      type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: EndNode
+        groupGUID: 
+        computeOrder: 3
+        position:
+          serializedVersion: 2
+          x: 741
+          y: 0
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 8346928920201003112
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 3afde76d-2cd9-4fc0-9833-024bcb6d5b37
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 428
+          y: 0
+          width: 300
+          height: 322.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 8346928920201003113
+    - rid: 8346928920201003113
+      type: {class: FollowPathSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
+      data:
+        collisionForce: 15
+        avoidanceForce: 1
+        cohesionForce: 0.5
+        separationForce: 1
+        alignmentForce: 0.5
+        movementForce: 5
+    - rid: 8346928920201003114
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        nodeCustomName: 
+        GUID: 8676df3e-3ddb-4a3b-a006-4ab38b94f254
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 118
+          y: 0
+          width: 300
+          height: 193
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 8346928920201003115
+    - rid: 8346928920201003115
+      type: {class: UpdateGraphSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
+      data: 

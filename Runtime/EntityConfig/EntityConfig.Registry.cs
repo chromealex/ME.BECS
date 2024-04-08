@@ -56,16 +56,6 @@ namespace ME.BECS {
 
         }
 
-        public static UnsafeEntityConfig GetById(uint id) {
-            
-            if (registryFromId.TryGetValue(in staticWorld.state->allocator, id, out var config) == true) {
-                return config;
-            }
-
-            return default;
-
-        }
-
     }
 
 }

@@ -69,7 +69,7 @@ namespace ME.BECS {
 
         public const uint CacheLineSize = JobsUtility.CacheLineSize;
         public static readonly uint ThreadsCount = (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount;
-        
+
         public static void Initialize() {
             CleanUp();
             JobSingleThread.singleThreads.Initialize();
@@ -140,6 +140,30 @@ namespace ME.BECS {
         [INLINE(256)]
         public static bool SetIfGreater(ref int target, int newValue) {
             int snapshot;
+            bool stillMore;
+            do {
+                snapshot = target;
+                stillMore = newValue > snapshot;
+            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target, newValue, snapshot) != snapshot);
+
+            return stillMore;
+        }
+
+        [INLINE(256)]
+        public static bool SetIfGreater(ref uint target, uint newValue) {
+            int snapshot;
+            bool stillMore;
+            do {
+                snapshot = (int)target;
+                stillMore = newValue > snapshot;
+            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref target), (int)newValue, snapshot) != snapshot);
+
+            return stillMore;
+        }
+
+        [INLINE(256)]
+        public static bool SetIfGreater(ref float target, float newValue) {
+            float snapshot;
             bool stillMore;
             do {
                 snapshot = target;

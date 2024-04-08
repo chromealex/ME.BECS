@@ -20,6 +20,7 @@ namespace ME.BECS {
         public AspectsStorage aspectsStorage;
         public RandomData random;
         public CollectionsRegistry collectionsRegistry;
+        public AutoDestroyRegistry autoDestroyRegistry;
         public ulong tick;
         public WorldState worldState;
         public byte tickCheck;
@@ -74,6 +75,7 @@ namespace ME.BECS {
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             this.random = RandomData.Create(statePtr);
             this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.entitiesCapacity);
+            this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.entitiesCapacity);
             this.mode = stateProperties.mode;
             return this;
 

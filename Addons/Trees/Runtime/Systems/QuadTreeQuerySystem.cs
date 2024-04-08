@@ -50,6 +50,68 @@ namespace ME.BECS {
         
     }
     
+    public struct AABBDistanceSquaredProvider<T> : NativeTrees.IOctreeDistanceProvider<T> {
+        // Just return the distance squared to our bounds
+        public float DistanceSquared(float3 point, T obj, NativeTrees.AABB bounds) => bounds.DistanceSquared(point);
+    }
+
+    public struct OctreeNearestIgnoreSelfAABBVisitor<T> : NativeTrees.IOctreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> {
+
+        public T ignoreSelf;
+        public T nearest;
+        public bool found;
+        public bool OnVisit(T obj) {
+
+            if (this.ignoreSelf.Equals(obj) == true) return true;
+            this.found = true;
+            this.nearest = obj;
+        
+            return false; // immediately stop iterating at first hit
+            // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
+        }
+    }
+
+    public struct OctreeNearestAABBVisitor<T> : NativeTrees.IOctreeNearestVisitor<T> {
+
+        public T nearest;
+        public bool found;
+        public bool OnVisit(T obj) {
+            
+            this.found = true;
+            this.nearest = obj;
+        
+            return false; // immediately stop iterating at first hit
+            // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
+        }
+    }
+
+    public struct OctreeKNearestAABBVisitor<T> : NativeTrees.IOctreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> {
+        public UnsafeHashSet<T> results;
+        public uint max;
+        public bool OnVisit(T obj) {
+            this.results.Add(obj);
+        
+            return this.results.Count < this.max; // immediately stop iterating at first hit
+            // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
+        }
+    }
+    
+    public struct RangeAABBUniqueVisitor<T> : NativeTrees.IOctreeRangeVisitor<T> where T : unmanaged, System.IEquatable<T> {
+        public UnsafeHashSet<T> results;
+        public float rangeSqr;
+        public uint max;
+        public bool OnVisit(T obj, NativeTrees.AABB objBounds, NativeTrees.AABB queryRange) {
+            // check if our object's AABB overlaps with the query AABB
+            if (objBounds.Overlaps(queryRange) == true &&
+                queryRange.DistanceSquared(objBounds.Center) <= this.rangeSqr) {
+                this.results.Add(obj);
+                if (this.max > 0u && this.results.Count == this.max) return false;
+            }
+
+            return true; // keep iterating
+        }
+    }
+    
     [BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(QuadTreeInsertSystem))]
     public unsafe struct QuadTreeQuerySystem : IUpdate {
@@ -76,22 +138,66 @@ namespace ME.BECS {
                     }
                     
                     ref var tree = ref *this.system.GetTree(i);
-                    
-                    if (data.nearestCount > 0) {
 
-                        var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
-                        var cnt = tree.QueryKNearest(worldPos, query.query.range, new Unity.Collections.NativeSlice<Ent>(results));
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
-                        query.results.results.AddRange(in results, 0, cnt);
+                    if (data.nearestCount == 1u) {
+                        
+                        var visitor = new OctreeNearestAABBVisitor<Ent>();
+                        tree.Nearest(worldPos, query.query.range, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, 1u);
+                        query.results.results.Add(visitor.nearest);
+                        
+                        /*var ent = tree.SearchClosestPointSync(worldPos, checkSelf: true);
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, 1);
+                        query.results.results.Add(ent);*/
+                        
+                    } else if (data.nearestCount > 1u) {
+                        
+                        // k-nearest
+                        var visitor = new OctreeKNearestAABBVisitor<Ent>() {
+                            results = new UnsafeHashSet<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp),
+                            max = data.nearestCount,
+                        };
+                        tree.Nearest(worldPos, query.query.range, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
+                        query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
                         
                     } else {
 
-                        var results = new UnsafeList<Ent>(tree.Points.Length, Unity.Collections.Allocator.Temp);
-                        tree.QueryRange(worldPos, data.range, ref results);
+                        var visitor = new RangeAABBUniqueVisitor<Ent>() {
+                            results = new UnsafeHashSet<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp),
+                            rangeSqr = query.query.range * query.query.range,
+                            max = data.nearestCount,
+                        };
+                        //var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
+                        tree.Range(new NativeTrees.AABB(worldPos - query.query.range, worldPos + query.query.range), ref visitor);
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
+                        query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
+                        
+                        /*var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
+                        var cnt = tree.QueryKNearest(worldPos, query.query.range, new Unity.Collections.NativeSlice<Ent>(results));
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
+                        query.results.results.AddRange(in results, 0, cnt);*/
+                        
+                        /*var results = new UnsafeList<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
+                        var cnt = tree.QueryKNearest(worldPos, ref results, query.query.range, (int)data.nearestCount);
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
+                        query.results.results.AddRange(in results, 0, (int)cnt);
+                        */
+                        
+                    } /*else {
+
+                        var results = new UnsafeList<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
+                        tree.QueryRange(worldPos, query.query.range, ref results);
+                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
+                        query.results.results.AddRange(in results, 0, results.Length);
+                        
+                        /*var results = new UnsafeList<Ent>((int)tree.Length, Unity.Collections.Allocator.Temp);
+                        tree.QueryRange(worldPos, ref results, data.range);
                         if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
                         query.results.results.AddRange(in results);
+                        *
                         
-                    }
+                    }*/
 
                 }
 

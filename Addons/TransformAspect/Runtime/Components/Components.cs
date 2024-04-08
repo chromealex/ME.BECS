@@ -7,10 +7,12 @@ namespace ME.BECS.Transforms {
 
     public struct TransformComponentGroup { }
 
+    [ComponentGroup(typeof(TransformComponentGroup))]
     public struct WorldMatrixComponent : IComponent {
 
         public float4x4 value;
-        
+        public byte calculated;
+
     }
 
     [ComponentGroup(typeof(TransformComponentGroup))]

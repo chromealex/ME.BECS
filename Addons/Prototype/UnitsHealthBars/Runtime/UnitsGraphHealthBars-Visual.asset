@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: 70
   builtInGraph: 1
+  isInnerGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928920201003080
@@ -45,7 +46,6 @@ MonoBehaviour:
   nodeInspectorReference: {fileID: 0}
   position: {x: -26.5, y: 144, z: 0}
   scale: {x: 1, y: 1, z: 1}
-  isInnerGraph: 1
   references:
     version: 2
     RefIds:
@@ -75,8 +75,8 @@ MonoBehaviour:
         healthBarMaterial:
           id: 3
         barSettings:
-          sectionWidth: 4
-          height: 1
+          sectionWidth: 6
+          height: 3
     - rid: 8346928920201003080
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -95,6 +95,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928920201003081
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -113,3 +114,4 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0

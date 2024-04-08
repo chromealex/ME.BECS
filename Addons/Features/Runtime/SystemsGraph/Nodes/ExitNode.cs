@@ -11,9 +11,13 @@ namespace ME.BECS.FeaturesGraph.Nodes {
         [Input(name = "In", allowMultiple = true)]
         public g::List<SystemHandle> inputNodes;
 
-        public override string name => "EXIT";
+        [UnityEngine.HideInInspector]
+        public bool isInstance;
+
+        public override bool isRenamable => this.isInstance;
+        public override string name => this.isInstance == true ? base.name : "EXIT";
         public override bool isLocked => false;
-        public override bool deletable => false;
+        public override bool deletable => this.isInstance;
         public override bool isCollapsable => false;
         public override UnityEngine.Color color => new UnityEngine.Color(0.3f, 0.06f, 0.14f);
         public override string style => "exit-node";

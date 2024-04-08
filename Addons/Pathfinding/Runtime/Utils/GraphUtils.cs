@@ -2,12 +2,72 @@ namespace ME.BECS.Pathfinding {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
-    using ME.BECS.Units;
+    using ME.BECS.Transforms;
     
     public static class GraphUtils {
 
         [INLINE(256)]
-        public static bool IsGraphMaskValid(in BuildGraphSystem system, in float3 position, in quaternion rotation, float2 size, byte minCost, byte maxCost) {
+        public static MemArrayAuto<float> GetBuildingHeights(in Ent ent, float height, uint2 size, out uint sizeX) {
+
+            sizeX = size.x;
+            var sizeY = size.y;
+            var length = size.x * size.y;
+            var arr = new MemArrayAuto<float>(in ent, length);
+            for (uint i = 0u; i < length; ++i) {
+                if (i < sizeX || i % sizeX == 0 || i >= sizeX * (sizeY - 1u) || i % (sizeX - 1u) == 0) {
+                    arr[i] = 0f;
+                } else {
+                    arr[i] = height;
+                }
+            }
+            return arr;
+
+        }
+
+        [INLINE(256)]
+        public static float3 SnapWorldPosition(in Ent graph, float3 worldPosition, uint2 size) {
+
+            var offset = float2.zero;
+            if (size.x % 2 == 0) {
+                offset.x -= 0.5f;
+            }
+            if (size.y % 2 == 0) {
+                offset.y -= 0.5f;
+            }
+            
+            var root = graph.Read<RootGraphComponent>();
+            worldPosition.x = math.round(worldPosition.x / root.nodeSize) * root.nodeSize + offset.x;
+            worldPosition.z = math.round(worldPosition.z / root.nodeSize) * root.nodeSize + offset.y;
+            
+            return worldPosition;
+
+        }
+
+        [INLINE(256)]
+        public static float2 SnapSize(uint2 size) {
+
+            var offset = SizeOffset(size);
+            return new float2(math.floor(size.x * 0.5f), math.floor(size.y * 0.5f)) + offset;
+
+        }
+
+        [INLINE(256)]
+        public static float2 SizeOffset(uint2 size) {
+
+            var offset = float2.zero;
+            if (size.x % 2 == 0) {
+                offset.x -= 0.5f;
+            }
+            if (size.y % 2 == 0) {
+                offset.y -= 0.5f;
+            }
+            
+            return offset;
+
+        }
+
+        [INLINE(256)]
+        public static bool IsGraphMaskValid(in BuildGraphSystem system, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
             foreach (var graph in system.graphs) {
                 if (IsGraphMaskValid(in graph, in position, in rotation, size, minCost, maxCost) == false) return false;
@@ -18,16 +78,17 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        public static unsafe bool IsGraphMaskValid(in Ent graph, in float3 position, in quaternion rotation, float2 size, byte minCost, byte maxCost) {
+        public static unsafe bool IsGraphMaskValid(in Ent graph, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
             var root = graph.Read<RootGraphComponent>();
             var state = graph.World.state;
             var pos = position.xz;
-            var posMin = pos - size * 0.5f;
-            var posMax = pos + size * 0.5f;
-            for (float x = posMin.x; x <= posMax.x; x += root.nodeSize * 0.5f) {
-                for (float y = posMin.y; y <= posMax.y; y += root.nodeSize * 0.5f) {
-                    var worldPos = new float3(x, 0f, y);
+            var sizeSnap = SnapSize(size);
+            var posMin = pos - sizeSnap;
+            var posMax = pos + sizeSnap;
+            for (float x = posMin.x; x <= posMax.x; x += root.nodeSize) {
+                for (float y = posMin.y; y <= posMax.y; y += root.nodeSize) {
+                    var worldPos = new float3(math.floor(x), 0f, math.floor(y));
                     var graphPos = math.mul(rotation, worldPos - position) + position;
                     var globalCoord = Graph.GetGlobalCoord(in root, graphPos);
                     var tempNode = Graph.GetCoordInfo(in root, globalCoord.x, globalCoord.y);
@@ -42,32 +103,55 @@ namespace ME.BECS.Pathfinding {
             return true;
 
         }
+
+        [INLINE(256)]
+        public static void DestroyGraphMask(in Ent ent) {
+
+            { // Apply to graphs
+                var mask = ent.Read<GraphMaskComponent>();
+                mask.Destroy();
+            }
+            ent.Destroy();
+            
+        }
         
         [INLINE(256)]
-        public static Ent CreateGraphMask(in float3 position, in quaternion rotation, float2 size, byte cost = Graph.UNWALKABLE, float height = 0f) {
+        public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false) {
 
             var ent = Ent.New();
-            return CreateGraphMask(in ent, in position, in rotation, size, cost, height);
+            return CreateGraphMask(in ent, in position, in rotation, size, cost, height, obstacleChannel, ignoreGraphRadius);
 
         }
 
         [INLINE(256)]
-        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, float2 size, byte cost = Graph.UNWALKABLE, float height = 0f) {
+        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false) {
+
+            var heights = new MemArrayAuto<float>(in ent, 1u);
+            heights[0u] = height;
+            return CreateGraphMask(in ent, in position, in rotation, size, cost, obstacleChannel, ignoreGraphRadius, heights, 1u);
+
+        }
+
+        [INLINE(256)]
+        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost, ObstacleChannel obstacleChannel, bool ignoreGraphRadius, MemArrayAuto<float> heights, uint heightsSizeX) {
 
             var buildGraphSystem = ent.World.GetSystem<BuildGraphSystem>();
-            var tr = ent.GetOrCreateAspect<ME.BECS.Transforms.TransformAspect>();
-            tr.position = position;
-            tr.rotation = rotation;
-            ent.Set(new GraphMaskComponent() {
+            var obstacle = new GraphMaskComponent() {
                 offset = float2.zero,
                 size = size,
-                height = height,
+                heights = heights,
+                heightsSizeX = heightsSizeX,
+                ignoreGraphRadius = ignoreGraphRadius,
                 cost = cost,
-                isDirty = true,
-            });
-            var aspect = ent.GetOrCreateAspect<QuadTreeAspect>();
-            aspect.quadTreeElement.treeIndex = buildGraphSystem.obstaclesTreeIndex;
-            aspect.quadTreeElement.ignoreY = true;
+                nodes = new ListAuto<GraphNodeMemory>(in ent, (uint)(size.x * size.y * buildGraphSystem.graphs.Length)),
+                obstacleChannel = obstacleChannel,
+            };
+            var obstacleTr = ent.GetOrCreateAspect<TransformAspect>();
+            obstacleTr.position = position;
+            obstacleTr.rotation = rotation;
+            ent.Set(obstacle);
+            ent.Set(new IsGraphMaskDirtyComponent());
+            ent.RegisterAutoDestroy<GraphMaskComponent>();
             return ent;
 
         }
@@ -157,10 +241,10 @@ namespace ME.BECS.Pathfinding {
                 if (localPos.z > root.height * root.chunkHeight * root.nodeSize - offset) resultPos.z = root.position.z + root.height * root.chunkHeight * root.nodeSize - offset - minOffset;
                 return resultPos;
             }*/
+            
             // if chunk and node are exist
             if (GetPositionWithMapBordersNode(out var node, in graph, in newPos) == true) {
                 if (filter.IsValid(in node) == false) {
-                    
                     // if previous pos is not walkable too
                     if (GetPositionWithMapBordersNode(out node, in graph, in prevPos) == true) {
                         if (filter.IsValid(in node) == false) {
@@ -204,6 +288,28 @@ namespace ME.BECS.Pathfinding {
             result = newPos;
             return true;
 
+        }
+
+        [INLINE(256)]
+        public static float GetObstacleHeight(in float3 localObstaclePosition, in MemArrayAuto<float> obstacleHeights, in float2 obstacleSize, uint obstacleHeightsSizeX) {
+            var x = (int)(localObstaclePosition.x / obstacleSize.x * obstacleHeightsSizeX);
+            var y = (int)(localObstaclePosition.z / obstacleSize.y * obstacleHeightsSizeX);
+            if (x < 0) x = 0;
+            if (x >= obstacleHeightsSizeX) x = (int)obstacleHeightsSizeX - 1;
+            if (y < 0) y = 0;
+            if (y >= obstacleHeightsSizeX) y = (int)obstacleHeightsSizeX - 1;
+            return obstacleHeights[(uint)y * obstacleHeightsSizeX + (uint)x];
+        }
+
+        [INLINE(256)]
+        public static float GetObstacleHeight(float3 localObstaclePosition, float[] obstacleHeights, in float2 obstacleSize, uint obstacleHeightsSizeX) {
+            var x = (int)(localObstaclePosition.x / obstacleSize.x * obstacleHeightsSizeX);
+            var y = (int)(localObstaclePosition.z / obstacleSize.y * obstacleHeightsSizeX);
+            if (x < 0) x = 0;
+            if (x >= obstacleHeightsSizeX) x = (int)obstacleHeightsSizeX - 1;
+            if (y < 0) y = 0;
+            if (y >= obstacleHeightsSizeX) y = (int)obstacleHeightsSizeX - 1;
+            return obstacleHeights[(uint)y * obstacleHeightsSizeX + (uint)x];
         }
 
     }

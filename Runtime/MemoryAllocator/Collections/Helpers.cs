@@ -7,6 +7,12 @@ namespace ME.BECS {
         bool isCreated { get; }
 
     }
+
+    public interface IUnmanagedList : IIsCreated {
+
+        object[] ToManagedArray();
+
+    }
     
     public interface IEquatableAllocator<T> {
 

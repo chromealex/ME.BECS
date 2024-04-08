@@ -388,6 +388,26 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>();
+                    foreach (var component in allComponents) {
+
+                        if (component.IsValueType == false) continue;
+
+                        var asm = component.Assembly.GetName().Name;
+                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        if (editorAssembly == false && info.isEditor == true) continue;
+
+                        var isTagType = IsTagType(component);
+                        var isTag = isTagType.ToString().ToLower();
+                        var type = component.FullName.Replace("+", ".");
+                        var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
+                        typesContent.Add(str);
+                        componentTypes.Add(component);
+                        content.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(null);");
+                        
+                    }
+                }
+                {
                     var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentShared>();
                     foreach (var component in allComponents) {
 
@@ -423,6 +443,25 @@ namespace ME.BECS.Editor {
                         typesContent.Add(str);
                         componentTypes.Add(component);
                         content.Add($"StaticTypesStatic<{type}>.AOT();");
+
+                    }
+                }
+                {
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigInitialize>();
+                    foreach (var component in allComponents) {
+
+                        if (component.IsValueType == false) continue;
+
+                        var asm = component.Assembly.GetName().Name;
+                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        if (editorAssembly == false && info.isEditor == true) continue;
+
+                        var isTag = IsTagType(component).ToString().ToLower();
+                        var type = component.FullName.Replace("+", ".");
+                        var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
+                        typesContent.Add(str);
+                        componentTypes.Add(component);
+                        content.Add($"ConfigInitializeTypes<{type}>.AOT();");
 
                     }
                 }

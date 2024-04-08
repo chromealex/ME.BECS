@@ -21,7 +21,7 @@ namespace ME.BECS {
             if (this.cameraPtr.IsValid == true) {
                 CameraUtils.UpdateCamera(this.camera.GetAspect<CameraAspect>(), this.cameraPtr.Value);
             }
-            dependsOn = this.world.Tick(deltaTime, UpdateType.UPDATE, dependsOn);
+            dependsOn = this.world.Tick(deltaTime, UpdateType.LATE_UPDATE, dependsOn);
             if (this.viewsModule.IsValid == true) {
                 dependsOn = this.viewsModule.Value.OnUpdate(dependsOn);
             }
@@ -141,7 +141,7 @@ namespace ME.BECS {
 
             var group = SystemGroup.Create(UpdateType.ANY);
             if (systemsGraph != null) {
-                group.Add(systemsGraph.DoAwake(ref viewsWorld, UpdateType.UPDATE));
+                group.Add(systemsGraph.DoAwake(ref viewsWorld, UpdateType.LATE_UPDATE));
             }
             viewsWorld.AssignRootSystemGroup(group);
             

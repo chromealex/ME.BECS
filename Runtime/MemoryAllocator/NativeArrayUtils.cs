@@ -2,7 +2,7 @@ namespace ME.BECS {
     
     using Unity.Collections.LowLevel.Unsafe;
 
-    public unsafe class NativeArrayUtils {
+    public static unsafe class NativeArrayUtils {
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static void Copy<T>(ref MemoryAllocator allocator,
@@ -11,6 +11,21 @@ namespace ME.BECS {
             
             NativeArrayUtils.Copy(ref allocator, fromArr, 0, ref arr, 0, fromArr.Length);
             
+        }
+        
+        [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static void Copy<T>(
+            T[] src,
+            int srcIndex,
+            MemArrayAuto<T> dst,
+            int dstIndex,
+            int length)
+        where T : unmanaged
+        {
+            var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc((object) src, System.Runtime.InteropServices.GCHandleType.Pinned);
+            var num = gcHandle.AddrOfPinnedObject();
+            UnsafeUtility.MemCpy((void*) ((System.IntPtr) dst.GetUnsafePtr() + dstIndex * UnsafeUtility.SizeOf<T>()), (void*) ((System.IntPtr) (void*) num + srcIndex * UnsafeUtility.SizeOf<T>()), (long) (length * UnsafeUtility.SizeOf<T>()));
+            gcHandle.Free();
         }
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

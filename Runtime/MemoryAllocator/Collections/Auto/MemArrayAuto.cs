@@ -11,7 +11,7 @@ namespace ME.BECS {
 
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayAutoProxy<>))]
-    public unsafe struct MemArrayAuto<T> : IIsCreated where T : unmanaged {
+    public unsafe struct MemArrayAuto<T> : IIsCreated, IUnmanagedList where T : unmanaged {
 
         public static readonly MemArrayAuto<T> Empty = new MemArrayAuto<T>() {
             arrPtr = MemPtr.Invalid,
@@ -28,6 +28,14 @@ namespace ME.BECS {
         public readonly bool isCreated {
             [INLINE(256)]
             get => this.arrPtr.IsValid();
+        }
+
+        object[] IUnmanagedList.ToManagedArray() {
+            var arr = new object[this.Length];
+            for (uint i = 0u; i < this.Length; ++i) {
+                arr[i] = this[i];
+            }
+            return arr;
         }
 
         [INLINE(256)]

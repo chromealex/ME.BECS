@@ -50,7 +50,7 @@ namespace ME.BECS.Editor {
         }
 
         ~AspectDrawer() {
-            if (this.tempObject != null) TempObject.DestroyImmediate(this.tempObject);
+            if (this.tempObject != null) EditorApplication.delayCall += () => TempObject.DestroyImmediate(this.tempObject);
             this.tempObject = null;
         }
 

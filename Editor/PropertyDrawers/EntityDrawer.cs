@@ -49,7 +49,7 @@ namespace ME.BECS.Editor {
             this.propertySerializedObject = null;
 
             if (tempObjects.TryGetValue(this.entity.ToULong(), out var temp) == true) {
-                if (temp != null) Object.DestroyImmediate(temp);
+                if (temp != null) EditorApplication.delayCall += () => Object.DestroyImmediate(temp);
                 tempObjects.Remove(this.entity.ToULong());
             }
 
@@ -71,7 +71,7 @@ namespace ME.BECS.Editor {
             this.propertyPath = property.propertyPath;
             this.propertySerializedObject = property.serializedObject;
             this.property = property;
-            this.DrawEntity(rootVisualElement, this.entity.World);
+            this.DrawEntity(rootVisualElement, this.entity.World, property.displayName);
 
             EditorApplication.update -= this.OnUpdate;
             EditorApplication.update += this.OnUpdate;
@@ -108,7 +108,7 @@ namespace ME.BECS.Editor {
             var newState = this.GetState(world);
             if (this.prevState != newState ||
                 (newState == true && this.archId != this.GetArchId())) {
-                this.DrawEntity(this.rootVisualElement, world);
+                this.DrawEntity(this.rootVisualElement, world, this.property.displayName);
             } else if (newState == true) {
                 this.UpdateData();
             }
@@ -145,7 +145,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private void DrawEntity(VisualElement root, World world) {
+        private void DrawEntity(VisualElement root, World world, string displayName = null) {
             
             var container = root;
             container.userData = this.entity;
@@ -153,6 +153,7 @@ namespace ME.BECS.Editor {
 
             var idString = "-";
             var genString = "-";
+            var worldString = "-";
             var versionString = string.Empty;
             var drawComponents = true;
 
@@ -160,6 +161,7 @@ namespace ME.BECS.Editor {
                 
                 idString = this.entity.id.ToString();
                 genString = this.entity.gen.ToString();
+                worldString = this.entity.worldId.ToString();
                 versionString = this.entity.Version.ToString();
                 
             } else {
@@ -172,6 +174,7 @@ namespace ME.BECS.Editor {
 
                 idString = "-";
                 genString = "-";
+                worldString = "-";
                 versionString = "-";
                 drawComponents = false;
 
@@ -202,6 +205,16 @@ namespace ME.BECS.Editor {
             if (drawComponents == true && header.value == true) this.DrawComponents(rootComponents, world);
             toggleContainer.Add(rootComponents);
 
+            if (displayName != null) {
+                var idContainer = new VisualElement();
+                idContainer.AddToClassList("entity-name-container");
+                header.Add(idContainer);
+                var entityIdLabel = new Label(displayName);
+                entityIdLabel.AddToClassList("entity-name-label");
+                entityIdLabel.AddToClassList("label-header");
+                idContainer.Add(entityIdLabel);
+            }
+
             {
                 var idContainer = new VisualElement();
                 idContainer.AddToClassList("entity-id-container");
@@ -229,7 +242,21 @@ namespace ME.BECS.Editor {
                 entityGen.AddToClassList("label-value");
                 genContainer.Add(entityGen);
             }
-            
+
+            {
+                var genContainer = new VisualElement();
+                genContainer.AddToClassList("entity-world-container");
+                header.Add(genContainer);
+                var entityGenLabel = new Label("World");
+                entityGenLabel.AddToClassList("entity-world-label");
+                entityGenLabel.AddToClassList("label-header");
+                genContainer.Add(entityGenLabel);
+                var entityGen = new Label(worldString);
+                entityGen.AddToClassList("entity-world");
+                entityGen.AddToClassList("label-value");
+                genContainer.Add(entityGen);
+            }
+
             if (this.GetState(world) == false) {
 
                 this.prevState = false;
@@ -553,9 +580,10 @@ namespace ME.BECS.Editor {
                         fields.Add(propertyField);
                     } else {
                         
-                        var labelField = new Foldout();
+                        var labelField = new Label();
                         labelField.text = label;
                         labelField.AddToClassList("field");
+                        labelField.AddToClassList("no-children");
                         rootContainer.Add(labelField);
                         fields.Add(labelField);
                     }

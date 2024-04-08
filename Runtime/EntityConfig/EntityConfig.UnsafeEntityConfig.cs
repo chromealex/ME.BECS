@@ -132,7 +132,7 @@ namespace ME.BECS {
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    Cuts._memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
+                    _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
                     gcHandle.Free();
                 }
 
@@ -160,7 +160,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public bool TryRead<TComponent>(out TComponent data) where TComponent : unmanaged, IComponentStatic {
+            public bool TryRead<TComponent>(out TComponent data) where TComponent : unmanaged, IComponent {
 
                 data = default;
                 var typeId = StaticTypes<TComponent>.typeId;
@@ -176,7 +176,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public bool Has<TComponent>() where TComponent : unmanaged, IComponentStatic {
+            public bool Has<TComponent>() where TComponent : unmanaged, IComponent {
                 
                 var typeId = StaticTypes<TComponent>.typeId;
                 for (uint i = 0; i < this.count; ++i) {
@@ -191,7 +191,7 @@ namespace ME.BECS {
 
         }
 
-        private readonly struct DataInitialize {
+        internal readonly struct DataInitialize {
 
             public struct Func {
 
@@ -205,7 +205,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    // TODO: FREE
+                    // TODO: Free
                     //this.handle.Free();
                     this = default;
 
@@ -346,6 +346,16 @@ namespace ME.BECS {
                 gcHandle.Free();
             }
 
+        }
+
+        [INLINE(256)]
+        public bool TryRead<T>(out T data) where T : unmanaged, IComponent {
+            return this.data.TryRead(out data);
+        }
+
+        [INLINE(256)]
+        public bool Has<T>() where T : unmanaged, IComponent {
+            return this.data.Has<T>();
         }
 
         [INLINE(256)]
