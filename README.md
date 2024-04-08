@@ -9,7 +9,7 @@ Bursted Entity Component System
 <br>
 <br>
 
-> **Warning**
+> [!IMPORTANT]
 > Currently ME.BECS is in alpha version, if you need stable ECS with rollbacks use [ME.ECS](https://github.com/chromealex/ecs)
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits

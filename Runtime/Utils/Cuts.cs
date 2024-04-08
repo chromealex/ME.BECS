@@ -1,10 +1,9 @@
-
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
-    public unsafe struct ClassPtr<T> where T : class {
+    public unsafe struct ClassPtr<T> : System.IEquatable<ClassPtr<T>> where T : class {
 
         [NativeDisableUnsafePtrRestriction]
         private System.IntPtr ptr;
@@ -26,6 +25,9 @@ namespace ME.BECS {
             }
         }
 
+        public bool Equals(ClassPtr<T> other) {
+            return other.ptr == ptr;
+        }
     }
 
     public static unsafe class Cuts {
