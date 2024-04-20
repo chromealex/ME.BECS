@@ -36,8 +36,7 @@ Tested in Unity 2023.1
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Dependencies
 ```
 "dependencies": {
-    "com.unity.collections": "1.4.0",
-    "com.unity.ui": "1.0.0-preview.18",
+    "com.unity.collections": "2.4.0-pre.2",
     "com.unity.jobs": "0.70.0-preview.7",
     "com.unity.burst": "1.8.4",
     "com.unity.mathematics": "1.2.6",
