@@ -40,6 +40,7 @@ namespace ME.BECS {
             registryToId.Add(config, nextId);
             unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
             registryFromId.Add(ref staticWorld.state->allocator, nextId, unsafeConfig);
+            EntityConfigsRegistry.TryAdd(nextId, unsafeConfig);
             return nextId;
 
         }

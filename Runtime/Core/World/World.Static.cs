@@ -201,17 +201,17 @@ namespace ME.BECS {
     
     public struct WorldsPersistentAllocator {
 
-        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10006);
-        internal static ref Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator> allocatorPersistent => ref allocatorPersistentBurst.Data;
+        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10006);
+        internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorPersistent => ref allocatorPersistentBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorPersistentValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10007);
         internal static bool allocatorPersistentValid => allocatorPersistentValidBurst.Data.IsCreated == true && allocatorPersistentValidBurst.Data.Value;
 
-        public static Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator> Initialize() {
+        public static Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> Initialize() {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorPersistent = new Unity.Collections.AllocatorHelper<ME.BECS.NativeCollections.RewindableCustomAllocator>(Unity.Collections.Allocator.Domain);
+            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Unity.Collections.Allocator.Domain);
             allocatorPersistent.Allocator.Initialize(128 * 1024, true);
             allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Unity.Collections.Allocator.Domain);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);

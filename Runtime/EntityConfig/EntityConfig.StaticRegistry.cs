@@ -62,6 +62,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void TryAdd(uint sourceId, UnsafeEntityConfig unsafeEntityConfig) {
+            configs.Data.TryAdd(sourceId, unsafeEntityConfig);
+        }
+
+        [INLINE(256)]
         public static UnsafeEntityConfig GetUnsafeEntityConfigBySourceId(uint sourceId) {
 
             configs.Data.TryGetValue(sourceId, out var config);

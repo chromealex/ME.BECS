@@ -44,6 +44,24 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void Create100k() {
+
+            {
+                var amount = 100_000;
+                var props = WorldProperties.Default;
+                props.stateProperties.entitiesCapacity = 100_000;
+                using var world = World.Create(props);
+                for (int i = 0; i < amount; ++i) {
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent());
+                    ent.Set(new Test1Component());
+                    ent.Set(new Test2Component());
+                }
+            }
+
+        }
+
+        [Test]
         public void SparseSet() {
 
             {
