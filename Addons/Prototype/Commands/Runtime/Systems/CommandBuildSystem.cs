@@ -22,7 +22,7 @@ namespace ME.BECS.Commands {
                     var graph = this.buildGraphSystem.GetGraphByTypeId(parameters.buildingTypeId);
                     if (GraphUtils.IsGraphMaskValid(in graph, parameters.snappedPosition, parameters.rotation, parameters.size, 0, 254) == true) {
 
-                        UnityEngine.Debug.Log("Start Building: " + parameters.building);
+                        // UnityEngine.Debug.Log("Start Building: " + parameters.building);
                         // just turn on building's mask
                         // After building has been complete - turn on building
                         var nodes = parameters.building.Read<ChildrenComponent>().list;
@@ -48,7 +48,7 @@ namespace ME.BECS.Commands {
 
                     } else {
 
-                        UnityEngine.Debug.Log("Building Cancelled: " + parameters.building);
+                        // UnityEngine.Debug.Log("Building Cancelled: " + parameters.building);
                         // Place is occupied already
                         // Destroy building because we have fail to build
                         parameters.building.DestroyHierarchy();
@@ -58,7 +58,7 @@ namespace ME.BECS.Commands {
                 } else {
                     
                     // Building is deployment already - join to the process or skip this command
-                    UnityEngine.Debug.Log("Building Skipped: " + parameters.building + ", commandGroup: " + commandGroup.ent);
+                    // UnityEngine.Debug.Log("Building Skipped: " + parameters.building + ", commandGroup: " + commandGroup.ent);
                     
                 }
 

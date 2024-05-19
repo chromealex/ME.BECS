@@ -26,7 +26,7 @@ namespace ME.BECS.Commands {
                     progress.value += this.dt / progress.timeToBuild;
                     if (progress.value >= 1f) {
                         // Building is complete
-                        UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
+                        // UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building.ToString());
                         // Complete building
                         buildInProgress.building.SetActiveHierarchy(true);
                         // Move all builders to the next target
@@ -35,7 +35,7 @@ namespace ME.BECS.Commands {
                             if (builderEnt.IsAlive() == false) continue;
                             builderEnt.Remove<BuildInProgress>();
                             var builder = builderEnt.GetAspect<UnitAspect>();
-                            UnityEngine.Debug.Log("Builder move next: " + builder.ent);
+                            // UnityEngine.Debug.Log("Builder move next: " + builder.ent.ToString());
                             UnitUtils.SetNextTargetIfAvailable(in builder);
                         }
                         progress.builders.Clear();
@@ -54,7 +54,7 @@ namespace ME.BECS.Commands {
 
                 if (building.value >= 1f) {
 
-                    UnityEngine.Debug.Log("Complete Job Building: " + ent);
+                    // UnityEngine.Debug.Log("Complete Job Building: " + ent);
                     ent.Remove<BuildingInProgress>();
 
                 }

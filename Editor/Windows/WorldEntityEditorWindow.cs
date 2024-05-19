@@ -16,7 +16,7 @@ namespace ME.BECS.Editor {
         public static void Show(Ent ent) {
             var win = WorldEntityEditorWindow.CreateInstance<WorldEntityEditorWindow>();
             win.entity = ent;
-            win.titleContent = new GUIContent(ent, EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-entityview.png"));
+            win.titleContent = new GUIContent(ent.ToString(), EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-entityview.png"));
             win.Show();
         }
 

@@ -33,7 +33,7 @@ namespace ME.BECS.Jobs {
                 jobData = jobData,
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T>(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(Cuts._address(ref data), GetReflectionData<T>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelFor(ref parameters, JobsUtility.JobWorkerCount, 1);
             #endif
 

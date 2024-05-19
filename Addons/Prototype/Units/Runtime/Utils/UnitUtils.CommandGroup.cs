@@ -110,12 +110,12 @@ namespace ME.BECS.Units {
                 // if next command group is created
                 var next = commandGroup.nextChainTarget.GetAspect<UnitCommandGroupAspect>();
                 next.Add(in unit);
-                UnityEngine.Debug.Log("Unit " + unit.ent + " set cmd group: " + commandGroup.ent + " => " + next.ent);
+                // UnityEngine.Debug.Log("Unit " + unit.ent.ToString() + " set cmd group: " + commandGroup.ent.ToString() + " => " + next.ent.ToString());
                 return true;
 
             }
             
-            UnityEngine.Debug.Log("Unit " + unit.ent + " has no next group");
+            // UnityEngine.Debug.Log("Unit " + unit.ent.ToString() + " has no next group");
 
             return false;
 

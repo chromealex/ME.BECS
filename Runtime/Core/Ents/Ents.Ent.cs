@@ -135,10 +135,11 @@ namespace ME.BECS {
             return (int)this.id ^ (int)this.gen;
         }
 
-        [INLINE(256)]
-        public static implicit operator string(Ent ent) {
-            return ent.ToString();
-        }
+        // [INLINE(256)]
+        // public static implicit operator string(Ent ent) {
+        //     return "Not implemented";
+        //     // return ent.ToString();
+        // }
 
         [INLINE(256)]
         public static bool operator ==(Ent ent1, Ent ent2) {
