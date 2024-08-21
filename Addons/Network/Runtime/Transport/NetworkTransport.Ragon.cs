@@ -1,4 +1,5 @@
 #if RAGON_NETWORK
+using System.Collections.Generic;
 using Ragon.Client;
 
 namespace ME.BECS.Network
@@ -74,11 +75,6 @@ namespace ME.BECS.Network
       return null;
     }
 
-    public void OnData(RagonPlayer player, byte[] data)
-    {
-      _bytesQueue.Enqueue(data);
-    }
-    
     public void OnConnected(RagonClient client)
     {
       _client.Session.AuthorizeWithKey("defaultkey", "Anon");
@@ -100,6 +96,11 @@ namespace ME.BECS.Network
       _module.SetServerStartTime(_client.ServerTimestamp, _world);
 
       Status = TransportStatus.Connected;
+    }
+    
+    public void OnData(RagonClient client, RagonPlayer player, byte[] data)
+    {
+      _bytesQueue.Enqueue(data);
     }
     
     public void OnDisconnected(RagonClient client, RagonDisconnect reason)
@@ -133,6 +134,23 @@ namespace ME.BECS.Network
     public void OnPlayerLeft(RagonClient client, RagonPlayer player)
     {
     }
+
+    public void OnRoomListUpdate(RagonClient client, IReadOnlyList<RagonRoomInformation> roomsInfos)
+    {
+      
+    }
+
+    public void OnUserDataUpdated(RagonClient client, IReadOnlyList<string> changes)
+    {
+      
+    }
+
+    public void OnPlayerUserDataUpdated(RagonClient client, RagonPlayer player, IReadOnlyList<string> changes)
+    {
+      
+    }
+
+
   }
 }
 
