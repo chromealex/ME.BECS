@@ -1,4 +1,5 @@
 using System.Reflection;
+using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     
@@ -6,6 +7,36 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     public class FeaturesGraphNodeView : ME.BECS.Extensions.GraphProcessor.BaseNodeView {
 
         private UnityEngine.UIElements.VisualElement container;
+
+        protected override void UpdateSync(UnityEngine.UIElements.VisualElement container) {
+            
+            base.UpdateSync(container);
+
+            if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.GraphNode ||
+                this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode) {
+
+                var syncLabel = container.Q(className: "sync-label") as Label;
+                if (syncLabel == null) {
+
+                    syncLabel = new UnityEngine.UIElements.Label();
+                    syncLabel.AddToClassList("sync-label");
+                    container.Add(syncLabel);
+
+                }
+
+                {
+
+                    if (this.nodeTarget.syncPoint == true) {
+                        syncLabel.text = "SYNC";
+                    } else {
+                        syncLabel.text = $"BRANCHES: {this.nodeTarget.syncCount}";
+                    }
+
+                }
+
+            }
+            
+        }
 
         public override void RedrawInspector(bool fromInspector = false) {
             

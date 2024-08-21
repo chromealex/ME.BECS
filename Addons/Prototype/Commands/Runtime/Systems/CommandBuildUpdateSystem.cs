@@ -14,7 +14,7 @@ namespace ME.BECS.Commands {
 
             public float dt;
             
-            public void Execute(in Ent ent, ref BuildInProgress buildInProgress) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref BuildInProgress buildInProgress) {
 
                 if (buildInProgress.building.IsAlive() == false) {
                     ent.Remove<BuildInProgress>();
@@ -26,7 +26,7 @@ namespace ME.BECS.Commands {
                     progress.value += this.dt / progress.timeToBuild;
                     if (progress.value >= 1f) {
                         // Building is complete
-                        UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
+                        //UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
                         // Complete building
                         buildInProgress.building.SetActiveHierarchy(true);
                         // Move all builders to the next target
@@ -35,7 +35,7 @@ namespace ME.BECS.Commands {
                             if (builderEnt.IsAlive() == false) continue;
                             builderEnt.Remove<BuildInProgress>();
                             var builder = builderEnt.GetAspect<UnitAspect>();
-                            UnityEngine.Debug.Log("Builder move next: " + builder.ent);
+                            //UnityEngine.Debug.Log("Builder move next: " + builder.ent);
                             UnitUtils.SetNextTargetIfAvailable(in builder);
                         }
                         progress.builders.Clear();
@@ -50,11 +50,11 @@ namespace ME.BECS.Commands {
         [BURST(CompileSynchronously = true)]
         public struct CompleteJob : IJobParallelForComponents<BuildingInProgress> {
 
-            public void Execute(in Ent ent, ref BuildingInProgress building) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref BuildingInProgress building) {
 
                 if (building.value >= 1f) {
 
-                    UnityEngine.Debug.Log("Complete Job Building: " + ent);
+                    //UnityEngine.Debug.Log("Complete Job Building: " + ent);
                     ent.Remove<BuildingInProgress>();
 
                 }
@@ -65,10 +65,10 @@ namespace ME.BECS.Commands {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var handle = context.Query().ScheduleParallelFor<UpdateProgressJob, BuildInProgress>(new UpdateProgressJob() {
+            var handle = context.Query().Schedule<UpdateProgressJob, BuildInProgress>(new UpdateProgressJob() {
                 dt = context.deltaTime,
             });
-            handle = context.Query(handle).ScheduleParallelFor<CompleteJob, BuildingInProgress>();
+            handle = context.Query(handle).Schedule<CompleteJob, BuildingInProgress>();
             context.SetDependency(handle);
             
         }

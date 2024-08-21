@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobAspectExtensions.JobProcess<,,,,,,,>))]
     public interface IJobAspect<T0,T1,T2,T3,T4,T5,T6> : IJobAspectBase where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect {
-        void Execute(ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5,ref T6 c6);
+        void Execute(in JobInfo jobInfo, ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5,ref T6 c6);
     }
 
     public static unsafe partial class JobAspectExtensions {
@@ -102,15 +102,19 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0,T1,T2,T3,T4,T5,T6> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
             
+                var jobInfo = JobInfo.Create();
+                jobInfo.count = jobData.buffer->count;
+                
                 JobUtils.SetCurrentThreadAsSingle(true);
                 
                 var aspect0 = jobData.c0;var aspect1 = jobData.c1;var aspect2 = jobData.c2;var aspect3 = jobData.c3;var aspect4 = jobData.c4;var aspect5 = jobData.c5;var aspect6 = jobData.c6;
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                for (int i = 0; i < jobData.buffer->count; ++i) {
+                for (uint i = 0u; i < jobData.buffer->count; ++i) {
+                    jobInfo.index = i;
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
                     aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect1.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect2.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect3.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect4.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect5.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect6.ent = new Ent(entId, gen, jobData.buffer->worldId);
-                    jobData.jobData.Execute(ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6);
+                    jobData.jobData.Execute(in jobInfo, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6);
                 }
                 jobData.buffer->EndForEachRange();
                 

@@ -36,7 +36,7 @@ namespace ME.BECS {
                 this.cameraPtr.Dispose();
             }
             if (this.viewsModule.IsValid == true) {
-                this.viewsModule.Value.OnDestroy();
+                this.viewsModule.Value.DoDestroy();
                 UnityEngine.Object.DestroyImmediate(this.viewsModule.Value);
                 this.viewsModule.Dispose();
             }
@@ -139,11 +139,13 @@ namespace ME.BECS {
             properties.stateProperties.mode = WorldMode.Visual;
             var viewsWorld = World.Create(properties, false);
 
-            var group = SystemGroup.Create(UpdateType.ANY);
             if (systemsGraph != null) {
-                group.Add(systemsGraph.DoAwake(ref viewsWorld, UpdateType.LATE_UPDATE));
+                var group = systemsGraph.DoAwake(ref viewsWorld, UpdateType.LATE_UPDATE);
+                viewsWorld.AssignRootSystemGroup(group);
+            } else {
+                var group = SystemGroup.Create(UpdateType.ANY);
+                viewsWorld.AssignRootSystemGroup(group);
             }
-            viewsWorld.AssignRootSystemGroup(group);
             
             ViewsModule viewsModule = null;
             foreach (var module in initializerInstance.modules.list) {

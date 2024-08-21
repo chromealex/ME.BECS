@@ -88,7 +88,7 @@ namespace ME.BECS.Units {
         public MemArrayAuto<Ent> targets;
         public Ent nextChainTarget;
         public Ent prevChainTarget;
-        public float volume;
+        public uint volume;
         public LockSpinner lockIndex;
 
     }

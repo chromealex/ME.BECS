@@ -1,3 +1,5 @@
+using ME.BECS.Transforms;
+
 namespace ME.BECS {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -12,10 +14,10 @@ namespace ME.BECS {
 
             public float deltaTime;
             
-            public void Execute(in Ent ent, ref DestroyWithLifetime component) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithLifetime component) {
                 component.lifetime -= this.deltaTime;
                 if (component.lifetime <= 0f) {
-                    ent.Destroy();
+                    ent.DestroyHierarchy();
                 }
             }
 
@@ -23,7 +25,7 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
             
-            var childHandle = API.Query(in context).ScheduleParallelFor<UpdateLifetimeJob, DestroyWithLifetime>(new UpdateLifetimeJob() {
+            var childHandle = API.Query(in context).Schedule<UpdateLifetimeJob, DestroyWithLifetime>(new UpdateLifetimeJob() {
                 deltaTime = context.deltaTime,
             });
             context.SetDependency(childHandle);

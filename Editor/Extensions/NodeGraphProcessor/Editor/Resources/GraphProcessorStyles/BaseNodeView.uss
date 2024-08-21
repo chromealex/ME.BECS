@@ -389,3 +389,18 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 #node-border > #title {
     border-bottom-width: 1px !important;
 }
+
+.sync-label {
+    position: absolute;
+    right: 0px;
+    -unity-text-align: middle-right;
+    font-size: 8px !important;
+    top: 0px;
+    padding: 2px;
+    margin-right: 4px;
+    opacity: 0.4;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}

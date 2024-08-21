@@ -49,7 +49,7 @@ namespace ME.BECS {
 
                 configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(data.items.Length, Constants.ALLOCATOR_DOMAIN);
                 foreach (var item in data.items) {
-                    configs.Data.Add(item.sourceId, item.source.AsUnsafeConfig());
+                    configs.Data.TryAdd(item.sourceId, item.source.AsUnsafeConfig());
                 }
 
             } catch (System.Exception ex) {

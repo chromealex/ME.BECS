@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobComponentsExtensions.JobProcess<,>))]
     public interface IJobComponents<T0> : IJobComponentsBase where T0 : unmanaged, IComponent {
-        void Execute(in Ent ent, ref T0 c0);
+        void Execute(in JobInfo jobInfo, in Ent ent, ref T0 c0);
     }
 
     public static unsafe partial class JobComponentsExtensions {
@@ -102,14 +102,18 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
             
+                var jobInfo = JobInfo.Create();
+                jobInfo.count = jobData.buffer->count;
+                
                 JobUtils.SetCurrentThreadAsSingle(true);
                 
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                for (int i = 0; i < jobData.buffer->count; ++i) {
+                for (uint i = 0u; i < jobData.buffer->count; ++i) {
+                    jobInfo.index = i;
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
                     var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                    jobData.jobData.Execute(in ent, ref jobData.c0.Get(ent.id, ent.gen));
+                    jobData.jobData.Execute(in jobInfo, in ent, ref jobData.c0.Get(ent.id, ent.gen));
                 }
                 jobData.buffer->EndForEachRange();
                 

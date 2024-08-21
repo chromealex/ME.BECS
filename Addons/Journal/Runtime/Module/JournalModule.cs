@@ -32,7 +32,7 @@ namespace ME.BECS {
             return dependsOn;
         }
 
-        public override void OnDestroy() {
+        public override void DoDestroy() {
 
             var journal = JournalsStorage.Get(this.worldId);
             if (journal == null) return;

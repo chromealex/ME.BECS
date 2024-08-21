@@ -211,9 +211,9 @@ namespace ME.BECS {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Unity.Collections.Allocator.Domain);
+            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_DOMAIN);
             allocatorPersistent.Allocator.Initialize(128 * 1024, true);
-            allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Unity.Collections.Allocator.Domain);
+            allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_DOMAIN);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 
             return allocatorPersistent;
@@ -248,7 +248,7 @@ namespace ME.BECS {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Unity.Collections.Allocator.Domain);
+            allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_DOMAIN);
             allocatorTemp.Allocator.Initialize(128 * 1024, false);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 

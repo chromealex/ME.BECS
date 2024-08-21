@@ -64,7 +64,7 @@ namespace ME.BECS.UnitsHealthBars {
             public BarSettings barSettings;
             public CameraAspect camera;
             
-            public void Execute(ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
 
                 if (unit.readHealth >= unit.readHealthMax) return;
                 if (this.fow.IsVisible(in this.activePlayer, unit.ent) == false) return;
@@ -101,7 +101,7 @@ namespace ME.BECS.UnitsHealthBars {
             var activePlayer = context.world.GetSystem<PlayersSystem>().GetActivePlayer();
             if (activePlayer.IsAlive() == false) return;
             
-            var handle = context.Query().ScheduleParallelFor<Job, UnitAspect>(new Job() {
+            var handle = context.Query().Schedule<Job, UnitAspect>(new Job() {
                 activePlayer = activePlayer,
                 fow = fow,
                 camera = this.visualWorld.Camera.GetAspect<CameraAspect>(),

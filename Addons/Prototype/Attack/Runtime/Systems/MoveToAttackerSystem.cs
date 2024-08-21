@@ -14,13 +14,13 @@ namespace ME.BECS.Attack {
     public struct MoveToAttackerSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : ME.BECS.Jobs.IJobAspect<UnitAspect, TransformAspect> {
+        public struct Job : IJobAspect<UnitAspect, TransformAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
             // TODO: Make this job as parallel
             // may be we need to group by DamageTookComponent.sourceUnit first?
-            public void Execute(ref UnitAspect unit, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, ref UnitAspect unit, ref TransformAspect tr) {
 
                 var attacker = unit.ent.Read<DamageTookComponent>().sourceUnit;
                 if (attacker.IsAlive() == false) return;
@@ -29,7 +29,7 @@ namespace ME.BECS.Attack {
                 if (AttackUtils.GetPositionToAttack(in unit, in attacker, out var worldPos) == true) {
                     ME.BECS.Commands.CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
                         targetPosition = worldPos,
-                    });
+                    }, jobInfo);
                 }
 
             }

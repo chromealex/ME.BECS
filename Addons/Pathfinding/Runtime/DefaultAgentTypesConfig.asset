@@ -20,8 +20,8 @@ MonoBehaviour:
     chunkWidth: 20
     chunkHeight: 20
     nodeSize: 1
-    chunksCountX: 20
-    chunksCountY: 20
+    chunksCountX: 10
+    chunksCountY: 10
   agentTypes:
   - typeId: 0
     radius: 0

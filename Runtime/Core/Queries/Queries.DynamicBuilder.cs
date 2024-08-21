@@ -620,19 +620,20 @@ namespace ME.BECS {
                             elementsCount += arch.entitiesList.Count;
                         }
 
-                        if (elementsCount > 0) {
+                        if (elementsCount > 0u) {
                             arrPtr = _makeArray<uint>(elementsCount);
                             var k = 0u;
                             for (uint i = 0u; i < archCount; ++i) {
                                 var archIdx = archs[i];
                                 ref var arch = ref this.state->archetypes.list[in this.state->allocator, archIdx];
-                                _memcpy(arch.entitiesList.GetUnsafePtr(in this.state->allocator), arrPtr + k, TSize<uint>.sizeInt * (int)arch.entitiesList.Count);
+                                _memcpy(arch.entitiesList.GetUnsafePtr(in this.state->allocator), arrPtr + k, TSize<uint>.size * arch.entitiesList.Count);
                                 k += arch.entitiesList.Count;
                             }
                         }
 
                     }
 
+                    if (elementsCount > 0u) Unity.Collections.NativeSortExtension.Sort(arrPtr, (int)elementsCount);
                     this.buffer->entities = arrPtr;
                     this.buffer->count = elementsCount;
                 }

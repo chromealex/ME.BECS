@@ -18,7 +18,7 @@ namespace ME.BECS.Attack {
             public World world;
             public FogOfWar.CreateSystem fogOfWar;
             
-            public void Execute(ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
                 var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
                 var player = unit.owner.GetAspect<Players.PlayerAspect>();
@@ -51,7 +51,7 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().Without<AttackTargetComponent>().ScheduleParallelFor<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
+            var dependsOn = context.Query().Without<AttackTargetComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
                 world = context.world,
                 fogOfWar = context.world.GetSystem<ME.BECS.FogOfWar.CreateSystem>(),
             });

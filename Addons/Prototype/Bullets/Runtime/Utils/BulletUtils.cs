@@ -9,9 +9,9 @@ namespace ME.BECS.Bullets {
     public static class BulletUtils {
 
         [INLINE(256)]
-        public static void RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation) {
+        public static void RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, JobInfo jobInfo) {
 
-            var point = Ent.New();
+            var point = Ent.New(jobInfo);
             var tr = point.GetOrCreateAspect<TransformAspect>();
             point.SetParent(root);
             tr.position = position;
@@ -43,10 +43,10 @@ namespace ME.BECS.Bullets {
         /// <param name="muzzleLifetime">Muzzle lifetime</param>
         /// <returns></returns>
         [INLINE(256)]
-        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View view, in View muzzleView, float muzzleLifetime = 0.2f) {
+        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View view, in View muzzleView, float muzzleLifetime = 0.2f, JobInfo jobInfo = default) {
 
             {
-                var muzzleEnt = Ent.New();
+                var muzzleEnt = Ent.New(jobInfo);
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
                 tr.position = position;
                 tr.rotation = rotation;
@@ -55,7 +55,7 @@ namespace ME.BECS.Bullets {
             }
 
             {
-                var ent = Ent.New();
+                var ent = Ent.New(jobInfo);
                 config.Apply(ent);
                 ent.InstantiateView(view);
                 var attack = ent.GetOrCreateAspect<QuadTreeQueryAspect>();

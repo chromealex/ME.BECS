@@ -23,6 +23,8 @@ namespace ME.BECS.Attack {
             }
         }
         
+        public float ReloadProgress => this.component.reloadTimer / this.component.reloadTime;
+
         public bool IsReloaded {
             get => this.ent.Has<ReloadedComponent>();
             set {

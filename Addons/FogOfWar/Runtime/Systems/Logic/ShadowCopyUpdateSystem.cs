@@ -17,7 +17,7 @@ namespace ME.BECS.FogOfWar {
 
             public CreateSystem fow;
             
-            public void Execute(in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
 
                 var shadowTr = ent.GetAspect<TransformAspect>();
                 var isVisible = this.fow.IsVisible(in shadowCopy.forTeam, shadowTr.GetWorldMatrixPosition());
@@ -25,7 +25,7 @@ namespace ME.BECS.FogOfWar {
                 if (isVisible == true) {
                     if (shadowCopy.original.IsAlive() == false) {
                         // if object is already destroyed - just destroy the shadow copy
-                        ent.Destroy();
+                        ent.DestroyHierarchy();
                     } else {
                         // if object is still alive - update properties
                         var tr = shadowCopy.original.GetAspect<TransformAspect>();
@@ -42,7 +42,7 @@ namespace ME.BECS.FogOfWar {
         public void OnUpdate(ref SystemContext context) {
 
             // Update all shadow copies
-            var dependsOn = context.Query().ScheduleParallelFor<UpdateJob, FogOfWarShadowCopyComponent>(new UpdateJob() {
+            var dependsOn = context.Query().Schedule<UpdateJob, FogOfWarShadowCopyComponent>(new UpdateJob() {
                 fow = context.world.GetSystem<CreateSystem>(),
             });
             context.SetDependency(dependsOn);

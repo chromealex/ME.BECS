@@ -8,9 +8,9 @@ namespace ME.BECS.Units {
     public static partial class UnitUtils {
 
         [INLINE(256)]
-        public static UnitSelectionGroupAspect CreateSelectionGroup(uint capacity = 10u) {
+        public static UnitSelectionGroupAspect CreateSelectionGroup(uint capacity = 10u, JobInfo jobInfo = default) {
 
-            var ent = Ent.New();
+            var ent = Ent.New(jobInfo);
             var aspect = ent.GetOrCreateAspect<UnitSelectionGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, capacity);
             return aspect;
@@ -18,9 +18,9 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static UnitSelectionTempGroupAspect CreateSelectionTempGroup(uint capacity = 10u) {
+        public static UnitSelectionTempGroupAspect CreateSelectionTempGroup(uint capacity = 10u, JobInfo jobInfo = default) {
 
-            var ent = Ent.New();
+            var ent = Ent.New(jobInfo);
             var aspect = ent.GetOrCreateAspect<UnitSelectionTempGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, capacity);
             return aspect;
@@ -30,14 +30,14 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static void DestroySelectionGroup(in Ent group) {
             
-            if (group.IsAlive() == true) group.Destroy();
+            if (group.IsAlive() == true) group.DestroyHierarchy();
             
         }
 
         [INLINE(256)]
         public static void DestroySelectionGroup(in UnitSelectionGroupAspect group) {
             
-            if (group.ent.IsAlive() == true) group.ent.Destroy();
+            if (group.ent.IsAlive() == true) group.ent.DestroyHierarchy();
             
         }
 
@@ -82,10 +82,10 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, float maxRange = 5f) {
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, float maxRange = 5f, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            var group = UnitUtils.CreateSelectionTempGroup(1u);
+            var group = UnitUtils.CreateSelectionTempGroup(1u, jobInfo);
 
             var visitor = new OctreeNearestAABBVisitor<Ent>();
             tree->Nearest(position, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
@@ -108,7 +108,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, float range) {
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, float range, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
             //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
@@ -119,7 +119,7 @@ namespace ME.BECS.Units {
             tree->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
             //tree->QueryRange(position, range, ref results);
             
-            var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count);
+            var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count, jobInfo);
             foreach (var unit in visitor.results) {
 
                 if (unit.IsAlive() == false) continue;
@@ -192,7 +192,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByRect(in SystemContext context, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4) {
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByRect(in SystemContext context, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4, JobInfo jobInfo = default) {
 
             /*
             UnityEngine.Debug.DrawLine(p1, p2, UnityEngine.Color.cyan, 3f);
@@ -213,7 +213,7 @@ namespace ME.BECS.Units {
             //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
             //tree->QueryRange(center, range, ref results);
 
-            var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count);
+            var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count, jobInfo);
             foreach (var unit in visitor.results) {
 
                 if (unit.IsAlive() == false) continue;
@@ -238,13 +238,14 @@ namespace ME.BECS.Units {
         /// <param name="selectionGroup"></param>
         /// <param name="addToCurrentGroup">Shift. Always move unique units from current selection to the new one.</param>
         /// <param name="removeAddConcrete">Control. If unit is in current selection - remove, if unit is not in current selection - add</param>
+        /// <param name="jobInfo"></param>
         [INLINE(256)]
-        public static void SetSelectionGroup(in ME.BECS.Players.PlayerAspect player, in UnitSelectionTempGroupAspect selectionGroup, bool addToCurrentGroup, bool removeAddConcrete) {
+        public static void SetSelectionGroup(in ME.BECS.Players.PlayerAspect player, in UnitSelectionTempGroupAspect selectionGroup, bool addToCurrentGroup, bool removeAddConcrete, JobInfo jobInfo) {
 
             var groupEnt = player.currentSelection;
             if (groupEnt.IsAlive() == false) {
                 // create selection group
-                player.currentSelection = UnitUtils.CreateSelectionGroup(selectionGroup.units.Count).ent;
+                player.currentSelection = UnitUtils.CreateSelectionGroup(selectionGroup.units.Count, jobInfo).ent;
                 groupEnt = player.currentSelection;
             }
 

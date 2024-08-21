@@ -11,10 +11,12 @@ namespace ME.BECS {
         public MemArray<uint> seeds;
         public MemArray<uint> versionsGroup;
         public MemArray<bool> aliveBits;
-        public Stack<uint> free;
+        public JobThreadStack<uint> free;
+        public List<uint> destroyed;
         public MemArray<LockSpinner> locksPerEntity;
         public ReadWriteSpinner readWriteSpinner;
         public LockSpinner popLock;
+        public LockSpinner destroyedLock;
         public uint Capacity => this.generations.Length;
         public uint FreeCount => this.free.Count;
         public uint EntitiesCount => this.aliveCount;
@@ -43,6 +45,7 @@ namespace ME.BECS {
             size += this.versionsGroup.GetReservedSizeInBytes();
             size += this.aliveBits.GetReservedSizeInBytes();
             size += this.free.GetReservedSizeInBytes();
+            size += this.destroyed.GetReservedSizeInBytes();
             
             return size;
             
@@ -56,6 +59,7 @@ namespace ME.BECS {
             this.seeds.BurstMode(in allocator, mode);
             this.versionsGroup.BurstMode(in allocator, mode);
             this.free.BurstMode(in allocator, mode);
+            this.destroyed.BurstMode(in allocator, mode);
         }
 
         [INLINE(256)]
@@ -69,13 +73,15 @@ namespace ME.BECS {
                 seeds = new MemArray<uint>(ref state->allocator, entityCapacity, growFactor: 2),
                 versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u), growFactor: 2),
                 aliveBits = new MemArray<bool>(ref state->allocator, entityCapacity),
-                free = new Stack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
+                free = new JobThreadStack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
+                destroyed = new List<uint>(ref state->allocator, entityCapacity),
                 locksPerEntity = new MemArray<LockSpinner>(ref state->allocator, entityCapacity, growFactor: 2),
                 readWriteSpinner = ReadWriteSpinner.Create(state),
             };
-            var ptr = (uint*)ents.free.GetUnsafePtr(in state->allocator);
+            //var ptr = (uint*)ents.free.GetUnsafePtr(in state->allocator);
             for (uint i = ents.generations.Length, k = 0u; i > 0u; --i, ++k) {
-                ents.free.PushNoChecks(i - 1u, ptr + k);
+                //ents.free.PushNoChecks(i - 1u, ptr + k);
+                ents.free.Push(ref state->allocator, i - 1u);
                 ++ents.entitiesCount;
             }
             return ents;
@@ -133,7 +139,23 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Ent Add(State* state, ushort worldId, out bool reused) {
+        public void EnsureFree(State* state, ushort worldId, uint count) {
+            
+            E.IS_IN_TICK(state);
+
+            var delta = (int)count - (int)this.free.Count;
+            if (delta > 0) {
+                for (int i = 0; i < delta; ++i) {
+                    var ent = Ent.New_INTERNAL(worldId, default);
+                    ent.Destroy();
+                }
+                this.ApplyDestroyed(state);
+            }
+
+        }
+
+        [INLINE(256)]
+        public Ent Add(State* state, ushort worldId, out bool reused, JobInfo jobInfo) {
 
             E.IS_IN_TICK(state);
             
@@ -141,16 +163,16 @@ namespace ME.BECS {
             
             var idx = 0u;
             var cnt = this.free.Count;
-            if (cnt > 0u) {
+            if (cnt > jobInfo.Offset) {
                 this.popLock.Lock();
                 cnt = this.free.Count;
-                if (cnt > 0u) {
-                    idx = this.free.Pop(in state->allocator);
+                if (cnt > jobInfo.Offset) {
+                    idx = this.free.Pop(in state->allocator, jobInfo);
                 }
                 this.popLock.Unlock();
             }
             
-            if (cnt > 0u) {
+            if (idx > 0u) {
 
                 reused = true;
                 JobUtils.Increment(ref this.aliveCount);
@@ -159,13 +181,15 @@ namespace ME.BECS {
                 this.versions[in state->allocator, idx] = version;
                 this.seeds[in state->allocator, idx] = idx;
                 var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * idx;
-                _memclear((byte*)this.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * sizeof(int), (StaticTypesGroupsBurst.maxId + 1u) * sizeof(int));
+                _memclear((byte*)this.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * TSize<uint>.size, (StaticTypesGroupsBurst.maxId + 1u) * TSize<uint>.size);
                 this.aliveBits[in state->allocator, idx] = true;
                 this.readWriteSpinner.ReadEnd(state);
                 return new Ent(idx, nextGen, worldId);
 
             } else {
 
+                E.THREAD_CHECK("Add entity");
+                
                 reused = false;
                 const ushort gen = 1;
                 JobUtils.Increment(ref this.aliveCount);
@@ -202,24 +226,36 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void RemoveTaskComplete(State* state, UnsafeList<uint>* list) {
-
-            this.free.PushRange(ref state->allocator, list);
-            
-        }
-
-        [INLINE(256)]
         public void Remove(State* state, in Ent ent) {
             
             E.IS_IN_TICK(state);
             
             this.RemoveThreaded(state, ent.id);
+
+            this.destroyedLock.Lock();
+            this.destroyed.Add(ref state->allocator, ent.id);
+            this.destroyedLock.Unlock();
             
-            //this.free.PushLock(ref this.popLock, ref state->allocator, ent.id);
-            this.popLock.Lock();
-            this.free.Push(ref state->allocator, ent.id);
-            this.popLock.Unlock();
-            
+        }
+
+        [INLINE(256)]
+        public void ApplyDestroyed(State* state) {
+
+            this.destroyedLock.Lock();
+            if (this.destroyed.Count == 0u) {
+                this.destroyedLock.Unlock();
+                return;
+            }
+            {
+                this.destroyed.Sort<uint>(state);
+                this.popLock.Lock();
+                for (uint i = 0; i < this.destroyed.Count; ++i) UnityEngine.Debug.Log("DESTROY: #" + this.destroyed[state, i]);
+                this.free.PushRange(ref state->allocator, this.destroyed);
+                this.popLock.Unlock();
+                this.destroyed.Clear();
+            }
+            this.destroyedLock.Unlock();
+
         }
 
         [INLINE(256)]

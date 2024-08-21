@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -5,7 +7,7 @@ namespace ME.BECS {
 
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = 8)]
     public unsafe struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
 
         public static Ent Null => new Ent();
@@ -48,29 +50,44 @@ namespace ME.BECS {
         /// </summary>
         /// <returns></returns>
         [INLINE(256)]
-        public static Ent New() {
-            return Ent.New(Context.world.id);
+        public static Ent New(JobInfo jobInfo = default) {
+            return Ent.New(Context.world.id, jobInfo);
         }
 
         [INLINE(256)]
-        public static Ent New(in World world) {
-            return Ent.New(world.id);
+        public static Ent New(in World world, JobInfo jobInfo = default) {
+            return Ent.New(world.id, jobInfo);
         }
 
         [INLINE(256)]
-        public static Ent New(in SystemContext systemContext) {
-            return Ent.New(systemContext.world.id);
+        public static Ent New(in SystemContext systemContext, JobInfo jobInfo = default) {
+            return Ent.New(systemContext.world.id, jobInfo);
         }
 
         [INLINE(256)]
-        public static Ent New(ushort worldId) {
+        public static Ent New(ushort worldId, JobInfo jobInfo = default) {
+
+            if (JobUtils.IsInParallelJob() == true) {
+                // Create entity with offset because we are in parallel mode
+                // so we need JobInfo struct to be provided
+                E.IS_CREATED(jobInfo);
+                throw new System.NotImplementedException();
+                //return New_INTERNAL(worldId, jobInfo);
+            } else {
+                return New_INTERNAL(worldId, default);
+            }
+
+        }
+        
+        [INLINE(256)]
+        internal static Ent New_INTERNAL(ushort worldId, JobInfo jobInfo) {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
             E.IS_IN_TICK(world.state);
 
             Ent newEnt;
             {
-                newEnt = world.state->entities.Add(world.state, worldId, out var reused);
+                newEnt = world.state->entities.Add(world.state, worldId, out var reused, jobInfo);
                 if (reused == false) {
                     world.state->entities.Lock(world.state, in newEnt);
                     world.state->components.OnEntityAdd(world.state, newEnt.id);

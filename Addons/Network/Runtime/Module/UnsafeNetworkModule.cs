@@ -74,6 +74,13 @@ namespace ME.BECS.Network {
 
     }
 
+    public interface IPackageData {
+
+        void Serialize(ref StreamBufferWriter writer);
+        void Deserialize(ref StreamBufferReader reader);
+
+    }
+
     public readonly unsafe ref struct InputData {
 
         private readonly NetworkPackage package;
@@ -86,10 +93,14 @@ namespace ME.BECS.Network {
             this.world = world;
         }
         
-        public T GetData<T>() where T : unmanaged {
+        public T GetData<T>() where T : unmanaged, IPackageData {
 
-            E.SIZE_EQUALS(TSize<T>.size, this.package.dataSize);
-            return *(T*)this.package.data;
+            //E.SIZE_EQUALS(TSize<T>.size, this.package.dataSize);
+            var result = default(T);
+            var packageData = this.package.data;
+            var readBuffer = new StreamBufferReader(packageData, this.package.dataSize);
+            result.Deserialize(ref readBuffer);
+            return result;
 
         }
 
@@ -510,7 +521,7 @@ namespace ME.BECS.Network {
                     },
                     name = "Network World",
                 };
-                this.networkWorld = World.CreateUninitialized(worldProperties);
+                this.networkWorld = World.CreateUninitialized(worldProperties, false);
                 this.connectedWorld = connectedWorld;
 
                 this.writeBuffer = new StreamBufferWriter(properties.eventsStorageProperties.bufferCapacity);
@@ -710,39 +721,52 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
-        public void AddEvent<T>(NetworkMethodDelegate method, in T data) where T : unmanaged {
+        public void AddEvent<T>(NetworkMethodDelegate method, in T data) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, this.data->localPlayerId, this.data->methodsStorage.GetMethodId(method), in data, 0UL);
         }
 
         [INLINE(256)]
-        public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data) where T : unmanaged {
+        public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, playerId, this.data->methodsStorage.GetMethodId(method), in data, 0UL);
         }
 
         [INLINE(256)]
-        public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged {
+        public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, playerId, this.data->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
         [INLINE(256)]
-        public void AddEvent<T>(uint playerId, ushort methodId, in T data) where T : unmanaged {
+        public void AddEvent<T>(uint playerId, ushort methodId, in T data) where T : unmanaged, IPackageData {
             AddEvent(this.networkTransport, this.data, playerId, methodId, in data, 0UL);
         }
 
         [INLINE(256)]
-        public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged {
+        public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
             AddEvent(networkTransport, moduleData, playerId, moduleData->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
         [INLINE(256)]
-        public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged {
+        public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
 
             if (networkTransport != null && networkTransport.Status != TransportStatus.Connected) {
                 
                 E.CustomException.Throw("NetworkModule is not connected");
                 
             }
-            
+
+            ushort dataLength = 0;
+            byte* dataPtr = null;
+            { // Custom data serialization
+                moduleData->writeBuffer.Reset();
+                data.Serialize(ref moduleData->writeBuffer);
+                var dataBytes = moduleData->writeBuffer.ToArray();
+                dataPtr = _makeArray<byte>((uint)dataBytes.Length);
+                fixed (void* ptr = &dataBytes[0]) {
+                    _memcpy(ptr, dataPtr, dataBytes.Length);
+                }
+                dataLength = (ushort)dataBytes.Length;
+            }
+
             // Form the package
             var tick = moduleData->GetTargetTick() - negativeDeltaTicks;
             var localOrder = moduleData->eventsStorage.GetLocalOrder(playerId);
@@ -751,8 +775,8 @@ namespace ME.BECS.Network {
                 playerId = playerId,
                 localOrder = localOrder,
                 methodId = methodId,
-                data = (byte*)_make(data),
-                dataSize = (ushort)TSize<T>.size,
+                data = dataPtr,
+                dataSize = dataLength,
             };
             
             var eventsBehaviour = (EventsBehaviourState)EventsBehaviour.RunLocalOnly;
@@ -779,8 +803,11 @@ namespace ME.BECS.Network {
 
         [INLINE(256)]
         public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
-            
-            if (this.networkTransport.Status != TransportStatus.Connected) return dependsOn; 
+
+            if (this.networkTransport.Status != TransportStatus.Connected) {
+                Logger.Network.Log($"Transport status: {this.networkTransport.Status}");
+                return dependsOn;
+            } 
             
             dependsOn.Complete();
             {
@@ -796,19 +823,19 @@ namespace ME.BECS.Network {
                         readBuffer.Dispose();
                     }
                 }
-                if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {(targetTick - currentTick)}");
+                //if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {unchecked(targetTick - currentTick)}");
                 {
                     // Do we need the rollback?
                     dependsOn = this.data->Rollback(ref currentTick, ref targetTick, dependsOn);
                 }
-                if ((targetTick - currentTick) > 0UL && this.data->IsInRollback() == false) {
+                if (unchecked((targetTick - currentTick) > 0UL) && this.data->IsInRollback() == false) {
                     // Make a state copy for interpolation
                     this.data->startFrameState->CopyFrom(in *world.state);
                 }
                 //var completePerTick = this.properties.maxFrameTime / this.properties.tickTime;
                 this.frameStopwatch.Restart();
                 for (ulong tick = currentTick; tick < targetTick; ++tick) {
-
+                    
                     // Begin tick
                     dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, dependsOn);
                     {

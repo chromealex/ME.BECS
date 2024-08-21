@@ -47,6 +47,17 @@ namespace ME.BECS {
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.LATE_UPDATE, this.previousFrameDependsOn);
 
+            if (this.world.isCreated == true) {
+                // Update modules
+                this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);
+
+                for (var i = 0; i < this.modules.list.Length; ++i) {
+                    var module = this.modules.list[i];
+                    if (module.IsEnabled() == false) continue;
+                    this.previousFrameDependsOn = module.obj.OnUpdate(this.previousFrameDependsOn);
+                }
+            }
+
             base.LateUpdate();
 
         }

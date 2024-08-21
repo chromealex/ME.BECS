@@ -101,7 +101,7 @@ namespace ME.BECS.Network {
             return dependsOn;
         }
 
-        public override void OnDestroy() {
+        public override void DoDestroy() {
             this.network.Dispose();
         }
 
@@ -147,7 +147,7 @@ namespace ME.BECS.Network {
             this.network.RegisterMethod(method);
         }
 
-        public void AddEvent<T>(uint playerId, ushort methodId, in T data) where T : unmanaged {
+        public void AddEvent<T>(uint playerId, ushort methodId, in T data) where T : unmanaged, IPackageData {
             this.network.AddEvent(playerId, methodId, in data);
         }
 

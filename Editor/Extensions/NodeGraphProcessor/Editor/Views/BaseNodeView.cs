@@ -190,6 +190,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 				var titleLabel = this.Q("title-label") as Label;
 				titleLabel.parent.Insert(1, container);
 				container.Add(titleLabel);
+
+				this.UpdateSync(container.parent);
+				
 				var containerLabels = new VisualElement();
 				containerLabels.AddToClassList("container-labels");
 				container.Add(containerLabels);
@@ -203,7 +206,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 				var contents = this.Q("contents");
 				contents.parent.Add(contents);
 			}
-
+			
 			// Add renaming capability
 			if ((capabilities & Capabilities.Renamable) != 0)
 				SetupRenamableTitle();
@@ -242,6 +245,20 @@ namespace ME.BECS.Extensions.GraphProcessor
 			
 			mainContainer.Add(controlsContainer);
 
+			this.TestSync();
+
+		}
+
+		private VisualElement syncContainer;
+
+		public void UpdateSync() {
+			if (this.syncContainer != null) this.UpdateSync(this.syncContainer);
+		}
+
+		protected virtual void UpdateSync(VisualElement container) {
+
+			this.syncContainer = container;
+			
 		}
 
 		protected virtual void CreateLabels(VisualElement container) {
@@ -1182,7 +1199,14 @@ namespace ME.BECS.Extensions.GraphProcessor
                 evt.menu.AppendAction((nodeTarget.isLocked ? "Unlock" : "Lock"), (e) => ChangeLockStatus(), LockStatus);
         }
 
-		protected void BuildAlignMenu(ContextualMenuPopulateEvent evt)
+        public void TestSync() {
+            
+	        this.nodeTarget.UpdateSyncState();
+	        this.UpdateSync();
+            
+        }
+
+        protected void BuildAlignMenu(ContextualMenuPopulateEvent evt)
 		{
 			evt.menu.AppendAction("Align/To Left", (e) => AlignToLeft());
 			evt.menu.AppendAction("Align/To Center", (e) => AlignToCenter());
@@ -1307,6 +1331,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 				for (int i = 0; i < portViews.Count; i++)
 					portViews[i].UpdatePortView(ports[i].portData);
 			}
+
+			this.TestSync();
 
 			return base.RefreshPorts();
 		}

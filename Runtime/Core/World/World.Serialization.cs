@@ -88,6 +88,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public StreamBufferReader(byte* bytes, uint size) {
+
+            this = default;
+            this.arr = bytes;
+            this.arrSize = size;
+            this.position = 0u;
+
+        }
+
+        [INLINE(256)]
         public void Dispose() {
             if (this.arr != null) _free(this.arr);
         }

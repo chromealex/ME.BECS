@@ -170,6 +170,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly ref U As<U>(in MemoryAllocator allocator, uint index) where U : unmanaged {
+            E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
             return ref allocator.RefArray<U>(this.arrPtr, index);
         }
@@ -177,6 +178,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void ReplaceWith(ref MemoryAllocator allocator, in MemArray<T> other) {
             
+            E.IS_CREATED(this);
             if (other.arrPtr == this.arrPtr) {
                 return;
             }
@@ -239,6 +241,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
 
+            E.IS_CREATED(this);
             return MemoryAllocatorExt.GetUnsafePtr(in allocator, this.arrPtr);
 
         }
@@ -246,6 +249,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void* GetUnsafePtrCached(in MemoryAllocator allocator) {
 
+            E.IS_CREATED(this);
             return this.cachedPtr.ReadPtr(in allocator, this.arrPtr);
 
         }
@@ -253,6 +257,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public MemPtr GetAllocPtr(in MemoryAllocator allocator, uint index) {
             
+            E.IS_CREATED(this);
             return allocator.RefArrayPtr<T>(this.arrPtr, index);
             
         }
@@ -260,6 +265,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public ref T Read(in MemoryAllocator allocator, uint index) {
             
+            E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
             return ref this.cachedPtr.Read(in allocator, this.arrPtr, index);
             
@@ -268,6 +274,7 @@ namespace ME.BECS {
         public readonly ref T this[State* state, int index] {
             [INLINE(256)]
             get {
+                E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
                 return ref *((T*)this.GetUnsafePtrCached(in state->allocator) + index);
             }
@@ -276,6 +283,7 @@ namespace ME.BECS {
         public readonly ref T this[in MemoryAllocator allocator, int index] {
             [INLINE(256)]
             get {
+                E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
                 return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
             }
@@ -284,6 +292,7 @@ namespace ME.BECS {
         public readonly ref T this[in MemoryAllocator allocator, uint index] {
             [INLINE(256)]
             get {
+                E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
                 return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
             }
@@ -292,6 +301,7 @@ namespace ME.BECS {
         public readonly ref T this[State* state, uint index] {
             [INLINE(256)]
             get {
+                E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
                 return ref *((T*)this.GetUnsafePtrCached(in state->allocator) + index);
             }
@@ -398,7 +408,7 @@ namespace ME.BECS {
 
         public uint GetReservedSizeInBytes() {
 
-            return this.Length * (uint)sizeof(T);
+            return this.Length * TSize<T>.size;
 
         }
 

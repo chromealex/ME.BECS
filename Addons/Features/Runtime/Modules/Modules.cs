@@ -13,7 +13,7 @@ namespace ME.BECS {
         public abstract void OnAwake(ref World world);
         public abstract JobHandle OnStart(ref World world, JobHandle dependsOn);
         public abstract JobHandle OnUpdate(JobHandle dependsOn);
-        public abstract void OnDestroy();
+        public abstract void DoDestroy();
 
     }
 

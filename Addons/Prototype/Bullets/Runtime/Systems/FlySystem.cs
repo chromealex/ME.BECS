@@ -15,7 +15,7 @@ namespace ME.BECS.Bullets {
 
             public float dt;
             
-            public void Execute(ref BulletAspect aspect, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, ref BulletAspect aspect, ref TransformAspect tr) {
 
                 if (aspect.config.autoTarget == true && aspect.component.targetEnt.IsAlive() == true) {
                     aspect.component.targetWorldPos = aspect.component.targetEnt.GetAspect<TransformAspect>().GetWorldMatrixPosition();
@@ -34,7 +34,7 @@ namespace ME.BECS.Bullets {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().Without<TargetReachedComponent>().ScheduleParallelFor<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
+            var dependsOn = context.Query().Without<TargetReachedComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);

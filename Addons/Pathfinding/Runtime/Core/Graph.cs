@@ -941,9 +941,9 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static JobHandle Build(in World world, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default) {
+        public static JobHandle Build(in World world, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default, JobInfo jobInfo = default) {
 
-            graph = Ent.New();
+            graph = Ent.New(jobInfo);
             graph.Set<TransformAspect>();
             return Build(in graph, in heights, in world, in properties, in agentConfig, dependsOn);
 

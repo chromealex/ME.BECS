@@ -62,7 +62,7 @@ namespace ME.BECS.Tests {
         [Unity.Burst.BurstCompileAttribute]
         private struct JobComponents : IJobParallelForComponents<TestComponent> {
 
-            public void Execute(in Ent ent, ref TestComponent component) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
 
                 component.data += 1;
 
@@ -103,7 +103,7 @@ namespace ME.BECS.Tests {
                     ent3 = ent;
                 }
 
-                var job = API.Query(world).Without<Test2Component>().ScheduleParallelFor<JobComponents, TestComponent>(new JobComponents());
+                var job = API.Query(world).Without<Test2Component>().Schedule<JobComponents, TestComponent>(new JobComponents());
                 job.Complete();
                 
                 Assert.AreEqual(2, ent1.Read<TestComponent>().data);

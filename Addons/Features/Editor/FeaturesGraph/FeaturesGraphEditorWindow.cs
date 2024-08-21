@@ -89,6 +89,12 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private void UpdateToolbar() {
             this.saveButton.SetEnabled(true);//this.hasUnsavedChanges);
+
+            if (this.graphView != null) {
+                if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);
+                this.graphView.RemoveManipulator(contextMenu);
+                this.graphView.AddManipulator(contextMenu);
+            }
         }
 
         protected override void Update() {
@@ -128,8 +134,21 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 this.background.style.backgroundSize = new StyleBackgroundSize(new BackgroundSize(512f * scaleX, 512f * scaleY));
             }
             this.background.MarkDirtyRepaint();
+
+            //this.graphView.focusable = true;
+            //this.graphView.pickingMode = PickingMode.Position;
+            //this.graphView.UnregisterCallback<ContextualMenuPopulateEvent>(this.graphView.BuildContextualMenu);
+            //this.graphView.RegisterCallback<ContextualMenuPopulateEvent>(this.graphView.BuildContextualMenu);
+
+            if (this.graphView != null) {
+                if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);
+                this.graphView.RemoveManipulator(contextMenu);
+                this.graphView.AddManipulator(contextMenu);
+            }
             
         }
+
+        private static IManipulator contextMenu;
 
         private static StyleSheet styleSheetBase;
         

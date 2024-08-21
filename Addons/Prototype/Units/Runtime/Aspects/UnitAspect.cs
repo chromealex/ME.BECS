@@ -77,14 +77,14 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public readonly void Hit(float damage, in Ent source) {
+        public readonly void Hit(float damage, in Ent source, JobInfo jobInfo) {
             if (this.health > 0f) {
                 JobUtils.Decrement(ref this.health, damage);
                 this.ent.SetOneShot(new DamageTookComponent() {
                     sourceUnit = source,
                 }, OneShotType.NextTick);
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, in this.ent.Read<UnitHealthComponent>().effectOnHit);
+                ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, in this.ent.Read<UnitHealthComponent>().effectOnHit, jobInfo);
             }
         }
 

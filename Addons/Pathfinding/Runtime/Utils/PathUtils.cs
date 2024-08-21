@@ -1,3 +1,5 @@
+using ME.BECS.Transforms;
+
 namespace ME.BECS.Pathfinding {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -22,7 +24,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position) {
+        public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position, JobInfo jobInfo = default) {
             
             unitCommandGroup.ent.Set(new ME.BECS.Transforms.LocalPositionComponent() {
                 value = position,
@@ -114,9 +116,10 @@ namespace ME.BECS.Pathfinding {
 
                 // set target for each unique type id in group
                 {
-                    var targetInfo = CreateTargetInfo(in middlePoint);
+                    var targetInfo = CreateTargetInfo(in middlePoint, jobInfo);
+                    targetInfo.SetParent(unitCommandGroup.ent);
                     foreach (var typeId in typeIds) {
-                        PathUtils.AddTarget(in buildGraphSystem, in unitCommandGroup, typeId, in targetInfo);
+                        PathUtils.AddTarget(in buildGraphSystem, in unitCommandGroup, typeId, in targetInfo, jobInfo);
                     }
                 }
 
@@ -135,9 +138,10 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static void AddTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, uint typeId, in Ent targetInfo) {
+        private static void AddTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, uint typeId, in Ent targetInfo, JobInfo jobInfo = default) {
 
-            var targetEnt = Ent.New();
+            var targetEnt = Ent.New(jobInfo);
+            targetEnt.SetParent(unitCommandGroup.ent);
             targetEnt.Set(TargetComponent.Create(in targetInfo, buildGraphSystem.GetGraphByTypeId(typeId)));
             unitCommandGroup.targets[typeId] = targetEnt;
 
@@ -159,15 +163,15 @@ namespace ME.BECS.Pathfinding {
                 if (target.IsAlive() == false) continue;
                 var targetComponent = target.Read<TargetComponent>();
                 if (targetComponent.target.IsAlive() == false) continue;
-                targetComponent.target.Destroy();
-                target.Destroy();
+                targetComponent.target.DestroyHierarchy();
+                target.DestroyHierarchy();
                 target = default;
             }
         }
         
         [INLINE(256)]
-        public static Ent CreateTargetInfo(in float3 position) {
-            var ent = Ent.New();
+        public static Ent CreateTargetInfo(in float3 position, JobInfo jobInfo) {
+            var ent = Ent.New(jobInfo);
             ent.Set(new TargetInfoComponent() {
                 position = position,
                 volume = (int)(DEFAULT_VOLUME_RADIUS * UnitUtils.FLOAT_TO_UINT),
@@ -202,7 +206,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static float GetGroupRadiusSqr(in UnitCommandGroupAspect commandGroup) {
 
-            return commandGroup.readVolume / math.PI * RADIUS_FACTOR;
+            return commandGroup.readVolume * UnitUtils.UINT_TO_FLOAT / math.PI * RADIUS_FACTOR;
 
         }
         

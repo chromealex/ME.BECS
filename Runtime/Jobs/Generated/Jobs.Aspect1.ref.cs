@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobAspectExtensions.JobProcess<,>))]
     public interface IJobAspect<T0> : IJobAspectBase where T0 : unmanaged, IAspect {
-        void Execute(ref T0 c0);
+        void Execute(in JobInfo jobInfo, ref T0 c0);
     }
 
     public static unsafe partial class JobAspectExtensions {
@@ -102,15 +102,19 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
             
+                var jobInfo = JobInfo.Create();
+                jobInfo.count = jobData.buffer->count;
+                
                 JobUtils.SetCurrentThreadAsSingle(true);
                 
                 var aspect0 = jobData.c0;
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                for (int i = 0; i < jobData.buffer->count; ++i) {
+                for (uint i = 0u; i < jobData.buffer->count; ++i) {
+                    jobInfo.index = i;
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
                     aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);
-                    jobData.jobData.Execute(ref aspect0);
+                    jobData.jobData.Execute(in jobInfo, ref aspect0);
                 }
                 jobData.buffer->EndForEachRange();
                 

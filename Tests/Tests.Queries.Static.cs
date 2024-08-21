@@ -256,7 +256,7 @@ namespace ME.BECS.Tests {
 
                 public Unity.Collections.NativeReference<int> sum;
 
-                public void Execute(in Ent ent, ref TestComponent comp) {
+                public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent comp) {
                     this.sum.Value += comp.data;
                 }
 

@@ -292,6 +292,7 @@ namespace ME.BECS.Editor {
         public const float COMPONENT_SIZE = 10f;
 
         private scg::List<GNode>[] nodes;
+        private float[] levelRadius;
         public readonly scg::Dictionary<uint, GNode> idToNode = new scg::Dictionary<uint, GNode>();
 
         private readonly scg::List<uint> tmpList = new scg::List<uint>();
@@ -315,6 +316,7 @@ namespace ME.BECS.Editor {
             var level = node.level;
             if (this.nodes == null || level >= this.nodes.Length) {
                 System.Array.Resize(ref this.nodes, (int)level + 1);
+                System.Array.Resize(ref this.levelRadius, (int)level + 1);
             }
 
             ref var list = ref this.nodes[level];
@@ -323,6 +325,7 @@ namespace ME.BECS.Editor {
             }
 
             list.Add(node);
+            this.levelRadius[level] = 0f;
             this.idToNode.Add(node.id, node);
 
         }
@@ -366,6 +369,7 @@ namespace ME.BECS.Editor {
 
                 }
 
+                this.levelRadius[level] = newDistance;
                 newDistance = Arrange.PositionDiagram(nodes, newDistance) + nodes[0].radius * 2f + spacing;
                 
             }
@@ -379,6 +383,8 @@ namespace ME.BECS.Editor {
             var offset = rect.center + this.offset;
             var center = Vector2.zero;
             this.CalcScale(center, zoom);
+            
+            this.DrawBackground(offset);
 
             foreach (var kv in this.cacheNodes) {
 
@@ -427,6 +433,29 @@ namespace ME.BECS.Editor {
             box.style.height = new StyleLength(node.radius * 2f * this.scale);
             box.style.left = new StyleLength(pos.x);
             box.style.top = new StyleLength(pos.y);
+
+        }
+
+        private BackgroundCircles backgroundCircles;
+        public void DrawBackground(Vector2 offset) {
+            
+            var center = offset;
+            
+            if (this.backgroundCircles != null) {
+                this.backgroundCircles.radiuses = this.levelRadius;
+                this.backgroundCircles.center = center;
+                this.backgroundCircles.scale = this.scale;
+                this.backgroundCircles.SetDirty();
+                return;
+            }
+            
+            var back = new BackgroundCircles(50) {
+                color = new Color(1f, 1f, 1f, 0.3f),
+                center = center,
+                scale = this.scale,
+            };
+            this.backgroundCircles = back;
+            this.rootVisualElement.Add(back);
 
         }
 
@@ -686,6 +715,7 @@ namespace ME.BECS.Editor {
             });
 
             this.rootVisualElement = rootVisualElement;
+            this.DrawBackground(Vector2.zero);
             var rect = rootVisualElement.parent.worldBound;
             var center = rect.center;
 
@@ -1592,9 +1622,11 @@ namespace ME.BECS.Editor {
                     graph.AddNode(node);
                 }
 
-                /*foreach (var archIdx in world.state->archetypes.allArchetypes) {
-
-                    var arch = world.state->archetypes.list[archIdx];
+                /*e = world.state->archetypes.allArchetypes.GetEnumerator();
+                while (e.MoveNext() == true) {
+                    
+                    var archIdx = e.GetCurrent(in world.state->allocator);
+                    var arch = world.state->archetypes.list[world.state, archIdx];
                     foreach (var edge in arch.addEdges) {
 
                         var toIdx = edge.Value;

@@ -60,7 +60,7 @@ namespace ME.BECS {
 
         }
 
-        public override void OnDestroy() {
+        public override void DoDestroy() {
 
             if (this.isActive == false) return;
             

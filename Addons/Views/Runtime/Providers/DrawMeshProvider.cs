@@ -238,7 +238,9 @@ namespace ME.BECS.Views {
             renderParams.layer = rendering.layer;
             renderParams.renderingLayerMask = rendering.renderingLayerMask;
             renderParams.rendererPriority = rendering.rendererPriority;
+            #if UNITY_2023_1_OR_NEWER
             renderParams.instanceID = rendering.instanceID;
+            #endif
             renderParams.camera = null;
             return renderParams;
         }

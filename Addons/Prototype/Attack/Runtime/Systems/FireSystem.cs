@@ -12,9 +12,9 @@ namespace ME.BECS.Attack {
     public struct FireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct FireJob : ME.BECS.Jobs.IJobParallelForAspect<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public struct FireJob : IJobAspect<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
-            public void Execute(ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
+            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
 
                 if (aspect.target.IsAlive() == true) {
 
@@ -28,7 +28,7 @@ namespace ME.BECS.Attack {
                     }
 
                     BulletUtils.CreateBullet(aspect.ent, pos, rot, query.query.treeMask, aspect.target, default, aspect.component.bulletConfig, aspect.component.bulletView,
-                                             aspect.component.muzzleView);
+                                             aspect.component.muzzleView, jobInfo: jobInfo);
 
                     // fire - reset target and reload
                     aspect.IsReloaded = false;
@@ -47,7 +47,7 @@ namespace ME.BECS.Attack {
             var dependsOn = context.Query()
                                .With<ReloadedComponent>()
                                .With<AttackTargetComponent>()
-                               .ScheduleParallelFor<FireJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>();
+                               .Schedule<FireJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>();
             context.SetDependency(dependsOn);
 
         }

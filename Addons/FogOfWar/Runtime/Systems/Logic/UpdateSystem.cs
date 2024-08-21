@@ -15,7 +15,7 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
                 
                 var fow = UnitUtils.GetTeam(in unit).Read<FogOfWarComponent>();
                 FogOfWarUtils.Write(in this.props, in fow, in tr, in unit);
@@ -26,7 +26,7 @@ namespace ME.BECS.FogOfWar {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().ScheduleParallelFor<Job, TransformAspect, UnitAspect>(new Job() {
+            var dependsOn = context.Query().Schedule<Job, TransformAspect, UnitAspect>(new Job() {
                 props = context.world.GetSystem<CreateSystem>().heights.Read<FogOfWarStaticComponent>(),
             });
             context.SetDependency(dependsOn);

@@ -17,7 +17,7 @@ namespace ME.BECS.Pathfinding {
             public World world;
             public Filter filter;
             
-            public void Execute(in Ent ent, ref TargetComponent targetData) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TargetComponent targetData) {
                 
                 if (targetData.target.IsAlive() == false) return;
 
@@ -51,7 +51,7 @@ namespace ME.BECS.Pathfinding {
         
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).With<TargetComponent>().ScheduleParallelFor<UpdatePathJob, TargetComponent>(new UpdatePathJob() {
+            var dependsOn = API.Query(in context).With<TargetComponent>().Schedule<UpdatePathJob, TargetComponent>(new UpdatePathJob() {
                 world = context.world,
                 filter = this.filter,
             });

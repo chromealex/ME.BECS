@@ -17,7 +17,7 @@ namespace ME.BECS.FogOfWar {
 
             public Players.PlayersSystem playersSystem;
             
-            public void Execute(ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
 
                 var tr = unit.ent.GetAspect<TransformAspect>();
                 var owner = unit.readOwner.GetAspect<PlayerAspect>();
@@ -27,7 +27,7 @@ namespace ME.BECS.FogOfWar {
                     var team = teams[(int)i];
                     // We do not need shadow copy for the same team
                     if (team == owner.readTeam) continue;
-                    var ent = Ent.New();
+                    var ent = Ent.New(jobInfo);
                     PlayerUtils.SetOwner(in ent, owner);
                     var shadowTr = ent.GetOrCreateAspect<TransformAspect>();
                     shadowTr.position = tr.position;
@@ -48,7 +48,7 @@ namespace ME.BECS.FogOfWar {
         public void OnUpdate(ref SystemContext context) {
 
             // Collect all units which has not presented as shadow copy
-            var dependsOn = context.Query().Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().ScheduleParallelFor<CreateJob, UnitAspect>(new CreateJob() {
+            var dependsOn = context.Query().Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().Schedule<CreateJob, UnitAspect>(new CreateJob() {
                 playersSystem = context.world.GetSystem<PlayersSystem>(),
             });
             context.SetDependency(dependsOn);

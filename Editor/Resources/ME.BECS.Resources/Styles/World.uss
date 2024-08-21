@@ -1,3 +1,20 @@
+BackgroundCircles {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    position: absolute;
+    --lines-color: rgba(255, 255, 255, 0.1);
+}
+
+BackgroundCircles Circle {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    position: absolute;
+}
+
 .full-screen {
     position: absolute;
     left: 0;

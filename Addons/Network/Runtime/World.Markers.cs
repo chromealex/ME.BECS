@@ -50,7 +50,7 @@ namespace ME.BECS.Network.Markers {
 
         }
 
-        public static void SendNetworkEvent<T>(this in World world, T marker, NetworkMethodDelegate method) where T : unmanaged {
+        public static void SendNetworkEvent<T>(this in World world, T marker, NetworkMethodDelegate method) where T : unmanaged, IPackageData {
 
             WorldsNetworkDataStorage.worlds.Resize(world.id + 1u);
             var header = WorldsNetworkDataStorage.worlds.Get(world.id);
@@ -59,7 +59,7 @@ namespace ME.BECS.Network.Markers {
             
         }
 
-        public static void SendNetworkEvent<T>(this in World world, T marker, NetworkMethodDelegate method, ulong negativeDelta) where T : unmanaged {
+        public static void SendNetworkEvent<T>(this in World world, T marker, NetworkMethodDelegate method, ulong negativeDelta) where T : unmanaged, IPackageData {
 
             WorldsNetworkDataStorage.worlds.Resize(world.id + 1u);
             var header = WorldsNetworkDataStorage.worlds.Get(world.id);

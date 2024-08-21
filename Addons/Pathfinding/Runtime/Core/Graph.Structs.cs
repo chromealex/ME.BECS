@@ -190,11 +190,14 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public readonly float GetHeight(float3 worldPosition) {
+            if (this.data.heightMap.Length == 1) return 0f;
             return this.data.SampleHeight(worldPosition);
         }
 
         [INLINE(256)]
         public readonly float GetHeight(float3 worldPosition, out float3 normal) {
+            normal = math.up();
+            if (this.data.heightMap.Length == 1) return 0f;
             return this.data.SampleHeight(worldPosition, out normal);
         }
 

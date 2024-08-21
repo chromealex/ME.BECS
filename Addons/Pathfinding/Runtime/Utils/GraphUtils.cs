@@ -111,14 +111,14 @@ namespace ME.BECS.Pathfinding {
                 var mask = ent.Read<GraphMaskComponent>();
                 mask.Destroy();
             }
-            ent.Destroy();
+            ent.DestroyHierarchy();
             
         }
         
         [INLINE(256)]
-        public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false) {
+        public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false, JobInfo jobInfo = default) {
 
-            var ent = Ent.New();
+            var ent = Ent.New(jobInfo);
             return CreateGraphMask(in ent, in position, in rotation, size, cost, height, obstacleChannel, ignoreGraphRadius);
 
         }

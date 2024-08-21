@@ -53,7 +53,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -23, y: 266, z: 0}
+  position: {x: -79, y: 209, z: 0}
   scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
@@ -61,6 +61,7 @@ MonoBehaviour:
     - rid: 8346928920201003102
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -80,6 +81,7 @@ MonoBehaviour:
     - rid: 8346928920201003103
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -99,6 +101,7 @@ MonoBehaviour:
     - rid: 8346928920201003104
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
         nodeCustomName: 
         GUID: cfce7412-e9ad-434b-bc8a-aeb877708187
         groupGUID: 
@@ -120,10 +123,11 @@ MonoBehaviour:
       type: {class: BuildGraphSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
       data:
         agentTypesConfig:
-          id: 2
+          id: 5
     - rid: 8346928920201003106
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
         nodeCustomName: 
         GUID: 123f146c-0ce5-48ca-94ce-f4d3993ce5ff
         groupGUID: 

@@ -36,7 +36,7 @@ namespace ME.BECS.Units {
             public float dt;
             public World world;
             
-            public void Execute(ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var facingCone = math.cos(math.radians(120f));
                 var collisionDir = float3.zero;
@@ -170,7 +170,7 @@ namespace ME.BECS.Units {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().ScheduleParallelFor<Job, TransformAspect, UnitAspect>(new Job() {
+            var dependsOn = API.Query(in context).Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().Schedule<Job, TransformAspect, UnitAspect>(new Job() {
                 world = context.world,
                 system = this,
                 dt = context.deltaTime,

@@ -7,9 +7,9 @@ namespace ME.BECS.Units {
     public static partial class UnitUtils {
 
         [INLINE(256)]
-        public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, uint capacity = 10u) {
+        public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, uint capacity = 10u, JobInfo jobInfo = default) {
 
-            var ent = Ent.New();
+            var ent = Ent.New(jobInfo);
             var aspect = ent.GetOrCreateAspect<UnitCommandGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, capacity);
             aspect.targets = new MemArrayAuto<Ent>(in ent, targetsCapacity);
@@ -18,9 +18,9 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in UnitSelectionGroupAspect selectionGroup) {
+        public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in UnitSelectionGroupAspect selectionGroup, JobInfo jobInfo) {
 
-            var ent = Ent.New();
+            var ent = Ent.New(jobInfo);
             var aspect = ent.GetOrCreateAspect<UnitCommandGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, selectionGroup.units.Count);
             aspect.targets = new MemArrayAuto<Ent>(in ent, targetsCapacity);
@@ -110,12 +110,12 @@ namespace ME.BECS.Units {
                 // if next command group is created
                 var next = commandGroup.nextChainTarget.GetAspect<UnitCommandGroupAspect>();
                 next.Add(in unit);
-                UnityEngine.Debug.Log("Unit " + unit.ent + " set cmd group: " + commandGroup.ent + " => " + next.ent);
+                //UnityEngine.Debug.Log("Unit " + unit.ent + " set cmd group: " + commandGroup.ent + " => " + next.ent);
                 return true;
 
             }
             
-            UnityEngine.Debug.Log("Unit " + unit.ent + " has no next group");
+            //UnityEngine.Debug.Log("Unit " + unit.ent + " has no next group");
 
             return false;
 

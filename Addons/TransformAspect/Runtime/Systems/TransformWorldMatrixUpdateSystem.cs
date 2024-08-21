@@ -11,7 +11,7 @@ namespace ME.BECS.Transforms {
         [BURST(CompileSynchronously = true)]
         public struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
 
-            public void Execute(ref TransformAspect aspect) {
+            public void Execute(in JobInfo jobInfo, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateMatrix(in aspect);
 
@@ -22,7 +22,7 @@ namespace ME.BECS.Transforms {
         [BURST(CompileSynchronously = true)]
         public struct CalculateRootsWithChildrenJob : IJobParallelForAspect<TransformAspect> {
 
-            public void Execute(ref TransformAspect aspect) {
+            public void Execute(in JobInfo jobInfo, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateMatrixHierarchy(aspect.parent, in aspect);
 
@@ -33,9 +33,9 @@ namespace ME.BECS.Transforms {
         public void OnUpdate(ref SystemContext context) {
             
             // update roots
-            var rootsHandle = API.Query(in context).Without<ParentComponent>().ScheduleParallelFor<CalculateRootsJob, TransformAspect>();
+            var rootsHandle = API.Query(in context).Without<ParentComponent>().Schedule<CalculateRootsJob, TransformAspect>();
             // update children with roots
-            var rootsWithChildrenHandle = API.Query(in context, rootsHandle).With<ParentComponent>().With<IsFirstLevelComponent>().ScheduleParallelFor<CalculateRootsWithChildrenJob, TransformAspect>();
+            var rootsWithChildrenHandle = API.Query(in context, rootsHandle).With<ParentComponent>().With<IsFirstLevelComponent>().Schedule<CalculateRootsWithChildrenJob, TransformAspect>();
             context.SetDependency(rootsWithChildrenHandle);
             
         }

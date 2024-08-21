@@ -49,7 +49,7 @@ namespace ME.BECS {
                     var vGroup = worldEnt.GetVersion(this.groupIdsInit[j]);
                     if (this.versionByGroup[j] != vGroup) {
                         this.versionByGroup[j] = vGroup;
-                        changed = true;
+                        return true;
                     }
                 }
             }

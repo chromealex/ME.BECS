@@ -13,8 +13,42 @@ namespace ME.BECS.Extensions.GraphProcessor
 	public delegate IEnumerable< PortData > CustomPortTypeBehaviorDelegate(string fieldName, string displayName, object value);
 
 	[Serializable]
-	public abstract class BaseNode
-	{
+	public abstract class BaseNode {
+
+		public bool syncPoint;
+		public int syncCount;
+		
+		public bool HasBackward(BaseNode lookUpNode) {
+			var q = new System.Collections.Generic.Queue<BaseNode>();
+			q.Enqueue(this);
+			var max = 100_000;
+			while (q.Count > 0) {
+				if (--max == 0) {
+					UnityEngine.Debug.LogError("max iter");
+					return false;
+				}
+
+				var node = q.Dequeue();
+				if (node == null) continue;
+                
+				// look up backward
+				foreach (var port in node.inputPorts) {
+					var edges = port.GetEdges();
+					foreach (var edge in edges) {
+						q.Enqueue(edge.outputNode);
+						if (edge.outputNode == lookUpNode) return true;
+					}
+				}
+
+			}
+
+			return false;
+		}
+
+		public virtual void UpdateSyncState() {
+			this.syncPoint = false;
+		}
+		
 		[SerializeField]
 		internal string nodeCustomName = null; // The name of the node in case it was renamed by a user
 

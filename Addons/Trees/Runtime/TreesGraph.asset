@@ -53,7 +53,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -21, y: 186, z: 0}
+  position: {x: -9, y: 224, z: 0}
   scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
@@ -86,9 +86,9 @@ MonoBehaviour:
           y: 0
           z: 0
         mapSize:
-          x: 500
+          x: 200
           y: 100
-          z: 500
+          z: 200
     - rid: 8346928920201003092
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

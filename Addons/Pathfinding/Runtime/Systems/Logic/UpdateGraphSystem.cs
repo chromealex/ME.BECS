@@ -16,12 +16,12 @@ namespace ME.BECS.Pathfinding {
     public struct UpdateGraphSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct ResetPathJob : ME.BECS.Jobs.IJobParallelForComponents<TargetPathComponent> {
+        public unsafe struct ResetPathJob : IJobParallelForComponents<TargetPathComponent> {
 
             public Unity.Collections.NativeArray<ulong> dirtyChunks;
             public World world;
 
-            public void Execute(in Ent ent, ref TargetPathComponent path) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TargetPathComponent path) {
                 
                 for (uint i = 0; i < this.dirtyChunks.Length; ++i) {
                     if (this.dirtyChunks[(int)i] != this.world.state->tick) continue;
@@ -39,7 +39,7 @@ namespace ME.BECS.Pathfinding {
 
             public BuildGraphSystem graphSystem;
             
-            public void Execute(in Ent ent, ref GraphMaskComponent obstacle) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref GraphMaskComponent obstacle) {
 
                 ent.Remove<IsGraphMaskDirtyComponent>();
                 
@@ -127,7 +127,7 @@ namespace ME.BECS.Pathfinding {
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var graphMaskUpdate = API.Query(in context, context.dependsOn).With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().ScheduleParallelFor<UpdateGraphMaskJob, GraphMaskComponent>(new UpdateGraphMaskJob() {
+            var graphMaskUpdate = API.Query(in context, context.dependsOn).With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().Schedule<UpdateGraphMaskJob, GraphMaskComponent>(new UpdateGraphMaskJob() {
                 graphSystem = graphSystem,
             });
             
@@ -139,7 +139,7 @@ namespace ME.BECS.Pathfinding {
                 _memcpy(changedChunks.GetUnsafePtr(), tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
-                dependsOn = API.Query(in context.world, dependsOn).ScheduleParallelFor<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
+                dependsOn = API.Query(in context.world, dependsOn).Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
                     world = context.world,
                     dirtyChunks = tempDirty,
                 });

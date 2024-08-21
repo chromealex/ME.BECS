@@ -60,7 +60,7 @@ namespace ME.BECS {
             return dependsOn;
         }
 
-        public override void OnDestroy() {
+        public override void DoDestroy() {
 
             if (this.uiWorld.isCreated == true) {
                 this.uiWorld.Dispose();

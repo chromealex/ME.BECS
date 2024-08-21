@@ -44,7 +44,7 @@ namespace ME.BECS {
             [NativeDisableUnsafePtrRestriction]
             public UnsafeList<System.IntPtr> quadTrees;
 
-            public void Execute(ref QuadTreeAspect quadTreeAspect, ref ME.BECS.Transforms.TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, ref QuadTreeAspect quadTreeAspect, ref ME.BECS.Transforms.TransformAspect tr) {
                 
                 var tree = (NativeTrees.NativeOctree<Ent>*)this.quadTrees[quadTreeAspect.treeIndex];
                 if (tr.IsCalculated == false) return;
@@ -118,7 +118,7 @@ namespace ME.BECS {
             };
             var clearJobHandle = clearJob.Schedule(this.quadTrees.Length, 1, context.dependsOn);
             
-            var handle = API.Query(in context, clearJobHandle).ScheduleParallelFor<CollectJob, QuadTreeAspect, Transforms.TransformAspect>(new CollectJob() {
+            var handle = API.Query(in context, clearJobHandle).Schedule<CollectJob, QuadTreeAspect, Transforms.TransformAspect>(new CollectJob() {
                 quadTrees = this.quadTrees,
             });
 

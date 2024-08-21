@@ -17,7 +17,9 @@ namespace ME.BECS.Network {
                 return;
             }
 
-            if (this.featuresGraph != null) this.featuresGraph.DoAwake(ref this.world, UpdateType.FIXED_UPDATE);
+            var group = SystemGroup.Create(UpdateType.ANY);
+            if (this.featuresGraph != null) group.Add(this.featuresGraph.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
+            this.world.AssignRootSystemGroup(group);
 
             this.networkModule = this.modules.Get<NetworkModule>();
 
@@ -28,6 +30,8 @@ namespace ME.BECS.Network {
 
         private unsafe void OnViewsUpdate(ref ViewsModuleData data) {
 
+            if (this.networkModule == null) return;
+
             data.beginFrameState->timeSinceStart = this.networkModule.GetCurrentTime();
             data.beginFrameState->state = this.networkModule.GetStartFrameState();
 
@@ -35,6 +39,8 @@ namespace ME.BECS.Network {
 
         private unsafe void ViewsLoad(ref ViewsModuleData data) {
 
+            if (this.networkModule == null) return;
+            
             data.beginFrameState->tickTime = this.networkModule.properties.tickTime;
 
         }
@@ -62,8 +68,8 @@ namespace ME.BECS.Network {
         }
 
         public void Update() {
-
-            this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
+            
+            //this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             
             if (this.networkModule is null) {
                 return;
@@ -76,6 +82,7 @@ namespace ME.BECS.Network {
                 // Update logic - depends on tick time
                 var handle = this.networkModule.UpdateInitializer(dt, this, this.previousFrameDependsOn, ref this.world);
                 handle.Complete();
+                
                 if (this.networkModule.IsInRollback() == false) {
 
                     // Update visual - once per frame
@@ -87,10 +94,21 @@ namespace ME.BECS.Network {
                     }
 
                 }
-
             }
             
         }
+
+        /*
+        protected override void LateUpdate() {
+
+            if (this.world.isCreated == true) {
+                this.previousFrameDependsOn.Complete();
+                this.previousFrameDependsOn = this.DoUpdate(UpdateType.LATE_UPDATE, this.previousFrameDependsOn);
+            }
+
+            base.LateUpdate();
+
+        }*/
 
     }
 

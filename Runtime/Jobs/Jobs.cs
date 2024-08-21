@@ -13,6 +13,25 @@ namespace ME.BECS {
     public interface IJobComponentsBase { }
     public interface IJobAspectBase { }
 
+    public struct JobInfo : IIsCreated {
+
+        public uint count;
+        public uint index;
+        public uint itemsPerThread;
+
+        public bool isCreated { private set; get; }
+
+        public uint Offset => this.index * this.itemsPerThread;
+
+        public static JobInfo Create() {
+            return new JobInfo() {
+                isCreated = true,
+                itemsPerThread = 1u,
+            };
+        }
+
+    }
+    
     [BURST(CompileSynchronously = true)]
     public unsafe struct DisposeJob : Unity.Jobs.IJob {
         public MemPtr ptr;

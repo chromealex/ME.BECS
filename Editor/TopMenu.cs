@@ -17,8 +17,8 @@ namespace ME.BECS.Editor {
         }
 
         #if ME_BECS_EDITOR_INTERNAL
-        [UnityEditor.MenuItem("ME.BECS/Internal/GenerateComponentsParallelFor")]
-        public static void CodeGenInternalGenerateComponentsParallelFor() {
+        [UnityEditor.MenuItem("ME.BECS/Internal/Generate Jobs")]
+        public static void CodeGenInternalGenerateJobs() {
             
             CodeGenerator.GenerateComponentsParallelFor();
             

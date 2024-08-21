@@ -13,9 +13,9 @@ namespace ME.BECS.Bullets {
     public struct DestroySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct DestroyJob : ME.BECS.Jobs.IJobParallelForAspect<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
+        public struct DestroyJob : IJobAspect<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
 
-            public void Execute(ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 if (bullet.config.hitRange > 0f) {
 
@@ -24,14 +24,14 @@ namespace ME.BECS.Bullets {
                         var unit = query.results.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit);
+                        targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, jobInfo);
                     }
 
                 } else if (bullet.component.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
                     var targetUnit = bullet.component.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit);
+                    targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, jobInfo);
                     
                 } else if (bullet.component.targetEnt == Ent.Null) {
 
@@ -40,22 +40,22 @@ namespace ME.BECS.Bullets {
                         var unit = query.results.results[0];
                         if (unit.IsAlive() == true) {
                             var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit);
+                            targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, jobInfo);
                         }
                     }
 
                 }
 
-                EffectUtils.CreateEffect(tr.position, tr.rotation, in bullet.config.effectOnDestroy);
+                EffectUtils.CreateEffect(tr.position, tr.rotation, in bullet.config.effectOnDestroy, jobInfo);
                 bullet.ent.DestroyHierarchy();
 
             }
 
         }
-
+        
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().With<TargetReachedComponent>().ScheduleParallelFor<DestroyJob, BulletAspect, QuadTreeQueryAspect, TransformAspect>();
+            var dependsOn = context.Query().With<TargetReachedComponent>().Schedule<DestroyJob, BulletAspect, QuadTreeQueryAspect, TransformAspect>();
             context.SetDependency(dependsOn);
 
         }

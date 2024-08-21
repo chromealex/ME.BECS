@@ -372,6 +372,10 @@ namespace ME.BECS.Views {
                     var ent = new Ent(entId, this.viewsModuleData->connectedWorld);
                     var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData->camera.GetAspect<CameraAspect>();
+                    if (camera.readComponent.orthographic == true) {
+                        this.viewsModuleData->renderingOnSceneApplyStateCulling[in this.state->allocator, entId] = false;
+                        return;
+                    }
                     var isVisible = CameraUtils.IsVisible(in camera, in bounds);
                     this.viewsModuleData->renderingOnSceneApplyStateCulling[in this.state->allocator, entId] = isVisible == false;
                 }

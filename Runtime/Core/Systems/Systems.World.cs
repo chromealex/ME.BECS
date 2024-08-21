@@ -48,14 +48,12 @@ namespace ME.BECS {
         }
         
         public static void DrawGizmos(this ref World world) {
-            Batches.Apply(world.state);
             world.DrawGizmos(default).Complete();
         }
 
         public static JobHandle DrawGizmos(this ref World world, JobHandle dependsOn) {
             
             E.IS_CREATED(world);
-            dependsOn = Batches.Apply(dependsOn, world.state);
             var address = world.id;
             WorldSystemRegistry.Validate();
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
@@ -93,7 +91,22 @@ namespace ME.BECS {
 
         }      
 
-        public static void AssignRootSystemGroup(this ref World world, SystemGroup systemGroup) {
+        public static SystemGroup GetRootSystemGroup(this in World world) {
+
+            E.IS_CREATED(world);
+            var address = world.id;
+            WorldSystemRegistry.Validate();
+            if (WorldSystemRegistry.systemGroups.ContainsKey(address) == true) {
+
+                return WorldSystemRegistry.systemGroups[address];
+
+            }
+
+            return default;
+
+        }
+
+        public static void AssignRootSystemGroup(this in World world, SystemGroup systemGroup) {
 
             E.IS_CREATED(world);
             var address = world.id;

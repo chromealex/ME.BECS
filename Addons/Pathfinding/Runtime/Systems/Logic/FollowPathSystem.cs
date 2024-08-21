@@ -37,7 +37,7 @@ namespace ME.BECS.Pathfinding {
             public BuildGraphSystem buildGraphSystem;
             public FollowPathSystem followPathSystem;
             
-            public void Execute(ref ME.BECS.Transforms.TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, ref ME.BECS.Transforms.TransformAspect tr, ref UnitAspect unit) {
 
                 var pos = tr.position;
 
@@ -147,7 +147,7 @@ namespace ME.BECS.Pathfinding {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<IsUnitStaticComponent>().ScheduleParallelFor<PathFollowJob, Transforms.TransformAspect, UnitAspect>(new PathFollowJob() {
+            var dependsOn = API.Query(in context).Without<IsUnitStaticComponent>().Schedule<PathFollowJob, Transforms.TransformAspect, UnitAspect>(new PathFollowJob() {
                 world = context.world,
                 dt = context.deltaTime,
                 buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),

@@ -54,9 +54,9 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex) {
+        public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, JobInfo jobInfo) {
 
-            var ent = Ent.New();
+            var ent = Ent.New(jobInfo);
             var unit = ent.GetOrCreateAspect<UnitAspect>();
             var rnd = ent.GetRandomVector2OnCircle(1f);
             var rndVec = new float3(rnd.x, 0f, rnd.y);
@@ -72,8 +72,8 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static int GetVolume(in UnitAspect unit) {
-            return (int)(VOLUME_FACTOR * math.PI * (unit.radius * unit.radius) * FLOAT_TO_UINT);
+        public static uint GetVolume(in UnitAspect unit) {
+            return (uint)(VOLUME_FACTOR * math.PI * (unit.radius * unit.radius) * FLOAT_TO_UINT);
         }
 
         [INLINE(256)]
@@ -85,6 +85,16 @@ namespace ME.BECS.Units {
                 tr.rotation = math.slerp(tr.rotation, quaternion.LookRotation(lookDir, math.up()), dt * speed);
             }
 
+        }
+
+        [INLINE(256)]
+        public static bool IsOwner(in Ent unit, ME.BECS.Players.PlayerAspect owner) {
+            return unit.Read<ME.BECS.Players.OwnerComponent>().ent == owner.ent;
+        }
+
+        [INLINE(256)]
+        public static bool IsTeam(in Ent unit, ME.BECS.Players.PlayerAspect owner) {
+            return GetTeam(unit) == ME.BECS.Players.PlayerUtils.GetTeam(owner);
         }
 
         [INLINE(256)]

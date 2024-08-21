@@ -23,7 +23,7 @@ namespace ME.BECS.Pathfinding {
     public struct TargetInfoComponent : IComponent {
         
         public float3 position;
-        public int volume;
+        public uint volume;
 
     }
 

@@ -51,7 +51,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 			// We use this little trick to retrieve the label once it is added to the graph
 			visualStyle = badgeText.GetHashCode().ToString();
 		}
-
+		
+#if UNITY_2023_1_OR_NEWER
 		protected override void HandleEventBubbleUp(EventBase evt) {
 			
 			base.HandleEventBubbleUp(evt);
@@ -65,6 +66,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 					label.style.color = color;
 			}
 		}
+#endif
 
 	}
 }

@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "ME.BECS",
-        "Unity.Burst"
+        "Unity.Burst",
+        "ME.BECS.Transforms"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

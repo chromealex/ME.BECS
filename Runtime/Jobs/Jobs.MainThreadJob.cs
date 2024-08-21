@@ -4,6 +4,7 @@ namespace ME.BECS.Jobs {
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
+    using static Cuts;
     
     [JobProducerType(typeof(JobMainThreadExtensions.JobProcess<>))]
     public interface IJobMainThread {

@@ -1,4 +1,5 @@
 using System.Reflection;
+using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor.FeaturesGraph.Nodes {
     
@@ -92,16 +93,16 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
 
         public override void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent evt) {
             
-            var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode).system;
+            var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode)?.system;
             if (system != null) {
-                evt.menu.AppendAction($"Open Script {system.GetType().Name}...", (e) => OpenScript(), this.OpenScriptStatus);
+                evt.menu.AppendAction($"Open Script {system.GetType().Name}...", (e) => this.OpenScript(), this.OpenScriptStatus);
             }
             
         }
 
         private UnityEngine.UIElements.DropdownMenuAction.Status OpenScriptStatus(UnityEngine.UIElements.DropdownMenuAction arg) {
 
-            var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode).system;
+            var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode)?.system;
             if (system != null) {
                 var script = FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
                 if (script != null) return UnityEngine.UIElements.DropdownMenuAction.Status.Normal;
@@ -113,7 +114,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
 
         private void OpenScript() {
             
-            var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode).system;
+            var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode)?.system;
             if (system != null) {
                 var script = FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
                 if (script != null) AssetDatabase.OpenAsset(script.GetInstanceID(), 0, 0);

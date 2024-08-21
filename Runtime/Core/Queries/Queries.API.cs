@@ -78,8 +78,8 @@ namespace ME.BECS {
 
         public static QueryBuilder Query(in QueryContext queryContext, JobHandle dependsOn = default) {
 
-            dependsOn = Batches.Apply(dependsOn, queryContext.state);
-            dependsOn = Batches.Open(dependsOn, queryContext.state);
+            //dependsOn = Batches.Apply(dependsOn, queryContext.state);
+            //dependsOn = Batches.Open(dependsOn, queryContext.state);
             
             var builder = new QueryBuilder() {
                 queryData = _make(new QueryData()),
@@ -95,7 +95,7 @@ namespace ME.BECS {
                 queryData = builder.queryData,
             };
             dependsOn = job.Schedule(dependsOn);
-            builder.builderDependsOn = Batches.Close(dependsOn, queryContext.state);
+            builder.builderDependsOn = dependsOn;//Batches.Close(dependsOn, queryContext.state);
             builder.Without<IsInactive>();
             
             return builder;
@@ -104,8 +104,8 @@ namespace ME.BECS {
 
         internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
 
-            dependsOn = Batches.Apply(dependsOn, queryContext.state);
-            dependsOn = Batches.Open(dependsOn, queryContext.state);
+            //dependsOn = Batches.Apply(dependsOn, queryContext.state);
+            //dependsOn = Batches.Open(dependsOn, queryContext.state);
 
             var builder = new QueryBuilder {
                 queryData = _make(new QueryData()),
@@ -114,7 +114,7 @@ namespace ME.BECS {
                     worldId = queryContext.worldId,
                 }),
                 isCreated = true,
-                builderDependsOn = Batches.Close(dependsOn, queryContext.state),
+                builderDependsOn = dependsOn,//Batches.Close(dependsOn, queryContext.state),
             };
             builder.Without<IsInactive>();
             return builder;

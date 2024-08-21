@@ -25,6 +25,14 @@ namespace ME.BECS {
                 return null;
             }
 
+            public void Load() {
+
+                for (int i = 0; i < this.list.Length; ++i) {
+                    this.list[i].obj = Object.Instantiate(this.list[i].obj);
+                }
+                
+            }
+            
         }
 
         public WorldProperties properties = WorldProperties.Default;
@@ -52,6 +60,8 @@ namespace ME.BECS {
         protected virtual void Awake() {
 
             instance = this;
+
+            this.modules.Load();
 
             this.world = World.Create(this.properties);
             
@@ -98,18 +108,6 @@ namespace ME.BECS {
             this.previousFrameDependsOn = dependsOn;
             if (this.world.isCreated == true) {
                 this.previousFrameDependsOn = this.world.Tick(Time.deltaTime, updateType, this.previousFrameDependsOn);
-                if (updateType == UpdateType.LATE_UPDATE) {
-                    
-                    // Update modules
-                    this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);
-
-                    for (var i = 0; i < this.modules.list.Length; ++i) {
-                        var module = this.modules.list[i];
-                        if (module.IsEnabled() == false) continue;
-                        this.previousFrameDependsOn = module.obj.OnUpdate(this.previousFrameDependsOn);
-                    }
-                    
-                }
             }
 
             return this.previousFrameDependsOn;
@@ -150,7 +148,7 @@ namespace ME.BECS {
             for (var i = 0; i < this.modules.list.Length; ++i) {
                 var module = this.modules.list[i];
                 if (module.IsEnabled() == false) continue;
-                module.obj.OnDestroy();
+                module.obj.DoDestroy();
             }
             
             if (this.world.isCreated == true) {

@@ -98,7 +98,7 @@ namespace ME.BECS {
             dependsOn = Batches.Apply(dependsOn, this.state);
             dependsOn = OneShotTasks.ResolveTasks(this.state, OneShotType.NextTick, updateType, dependsOn);
             {
-                dependsOn = State.NextTick(this.state, dependsOn);
+                if (updateType == UpdateType.FIXED_UPDATE) dependsOn = State.NextTick(this.state, dependsOn);
                 dependsOn = this.TickRootSystemGroup(dt, updateType, dependsOn);
                 dependsOn = Batches.Apply(dependsOn, this.state);
             }

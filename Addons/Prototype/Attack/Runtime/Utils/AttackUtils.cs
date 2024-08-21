@@ -10,9 +10,9 @@ namespace ME.BECS.Attack {
     public static class AttackUtils {
 
         [INLINE(256)]
-        public static Ent CreateAttackSensor(in UnitAspect unit, int targetsMask, Config config) {
+        public static Ent CreateAttackSensor(in UnitAspect unit, int targetsMask, Config config, JobInfo jobInfo) {
             
-            var attackSensor = Ent.New();
+            var attackSensor = Ent.New(jobInfo);
             config.Apply(attackSensor);
             attackSensor.Set<QuadTreeQueryAspect>();
             attackSensor.Set<AttackAspect>();
@@ -26,7 +26,7 @@ namespace ME.BECS.Attack {
             attackQueryAspect.query.range = math.sqrt(math.max(attackAspect.attackRangeSqr, unit.sightRangeSqr));
             attackQueryAspect.query.nearestCount = 1;
             var point = config.AsUnsafeConfig().ReadStatic<BulletViewPoint>();
-            BulletUtils.RegisterFirePoint(attackSensor, point.position, point.rotation);
+            BulletUtils.RegisterFirePoint(attackSensor, point.position, point.rotation, jobInfo);
             return attackSensor;
 
         }

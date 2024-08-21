@@ -418,9 +418,14 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
+        public void Sort<U>(State* state) where U : unmanaged, System.IComparable<U> {
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr(in state->allocator), (int)this.Count);
+        }
+
         public uint GetReservedSizeInBytes() {
             
-            return this.arr.GetReservedSizeInBytes();
+            return this.arr.GetReservedSizeInBytes() + TSize<List<uint>>.size;
             
         }
 

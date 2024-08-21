@@ -134,7 +134,7 @@ namespace ME.BECS.Editor.Systems {
             public int index;
 
             public override string ToString() {
-                return GetId(this.graph) + "_" + this.index;
+                return $"{GetId(this.graph)}_{this.index}";
             }
 
         }
@@ -179,8 +179,27 @@ namespace ME.BECS.Editor.Systems {
                         var isInBurst = false;
                         var prevOpenIndex = -1;
                         var prevOpenIndexDeps = 0;
-                        var maxIter = 100;
+                        var maxIter = 10_000;
                         var methodContent = content;
+
+                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn) {
+
+                            if (node.syncPoint == false) return;
+                            if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
+                                while (parentNode != null) {
+                                    if (parentNode.syncPoint == false) return;
+                                    customInputDeps.TryGetValue(parentNode, out var parentNodeInner);
+                                    parentNode = parentNodeInner;
+                                }
+                            }
+
+                            var resDep = $"dep{index.ToString()}";
+                            scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
+                            //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
+                            schemeDependsOn = resDep;
+                            //methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
+                        }
+                        
                         while (q.Count > 0) {
 
                             if (--maxIter == 0) {
@@ -257,9 +276,10 @@ namespace ME.BECS.Editor.Systems {
 
                                 }
 
-                            } else if (n is ME.BECS.FeaturesGraph.Nodes.SystemNode ||
-                                       n is ME.BECS.Extensions.GraphProcessor.RelayNode ||
-                                       n is ME.BECS.FeaturesGraph.Nodes.StartNode) {
+                            } else if (
+                                n is ME.BECS.FeaturesGraph.Nodes.SystemNode ||
+                                n is ME.BECS.Extensions.GraphProcessor.RelayNode ||
+                                n is ME.BECS.FeaturesGraph.Nodes.StartNode) {
 
                                 if (n is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode && systemNode.system != null &&
                                     n.enabled == true && n.IsGroupEnabled() == true) {
@@ -291,8 +311,7 @@ namespace ME.BECS.Editor.Systems {
                                                 }
 
                                                 if (collectedDeps.Count - prevOpenIndexDeps > 0) {
-                                                    var data =
-                                                        $", {GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}) {{";
+                                                    var data = $", {GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}) {{";
                                                     methodContent.Insert(prevOpenIndex, data);
                                                     var dataDef = $", {GetMethodDeps("ref", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}";
                                                     containers.Add(dataDef);
@@ -316,11 +335,9 @@ namespace ME.BECS.Editor.Systems {
 
                                             var methodDeps = GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, 0, collectedDeps.Count);
                                             var methodDepsDef = GetMethodDeps("ref", collectedDeps, 0, collectedDeps.Count);
-                                            var methodData =
-                                                $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(float dt, in World world, ref Unity.Jobs.JobHandle dependsOn, {GetMethodDeps("System.IntPtr*", arrMethodDef, 0, arrMethodDef.Count)}, {methodDeps}";
+                                            var methodData = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(float dt, in World world, ref Unity.Jobs.JobHandle dependsOn, {GetMethodDeps("System.IntPtr*", arrMethodDef, 0, arrMethodDef.Count)}, {methodDeps}";
                                             methodContent.Add($"{(isBursted == true ? "[BURST] " : string.Empty)}private static void {methodData}"); // open next
-                                            var methodDef =
-                                                $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(dt, in world, ref dependsOn, {GetMethodDeps("", arrMethodDef, 0, arrMethodDef.Count)}, {methodDepsDef}";
+                                            var methodDef = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(dt, in world, ref dependsOn, {GetMethodDeps("", arrMethodDef, 0, arrMethodDef.Count)}, {methodDepsDef}";
                                             containers.Add(methodDef);
                                             prevOpenIndex = methodContent.Count;
                                             prevOpenIndexDeps = collectedDeps.Count;
@@ -329,16 +346,17 @@ namespace ME.BECS.Editor.Systems {
                                             isInBurst = isBursted;
                                         }
 
+                                        methodContent.Add("{");
                                         methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});");
-                                        methodContent.Add(
-                                            $"(({GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
-                                        methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
+                                        methodContent.Add($"(({GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
+                                        methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
+                                        AddApply(systemNode, index, ref schemeDependsOn);
+                                        methodContent.Add("}");
                                         collectedDeps.Add($"dep{index.ToString()}");
 
                                     }
 
-                                    scheme.Add(
-                                        $" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{notUsedDescr}");
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{notUsedDescr}");
 
                                 } else {
 
@@ -381,13 +399,16 @@ namespace ME.BECS.Editor.Systems {
                                 }
 
                             }
-
+                            
                             foreach (var port in n.outputPorts) {
                                 var edges = port.GetEdges();
                                 foreach (var edge in edges) {
                                     if (containsInQueue.Contains(edge.inputNode) == false) {
                                         q.Enqueue(edge.inputNode);
                                         containsInQueue.Add(edge.inputNode);
+                                        if (customInputDeps.TryGetValue(n, out var parentNode) == true) {
+                                            customInputDeps.TryAdd(edge.inputNode, parentNode);
+                                        }
                                     }
                                 }
                             }
@@ -539,7 +560,7 @@ namespace ME.BECS.Editor.Systems {
                 } else {
                     var list = string.Join(", ", arr);
                     deps = arr;
-                    result = "JobsExt.CombineDependencies(" + list + ")";
+                    result = $"JobsExt.CombineDependencies({list})";
                     scheme = list;
                 }
             }
@@ -615,7 +636,11 @@ namespace ME.BECS.Editor.Systems {
 
         private static string GetDefinition(object system) {
 
-            var result = $"new {GetTypeName(system.GetType())}() {{\n";
+            var result = new System.Text.StringBuilder(100);
+            result.Append("new ");
+            result.Append(GetTypeName(system.GetType()));
+            result.Append(" {\n");
+            //var result = $"new {GetTypeName(system.GetType())}() {{\n";
             var fields = system.GetType().GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
             foreach (var field in fields) {
                 //var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
@@ -623,27 +648,36 @@ namespace ME.BECS.Editor.Systems {
                 if (field.IsPublic == false) continue;
                 //if (field.IsPublic == false && field.GetCustomAttribute<UnityEngine.SerializeField>() == null) continue;
                 //if (isSerializable == false) continue;
+                result.Append(field.Name);
+                result.Append(" = ");
                 if (field.FieldType.IsEnum == true) {
-                    result += field.Name + " = " + field.FieldType.FullName + "." + field.GetValue(system) + ",\n";
+                    result.Append(field.FieldType.FullName);
+                    result.Append(".");
+                    result.Append(field.GetValue(system));
                 } else if (field.FieldType.IsPrimitive == true) {
                     var val = field.GetValue(system);
                     if (val is double) {
-                        result += field.Name + " = " + val.ToString() + "d,\n";
-                    } else if (val is float) {
-                        result += field.Name + " = " + val.ToString() + "f,\n";
+                        result.Append(val);
+                        result.Append("d");
+                    } else if (val is float fVal) {
+                        result.Append(fVal.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        result.Append("f");
                     } else if (val is bool) {
-                        result += field.Name + " = " + val.ToString().ToLower() + ",\n";
-                    } else if (val is string) {
-                        result += field.Name + " = \"" + (string)val + "\",\n";
+                        result.Append(val.ToString().ToLower());
+                    } else if (val is string str) {
+                        result.Append("\"");
+                        result.Append(str);
+                        result.Append("\"");
                     } else {
-                        result += field.Name + " = " + val + ",\n";
+                        result.Append(val);
                     }
                 } else {
-                    result += field.Name + " = " + GetDefinition(field.GetValue(system)) + ",\n";
+                    result.Append(GetDefinition(field.GetValue(system)));
                 }
+                result.Append(",\n");
             }
-            result += "}\n";
-            return result;
+            result.Append("}\n");
+            return result.ToString();
 
         }
 

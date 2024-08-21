@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobComponentsExtensions.JobProcess<,,,,,,,,,>))]
     public interface IJobComponents<T0,T1,T2,T3,T4,T5,T6,T7,T8> : IJobComponentsBase where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent where T6 : unmanaged, IComponent where T7 : unmanaged, IComponent where T8 : unmanaged, IComponent {
-        void Execute(in Ent ent, ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5,ref T6 c6,ref T7 c7,ref T8 c8);
+        void Execute(in JobInfo jobInfo, in Ent ent, ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3,ref T4 c4,ref T5 c5,ref T6 c6,ref T7 c7,ref T8 c8);
     }
 
     public static unsafe partial class JobComponentsExtensions {
@@ -102,14 +102,18 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0,T1,T2,T3,T4,T5,T6,T7,T8> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
             
+                var jobInfo = JobInfo.Create();
+                jobInfo.count = jobData.buffer->count;
+                
                 JobUtils.SetCurrentThreadAsSingle(true);
                 
                 jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                for (int i = 0; i < jobData.buffer->count; ++i) {
+                for (uint i = 0u; i < jobData.buffer->count; ++i) {
+                    jobInfo.index = i;
                     var entId = *(jobData.buffer->entities + i);
                     var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
                     var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                    jobData.jobData.Execute(in ent, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen),ref jobData.c4.Get(ent.id, ent.gen),ref jobData.c5.Get(ent.id, ent.gen),ref jobData.c6.Get(ent.id, ent.gen),ref jobData.c7.Get(ent.id, ent.gen),ref jobData.c8.Get(ent.id, ent.gen));
+                    jobData.jobData.Execute(in jobInfo, in ent, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen),ref jobData.c4.Get(ent.id, ent.gen),ref jobData.c5.Get(ent.id, ent.gen),ref jobData.c6.Get(ent.id, ent.gen),ref jobData.c7.Get(ent.id, ent.gen),ref jobData.c8.Get(ent.id, ent.gen));
                 }
                 jobData.buffer->EndForEachRange();
                 

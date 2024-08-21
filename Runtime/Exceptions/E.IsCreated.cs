@@ -48,9 +48,9 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
-        public static void IS_CREATED<T>(T list) where T : unmanaged, IIsCreated {
-            if (list.isCreated == true) return;
-            NotCreatedException.Throw(list);
+        public static void IS_CREATED<T>(T obj) where T : unmanaged, IIsCreated {
+            if (obj.isCreated == true) return;
+            NotCreatedException.Throw(obj);
         }
 
     }

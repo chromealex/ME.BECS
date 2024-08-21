@@ -165,15 +165,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void PushRange(ref MemoryAllocator allocator, Unity.Collections.LowLevel.Unsafe.UnsafeList<uint>* list) {
+        public void PushRange(ref MemoryAllocator allocator, List<uint> list) {
             var freeItems = this.array.Length - this.size;
-            if (list->Length >= freeItems) {
-                var delta = (uint)list->Length - freeItems;
+            if (list.Count >= freeItems) {
+                var delta = list.Count - freeItems;
                 this.array.Resize(ref allocator, this.array.Length + delta, growFactor: 1);
             }
 
-            _memcpy(list->Ptr, (byte*)this.array.GetUnsafePtr(in allocator) + sizeof(uint) * this.size, (uint)(sizeof(uint) * list->Length));
-            this.size += (uint)list->Length;
+            _memcpy(list.GetUnsafePtr(in allocator), (byte*)this.array.GetUnsafePtr(in allocator) + TSize<uint>.size * this.size, TSize<uint>.size * list.Count);
+            this.size += list.Count;
 
         }
 

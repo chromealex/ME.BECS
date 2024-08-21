@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: 1
   builtInGraph: 1
+  isInnerGraph: 1
   serializedNodes: []
   nodes:
   - rid: 5232414874647134274
@@ -21,14 +22,6 @@ MonoBehaviour:
   - rid: 5232414874647134279
   - rid: 5232414874647134280
   edges:
-  - GUID: 1e0c1d70-35b2-4df6-b707-be15e13ef32c
-    owner: {fileID: 11400000}
-    inputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
-    outputNodeGUID: StartNode
-    inputFieldName: inputNodes
-    outputFieldName: output
-    inputPortIdentifier: 
-    outputPortIdentifier: 
   - GUID: 36ce3440-f290-44e7-8cc0-6a866ca5cd5e
     owner: {fileID: 11400000}
     inputNodeGUID: 199e6da4-c752-47a3-b843-b969578961f5
@@ -53,7 +46,7 @@ MonoBehaviour:
     outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: 65fb1e94-779e-478f-b288-0d9a4a09f457
+  - GUID: 353896df-57a0-4097-a533-db961ab6e13d
     owner: {fileID: 11400000}
     inputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
     outputNodeGUID: StartNode
@@ -68,15 +61,16 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 188, y: 418.5, z: 0}
+  position: {x: -112.5, y: 311.5, z: 0}
   scale: {x: 1, y: 1, z: 1}
-  isInnerGraph: 1
   references:
     version: 2
     RefIds:
     - rid: 5232414874647134274
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
         groupGUID: 
@@ -97,6 +91,8 @@ MonoBehaviour:
     - rid: 5232414874647134275
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 199e6da4-c752-47a3-b843-b969578961f5
         groupGUID: 
@@ -120,6 +116,8 @@ MonoBehaviour:
     - rid: 5232414874647134279
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -135,9 +133,12 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
+        isInstance: 0
     - rid: 5232414874647134280
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -153,6 +154,7 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
+        isInstance: 0
     - rid: 8346928896279576650
       type: {class: TransformWorldMatrixUpdateSystem, ns: ME.BECS.Transforms, asm: ME.BECS.Transforms}
       data: 

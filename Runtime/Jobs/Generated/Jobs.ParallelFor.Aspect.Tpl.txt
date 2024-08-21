@@ -6,28 +6,28 @@ namespace ME.BECS.Jobs {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
 
-    public static unsafe partial class QueryAspectScheduleExtensions {
+    public static unsafe partial class QueryAspectParallelScheduleExtensions {
         
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             {count( )[builder.WithAspect<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.ScheduleParallelFor<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
         
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
-            return staticQuery.ScheduleParallelFor<T, {count(,)[T#i#]}>(in job, in context.world, context.dependsOn);
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+            return staticQuery.Schedule<T, {count(,)[T#i#]}>(in job, in context.world, context.dependsOn);
         }
         
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             var state = world.state;
             var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
-            return query.ScheduleParallelFor<T, {count(,)[T#i#]}>(in job);
+            return query.Schedule<T, {count(,)[T#i#]}>(in job);
         }
 
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
-            staticQuery.builderDependsOn = job.ScheduleParallelFor<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.builderDependsOn);
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -42,7 +42,7 @@ namespace ME.BECS.Jobs {
 
     [JobProducerType(typeof(JobParallelForAspectExtensions.JobProcess<{count[,]}>))]
     public interface IJobParallelForAspect<{count(,)[T#i#]}> : IJobParallelForAspectBase {count( )[where T#i# : unmanaged, IAspect]} {
-        void Execute({count(,)[{{inref}} T#i# c#i#]});
+        void Execute(in JobInfo jobInfo, {count(,)[{{inref}} T#i# c#i#]});
     }
 
     public static unsafe partial class JobParallelForAspectExtensions {
@@ -55,10 +55,14 @@ namespace ME.BECS.Jobs {
             return reflectionData;
         }
 
-        public static JobHandle ScheduleParallelFor<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspect<{count(,)[T#i#]}> {
             
+            dependsOn = new StartParallelJob() {
+                            buffer = buffer,
+                        }.ScheduleSingle(dependsOn);
+                        
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             buffer->sync = false;
@@ -100,15 +104,18 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, {count(,)[T#i#]}> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
 
+                var jobInfo = JobInfo.Create();
+                jobInfo.count = jobData.buffer->count;
                 {count[var aspect#i# = jobData.c#i#;]}
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                     for (uint i = (uint)begin; i < end; ++i) {
+                        jobInfo.index = i;
                         var entId = *(jobData.buffer->entities + i);
                         var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
                         {count[aspect#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
-                        jobData.jobData.Execute({count(,)[{{inref}} aspect#i#]});
+                        jobData.jobData.Execute(in jobInfo, {count(,)[{{inref}} aspect#i#]});
                     }
                     jobData.buffer->EndForEachRange();
                     

@@ -228,9 +228,12 @@ namespace ME.BECS {
         [INLINE(256)]
         internal void ApplyFromJob(State* state) {
 
-            if (this.openIndex > 0u) return;
+            if (this.openIndex > 0u) {
+                return;
+            }
             if (this.items.Length == 0u) return;
 
+            JobUtils.Increment(ref this.openIndex);
             this.workingLock.WriteBegin(state);
 
             // Collect
@@ -262,6 +265,7 @@ namespace ME.BECS {
             }
             
             this.workingLock.WriteEnd();
+            JobUtils.Decrement(ref this.openIndex);
 
         }
         
@@ -309,7 +313,9 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         [INLINE(256)]
         public static void Apply(State* state) {
-            state->batches.ApplyFromJob(state);
+            new ApplyJob() {
+                state = state,
+            }.Execute();
         }
 
         [INLINE(256)]
@@ -317,7 +323,7 @@ namespace ME.BECS {
             var job = new ApplyJob() {
                 state = state,
             };
-            return job.Schedule(jobHandle);
+            return job.ScheduleSingle(jobHandle);
         }
 
         [INLINE(256)]
@@ -325,7 +331,7 @@ namespace ME.BECS {
             var job = new ApplyJob() {
                 state = world.state,
             };
-            return job.Schedule(jobHandle);
+            return job.ScheduleSingle(jobHandle);
         }
 
         [INLINE(256)]
@@ -333,7 +339,7 @@ namespace ME.BECS {
             var job = new OpenJob() {
                 state = state,
             };
-            return job.Schedule(jobHandle);
+            return job.ScheduleSingle(jobHandle);
         }
 
         [INLINE(256)]
@@ -341,7 +347,7 @@ namespace ME.BECS {
             var job = new CloseJob() {
                 state = state,
             };
-            return job.Schedule(jobHandle);
+            return job.ScheduleSingle(jobHandle);
         }
 
         [INLINE(256)]
@@ -349,7 +355,7 @@ namespace ME.BECS {
             var job = new OpenJob() {
                 state = world.state,
             };
-            return job.Schedule(jobHandle);
+            return job.ScheduleSingle(jobHandle);
         }
 
         [INLINE(256)]
@@ -357,7 +363,7 @@ namespace ME.BECS {
             var job = new CloseJob() {
                 state = world.state,
             };
-            return job.Schedule(jobHandle);
+            return job.ScheduleSingle(jobHandle);
         }
 
         [INLINE(256)]

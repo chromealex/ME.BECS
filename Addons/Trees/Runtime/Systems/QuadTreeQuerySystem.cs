@@ -121,7 +121,7 @@ namespace ME.BECS {
 
             public QuadTreeInsertSystem system;
 
-            public void Execute(ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 var data = query.query;
                 var worldPos = tr.GetWorldMatrixPosition();
@@ -208,7 +208,7 @@ namespace ME.BECS {
         public void OnUpdate(ref SystemContext context) {
 
             var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            var handle = API.Query(in context).ScheduleParallelFor<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
+            var handle = API.Query(in context).Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
                 system = querySystem,
             });
             context.SetDependency(handle);

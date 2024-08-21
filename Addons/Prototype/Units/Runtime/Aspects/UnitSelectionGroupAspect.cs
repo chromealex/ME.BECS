@@ -1,3 +1,5 @@
+using ME.BECS.Transforms;
+
 namespace ME.BECS.Units {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -66,7 +68,7 @@ namespace ME.BECS.Units {
 
         [INLINE(256)]
         public readonly void Destroy() {
-            this.ent.Destroy();
+            this.ent.DestroyHierarchy();
         }
 
     }
