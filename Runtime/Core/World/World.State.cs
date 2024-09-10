@@ -147,10 +147,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static Unity.Jobs.JobHandle BurstMode(State* state, bool mode, Unity.Jobs.JobHandle dependsOn) {
+            #if USE_CACHE_PTR
             dependsOn = new BurstModeJob() {
                 state = state,
                 mode = mode,
             }.ScheduleSingleDeps(dependsOn);
+            #endif
             return dependsOn;
         }
 

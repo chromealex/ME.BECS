@@ -146,6 +146,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static bool SetIfSmaller(ref int target, int newValue) {
+            E.ADDR_4(ref target);
             int snapshot;
             bool stillLess;
             do {
@@ -158,6 +159,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static bool SetIfGreater(ref int target, int newValue) {
+            E.ADDR_4(ref target);
             int snapshot;
             bool stillMore;
             do {
@@ -170,6 +172,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static bool SetIfGreater(ref uint target, uint newValue) {
+            E.ADDR_4(ref target);
             int snapshot;
             bool stillMore;
             do {
@@ -182,6 +185,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static bool SetIfGreater(ref float target, float newValue) {
+            E.ADDR_4(ref target);
             float snapshot;
             bool stillMore;
             do {
@@ -194,6 +198,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static bool SetIfGreaterOrEquals(ref int target, int newValue) {
+            E.ADDR_4(ref target);
             int snapshot;
             bool stillMore;
             do {
@@ -206,21 +211,25 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static uint Increment(ref uint value) {
+            E.ADDR_4(ref value);
             return (uint)System.Threading.Interlocked.Increment(ref _as<uint, int>(ref value));
         }
 
         [INLINE(256)]
         public static int Increment(ref int value) {
+            E.ADDR_4(ref value);
             return System.Threading.Interlocked.Increment(ref value);
         }
 
         [INLINE(256)]
         public static uint Decrement(ref uint value) {
+            E.ADDR_4(ref value);
             return (uint)System.Threading.Interlocked.Decrement(ref _as<uint, int>(ref value));
         }
 
         [INLINE(256)]
         public static void Increment(ref float value, float count) {
+            E.ADDR_4(ref value);
             float initialValue;
             float computedValue;
             do {
@@ -231,6 +240,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Increment(ref int value, int count) {
+            E.ADDR_4(ref value);
             int initialValue;
             int computedValue;
             do {
@@ -241,6 +251,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Increment(ref uint value, uint count) {
+            E.ADDR_4(ref value);
             int initialValue;
             int computedValue;
             do {
@@ -251,6 +262,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Decrement(ref int value, int count) {
+            E.ADDR_4(ref value);
             int initialValue;
             int computedValue;
             do {
@@ -261,6 +273,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Decrement(ref float value, float count) {
+            E.ADDR_4(ref value);
             float initialValue;
             float computedValue;
             do {
@@ -271,6 +284,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Decrement(ref uint value, uint count) {
+            E.ADDR_4(ref value);
             int initialValue;
             int computedValue;
             do {
@@ -281,6 +295,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Decrement(ref uint value, int count) {
+            E.ADDR_4(ref value);
             int initialValue;
             int computedValue;
             do {

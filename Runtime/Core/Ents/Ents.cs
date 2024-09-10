@@ -249,7 +249,6 @@ namespace ME.BECS {
             {
                 this.destroyed.Sort<uint>(state);
                 this.popLock.Lock();
-                for (uint i = 0; i < this.destroyed.Count; ++i) UnityEngine.Debug.Log("DESTROY: #" + this.destroyed[state, i]);
                 this.free.PushRange(ref state->allocator, this.destroyed);
                 this.popLock.Unlock();
                 this.destroyed.Clear();

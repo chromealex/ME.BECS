@@ -179,7 +179,7 @@ namespace ME.BECS {
         public static MemZone* ZmCreateZoneEmpty(int size) {
 
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = (MemZone*)_make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_PERSISTENT);
+            var zone = (MemZone*)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT);
             return zone;
             
         }
@@ -191,7 +191,7 @@ namespace ME.BECS {
         public static MemZone* ZmCreateZone(int size) {
 
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = (MemZone*)_make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_PERSISTENT);
+            var zone = (MemZone*)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT);
             zone->size = size;
             MemoryAllocator.ZmClearZone(zone);
             

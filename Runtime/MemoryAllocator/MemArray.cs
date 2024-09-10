@@ -24,7 +24,11 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public bool IsValid(in MemoryAllocator allocator) {
+            #if USE_CACHE_PTR
             return this.version == allocator.version;
+            #else
+            return false;
+            #endif
         }
         
         [INLINE(256)]
@@ -37,25 +41,31 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void* ReadPtr(in MemoryAllocator allocator, in MemPtr arrPtr) {
+            #if USE_CACHE_PTR
             if (allocator.version == this.version) {
                 return this.cachedPtr;
             }
+            #endif
             return MemoryAllocatorExt.GetUnsafePtr(in allocator, in arrPtr);
         }
 
         [INLINE(256)]
         public ref T Read(in MemoryAllocator allocator, MemPtr arrPtr, int index) {
+            #if USE_CACHE_PTR
             if (allocator.version == this.version) {
                 return ref *(this.cachedPtr + index);
             }
+            #endif
             return ref allocator.RefArray<T>(arrPtr, index);
         }
 
         [INLINE(256)]
         public ref T Read(in MemoryAllocator allocator, MemPtr arrPtr, uint index) {
+            #if USE_CACHE_PTR
             if (allocator.version == this.version) {
                 return ref *(this.cachedPtr + index);
             }
+            #endif
             return ref allocator.RefArray<T>(arrPtr, index);
         }
 
