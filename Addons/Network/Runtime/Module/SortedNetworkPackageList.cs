@@ -140,10 +140,12 @@ namespace ME.BECS.Network {
         public void Add(ref MemoryAllocator allocator, NetworkPackage value) {
 
             E.IS_CREATED(this);
-            int i = BinarySearch(in allocator, this.arr, 0, (int)this.Count, value);
-            if (i >= 0)
-                throw new System.Exception();
-            Insert(ref allocator, ~i, value);
+            var i = BinarySearch(in allocator, this.arr, 0, (int)this.Count, value);
+            if (i >= 0) {
+                throw new System.Exception("Item already exists");
+            }
+
+            this.Insert(ref allocator, ~i, value);
 
         }
 
@@ -261,24 +263,27 @@ namespace ME.BECS.Network {
             // Note both may be negative, if we are dealing with arrays w/ negative lower bounds.
             return low + ((hi - low) >> 1);
         }
-        
+
         public static int BinarySearch(in MemoryAllocator allocator, in MemArray<NetworkPackage> array, int index, int length, NetworkPackage value) {
 
-            int lo = index;
-            int hi = index + length - 1;
+            var lo = index;
+            var hi = index + length - 1;
             while (lo <= hi) {
                 // i might overflow if lo and hi are both large positive numbers. 
-                int i = GetMedian(lo, hi);
+                var i = GetMedian(lo, hi);
 
-                int c = array[in allocator, i].GetKey().CompareTo(value.GetKey());
-                if (c == 0) return i;
+                var c = array[in allocator, i].CompareTo(value);
+                if (c == 0) {
+                    return i;
+                }
+
                 if (c < 0) {
                     lo = i + 1;
-                }
-                else {
+                } else {
                     hi = i - 1;
                 }
             }
+
             return ~lo;
         }
 

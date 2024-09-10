@@ -11,7 +11,7 @@ namespace ME.BECS.Network {
     using Jobs;
     using Unity.Mathematics;
 
-    public unsafe struct NetworkPackage {
+    public unsafe struct NetworkPackage : System.IComparable<NetworkPackage> {
 
         /// <summary>
         /// Tick
@@ -70,6 +70,20 @@ namespace ME.BECS.Network {
             writeBufferWriter.Write(this.dataSize);
             writeBufferWriter.Write(this.data, this.dataSize);
             
+        }
+
+        public int CompareTo(NetworkPackage other) {
+            var tickComparison = this.tick.CompareTo(other.tick);
+            if (tickComparison != 0) {
+                return tickComparison;
+            }
+
+            var playerIdComparison = this.playerId.CompareTo(other.playerId);
+            if (playerIdComparison != 0) {
+                return playerIdComparison;
+            }
+
+            return this.localOrder.CompareTo(other.localOrder);
         }
 
     }
