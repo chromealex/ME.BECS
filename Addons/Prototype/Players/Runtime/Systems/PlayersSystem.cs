@@ -31,7 +31,7 @@ namespace ME.BECS.Players {
             }
 
             for (uint i = 0u; i < this.players.Length; ++i) {
-                this.players[(int)i] = PlayerUtils.CreatePlayer(i, this.teams[(int)i]);
+                this.players[(int)i] = PlayerUtils.CreatePlayer(in context, i, this.teams[(int)i]);
             }
             
             this.UpdateTeams();
