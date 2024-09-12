@@ -40,7 +40,7 @@ namespace ME.BECS.FogOfWar {
             // for each player
             // create fog of war
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
-            var heights = Ent.New();
+            var heights = Ent.New(in context);
             heights.Set(new FogOfWarStaticComponent() {
                 worldSize = this.mapSize,
                 size = fowSize,

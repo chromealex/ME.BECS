@@ -22,7 +22,7 @@ namespace ME.BECS.Players {
             this.players = new Unity.Collections.NativeArray<Ent>((int)this.playersCount, Unity.Collections.Allocator.Persistent);
             this.teams = new Unity.Collections.NativeArray<Ent>((int)this.playersCount, Unity.Collections.Allocator.Persistent);
             for (uint i = 0u; i < this.players.Length; ++i) {
-                var team = Ent.New();
+                var team = Ent.New(in context.world);
                 team.Set(new TeamComponent() {
                     id = i + 1u,
                 });

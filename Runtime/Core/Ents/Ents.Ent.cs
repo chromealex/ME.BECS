@@ -50,8 +50,13 @@ namespace ME.BECS {
         /// </summary>
         /// <returns></returns>
         [INLINE(256)]
-        public static Ent New(JobInfo jobInfo = default) {
-            return Ent.New(Context.world.id, jobInfo);
+        public static Ent New() {
+            return Ent.New(Context.world.id, default);
+        }
+        
+        [INLINE(256)]
+        public static Ent New(JobInfo jobInfo) {
+            return Ent.New(jobInfo.worldId, jobInfo);
         }
 
         [INLINE(256)]

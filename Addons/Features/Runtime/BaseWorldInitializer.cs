@@ -90,6 +90,7 @@ namespace ME.BECS {
                 }
                 
                 this.previousFrameDependsOn = this.OnStart(this.previousFrameDependsOn);
+                this.previousFrameDependsOn.Complete();
 
             }
 

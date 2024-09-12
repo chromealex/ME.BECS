@@ -18,15 +18,17 @@ namespace ME.BECS {
         public uint count;
         public uint index;
         public uint itemsPerThread;
-
+        public ushort worldId;
+        
         public bool isCreated { private set; get; }
 
         public uint Offset => this.index * this.itemsPerThread;
 
-        public static JobInfo Create() {
+        public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
                 isCreated = true,
                 itemsPerThread = 1u,
+                worldId = worldId,
             };
         }
 

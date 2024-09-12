@@ -106,11 +106,11 @@ namespace ME.BECS {
             public byte b1;
             public byte b2;
             public byte b3;
+            public MemBlockOffset next;
+            public MemBlockOffset prev;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             public int id;      // should be ZONE_ID
             #endif
-            public MemBlockOffset next;
-            public MemBlockOffset prev;
 
         };
 

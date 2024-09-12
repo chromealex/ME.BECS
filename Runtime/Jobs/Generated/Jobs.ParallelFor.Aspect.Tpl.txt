@@ -104,7 +104,7 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, {count(,)[T#i#]}> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
 
-                var jobInfo = JobInfo.Create();
+                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
                 jobInfo.count = jobData.buffer->count;
                 {count[var aspect#i# = jobData.c#i#;]}
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {

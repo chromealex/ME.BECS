@@ -102,7 +102,7 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
             
-                var jobInfo = JobInfo.Create();
+                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
                 jobInfo.count = jobData.buffer->count;
                 
                 JobUtils.SetCurrentThreadAsSingle(true);
