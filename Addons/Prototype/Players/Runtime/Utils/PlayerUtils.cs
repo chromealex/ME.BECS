@@ -20,7 +20,7 @@ namespace ME.BECS.Players {
         public static void SetActivePlayer(in PlayerAspect playerAspect) => PlayerStatic.activePlayer.Data = playerAspect.ent;
 
         [INLINE(256)]
-        public static Ent CreatePlayer(uint index, in Ent team, JobInfo jobInfo = default) {
+        public static Ent CreatePlayer(uint index, in Ent team, JobInfo jobInfo) {
             var ent = Ent.New(jobInfo);
             var aspect = ent.GetOrCreateAspect<PlayerAspect>();
             aspect.index = index;
