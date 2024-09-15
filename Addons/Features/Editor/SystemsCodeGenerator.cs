@@ -197,7 +197,7 @@ namespace ME.BECS.Editor.Systems {
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            //methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
+                            methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
                         }
                         
                         while (q.Count > 0) {
