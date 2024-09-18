@@ -172,7 +172,7 @@ namespace ME.BECS {
                 this.popLock.Unlock();
             }
             
-            if (idx > 0u) {
+            if (cnt > 0u) {
 
                 reused = true;
                 JobUtils.Increment(ref this.aliveCount);
