@@ -30,9 +30,9 @@ namespace ME.BECS {
         internal MemArray<T> arr;
         public uint Count;
 
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.arr.isCreated;
+            get => this.arr.IsCreated;
         }
 
         public uint Capacity {
@@ -129,7 +129,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly Enumerator GetEnumerator() {
 
-            if (this.isCreated == false) return default;
+            if (this.IsCreated == false) return default;
             return new Enumerator(in this);
             
         }
@@ -162,7 +162,7 @@ namespace ME.BECS {
         private bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            if (this.arr.isCreated == false) this.arr.growFactor = 1;
+            if (this.arr.IsCreated == false) this.arr.growFactor = 1;
             return this.arr.Resize(ref allocator, capacity, ClearOptions.UninitializedMemory);
             
         }
@@ -277,7 +277,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint newLength) {
 
-            if (this.isCreated == false) {
+            if (this.IsCreated == false) {
                 
                 this = new List<T>(ref allocator, newLength);
                 return true;

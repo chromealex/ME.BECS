@@ -25,7 +25,7 @@ namespace ME.BECS {
         public uint Length;
         public Ent ent;
 
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arrPtr.IsValid();
         }
@@ -77,7 +77,7 @@ namespace ME.BECS {
             this = default;
             this.ent = ent;
             this.cachedPtr = default;
-            this.arrPtr = MemoryAllocatorExt.Alloc(ref state->allocator, elementSize * length, out var tPtr);
+            this.arrPtr = state->allocator.Alloc(elementSize * length, out var tPtr);
             this.cachedPtr = new CachedPtr<T>(in state->allocator, (T*)tPtr);
             this.Length = length;
             this.growFactor = growFactor;
@@ -103,7 +103,7 @@ namespace ME.BECS {
             this.Length = arr.Length;
             this.growFactor = arr.growFactor;
             this.arrPtr = state->allocator.AllocArray<T>(arr.Length);
-            NativeArrayUtils.CopyNoChecks(ref state->allocator, in arr, 0u, ref this, 0u, arr.Length);
+            NativeArrayUtils.CopyNoChecks(in arr, 0u, ref this, 0u, arr.Length);
             state->collectionsRegistry.Add(state, in ent, in this.arrPtr);
 
         }
@@ -177,7 +177,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
-            if (state == true && this.isCreated == true) {
+            if (state == true && this.IsCreated == true) {
                 this.cachedPtr = new CachedPtr<T>(in allocator, (T*)this.GetUnsafePtr(in allocator));
             } else {
                 this.cachedPtr = default;
@@ -187,14 +187,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void* GetUnsafePtr() {
 
-            return MemoryAllocatorExt.GetUnsafePtr(in this.ent.World.state->allocator, this.arrPtr);
+            return this.ent.World.state->allocator.GetUnsafePtr(this.arrPtr);
 
         }
 
         [INLINE(256)]
         public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
 
-            return MemoryAllocatorExt.GetUnsafePtr(in allocator, this.arrPtr);
+            return allocator.GetUnsafePtr(this.arrPtr);
 
         }
 
@@ -206,9 +206,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr GetAllocPtr(in MemoryAllocator allocator, uint index) {
+        public readonly void* GetUnsafePtrCached() {
+
+            return this.cachedPtr.ReadPtr(in this.ent.World.state->allocator, this.arrPtr);
+
+        }
+
+        [INLINE(256)]
+        public MemPtr GetAllocPtr(uint index) {
             
-            return allocator.RefArrayPtr<T>(this.arrPtr, index);
+            return this.ent.World.state->allocator.RefArrayPtr<T>(this.arrPtr, index);
             
         }
 
@@ -316,7 +323,7 @@ namespace ME.BECS {
             var state = this.ent.World.state;
             state->collectionsRegistry.Remove(state, in this.ent, in this.arrPtr);
             var prevLength = this.Length;
-            this.arrPtr = MemoryAllocatorExt.Alloc(ref state->allocator, elementSize * newLength, out var tPtr);
+            this.arrPtr = state->allocator.Alloc(elementSize * newLength, out var tPtr);
             state->collectionsRegistry.Add(state, in this.ent, in this.arrPtr);
             this.cachedPtr = new CachedPtr<T>(in state->allocator, (T*)tPtr);
             if (options == ClearOptions.ClearMemory) {
@@ -363,6 +370,21 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
+        public void CopyFrom(in MemArrayAuto<T> other) {
+
+            if (other.arrPtr == this.arrPtr) return;
+            if (this.arrPtr.IsValid() == false && other.arrPtr.IsValid() == false) return;
+            if (this.arrPtr.IsValid() == true && other.arrPtr.IsValid() == false) {
+                this.Dispose();
+                return;
+            }
+            if (this.arrPtr.IsValid() == false) this = new MemArrayAuto<T>(in other.ent, other.Length);
+            
+            NativeArrayUtils.Copy(in other, ref this);
+            
+        }
+        
         public uint GetReservedSizeInBytes() {
 
             return this.Length * (uint)sizeof(T);

@@ -128,7 +128,7 @@ namespace ME.BECS {
                 if (data.ignoreY == true) worldPos.y = 0f;
                 
                 // clean up results
-                if (query.results.results.isCreated == true) query.results.results.Clear();
+                if (query.results.results.IsCreated == true) query.results.results.Clear();
                 
                 // for each tree
                 for (int i = 0; i < this.system.treesCount; ++i) {
@@ -143,7 +143,7 @@ namespace ME.BECS {
                         
                         var visitor = new OctreeNearestAABBVisitor<Ent>();
                         tree.Nearest(worldPos, query.query.range, ref visitor, new AABBDistanceSquaredProvider<Ent>());
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, 1u);
+                        if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, 1u);
                         query.results.results.Add(visitor.nearest);
                         
                         /*var ent = tree.SearchClosestPointSync(worldPos, checkSelf: true);
@@ -158,7 +158,7 @@ namespace ME.BECS {
                             max = data.nearestCount,
                         };
                         tree.Nearest(worldPos, query.query.range, ref visitor, new AABBDistanceSquaredProvider<Ent>());
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
+                        if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
                         query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
                         
                     } else {
@@ -170,7 +170,7 @@ namespace ME.BECS {
                         };
                         //var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
                         tree.Range(new NativeTrees.AABB(worldPos - query.query.range, worldPos + query.query.range), ref visitor);
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
+                        if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
                         query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
                         
                         /*var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);

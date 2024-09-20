@@ -46,7 +46,7 @@ namespace ME.BECS {
                 return this.cachedPtr;
             }
             #endif
-            return MemoryAllocatorExt.GetUnsafePtr(in allocator, in arrPtr);
+            return allocator.GetUnsafePtr(in arrPtr);
         }
 
         [INLINE(256)]
@@ -85,7 +85,7 @@ namespace ME.BECS {
         public MemPtr arrPtr;
         public uint Length;
 
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arrPtr.IsValid();
         }
@@ -124,7 +124,7 @@ namespace ME.BECS {
 
             this = default;
             this.cachedPtr = default;
-            this.arrPtr = MemoryAllocatorExt.Alloc(ref allocator, elementSize * length, out var tPtr);
+            this.arrPtr = allocator.Alloc(elementSize * length, out var tPtr);
             this.cachedPtr = new CachedPtr<T>(in allocator, (T*)tPtr);
             this.Length = length;
             this.growFactor = growFactor;
@@ -241,7 +241,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
-            if (state == true && this.isCreated == true) {
+            if (state == true && this.IsCreated == true) {
                 this.cachedPtr = new CachedPtr<T>(in allocator, (T*)this.GetUnsafePtr(in allocator));
             } else {
                 this.cachedPtr = default;
@@ -252,7 +252,7 @@ namespace ME.BECS {
         public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
-            return MemoryAllocatorExt.GetUnsafePtr(in allocator, this.arrPtr);
+            return allocator.GetUnsafePtr(this.arrPtr);
 
         }
 
@@ -325,7 +325,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint newLength, ushort growFactor, ClearOptions options = ClearOptions.ClearMemory) {
 
-            if (this.isCreated == false) {
+            if (this.IsCreated == false) {
 
                 this = new MemArray<T>(ref allocator, newLength, options, growFactor);
                 return true;
@@ -354,7 +354,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint elementSize, uint newLength, ClearOptions options = ClearOptions.ClearMemory, ushort growFactor = 1) {
 
-            if (this.isCreated == false) {
+            if (this.IsCreated == false) {
 
                 this = new MemArray<T>(ref allocator, newLength, options, growFactor);
                 return true;
@@ -370,7 +370,7 @@ namespace ME.BECS {
             newLength *= this.growFactor;
 
             var prevLength = this.Length;
-            this.arrPtr = MemoryAllocatorExt.Alloc(ref allocator, elementSize * newLength, out var tPtr);
+            this.arrPtr = allocator.Alloc(elementSize * newLength, out var tPtr);
             this.cachedPtr = new CachedPtr<T>(in allocator, (T*)tPtr);
             if (options == ClearOptions.ClearMemory) {
                 this.Clear(ref allocator, prevLength, newLength - prevLength);

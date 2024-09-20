@@ -54,10 +54,10 @@ namespace ME.BECS {
 
             this.readWriteSpinner.ReadBegin(state);
             ref var list = ref this.list[in state->allocator, ent.id];
-            if (list.isCreated == true) {
+            if (list.IsCreated == true) {
                 ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
                 entitySpinner.Lock();
-                if (list.isCreated == true) {
+                if (list.IsCreated == true) {
                     for (uint i = 0; i < list.Count; ++i) {
                         var typeId = list[in state->allocator, i];
                         var comp = state->components.ReadUnknownType(state, typeId, ent.id, ent.gen, out var exists);
@@ -83,7 +83,7 @@ namespace ME.BECS {
             ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
             entitySpinner.Lock();
             ref var list = ref this.list[in state->allocator, ent.id];
-            if (list.isCreated == false) list = new List<uint>(ref state->allocator, 1u);
+            if (list.IsCreated == false) list = new List<uint>(ref state->allocator, 1u);
             list.Add(ref state->allocator, typeId);
             entitySpinner.Unlock();
             this.readWriteSpinner.ReadEnd(state);
@@ -97,7 +97,7 @@ namespace ME.BECS {
             ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
             entitySpinner.Lock();
             ref var list = ref this.list[in state->allocator, ent.id];
-            if (list.isCreated == true) list.Remove(ref state->allocator, typeId);
+            if (list.IsCreated == true) list.Remove(ref state->allocator, typeId);
             entitySpinner.Unlock();
             this.readWriteSpinner.ReadEnd(state);
             

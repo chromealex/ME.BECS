@@ -4,7 +4,7 @@ namespace ME.BECS {
     
     public interface IIsCreated {
 
-        bool isCreated { get; }
+        bool IsCreated { get; }
 
     }
 
@@ -14,13 +14,6 @@ namespace ME.BECS {
 
     }
     
-    public interface IEquatableAllocator<T> {
-
-        bool Equals(in MemoryAllocator allocator, T obj);
-        int GetHash(in MemoryAllocator allocator);
-
-    }
-
     public enum InsertionBehavior {
 
         None = 0,

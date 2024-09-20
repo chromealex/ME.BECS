@@ -1,159 +1,108 @@
-//#define MEMORY_ALLOCATOR_BOUNDS_CHECK
-//#define BURST
-
 using static ME.BECS.Cuts;
-using System;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
+using Unity.Mathematics;
 using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 using BURST = Unity.Burst.BurstCompileAttribute;
-using System.Runtime.InteropServices;
 
 namespace ME.BECS {
 
-    public unsafe class MemoryAllocatorProxy {
-
-        public struct Dump {
-
-            public string[] blocks;
-
-        }
-        
-        private readonly MemoryAllocator allocator;
-        
-        public MemoryAllocatorProxy(MemoryAllocator allocator) {
-
-            this.allocator = allocator;
-
-        }
-
-        public Dump[] dump {
-            get {
-                var list = new System.Collections.Generic.List<Dump>();
-                for (int i = 0; i < this.allocator.zonesListCount; ++i) {
-                    var zone = this.allocator.zonesList[i];
-
-                    if (zone == null) {
-                        list.Add(default);
-                        continue;
-                    }
-
-                    var blocks = new System.Collections.Generic.List<string>();
-                    MemoryAllocator.ZmDumpHeap(zone, blocks);
-                    var item = new Dump() {
-                        blocks = blocks.ToArray(),
-                    };
-                    list.Add(item);
-                }
-                
-                return list.ToArray();
-            }
-        }
-
-        public Dump[] checks {
-            get {
-                var list = new System.Collections.Generic.List<Dump>();
-                for (int i = 0; i < this.allocator.zonesListCount; ++i) {
-                    var zone = this.allocator.zonesList[i];
-
-                    if (zone == null) {
-                        list.Add(default);
-                        continue;
-                    }
-                    
-                    var blocks = new System.Collections.Generic.List<string>();
-                    MemoryAllocator.ZmCheckHeap(zone, blocks);
-                    var item = new Dump() {
-                        blocks = blocks.ToArray(),
-                    };
-                    list.Add(item);
-                }
-                
-                return list.ToArray();
-            }
-        }
-
-    }
-
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemoryAllocatorProxy))]
-    #if BURST
-    [BURST(CompileSynchronously = true)]
-    #endif
-    public unsafe partial struct MemoryAllocator {
+    public unsafe partial struct MemoryAllocator : System.IDisposable {
 
-        private const int ZONE_ID = 0x1d4a11;
+        public bool IsValid => this.zonesList != null;
 
-        private const int MIN_FRAGMENT = 64;
-        
-        public const byte BLOCK_STATE_FREE = 0;
-        public const byte BLOCK_STATE_USED = 1;
-        
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MemZone {
+        /// 
+        /// Constructors
+        /// 
+        [INLINE(256)]
+        public MemoryAllocator Initialize(long initialSize, long maxSize = -1L) {
 
-            public int size;           // total bytes malloced, including header
-            public MemBlock blocklist; // start / end cap for linked list
-            public MemBlockOffset rover;
+            if (maxSize < initialSize) maxSize = initialSize;
+
+            this.initialSize = (int)math.max(initialSize, MemoryAllocator.MIN_ZONE_SIZE);
+            this.AddZone(MemoryAllocator.ZmCreateZone(this.initialSize));
+            this.version = 1;
+
+            return this;
+        }
+
+        [INLINE(256)]
+        public void Dispose() {
+
+            this.FreeZones();
+            
+            if (this.zonesList != null) {
+                _free(this.zonesList, Constants.ALLOCATOR_PERSISTENT);
+                this.zonesList = null;
+            }
+
+            this.zonesListCapacity = 0;
 
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MemBlock {
-
-            public int size;    // including the header and possibly tiny fragments
-            public byte state;
-            // to align block
-            public byte b1;
-            public byte b2;
-            public byte b3;
-            public MemBlockOffset next;
-            public MemBlockOffset prev;
+        [INLINE(256)]
+        internal readonly MemPtr GetSafePtr(void* ptr, uint zoneIndex) {
+            
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            public int id;      // should be ZONE_ID
+            if (zoneIndex >= this.zonesListCount || this.zonesList[zoneIndex] == null) {
+                throw new System.Exception();
+            }
             #endif
+            
+            //var index = (long)zoneIndex << 32;
+            //var offset = ((byte*)ptr - (byte*)this.zonesList[zoneIndex]);
 
-        };
-
-        public readonly struct MemBlockOffset {
-
-            public readonly long value;
-
-            [INLINE(256)]
-            public MemBlockOffset(void* block, MemZone* zone) {
-                this.value = (byte*)block - (byte*)zone;
-            }
-
-            [INLINE(256)]
-            public MemBlock* Ptr(void* zone) {
-                return (MemBlock*)((byte*)zone + this.value);
-            }
-
-            [INLINE(256)]
-            public static bool operator ==(MemBlockOffset a, MemBlockOffset b) => a.value == b.value;
-
-            [INLINE(256)]
-            public static bool operator !=(MemBlockOffset a, MemBlockOffset b) => a.value != b.value;
-
-            [INLINE(256)]
-            public bool Equals(MemBlockOffset other) {
-                return this.value == other.value;
-            }
-
-            [INLINE(256)]
-            public override bool Equals(object obj) {
-                return obj is MemBlockOffset other && this.Equals(other);
-            }
-
-            [INLINE(256)]
-            public override int GetHashCode() {
-                return this.value.GetHashCode();
-            }
-
+            // index | offset
+            return new MemPtr(zoneIndex, (uint)((byte*)ptr - (byte*)this.zonesList[zoneIndex]));
         }
-        
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
+
+        [INLINE(256)]
+        private void FreeZones() {
+            if (this.zonesListCount > 0 && this.zonesList != null) {
+                for (int i = 0; i < this.zonesListCount; i++) {
+                    var zone = this.zonesList[i];
+                    if (zone != null) {
+                        MemoryAllocator.ZmFreeZone(zone);
+                    }
+                }
+            }
+
+            this.zonesListCount = 0;
+        }
+
+        [INLINE(256)]
+        internal uint AddZone(MemZone* zone, bool lookUpNull = true) {
+
+            if (lookUpNull == true) {
+
+                for (uint i = 0u; i < this.zonesListCount; ++i) {
+                    if (this.zonesList[i] == null) {
+                        this.zonesList[i] = zone;
+                        return i;
+                    }
+                }
+
+            }
+
+            if (this.zonesListCapacity <= this.zonesListCount) {
+                
+                var capacity = math.max(MemoryAllocator.MIN_ZONES_LIST_CAPACITY, this.zonesListCapacity * 2u);
+                var list = (MemZone**)_make(capacity * (uint)sizeof(MemZone*), TAlign<System.IntPtr>.alignInt, Constants.ALLOCATOR_PERSISTENT);
+
+                if (this.zonesList != null) {
+                    _memcpy(this.zonesList, list, (uint)sizeof(MemZone*) * this.zonesListCount);
+                    _free(this.zonesList, Constants.ALLOCATOR_PERSISTENT);
+                }
+                
+                this.zonesList = list;
+                this.zonesListCapacity = capacity;
+                
+            }
+
+            this.zonesList[this.zonesListCount++] = zone;
+
+            return this.zonesListCount - 1u;
+        }
+
         [INLINE(256)]
         public static void ZmClearZone(MemZone* zone) {
             
@@ -172,35 +121,22 @@ namespace ME.BECS {
             
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static MemZone* ZmCreateZoneEmpty(int size) {
-
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
             var zone = (MemZone*)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT);
             return zone;
-            
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static MemZone* ZmCreateZone(int size) {
-
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
             var zone = (MemZone*)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT);
             zone->size = size;
             MemoryAllocator.ZmClearZone(zone);
-            
             return zone;
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static MemZone* ZmReallocZone(MemZone* zone, int newSize) {
             if (zone->size >= newSize) return zone;
@@ -244,31 +180,11 @@ namespace ME.BECS {
             return newZone;
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static void ZmFreeZone(MemZone* zone) {
             _free(zone, Constants.ALLOCATOR_PERSISTENT);
         }
 
-        [System.Diagnostics.ConditionalAttribute("MEMORY_ALLOCATOR_BOUNDS_CHECK")]
-        public static void CHECK_PTR(void* ptr) {
-            if (ptr == null) {
-                throw new System.ArgumentException("CHECK_PTR failed");
-            }
-        }
-
-        [System.Diagnostics.ConditionalAttribute("MEMORY_ALLOCATOR_BOUNDS_CHECK")]
-        public static void CHECK_ZONE_ID(int id) {
-            if (id != MemoryAllocator.ZONE_ID) {
-                throw new System.ArgumentException("ZmFree: freed a pointer without ZONEID");
-            }
-        }
-
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static bool ZmFree(MemZone* zone, void* ptr, bool freePrev = true) {
             MemoryAllocator.CHECK_PTR(ptr);
@@ -319,9 +235,6 @@ namespace ME.BECS {
             return true;
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         private static int ZmGetMemBlockSize(int size) {
             return Align(size) + TSize<MemBlock>.sizeInt;
@@ -332,9 +245,6 @@ namespace ME.BECS {
         [INLINE(256)]
         internal static long Align(long size) => ((size + 3) & ~3);
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static void* ZmMalloc(MemZone* zone, int size) {
             
@@ -434,9 +344,6 @@ namespace ME.BECS {
             
         }
         
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static bool IsEmptyZone(MemZone* zone) {
 
@@ -447,53 +354,6 @@ namespace ME.BECS {
             return true;
         }
 
-        [INLINE(256)]
-        public static void ZmDumpHeap(MemZone* zone, System.Collections.Generic.List<string> results) {
-            results.Add($"zone size: {zone->size}; location: {new IntPtr(zone)}; rover block offset: {zone->rover.value}");
-
-            for (var block = zone->blocklist.next.Ptr(zone);; block = block->next.Ptr(zone)) {
-
-                results.Add($"block offset: {(byte*)block - (byte*)@zone}; size: {block->size}; state: {block->state}");
-
-                if (block->next.Ptr(zone) == &zone->blocklist) break;
-
-                MemoryAllocator.ZmCheckBlock(zone, block, results);
-            }
-        }
-
-        [INLINE(256)]
-        public static void ZmCheckHeap(MemZone* zone, System.Collections.Generic.List<string> results) {
-            for (var block = zone->blocklist.next.Ptr(zone);; block = block->next.Ptr(zone)) {
-                if (block->next.Ptr(zone) == &zone->blocklist) {
-                    // all blocks have been hit
-                    break;
-                }
-
-                MemoryAllocator.ZmCheckBlock(zone, block, results);
-            }
-        }
-
-        [INLINE(256)]
-        private static void ZmCheckBlock(MemZone* zone, MemBlock* block, System.Collections.Generic.List<string> results) {
-            var next = (byte*)block->next.Ptr(zone);
-            if (next == null) {
-                results.Add("CheckHeap: next block is null\n");
-                return;
-            }
-
-            if ((byte*)block + block->size != (byte*)block->next.Ptr(zone)) {
-                results.Add("CheckHeap: block size does not touch the next block\n");
-            }
-
-            if (block->next.Ptr(zone)->prev.Ptr(zone) != block) {
-                results.Add("CheckHeap: next block doesn't have proper back link\n");
-            }
-
-            if (block->state == MemoryAllocator.BLOCK_STATE_FREE && block->next.Ptr(zone)->state == MemoryAllocator.BLOCK_STATE_FREE) {
-                results.Add("CheckHeap: two consecutive free blocks\n");
-            }
-        }
-        
         [INLINE(256)]
         public static bool ZmCheckHeap(MemZone* zone, out int blockIndex, out int index) {
             blockIndex = -1;
@@ -538,9 +398,6 @@ namespace ME.BECS {
             return true;
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static int GetZmFreeMemory(MemZone* zone) {
             var free = 0;
@@ -552,9 +409,6 @@ namespace ME.BECS {
             return free;
         }
 
-        #if BURST
-        [BURST(CompileSynchronously = true)]
-        #endif
         [INLINE(256)]
         public static bool ZmHasFreeBlock(MemZone* zone, int size) {
             size = MemoryAllocator.ZmGetMemBlockSize(size);

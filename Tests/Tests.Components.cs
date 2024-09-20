@@ -137,7 +137,7 @@ namespace ME.BECS.Tests {
                     entities = arr,
                 }.Schedule(amount, 10).Complete();
 
-                MemoryAllocatorExt.CheckConsistency(ref world.state->allocator);
+                MemoryAllocator.CheckConsistency(ref world.state->allocator);
 
                 for (int i = 0; i < amount; ++i) {
                     var v = arr[i].Read<TestComponent>().data;
@@ -145,7 +145,7 @@ namespace ME.BECS.Tests {
                     Assert.IsTrue(v == i);
                 }
                 
-                MemoryAllocatorExt.CheckConsistency(ref world.state->allocator);
+                MemoryAllocator.CheckConsistency(ref world.state->allocator);
 
                 arr.Dispose();
             }

@@ -328,7 +328,7 @@ namespace ME.BECS.Views {
             _free(ref this.applyStateCounter);
             _free(ref this.updateCounter);
             if (this.renderingOnSceneEnts.IsCreated == true) this.renderingOnSceneEnts.Dispose();
-            if (this.renderingOnSceneBits.isCreated == true) this.renderingOnSceneBits.Dispose();
+            if (this.renderingOnSceneBits.IsCreated == true) this.renderingOnSceneBits.Dispose();
             if (this.toRemove.IsCreated == true) this.toRemove.Dispose();
             if (this.toAdd.IsCreated == true) this.toAdd.Dispose();
             if (this.dirty.IsCreated == true) this.dirty.Dispose();
@@ -342,7 +342,7 @@ namespace ME.BECS.Views {
 
         public struct ProviderInfo : IIsCreated {
 
-            public bool isCreated { get; set; }
+            public bool IsCreated { get; set; }
             public uint typeId;
 
         }
@@ -357,7 +357,7 @@ namespace ME.BECS.Views {
             registeredProviders.Data.Resize((int)providerId + 1, NativeArrayOptions.ClearMemory);
 
             ref var item = ref *(registeredProviders.Data.Ptr + providerId);
-            item.isCreated = true;
+            item.IsCreated = true;
             item.typeId = StaticTypes<T>.typeId;
 
         }

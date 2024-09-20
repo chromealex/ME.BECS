@@ -13,12 +13,12 @@ namespace ME.BECS {
         private int writeValue;
         private int* ptr;
 
-        public bool isCreated => this.value.IsValid();
+        public bool IsCreated => this.value.IsValid();
 
         [INLINE(256)]
         public static ReadWriteSpinner Create(State* state) {
             var size = TSize<int>.size * INTS_PER_CACHE_LINE * JobsUtility.MaxJobThreadCount;
-            var arr = MemoryAllocatorExt.Alloc(ref state->allocator, size, out var ptr);
+            var arr = state->allocator.Alloc(size, out var ptr);
             state->allocator.MemClear(arr, 0L, size);
             return new ReadWriteSpinner() {
                 value = arr,
@@ -64,6 +64,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             // acquire write op
             var i = 100_000_000;
+            E.ADDR_4(ref this.writeValue);
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
                 --i;
                 if (i == 0) {
@@ -89,6 +90,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             // release write op
             var i = 100_000_000;
+            E.ADDR_4(ref this.writeValue);
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 1) != 1) {
                 --i;
                 if (i == 0) {
@@ -102,7 +104,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool value) {
             
-            this.ptr = (int*)MemoryAllocatorExt.GetUnsafePtr(in allocator, this.value);
+            this.ptr = (int*)allocator.GetUnsafePtr(this.value);
             
         }
 
@@ -182,6 +184,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Lock() {
             var i = 100_000_000;
+            E.ADDR_4(ref this.value);
             while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
                 --i;
                 if (i == 0) {
@@ -197,6 +200,7 @@ namespace ME.BECS {
         public void Unlock() {
             var i = 100_000_000;
             System.Threading.Interlocked.MemoryBarrier();
+            E.ADDR_4(ref this.value);
             while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
                 --i;
                 if (i == 0) {
@@ -209,6 +213,7 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public void LockWhile() {
+            E.ADDR_4(ref this.value);
             while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
@@ -218,6 +223,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void UnlockWhile() {
             System.Threading.Interlocked.MemoryBarrier();
+            E.ADDR_4(ref this.value);
             while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
                 Unity.Burst.Intrinsics.Common.Pause();
             }

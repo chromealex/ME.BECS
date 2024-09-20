@@ -409,7 +409,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Dispose(State* state) {
                 
-                if (this.archetypes.isCreated == true) this.archetypes.Dispose(ref state->allocator);
+                if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state->allocator);
                 this.with.Dispose(ref state->allocator);
                 this.without.Dispose(ref state->allocator);
                 this.withAny.Dispose(ref state->allocator);
@@ -448,7 +448,7 @@ namespace ME.BECS {
                     }
                 }
 
-                if (this.archetypes.isCreated == true) this.archetypes.Dispose(ref state->allocator);
+                if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state->allocator);
                 this.archetypes = queryRef->archetypesBits.GetTrueBitsPersistent(ref state->allocator);
                 queryRef->Dispose();
                 

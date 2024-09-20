@@ -20,13 +20,13 @@ namespace ME.BECS {
         public uint itemsPerThread;
         public ushort worldId;
         
-        public bool isCreated { private set; get; }
+        public bool IsCreated { private set; get; }
 
         public uint Offset => this.index * this.itemsPerThread;
 
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
-                isCreated = true,
+                IsCreated = true,
                 itemsPerThread = 1u,
                 worldId = worldId,
             };

@@ -15,7 +15,7 @@ namespace ME.BECS {
         private readonly MemPtr arrPtr;
         public readonly uint Length => JobUtils.ThreadsCount;
 
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arrPtr.IsValid();
         }
@@ -25,7 +25,7 @@ namespace ME.BECS {
 
             this = default;
             var size = TSize<T>.size;
-            var memPtr = MemoryAllocatorExt.Alloc(ref allocator, this.Length * size * CACHE_LINE_SIZE);
+            var memPtr = allocator.Alloc(this.Length * size * CACHE_LINE_SIZE);
             
             if (clearOptions == ClearOptions.ClearMemory) {
                 allocator.MemClear(memPtr, 0u, this.Length * size * CACHE_LINE_SIZE);
@@ -64,7 +64,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
 
-            return MemoryAllocatorExt.GetUnsafePtr(in allocator, this.arrPtr);
+            return allocator.GetUnsafePtr(this.arrPtr);
 
         }
 

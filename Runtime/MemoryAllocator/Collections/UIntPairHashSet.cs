@@ -145,9 +145,9 @@ namespace ME.BECS {
         internal uint version;
         internal uint hash;
 
-        public bool isCreated {
+        public bool IsCreated {
             [INLINE(256)]
-            get => this.buckets.isCreated;
+            get => this.buckets.IsCreated;
         }
 
         public uint Count {
@@ -381,7 +381,7 @@ namespace ME.BECS {
         /// <returns>true if removed; false if not (i.e. if the item wasn't in the HashSet)</returns>
         [INLINE(256)]
         public bool Remove(ref MemoryAllocator allocator, UIntPair item) {
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 uint hashCode = item.GetHash() & UIntPairHashSet.LOWER31_BIT_MASK;
                 uint bucket = hashCode % this.buckets.Length;
                 int last = -1;
@@ -465,7 +465,7 @@ namespace ME.BECS {
         private void SetCapacity(ref MemoryAllocator allocator, uint newSize, bool forceNewHashCodes) { 
             
             var newSlots = new MemArray<Slot>(ref allocator, newSize);
-            if (this.slots.isCreated == true) {
+            if (this.slots.IsCreated == true) {
                 NativeArrayUtils.CopyNoChecks(ref allocator, in this.slots, 0, ref newSlots, 0, this.lastIndex);
             }
 
@@ -483,8 +483,8 @@ namespace ME.BECS {
                 newSlots[in allocator, i].next = (int)newBuckets[in allocator, bucket] - 1;
                 newBuckets[in allocator, bucket] = i + 1;
             }
-            if (this.slots.isCreated == true) this.slots.Dispose(ref allocator);
-            if (this.buckets.isCreated == true) this.buckets.Dispose(ref allocator);
+            if (this.slots.IsCreated == true) this.slots.Dispose(ref allocator);
+            if (this.buckets.IsCreated == true) this.buckets.Dispose(ref allocator);
             this.slots = newSlots;
             this.buckets = newBuckets;
         }
@@ -499,7 +499,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Add(ref MemoryAllocator allocator, UIntPair value) {
             
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 this.Initialize(ref allocator, 0);
             }
 
@@ -550,7 +550,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Add(ref MemoryAllocator allocator, UIntPair value, ref int* bucketsPtr, ref Slot* slotsPtr) {
             
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 this.Initialize(ref allocator, 0);
             }
 

@@ -209,7 +209,7 @@ namespace ME.BECS.Pathfinding {
             var chunkComponent = root.chunks[world.state, chunkIndex];
             var nodeIndex = GetNodeIndex(in root, in chunkComponent, position, float3.zero, quaternion.identity, false);
             var chunk = path.chunks[world.state, chunkIndex];
-            if (nodeIndex == uint.MaxValue || chunk.flowField.isCreated == false) {
+            if (nodeIndex == uint.MaxValue || chunk.flowField.IsCreated == false) {
                 complete = false;
                 return float3.zero;
             }
@@ -757,7 +757,7 @@ namespace ME.BECS.Pathfinding {
 
             //UnityEngine.Debug.Log(baseIndex + " :: " + direction + " :: " + bIndex);
             var newChunkIndex = GetChunkIndex(chunkIndex, offset.x, offset.y, chunksX, chunksY);
-            if (newChunkIndex == uint.MaxValue || (gridChunks.isCreated == true && gridChunks[world.state, newChunkIndex].flowField.isCreated == false)) {
+            if (newChunkIndex == uint.MaxValue || (gridChunks.IsCreated == true && gridChunks[world.state, newChunkIndex].flowField.IsCreated == false)) {
                 // there is no chunk in this direction
                 return TempNode.Invalid;
             }
@@ -1134,7 +1134,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static void CalculatePortals(in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, in World world, Unity.Collections.NativeArray<ulong> changedChunks) {
 
-            if (chunkComponent.portals.list.isCreated == false) chunkComponent.portals.list = new List<Portal>(ref world.state->allocator, 10u);
+            if (chunkComponent.portals.list.IsCreated == false) chunkComponent.portals.list = new List<Portal>(ref world.state->allocator, 10u);
             // clean up neighbours for each portal of this chunk
             var root = graph.Read<RootGraphComponent>();
             for (uint i = 0; i < chunkComponent.portals.list.Count; ++i) {
@@ -1144,7 +1144,7 @@ namespace ME.BECS.Pathfinding {
                     var remoteInfo = portal.remoteNeighbours[j];
                     var sourceInfo = remoteInfo.portalInfo;
                     ref var remotePortal = ref root.chunks[world.state, sourceInfo.chunkIndex].portals.list[world.state, sourceInfo.portalIndex];
-                    if (remotePortal.remoteNeighbours.isCreated == true) remotePortal.remoteNeighbours.Clear();
+                    if (remotePortal.remoteNeighbours.IsCreated == true) remotePortal.remoteNeighbours.Clear();
                     if (changedChunks.IsCreated == true) {
                         changedChunks[(int)remotePortal.portalInfo.chunkIndex] = world.state->tick;
                         changedChunks[(int)sourceInfo.chunkIndex] = world.state->tick;

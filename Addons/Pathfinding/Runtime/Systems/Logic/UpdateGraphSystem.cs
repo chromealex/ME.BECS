@@ -27,7 +27,7 @@ namespace ME.BECS.Pathfinding {
                     if (this.dirtyChunks[(int)i] != this.world.state->tick) continue;
                     ref var chunk = ref path.path.chunks[this.world.state, i];
                     ref var flowField = ref chunk.flowField;
-                    if (flowField.isCreated == true) flowField.Dispose(ref this.world.state->allocator);
+                    if (flowField.IsCreated == true) flowField.Dispose(ref this.world.state->allocator);
                 }
 
             }

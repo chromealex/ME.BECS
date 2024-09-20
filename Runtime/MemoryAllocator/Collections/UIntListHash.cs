@@ -11,9 +11,9 @@ namespace ME.BECS {
         public uint hash;
         public uint Count;
 
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.arr.isCreated;
+            get => this.arr.IsCreated;
         }
 
         public uint Capacity {
@@ -101,7 +101,7 @@ namespace ME.BECS {
         public bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            if (this.arr.isCreated == false) this.arr.growFactor = 1;
+            if (this.arr.IsCreated == false) this.arr.growFactor = 1;
             return this.arr.Resize(ref allocator, capacity, ClearOptions.UninitializedMemory);
             
         }

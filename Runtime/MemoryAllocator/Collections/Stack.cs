@@ -74,7 +74,7 @@ namespace ME.BECS {
 
         private MemArray<T> array;
         private uint size;
-        public bool isCreated => this.array.isCreated;
+        public bool isCreated => this.array.IsCreated;
 
         public readonly uint Count => this.size;
 

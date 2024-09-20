@@ -107,7 +107,7 @@ namespace ME.BECS.Pathfinding {
         public void InvalidateCache(ref MemoryAllocator allocator, PortalInfo fromPortalId, PortalInfo toPortalId) {
             this.lockSpinner.Lock();
             var chunk = this.data.GetValueAndRemove(ref allocator, new PortalPair(fromPortalId, toPortalId).pack);
-            if (chunk.flowField.isCreated == true) chunk.flowField.Dispose(ref allocator);
+            if (chunk.flowField.IsCreated == true) chunk.flowField.Dispose(ref allocator);
             this.lockSpinner.Unlock();
         }
 
@@ -311,7 +311,7 @@ namespace ME.BECS.Pathfinding {
         public float3 to;
         public Filter filter;
 
-        public bool IsCreated => this.graph.IsAlive() == true && this.from.IsValid() == true && this.chunks.isCreated == true;
+        public bool IsCreated => this.graph.IsAlive() == true && this.from.IsValid() == true && this.chunks.IsCreated == true;
 
         [INLINE(256)]
         public void Dispose(in World world) {

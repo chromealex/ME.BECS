@@ -68,7 +68,7 @@ namespace ME.BECS {
         private uint tail;
         private uint size;
         private uint version;
-        public readonly bool isCreated => this.array.isCreated;
+        public readonly bool isCreated => this.array.IsCreated;
 
         public readonly uint Count => this.size;
         public readonly uint Capacity => this.array.Length;

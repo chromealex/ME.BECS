@@ -53,7 +53,7 @@ namespace ME.BECS.Pathfinding {
             // Update only last chunk if target chunk is equal with previous
             var nodeChanged = true;
             var chunkChanged = true;
-            if (unitCommandGroup.targets.isCreated == true) {
+            if (unitCommandGroup.targets.IsCreated == true) {
                 chunkChanged = false;
                 nodeChanged = false;
                 var state = unitCommandGroup.ent.World.state;

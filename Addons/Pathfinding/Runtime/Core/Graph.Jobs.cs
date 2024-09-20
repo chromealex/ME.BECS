@@ -351,7 +351,7 @@ namespace ME.BECS.Pathfinding {
                         chunksVisited.Set((int)portalInfo.chunkIndex, true);
 
                         var data = this.path.chunks[this.world.state, portalInfo.chunkIndex];
-                        if (data.flowField.isCreated == false) {
+                        if (data.flowField.IsCreated == false) {
 
                             ref var chunk = ref root.chunks[this.world.state, portalInfo.chunkIndex];
                             /*if (k < nodes.Length - 1) {
@@ -585,7 +585,7 @@ namespace ME.BECS.Pathfinding {
             [INLINE(256)]
             static bool GetState(State* state, in Path path, in Graph.TempNode node) {
                 var chunk = path.chunks[state, node.chunkIndex];
-                if (chunk.flowField.isCreated == false) return false;
+                if (chunk.flowField.IsCreated == false) return false;
                 return chunk.flowField[state, node.nodeIndex].hasLineOfSight;
             }
             

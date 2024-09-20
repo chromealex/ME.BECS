@@ -16,7 +16,7 @@ namespace ME.BECS {
         internal uint minElementsPerStep;
 
         public void Dispose() {
-            if (this.archetypesBits.isCreated == true) this.archetypesBits.Dispose();
+            if (this.archetypesBits.IsCreated == true) this.archetypesBits.Dispose();
             this = default;
         }
 

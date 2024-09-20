@@ -38,7 +38,7 @@ namespace ME.BECS.Editor {
 
         public void CreateGUI(VisualElement root, IUnmanagedList list, SerializedProperty property) {
 
-            if (list.isCreated == false) {
+            if (list.IsCreated == false) {
                 var label = new Label("Collection is not created");
                 root.Add(label);
                 return;

@@ -16,12 +16,12 @@ namespace ME.BECS {
         public uint hash;
         public uint maxId;
 
-        public bool isCreated => this.list.isCreated;
+        public bool isCreated => this.list.IsCreated;
 
         [INLINE(256)]
         public void Add(uint value) {
 
-            if (this.list.isCreated == false) this.list = new TempBitArray(StaticTypes.counter + 1u, ClearOptions.ClearMemory, Constants.ALLOCATOR_PERSISTENT_ST);
+            if (this.list.IsCreated == false) this.list = new TempBitArray(StaticTypes.counter + 1u, ClearOptions.ClearMemory, Constants.ALLOCATOR_PERSISTENT_ST);
             
             ++this.Count;
             if (value > this.maxId) this.maxId = value;
@@ -48,7 +48,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            if (this.list.isCreated == true) this.list.Dispose();
+            if (this.list.IsCreated == true) this.list.Dispose();
             this = default;
 
         }
@@ -76,7 +76,7 @@ namespace ME.BECS {
             {
                 var addItems = ComponentsFastTrack.Create(this.addItems);
                 var removeItems = ComponentsFastTrack.Create(this.removeItems);
-                MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state->allocator);
                 archetypes.ApplyBatch(state, entId, in addItems, in removeItems);
                 this.addItems.Dispose();
                 this.removeItems.Dispose();
@@ -145,7 +145,7 @@ namespace ME.BECS {
 
         public uint GetReservedSizeInBytes(State* state) {
 
-            if (this.items.isCreated == false) return 0u;
+            if (this.items.IsCreated == false) return 0u;
 
             var size = 0u;
             for (uint i = 0u; i < this.items.Length; ++i) {

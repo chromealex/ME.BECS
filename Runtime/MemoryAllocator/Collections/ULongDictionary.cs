@@ -52,7 +52,7 @@ namespace ME.BECS {
 
         public bool isCreated {
             [INLINE(256)]
-            get => this.buckets.isCreated;
+            get => this.buckets.IsCreated;
         }
 
         public readonly uint Count {
@@ -295,7 +295,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private bool TryInsert(ref MemoryAllocator allocator, ulong key, TValue value, InsertionBehavior behavior) {
             ++this.version;
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 this.Initialize(ref allocator, 0);
             }
 
@@ -365,7 +365,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private ref TValue Insert(ref MemoryAllocator allocator, ulong key, TValue value) {
             ++this.version;
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 this.Initialize(ref allocator, 0);
             }
 
@@ -424,11 +424,11 @@ namespace ME.BECS {
                 }
             }
 
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 this.buckets.Dispose(ref allocator);
             }
 
-            if (this.entries.isCreated == true) {
+            if (this.entries.IsCreated == true) {
                 this.entries.Dispose(ref allocator);
             }
 
@@ -560,7 +560,7 @@ namespace ME.BECS {
                 return num;
             }
 
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 return this.Initialize(ref allocator, capacity);
             }
 

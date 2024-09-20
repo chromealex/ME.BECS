@@ -19,16 +19,18 @@ namespace ME.BECS {
             private readonly ListAuto<T> list;
             private uint index;
 
+            [INLINE(256)]
             internal Enumerator(in ListAuto<T> list) {
                 this.list = list;
                 this.index = 0u;
             }
 
+            [INLINE(256)]
             public bool MoveNext() {
                 return this.index++ < this.list.Count;
             }
 
-            public ref T GetCurrent(in MemoryAllocator allocator) => ref this.list[in allocator, this.index - 1u];
+            public ref T Current => ref this.list[this.index - 1u];
 
         }
 
@@ -45,9 +47,9 @@ namespace ME.BECS {
             return arr;
         }
         
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.arr.isCreated;
+            get => this.arr.IsCreated;
         }
 
         public uint Capacity {
@@ -97,7 +99,7 @@ namespace ME.BECS {
             if (this.arr.arrPtr.IsValid() == false) this = new ListAuto<T>(this.ent, other.Capacity);
 
             var state = this.ent.World.state;
-            NativeArrayUtils.Copy(ref state->allocator, in other.arr, ref this.arr);
+            NativeArrayUtils.Copy(in other.arr, ref this.arr);
             this.Count = other.Count;
 
         }
@@ -155,7 +157,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly Enumerator GetEnumerator() {
 
-            if (this.isCreated == false) return default;
+            if (this.IsCreated == false) return default;
             return new Enumerator(in this);
             
         }
@@ -196,7 +198,7 @@ namespace ME.BECS {
         private bool EnsureCapacity(in Ent ent, uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            if (this.arr.isCreated == false) this.arr.growFactor = 1;
+            if (this.arr.IsCreated == false) this.arr.growFactor = 1;
             return this.arr.Resize(capacity, ClearOptions.UninitializedMemory);
             
         }

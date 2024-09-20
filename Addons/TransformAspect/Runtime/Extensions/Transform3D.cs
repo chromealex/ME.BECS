@@ -57,7 +57,7 @@ namespace ME.BECS.Transforms {
             {
                 // Move to the new parent
                 ref var parentChildren = ref parent.Get<ChildrenComponent>().list;
-                if (parentChildren.isCreated == false) parentChildren = new ListAuto<Ent>(parent, 1u); 
+                if (parentChildren.IsCreated == false) parentChildren = new ListAuto<Ent>(parent, 1u); 
                 parentChildren.Add(ent);
                 currentParent = parent;
                 // if new parent has no parent component

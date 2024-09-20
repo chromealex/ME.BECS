@@ -31,9 +31,9 @@ namespace ME.BECS.Network {
         internal MemArray<NetworkPackage> arr;
         public uint Count;
 
-        public readonly bool isCreated {
+        public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.arr.isCreated;
+            get => this.arr.IsCreated;
         }
 
         public uint Capacity {
@@ -229,7 +229,7 @@ namespace ME.BECS.Network {
         public bool Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions options = ClearOptions.ClearMemory) {
 
             E.IS_CREATED(this);
-            if (this.isCreated == false) {
+            if (this.IsCreated == false) {
 
                 this = new SortedNetworkPackageList(ref allocator, newLength);
                 return true;

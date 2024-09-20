@@ -138,7 +138,7 @@ namespace ME.BECS {
             // update data in storage
             ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state->allocator);
             var dataMemPtr = storage.data.ptr;
-            var dataPtr = MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in dataMemPtr);
+            var dataPtr = state->allocator.GetUnsafePtr(in dataMemPtr);
             if (dataSize > 0u) _memcpy(data, dataPtr, dataSize);
             var added = storage.entities.Add(ref state->allocator, ent.id);
             

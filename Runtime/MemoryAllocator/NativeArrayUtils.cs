@@ -1,15 +1,15 @@
 namespace ME.BECS {
     
     using Unity.Collections.LowLevel.Unsafe;
+    using static Cuts;
 
     public static unsafe class NativeArrayUtils {
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public static void Copy<T>(ref MemoryAllocator allocator,
-                                   in MemArrayAuto<T> fromArr,
+        public static void Copy<T>(in MemArrayAuto<T> fromArr,
                                    ref MemArrayAuto<T> arr) where T : unmanaged {
             
-            NativeArrayUtils.Copy(ref allocator, fromArr, 0, ref arr, 0, fromArr.Length);
+            NativeArrayUtils.Copy(fromArr, 0, ref arr, 0, fromArr.Length);
             
         }
         
@@ -47,11 +47,10 @@ namespace ME.BECS {
         }
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public static void CopyExact<T>(ref MemoryAllocator allocator, 
-                                        in MemArrayAuto<T> fromArr,
+        public static void CopyExact<T>(in MemArrayAuto<T> fromArr,
                                         ref MemArrayAuto<T> arr) where T : unmanaged {
             
-            NativeArrayUtils.Copy(ref allocator, fromArr, 0, ref arr, 0, fromArr.Length, true);
+            NativeArrayUtils.Copy(fromArr, 0, ref arr, 0, fromArr.Length, true);
             
         }
 
@@ -64,19 +63,19 @@ namespace ME.BECS {
                                    uint length,
                                    bool copyExact = false) where T : unmanaged {
 
-            switch (fromArr.isCreated) {
-                case false when arr.isCreated == false:
+            switch (fromArr.IsCreated) {
+                case false when arr.IsCreated == false:
                     return;
 
-                case false when arr.isCreated == true:
+                case false when arr.IsCreated == true:
                     arr.Dispose(ref allocator);
                     arr = default;
                     return;
             }
 
-            if (arr.isCreated == false || (copyExact == false ? arr.Length < fromArr.Length : arr.Length != fromArr.Length)) {
+            if (arr.IsCreated == false || (copyExact == false ? arr.Length < fromArr.Length : arr.Length != fromArr.Length)) {
 
-                if (arr.isCreated == true) arr.Dispose(ref allocator);
+                if (arr.IsCreated == true) arr.Dispose(ref allocator);
                 arr = new MemArray<T>(ref allocator, fromArr.Length);
                 
             }
@@ -87,34 +86,33 @@ namespace ME.BECS {
         }
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public static void Copy<T>(ref MemoryAllocator allocator, 
-                                   in MemArrayAuto<T> fromArr,
+        public static void Copy<T>(in MemArrayAuto<T> fromArr,
                                    uint sourceIndex,
                                    ref MemArrayAuto<T> arr,
                                    uint destIndex,
                                    uint length,
                                    bool copyExact = false) where T : unmanaged {
 
-            switch (fromArr.isCreated) {
-                case false when arr.isCreated == false:
+            switch (fromArr.IsCreated) {
+                case false when arr.IsCreated == false:
                     return;
 
-                case false when arr.isCreated == true:
+                case false when arr.IsCreated == true:
                     arr.Dispose();
                     arr = default;
                     return;
             }
 
-            if (arr.isCreated == false || (copyExact == false ? arr.Length < fromArr.Length : arr.Length != fromArr.Length)) {
+            if (arr.IsCreated == false || (copyExact == false ? arr.Length < fromArr.Length : arr.Length != fromArr.Length)) {
 
-                if (arr.isCreated == true) arr.Dispose();
+                if (arr.IsCreated == true) arr.Dispose();
                 arr = new MemArrayAuto<T>(fromArr.ent, fromArr.Length);
                 
             }
 
             var size = TSize<T>.size;
-            allocator.MemMove(arr.arrPtr, destIndex * size, fromArr.arrPtr, sourceIndex * size, length * size);
-
+            _memmove(fromArr.ent.World.state->allocator.GetUnsafePtr(fromArr.arrPtr, sourceIndex * size), arr.ent.World.state->allocator.GetUnsafePtr(arr.arrPtr, destIndex * size), length * size);
+            
         }
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -131,15 +129,14 @@ namespace ME.BECS {
         }
 
         [System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public static void CopyNoChecks<T>(ref MemoryAllocator allocator,
-                                           in MemArrayAuto<T> fromArr,
+        public static void CopyNoChecks<T>(in MemArrayAuto<T> fromArr,
                                            uint sourceIndex,
                                            ref MemArrayAuto<T> arr,
                                            uint destIndex,
                                            uint length) where T : unmanaged {
 
-            var size = sizeof(T);
-            allocator.MemCopy(arr.arrPtr, destIndex * size, fromArr.arrPtr, sourceIndex * size, length * size);
+            var size = TSize<T>.size;
+            _memmove(fromArr.ent.World.state->allocator.GetUnsafePtr(fromArr.arrPtr, sourceIndex * size), arr.ent.World.state->allocator.GetUnsafePtr(arr.arrPtr, destIndex * size), length * size);
 
         }
 

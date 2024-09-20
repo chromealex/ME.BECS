@@ -96,7 +96,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private static byte* _getBlock(State* state, in Page page, uint entityId, uint dataSize) {
             var dataIndex = _dataIndex(entityId);
-            return MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in page.entIdToData, _blockSize(dataSize) * dataIndex);
+            return state->allocator.GetUnsafePtr(in page.entIdToData, _blockSize(dataSize) * dataIndex);
         }
 
         [INLINE(256)]
@@ -110,7 +110,7 @@ namespace ME.BECS {
             this.dataSize = dataSize;
             this.dataPages = new MemArray<Page>(ref state->allocator, _sizeData(entitiesCapacity), growFactor: 2);
             this.readWriteSpinner = ReadWriteSpinner.Create(state);
-            MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state->allocator);
 
         }
         

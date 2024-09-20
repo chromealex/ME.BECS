@@ -6,7 +6,7 @@ namespace ME.BECS {
 
         public uint GetReservedSizeInBytes(State* state) {
 
-            if (this.items.isCreated == false) return 0u;
+            if (this.items.IsCreated == false) return 0u;
             
             var size = 0u;
             var c = StaticTypes.counter;

@@ -95,7 +95,7 @@ namespace ME.BECS {
         
         public uint GetReservedSizeInBytes(State* state) {
 
-            if (this.list.isCreated == false) return 0u;
+            if (this.list.IsCreated == false) return 0u;
 
             return this.list.GetReservedSizeInBytes();
 
@@ -118,12 +118,12 @@ namespace ME.BECS {
             ref var item = ref this.list[state, typeId];
             if (item.constructedAspect.IsValid() == false) {
                 item = new Aspect() {
-                    constructedAspect = MemoryAllocatorExt.Alloc(ref state->allocator, sizeof(T)),
+                    constructedAspect = state->allocator.Alloc(sizeof(T)),
                     version = state->allocator.version,
                 };
             }
 
-            return ref *(T*)MemoryAllocatorExt.GetUnsafePtr(in state->allocator, in item.constructedAspect);
+            return ref *(T*)state->allocator.GetUnsafePtr(in item.constructedAspect);
 
         }
 

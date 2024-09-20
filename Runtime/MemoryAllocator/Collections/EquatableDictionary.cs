@@ -52,7 +52,7 @@ namespace ME.BECS {
 
         public bool isCreated {
             [INLINE(256)]
-            get => this.buckets.isCreated;
+            get => this.buckets.IsCreated;
         }
 
         public readonly uint Count {
@@ -227,7 +227,7 @@ namespace ME.BECS {
         private readonly int FindEntry(in MemoryAllocator allocator, TKey key) {
             var index = -1;
             var num1 = 0;
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 var num2 = GetHashCode(key) & int.MaxValue;
                 index = (int)this.buckets[in allocator, (uint)(num2 % this.buckets.Length)] - 1;
                 while ((uint)index < (uint)this.entries.Length &&
@@ -256,7 +256,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private bool TryInsert(ref MemoryAllocator allocator, TKey key, TValue value, InsertionBehavior behavior) {
             ++this.version;
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 this.Initialize(ref allocator, 0);
             }
 
@@ -342,11 +342,11 @@ namespace ME.BECS {
                 }
             }
 
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 this.buckets.Dispose(ref allocator);
             }
 
-            if (this.entries.isCreated == true) {
+            if (this.entries.IsCreated == true) {
                 this.entries.Dispose(ref allocator);
             }
 
@@ -359,7 +359,7 @@ namespace ME.BECS {
         /// <param name="key">The key of the element to be removed from the dictionary.</param>
         [INLINE(256)]
         public bool Remove(ref MemoryAllocator allocator, TKey key) {
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 var num = GetHashCode(key) & int.MaxValue;
                 var index1 = (int)(num % this.buckets.Length);
                 var index2 = -1;
@@ -399,7 +399,7 @@ namespace ME.BECS {
         /// <param name="value"></param>
         [INLINE(256)]
         public bool Remove(ref MemoryAllocator allocator, TKey key, out TValue value) {
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 var num = GetHashCode(key) & int.MaxValue;
                 var index1 = (int)(num % this.buckets.Length);
                 var index2 = -1;
@@ -465,7 +465,7 @@ namespace ME.BECS {
                 return num;
             }
 
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 return this.Initialize(ref allocator, capacity);
             }
 

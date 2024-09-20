@@ -11,12 +11,14 @@ namespace ME.BECS {
             private readonly Entry* entries;
             private uint index;
 
+            [INLINE(256)]
             internal Enumerator(in ULongDictionaryAuto<TValue> dictionary, State* state) {
                 this.entries = (Entry*)dictionary.entries.GetUnsafePtrCached(in state->allocator);
                 this.count = dictionary.count;
                 this.index = 0u;
             }
 
+            [INLINE(256)]
             public bool MoveNext() {
 
                 while (this.index < this.count) {
@@ -52,9 +54,9 @@ namespace ME.BECS {
 
         public readonly Ent ent => this.buckets.ent;
 
-        public bool isCreated {
+        public bool IsCreated {
             [INLINE(256)]
-            get => this.buckets.isCreated;
+            get => this.buckets.IsCreated;
         }
 
         public readonly uint Count {
@@ -122,8 +124,8 @@ namespace ME.BECS {
             if (this.GetMemPtr().IsValid() == false) this = new ULongDictionaryAuto<TValue>(this.ent, other.Count);
 
             var state = this.ent.World.state;
-            NativeArrayUtils.CopyExact(ref state->allocator, other.buckets, ref this.buckets);
-            NativeArrayUtils.CopyExact(ref state->allocator, other.entries, ref this.entries);
+            NativeArrayUtils.CopyExact(other.buckets, ref this.buckets);
+            NativeArrayUtils.CopyExact(other.entries, ref this.entries);
             this.count = other.count;
             this.version = other.version;
             this.freeCount = other.freeCount;
@@ -150,7 +152,6 @@ namespace ME.BECS {
         }
 
         /// <summary><para>Gets or sets the value associated with the specified key.</para></summary>
-        /// <param name="allocator"></param>
         /// <param name="key">The key whose value is to be gotten or set.</param>
         public readonly ref TValue this[ulong key] {
             [INLINE(256)]
@@ -158,10 +159,9 @@ namespace ME.BECS {
                 
                 E.IS_CREATED(this);
 
-                var state = this.ent.World.state;
-                var entry = this.FindEntry(in state->allocator, key);
+                var entry = this.FindEntry(key);
                 if (entry >= 0) {
-                    return ref this.entries[in state->allocator, entry].value;
+                    return ref this.entries[entry].value;
                 }
 
                 throw new System.Collections.Generic.KeyNotFoundException();
@@ -173,10 +173,9 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             
-            var state = this.ent.World.state;
-            var entry = this.FindEntry(in state->allocator, key);
+            var entry = this.FindEntry(key);
             if (entry >= 0) {
-                return ref this.entries[in state->allocator, entry].value;
+                return ref this.entries[entry].value;
             }
 
             return ref this.Insert(key, default);
@@ -188,11 +187,10 @@ namespace ME.BECS {
             
             E.IS_CREATED(this);
 
-            var state = this.ent.World.state;
-            var entry = this.FindEntry(in state->allocator, key);
+            var entry = this.FindEntry(key);
             if (entry >= 0) {
                 exist = true;
-                return ref this.entries[in state->allocator, entry].value;
+                return ref this.entries[entry].value;
             }
 
             exist = false;
@@ -211,7 +209,6 @@ namespace ME.BECS {
         }
 
         /// <summary><para>Adds an element with the specified key and value to the dictionary.</para></summary>
-        /// <param name="allocator"></param>
         /// <param name="key">The key of the element to add to the dictionary.</param>
         /// <param name="value"></param>
         [INLINE(256)]
@@ -242,26 +239,24 @@ namespace ME.BECS {
         }
 
         /// <summary><para>Determines whether the dictionary contains an element with a specific key.</para></summary>
-        /// <param name="allocator"></param>
         /// <param name="key">The key to locate in the dictionary.</param>
         [INLINE(256)]
-        public readonly bool ContainsKey(in MemoryAllocator allocator, ulong key) {
+        public readonly bool ContainsKey(ulong key) {
             
             E.IS_CREATED(this);
 
-            return this.FindEntry(in allocator, key) >= 0;
+            return this.FindEntry(key) >= 0;
         }
 
         /// <summary><para>Determines whether the dictionary contains an element with a specific value.</para></summary>
-        /// <param name="allocator"></param>
         /// <param name="value">The value to locate in the dictionary.</param>
         [INLINE(256)]
-        public readonly bool ContainsValue(in MemoryAllocator allocator, TValue value) {
+        public readonly bool ContainsValue(TValue value) {
             
             E.IS_CREATED(this);
 
             for (var index = 0; index < this.count; ++index) {
-                if (this.entries[in allocator, index].hashCode >= 0 && System.Collections.Generic.EqualityComparer<TValue>.Default.Equals(this.entries[in allocator, index].value, value)) {
+                if (this.entries[index].hashCode >= 0 && System.Collections.Generic.EqualityComparer<TValue>.Default.Equals(this.entries[index].value, value)) {
                     return true;
                 }
             }
@@ -269,13 +264,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private readonly int FindEntry(in MemoryAllocator allocator, ulong key) {
+        private readonly int FindEntry(ulong key) {
             var index = -1;
             var num1 = 0;
             if (this.buckets.Length > 0u) {
                 var num2 = key.GetHashCode() & int.MaxValue;
-                index = (int)this.buckets[in allocator, (uint)(num2 % this.buckets.Length)] - 1;
-                var entries = (Entry*)this.entries.GetUnsafePtrCached(in allocator);
+                index = (int)this.buckets[(uint)(num2 % this.buckets.Length)] - 1;
+                var entries = (Entry*)this.entries.GetUnsafePtrCached();
                 while ((uint)index < this.entries.Length &&
                        (entries[index].hashCode != num2 || !entries[index].key.Equals(key))) {
                     index = entries[index].next;
@@ -301,11 +296,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         private bool TryInsert(in Ent ent, ulong key, TValue value, InsertionBehavior behavior) {
+            E.IS_CREATED(this);
             ++this.version;
-            if (this.buckets.isCreated == false) {
-                this.Initialize(in ent, 0);
-            }
-
             var state = ent.World.state;
             var entries = (Entry*)this.entries.GetUnsafePtrCached(in state->allocator);
             var num1 = key.GetHashCode() & int.MaxValue;
@@ -373,11 +365,8 @@ namespace ME.BECS {
         [INLINE(256)]
         private ref TValue Insert(ulong key, TValue value) {
             ++this.version;
+            E.IS_CREATED(this);
             var state = this.ent.World.state;
-            if (this.buckets.isCreated == false) {
-                this.Initialize(this.ent, 0);
-            }
-
             var entries = (Entry*)this.entries.GetUnsafePtrCached(in state->allocator);
             var num1 = key.GetHashCode() & int.MaxValue;
             ref var local1 = ref this.buckets[in state->allocator, (uint)(num1 % this.buckets.Length)];
@@ -425,7 +414,7 @@ namespace ME.BECS {
             var numArray = new MemArrayAuto<uint>(this.ent, newSize);
             var entryArray = new MemArrayAuto<Entry>(this.ent, newSize);
             var count = this.count;
-            NativeArrayUtils.CopyNoChecks(ref state->allocator, this.entries, 0, ref entryArray, 0, count);
+            NativeArrayUtils.CopyNoChecks(this.entries, 0, ref entryArray, 0, count);
             for (uint index1 = 0u; index1 < count;  ++index1) {
                 if (entryArray[state, index1].hashCode >= 0) {
                     uint index2 = (uint)(entryArray[in state->allocator, index1].hashCode % newSize);
@@ -434,11 +423,11 @@ namespace ME.BECS {
                 }
             }
 
-            if (this.buckets.isCreated == true) {
+            if (this.buckets.IsCreated == true) {
                 this.buckets.Dispose();
             }
 
-            if (this.entries.isCreated == true) {
+            if (this.entries.IsCreated == true) {
                 this.entries.Dispose();
             }
 
@@ -542,7 +531,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
 
             var state = this.ent.World.state;
-            var entry = this.FindEntry(in state->allocator, key);
+            var entry = this.FindEntry(key);
             if (entry >= 0) {
                 value = this.entries[in state->allocator, entry].value;
                 return true;
@@ -571,7 +560,7 @@ namespace ME.BECS {
                 return num;
             }
 
-            if (this.buckets.isCreated == false) {
+            if (this.buckets.IsCreated == false) {
                 return this.Initialize(this.ent, capacity);
             }
 

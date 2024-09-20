@@ -17,7 +17,7 @@ namespace ME.BECS {
         public MemAllocatorPtr storage;
         public ushort worldId;
 
-        public bool isCreated => this.state != null;
+        public bool IsCreated => this.state != null;
         
         [INLINE(256)]
         public RefRW(in World world) {

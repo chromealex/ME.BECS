@@ -80,7 +80,7 @@ namespace ME.BECS {
                 }
                 
                 // Archetype not found - create the new one
-                MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state->allocator);
                 var newArchetype = Archetype.Create(state, targetCount, 1u);
                 newArchetype.components.CopyFrom(ref state->allocator, this.components);
                 newArchetype.componentBits.Set(ref state->allocator, this.componentBits);
@@ -89,15 +89,15 @@ namespace ME.BECS {
                     newArchetype.componentBits.Remove(in state->allocator, removeItems.root);
                 }
 
-                MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state->allocator);
                 if (addItems.Count > 0u) {
                     newArchetype.components.Add(ref state->allocator, addItems);
                     newArchetype.componentBits.Union(ref state->allocator, addItems.root);
                 }
 
-                MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state->allocator);
                 newArchetype.AddEntity(state, entId);
-                MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state->allocator);
                 archetypes.Add(state, in newArchetype, out var newIdx);
                 
                 return newIdx;
@@ -165,7 +165,7 @@ namespace ME.BECS {
 
         public uint GetReservedSizeInBytes(State* state) {
 
-            if (this.list.isCreated == false) return 0u;
+            if (this.list.IsCreated == false) return 0u;
 
             var size = 0u;
             for (uint i = 0u; i < this.list.Count; ++i) {
@@ -212,7 +212,7 @@ namespace ME.BECS {
         [INLINE(256)]
         internal void Add(State* state, in Archetype archetype, out uint idx) {
             
-            MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state->allocator);
             ref var allocator = ref state->allocator;
             idx = this.list.Add(ref allocator, archetype);
             var idxLength = idx + 1u;
@@ -222,24 +222,24 @@ namespace ME.BECS {
             // because we use intersects method to find out bits overlapping, so we need to use len parameter in both
             this.allArchetypesForQuery.Resize(ref allocator, len);
             this.allArchetypesForQuery.Set(in allocator, (int)idx, true);
-            MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state->allocator);
             { // collect with
                 var e = archetype.components.GetEnumerator(in allocator);
                 while (e.MoveNext() == true) {
                     var cId = e.Current;
                     {
-                        MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state->allocator);
                         ref var list = ref this.archetypesWithTypeIdBits[in allocator, cId];
-                        MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state->allocator);
                         if (list.isCreated == false) list = new BitArray(ref allocator, len);
                         list.Resize(ref allocator, len);
-                        MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state->allocator);
                         list.Set(in allocator, (int)idx, true);
-                        MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state->allocator);
                     }
                 }
             }
-            MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state->allocator);
             { // update all static queries
                 ref var queries = ref state->queries.queryData;
                 for (uint i = 0u; i < state->queries.nextId; ++i) {
@@ -247,14 +247,14 @@ namespace ME.BECS {
                     query.Validate(state);
                 }
             }
-            MemoryAllocatorExt.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state->allocator);
             {
                 this.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u);
                 ref var arr = ref this.componentsCountToArchetypeIds[in allocator, archetype.componentsCount];
                 if (arr.isCreated == false) arr = new UIntDictionary<List<uint>>(ref allocator, 1u);
                 var hash = archetype.components.hash;
                 ref var list = ref arr.GetValue(ref allocator, hash, out var exist);
-                if (exist == true && list.isCreated == true) {
+                if (exist == true && list.IsCreated == true) {
                     list.Add(ref allocator, idx);
                 } else {
                     list = new List<uint>(ref allocator, 1u);

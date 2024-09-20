@@ -37,10 +37,10 @@ namespace ME.BECS {
 
             this.readWriteSpinner.ReadBegin(state);
             ref var list = ref this.list[in state->allocator, ent.id];
-            if (list.isCreated == true) {
+            if (list.IsCreated == true) {
                 ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
                 entitySpinner.Lock();
-                if (list.isCreated == true) {
+                if (list.IsCreated == true) {
                     for (uint i = 0; i < list.Count; ++i) {
                         state->allocator.Free(in list[in state->allocator, i]);
                     }
@@ -60,7 +60,7 @@ namespace ME.BECS {
             ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
             entitySpinner.Lock();
             ref var list = ref this.list[in state->allocator, ent.id];
-            if (list.isCreated == false) list = new List<MemPtr>(ref state->allocator, 1u);
+            if (list.IsCreated == false) list = new List<MemPtr>(ref state->allocator, 1u);
             list.Add(ref state->allocator, ptr);
             entitySpinner.Unlock();
             this.readWriteSpinner.ReadEnd(state);
@@ -72,7 +72,7 @@ namespace ME.BECS {
             
             this.readWriteSpinner.ReadBegin(state);
             ref var list = ref this.list[in state->allocator, ent.id];
-            if (list.isCreated == true) {
+            if (list.IsCreated == true) {
                 ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
                 entitySpinner.Lock();
                 list.Remove(ref state->allocator, ptr);

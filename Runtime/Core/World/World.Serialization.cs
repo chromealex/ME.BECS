@@ -8,7 +8,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public static World Create(byte[] bytes, bool useSerializedWorldId = false) {
             var statePtr = State.Create(bytes);
-            statePtr->allocator.threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             var world = new World() {
                 state = statePtr,
             };

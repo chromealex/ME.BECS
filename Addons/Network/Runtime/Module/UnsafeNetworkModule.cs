@@ -266,7 +266,7 @@ namespace ME.BECS.Network {
                 while (e.MoveNext() == true) {
                     var kv = e.Current;
                     var list = kv.value;
-                    if (list.isCreated == true) {
+                    if (list.IsCreated == true) {
                         for (uint i = 0u; i < list.Count; ++i) {
                             var item = list[in this.state->allocator, i];
                             item.Dispose();
@@ -279,7 +279,7 @@ namespace ME.BECS.Network {
             public void Add(NetworkPackage package) {
 
                 ref var list = ref this.eventsByTick.GetValue(ref this.state->allocator, package.tick);
-                if (list.isCreated == false) list = new SortedNetworkPackageList(ref this.state->allocator, this.properties.capacityPerTick);
+                if (list.IsCreated == false) list = new SortedNetworkPackageList(ref this.state->allocator, this.properties.capacityPerTick);
                 list.Add(ref this.state->allocator, package);
 
                 if (package.tick < this.oldestTick || this.oldestTick == EMPTY_TICK) {
@@ -314,7 +314,7 @@ namespace ME.BECS.Network {
             public JobHandle Tick(ulong tick, float dt, in World world, Data* data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
-                if (events.isCreated == true && events.Count > 0u) {
+                if (events.IsCreated == true && events.Count > 0u) {
 
                     ref var allocator = ref data->networkWorld.state->allocator;
                     for (uint i = 0u; i < events.Count; ++i) {

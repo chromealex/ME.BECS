@@ -49,7 +49,7 @@ namespace ME.BECS {
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED<T>(T obj) where T : unmanaged, IIsCreated {
-            if (obj.isCreated == true) return;
+            if (obj.IsCreated == true) return;
             NotCreatedException.Throw(obj);
         }
 
@@ -132,21 +132,21 @@ namespace ME.BECS {
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(UIntHashSet list) {
-            if (list.isCreated == true) return;
+            if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(UIntPairHashSet list) {
-            if (list.isCreated == true) return;
+            if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(UIntHashSet* list) {
-            if (list->isCreated == true) return;
+            if (list->IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
@@ -157,7 +157,7 @@ namespace ME.BECS {
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED<T>(List<T> list) where T : unmanaged {
-            if (list.isCreated == true) return;
+            if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
@@ -168,7 +168,7 @@ namespace ME.BECS {
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(UIntListHash list) {
-            if (list.isCreated == true) return;
+            if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
@@ -179,7 +179,7 @@ namespace ME.BECS {
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED<T>(MemArray<T> arr) where T : unmanaged {
-            if (arr.isCreated == true) return;
+            if (arr.IsCreated == true) return;
             NotCreatedException.Throw(arr);
         }
 

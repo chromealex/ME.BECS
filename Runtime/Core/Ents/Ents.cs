@@ -36,7 +36,7 @@ namespace ME.BECS {
 
         public uint GetReservedSizeInBytes(State* state) {
 
-            if (this.generations.isCreated == false) return 0u;
+            if (this.generations.IsCreated == false) return 0u;
 
             var size = 0u;
             size += this.generations.GetReservedSizeInBytes();
