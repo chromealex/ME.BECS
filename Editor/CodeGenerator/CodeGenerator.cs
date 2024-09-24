@@ -281,7 +281,14 @@ namespace ME.BECS.Editor {
             var componentTypes = new System.Collections.Generic.List<System.Type>();
             {
                 var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                var template = EditorUtils.LoadResource<UnityEngine.TextAsset>("ME.BECS.Resources/Templates/Types-Template.txt").text;
+                string template = null;
+                if (editorAssembly == true) {
+                    template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Editor-Template.txt").text;
+                }
+                else {
+                    template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Template.txt").text;
+                }
+
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var content = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();

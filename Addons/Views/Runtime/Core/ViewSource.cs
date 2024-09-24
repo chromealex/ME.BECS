@@ -20,8 +20,14 @@ namespace ME.BECS.Views {
 
         public static ViewsRegistryData data;
         
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
+            
+            CustomModules.RegisterResetPass(Load);
+            
+        }
+        
+        public static void Load() {
 
             if (data != null) return;
             
