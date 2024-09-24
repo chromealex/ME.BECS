@@ -81,8 +81,11 @@ namespace ME.BECS.Editor.Systems {
                 //content.Add("*/");
 
                 // initialize callbacks
+                content.Add("[UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]");
+                content.Add("public static void Initialize() {");
+                content.Add("CustomModules.RegisterFirstPass(SystemsLoad);");
+                content.Add("}");
                 content.Add("[UnityEngine.Scripting.PreserveAttribute]");
-                content.Add("[UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]");
                 content.Add("public static void SystemsLoad() {");
                 foreach (var guid in graphs) {
                     var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);

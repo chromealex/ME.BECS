@@ -85,10 +85,16 @@ namespace ME.BECS.Jobs {
                 work.Invoke();
             }
         }
+        
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Initialize() {
+            
+            CustomModules.RegisterResetPass(InitializeSynchronizationContext);
+            
+        }
 
         // SynchronizationContext must be set before any user code is executed. This is done on
         // Initial domain load and domain reload at MonoManager ReloadAssembly
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         private static void InitializeSynchronizationContext() {
             instance = new MainThreadDispatcher(System.Threading.Thread.CurrentThread.ManagedThreadId);
             var go = new UnityEngine.GameObject("DispatcherMono", typeof(DispatcherMono));

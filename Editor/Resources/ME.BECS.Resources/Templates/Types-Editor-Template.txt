@@ -1,4 +1,4 @@
-namespace ME.BECS {
+namespace ME.BECS.Editor {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections;
@@ -28,7 +28,6 @@ namespace ME.BECS {
     public static unsafe class StaticMethods {
         
         [UnityEngine.Scripting.PreserveAttribute] 
-        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Load() {
             Worlds.Initialize();
             StaticTypesInitializer.Load();
@@ -36,8 +35,6 @@ namespace ME.BECS {
             {{CUSTOM_METHOD_REGISTRY}}
             EntityConfigRegistry.Initialize();
             EntityConfigsRegistry.Initialize();
-            CustomModules.InvokeFirstPass();
-            CustomModules.InvokeSecondPass();
         }
         {{CUSTOM_METHODS}}
     }

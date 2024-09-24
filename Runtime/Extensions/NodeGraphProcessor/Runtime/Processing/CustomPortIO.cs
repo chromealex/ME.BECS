@@ -21,8 +21,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
 			LoadCustomPortMethods();
 		}
-
-		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+		
 		static void LoadCustomPortMethods()
 		{
 			BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;

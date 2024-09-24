@@ -35,6 +35,12 @@ namespace ME.BECS.Network.Markers {
     public static unsafe class WorldNetworkMarkers {
 
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        public static void Initialize() {
+            
+            CustomModules.RegisterResetPass(Reset);
+            
+        }
+        
         public static void Reset() {
             WorldsNetworkDataStorage.CleanUp();
         }

@@ -79,6 +79,13 @@ namespace ME.BECS.Addons {
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
 
+            
+            CustomModules.RegisterResetPass(Reset);
+            
+        }
+        
+        public static void Reset() {
+            
             dataArr = null;
             
         }
