@@ -13,7 +13,7 @@ namespace ME.BECS {
 
             [HIDE_CALLSTACK]
             public static void Throw() {
-                throw new OutOfRangeException("Addr of value must be % 4");
+                throw new System.InvalidOperationException("Addr of value must be % 4");
             }
 
         }

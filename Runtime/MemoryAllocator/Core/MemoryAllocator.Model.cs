@@ -16,9 +16,9 @@ namespace ME.BECS {
         [FieldOffset(16)]
         public int initialSize;
         [FieldOffset(20)]
-        public ushort version;
-        [FieldOffset(22)]
         public LockSpinner lockIndex;
+        [FieldOffset(24)]
+        public ushort version;
 
     }
 
