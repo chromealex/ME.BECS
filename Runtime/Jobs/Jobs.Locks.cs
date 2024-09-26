@@ -39,13 +39,17 @@ namespace ME.BECS {
         public void ReadBegin(State* state) {
             E.IS_CREATED(this);
             // wait if we have write op running
+            #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            #endif
             while (System.Threading.Volatile.Read(ref this.writeValue) == 1) {
+                #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max lock iter");
                     return;
                 }
+                #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // acquire read op
@@ -63,24 +67,32 @@ namespace ME.BECS {
         public void WriteBegin(State* state) {
             E.IS_CREATED(this);
             // acquire write op
+            #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            #endif
             E.ADDR_4(ref this.writeValue);
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
+                #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max lock iter");
                     return;
                 }
+                #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // wait if we have read op running
+            #if EXCEPTIONS_INTERNAL
             i = 100_000_000;
+            #endif
             while (this.ReadCount(state) > 0) {
+                #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max lock iter");
                     return;
                 }
+                #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
         }
@@ -89,14 +101,18 @@ namespace ME.BECS {
         public void WriteEnd() {
             E.IS_CREATED(this);
             // release write op
+            #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            #endif
             E.ADDR_4(ref this.writeValue);
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 1) != 1) {
+                #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max lock iter");
                     return;
                 }
+                #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
         }
@@ -183,14 +199,18 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Lock() {
+            #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            #endif
             E.ADDR_4(ref this.value);
             while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
+                #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max lock iter");
                     return;
                 }
+                #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             System.Threading.Interlocked.MemoryBarrier();
@@ -198,15 +218,19 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public void Unlock() {
+            #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            #endif
             System.Threading.Interlocked.MemoryBarrier();
             E.ADDR_4(ref this.value);
             while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
+                #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max unlock iter");
                     return;
                 }
+                #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
         }

@@ -3,7 +3,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using System.Runtime.InteropServices;
 
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = 28)]
     public unsafe partial struct MemoryAllocator {
 
         [FieldOffset(0)]
