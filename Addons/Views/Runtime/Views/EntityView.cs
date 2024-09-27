@@ -49,17 +49,17 @@ namespace ME.BECS.Views {
         [SerializeField]
         protected internal IViewModule[] viewModules = System.Array.Empty<IViewModule>();
 
-        [SerializeField]
+        [SerializeField][HideInInspector]
         internal int[] initializeModules;
-        [SerializeField]
+        [SerializeField][HideInInspector]
         internal int[] deInitializeModules;
-        [SerializeField]
+        [SerializeField][HideInInspector]
         internal int[] enableFromPoolModules;
-        [SerializeField]
+        [SerializeField][HideInInspector]
         internal int[] disableToPoolModules;
-        [SerializeField]
+        [SerializeField][HideInInspector]
         internal int[] applyStateModules;
-        [SerializeField]
+        [SerializeField][HideInInspector]
         internal int[] updateModules;
 
         public CullingType cullingType;

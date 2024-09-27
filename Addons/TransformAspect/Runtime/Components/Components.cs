@@ -5,7 +5,11 @@ namespace ME.BECS.Transforms {
     using System.Runtime.InteropServices;
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
 
-    public struct TransformComponentGroup { }
+    public struct TransformComponentGroup {
+
+        public static UnityEngine.Color color = UnityEngine.Color.red;
+
+    }
 
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct WorldMatrixComponent : IComponent {
@@ -32,11 +36,12 @@ namespace ME.BECS.Transforms {
     }
 
     [ComponentGroup(typeof(TransformComponentGroup))]
+    [LAYOUT(LayoutKind.Explicit, Size = sizeof(float) * 4)]
     public struct LocalScaleComponent : IConfigComponent {
 
         public static LocalScaleComponent Default => new LocalScaleComponent() { value = new float3(1f, 1f, 1f) };
+        [FieldOffset(0)]
         public float3 value;
-        private float _;
 
     }
     

@@ -87,9 +87,9 @@ namespace ME.BECS.Editor {
         }
 
         public static void ShowPopup(UnityEngine.Rect popupPosition, System.Action<System.Type> onSelect, System.Type baseType, bool unmanagedTypes, bool runtimeAssembliesOnly, bool showNullElement = true) {
-            var state = new UnityEditor.IMGUI.Controls.AdvancedDropdownState();
-            
+
             var assembliesInfo = CodeGenerator.GetAssembliesInfo();
+
             System.Predicate<System.Type> filter = null;
             if (unmanagedTypes == true) {
                 filter += type => {
@@ -113,16 +113,22 @@ namespace ME.BECS.Editor {
                     return found;
                 };
             }
-            var arr = UnityEditor.TypeCache.GetTypesDerivedFrom(baseType).Append(baseType);
-            var popup = new ME.BECS.Editor.Extensions.SubclassSelector.AdvancedTypePopup(
-                arr.Where(p =>
-                              (p.IsPublic || p.IsNestedPublic) &&
-                              !p.IsAbstract &&
-                              !p.IsGenericType &&
-                              !ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.k_UnityObjectType.IsAssignableFrom(p) &&
-                              //System.Attribute.IsDefined(p, typeof(System.SerializableAttribute)) &&
-                              (filter == null || filter.GetInvocationList().All(x => ((System.Predicate<System.Type>)x).Invoke(p)) == true)
-                ),
+            var types = UnityEditor.TypeCache.GetTypesDerivedFrom(baseType).Append(baseType).ToArray();
+            var arr = types.Where(p =>
+                                      (p.IsPublic || p.IsNestedPublic) &&
+                                      !p.IsAbstract &&
+                                      !p.IsGenericType &&
+                                      !ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.k_UnityObjectType.IsAssignableFrom(p) &&
+                                      //System.Attribute.IsDefined(p, typeof(System.SerializableAttribute)) &&
+                                      (filter == null || filter.GetInvocationList().All(x => ((System.Predicate<System.Type>)x).Invoke(p)) == true));
+            ShowPopup(popupPosition, onSelect, arr.ToArray(), showNullElement);
+            
+        }
+        
+        public static void ShowPopup(UnityEngine.Rect popupPosition, System.Action<System.Type> onSelect, System.Type[] types, bool showNullElement = true) {
+            
+            var state = new UnityEditor.IMGUI.Controls.AdvancedDropdownState();
+            var popup = new ME.BECS.Editor.Extensions.SubclassSelector.AdvancedTypePopup(types,
                 ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.k_MaxTypePopupLineCount,
                 state,
                 showNullElement
@@ -237,7 +243,7 @@ namespace ME.BECS.Editor {
         public static AspectItemTypeInfo[] GetAspectTypes(System.Type type) {
 
             var result = new System.Collections.Generic.List<AspectItemTypeInfo>();
-            var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
             foreach (var field in fields) {
 
                 if (typeof(IAspectData).IsAssignableFrom(field.FieldType) == true) {
@@ -254,7 +260,23 @@ namespace ME.BECS.Editor {
                         
             }
 
-            return result.ToArray();
+            return result.OrderByDescending(x => x.required).ThenByDescending(x => x.config).ToArray();
+
+        }
+
+        public static bool TryGetComponentGroupColor(System.Type componentType, out UnityEngine.Color color) {
+
+            color = default;
+            var componentGroupAttribute = componentType.GetCustomAttribute<ComponentGroupAttribute>();
+            if (componentGroupAttribute != null) {
+                var field = componentGroupAttribute.groupType.GetField("color", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                if (field != null) {
+                    color = (UnityEngine.Color)field.GetValue(null);
+                    return true;
+                }
+            }
+
+            return false;
 
         }
 

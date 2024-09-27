@@ -2,7 +2,11 @@ namespace ME.BECS.Units {
     
     using Unity.Mathematics;
 
-    public struct UnitComponentGroup { }
+    public struct UnitComponentGroup {
+        
+        public static UnityEngine.Color color = UnityEngine.Color.black;
+        
+    }
     
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct NavAgentComponent : IConfigComponent {

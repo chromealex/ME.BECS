@@ -527,7 +527,8 @@ namespace ME.BECS.Editor {
 
                     var it = dataArr.GetArrayElementAtIndex(i);
                     var copy = it.Copy();
-                    var label = EditorUtils.GetComponentName(arrData[i].GetType());
+                    var type = arrData[i].GetType();
+                    var label = EditorUtils.GetComponentName(type);
                     if (copy.hasVisibleChildren == true) {
                         var propertyField = new PropertyField(copy, label) {
                             name = $"PropertyField:{it.propertyPath}",
@@ -536,6 +537,10 @@ namespace ME.BECS.Editor {
                         propertyField.AddToClassList("field");
                         propertyField.BindProperty(copy);
                         propertyField.Bind(serializedObject);
+                        if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
+                            color.a = 0.1f;
+                            propertyField.style.backgroundColor = new StyleColor(color);
+                        }
                         System.Action rebuild = () => {
                             var allChilds = propertyField.Query<PropertyField>().ToList();
                             foreach (var child in allChilds) {
@@ -581,6 +586,10 @@ namespace ME.BECS.Editor {
                     } else {
                         
                         var labelField = new Label();
+                        if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
+                            color.a = 0.1f;
+                            labelField.style.backgroundColor = new StyleColor(color);
+                        }
                         labelField.text = label;
                         labelField.AddToClassList("field");
                         labelField.AddToClassList("no-children");

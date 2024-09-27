@@ -2,7 +2,11 @@ namespace ME.BECS.Commands {
 
     using Unity.Mathematics;
     
-    public struct CommandComponentsGroup {}
+    public struct CommandComponentsGroup {
+        
+        public static UnityEngine.Color color = UnityEngine.Color.yellow;
+
+    }
 
     public interface ICommandComponent : IComponent {
 

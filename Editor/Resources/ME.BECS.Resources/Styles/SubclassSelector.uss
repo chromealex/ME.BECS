@@ -1,0 +1,51 @@
+.subclass-selector {
+    padding: 2px;
+    background-color: rgba(0, 90, 128, 0.1);
+    border-radius: 5px;
+}
+
+.subclass-selector .subclass-button-selector {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    min-width: 200px;
+}
+
+.subclass-selector .unity-foldout {
+    background-color: rgba(0, 90, 128, 0.1);
+    border-bottom-color: rgba(0, 90, 128, 0.1);
+}
+
+.subclass-selector .unity-foldout {
+    border-radius: 5px;
+    border-bottom-width: 1px;
+}
+
+.subclass-selector .unity-foldout__content {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    margin: 0px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 15px;
+    padding-right: 6px;
+}
+
+.subclass-selector .unity-toggle {
+    margin: 0px;
+    padding: 3px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+.subclass-selector .unity-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+
+.subclass-selector .unity-toggle__input {
+    -unity-font-style: bold;
+}

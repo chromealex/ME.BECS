@@ -1,6 +1,10 @@
 namespace ME.BECS.Effects {
     
-    public struct EffectComponentGroup { }
+    public struct EffectComponentGroup {
+        
+        public static UnityEngine.Color color = UnityEngine.Color.black;
+        
+    }
     
     [ComponentGroup(typeof(EffectComponentGroup))]
     public struct EffectComponent : IComponent {

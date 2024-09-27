@@ -2,7 +2,11 @@ namespace ME.BECS.FogOfWar {
     
     using Unity.Mathematics;
 
-    public struct FogOfWarComponentGroup { }
+    public struct FogOfWarComponentGroup {
+        
+        public static UnityEngine.Color color = UnityEngine.Color.gray;
+        
+    }
 
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarComponent : IComponent {

@@ -39,8 +39,23 @@ namespace ME.BECS.Editor {
         public void CreateGUI(VisualElement root, IUnmanagedList list, SerializedProperty property) {
 
             if (list.IsCreated == false) {
-                var label = new Label("Collection is not created");
-                root.Add(label);
+                var container = new VisualElement();
+                container.AddToClassList("unity-base-field");
+                container.AddToClassList("unity-integer-field");
+                container.AddToClassList("unity-base-text-field");
+                container.AddToClassList("unity-base-field__aligned");
+                container.AddToClassList("unity-base-field__inspector-field");
+                root.Add(container);
+                var label = new Label(property.displayName);
+                label.AddToClassList("unity-base-field__label");
+                label.AddToClassList("unity-base-text-field__label");
+                label.AddToClassList("unity-property-field__label");
+                label.AddToClassList("unity-base-field__label--with-dragger");
+                label.AddToClassList("unity-integer-field__label");
+                container.Add(label);
+                var val = new Label("Collection is not created");
+                val.AddToClassList("unity-base-field__input");
+                container.Add(val);
                 return;
             }
             var arr = list.ToManagedArray();

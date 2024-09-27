@@ -75,38 +75,59 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
         public SerializedProperty m_TargetProperty;
 
         private FindGraphAssetsWindow findGraphAssetsWindow;
+        
+        public static StyleSheet styleSheetBase;
+        public static StyleSheet styleSheetTooltip;
+        
+        private void LoadStyle() {
+            if (styleSheetBase == null) {
+                styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/SubclassSelector.uss");
+            }
+            if (styleSheetTooltip == null) {
+                styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
+            }
+        }
+        
+        public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
-        public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
+            this.LoadStyle();
 
-            var container = new UnityEngine.UIElements.VisualElement();
+            var attr = (this.attribute as ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute);
+            
+            var container = new VisualElement();
+            container.styleSheets.Add(styleSheetBase);
+            container.styleSheets.Add(styleSheetTooltip);
 
-            var propContainer = new UnityEngine.UIElements.VisualElement();
+            var propContainer = new VisualElement();
             void BuildProperty() {
                 propContainer.Clear();
                 var content = new UnityEditor.UIElements.PropertyField(property) {
                     bindingPath = property.propertyPath,
                 };
+                content.AddToClassList("subclass-content");
                 content.BindProperty(property);
                 //content.Bind(property.serializedObject);
                 propContainer.Add(content);
             }
-
-            var attr = (this.attribute as ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute);
+            
+            propContainer.AddToClassList("subclass-selector-container");
+            container.Add(propContainer);
+            
             if (attr.showSelector == true) {
+                container.AddToClassList("subclass-selector");
                 if (attr.showLabel == true) {
                     
-                    container.AddToClassList("subclass-selector");
                     container.AddToClassList("unity-base-field");
                     
-                    var label = new UnityEngine.UIElements.Label(property.displayName);
+                    var label = new Label(property.displayName);
                     label.AddToClassList("subclass-selector-label");
                     label.AddToClassList("unity-label");
                     label.AddToClassList("unity-base-field__label");
                     container.Add(label);
                 }
 
-                var button = new UnityEngine.UIElements.Button();
-                button.RegisterCallback<UnityEngine.UIElements.ClickEvent>((evt) => {
+                var button = new Button();
+                button.RegisterCallback<ClickEvent>((evt) => {
                     if (property.propertyType == SerializedPropertyType.ObjectReference) {
                         this.findGraphAssetsWindow = ScriptableObject.CreateInstance<FindGraphAssetsWindow>();
                         this.findGraphAssetsWindow.Initialize(this.fieldInfo.FieldType, attr.additionalType, (item) => {
@@ -135,11 +156,14 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                 }
 
                 {
-                    var checkmark = new UnityEngine.UIElements.VisualElement();
-                    checkmark.AddToClassList("unity-toggle__checkmark");
-                    checkmark.AddToClassList("unity-foldout__checkmark");
+                    var checkmark = new VisualElement();
+                    if (attr.showLabel == true) {
+                        checkmark.AddToClassList("unity-toggle__checkmark");
+                        checkmark.AddToClassList("unity-foldout__checkmark");
+                    }
+
                     button.Add(checkmark);
-                    var buttonText = new UnityEngine.UIElements.Label(this.GetTypeName(property).text);
+                    var buttonText = new Label(this.GetTypeName(property).text);
                     buttonText.AddToClassList("button-text");
                     button.Add(buttonText);
                 }
@@ -150,7 +174,6 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                 container.Add(button);
             }
             
-            container.Add(propContainer);
             BuildProperty();
 
             return container;

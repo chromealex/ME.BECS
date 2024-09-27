@@ -92,6 +92,11 @@ namespace ME.BECS.Editor {
         }
 
         public static VisualElement DrawTooltip(VisualElement container, string tooltip) {
+            return DrawTooltip(container, tooltip, default);
+        }
+        
+
+        public static VisualElement DrawTooltip(VisualElement container, string tooltip, StyleLength width) {
             
             if (string.IsNullOrEmpty(tooltip) == false) {
 
@@ -99,6 +104,10 @@ namespace ME.BECS.Editor {
                 var tooltipElement = new Label(tooltip);
                 tooltipElement.AddToClassList("tooltip-text");
                 tooltipElement.pickingMode = PickingMode.Ignore;
+                if (width != default) {
+                    tooltipElement.style.width = width;
+                    tooltipElement.AddToClassList("custom-width");
+                }
                 var tooltipButton = new Label("?");
                 tooltipButton.AddToClassList("tooltip");
                 container.Add(tooltipElement);

@@ -1,0 +1,58 @@
+.has-tooltip .tooltip-text {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-radius: 7px;
+    padding: 7px;
+    width: 100%;
+    right: 0px;
+    bottom: 100%;
+    white-space: normal;
+    align-self: flex-end;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.5);
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    display: none;
+}
+
+.has-tooltip .tooltip-text.custom-width {
+    border-bottom-left-radius: 7px;
+}
+
+.has-tooltip {
+    flex-direction: row;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.has-tooltip .tooltip {
+    align-self: center;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    margin: 4px;
+    background-color: rgba(198, 198, 26, 0.1);
+    border-radius: 7px;
+    color: rgba(0, 0, 0, 1);
+    margin-left: 8px;
+    margin-right: 0px;
+    width: 10px;
+    height: 10px;
+    font-size: 8px;
+}
+
+.has-tooltip:hover .tooltip-text {
+    display: flex;
+}
+
+.has-tooltip:hover {
+    overflow: visible;
+}
+
+.has-tooltip:hover {
+    background-color: rgba(20, 20, 20, 0.8);
+    border-radius: 7px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}

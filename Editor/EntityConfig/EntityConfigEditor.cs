@@ -10,11 +10,15 @@ namespace ME.BECS.Editor {
     public class EntityConfigEditor : UnityEditor.Editor {
 
         public StyleSheet styleSheetBase;
+        public StyleSheet styleSheetTooltip;
         public StyleSheet styleSheet;
         
         private void LoadStyle() {
             if (this.styleSheetBase == null) {
                 this.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Entity.uss");
+            }
+            if (this.styleSheetTooltip == null) {
+                this.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
             }
             if (this.styleSheet == null) {
                 this.styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
@@ -27,6 +31,7 @@ namespace ME.BECS.Editor {
             var rootVisualElement = new VisualElement();
             rootVisualElement.Clear();
             rootVisualElement.styleSheets.Add(this.styleSheetBase);
+            rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
             rootVisualElement.styleSheets.Add(this.styleSheet);
 
             var serializedObject = this.serializedObject;
@@ -37,6 +42,7 @@ namespace ME.BECS.Editor {
         }
 
         private Item componentsContainer;
+        private Item aspects;
         
         private void DrawComponents(VisualElement root, SerializedObject serializedObject) {
 
@@ -142,7 +148,8 @@ namespace ME.BECS.Editor {
                     
                     var data = serializedObject.FindProperty(nameof(EntityConfig.aspects));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
-                    componentContainer.Add(this.DrawFields(typeof(IAspect), componentsData, serializedObject).container);
+                    this.aspects = this.DrawFields(typeof(IAspect), componentsData, serializedObject);
+                    componentContainer.Add(this.aspects.container);
                 }
             }
             
@@ -153,6 +160,7 @@ namespace ME.BECS.Editor {
             public VisualElement container;
             public VisualElement drawFieldsContainer;
             public System.Action<System.Collections.Generic.List<VisualElement>, int> updateButtons;
+            public System.Action redrawFields;
 
         }
         
@@ -199,6 +207,7 @@ namespace ME.BECS.Editor {
                     selectedIndex = -1;
                     serializedObject.ApplyModifiedProperties();
                     this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(componentsArr.propertyPath), serializedObject);
+                    this.componentsContainer.redrawFields?.Invoke();
                 });
                 removeButton.text = "-";
                 removeButton.AddToClassList("remove-button");
@@ -254,6 +263,7 @@ namespace ME.BECS.Editor {
                 container = container,
                 drawFieldsContainer = drawFieldsContainer,
                 updateButtons = UpdateButtons,
+                redrawFields = () => this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, componentsArr, serializedObject),
             };
 
         }
@@ -284,28 +294,100 @@ namespace ME.BECS.Editor {
                 if (typeof(IAspect).IsAssignableFrom(type) == true) {
 
                     var fields = EditorUtils.GetAspectTypes(type);
+
+                    var fieldContainer = new VisualElement();
+                    fieldContainer.AddToClassList("field");
                     
                     var labelField = new Foldout();
+                    fieldContainer.Add(labelField);
                     labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     labelField.text = label;
-                    labelField.AddToClassList("field");
+                    labelField.AddToClassList("aspect-component-container-field");
 
-                    foreach (var field in fields) {
-
-                        var labelFieldItem = new Label(EditorUtils.GetComponentName(field.fieldType));
-                        if (field.required == true) {
-                            labelFieldItem.AddToClassList("required");
-                        } else {
-                            labelFieldItem.AddToClassList("not-required");
+                    {
+                        var header = new VisualElement();
+                        header.AddToClassList("header");
+                        {
+                            var column = new VisualElement();
+                            column.AddToClassList("first-column");
+                            var headerLabel = new Label("Component Name");
+                            headerLabel.AddToClassList("main-label");
+                            column.Add(headerLabel);
+                            header.Add(column);
                         }
+                        {
+                            var column = new VisualElement();
+                            column.AddToClassList("column");
+                            var headerLabel = new Label("Used by Queries");
+                            column.Add(headerLabel);
+                            header.Add(column);
+                        }
+                        {
+                            var column = new VisualElement();
+                            column.AddToClassList("column");
+                            var headerLabel = new Label("Auto");
+                            column.Add(headerLabel);
+                            header.Add(column);
+                        }
+                        labelField.Add(header);
+                    }
+                    
+                    for (var index = 0; index < fields.Length; ++index) {
+                        
+                        var field = fields[index];
+                        var labelFieldItem = new VisualElement();
+                        labelFieldItem.AddToClassList("aspect-component-container");
+                        if (index == fields.Length - 1) labelFieldItem.AddToClassList("last");
+                        var componentLabel = EditorUtils.GetComponentName(field.fieldType);
+                        {
+                            var column = new VisualElement();
+                            column.AddToClassList("first-column");
+                            var mainLabel = new Label(componentLabel);
+                            mainLabel.AddToClassList("main-label");
+                            column.Add(mainLabel);
+                            labelFieldItem.Add(column);
+                        }
+
+                        {
+                            var column = new VisualElement();
+                            column.AddToClassList("column");
+                            var text = $"When you use <b>{label}</b> aspect in query, <b>{componentLabel}</b> component will be <b>skipped</b>.";
+                            if (field.required == true) {
+                                text = $"When you use <b>{label}</b> aspect in query, <b>{componentLabel}</b> component will be <b>used</b> for this operation.";
+                            }
+                            EditorUIUtils.DrawTooltip(column, text, new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                            var toggle = new Toggle();
+                            toggle.SetEnabled(false);
+                            toggle.value = field.required;
+                            column.Add(toggle);
+                            labelFieldItem.Add(column);
+                        }
+
+                        {
+                            var column = new VisualElement();
+                            column.AddToClassList("column");
+                            var text = $"Some of aspect methods may create <b>{componentLabel}</b> component at runtime.";
+                            if (field.config == true) {
+                                text = $"<b>{componentLabel}</b> component automatically added onto entity while applying <b>{label}</b> aspect.";
+                            }
+                            EditorUIUtils.DrawTooltip(column, text, new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                            var toggle = new Toggle();
+                            toggle.SetEnabled(false);
+                            toggle.value = field.config;
+                            column.Add(toggle);
+                            labelFieldItem.Add(column);
+                        }
+
                         labelField.Add(labelFieldItem);
                         
                     }
-                    
-                    container.Add(labelField);
-                    list.Add(labelField);
+
+                    container.Add(fieldContainer);
+                    list.Add(fieldContainer);
                     
                 } else if (copy.hasVisibleChildren == true) {
+
+                    var propContainer = new VisualElement();
                     
                     var propertyField = new UnityEditor.UIElements.PropertyField(copy, label) {
                         name = $"PropertyField:{it.propertyPath}",
@@ -324,9 +406,17 @@ namespace ME.BECS.Editor {
                     propertyField.RegisterCallback<ChangeEvent<StyleFont>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleFontDefinition>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleLength>, PropertyField>((evt, p) => rebuild(), propertyField);
+
+                    propContainer.Add(propertyField);
+                    if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
+                        color.a = 0.1f;
+                        propertyField.style.backgroundColor = new StyleColor(color);
+                    }
                     
-                    container.Add(propertyField);
+                    container.Add(propContainer);
                     list.Add(propertyField);
+
+                    this.DrawAspects(propContainer, type);
 
                 } else {
 
@@ -334,6 +424,10 @@ namespace ME.BECS.Editor {
                     labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     labelField.text = label;
                     labelField.AddToClassList("field");
+                    if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
+                        color.a = 0.1f;
+                        labelField.style.backgroundColor = new StyleColor(color);
+                    }
                     container.Add(labelField);
                     list.Add(labelField);
 
@@ -343,6 +437,37 @@ namespace ME.BECS.Editor {
 
             updateButtons.Invoke(list, -2);
 
+        }
+
+        private void DrawAspects(VisualElement propContainer, System.Type type) {
+            
+            var aspects = new VisualElement();
+            aspects.AddToClassList("component-aspects");
+            {
+                var data = serializedObject.FindProperty(nameof(EntityConfig.aspects));
+                var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
+                for (int j = 0; j < componentsData.arraySize; ++j) {
+
+                    var itAspect = componentsData.GetArrayElementAtIndex(j);
+                    var typeAspect = EditorUtils.GetTypeFromPropertyField(itAspect.managedReferenceFullTypename);
+                    if (typeof(IAspect).IsAssignableFrom(typeAspect) == true) {
+
+                        var label = EditorUtils.GetComponentName(typeAspect);
+                        var fields = EditorUtils.GetAspectTypes(typeAspect);
+                        foreach (var field in fields) {
+                            if (field.fieldType == type) {
+                                var aspect = new Label(label);
+                                aspect.AddToClassList("component-aspect");
+                                aspects.Add(aspect);
+                                break;
+                            }
+                        }
+                                    
+                    }
+                }
+            }
+            propContainer.Add(aspects);
+            
         }
 
     }

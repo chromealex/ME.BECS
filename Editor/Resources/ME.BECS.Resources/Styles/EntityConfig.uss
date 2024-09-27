@@ -11,13 +11,87 @@
     border-color: rgba(0, 0, 0, 0.1);
 }
 
-.fields-container .required {
-    color: cadetblue;
+.aspect-component-container-field #unity-content {
+    padding: 0px;
+}
+
+.fields-container .aspect-component-container-field .header {
+    flex-direction: row;
+    height: 24px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    -unity-font-style: bold;
+    opacity: 0.5;
+}
+
+.fields-container .aspect-component-container-field .first-column {
+    flex-grow: 1;
+    align-content: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.fields-container .aspect-component-container-field .column {
+    margin-top: 0px;
+    align-content: center;
+    justify-content: center;
+    height: 22px;
+}
+
+.fields-container .aspect-component-container-field .unity-toggle:hover {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.fields-container .aspect-component-container-field .main-label {
+    padding-left: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fields-container .aspect-component-container {
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    flex-direction: row;
+    height: 24px;
+    max-height: 24px;
+}
+
+.fields-container .aspect-component-container.last {
+    border-bottom-width: 0px;
+}
+
+.fields-container .aspect-component-container-field .column {
+    border-left-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+    width: 100px;
+    min-width: 100px;
+    height: 22px;
+    align-items: center;
+}
+
+.fields-container .aspect-component-container .sub-label {
+    margin-left: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    background-color: rgba(128, 128, 128, 0.3);
+    border-radius: 4px;
     -unity-font-style: bold;
 }
 
-.fields-container .not-required {
-    opacity: 0.5;
+.fields-container .in-config .sub-label.in-config {
+    color: cadetblue;
+}
+
+.fields-container .required .sub-label.required {
+    color: chocolate;
+}
+
+.fields-container .not-required .sub-label.not-required {
+    color: darkgoldenrod;
+}
+
+.fields-container .in-runtime .sub-label.in-runtime {
+    color: cornsilk;
 }
 
 .fields-container-root {
@@ -77,4 +151,24 @@
     margin-bottom: 15px;
     border-radius: 5px;
     background-color: rgba(0, 0, 0, 0.1);
+}
+
+.component-aspects {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    height: 26px;
+    align-content: center;
+    justify-content: center;
+}
+
+.component-aspects .component-aspect {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    margin-right: 4px;
 }
