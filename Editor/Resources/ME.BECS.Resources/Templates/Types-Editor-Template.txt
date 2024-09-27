@@ -35,6 +35,8 @@ namespace ME.BECS.Editor {
             {{CUSTOM_METHOD_REGISTRY}}
             EntityConfigRegistry.Initialize();
             EntityConfigsRegistry.Initialize();
+            CustomModules.InvokeFirstPass();
+            CustomModules.InvokeSecondPass();
         }
         {{CUSTOM_METHODS}}
     }

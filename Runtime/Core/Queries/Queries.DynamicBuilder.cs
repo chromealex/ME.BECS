@@ -206,7 +206,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public QueryBuilder WithAspect<T>() where T : unmanaged, IAspect {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.With(ref this, AspectTypeInfo<T>.with);
+            this.builderDependsOn = ArchetypeQueries.With(ref this, AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId));
             return this;
         }
 

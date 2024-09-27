@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Reflection;
 
 namespace ME.BECS.Editor {
 
@@ -223,6 +224,38 @@ namespace ME.BECS.Editor {
             
             return null;
             
+        }
+
+        public struct AspectItemTypeInfo {
+
+            public System.Type fieldType;
+            public bool required;
+            public bool config;
+
+        }
+        
+        public static AspectItemTypeInfo[] GetAspectTypes(System.Type type) {
+
+            var result = new System.Collections.Generic.List<AspectItemTypeInfo>();
+            var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            foreach (var field in fields) {
+
+                if (typeof(IAspectData).IsAssignableFrom(field.FieldType) == true) {
+
+                    var required = field.GetCustomAttribute<QueryWithAttribute>() != null;
+                    var itemType = field.FieldType.GetGenericArguments()[0];
+                    result.Add(new AspectItemTypeInfo() {
+                        fieldType = itemType,
+                        required = required,
+                        config = typeof(IConfigComponent).IsAssignableFrom(itemType),
+                    });
+                            
+                }
+                        
+            }
+
+            return result.ToArray();
+
         }
 
     }

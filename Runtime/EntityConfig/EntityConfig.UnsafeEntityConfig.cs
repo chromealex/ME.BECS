@@ -314,11 +314,64 @@ namespace ME.BECS {
 
         }
 
+        private readonly struct Aspect<T> where T : class, IAspect {
+
+            [NativeDisableUnsafePtrRestriction]
+            private readonly uint* sizes;
+            private readonly uint count;
+            [NativeDisableUnsafePtrRestriction]
+            private readonly uint* typeIds;
+            
+            public Aspect(ComponentsStorage<IAspect> configAspects) {
+
+                var components = configAspects.components;
+                var cnt = (uint)components.Length;
+                if (cnt == 0u) {
+                    this = default;
+                    return;
+                }
+                this.sizes = _makeArray<uint>(cnt);
+                this.typeIds = _makeArray<uint>(cnt);
+                this.count = cnt;
+                
+                for (uint i = 0u; i < components.Length; ++i) {
+                    var comp = components[i];
+                    AspectTypeInfoLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
+                    E.IS_VALID_ASPECT_TYPE_ID(typeId);
+                    var elemSize = AspectTypeInfo.sizes.Get(typeId);
+                    this.sizes[i] = elemSize;
+                    this.typeIds[i] = typeId;
+                }
+
+            }
+
+            [INLINE(256)]
+            public void Apply(in Ent ent) {
+
+                var state = ent.World.state;
+                for (uint i = 0; i < this.count; ++i) {
+                    state->aspectsStorage.Initialize(state, this.typeIds[i], this.sizes[i]);
+                    state->aspectsStorage.SetAspect(state, in ent, this.typeIds[i]);
+                }
+
+            }
+
+            [INLINE(256)]
+            public void Dispose() {
+
+                CutsPool._freeArray(this.sizes, this.count);
+                CutsPool._freeArray(this.typeIds, this.count);
+
+            }
+            
+        }
+
         [NativeDisableUnsafePtrRestriction]
         private readonly UnsafeEntityConfig* baseConfig;
         private readonly Data<IConfigComponent> data;
         private readonly SharedData<IConfigComponentShared> dataShared;
         private readonly DataInitialize dataInitialize;
+        private readonly Aspect<IAspect> aspects;
         private readonly uint id;
         private readonly Ent staticDataEnt;
 
@@ -329,11 +382,12 @@ namespace ME.BECS {
             this.data = new Data<IConfigComponent>(config.data.components);
             this.dataShared = new SharedData<IConfigComponentShared>(config.sharedData.components);
             this.dataInitialize = new DataInitialize(config.dataInitialize.components);
+            this.aspects = new Aspect<IAspect>(config.aspects);
             this.staticDataEnt = staticDataEnt;
             var state = staticDataEnt.World.state;
             
             this.baseConfig = null;
-            if (config.baseConfig != null) {
+            if (config.baseConfig is not null) {
                 this.baseConfig = _make(new UnsafeEntityConfig(config.baseConfig, staticDataEnt: staticDataEnt));
             }
 
@@ -369,6 +423,7 @@ namespace ME.BECS {
                 id = this.id,
             });
 
+            this.aspects.Apply(ent);
             this.data.Apply(ent);
             this.dataShared.Apply(ent);
             this.dataInitialize.Apply(ent);
@@ -396,6 +451,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
+            this.aspects.Dispose();
             this.data.Dispose();
             this.dataShared.Dispose();
             this.dataInitialize.Dispose();

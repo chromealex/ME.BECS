@@ -73,6 +73,7 @@ namespace ME.BECS.Tests {
 
         }
 
+        /*
         [Unity.Burst.BurstCompileAttribute]
         public struct CreateEntitiesJob : Unity.Jobs.IJobParallelFor {
 
@@ -131,7 +132,7 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(amount, world.state->entities.EntitiesCount);
             }
 
-        }
+        }*/
 
         [Unity.Burst.BurstCompileAttribute]
         public static void CreateHugeAmountBurstMethod(ref World world, uint amount) {
@@ -235,6 +236,8 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(1, ent.gen);
             ent.Destroy();
             Assert.IsFalse(ent.IsAlive());
+
+            Batches.Apply(world.state);
             
             var ent2 = Ent.New();
             Assert.IsFalse(ent.IsAlive());

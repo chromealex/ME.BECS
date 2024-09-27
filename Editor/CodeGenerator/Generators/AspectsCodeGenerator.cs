@@ -37,10 +37,10 @@ namespace ME.BECS.Editor.Aspects {
                 content.Add(str);
                 if (fieldsCount > 0 && fieldsCount == types.Count) {
                     references.Add(type);
-                    str = $"AspectTypeInfo<{strType}>.with.Resize({types.Count});";
+                    str = $"AspectTypeInfo.with.Get(AspectTypeInfo<{strType}>.typeId).Resize({types.Count});";
                     content.Add(str);
                     for (int i = 0; i < types.Count; ++i) {
-                        str = $"AspectTypeInfo<{strType}>.with.Get({i}) = StaticTypes<{types[i]}>.typeId;";
+                        str = $"AspectTypeInfo.with.Get(AspectTypeInfo<{strType}>.typeId).Get({i}) = StaticTypes<{types[i]}>.typeId;";
                         content.Add(str);
                     }
                 }

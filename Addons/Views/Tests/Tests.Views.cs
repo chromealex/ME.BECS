@@ -8,8 +8,8 @@ namespace ME.BECS.Tests {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
-            AllTests.Start();
             ViewsRegistry.Initialize();
+            AllTests.Start();
             yield return null;
         }
 

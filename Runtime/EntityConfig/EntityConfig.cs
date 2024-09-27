@@ -11,6 +11,7 @@ namespace ME.BECS {
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
         public ComponentsStorage<IComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IComponentStatic>() };
         public ComponentsStorage<IConfigInitialize> dataInitialize = new() { isShared = false, components = System.Array.Empty<IConfigInitialize>() };
+        public ComponentsStorage<IAspect> aspects = new() { isShared = false, components = System.Array.Empty<IAspect>() };
 
         public void OnValidate() {
             var list = new System.Collections.Generic.List<IConfigInitialize>();

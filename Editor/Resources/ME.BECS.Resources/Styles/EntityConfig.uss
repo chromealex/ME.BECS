@@ -11,6 +11,15 @@
     border-color: rgba(0, 0, 0, 0.1);
 }
 
+.fields-container .required {
+    color: cadetblue;
+    -unity-font-style: bold;
+}
+
+.fields-container .not-required {
+    opacity: 0.5;
+}
+
 .fields-container-root {
     margin-top: 5px;
     margin-bottom: 10px;

@@ -46,11 +46,15 @@ namespace ME.BECS.Tests {
                 new TestConfig1Component() { data = 1 },
                 new TestConfig2Component() { data = 2 },
             };
+            config.aspects.components = new IAspect[1] {
+                new TestAspect(),
+            };
 
             {
                 using var world = World.Create();
                 var ent = Ent.New();
                 config.Apply(ent);
+                Assert.IsTrue(ent.Has<TestComponent>());
                 Assert.IsTrue(ent.Has<TestConfig1Component>());
                 Assert.IsTrue(ent.Has<TestConfig2Component>());
                 Assert.AreEqual(1, ent.Read<TestConfig1Component>().data);

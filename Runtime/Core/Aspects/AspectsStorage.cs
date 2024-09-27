@@ -26,11 +26,24 @@ namespace ME.BECS {
         }
 
     }
+    public struct AspectTypeInfoLoadedManaged {
 
-    public struct AspectTypeInfoCounter {
+        public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
+        public static readonly System.Collections.Generic.Dictionary<System.Type, uint> typeToId = new System.Collections.Generic.Dictionary<System.Type, uint>();
 
-        public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<AspectTypeInfoCounter>();
+    }
+    
+    public struct AspectTypeInfo {
 
+        public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<AspectTypeInfo>();
+        public static ref uint counter => ref counterBurst.Data;
+
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> sizesBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<AspectTypeInfo>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10402);
+        public static ref ME.BECS.Internal.Array<uint> sizes => ref sizesBurst.Data;
+
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<ME.BECS.Internal.Array<uint>>> withBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<ME.BECS.Internal.Array<uint>>>.GetOrCreatePartiallyUnsafeWithHashCode<AspectTypeInfo>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10401);
+        public static ref ME.BECS.Internal.Array<ME.BECS.Internal.Array<uint>> with => ref withBurst.Data;
+        
     }
 
     public struct AspectTypeInfoId<T> where T : unmanaged, IAspect {
@@ -39,24 +52,24 @@ namespace ME.BECS {
 
     }
 
-    public struct AspectTypeInfoWith<T> where T : unmanaged, IAspect {
-
-        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> withBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<AspectTypeInfoWith<T>>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10401);
-
-    }
-
     public struct AspectTypeInfo<T> where T : unmanaged, IAspect {
 
-        public static ref ME.BECS.Internal.Array<uint> with => ref AspectTypeInfoWith<T>.withBurst.Data;
         public static ref uint typeId => ref AspectTypeInfoId<T>.typeIdBurst.Data;
 
         [INLINE(256)]
         public static void Validate() {
 
             if (typeId == 0u) {
-                typeId = ++AspectTypeInfoCounter.value.Data;
+                typeId = ++AspectTypeInfo.counter;
+                AspectTypeInfoLoadedManaged.loadedTypes.Add(typeId, typeof(T));
+                AspectTypeInfoLoadedManaged.typeToId.Add(typeof(T), typeId);
             }
             
+            AspectTypeInfo.sizes.Resize(typeId + 1u);
+            AspectTypeInfo.sizes.Get(typeId) = TSize<T>.size;
+
+            AspectTypeInfo.with.Resize(typeId + 1u);
+
         }
 
     }
@@ -67,17 +80,8 @@ namespace ME.BECS {
         public static void Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
             var world = ent.World;
-            for (uint i = 0u; i < AspectTypeInfo<T>.with.Length; ++i) {
-
-                var typeId = AspectTypeInfo<T>.with.Get(i);
-                var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
-                if (has == false) {
-                    world.state->components.SetUnknownType(world.state, typeId, StaticTypes.groups.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
-                    world.state->batches.Set_INTERNAL(typeId, in ent, world.state);
-                }
-
-            }
-
+            world.state->aspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
+            
         }
 
     }
@@ -103,7 +107,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static AspectsStorage Create(State* state) {
-            var aspectsCount = AspectTypeInfoCounter.value.Data + 1u;
+            var aspectsCount = AspectTypeInfo.counter + 1u;
             var storage = new AspectsStorage() {
                 list = new MemArray<Aspect>(ref state->allocator, aspectsCount),
             };
@@ -115,15 +119,38 @@ namespace ME.BECS {
         public ref T Initialize<T>(State* state) where T : unmanaged, IAspect {
             
             var typeId = AspectTypeInfo<T>.typeId;
+            return ref *(T*)this.Initialize(state, typeId, TSize<T>.size);
+            
+        }
+
+        [INLINE(256)]
+        public byte* Initialize(State* state, uint typeId, uint size) {
+            
             ref var item = ref this.list[state, typeId];
             if (item.constructedAspect.IsValid() == false) {
                 item = new Aspect() {
-                    constructedAspect = state->allocator.Alloc(sizeof(T)),
+                    constructedAspect = state->allocator.Alloc(size),
                     version = state->allocator.version,
                 };
             }
 
-            return ref *(T*)state->allocator.GetUnsafePtr(in item.constructedAspect);
+            return state->allocator.GetUnsafePtr(in item.constructedAspect);
+
+        }
+
+        [INLINE(256)]
+        public void SetAspect(State* state, in Ent ent, uint aspectTypeId) {
+
+            for (uint i = 0u; i < AspectTypeInfo.with.Get(aspectTypeId).Length; ++i) {
+
+                var typeId = AspectTypeInfo.with.Get(aspectTypeId).Get(i);
+                var has = state->components.HasUnknownType(state, typeId, ent.id, ent.gen, checkEnabled: false);
+                if (has == false) {
+                    state->components.SetUnknownType(state, typeId, StaticTypes.groups.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
+                    state->batches.Set_INTERNAL(typeId, in ent, state);
+                }
+
+            }
 
         }
 

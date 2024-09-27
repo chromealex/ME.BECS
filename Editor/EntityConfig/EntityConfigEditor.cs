@@ -1,3 +1,4 @@
+using System.Reflection;
 using ME.BECS.Editor.Extensions.SubclassSelector;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -34,6 +35,8 @@ namespace ME.BECS.Editor {
             return rootVisualElement;
             
         }
+
+        private Item componentsContainer;
         
         private void DrawComponents(VisualElement root, SerializedObject serializedObject) {
 
@@ -69,7 +72,8 @@ namespace ME.BECS.Editor {
 
                     var data = serializedObject.FindProperty(nameof(EntityConfig.data));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.data.components));
-                    componentContainer.Add(this.DrawFields(typeof(IConfigComponent), componentsData, serializedObject));
+                    this.componentsContainer = this.DrawFields(typeof(IConfigComponent), componentsData, serializedObject);
+                    componentContainer.Add(this.componentsContainer.container);
                 }
             }
             {
@@ -92,7 +96,7 @@ namespace ME.BECS.Editor {
 
                     var data = serializedObject.FindProperty(nameof(EntityConfig.sharedData));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.sharedData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentShared), componentsData, serializedObject));
+                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentShared), componentsData, serializedObject).container);
                 }
             }
             {
@@ -115,13 +119,44 @@ namespace ME.BECS.Editor {
                     
                     var data = serializedObject.FindProperty(nameof(EntityConfig.staticData));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.staticData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IComponentStatic), componentsData, serializedObject));
+                    componentContainer.Add(this.DrawFields(typeof(IComponentStatic), componentsData, serializedObject).container);
+                }
+            }
+            {
+                
+                var components = new VisualElement();
+                components.AddToClassList("entity-components");
+                components.AddToClassList("entity-aspects");
+                componentsContainer.Add(components);
+
+                var componentsLabel = new Label("Aspects");
+                componentsLabel.AddToClassList("entity-components-label");
+                components.Add(componentsLabel);
+
+                var componentsList = new VisualElement();
+                componentsList.AddToClassList("entity-components-list");
+                components.Add(componentsList);
+                {
+                    var componentContainer = new VisualElement();
+                    componentsList.Add(componentContainer);
+                    
+                    var data = serializedObject.FindProperty(nameof(EntityConfig.aspects));
+                    var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
+                    componentContainer.Add(this.DrawFields(typeof(IAspect), componentsData, serializedObject).container);
                 }
             }
             
         }
 
-        private VisualElement DrawFields(System.Type type, SerializedProperty componentsArr, SerializedObject serializedObject) {
+        public struct Item {
+
+            public VisualElement container;
+            public VisualElement drawFieldsContainer;
+            public System.Action<System.Collections.Generic.List<VisualElement>, int> updateButtons;
+
+        }
+        
+        private Item DrawFields(System.Type type, SerializedProperty componentsArr, SerializedObject serializedObject) {
 
             Button removeButton = null;
             Button addButton = null;
@@ -173,13 +208,38 @@ namespace ME.BECS.Editor {
                 addButton = new Button(() => {
                     var rect = buttons.worldBound;
                     EditorUtils.ShowPopup(rect, (type) => {
-                        var prop = serializedObject.FindProperty(componentsArr.propertyPath);
-                        ++prop.arraySize;
-                        var lastProp = prop.GetArrayElementAtIndex(prop.arraySize - 1);
-                        var obj = lastProp.SetManagedReference(type);
-                        lastProp.isExpanded = obj != null;
-                        lastProp.serializedObject.ApplyModifiedProperties();
-                        lastProp.serializedObject.Update();
+                        {
+                            AddComponent(serializedObject, componentsArr, type);
+                        }
+                        if (typeof(IAspect).IsAssignableFrom(type) == true) {
+                            // Add missing types
+                            var aspectTypes = EditorUtils.GetAspectTypes(type);
+                            var data = serializedObject.FindProperty(nameof(EntityConfig.data));
+                            var componentsData = data.FindPropertyRelative(nameof(EntityConfig.data.components));
+                            var refreshRequired = false;
+                            foreach (var item in aspectTypes) {
+                                if (item.config == false) continue;
+                                var propItem = serializedObject.FindProperty(componentsData.propertyPath);
+                                var found = false;
+                                for (int i = 0; i < propItem.arraySize; ++i) {
+                                    var elem = propItem.GetArrayElementAtIndex(i);
+                                    var elemType = EditorUtils.GetTypeFromPropertyField(elem.managedReferenceFieldTypename);
+                                    if (elemType == item.fieldType) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (found == false) {
+                                    // Add component
+                                    AddComponent(serializedObject, componentsData, item.fieldType);
+                                    refreshRequired = true;
+                                }
+                            }
+
+                            if (refreshRequired == true) {
+                                this.DrawFields_INTERNAL(this.componentsContainer.updateButtons, this.componentsContainer.drawFieldsContainer, serializedObject.FindProperty(componentsData.propertyPath), serializedObject);
+                            }
+                        }
                         this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(componentsArr.propertyPath), serializedObject);
                     }, type, unmanagedTypes: true, runtimeAssembliesOnly: true, showNullElement: false);
                 });
@@ -190,8 +250,22 @@ namespace ME.BECS.Editor {
 
             this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, componentsArr, serializedObject);
 
-            return container;
+            return new Item() {
+                container = container,
+                drawFieldsContainer = drawFieldsContainer,
+                updateButtons = UpdateButtons,
+            };
 
+        }
+
+        private static void AddComponent(SerializedObject serializedObject, SerializedProperty componentsArr, System.Type componentType) {
+            var prop = serializedObject.FindProperty(componentsArr.propertyPath);
+            ++prop.arraySize;
+            var lastProp = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+            var obj = lastProp.SetManagedReference(componentType);
+            lastProp.isExpanded = obj != null;
+            lastProp.serializedObject.ApplyModifiedProperties();
+            lastProp.serializedObject.Update();
         }
 
         private void DrawFields_INTERNAL(System.Action<System.Collections.Generic.List<VisualElement>, int> updateButtons, VisualElement container, SerializedProperty componentsArr, SerializedObject serializedObject) {
@@ -205,8 +279,34 @@ namespace ME.BECS.Editor {
                 var idx = i;
                 var it = dataArr.GetArrayElementAtIndex(i);
                 var copy = it.Copy();
-                var label = EditorUtils.GetComponentName(EditorUtils.GetTypeFromPropertyField(it.managedReferenceFullTypename));
-                if (copy.hasVisibleChildren == true) {
+                var type = EditorUtils.GetTypeFromPropertyField(it.managedReferenceFullTypename);
+                var label = EditorUtils.GetComponentName(type);
+                if (typeof(IAspect).IsAssignableFrom(type) == true) {
+
+                    var fields = EditorUtils.GetAspectTypes(type);
+                    
+                    var labelField = new Foldout();
+                    labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
+                    labelField.text = label;
+                    labelField.AddToClassList("field");
+
+                    foreach (var field in fields) {
+
+                        var labelFieldItem = new Label(EditorUtils.GetComponentName(field.fieldType));
+                        if (field.required == true) {
+                            labelFieldItem.AddToClassList("required");
+                        } else {
+                            labelFieldItem.AddToClassList("not-required");
+                        }
+                        labelField.Add(labelFieldItem);
+                        
+                    }
+                    
+                    container.Add(labelField);
+                    list.Add(labelField);
+                    
+                } else if (copy.hasVisibleChildren == true) {
+                    
                     var propertyField = new UnityEditor.UIElements.PropertyField(copy, label) {
                         name = $"PropertyField:{it.propertyPath}",
                     };

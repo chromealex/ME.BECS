@@ -6,14 +6,21 @@ namespace ME.BECS {
 
     public static partial class E {
 
+        [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
+        [HIDE_CALLSTACK]
+        public static void IS_VALID_ASPECT_TYPE_ID(uint typeId) {
+            if (typeId > 0u && typeId <= AspectTypeInfo.counter) return;
+            InvalidTypeIdException.Throw();
+        }
+
         [Conditional(COND.EXCEPTIONS_ASPECTS)]
         [HIDE_CALLSTACK]
         public static unsafe void IS_VALID_FOR_ASPECT<T>(in Ent ent) where T : unmanaged, IAspect {
             
             var world = ent.World;
-            for (uint i = 0u; i < AspectTypeInfo<T>.with.Length; ++i) {
+            for (uint i = 0u; i < AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId).Length; ++i) {
 
-                var typeId = AspectTypeInfo<T>.with.Get(i);
+                var typeId = AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId).Get(i);
                 var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     IS_VALID_FOR_ASPECT_BurstDiscard(in ent, typeId);
