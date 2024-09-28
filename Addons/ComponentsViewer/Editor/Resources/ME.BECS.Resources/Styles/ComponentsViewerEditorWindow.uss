@@ -1,0 +1,103 @@
+.main-container {
+    font-size: 20px;
+    padding: 5px;
+    background-color: rgba(0, 90, 128, 0.1);
+    border-bottom-color: rgba(0, 90, 128, 0.1);
+}
+
+.main-container .unity-foldout {
+    border-radius: 5px;
+    border-bottom-width: 1px;
+}
+
+.main-container .unity-foldout__content {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    margin: 0px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.main-container .unity-toggle {
+    margin: 0px;
+    padding: 3px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    transition-property: background-color;
+    transition-duration: 0.3s;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+.main-container .unity-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+
+.main-container .unity-toggle__input {
+    -unity-font-style: bold;
+}
+
+.container {
+    padding: 10px;
+    font-size: 12px;
+}
+
+.container-group {
+    padding: 5px;
+    background-color: rgba(0, 90, 128, 0.1);
+    border-bottom-color: rgba(0, 90, 128, 0.1);
+}
+
+.container-group {
+    padding: 2px;
+    margin-left: 2px;
+    margin-right: 2px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    background-color: rgba(0, 90, 128, 0.3);
+    border-radius: 7px;
+}
+
+.column .unity-toggle {
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0);
+}
+.column .unity-toggle .unity-toggle__checkmark {
+    -unity-background-image-tint-color: rgba(120, 120, 120, 1);
+}
+
+.container-group .unity-foldout__content {
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.container-group Button {
+    background-color: rgba(0, 90, 128, 0.3);
+    border-color: rgba(0, 90, 128, 0.5);
+}
+.container-group Button:hover {
+    background-color: rgba(0, 90, 128, 0.5);
+    border-color: rgba(0, 90, 128, 0.7);
+}
+
+.component-data {
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    flex-direction: row;
+    height: 24px;
+    max-height: 24px;
+    align-items: center;
+}
+
+.component-data:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.component-meta-text-field {
+    padding: 0px;
+    margin: 0px;
+    width: 100%;
+    height: 100%;
+}

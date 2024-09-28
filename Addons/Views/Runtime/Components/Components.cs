@@ -8,7 +8,7 @@ namespace ME.BECS.Views {
     
     public struct IsViewRequested : IComponent {}
 
-    public struct InstantiateViewComponent : IComponentStatic, IConfigInitialize {
+    public struct InstantiateViewComponent : IConfigComponentStatic, IConfigInitialize {
 
         public View view;
         

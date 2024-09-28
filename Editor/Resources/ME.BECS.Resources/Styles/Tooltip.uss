@@ -23,14 +23,17 @@
     flex-direction: row;
     padding-top: 2px;
     padding-bottom: 2px;
-    padding-left: 4px;
     padding-right: 4px;
+    padding-left: 0px;
+    justify-content: flex-start;
 }
 
 .has-tooltip .tooltip {
     align-self: center;
-    -unity-text-align: middle-center;
+    -unity-text-align: middle-center !important;
     -unity-font-style: bold;
+    justify-content: center;
+    flex-grow: 0;
     margin: 4px;
     background-color: rgba(198, 198, 26, 0.1);
     border-radius: 7px;

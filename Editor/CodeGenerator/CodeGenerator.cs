@@ -435,7 +435,7 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentStatic>();
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;

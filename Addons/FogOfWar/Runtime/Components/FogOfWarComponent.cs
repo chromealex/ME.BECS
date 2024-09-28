@@ -41,7 +41,7 @@ namespace ME.BECS.FogOfWar {
     }
 
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct UnitShadowCopyViewComponent : IComponentStatic, IConfigInitialize {
+    public struct UnitShadowCopyViewComponent : IConfigComponentStatic, IConfigInitialize {
 
         public ME.BECS.Views.View view;
 

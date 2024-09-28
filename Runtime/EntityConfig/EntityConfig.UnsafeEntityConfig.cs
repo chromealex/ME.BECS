@@ -465,7 +465,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool HasStatic<T>() where T : unmanaged, IComponentStatic {
+        public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
             var state = this.staticDataEnt.World.state;
             return state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen, checkEnabled: false);
@@ -473,7 +473,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public T ReadStatic<T>() where T : unmanaged, IComponentStatic {
+        public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
             
             var state = this.staticDataEnt.World.state;
             return state->components.Read<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen);

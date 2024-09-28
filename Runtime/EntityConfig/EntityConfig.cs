@@ -9,7 +9,7 @@ namespace ME.BECS {
         public EntityConfig baseConfig;
         public ComponentsStorage<IConfigComponent> data = new() { isShared = false, components = System.Array.Empty<IConfigComponent>() };
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
-        public ComponentsStorage<IComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IComponentStatic>() };
+        public ComponentsStorage<IConfigComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IConfigComponentStatic>() };
         public ComponentsStorage<IConfigInitialize> dataInitialize = new() { isShared = false, components = System.Array.Empty<IConfigInitialize>() };
         public ComponentsStorage<IAspect> aspects = new() { isShared = false, components = System.Array.Empty<IAspect>() };
 

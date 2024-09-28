@@ -8,41 +8,6 @@ namespace ME.BECS.Editor {
     [UnityEditor.CustomPropertyDrawer(typeof(ComponentGroupChooser))]
     public class ComponentGroupChooserDrawer : UnityEditor.PropertyDrawer {
 
-        public struct Item {
-
-            public string value;
-            public System.Type type;
-            public int index;
-
-        }
-
-        private static System.Collections.Generic.List<Item> componentGroups;
-        private static System.Collections.Generic.List<Item> GetComponentGroups() {
-
-            if (componentGroups != null) return componentGroups;
-
-            var asms = CodeGenerator.GetAssembliesInfo();
-            var list = new System.Collections.Generic.List<Item>();
-            var idx = 0;
-            var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>();
-            foreach (var component in components) {
-                
-                var asm = component.Assembly.GetName().Name;
-                var info = asms.FirstOrDefault(x => x.name == asm);
-                if (info.isEditor == true) continue;
-                
-                var attr = component.GetCustomAttribute<ComponentGroupAttribute>();
-                list.Add(new Item() {
-                    index = ++idx,
-                    value = UnityEditor.ObjectNames.NicifyVariableName(attr.groupType.Name),
-                    type = attr.groupType,
-                });
-            }
-            componentGroups = list;
-            return list;
-
-        }
-
         public override VisualElement CreatePropertyGUI(UnityEditor.SerializedProperty property) {
 
             var root = new VisualElement();
@@ -53,7 +18,7 @@ namespace ME.BECS.Editor {
             
                 var so = property.serializedObject;
                 var prop = property;
-                var choices = GetComponentGroups();
+                var choices = EditorUtils.GetComponentGroups();
                 Button nameField = null;
                 nameField = new Button(() => {
                     var rect = nameField.worldBound;

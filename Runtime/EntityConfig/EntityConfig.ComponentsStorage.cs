@@ -11,7 +11,7 @@ namespace ME.BECS {
     [System.Serializable]
     public unsafe struct ComponentsStorage<T> : IConfigComponentsStorage where T : class {
 
-        public void AOTStatic<TComponent>() where TComponent : unmanaged, IComponentStatic {
+        public void AOTStatic<TComponent>() where TComponent : unmanaged, IConfigComponentStatic {
             
             new CacheData<TComponent>();
             

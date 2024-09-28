@@ -125,7 +125,7 @@ namespace ME.BECS.Editor {
                     
                     var data = serializedObject.FindProperty(nameof(EntityConfig.staticData));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.staticData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IComponentStatic), componentsData, serializedObject).container);
+                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentStatic), componentsData, serializedObject).container);
                 }
             }
             {
@@ -293,97 +293,12 @@ namespace ME.BECS.Editor {
                 var label = EditorUtils.GetComponentName(type);
                 if (typeof(IAspect).IsAssignableFrom(type) == true) {
 
-                    var fields = EditorUtils.GetAspectTypes(type);
-
-                    var fieldContainer = new VisualElement();
-                    fieldContainer.AddToClassList("field");
-                    
-                    var labelField = new Foldout();
-                    fieldContainer.Add(labelField);
-                    labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
-                    labelField.text = label;
-                    labelField.AddToClassList("aspect-component-container-field");
-
-                    {
-                        var header = new VisualElement();
-                        header.AddToClassList("header");
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("first-column");
-                            var headerLabel = new Label("Component Name");
-                            headerLabel.AddToClassList("main-label");
-                            column.Add(headerLabel);
-                            header.Add(column);
-                        }
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var headerLabel = new Label("Used by Queries");
-                            column.Add(headerLabel);
-                            header.Add(column);
-                        }
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var headerLabel = new Label("Auto");
-                            column.Add(headerLabel);
-                            header.Add(column);
-                        }
-                        labelField.Add(header);
+                    var fieldContainer = EditorUIUtils.DrawAspects(container, new System.Collections.Generic.List<System.Type>() { type });
+                    list.AddRange(fieldContainer);
+                    foreach (var fc in fieldContainer) {
+                        var lbl = fc.Q(className: "aspect-component-container-field");
+                        lbl.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     }
-                    
-                    for (var index = 0; index < fields.Length; ++index) {
-                        
-                        var field = fields[index];
-                        var labelFieldItem = new VisualElement();
-                        labelFieldItem.AddToClassList("aspect-component-container");
-                        if (index == fields.Length - 1) labelFieldItem.AddToClassList("last");
-                        var componentLabel = EditorUtils.GetComponentName(field.fieldType);
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("first-column");
-                            var mainLabel = new Label(componentLabel);
-                            mainLabel.AddToClassList("main-label");
-                            column.Add(mainLabel);
-                            labelFieldItem.Add(column);
-                        }
-
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var text = $"When you use <b>{label}</b> aspect in query, <b>{componentLabel}</b> component will be <b>skipped</b>.";
-                            if (field.required == true) {
-                                text = $"When you use <b>{label}</b> aspect in query, <b>{componentLabel}</b> component will be <b>used</b> for this operation.";
-                            }
-                            EditorUIUtils.DrawTooltip(column, text, new StyleLength(new Length(200f, LengthUnit.Pixel)));
-                            var toggle = new Toggle();
-                            toggle.SetEnabled(false);
-                            toggle.value = field.required;
-                            column.Add(toggle);
-                            labelFieldItem.Add(column);
-                        }
-
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var text = $"Some of aspect methods may create <b>{componentLabel}</b> component at runtime.";
-                            if (field.config == true) {
-                                text = $"<b>{componentLabel}</b> component automatically added onto entity while applying <b>{label}</b> aspect.";
-                            }
-                            EditorUIUtils.DrawTooltip(column, text, new StyleLength(new Length(200f, LengthUnit.Pixel)));
-                            var toggle = new Toggle();
-                            toggle.SetEnabled(false);
-                            toggle.value = field.config;
-                            column.Add(toggle);
-                            labelFieldItem.Add(column);
-                        }
-
-                        labelField.Add(labelFieldItem);
-                        
-                    }
-
-                    container.Add(fieldContainer);
-                    list.Add(fieldContainer);
                     
                 } else if (copy.hasVisibleChildren == true) {
 

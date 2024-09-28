@@ -4,7 +4,307 @@ using System.Reflection;
 namespace ME.BECS.Editor {
 
     public static class EditorUtils {
+        
+        public struct ComponentGroupItem : System.IEquatable<ComponentGroupItem> {
 
+            public class ComponentMetaInfo : System.IEquatable<ComponentMetaInfo> {
+
+                public System.Type type;
+                public UnityEditor.MonoScript file;
+                public int lineNumber;
+                public int columnNumber;
+                public bool fileIsReady;
+                public System.Action<bool> onFileReady;
+                public bool isBuiltIn;
+                public string editorComment;
+
+                public ComponentMetaInfo(System.Type type) {
+                    this.type = type;
+                    this.file = null;
+                    this.isBuiltIn = type != null ? type.AssemblyQualifiedName.Contains("ME.BECS") : false;
+                    if (this.isBuiltIn == false) {
+                        EditorUtils.FindComponentFromStructName(type.Name, type.Namespace, (x, lineNumber, columnNumber) => {
+                            this.file = x;
+                            this.lineNumber = lineNumber;
+                            this.columnNumber = columnNumber;
+                            this.fileIsReady = true;
+                            this.onFileReady?.Invoke(this.file != null);
+                        });
+                    }
+                }
+
+                public string GetTooltip() {
+                    return this.file != null ? this.file.name + ":" + this.lineNumber + ",col:" + this.columnNumber : string.Empty;
+                }
+
+                public bool Equals(ComponentMetaInfo other) {
+                    if (other is null) {
+                        return false;
+                    }
+
+                    if (ReferenceEquals(this, other)) {
+                        return true;
+                    }
+
+                    return Equals(this.type, other.type);
+                }
+
+                public override bool Equals(object obj) {
+                    if (obj is null) {
+                        return false;
+                    }
+
+                    if (ReferenceEquals(this, obj)) {
+                        return true;
+                    }
+
+                    if (obj.GetType() != this.GetType()) {
+                        return false;
+                    }
+
+                    return this.Equals((ComponentMetaInfo)obj);
+                }
+
+                public override int GetHashCode() {
+                    return (this.type != null ? this.type.GetHashCode() : 0);
+                }
+
+            }
+            
+            public string value;
+            public System.Type type;
+            public System.Collections.Generic.List<ComponentMetaInfo> components;
+            public int index;
+            public int order;
+
+            public ComponentGroupItem(ComponentGroupsXml.Item data) {
+
+                this.type = data.type != null ? System.Type.GetType(data.type) : null;
+                this.value = UnityEditor.ObjectNames.NicifyVariableName(this.type != null ? this.type.Name : UNKNOWN_GROUP_NAME);
+                this.index = data.id;
+                this.order = this.type != null ? 1 : 100;
+                this.components = EditorUtils.GetComponentsByGroup(this.type).Select(x => {
+                    var meta = new ComponentMetaInfo(x);
+                    meta.editorComment = data.components.FirstOrDefault(c => c.type == x.AssemblyQualifiedName)?.editorComment;
+                    return meta;
+                }).ToList();
+
+            }
+
+            public bool Equals(ComponentGroupItem other) {
+                return Equals(this.type, other.type);
+            }
+
+            public override bool Equals(object obj) {
+                return obj is ComponentGroupItem other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return (this.type != null ? this.type.GetHashCode() : 0);
+            }
+
+        }
+
+        private static readonly string UNKNOWN_GROUP_NAME = "Ungrouped";
+
+        [System.Serializable]
+        [System.Xml.Serialization.XmlRoot("ComponentGroupsXml")]
+        public class ComponentGroupsXml {
+
+            [System.Serializable]
+            public class Item {
+
+                [System.Serializable]
+                public class ComponentMeta {
+
+                    public string type;
+                    public string editorComment;
+
+                }
+
+                public int id;
+                public string type;
+                [System.Xml.Serialization.XmlArrayAttribute("Components")]
+                [System.Xml.Serialization.XmlArrayItemAttribute("Component", typeof(ComponentMeta))]
+                public ComponentMeta[] components;
+
+            }
+
+            public int nextId;
+            [System.Xml.Serialization.XmlArrayAttribute("Items")]
+            [System.Xml.Serialization.XmlArrayItemAttribute("Item", typeof(Item))]
+            public Item[] items;
+
+        }
+
+        public static void LoadComponentGroups() {
+
+            var dir = "ME.BECS.Cache";
+            var file = "ComponentGroups.xml";
+            var path = dir + "/" + file;
+            if (System.IO.File.Exists(path) == true) {
+                
+                componentGroups = new System.Collections.Generic.List<ComponentGroupItem>();
+                var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
+                using (var reader = System.Xml.XmlReader.Create(path))
+                {
+                    var data = (ComponentGroupsXml)ser.Deserialize(reader);
+                    componentGroupsNextId = data.nextId;
+                    foreach (var item in data.items) {
+
+                        var elem = new ComponentGroupItem(item);
+                        if (item.type != null && elem.type == null) {
+                            // missing type
+                        } else {
+                            componentGroups.Add(elem);
+                        }
+
+                    }
+                }
+
+            }
+
+        }
+        
+        public static void SaveComponentGroups() {
+
+            var dir = "ME.BECS.Cache";
+            var file = "ComponentGroups.xml";
+            var path = dir + "/" + file;
+            if (System.IO.Directory.Exists(dir) == false) {
+                System.IO.Directory.CreateDirectory(dir);
+            }
+
+            if (System.IO.File.Exists(path) == true) {
+                System.IO.File.WriteAllText(path, string.Empty);
+            }
+
+            {
+                var data = new ComponentGroupsXml();
+                data.items = new ComponentGroupsXml.Item[componentGroups.Count];
+                data.nextId = componentGroupsNextId;
+                var i = 0;
+                foreach (var group in componentGroups) {
+                    data.items[i] = new ComponentGroupsXml.Item() {
+                        id = group.index,
+                        type = group.type != null ? group.type.AssemblyQualifiedName : null,
+                        components = group.components.Select(x => new ComponentGroupsXml.Item.ComponentMeta() { type = x.type.AssemblyQualifiedName, editorComment = x.editorComment }).ToArray(),
+                    };
+                    ++i;
+                }
+                var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
+                var writer = new System.Xml.XmlTextWriter(path, System.Text.Encoding.UTF8);
+                writer.Formatting = System.Xml.Formatting.Indented;
+                writer.Indentation = 4;
+                ser.Serialize(writer, data);
+                writer.Dispose();
+                
+            }
+
+        }
+
+        public static System.Collections.Generic.List<System.Type> GetComponentsByGroup(System.Type type) {
+
+            var result = new System.Collections.Generic.List<System.Type>();
+            if (type != null) {
+                
+                var asms = CodeGenerator.GetAssembliesInfo();
+                var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>();
+                foreach (var component in components) {
+                    
+                    var asm = component.Assembly.GetName().Name;
+                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    if (info.isEditor == true) continue;
+
+                    var attr = component.GetCustomAttribute<ComponentGroupAttribute>();
+                    if (attr != null && attr.groupType == type) {
+
+                        result.Add(component);
+
+                    }
+
+                }
+
+            } else {
+                
+                var asms = CodeGenerator.GetAssembliesInfo();
+                var components = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>();
+                foreach (var component in components) {
+                    
+                    var asm = component.Assembly.GetName().Name;
+                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    if (info.isEditor == true) continue;
+                    if (component.IsInterface == true) continue;
+
+                    var attr = component.GetCustomAttribute<ComponentGroupAttribute>();
+                    if (attr == null) {
+
+                        result.Add(component);
+
+                    }
+
+                }
+                
+            }
+
+            return result.OrderBy(x => x.FullName).ToList();
+
+        }
+
+        private static int componentGroupsNextId;
+        private static System.Collections.Generic.List<ComponentGroupItem> componentGroups;
+        public static System.Collections.Generic.List<ComponentGroupItem> GetComponentGroups() {
+
+            if (componentGroups != null) return componentGroups;
+
+            LoadComponentGroups();
+            
+            var groups = componentGroups != null ? new System.Collections.Generic.HashSet<ComponentGroupItem>(componentGroups) : new System.Collections.Generic.HashSet<ComponentGroupItem>();
+            var asms = CodeGenerator.GetAssembliesInfo();
+            var components = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>();
+            var componentsList = new System.Collections.Generic.List<System.Type>(components.Count);
+            foreach (var component in components) {
+                
+                var asm = component.Assembly.GetName().Name;
+                var info = asms.FirstOrDefault(x => x.name == asm);
+                if (info.isEditor == true) continue;
+                if (component.IsInterface == true) continue;
+
+                componentsList.Add(component);
+            }
+
+            foreach (var component in componentsList) {
+                
+                var attr = component.GetCustomAttribute<ComponentGroupAttribute>();
+                var group = new ComponentGroupItem() {
+                    type = attr != null ? attr.groupType : null,
+                };
+                if (groups.Contains(group) == false) {
+                    group.value = UnityEditor.ObjectNames.NicifyVariableName(attr != null ? attr.groupType.Name : UNKNOWN_GROUP_NAME);
+                    if (attr != null) {
+                        group.order = 1;
+                    } else {
+                        group.order = 100;
+                    }
+                    group.components = new System.Collections.Generic.List<ComponentGroupItem.ComponentMetaInfo>();
+                    group.index = ++componentGroupsNextId;
+                    groups.Add(group);
+                }
+
+                groups.TryGetValue(group, out group);
+                var meta = new ComponentGroupItem.ComponentMetaInfo(component);
+                if (group.components.Contains(meta) == false) {
+                    group.components.Add(meta);
+                }
+
+            }
+            
+            componentGroups = groups.OrderBy(x => x.order).ToList();
+            SaveComponentGroups();
+            return componentGroups;
+
+        }
+        
         public static string GetEntityName(Ent ent) {
             return ent.ToString(withWorld: false);
         }
@@ -267,12 +567,146 @@ namespace ME.BECS.Editor {
         public static bool TryGetComponentGroupColor(System.Type componentType, out UnityEngine.Color color) {
 
             color = default;
+            if (componentType == null) return false;
             var componentGroupAttribute = componentType.GetCustomAttribute<ComponentGroupAttribute>();
             if (componentGroupAttribute != null) {
-                var field = componentGroupAttribute.groupType.GetField("color", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                if (field != null) {
-                    color = (UnityEngine.Color)field.GetValue(null);
+                return TryGetGroupColor(componentGroupAttribute.groupType, out color);
+            }
+
+            return false;
+
+        }
+
+        public static bool TryGetGroupColor(System.Type groupType, out UnityEngine.Color color) {
+
+            color = default;
+            if (groupType == null) return false;
+            var field = groupType.GetField("color", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field != null) {
+                color = (UnityEngine.Color)field.GetValue(null);
+                return true;
+            }
+
+            return false;
+
+        }
+
+        public struct ScriptMetaInfo {
+
+            public string text;
+            public string name;
+            public UnityEditor.MonoScript script;
+
+        }
+        
+        private static System.Collections.Generic.List<ScriptMetaInfo> scriptsMetaInfo;
+        
+        public static void FindComponentFromStructName(string structName, string @namespace, System.Action<UnityEditor.MonoScript, int, int> callback) {
+
+            if (scriptsMetaInfo == null) {
+
+                var scriptGUIDs = UnityEditor.AssetDatabase.FindAssets($"t:script");
+                if (scriptGUIDs.Length == 0) return;
+
+                scriptsMetaInfo = new System.Collections.Generic.List<ScriptMetaInfo>(scriptGUIDs.Length);
+                foreach (var scriptGUID in scriptGUIDs) {
+                    var assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(scriptGUID);
+                    var script = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(assetPath);
+                    if (script != null) {
+                        scriptsMetaInfo.Add(new ScriptMetaInfo() { text = script.text, name = script.name, script = script, });
+                    }
+                }
+
+            }
+
+            System.Threading.ThreadPool.QueueUserWorkItem((_) => {
+
+                for (var index = 0; index < scriptsMetaInfo.Count; ++index) {
+                    var script = scriptsMetaInfo[index];
+                    if ((string.IsNullOrEmpty(@namespace) == true ||
+                         System.Text.RegularExpressions.Regex.IsMatch(script.text, @$"namespace\s+{@namespace}", System.Text.RegularExpressions.RegexOptions.Singleline) == true)) {
+
+                        var match = System.Text.RegularExpressions.Regex.Match(script.text, @$"struct\s+{structName}", System.Text.RegularExpressions.RegexOptions.Singleline);
+                        if (match.Groups.Count > 0 && match.Groups[0].Success == true) {
+                            
+                            var pos = LineFromPos(script.text, match.Index, out var columnNumber);
+                            callback.Invoke(script.script, pos, columnNumber + 7);
+                            return;
+
+                        }
+                    }
+                }
+            });
+
+        }
+        
+        public static int LineFromPos(string input, int indexPosition, out int columnNumber) {
+            var lineNumber = 1;
+            var lastIndex = 0;
+            for (int i = 0; i < indexPosition; ++i) {
+                if (input[i] == '\n') {
+                    ++lineNumber;
+                    lastIndex = i;
+                }
+            }
+            columnNumber = indexPosition - lastIndex;
+            return lineNumber;
+        }
+
+        public static bool UpdateComponentScript(ComponentGroupItem.ComponentMetaInfo component, System.Type type, bool state) {
+
+            var text = component.file.text;
+            var path = UnityEditor.AssetDatabase.GetAssetPath(component.file);
+            var interfaceType = type.Name;
+            if (state == true) {
+                // Add new interface if not exist
+                var match = System.Text.RegularExpressions.Regex.Match(text, @"struct\s+" + component.type.Name + @"\s*:\s*(.*?)\s*{");
+                if (match.Success == true && match.Groups.Count == 2) {
+                    var interfaces = match.Groups[1].Value.Trim().Split(',', System.StringSplitOptions.RemoveEmptyEntries).ToList();
+                    var found = false;
+                    foreach (var interfaceItem in interfaces) {
+                        if (interfaceItem == interfaceType) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found == true) {
+                        // interface already added
+                        return false;
+                    }
+
+                    interfaces.Add(" " + interfaceType);
+                    var str = string.Join(",", interfaces).Trim();
+                    var regex = new System.Text.RegularExpressions.Regex(@"(struct\s+" + component.type.Name + @"\s*:\s*)(.*?)(\s*{)");
+                    var result = regex.Replace(text, (match) => {
+                        return match.Groups[1].Value + str + match.Groups[3].Value;
+                    });
+                    System.IO.File.WriteAllText(path, result);
                     return true;
+                }
+            } else {
+                // Remove interface if it exists
+                var match = System.Text.RegularExpressions.Regex.Match(text, @"struct\s+" + component.type.Name + @"\s*:\s*(.*?)\s*{");
+                if (match.Success == true && match.Groups.Count == 2) {
+                    var interfaces = match.Groups[1].Value.Trim().Split(',', System.StringSplitOptions.RemoveEmptyEntries).ToList();
+                    var found = false;
+                    foreach (var interfaceItem in interfaces) {
+                        if (interfaceItem == interfaceType) {
+                            found = true;
+                            interfaces.Remove(interfaceType);
+                            break;
+                        }
+                    }
+
+                    if (found == true) {
+                        if (interfaces.Count == 0) interfaces.Add(nameof(IComponent));
+                        var str = string.Join(",", interfaces).Trim();
+                        var regex = new System.Text.RegularExpressions.Regex(@"(struct\s+" + component.type.Name + @"\s*:\s*)(.*?)(\s*{)");
+                        var result = regex.Replace(text, (match) => { return match.Groups[1].Value + str + match.Groups[3].Value; });
+                        System.IO.File.WriteAllText(path, result);
+                        return true;
+                    }
                 }
             }
 

@@ -27,8 +27,11 @@
 .fields-container .aspect-component-container-field .first-column {
     flex-grow: 1;
     align-content: center;
-    justify-content: center;
     height: 22px;
+}
+.fields-container .aspect-component-container-field .first-column Label {
+    -unity-text-align: middle-left;
+    flex-grow: 1;
 }
 
 .fields-container .aspect-component-container-field .column {
@@ -56,6 +59,10 @@
     max-height: 24px;
 }
 
+.fields-container .aspect-component-container:hover {
+    background-color: rgba(255, 255, 255, 0.01);
+}
+
 .fields-container .aspect-component-container.last {
     border-bottom-width: 0px;
 }
@@ -63,8 +70,8 @@
 .fields-container .aspect-component-container-field .column {
     border-left-width: 1px;
     border-color: rgba(255, 255, 255, 0.05);
-    width: 100px;
-    min-width: 100px;
+    width: 80px;
+    min-width: 80px;
     height: 22px;
     align-items: center;
 }

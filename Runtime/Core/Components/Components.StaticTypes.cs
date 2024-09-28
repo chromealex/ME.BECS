@@ -120,7 +120,7 @@ namespace ME.BECS {
 
     }
 
-    public struct StaticTypesStatic<T> where T : unmanaged, IComponentStatic {
+    public struct StaticTypesStatic<T> where T : unmanaged, IConfigComponentStatic {
 
         public static void AOT() {
             default(EntityConfig).data.AOTStatic<T>();

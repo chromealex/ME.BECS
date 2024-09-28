@@ -110,6 +110,7 @@ namespace ME.BECS.Editor {
                 }
                 var tooltipButton = new Label("?");
                 tooltipButton.AddToClassList("tooltip");
+                tooltipButton.style.flexGrow = new StyleFloat(0f);
                 container.Add(tooltipElement);
                 container.Add(tooltipButton);
                 return tooltipElement;
@@ -206,6 +207,111 @@ namespace ME.BECS.Editor {
             container.Add(nameField);
             
             DrawTooltip(container, property);
+
+        }
+
+        public static System.Collections.Generic.List<VisualElement> DrawAspects(VisualElement root, System.Collections.Generic.IEnumerable<System.Type> aspects) {
+
+            var result = new System.Collections.Generic.List<VisualElement>();
+            foreach (var aspect in aspects) {
+                
+                var label = EditorUtils.GetComponentName(aspect);
+                var fields = EditorUtils.GetAspectTypes(aspect);
+
+                var fieldContainer = new VisualElement();
+                fieldContainer.AddToClassList("field");
+
+                var labelField = new Foldout();
+                fieldContainer.Add(labelField);
+                labelField.text = label;
+                labelField.AddToClassList("aspect-component-container-field");
+
+                {
+                    var header = new VisualElement();
+                    header.AddToClassList("header");
+                    {
+                        var column = new VisualElement();
+                        column.AddToClassList("first-column");
+                        var headerLabel = new Label("Component Name");
+                        headerLabel.AddToClassList("main-label");
+                        column.Add(headerLabel);
+                        header.Add(column);
+                    }
+                    {
+                        var column = new VisualElement();
+                        column.AddToClassList("column");
+                        var headerLabel = new Label("Query");
+                        column.Add(headerLabel);
+                        header.Add(column);
+                    }
+                    {
+                        var column = new VisualElement();
+                        column.AddToClassList("column");
+                        var headerLabel = new Label("Auto");
+                        column.Add(headerLabel);
+                        header.Add(column);
+                    }
+                    labelField.Add(header);
+                }
+
+                for (var index = 0; index < fields.Length; ++index) {
+
+                    var field = fields[index];
+                    var labelFieldItem = new VisualElement();
+                    labelFieldItem.AddToClassList("aspect-component-container");
+                    if (index == fields.Length - 1) labelFieldItem.AddToClassList("last");
+                    var componentLabel = EditorUtils.GetComponentName(field.fieldType);
+                    {
+                        var column = new VisualElement();
+                        column.AddToClassList("first-column");
+                        var mainLabel = new Label(componentLabel);
+                        mainLabel.AddToClassList("main-label");
+                        column.Add(mainLabel);
+                        labelFieldItem.Add(column);
+                    }
+
+                    {
+                        var column = new VisualElement();
+                        column.AddToClassList("column");
+                        var text = $"When you use <b>{label}</b> aspect in query, <b>{componentLabel}</b> will be <b>skipped</b>.";
+                        if (field.required == true) {
+                            text = $"When you use <b>{label}</b> aspect in query, <b>{componentLabel}</b> will be <b>used</b> for this operation.";
+                        }
+
+                        EditorUIUtils.DrawTooltip(column, text, new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                        var toggle = new Toggle();
+                        toggle.SetEnabled(false);
+                        toggle.value = field.required;
+                        column.Add(toggle);
+                        labelFieldItem.Add(column);
+                    }
+
+                    {
+                        var column = new VisualElement();
+                        column.AddToClassList("column");
+                        var text = $"Some of aspect methods may create <b>{componentLabel}</b> at runtime.";
+                        if (field.config == true) {
+                            text = $"<b>{componentLabel}</b> automatically added onto entity while applying <b>{label}</b> aspect.";
+                        }
+
+                        EditorUIUtils.DrawTooltip(column, text, new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                        var toggle = new Toggle();
+                        toggle.SetEnabled(false);
+                        toggle.value = field.config;
+                        column.Add(toggle);
+                        labelFieldItem.Add(column);
+                    }
+
+                    labelField.Add(labelFieldItem);
+
+                }
+
+                root.Add(fieldContainer);
+                result.Add(fieldContainer);
+
+            }
+
+            return result;
 
         }
 

@@ -32,7 +32,7 @@ namespace ME.BECS.Bullets {
 
     }
 
-    public struct BulletViewPoint : IComponentStatic {
+    public struct BulletViewPoint : IConfigComponentStatic {
 
         public float3 position;
         public quaternion rotation;
