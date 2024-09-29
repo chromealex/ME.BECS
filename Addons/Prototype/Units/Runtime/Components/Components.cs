@@ -20,6 +20,7 @@ namespace ME.BECS.Units {
 
     }
 
+    [EditorComment("Current unit agent values")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
     public struct NavAgentRuntimeComponent : IComponent {
@@ -74,6 +75,7 @@ namespace ME.BECS.Units {
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct PathFollowComponent : IComponent {}
 
+    [EditorComment("Current unit health")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitHealthComponent : IConfigComponent {
  
@@ -99,21 +101,23 @@ namespace ME.BECS.Units {
         
     }
 
+    [EditorComment("Contains units list and chain targets")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct CommandGroupComponent : IComponent {
 
+        public LockSpinner lockIndex;
         public ListAuto<Ent> units;
         public MemArrayAuto<Ent> targets;
         public Ent nextChainTarget;
         public Ent prevChainTarget;
         public uint volume;
-        public LockSpinner lockIndex;
 
     }
     
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct IsCommandGroupDirty : IComponent {}
     
+    [EditorComment("Added as one-shot component on damage took")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct DamageTookComponent : IComponent {
 
@@ -121,9 +125,11 @@ namespace ME.BECS.Units {
 
     }
     
+    [EditorComment("Is unit on hold?")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitHoldComponent : IComponent {}
-
+    
+    [EditorComment("Contains units list")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct SelectionGroupComponent : IComponent {
 

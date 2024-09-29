@@ -11,6 +11,7 @@ namespace ME.BECS.Transforms {
 
     }
 
+    [EditorComment("Current calculated matrix")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     [LAYOUT(LayoutKind.Explicit, Size = 68)]
     public struct WorldMatrixComponent : IComponent {
@@ -22,6 +23,7 @@ namespace ME.BECS.Transforms {
         
     }
 
+    [EditorComment("Current local rotation")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct LocalRotationComponent : IConfigComponent {
 
@@ -30,6 +32,7 @@ namespace ME.BECS.Transforms {
         
     }
 
+    [EditorComment("Current local position")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     [LAYOUT(LayoutKind.Explicit, Size = sizeof(float) * 4)]
     public struct LocalPositionComponent : IConfigComponent {
@@ -39,6 +42,7 @@ namespace ME.BECS.Transforms {
 
     }
 
+    [EditorComment("Current local scale")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     [LAYOUT(LayoutKind.Explicit, Size = sizeof(float) * 4)]
     public struct LocalScaleComponent : IConfigComponent {
@@ -49,6 +53,7 @@ namespace ME.BECS.Transforms {
 
     }
     
+    [EditorComment("Contains parent entity")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct ParentComponent : IComponent {
 
@@ -56,6 +61,7 @@ namespace ME.BECS.Transforms {
 
     }
     
+    [EditorComment("Contains list of children entities")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct ChildrenComponent : IComponent {
 
@@ -63,6 +69,7 @@ namespace ME.BECS.Transforms {
 
     }
 
+    [EditorComment("Is root entity?")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct IsFirstLevelComponent : IComponent {
 
