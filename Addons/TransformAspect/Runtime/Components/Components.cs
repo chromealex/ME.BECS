@@ -12,11 +12,14 @@ namespace ME.BECS.Transforms {
     }
 
     [ComponentGroup(typeof(TransformComponentGroup))]
+    [LAYOUT(LayoutKind.Explicit, Size = 68)]
     public struct WorldMatrixComponent : IComponent {
 
-        public float4x4 value;
+        [FieldOffset(0)]
         public byte calculated;
-
+        [FieldOffset(4)]
+        public float4x4 value;
+        
     }
 
     [ComponentGroup(typeof(TransformComponentGroup))]
@@ -28,10 +31,11 @@ namespace ME.BECS.Transforms {
     }
 
     [ComponentGroup(typeof(TransformComponentGroup))]
+    [LAYOUT(LayoutKind.Explicit, Size = sizeof(float) * 4)]
     public struct LocalPositionComponent : IConfigComponent {
 
+        [FieldOffset(0)]
         public float3 value;
-        private float _;
 
     }
 

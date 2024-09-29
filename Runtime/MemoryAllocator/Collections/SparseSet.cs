@@ -17,8 +17,8 @@ namespace ME.BECS {
 
             this.isCreated = true;
             this.denseSize = 0u;
-            this.dense = new MemArray<uint>(ref allocator, size, growFactor: 2);
-            this.sparse = new MemArray<uint>(ref allocator, size, growFactor: 2);
+            this.dense = new MemArray<uint>(ref allocator, size);
+            this.sparse = new MemArray<uint>(ref allocator, size);
             this.lockIndex = default;
 
         }
@@ -27,8 +27,8 @@ namespace ME.BECS {
         private void Validate(ref MemoryAllocator allocator, uint newSize) {
 
             if (newSize > this.dense.Length) {
-                this.dense.Resize(ref allocator, newSize);
-                this.sparse.Resize(ref allocator, newSize);
+                this.dense.Resize(ref allocator, newSize, 2);
+                this.sparse.Resize(ref allocator, newSize, 2);
             }
 
         }

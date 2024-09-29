@@ -165,7 +165,7 @@ namespace ME.BECS {
         public static Batches Create(State* state, uint entitiesCapacity) {
             var batches = new Batches() {
                 items = new MemArrayThreadCacheLine<ThreadItem>(ref state->allocator),
-                arr = new MemArray<BatchItem>(ref state->allocator, entitiesCapacity, growFactor: 2),
+                arr = new MemArray<BatchItem>(ref state->allocator, entitiesCapacity),
                 lockReadWrite = ReadWriteSpinner.Create(state),
                 openIndex = 0u,
                 workingLock = ReadWriteSpinner.Create(state),
@@ -384,7 +384,7 @@ namespace ME.BECS {
             if (entId >= batches.arr.Length) {
                 batches.lockReadWrite.WriteBegin(state);
                 if (entId >= batches.arr.Length) {
-                    batches.arr.Resize(ref state->allocator, entId + 1u);
+                    batches.arr.Resize(ref state->allocator, entId + 1u, 2);
                 }
                 batches.lockReadWrite.WriteEnd();
             }

@@ -28,7 +28,7 @@ namespace ME.BECS {
                     componentsCount = componentsCount,
                     components = new UIntHashSet(ref state->allocator, componentsCount),
                     componentBits = new BitArray(ref state->allocator, StaticTypes.counter + 1u),
-                    entitiesList = new UIntListHash(ref state->allocator, entitiesCapacityPerArchetype, 2),
+                    entitiesList = new UIntListHash(ref state->allocator, entitiesCapacityPerArchetype),
                 };
             }
 
@@ -249,7 +249,7 @@ namespace ME.BECS {
             }
             MemoryAllocator.ValidateConsistency(ref state->allocator);
             {
-                this.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u);
+                this.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u, 2);
                 ref var arr = ref this.componentsCountToArchetypeIds[in allocator, archetype.componentsCount];
                 if (arr.isCreated == false) arr = new UIntDictionary<List<uint>>(ref allocator, 1u);
                 var hash = archetype.components.hash;
@@ -270,8 +270,8 @@ namespace ME.BECS {
         public void AddEntity(State* state, UnsafeList<Ent>* list, uint maxId) {
 
             JobUtils.Lock(ref this.lockIndex);
-            this.entToArchetypeIdx.Resize(ref state->allocator, maxId + 1u);
-            this.entToIdxInArchetype.Resize(ref state->allocator, maxId + 1u);
+            this.entToArchetypeIdx.Resize(ref state->allocator, maxId + 1u, 2);
+            this.entToIdxInArchetype.Resize(ref state->allocator, maxId + 1u, 2);
 
             for (int i = 0; i < list->Length; ++i) {
                 var ent = list->ElementAt(i);
@@ -289,8 +289,8 @@ namespace ME.BECS {
             JobUtils.Lock(ref this.lockIndex);
             CheckEntityTimes(state, ent.id, 0);
             CheckNoEntity(state, ent.id, 0);
-            this.entToArchetypeIdx.Resize(ref state->allocator, ent.id + 1u);
-            this.entToIdxInArchetype.Resize(ref state->allocator, ent.id + 1u);
+            this.entToArchetypeIdx.Resize(ref state->allocator, ent.id + 1u, 2);
+            this.entToIdxInArchetype.Resize(ref state->allocator, ent.id + 1u, 2);
             this.list[in state->allocator, 0].AddEntity(state, ent.id);
             this.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
             CheckEntityTimes(state, ent.id, 1);
@@ -343,9 +343,9 @@ namespace ME.BECS {
             if (capacity == 0u) capacity = 1u;
             var archs = new Archetypes() {
                 list = new List<Archetype>(ref state->allocator, capacity),
-                entToArchetypeIdx = new MemArray<uint>(ref state->allocator, capacity, growFactor: 2),
-                entToIdxInArchetype = new MemArray<uint>(ref state->allocator, capacity, growFactor: 2),
-                componentsCountToArchetypeIds = new MemArray<UIntDictionary<List<uint>>>(ref state->allocator, capacity, growFactor: 2),
+                entToArchetypeIdx = new MemArray<uint>(ref state->allocator, capacity),
+                entToIdxInArchetype = new MemArray<uint>(ref state->allocator, capacity),
+                componentsCountToArchetypeIds = new MemArray<UIntDictionary<List<uint>>>(ref state->allocator, capacity),
                 archetypesWithTypeIdBits = new MemArray<BitArray>(ref state->allocator, StaticTypes.counter + 1u),
                 allArchetypes = new List<uint>(ref state->allocator, capacity),
                 allArchetypesForQuery = new BitArray(ref state->allocator, capacity),

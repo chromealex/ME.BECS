@@ -5,22 +5,23 @@ namespace ME.BECS {
     using static Cuts;
     using Unity.Mathematics;
 
-    [StructLayout(LayoutKind.Sequential)]
+    #if USE_CACHE_PTR
+    [StructLayout(LayoutKind.Explicit, Size = 56)]
+    #else
+    [StructLayout(LayoutKind.Explicit, Size = 48)]
+    #endif
     public unsafe struct DataDenseSet {
 
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Explicit, Size = 16)]
         public struct Page {
 
             // [ushort-gen][byte-state][byte-align][data]
+            [FieldOffset(0)]
             public MemPtr entIdToData;
+            [FieldOffset(8)]
             public LockSpinner lockSpinner;
+            [FieldOffset(12)]
             public byte isCreated;
-            /// <summary>
-            /// Manual alignment
-            /// </summary>
-            public byte _r1;
-            public byte _r2;
-            public byte _r3;
             public bool IsCreated => this.isCreated == 1;
 
             [INLINE(256)]
@@ -54,10 +55,13 @@ namespace ME.BECS {
 
         private const uint ENTITIES_PER_PAGE = 64u;
 
-        private MemArray<Page> dataPages;
-        private readonly uint dataSize;
+        [FieldOffset(0)]
         private ReadWriteSpinner readWriteSpinner;
-        
+        [FieldOffset(24)]
+        private readonly uint dataSize;
+        [FieldOffset(30)]
+        private MemArray<Page> dataPages;
+
         [INLINE(256)]
         private static uint _sizeData(uint capacity) {
             return (uint)math.ceil(capacity / (float)ENTITIES_PER_PAGE);
@@ -108,7 +112,7 @@ namespace ME.BECS {
         public DataDenseSet(State* state, uint dataSize, uint entitiesCapacity) {
 
             this.dataSize = dataSize;
-            this.dataPages = new MemArray<Page>(ref state->allocator, _sizeData(entitiesCapacity), growFactor: 2);
+            this.dataPages = new MemArray<Page>(ref state->allocator, _sizeData(entitiesCapacity));
             this.readWriteSpinner = ReadWriteSpinner.Create(state);
             MemoryAllocator.ValidateConsistency(ref state->allocator);
 
@@ -136,7 +140,7 @@ namespace ME.BECS {
             if (newSize > this.dataPages.Length) {
                 this.readWriteSpinner.WriteBegin(state);
                 if (newSize > this.dataPages.Length) {
-                    this.dataPages.Resize(ref state->allocator, newSize);
+                    this.dataPages.Resize(ref state->allocator, newSize, 2);
                 }
                 this.readWriteSpinner.WriteEnd();
             }

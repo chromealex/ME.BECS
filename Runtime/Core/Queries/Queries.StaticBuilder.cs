@@ -487,7 +487,7 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             {
-                this.queryData.Resize(ref state->allocator, this.nextId + 1u);
+                this.queryData.Resize(ref state->allocator, this.nextId + 1u, 2);
             }
 
             var data = new QueryDataStatic(in builder);

@@ -4,16 +4,6 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
 
-    public interface IComponentShared : IComponent {
-
-        /// <summary>
-        /// Returns static hash of instance
-        /// </summary>
-        /// <returns></returns>
-        uint GetHash() => throw new System.NotImplementedException();
-
-    }
-
     /// <summary>
     /// TODO: Locks improvement required
     /// </summary>
@@ -39,12 +29,6 @@ namespace ME.BECS {
             }
 
         }
-
-        // hash => SharedComponentStorage<T>
-        internal UIntDictionary<MemAllocatorPtr> sharedData;
-        // entityId => [typeId => hash]
-        internal MemArray<MemArray<uint>> entityIdToHash;
-        public LockSpinner lockSharedIndex;
 
         [INLINE(256)]
         private Components InitializeSharedComponents(State* state, in StateProperties stateProperties) {
@@ -100,9 +84,9 @@ namespace ME.BECS {
         [INLINE(256)]
         private static void SetSharedHash(State* state, ref Components components, uint entId, uint typeId, uint hash) {
             
-            if (entId >= components.entityIdToHash.Length) components.entityIdToHash.Resize(ref state->allocator, entId + 1u);
+            if (entId >= components.entityIdToHash.Length) components.entityIdToHash.Resize(ref state->allocator, entId + 1u, 2);
             ref var typeIdToHash = ref components.entityIdToHash[state, entId];
-            if (typeId >= typeIdToHash.Length) typeIdToHash.Resize(ref state->allocator, typeId + 1u);
+            if (typeId >= typeIdToHash.Length) typeIdToHash.Resize(ref state->allocator, typeId + 1u, 2);
             typeIdToHash[state, typeId] = hash;
 
         }
@@ -110,7 +94,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool SetShared<T>(State* state, in Ent ent, in T data, uint hash = 0u) where T : unmanaged, IComponentShared {
 
-            var typeId = StaticTypes<T>.typeId;
             // No custom hash provided - use data hash
             if (hash == Components.COMPONENT_SHARED_DEFAULT_HASH) {
                 hash = GetDataSharedHash(in data);
@@ -232,7 +215,7 @@ namespace ME.BECS {
 
             state->components.lockSharedIndex.Lock();
             isNew = false;
-            if (ent.id >= this.entityIdToHash.Length) this.entityIdToHash.Resize(ref state->allocator, ent.id + 1u);
+            if (ent.id >= this.entityIdToHash.Length) this.entityIdToHash.Resize(ref state->allocator, ent.id + 1u, 2);
             hash = GetSharedHash(default(T), state, in this, ent.id, hash);
             
             // get shared storage for component by hash

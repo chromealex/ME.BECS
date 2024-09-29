@@ -16,9 +16,9 @@ namespace ME.BECS {
         public readonly uint Count => this.size;
 
         [INLINE(256)]
-        public JobThreadStack(ref MemoryAllocator allocator, uint capacity, byte growFactor = 1) {
+        public JobThreadStack(ref MemoryAllocator allocator, uint capacity) {
             this = default;
-            this.array = new MemArray<T>(ref allocator, capacity, growFactor: growFactor);
+            this.array = new MemArray<T>(ref allocator, capacity);
             //this.bits = new BitArray(ref allocator, capacity);
         }
 
@@ -77,7 +77,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Push(ref MemoryAllocator allocator, T item) {
             if (this.size == this.array.Length) {
-                this.array.Resize(ref allocator, this.array.Length == 0 ? JobThreadStack<T>.DEFAULT_CAPACITY : 2 * this.array.Length);
+                this.array.Resize(ref allocator, this.array.Length == 0 ? JobThreadStack<T>.DEFAULT_CAPACITY : 2 * this.array.Length, 2);
                 //this.bits.Resize(ref allocator, this.bits.Length == 0 ? JobThreadStack<T>.DEFAULT_CAPACITY : 2 * this.bits.Length);
             }
 

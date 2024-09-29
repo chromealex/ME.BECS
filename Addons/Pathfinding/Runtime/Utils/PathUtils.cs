@@ -130,7 +130,7 @@ namespace ME.BECS.Pathfinding {
                 var unit = unitCommandGroup.units[i];
                 var aspect = unit.GetAspect<UnitAspect>();
                 aspect.IsPathFollow = true;
-                aspect.collideWithEnd = false;
+                aspect.collideWithEnd = 0;
             }
             
             unitCommandGroup.Unlock();

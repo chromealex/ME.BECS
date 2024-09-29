@@ -198,8 +198,7 @@ namespace ME.BECS {
         private bool EnsureCapacity(in Ent ent, uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            if (this.arr.IsCreated == false) this.arr.growFactor = 1;
-            return this.arr.Resize(capacity, ClearOptions.UninitializedMemory);
+            return this.arr.Resize(capacity, 2, ClearOptions.UninitializedMemory);
             
         }
         

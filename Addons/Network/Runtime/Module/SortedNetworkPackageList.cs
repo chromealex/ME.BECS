@@ -132,7 +132,7 @@ namespace ME.BECS.Network {
 
             E.IS_CREATED(this);
             capacity = Helpers.NextPot(capacity);
-            return this.arr.Resize(ref allocator, capacity, ClearOptions.UninitializedMemory);
+            return this.arr.Resize(ref allocator, capacity, 2, ClearOptions.UninitializedMemory);
 
         }
 
@@ -242,7 +242,7 @@ namespace ME.BECS.Network {
 
             }
 
-            this.arr.Resize(ref allocator, newLength, options);
+            this.arr.Resize(ref allocator, newLength, 2, options);
             this.Count = newLength;
             return true;
 

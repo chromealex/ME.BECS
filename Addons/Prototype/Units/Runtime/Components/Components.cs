@@ -1,6 +1,7 @@
 namespace ME.BECS.Units {
     
     using Unity.Mathematics;
+    using System.Runtime.InteropServices;
 
     public struct UnitComponentGroup {
         
@@ -20,21 +21,34 @@ namespace ME.BECS.Units {
     }
 
     [ComponentGroup(typeof(UnitComponentGroup))]
+    [StructLayout(LayoutKind.Explicit)]
     public struct NavAgentRuntimeComponent : IComponent {
 
+        [FieldOffset(0)]
         public AgentType properties;
 
+        [FieldOffset(20)]
         public float speed;
+        [FieldOffset(24)]
         public float3 collisionDirection;
+        [FieldOffset(24 + 12)]
         public float3 avoidanceVector;
+        [FieldOffset(24 + 12 + 12)]
         public float3 separationVector;
+        [FieldOffset(24 + 12 + 12 + 12)]
         public float3 alignmentVector;
+        [FieldOffset(24 + 12 + 12 + 12 + 12)]
         public float3 cohesionVector;
+        [FieldOffset(24 + 12 + 12 + 12 + 12 + 12)]
         public float3 desiredDirection;
+        [FieldOffset(24 + 12 + 12 + 12 + 12 + 12 + 12)]
         public float3 randomVector;
-        public bool collideWithEnd;
+        [FieldOffset(24 + 12 + 12 + 12 + 12 + 12 + 12 + 12)]
         public float3 velocity;
+        [FieldOffset(24 + 12 + 12 + 12 + 12 + 12 + 12 + 12 + 12)]
+        public int collideWithEnd;
 
+        [FieldOffset(24 + 12 + 12 + 12 + 12 + 12 + 12 + 12 + 12 + 4)]
         public Ent attackSensor;
 
     }

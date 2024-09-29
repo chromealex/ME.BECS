@@ -138,7 +138,7 @@ namespace ME.BECS.Units {
                         {
                             // set the flag
                             if (isGroupEquals == true) {
-                                unit.collideWithEnd = true;
+                                unit.collideWithEnd = 1;
                             }
                         }
                     }

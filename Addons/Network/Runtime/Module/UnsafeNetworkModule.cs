@@ -152,7 +152,7 @@ namespace ME.BECS.Network {
 
                 this.state = state;
                 this.properties = properties;
-                this.methods = new MemArray<Method>(ref state->allocator, properties.capacity, growFactor: 2);
+                this.methods = new MemArray<Method>(ref state->allocator, properties.capacity);
                 this.methodPtrs = new EquatableDictionary<System.IntPtr, ushort>(ref state->allocator, properties.capacity);
                 this.index = 0;
 
@@ -180,7 +180,7 @@ namespace ME.BECS.Network {
                 
                 var idx = this.index++;
                 id = (ushort)(idx + 1);
-                if (idx >= this.methods.Length) this.methods.Resize(ref this.state->allocator, id);
+                if (idx >= this.methods.Length) this.methods.Resize(ref this.state->allocator, id, 2);
 
                 var targetHandle = GCHandle.Alloc(method.Target);
                 var handle = GCHandle.Alloc(method);

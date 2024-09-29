@@ -8,6 +8,7 @@ namespace ME.BECS.FogOfWar {
         
     }
 
+    [EditorComment("Main runtime component to store nodes")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarComponent : IComponent {
 
@@ -16,6 +17,7 @@ namespace ME.BECS.FogOfWar {
 
     }
 
+    [EditorComment("World settings")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarStaticComponent : IComponent {
 
@@ -26,12 +28,15 @@ namespace ME.BECS.FogOfWar {
 
     }
 
+    [EditorComment("Tag indicates shadow copy for the entity")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarHasShadowCopyComponent : IComponent {}
 
+    [EditorComment("Tag indicates shadow copy creation")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarShadowCopyRequiredComponent : IComponent {}
 
+    [EditorComment("Stores links to original entity")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarShadowCopyComponent : IComponent {
 
@@ -40,6 +45,7 @@ namespace ME.BECS.FogOfWar {
 
     }
 
+    [EditorComment("View which represents shadow copy view")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct UnitShadowCopyViewComponent : IConfigComponentStatic, IConfigInitialize {
 

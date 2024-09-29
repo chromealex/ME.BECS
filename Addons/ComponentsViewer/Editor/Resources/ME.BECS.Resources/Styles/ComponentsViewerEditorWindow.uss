@@ -15,10 +15,7 @@
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
     margin: 0px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-left: 5px;
-    padding-right: 5px;
+    padding: 4px;
 }
 
 .main-container .unity-toggle {
@@ -41,7 +38,7 @@
 }
 
 .container {
-    padding: 10px;
+    padding: 0px;
     font-size: 12px;
 }
 
@@ -100,4 +97,46 @@
     margin: 0px;
     width: 100%;
     height: 100%;
+}
+
+.fields-container .aspect-component-container-field .column {
+    width: 60px;
+    min-width: 60px;
+}
+
+.fields-container .aspect-component-container-field .column.actions {
+    width: 80px;
+    min-width: 80px;
+}
+
+.tooltip-table .tooltip-table-tr {
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    flex-direction: row;
+    height: 24px;
+    max-height: 24px;
+}
+.tooltip-table .tooltip-table-tr-last {
+    border-bottom-width: 0px;
+}
+.tooltip-table .tooltip-table-field,
+.tooltip-table .tooltip-table-size {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.tooltip-table .tooltip-table-field {
+    flex-grow: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    -unity-text-align: middle-left;
+    max-width: 122px;
+    padding-left: 0px;
+}
+.tooltip-table .tooltip-table-size {
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.2);
+    min-width: 60px;
+    width: 60px;
 }

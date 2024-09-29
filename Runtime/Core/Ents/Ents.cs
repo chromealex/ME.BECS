@@ -68,14 +68,14 @@ namespace ME.BECS {
             if (entityCapacity == 0u) entityCapacity = 1u;
             
             var ents = new Ents() {
-                generations = new MemArray<ushort>(ref state->allocator, entityCapacity, growFactor: 2),
-                versions = new MemArray<uint>(ref state->allocator, entityCapacity, growFactor: 2),
-                seeds = new MemArray<uint>(ref state->allocator, entityCapacity, growFactor: 2),
-                versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u), growFactor: 2),
+                generations = new MemArray<ushort>(ref state->allocator, entityCapacity),
+                versions = new MemArray<uint>(ref state->allocator, entityCapacity),
+                seeds = new MemArray<uint>(ref state->allocator, entityCapacity),
+                versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u)),
                 aliveBits = new MemArray<bool>(ref state->allocator, entityCapacity),
-                free = new JobThreadStack<uint>(ref state->allocator, entityCapacity, growFactor: 2),
+                free = new JobThreadStack<uint>(ref state->allocator, entityCapacity),
                 destroyed = new List<uint>(ref state->allocator, entityCapacity),
-                locksPerEntity = new MemArray<LockSpinner>(ref state->allocator, entityCapacity, growFactor: 2),
+                locksPerEntity = new MemArray<LockSpinner>(ref state->allocator, entityCapacity),
                 readWriteSpinner = ReadWriteSpinner.Create(state),
             };
             //var ptr = (uint*)ents.free.GetUnsafePtr(in state->allocator);
@@ -120,11 +120,11 @@ namespace ME.BECS {
             this.readWriteSpinner.WriteBegin(state);
             
             // Resize by maxId
-            this.generations.Resize(ref state->allocator, maxId + 1u);
-            this.versionsGroup.Resize(ref state->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
-            this.versions.Resize(ref state->allocator, maxId + 1u);
-            this.seeds.Resize(ref state->allocator, maxId + 1u);
-            this.aliveBits.Resize(ref state->allocator, maxId + 1u);
+            this.generations.Resize(ref state->allocator, maxId + 1u, 2);
+            this.versionsGroup.Resize(ref state->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
+            this.versions.Resize(ref state->allocator, maxId + 1u, 2);
+            this.seeds.Resize(ref state->allocator, maxId + 1u, 2);
+            this.aliveBits.Resize(ref state->allocator, maxId + 1u, 1);
             
             // Apply list
             for (int i = 0; i < list->Length; ++i) {
@@ -197,15 +197,15 @@ namespace ME.BECS {
                 var ent = new Ent(idx - 1u, gen, worldId);
                 idx = ent.id;
                 this.readWriteSpinner.WriteBegin(state);
-                this.locksPerEntity.Resize(ref state->allocator, idx + 1u);
-                this.generations.Resize(ref state->allocator, idx + 1u);
+                this.locksPerEntity.Resize(ref state->allocator, idx + 1u, 2);
+                this.generations.Resize(ref state->allocator, idx + 1u, 2);
                 this.generations[in state->allocator, idx] = gen;
-                this.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u));
-                this.versions.Resize(ref state->allocator, idx + 1u);
+                this.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
+                this.versions.Resize(ref state->allocator, idx + 1u, 2);
                 this.versions[in state->allocator, idx] = version;
-                this.seeds.Resize(ref state->allocator, idx + 1u);
+                this.seeds.Resize(ref state->allocator, idx + 1u, 2);
                 this.seeds[in state->allocator, idx] = idx;
-                this.aliveBits.Resize(ref state->allocator, idx + 1u);
+                this.aliveBits.Resize(ref state->allocator, idx + 1u, 1);
                 this.aliveBits[in state->allocator, idx] = true;
                 this.readWriteSpinner.WriteEnd();
                 return ent;

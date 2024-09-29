@@ -24,13 +24,13 @@ namespace ME.BECS.Editor.ComponentsViewer {
         
         private void LoadStyle() {
             if (styleSheetBase == null) {
-                styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/ComponentsViewerEditorWindow.uss");
+                styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
             }
             if (styleSheetTooltip == null) {
                 styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
             }
             if (styleSheet == null) {
-                styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
+                styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/ComponentsViewerEditorWindow.uss");
             }
         }
 
@@ -201,6 +201,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         {
                             var column = new VisualElement();
                             column.AddToClassList("column");
+                            column.AddToClassList("actions");
                             var headerLabel = new Label("Actions");
                             column.Add(headerLabel);
                             header.Add(column);
@@ -225,16 +226,16 @@ namespace ME.BECS.Editor.ComponentsViewer {
                             mainLabel.AddToClassList("main-label");
                             column.Add(mainLabel);
                             componentContainer.Add(column);
-                            var tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.editorComment);
+                            var tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.GetEditorComment());
                             column.RegisterCallback<ClickEvent>(x => {
                                 if (x.clickCount == 2) {
                                     ComponentMetadataEditorWindow.ShowWindow(column, component, () => {
                                         if (tooltip == null) {
-                                            tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.editorComment);
-                                        } else if (string.IsNullOrEmpty(component.editorComment) == true) {
-                                            tooltip.RemoveFromHierarchy();
+                                            tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.GetEditorComment());
+                                        } else if (string.IsNullOrEmpty(component.GetEditorComment()) == true) {
+                                            EditorUIUtils.RemoveTooltip(tooltip.parent);
                                         }
-                                        tooltip.text = component.editorComment;
+                                        tooltip.text = component.GetEditorComment();
                                         EditorUtils.SaveComponentGroups();
                                     });
                                 }
@@ -267,6 +268,35 @@ namespace ME.BECS.Editor.ComponentsViewer {
                             var size = System.Runtime.InteropServices.Marshal.SizeOf(component.type);
                             var lbl = new Label();
                             lbl.text = EditorUtils.BytesToString(size);
+                            var fields = component.GetFields();
+                            if (fields.Length > 0) {
+                                EditorUIUtils.DrawTooltip(column, () => {
+                                    var table = new VisualElement();
+                                    table.AddToClassList("tooltip-table");
+                                    for (var i = 0; i < fields.Length; ++i) {
+                                        var field = fields[i];
+                                        var tr = new VisualElement();
+                                        tr.AddToClassList("tooltip-table-tr");
+                                        if (i == fields.Length - 1) tr.AddToClassList("tooltip-table-tr-last");
+                                        table.Add(tr);
+                                        var fieldSize = 0;
+                                        if (field.FieldType.IsEnum == true) {
+                                            fieldSize = 4;
+                                        } else {
+                                            fieldSize = System.Runtime.InteropServices.Marshal.SizeOf(field.FieldType);
+                                        }
+
+                                        var lblField = new Label(field.Name);
+                                        lblField.AddToClassList("tooltip-table-field");
+                                        tr.Add(lblField);
+                                        var sizeField = new Label(EditorUtils.BytesToString(fieldSize));
+                                        sizeField.AddToClassList("tooltip-table-size");
+                                        tr.Add(sizeField);
+                                    }
+
+                                    return table;
+                                }, new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                            }
                             column.Add(lbl);
                             componentContainer.Add(column);
                         }
@@ -274,6 +304,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         {
                             var column = new VisualElement();
                             column.AddToClassList("column");
+                            column.AddToClassList("actions");
                             if (component.isBuiltIn == true) {
                                 var label = new Label("Built-in");
                                 column.Add(label);

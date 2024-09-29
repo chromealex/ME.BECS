@@ -67,7 +67,7 @@ namespace ME.BECS.Pathfinding {
                 }
                 
                 var dir = Graph.GetDirection(in this.world, pos, in path, out var complete);
-                if ((unit.collideWithEnd == true && PathUtils.HasArrived(in tr, in unit) == true) ||
+                if ((unit.collideWithEnd == 1 && PathUtils.HasArrived(in tr, in unit) == true) ||
                     (path.IsCreated == true && complete == true)) {
                     // complete path
                     unit.IsPathFollow = false;

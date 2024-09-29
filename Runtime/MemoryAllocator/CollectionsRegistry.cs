@@ -13,8 +13,8 @@ namespace ME.BECS {
         public static CollectionsRegistry Create(State* state, uint capacity) {
 
             return new CollectionsRegistry() {
-                list = new MemArray<List<MemPtr>>(ref state->allocator, capacity, growFactor: 2),
-                readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state->allocator, capacity, growFactor: 2),
+                list = new MemArray<List<MemPtr>>(ref state->allocator, capacity),
+                readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state->allocator, capacity),
                 readWriteSpinner = ReadWriteSpinner.Create(state),
             };
 
@@ -25,8 +25,8 @@ namespace ME.BECS {
             
             if (entId >= this.list.Length) {
                 this.readWriteSpinner.WriteBegin(state);
-                this.list.Resize(ref state->allocator, entId + 1u);
-                this.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u);
+                this.list.Resize(ref state->allocator, entId + 1u, 2);
+                this.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
                 this.readWriteSpinner.WriteEnd();
             }
             

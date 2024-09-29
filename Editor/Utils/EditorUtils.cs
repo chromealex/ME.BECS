@@ -17,6 +17,7 @@ namespace ME.BECS.Editor {
                 public System.Action<bool> onFileReady;
                 public bool isBuiltIn;
                 public string editorComment;
+                public string defaultEditorComment;
 
                 public ComponentMetaInfo(System.Type type) {
                     this.type = type;
@@ -31,6 +32,19 @@ namespace ME.BECS.Editor {
                             this.onFileReady?.Invoke(this.file != null);
                         });
                     }
+                }
+
+                public string GetEditorComment() {
+                    var result = string.IsNullOrEmpty(this.editorComment) == true ? this.defaultEditorComment : this.editorComment;
+                    if (string.IsNullOrEmpty(result) == false) {
+                        return $"<b>{this.type.Name}</b>\n{result}";
+                    }
+
+                    return string.Empty;
+                }
+
+                public FieldInfo[] GetFields() {
+                    return this.type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 }
 
                 public string GetTooltip() {
@@ -86,6 +100,7 @@ namespace ME.BECS.Editor {
                 this.components = EditorUtils.GetComponentsByGroup(this.type).Select(x => {
                     var meta = new ComponentMetaInfo(x);
                     meta.editorComment = data.components.FirstOrDefault(c => c.type == x.AssemblyQualifiedName)?.editorComment;
+                    meta.defaultEditorComment = x.GetCustomAttribute<EditorCommentAttribute>()?.comment;
                     return meta;
                 }).ToList();
 

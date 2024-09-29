@@ -1,4 +1,4 @@
-
+//#define USE_CACHE_PTR
 namespace ME.BECS {
     
     #if NO_INLINE
@@ -9,65 +9,74 @@ namespace ME.BECS {
     using Unity.Jobs;
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
-
-    public readonly unsafe struct CachedPtr<T> where T : unmanaged {
-
+    using System.Runtime.InteropServices;
+    
+    [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public readonly unsafe struct CachedPtr {
+        
         [NativeDisableUnsafePtrRestriction]
-        internal readonly T* cachedPtr;
+        internal readonly void* cachedPtr;
         internal readonly ushort version;
-
+        
         [INLINE(256)]
-        public CachedPtr(in MemoryAllocator allocator, T* ptr) {
+        public CachedPtr(in MemoryAllocator allocator, void* ptr) {
             this.version = allocator.version;
             this.cachedPtr = ptr;
         }
 
         [INLINE(256)]
-        public bool IsValid(in MemoryAllocator allocator) {
-            #if USE_CACHE_PTR
-            return this.version == allocator.version;
-            #else
-            return false;
-            #endif
+        public static bool IsValid(in CachedPtr cache, in MemoryAllocator allocator) {
+            return cache.version == allocator.version;
         }
         
         [INLINE(256)]
-        public T* ReadPtr(in MemoryAllocator allocator) {
-            if (allocator.version == this.version) {
-                return this.cachedPtr;
+        public static T* ReadPtr<T>(in CachedPtr cache, in MemoryAllocator allocator) where T : unmanaged {
+            if (allocator.version == cache.version) {
+                return (T*)cache.cachedPtr;
             }
             return null;
         }
 
         [INLINE(256)]
-        public void* ReadPtr(in MemoryAllocator allocator, in MemPtr arrPtr) {
-            #if USE_CACHE_PTR
-            if (allocator.version == this.version) {
-                return this.cachedPtr;
+        public static void* ReadPtr(in CachedPtr cache, in MemoryAllocator allocator, in MemPtr arrPtr) {
+            if (allocator.version == cache.version) {
+                return cache.cachedPtr;
             }
-            #endif
             return allocator.GetUnsafePtr(in arrPtr);
         }
 
         [INLINE(256)]
-        public ref T Read(in MemoryAllocator allocator, MemPtr arrPtr, int index) {
-            #if USE_CACHE_PTR
-            if (allocator.version == this.version) {
-                return ref *(this.cachedPtr + index);
+        public static ref T Read<T>(CachedPtr cache, in MemoryAllocator allocator, MemPtr arrPtr, int index) where T : unmanaged {
+            if (allocator.version == cache.version) {
+                return ref *((T*)cache.cachedPtr + index);
             }
-            #endif
             return ref allocator.RefArray<T>(arrPtr, index);
         }
 
         [INLINE(256)]
-        public ref T Read(in MemoryAllocator allocator, MemPtr arrPtr, uint index) {
-            #if USE_CACHE_PTR
-            if (allocator.version == this.version) {
-                return ref *(this.cachedPtr + index);
+        public static ref T Read<T>(CachedPtr cache, in MemoryAllocator allocator, MemPtr arrPtr, uint index) where T : unmanaged {
+            if (allocator.version == cache.version) {
+                return ref *((T*)cache.cachedPtr + index);
             }
-            #endif
             return ref allocator.RefArray<T>(arrPtr, index);
         }
+
+    }
+
+    [StructLayout(LayoutKind.Sequential, Size = MemArrayData.SIZE)]
+    public struct MemArrayData {
+
+        #if USE_CACHE_PTR
+        public const int SIZE = 24;
+        #else
+        public const int SIZE = 12;
+        #endif
+
+        public MemPtr arrPtr;
+        public uint Length;
+        #if USE_CACHE_PTR
+        public CachedPtr cachedPtr;
+        #endif
 
     }
 
@@ -75,23 +84,23 @@ namespace ME.BECS {
     public unsafe struct MemArray<T> : IIsCreated where T : unmanaged {
 
         public static readonly MemArray<T> Empty = new MemArray<T>() {
-            arrPtr = MemPtr.Invalid,
-            Length = 0,
-            growFactor = 0,
+            data = new MemArrayData() {
+                arrPtr = MemPtr.Invalid,
+                Length = 0,
+            },
         };
         
-        public CachedPtr<T> cachedPtr;
-        public ushort growFactor;
-        public MemPtr arrPtr;
-        public uint Length;
+        public MemArrayData data;
+        public readonly uint Length => this.data.Length;
+        public readonly MemPtr arrPtr => this.data.arrPtr;
 
         public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.arrPtr.IsValid();
+            get => this.data.arrPtr.IsValid();
         }
 
         [INLINE(256)]
-        public MemArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, ushort growFactor = 1) {
+        public MemArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (length == 0u) {
                 this = MemArray<T>.Empty;
@@ -99,23 +108,23 @@ namespace ME.BECS {
             }
 
             this = default;
-            this.cachedPtr = default;
             var memPtr = allocator.AllocArray(length, out T* ptr);
-            this.cachedPtr = new CachedPtr<T>(in allocator, ptr);
-            this.Length = length;
-            this.growFactor = growFactor;
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = new CachedPtr(in allocator, ptr);
+            #endif
+            this.data.Length = length;
             
             if (clearOptions == ClearOptions.ClearMemory) {
                 var size = TSize<T>.size;
                 allocator.MemClear(memPtr, 0u, length * size);
             }
             
-            this.arrPtr = memPtr;
+            this.data.arrPtr = memPtr;
 
         }
 
         [INLINE(256)]
-        public MemArray(ref MemoryAllocator allocator, uint elementSize, uint length, ClearOptions clearOptions, ushort growFactor = 1) {
+        public MemArray(ref MemoryAllocator allocator, uint elementSize, uint length, ClearOptions clearOptions) {
 
             if (length == 0u) {
                 this = MemArray<T>.Empty;
@@ -123,11 +132,11 @@ namespace ME.BECS {
             }
 
             this = default;
-            this.cachedPtr = default;
-            this.arrPtr = allocator.Alloc(elementSize * length, out var tPtr);
-            this.cachedPtr = new CachedPtr<T>(in allocator, (T*)tPtr);
-            this.Length = length;
-            this.growFactor = growFactor;
+            this.data.arrPtr = allocator.Alloc(elementSize * length, out var tPtr);
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = new CachedPtr(in allocator, (T*)tPtr);
+            #endif
+            this.data.Length = length;
             
             if (clearOptions == ClearOptions.ClearMemory) {
                 this.Clear(ref allocator);
@@ -142,11 +151,12 @@ namespace ME.BECS {
                 this = MemArray<T>.Empty;
                 return;
             }
-
-            this.cachedPtr = default;
-            this.Length = arr.Length;
-            this.growFactor = arr.growFactor;
-            this.arrPtr = allocator.AllocArray<T>(arr.Length);
+            
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = default;
+            #endif
+            this.data.Length = arr.Length;
+            this.data.arrPtr = allocator.AllocArray<T>(arr.Length);
             NativeArrayUtils.CopyNoChecks(ref allocator, in arr, 0u, ref this, 0u, arr.Length);
 
         }
@@ -159,22 +169,24 @@ namespace ME.BECS {
                 return;
             }
 
-            this.cachedPtr = default;
-            this.Length = arr.Length;
-            this.growFactor = 1;
-            this.arrPtr = allocator.AllocArray<T>(arr.Length, out var ptr);
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = default;
+            #endif
+            this.data.Length = arr.Length;
+            this.data.arrPtr = allocator.AllocArray<T>(arr.Length, out var ptr);
             var size = TSize<T>.size;
             _memcpy(arr.ptr, ptr, this.Length * size);
             
         }
 
         [INLINE(256)]
-        public MemArray(MemPtr ptr, uint length, ushort growFactor) {
+        public MemArray(MemPtr ptr, uint length) {
 
-            this.arrPtr = ptr;
-            this.Length = length;
-            this.growFactor = growFactor;
-            this.cachedPtr = default;
+            this.data.arrPtr = ptr;
+            this.data.Length = length;
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = default;
+            #endif
 
         }
 
@@ -182,14 +194,14 @@ namespace ME.BECS {
         public readonly ref U As<U>(in MemoryAllocator allocator, uint index) where U : unmanaged {
             E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
-            return ref allocator.RefArray<U>(this.arrPtr, index);
+            return ref allocator.RefArray<U>(this.data.arrPtr, index);
         }
         
         [INLINE(256)]
         public void ReplaceWith(ref MemoryAllocator allocator, in MemArray<T> other) {
             
             E.IS_CREATED(this);
-            if (other.arrPtr == this.arrPtr) {
+            if (other.data.arrPtr == this.data.arrPtr) {
                 return;
             }
             
@@ -201,13 +213,13 @@ namespace ME.BECS {
         [INLINE(256)]
         public void CopyFrom(ref MemoryAllocator allocator, in MemArray<T> other) {
 
-            if (other.arrPtr == this.arrPtr) return;
-            if (this.arrPtr.IsValid() == false && other.arrPtr.IsValid() == false) return;
-            if (this.arrPtr.IsValid() == true && other.arrPtr.IsValid() == false) {
+            if (other.data.arrPtr == this.data.arrPtr) return;
+            if (this.data.arrPtr.IsValid() == false && other.data.arrPtr.IsValid() == false) return;
+            if (this.data.arrPtr.IsValid() == true && other.data.arrPtr.IsValid() == false) {
                 this.Dispose(ref allocator);
                 return;
             }
-            if (this.arrPtr.IsValid() == false) this = new MemArray<T>(ref allocator, other.Length);
+            if (this.data.arrPtr.IsValid() == false) this = new MemArray<T>(ref allocator, other.Length);
             
             NativeArrayUtils.Copy(ref allocator, in other, ref this);
             
@@ -216,8 +228,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
 
-            if (this.arrPtr.IsValid() == true) {
-                allocator.Free(this.arrPtr);
+            if (this.data.arrPtr.IsValid() == true) {
+                allocator.Free(this.data.arrPtr);
             }
             this = default;
 
@@ -229,7 +241,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             
             var jobHandle = new DisposeJob() {
-                ptr = this.arrPtr,
+                ptr = this.data.arrPtr,
                 worldId = worldId,
             }.Schedule(inputDeps);
             
@@ -241,18 +253,20 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
+            #if USE_CACHE_PTR
             if (state == true && this.IsCreated == true) {
-                this.cachedPtr = new CachedPtr<T>(in allocator, (T*)this.GetUnsafePtr(in allocator));
+                this.data.cachedPtr = new CachedPtr(in allocator, (T*)this.GetUnsafePtr(in allocator));
             } else {
-                this.cachedPtr = default;
+                this.data.cachedPtr = default;
             }
+            #endif
         }
 
         [INLINE(256)]
         public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
-            return allocator.GetUnsafePtr(this.arrPtr);
+            return allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
 
@@ -260,7 +274,11 @@ namespace ME.BECS {
         public readonly void* GetUnsafePtrCached(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
-            return this.cachedPtr.ReadPtr(in allocator, this.arrPtr);
+            #if USE_CACHE_PTR
+            return CachedPtr.ReadPtr(in this.data.cachedPtr, in allocator, this.data.arrPtr);
+            #else
+            return this.GetUnsafePtr(in allocator);
+            #endif
 
         }
 
@@ -268,7 +286,7 @@ namespace ME.BECS {
         public MemPtr GetAllocPtr(in MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
-            return allocator.RefArrayPtr<T>(this.arrPtr, index);
+            return allocator.RefArrayPtr<T>(this.data.arrPtr, index);
             
         }
 
@@ -277,8 +295,12 @@ namespace ME.BECS {
             
             E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
-            return ref this.cachedPtr.Read(in allocator, this.arrPtr, index);
-            
+            #if USE_CACHE_PTR
+            return ref CachedPtr.Read<T>(this.data.cachedPtr, in allocator, this.data.arrPtr, index);
+            #else
+            return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
+            #endif
+
         }
 
         public readonly ref T this[State* state, int index] {
@@ -318,16 +340,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions options = ClearOptions.ClearMemory) {
-            return this.Resize(ref allocator, newLength, this.growFactor, options);
-        }
-
-        [INLINE(256)]
         public bool Resize(ref MemoryAllocator allocator, uint newLength, ushort growFactor, ClearOptions options = ClearOptions.ClearMemory) {
 
             if (this.IsCreated == false) {
 
-                this = new MemArray<T>(ref allocator, newLength, options, growFactor);
+                this = new MemArray<T>(ref allocator, newLength, options);
                 return true;
 
             }
@@ -341,12 +358,14 @@ namespace ME.BECS {
             newLength *= growFactor;
 
             var prevLength = this.Length;
-            this.arrPtr = allocator.ReAllocArray(this.arrPtr, newLength, out T* ptr);
-            this.cachedPtr = new CachedPtr<T>(in allocator, ptr);
+            this.data.arrPtr = allocator.ReAllocArray(this.data.arrPtr, newLength, out T* ptr);
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = new CachedPtr(in allocator, ptr);
+            #endif
             if (options == ClearOptions.ClearMemory) {
                 this.Clear(ref allocator, prevLength, newLength - prevLength);
             }
-            this.Length = newLength;
+            this.data.Length = newLength;
             return true;
 
         }
@@ -356,7 +375,7 @@ namespace ME.BECS {
 
             if (this.IsCreated == false) {
 
-                this = new MemArray<T>(ref allocator, newLength, options, growFactor);
+                this = new MemArray<T>(ref allocator, newLength, options);
                 return true;
 
             }
@@ -367,15 +386,17 @@ namespace ME.BECS {
                 
             }
 
-            newLength *= this.growFactor;
+            newLength *= growFactor;
 
             var prevLength = this.Length;
-            this.arrPtr = allocator.Alloc(elementSize * newLength, out var tPtr);
-            this.cachedPtr = new CachedPtr<T>(in allocator, (T*)tPtr);
+            this.data.arrPtr = allocator.Alloc(elementSize * newLength, out var tPtr);
+            #if USE_CACHE_PTR
+            this.data.cachedPtr = new CachedPtr(in allocator, (T*)tPtr);
+            #endif
             if (options == ClearOptions.ClearMemory) {
                 this.Clear(ref allocator, prevLength, newLength - prevLength);
             }
-            this.Length = newLength;
+            this.data.Length = newLength;
             return true;
 
         }
@@ -393,7 +414,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
 
             var size = TSize<T>.size;
-            allocator.MemClear(this.arrPtr, index * size, length * size);
+            allocator.MemClear(this.data.arrPtr, index * size, length * size);
             
         }
 

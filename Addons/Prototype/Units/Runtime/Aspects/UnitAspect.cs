@@ -52,7 +52,7 @@ namespace ME.BECS.Units {
         public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitCommandGroup => ref this.unitCommandGroupDataPtr.Read(this.ent.id, this.ent.gen).unitCommandGroup;
         
-        public readonly ref bool collideWithEnd => ref this.componentRuntime.collideWithEnd;
+        public readonly ref int collideWithEnd => ref this.componentRuntime.collideWithEnd;
         public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);

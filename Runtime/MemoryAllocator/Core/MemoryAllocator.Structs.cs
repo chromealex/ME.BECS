@@ -25,12 +25,14 @@
 
     }
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Explicit, Size = 8)]
     public readonly struct MemPtr : System.IEquatable<MemPtr> {
 
         public static readonly MemPtr Invalid = new MemPtr(0u, 0u);
         
+        [FieldOffset(0)]
         public readonly uint zoneId;
+        [FieldOffset(4)]
         public readonly uint offset;
 
         [INLINE(256)]

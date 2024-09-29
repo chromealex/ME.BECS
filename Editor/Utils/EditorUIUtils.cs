@@ -121,6 +121,38 @@ namespace ME.BECS.Editor {
 
         }
 
+        public static VisualElement DrawTooltip(VisualElement container, System.Func<VisualElement> tooltip, StyleLength width) {
+            
+            if (tooltip != null) {
+
+                container.AddToClassList("has-tooltip");
+                var tooltipElement = new VisualElement();
+                tooltipElement.AddToClassList("tooltip-text");
+                tooltipElement.pickingMode = PickingMode.Ignore;
+                if (width != default) {
+                    tooltipElement.style.width = width;
+                    tooltipElement.AddToClassList("custom-width");
+                }
+                tooltipElement.Add(tooltip.Invoke());
+                var tooltipButton = new Label("?");
+                tooltipButton.AddToClassList("tooltip");
+                tooltipButton.style.flexGrow = new StyleFloat(0f);
+                container.Add(tooltipElement);
+                container.Add(tooltipButton);
+                return tooltipElement;
+
+            }
+
+            return null;
+
+        }
+
+        public static void RemoveTooltip(VisualElement container) {
+            container.RemoveFromClassList("has-tooltip");
+            container.Q(className: "tooltip-text").RemoveFromHierarchy();
+            container.Q(className: "tooltip").RemoveFromHierarchy();
+        }
+
         public static void DrawPropertyField(VisualElement root, SerializedProperty property) {
             
             var container = new VisualElement();

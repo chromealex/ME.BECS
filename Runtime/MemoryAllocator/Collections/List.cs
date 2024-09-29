@@ -162,8 +162,7 @@ namespace ME.BECS {
         private bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            if (this.arr.IsCreated == false) this.arr.growFactor = 1;
-            return this.arr.Resize(ref allocator, capacity, ClearOptions.UninitializedMemory);
+            return this.arr.Resize(ref allocator, capacity, 2, ClearOptions.UninitializedMemory);
             
         }
         

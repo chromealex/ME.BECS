@@ -153,7 +153,7 @@ namespace ME.BECS {
         }
 
         private void SetCapacity(ref MemoryAllocator allocator, uint capacity) {
-            this.array.Resize(ref allocator, capacity);
+            this.array.Resize(ref allocator, capacity, 2);
             this.head = 0;
             this.tail = this.size == capacity ? 0 : this.size;
             this.version++;

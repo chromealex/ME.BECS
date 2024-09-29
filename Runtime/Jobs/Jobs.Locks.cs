@@ -3,14 +3,20 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Jobs.LowLevel.Unsafe;
+    using System.Runtime.InteropServices;
 
     [BURST(CompileSynchronously = true)]
+    [StructLayout(LayoutKind.Explicit, Size = 24)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
 
         private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
+        [FieldOffset(0)]
         private MemPtr value;
+        [FieldOffset(8)]
         private int readValue;
+        [FieldOffset(12)]
         private int writeValue;
+        [FieldOffset(16)]
         private int* ptr;
 
         public bool IsCreated => this.value.IsValid();

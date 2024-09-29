@@ -5,6 +5,8 @@ namespace ME.BECS {
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UIntDictionaryProxy<>))]
     public unsafe struct UIntDictionary<TValue> where TValue : unmanaged {
 
+        public const int SIZE = MemArrayData.SIZE + MemArrayData.SIZE + 4 + 4 + 4 + 4;
+        
         public struct Enumerator {
 
             private uint count;
