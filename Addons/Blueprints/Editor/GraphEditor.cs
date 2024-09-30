@@ -44,7 +44,7 @@ namespace ME.BECS.Blueprints.Editor {
                 var node = (ME.BECS.Blueprints.Nodes.Operation)this.nodeTarget;
                 var drop = new DropdownField();
                 this.controlsContainer.Add(drop);
-                var enumType = typeof(ME.BECS.Blueprints.Nodes.Operation.OpType);
+                var enumType = typeof(ME.BECS.Blueprints.Nodes.OpType);
                 var memberInfos = enumType.GetMembers();
                 var values = System.Enum.GetValues(enumType);
                 var items = memberInfos.Where(x => x.DeclaringType == enumType && x.GetCustomAttribute(typeof(HeaderAttribute)) != null).ToArray();
@@ -53,7 +53,7 @@ namespace ME.BECS.Blueprints.Editor {
                 }).ToList();
                 drop.index = System.Array.IndexOf(values, node.operationType);
                 drop.RegisterValueChangedCallback((evt) => {
-                    node.operationType = (ME.BECS.Blueprints.Nodes.Operation.OpType)values.GetValue(drop.index);
+                    node.operationType = (ME.BECS.Blueprints.Nodes.OpType)values.GetValue(drop.index);
                 });
 
             }

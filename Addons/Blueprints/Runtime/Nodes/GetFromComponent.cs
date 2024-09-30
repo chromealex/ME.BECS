@@ -17,7 +17,7 @@ namespace ME.BECS.Blueprints.Nodes {
 
     }
 
-    [System.Serializable]
+    /*[System.Serializable]
     [Extensions.GraphProcessor.NodeMenuItem("Get from Component")]
     public class GetFromComponent : Graph.Node {
 
@@ -43,6 +43,6 @@ namespace ME.BECS.Blueprints.Nodes {
             
         }
 
-    }
+    }*/
 
 }
