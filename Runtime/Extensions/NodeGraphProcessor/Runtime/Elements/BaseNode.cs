@@ -161,6 +161,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// </summary>
 		public virtual bool			isRenamable => false;
 
+		public virtual bool isEnableable => true;
+
 		public virtual bool isCollapsable => true;
 
 		/// <summary>

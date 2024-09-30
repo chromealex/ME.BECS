@@ -1,0 +1,66 @@
+.math-operation {
+    width: 100px;
+    height: 60px;
+    min-width: 100px;
+}
+
+.math-operation #title,
+.math-operation #divider {
+    display: none;
+}
+
+.math-operation #input {
+    width: 30px;
+}
+
+.math-operation #input,
+.math-operation #output {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.math-operation .connectorText {
+    display: none;
+}
+
+.math-operation #controls {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0px;
+    border-width: 0px;
+    justify-content: center;
+    align-items: center;
+}
+.math-operation #controls Label {
+    display: none;
+}
+
+.math-operation #controls #operationType {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+}
+.math-operation #controls DropdownField {
+    width: 40px;
+    height: 40px;
+}
+
+.math-operation #top {
+    height: 100%;
+}
+
+.math-operation .unity-popup-field__input {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    border-width: 3px;
+    min-width: 30px;
+}
+.math-operation PopupTextElement {
+    -unity-text-align: middle-center;
+    font-size: 30px;
+}
+.math-operation .unity-base-popup-field__arrow {
+    display: none;
+}

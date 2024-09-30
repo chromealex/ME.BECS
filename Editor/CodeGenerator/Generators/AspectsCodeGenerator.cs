@@ -17,7 +17,7 @@ namespace ME.BECS.Editor.Aspects {
                 if (this.IsValidTypeForAssembly(aspect) == false) continue;
                 
                 var type = aspect;
-                var strType = GetTypeName(type);
+                var strType = EditorUtils.GetTypeName(type);
                 var types = new System.Collections.Generic.List<string>();
                 var fieldsCount = 0;
                 var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
@@ -28,7 +28,7 @@ namespace ME.BECS.Editor.Aspects {
                         ++fieldsCount;
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        types.Add(GetTypeName(gType));
+                        types.Add(EditorUtils.GetTypeName(gType));
                         references.Add(gType);
                     }
                 }
@@ -63,7 +63,7 @@ namespace ME.BECS.Editor.Aspects {
                 if (this.IsValidTypeForAssembly(aspect) == false) continue;
 
                 var type = aspect;
-                var strType = GetTypeName(type);
+                var strType = EditorUtils.GetTypeName(type);
                 var types = new System.Collections.Generic.List<string>();
                 var fieldsCount = 0;
                 var i = 0;
@@ -74,7 +74,7 @@ namespace ME.BECS.Editor.Aspects {
                         ++fieldsCount;
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        types.Add($"aspect.{field.Name} = new {GetDataTypeName(fieldType)}<{GetTypeName(gType)}>(in world);");
+                        types.Add($"aspect.{field.Name} = new {EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>(in world);");
                         ++i;
                     }
                 }

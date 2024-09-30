@@ -1,17 +1,79 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
-using ME.BECS.Extensions.GraphProcessor;
 using UnityEngine.UIElements;
+using UnityEditor;
+using ME.BECS.Editor;
+using UnityEditor.Experimental.GraphView;
 
-namespace ME.BECS.Editor.FeaturesGraph {
+namespace ME.BECS.Blueprints.Editor {
+    
+    using ME.BECS.Extensions.GraphProcessor;
+    
+    [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(BlueprintNode))]
+    public class NodeView : BaseNodeView {
 
-    public class FeaturesGraphEditorWindow : BaseGraphWindow {
+        public override bool expanded => true;
+        public override void OnCreated() {
+            
+            base.OnCreated();
 
-        public static void ShowWindow(BaseGraph graph = null) {
+            this.styleSheets.Add(GraphEditor.nodeStyleSheet);
 
-            var win = FeaturesGraphEditorWindow.GetWindow<FeaturesGraphEditorWindow>();
-            win.titleContent = new GUIContent("Features Graph", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-featuresgraph.png"));
+        }
+
+        public override bool RefreshPorts() {
+            
+            this.styleSheets.Add(GraphEditor.nodeStyleSheet);
+
+            return base.RefreshPorts();
+            
+        }
+
+    }
+
+    [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.Blueprints.Nodes.Operation))]
+    public class OperationNodeView : NodeView {
+
+        protected override void DrawDefaultInspector(bool fromInspector = false) {
+
+            if (fromInspector == false) {
+
+                var node = (ME.BECS.Blueprints.Nodes.Operation)this.nodeTarget;
+                var drop = new DropdownField();
+                this.controlsContainer.Add(drop);
+                var enumType = typeof(ME.BECS.Blueprints.Nodes.Operation.OpType);
+                var memberInfos = enumType.GetMembers();
+                var values = System.Enum.GetValues(enumType);
+                var items = memberInfos.Where(x => x.DeclaringType == enumType && x.GetCustomAttribute(typeof(HeaderAttribute)) != null).ToArray();
+                drop.choices = items.Select(x => {
+                    return ((HeaderAttribute)x.GetCustomAttribute(typeof(HeaderAttribute))).header;
+                }).ToList();
+                drop.index = System.Array.IndexOf(values, node.operationType);
+                drop.RegisterValueChangedCallback((evt) => {
+                    node.operationType = (ME.BECS.Blueprints.Nodes.Operation.OpType)values.GetValue(drop.index);
+                });
+
+            }
+            
+        }
+
+    }
+
+    public class BlueprintGraphView : BaseGraphView {
+        
+        public BlueprintGraphView(UnityEditor.EditorWindow window) : base(window) { }
+
+    }
+
+    public class GraphEditor : BaseGraphWindow {
+
+        public static void ShowWindow(Graph graph) {
+
+            var win = GraphEditor.CreateInstance<GraphEditor>();
+            win.titleContent = new GUIContent("Blueprint Graph", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-blueprintgraph.png"));
             if (graph != null) {
                 win.SelectAsset(graph);
             } else {
@@ -23,9 +85,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         [UnityEditor.Callbacks.OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line) {
-            var project = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as ME.BECS.FeaturesGraph.SystemsGraph;
-            if (project != null) {
-                FeaturesGraphEditorWindow.ShowWindow(project);
+            var graph = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as ME.BECS.Blueprints.Graph;
+            if (graph != null) {
+                ShowWindow(graph);
                 return true;
             }
             return false;
@@ -52,13 +114,36 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private void OnSelectionChanged() {
 
-            var graph = UnityEditor.Selection.activeObject as ME.BECS.FeaturesGraph.SystemsGraph;
+            var graph = UnityEditor.Selection.activeObject as Graph;
             if (graph != null) {
 
                 this.SelectAsset(graph);
 
             }
 
+        }
+
+        private void OnGraphChanged(GraphChanges obj) {
+        
+            //Debug.Log("Dirty");
+            this.hasUnsavedChanges = true;
+            this.UpdateToolbar();
+
+            if (obj.addedNode != null) {
+                var node = (Graph.Node)obj.addedNode;
+                node.OnCreated();
+            }
+            
+        }
+
+        private void UpdateToolbar() {
+            this.saveButton.SetEnabled(true);//this.hasUnsavedChanges);
+
+            if (this.graphView != null) {
+                if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);
+                this.graphView.RemoveManipulator(contextMenu);
+                this.graphView.AddManipulator(contextMenu);
+            }
         }
 
         private void SelectAsset(BaseGraph graph) {
@@ -79,20 +164,19 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
-        private void OnGraphChanged(GraphChanges obj) {
+        private static StyleSheet styleSheetBase;
+        private static StyleSheet styleSheetTooltip;
+        public static StyleSheet nodeStyleSheet;
         
-            //Debug.Log("Dirty");
-            this.hasUnsavedChanges = true;
-            this.UpdateToolbar();
-        }
-
-        private void UpdateToolbar() {
-            this.saveButton.SetEnabled(true);//this.hasUnsavedChanges);
-
-            if (this.graphView != null) {
-                if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);
-                this.graphView.RemoveManipulator(contextMenu);
-                this.graphView.AddManipulator(contextMenu);
+        private void LoadStyle() {
+            if (styleSheetBase == null) {
+                styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/BlueprintsGraphEditorWindow.uss");
+            }
+            if (styleSheetTooltip == null) {
+                styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
+            }
+            if (nodeStyleSheet == null) {
+                nodeStyleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/BlueprintsGraphNode.uss");
             }
         }
 
@@ -106,6 +190,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         private Vector3 prevScale;
         private Vector3 prevPos;
+        private const float maxOpacity = 1f;
 
         private void OnTransformChanged(UnityEditor.Experimental.GraphView.GraphView graphview) {
             this.OnTransformChanged(graphview, false);
@@ -146,23 +231,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
             
         }
-
-        private static IManipulator contextMenu;
-
-        private static StyleSheet styleSheetBase;
-        
-        private void LoadStyle() {
-            if (styleSheetBase == null) {
-                styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/FeaturesGraphEditorWindow.uss");
-            }
-        }
         
         private UnityEngine.UIElements.VisualElement background;
         private UnityEditor.UIElements.Toolbar toolbar;
-        private UnityEngine.UIElements.Button saveButton;
-        private const float maxOpacity = 1f;
+        private Button saveButton;
+        private static IManipulator contextMenu;
+
         protected override void InitializeWindow(BaseGraph graph) {
-            var view = new FeaturesGraphView(this);
+            var view = new BlueprintGraphView(this);
             view.RegisterCallback<MouseMoveEvent>((evt) => {
                 this.OnTransformChanged(view);
             });
@@ -171,28 +247,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.rootView.Add(view);
             this.LoadStyle();
             view.styleSheets.Add(styleSheetBase);
-            /*{
-                var vg = new Image();
-                vg.image = EditorUtils.LoadResource<Texture>("ME.BECS.Resources/Icons/vignette.png");
-                vg.scaleMode = ScaleMode.StretchToFill;
-                vg.AddToClassList("header-vignette");
-                vg.focusable = false;
-                vg.pickingMode = UnityEngine.UIElements.PickingMode.Ignore;
-                view.Add(vg);
-                vg.SendToBack();
-            }
-            {
-                var icon = new Image();
-                icon.style.backgroundImage = new StyleBackground(EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/logo-back.png"));
-                icon.style.backgroundRepeat = new StyleBackgroundRepeat(new BackgroundRepeat(Repeat.Repeat, Repeat.Repeat));
-                icon.style.backgroundSize = new StyleBackgroundSize(new BackgroundSize(512f, 512f));
-                this.background = icon;
-                icon.AddToClassList("header-icon");
-                icon.focusable = false;
-                icon.pickingMode = UnityEngine.UIElements.PickingMode.Ignore;
-                view.Add(icon);
-                icon.SendToBack();
-            }*/
             {
                 var gridSpacing = 10f;
                 var gridBlockSpacing = gridSpacing * 10f;
@@ -261,6 +315,22 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.toolbar = toolbar;
             {
                 var saveButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                    {
+                        // Apply connections
+                        var graph = (Graph)this.graph;
+                        graph.connections = new Connection[graph.edges.Count];
+                        for (var index = 0; index < graph.edges.Count; ++index) {
+                            var edge = graph.edges[index];
+                            var from = (Graph.Node)edge.outputNode;
+                            var to = (Graph.Node)edge.inputNode;
+                            var connection = new Connection();
+                            connection.from = from.id;
+                            connection.fromIndex = 0;
+                            connection.to = to.id;
+                            connection.toIndex = to.inputPorts.IndexOf(edge.inputPort);
+                            graph.connections[index] = connection;
+                        }
+                    }
                     this.graphView.SaveGraphToDisk();
                     this.hasUnsavedChanges = false;
                     this.ShowNotification(new GUIContent("Graph Saved"), 1f);
@@ -279,15 +349,62 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
             {
                 var compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    CodeGenerator.RegenerateBurstAOT();
+                    var graph = (Graph)this.graph;
+                    var text = graph.Generate();
+                    TextAsset blueprintSystem;
+                    if (text.components.Count > 0) {
+                        blueprintSystem = EditorUtils.LoadResource<TextAsset>("ME.BECS.Resources/Templates/Blueprint-SystemWithComponents.txt");
+                    } else {
+                        blueprintSystem = EditorUtils.LoadResource<TextAsset>("ME.BECS.Resources/Templates/Blueprint-System.txt");
+                    }
+
+                    var template = blueprintSystem.text;
+                    var asm = EditorUtils.GetAssemblyInfo(this.graph);
+                    var tpl = new Tpl(template);
+                    var counters = new Dictionary<string, int>();
+                    var variables = new Dictionary<string, string>();
+                    var str = text.ToString();
+
+                    var name = EditorUtils.GetCodeName(this.graph.name);
+                    if (name.EndsWith("System") == false) name += "System";
+                    variables.Add("LOGIC", EditorUtils.FormatCode(str.Split('\n', System.StringSplitOptions.RemoveEmptyEntries), defaultIndent: 4));
+                    variables.Add("NAMESPACE", asm.name);
+                    variables.Add("NAME", name);
+                    variables.Add("PARALLEL", graph.systemType == Graph.SystemJobType.Parallel ? "Parallel" : string.Empty);
+                    if (text.components.Count > 0) {
+                        var components = new System.Collections.Generic.List<string>();
+                        var componentsWithVars = new System.Collections.Generic.List<string>();
+                        foreach (var kv in text.components) {
+                            components.Add(kv.Key.FullName);
+                            componentsWithVars.Add(kv.Key.FullName + " " + kv.Value.componentVariableName);
+                        }
+
+                        variables.Add("COMPONENTS", string.Join(", ", components));
+                        variables.Add("COMPONENTS_WITH_VARS", "ref " + string.Join(", ref ", componentsWithVars));
+                    }
+                    var result = tpl.GetString(counters, variables);
+                    //Debug.Log(result);
+                    var path = $"{System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(graph))}/{name}.cs";
+                    System.IO.File.WriteAllText(path, result);
+                    AssetDatabase.ImportAsset(path);
                 });
                 compileButton.text = "Compile Graphs";
                 toolbar.Add(compileButton);
             }
+            
             this.rootView.Add(toolbar);
             
             this.UpdateToolbar();
             if (this.graphView != null) this.OnTransformChanged(view, true);
+            
+        }
+
+        protected override void InitializeGraphView(BaseGraphView view) {
+            
+            this.rootView.styleSheets.Add(nodeStyleSheet);
+
+            base.InitializeGraphView(view);
+            
         }
 
     }

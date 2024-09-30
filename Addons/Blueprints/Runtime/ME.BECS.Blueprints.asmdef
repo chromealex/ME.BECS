@@ -1,0 +1,4 @@
+{
+	"name": "ME.BECS.Blueprints",
+	"references":[ "ME.BECS" ]
+}

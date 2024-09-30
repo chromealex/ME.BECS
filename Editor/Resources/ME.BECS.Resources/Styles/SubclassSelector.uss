@@ -49,3 +49,8 @@
 .subclass-selector .unity-toggle__input {
     -unity-font-style: bold;
 }
+
+.empty-property-selector {
+    height: 24px;
+    -unity-text-align: middle-left;
+}

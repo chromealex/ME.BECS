@@ -106,29 +106,8 @@ namespace ME.BECS.Editor.Systems {
             }
             
             var newContent = string.Join("\n", content);
-            return FormatCode(newContent.Split("\n"));
+            return EditorUtils.FormatCode(newContent.Split("\n"));
             
-        }
-
-        private static string FormatCode(string[] content) {
-
-            var result = new System.Text.StringBuilder(content.Length * 256);
-            var indent = 2;
-            for (int i = 0; i < content.Length; ++i) {
-                var line = content[i];
-                var open = line.Contains('{');
-                var close = line.Contains('}');
-                if (close == true) --indent;
-                for (int j = 0; j < indent; ++j) {
-                    result.Append(' ', 4);
-                }
-                result.Append(line);
-                result.Append('\n');
-                if (open == true) ++indent;
-            }
-            
-            return result.ToString();
-
         }
 
         private struct GraphLink {
@@ -351,7 +330,7 @@ namespace ME.BECS.Editor.Systems {
 
                                         methodContent.Add("{");
                                         methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});");
-                                        methodContent.Add($"(({GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
+                                        methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
                                         methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
                                         AddApply(systemNode, index, ref schemeDependsOn);
                                         methodContent.Add("}");
@@ -622,7 +601,7 @@ namespace ME.BECS.Editor.Systems {
                         content.Add("// [!] system is null");
                     } else {
                         var type = system.GetType().FullName;
-                        var systemType = GetTypeName(systemNode.system.GetType());
+                        var systemType = EditorUtils.GetTypeName(systemNode.system.GetType());
                         content.Add($"var item{id}_{k} = allocator.Allocate(TSize<{type}>.sizeInt, TAlign<{type}>.alignInt);");
                         //content.Add($"_memclear(item{name}_{k}, TSize<{type}>.size);");
                         content.Add($"*({systemType}*)item{id}_{k} = {GetDefinition(systemNode.system)};");
@@ -641,7 +620,7 @@ namespace ME.BECS.Editor.Systems {
 
             var result = new System.Text.StringBuilder(100);
             result.Append("new ");
-            result.Append(GetTypeName(system.GetType()));
+            result.Append(EditorUtils.GetTypeName(system.GetType()));
             result.Append(" {\n");
             //var result = $"new {GetTypeName(system.GetType())}() {{\n";
             var fields = system.GetType().GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);

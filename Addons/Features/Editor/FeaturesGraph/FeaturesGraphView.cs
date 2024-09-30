@@ -17,7 +17,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
             base.InitializeView();
 
-            SetupZoom(0.05f, 1f);
+            this.SetupZoom(0.05f, 1f);
             this.baseNodeCreationRequest = this.nodeCreationRequest;
             this.nodeCreationRequest = (evt) => {
                 if (evt.index == -2) {

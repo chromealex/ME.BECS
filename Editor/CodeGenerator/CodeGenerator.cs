@@ -33,18 +33,6 @@ namespace ME.BECS.Editor {
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
         }
 
-        public static string GetTypeName(System.Type type) {
-            if (type.IsGenericType == true) {
-                var first = type.FullName.Split('[')[0].Replace("+", ".").Replace("`1", "");
-                return $"{first}<{GetTypeName(type.GenericTypeArguments[0])}>";
-            }
-            return type.FullName.Replace("+", ".").Replace("`1", "");
-        }
-
-        public static string GetDataTypeName(System.Type type) {
-            return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
-        }
-
         public virtual string AddPublicContent() {
             return string.Empty;
         }

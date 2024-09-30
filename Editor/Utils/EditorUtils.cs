@@ -729,6 +729,61 @@ namespace ME.BECS.Editor {
 
         }
 
+        public static CodeGenerator.AssemblyInfo GetAssemblyInfo(ME.BECS.Extensions.GraphProcessor.BaseGraph graph) {
+            var path = UnityEditor.AssetDatabase.GetAssetPath(graph);
+            path = path.Replace("\\", "/");
+            var splitted = path.Split('/');
+            for (int i = splitted.Length - 1; i >= 0; --i) {
+                var dir = string.Join("/", splitted, 0, i);
+                var asms = UnityEditor.AssetDatabase.FindAssets("t:asmdef", new string[] { dir });
+                foreach (var guid in asms) {
+                    var p = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    var info = System.IO.File.ReadAllText(p);
+                    return UnityEngine.JsonUtility.FromJson<CodeGenerator.AssemblyInfo>(info).Init();
+                }
+            }
+
+            return default;
+        }
+
+        public static string GetCodeName(string name) {
+            name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z]", "");
+            return name;
+        }
+
+        public static string GetTypeName(System.Type type) {
+            if (type.IsGenericType == true) {
+                var first = type.FullName.Split('[')[0].Replace("+", ".").Replace("`1", "");
+                return $"{first}<{GetTypeName(type.GenericTypeArguments[0])}>";
+            }
+            return type.FullName.Replace("+", ".").Replace("`1", "");
+        }
+
+        public static string GetDataTypeName(System.Type type) {
+            return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
+        }
+
+        public static string FormatCode(string[] content, int indentSize = 4, int defaultIndent = 2) {
+
+            var result = new System.Text.StringBuilder(content.Length * 256);
+            var indent = defaultIndent;
+            for (int i = 0; i < content.Length; ++i) {
+                var line = content[i];
+                var open = line.Contains('{');
+                var close = line.Contains('}');
+                if (close == true) --indent;
+                for (int j = 0; j < indent; ++j) {
+                    result.Append(' ', indentSize);
+                }
+                result.Append(line);
+                result.Append('\n');
+                if (open == true) ++indent;
+            }
+            
+            return result.ToString();
+
+        }
+
     }
 
 }

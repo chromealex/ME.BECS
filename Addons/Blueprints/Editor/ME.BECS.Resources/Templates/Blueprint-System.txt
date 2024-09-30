@@ -1,0 +1,34 @@
+namespace {{NAMESPACE}} {
+
+    using BURST = Unity.Burst.BurstCompileAttribute;
+    using Unity.Mathematics;
+    using ME.BECS;
+    using ME.BECS.Jobs;
+
+    [BURST(CompileSynchronously = true)]
+    public struct {{NAME}} : IUpdate {
+
+        [BURST(CompileSynchronously = true)]
+        public struct Job : IJob{{PARALLEL}} {
+
+            public SystemContext systemContext;
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent) {
+
+{{LOGIC}}
+
+            }
+
+        }
+        
+        public void OnUpdate(ref SystemContext context) {
+
+            context.SetDependency(context.Query().Schedule<Job>(new Job() {
+                systemContext = context,
+            }));
+
+        }
+
+    }
+
+}

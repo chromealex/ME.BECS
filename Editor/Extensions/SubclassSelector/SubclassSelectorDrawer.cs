@@ -173,8 +173,14 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                 //button.text = this.GetTypeName(property).text;
                 container.Add(button);
             }
-            
-            BuildProperty();
+
+            if (attr.showContent == true) {
+                BuildProperty();
+            } else {
+                var emptyElement = new Label("Component");
+                emptyElement.AddToClassList("empty-property-selector");
+                propContainer.Add(emptyElement);
+            }
 
             return container;
             

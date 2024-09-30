@@ -18,7 +18,7 @@ namespace ME.BECS.Editor.Jobs {
 
                     if (this.IsValidTypeForAssembly(jobType) == false) continue;
 
-                    var jobTypeFullName = GetTypeName(jobType);
+                    var jobTypeFullName = EditorUtils.GetTypeName(jobType);
                     var components = new System.Collections.Generic.List<string>();
                     var interfaces = jobType.GetInterfaces();
                     System.Type workInterface = null;
@@ -27,7 +27,7 @@ namespace ME.BECS.Editor.Jobs {
                             foreach (var type in i.GenericTypeArguments) {
                                 if (typeof(TComponent).IsAssignableFrom(type) == true) {
                                     if (this.IsValidTypeForAssembly(type) == false) continue;
-                                    components.Add(GetDataTypeName(type));
+                                    components.Add(EditorUtils.GetDataTypeName(type));
                                 }
                             }
 

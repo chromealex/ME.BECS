@@ -230,7 +230,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 			this.Q("contents").style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
 			
-			{
+			if (this.nodeTarget.isEnableable == true) {
 				var title = this.Q("title");
 				var enableToggle = new Toggle();
 				enableToggle.AddToClassList("enable-toggle");

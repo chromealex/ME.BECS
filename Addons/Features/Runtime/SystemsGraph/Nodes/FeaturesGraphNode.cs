@@ -7,6 +7,9 @@ namespace ME.BECS.FeaturesGraph.Nodes {
     [System.Serializable]
     public abstract class FeaturesGraphNode : BaseNode {
         
+        [IsCompatibleWithGraph]
+        public static bool IsCompatible(BaseGraph graph) => graph is FeaturesGraph.SystemsGraph;
+
         public override void UpdateSyncState() {
             
             var q = new System.Collections.Generic.Queue<BaseNode>();
