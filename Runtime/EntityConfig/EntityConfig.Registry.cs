@@ -12,7 +12,6 @@ namespace ME.BECS {
 
         private static System.Collections.Generic.Dictionary<EntityConfig, uint> registryToId = new System.Collections.Generic.Dictionary<EntityConfig, uint>();
         private static UIntDictionary<UnsafeEntityConfig> registryFromId;
-        private static uint nextId;
 
         public static void Initialize() {
             UnityEngine.Debug.Log("Initialize static world for configs");
@@ -21,7 +20,6 @@ namespace ME.BECS {
             staticWorld = World.Create(props, false);
             registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state->allocator, 10u);
             registryToId.Clear();
-            nextId = 0u;
         }
         
         public static uint Register(EntityConfig config, out UnsafeEntityConfig unsafeConfig) {
@@ -36,7 +34,12 @@ namespace ME.BECS {
             }
 
             var staticConfigEnt = staticWorld.NewEnt();
-            ++nextId;
+            var nextId = ObjectReferenceRegistry.GetId(config);
+
+            if (nextId == 0u) {
+                throw new System.Exception($"ObjectReferenceRegistry does not contain Config {config.name}");
+            }
+            
             registryToId.Add(config, nextId);
             unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
             registryFromId.Add(ref staticWorld.state->allocator, nextId, unsafeConfig);

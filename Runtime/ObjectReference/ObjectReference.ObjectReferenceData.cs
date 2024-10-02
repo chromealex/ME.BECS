@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace ME.BECS.Addons {
+namespace ME.BECS {
 
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
 

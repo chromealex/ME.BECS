@@ -22,7 +22,7 @@ namespace ME.BECS.Views {
         void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent);
         void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
 
-        public void Load(ViewsModuleData* viewsModuleData, ViewsRegistryData data);
+        public void Load(ViewsModuleData* viewsModuleData, BECS.ObjectReferenceRegistryData data);
         public ViewSource Register(ViewsModuleData* viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
 
         void Query(ref QueryBuilder queryBuilder);
@@ -415,7 +415,7 @@ namespace ME.BECS.Views {
             module.data->connectedWorld = connectedWorld;
             module.data->viewsWorld = viewsWorld;
             WorldStaticCallbacks.RaiseCallback(ref *module.data);
-            module.provider.Load(module.data, ViewsRegistry.data);
+            module.provider.Load(module.data, BECS.ObjectReferenceRegistry.data);
             Context.Switch(in prevContext);
             return module;
 

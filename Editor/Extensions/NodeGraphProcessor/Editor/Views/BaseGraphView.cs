@@ -607,6 +607,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 		bool DoesSelectionContainsInspectorNodes()
 		{
 			var selectedNodes = selection.Where(s => s is BaseNodeView).ToList();
+
+			if (nodeInspector == null) return false;
+			
 			var selectedNodesNotInInspector = selectedNodes.Except(nodeInspector.selectedNodes).ToList();
 			var nodeInInspectorWithoutSelectedNodes = nodeInspector.selectedNodes.Except(selectedNodes).ToList();
 
@@ -937,6 +940,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 		public void UpdateNodeInspectorSelection()
 		{
+			if (nodeInspector == null) return;
+			
 			if (nodeInspector.previouslySelectedObject != Selection.activeObject)
 				nodeInspector.previouslySelectedObject = Selection.activeObject;
 

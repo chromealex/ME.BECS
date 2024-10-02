@@ -383,12 +383,14 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(ViewsModuleData* viewsModuleData, ViewsRegistryData data) {
+        public void Load(ViewsModuleData* viewsModuleData, BECS.ObjectReferenceRegistryData data) {
 
-            viewsModuleData->prefabId = data.prefabId;
+            viewsModuleData->prefabId = data.sourceId;
             foreach (var item in data.items) {
                 if (item.IsValid() == false) continue;
-                this.Register(viewsModuleData, item.prefab, item.prefabId);
+                if (item.source is EntityView entityView) {
+                    this.Register(viewsModuleData, entityView, item.sourceId);
+                }
             }
 
         }
