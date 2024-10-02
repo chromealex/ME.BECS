@@ -19,7 +19,8 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
-                var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
+                var parent = aspect.ent.GetParent();
+                var unit = parent.GetAspect<UnitAspect>();
                 var player = unit.owner.GetAspect<Players.PlayerAspect>();
                 var team = player.team;
                 UnitAspect nearestResult = default;

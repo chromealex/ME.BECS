@@ -50,15 +50,27 @@ namespace ME.BECS.Extensions.GraphProcessor
 			return this.id;
 		}
 
+		private static int GetStringHash(string str) {
+
+			var hash = 0;
+			for (int i = 0; i < str.Length; ++i) {
+				hash ^= str[i] + 31;
+			}
+
+			return hash;
+
+		}
+		
 		public void OnValidate() {
-			var id = this.GetInstanceID();
+			#if UNITY_EDITOR
+			var path = UnityEditor.AssetDatabase.GetAssetPath(this);
+			var id = GetStringHash(path);
 			if (id < 0) id = -id;
 			if (id != this.id && this.builtInGraph == false) {
 				this.id = id;
-				#if UNITY_EDITOR
 				UnityEditor.EditorUtility.SetDirty(this);
-				#endif
 			}
+			#endif
 		}
 
 		/// <summary>

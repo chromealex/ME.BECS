@@ -201,7 +201,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void Validate(bool isTag) {
 
-            if (typeId == 0u) {
+            if (typeId == 0u && typeof(T) != typeof(TNull)) {
                 StaticTypes<T>.typeId = ++StaticTypes.counter;
                 StaticTypes<T>.isTag = isTag;
                 StaticTypes.sizes.Resize(StaticTypes<T>.typeId + 1u);

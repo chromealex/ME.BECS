@@ -146,11 +146,7 @@ namespace ME.BECS {
         public QueryBuilder WithAny<T0, T1>() where T0 : unmanaged, IComponent
                                               where T1 : unmanaged, IComponent {
             E.IS_CREATED(this);
-            if (this.builderDependsOn.IsCompleted == true) {
-                ArchetypeQueries.WithAnySync<T0, T1, TNull, TNull>(ref this);
-            } else {
-                this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, TNull, TNull>(ref this);
-            }
+            this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, TNull, TNull>(ref this);
             return this;
         }
 
@@ -159,11 +155,7 @@ namespace ME.BECS {
                                                   where T1 : unmanaged, IComponent
                                                   where T2 : unmanaged, IComponent {
             E.IS_CREATED(this);
-            if (this.builderDependsOn.IsCompleted == true) {
-                ArchetypeQueries.WithAnySync<T0, T1, T2, TNull>(ref this);
-            } else {
-                this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, TNull>(ref this);
-            }
+            this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, TNull>(ref this);
             return this;
         }
 
@@ -173,33 +165,21 @@ namespace ME.BECS {
                                                       where T2 : unmanaged, IComponent 
                                                       where T3 : unmanaged, IComponent {
             E.IS_CREATED(this);
-            if (this.builderDependsOn.IsCompleted == true) {
-                ArchetypeQueries.WithAnySync<T0, T1, T2, T3>(ref this);
-            } else {
-                this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
-            }
+            this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilder With<T>() where T : unmanaged, IComponent {
             E.IS_CREATED(this);
-            if (this.builderDependsOn.IsCompleted == true) {
-                ArchetypeQueries.WithSync<T>(ref this);
-            } else {
-                this.builderDependsOn = ArchetypeQueries.With<T>(ref this);
-            }
+            this.builderDependsOn = ArchetypeQueries.With<T>(ref this);
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilder Without<T>() where T : unmanaged, IComponent {
             E.IS_CREATED(this);
-            if (this.builderDependsOn.IsCompleted == true) {
-                ArchetypeQueries.WithoutSync<T>(ref this);
-            } else {
-                this.builderDependsOn = ArchetypeQueries.Without<T>(ref this);
-            }
+            this.builderDependsOn = ArchetypeQueries.Without<T>(ref this);
             return this;
         }
 
@@ -507,11 +487,7 @@ namespace ME.BECS {
 
             }
 
-            if (handle.IsCompleted == false) {
-                handle = this.Dispose(handle);
-            } else {
-                this.Dispose();
-            }
+            handle = this.Dispose(handle);
 
             this.builderDependsOn = handle;
             return handle;
