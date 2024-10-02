@@ -1,6 +1,6 @@
 namespace ME.BECS.UI {
     
-    using ME.BECS.Addons;
+    using BECS;
 
     [System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct UIComponent : IComponent {

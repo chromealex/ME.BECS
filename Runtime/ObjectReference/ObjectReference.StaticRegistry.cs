@@ -1,4 +1,4 @@
-namespace ME.BECS.Addons {
+namespace ME.BECS {
 
     #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoadAttribute]
@@ -14,6 +14,9 @@ namespace ME.BECS.Addons {
             
         }
         
+        #if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        #endif
         public static void Load() {
 
             if (data != null) return;
@@ -65,6 +68,15 @@ namespace ME.BECS.Addons {
 
         }
 
+        public static uint GetId(UnityEngine.Object obj) {
+
+            foreach (var item in data.items) {
+                if (item.source == obj) return item.sourceId;
+            }
+
+            return 0u;
+            
+        }
     }
 
 }

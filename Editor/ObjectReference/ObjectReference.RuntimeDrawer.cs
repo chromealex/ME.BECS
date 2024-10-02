@@ -2,17 +2,16 @@
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-namespace ME.BECS.Addons.Editor {
+namespace ME.BECS.Editor {
     
-    [CustomPropertyDrawer(typeof(ME.BECS.Addons.ObjectReference<>))]
-    public class ObjectReferenceDrawer : PropertyDrawer {
+    [CustomPropertyDrawer(typeof(RuntimeObjectReference<>))]
+    public class ObjectReferenceRuntimeDrawer : PropertyDrawer {
 
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
-            ObjectReferenceRegistry.Initialize();
-            
-            var id = property.FindPropertyRelative(nameof(ME.BECS.Addons.ObjectReference<UnityEngine.Object>.id));
-            var obj = ObjectReferenceRegistry.GetObjectBySourceId<UnityEngine.Object>(id.uintValue);
+            var id = property.FindPropertyRelative(nameof(RuntimeObjectReference<UnityEngine.Object>.id));
+            var worldId = property.FindPropertyRelative(nameof(RuntimeObjectReference<UnityEngine.Object>.worldId));
+            var obj = RuntimeObjectReference.ReadObject<UnityEngine.Object>(id.uintValue, (ushort)worldId.uintValue);
             
             var container = new UnityEngine.UIElements.VisualElement();
             var objectField = new ObjectField(property.displayName);
@@ -23,7 +22,8 @@ namespace ME.BECS.Addons.Editor {
             objectField.value = obj;
             objectField.RegisterValueChangedCallback((evt) => {
                 if (evt.newValue == evt.previousValue) return;
-                var pId = ObjectReferenceRegistry.Assign(evt.previousValue, evt.newValue);
+                var pId = 0u;
+                RuntimeObjectReference.GetObject(ref pId, (ushort)worldId.uintValue, evt.newValue);
                 var prop = property.serializedObject.FindProperty(id.propertyPath);
                 prop.serializedObject.Update();
                 id.uintValue = pId;

@@ -15,7 +15,6 @@ namespace ME.BECS.Views.Editor {
             var viewSource = property.FindPropertyRelative(nameof(View.viewSource));
             var prefabId = viewSource.FindPropertyRelative(nameof(View.viewSource.prefabId));
             var providerId = viewSource.FindPropertyRelative(nameof(View.viewSource.providerId));
-            ViewsRegistry.Initialize();
             
             var container = new UnityEngine.UIElements.VisualElement();
             container.styleSheets.Add(ME.BECS.Editor.EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/DefaultStyles.uss"));

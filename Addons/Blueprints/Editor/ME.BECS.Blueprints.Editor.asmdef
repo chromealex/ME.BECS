@@ -1,4 +1,20 @@
 {
-	"name": "ME.BECS.Blueprints.Editor",
-	"references":[ "GUID:5ddfdd0931dfc49b7a37937f64fec1e4", "GUID:103936b61cc594f2a918cf9e6ade6757", "GUID:c86be02c705c6464297ae4152f281812" ]
+    "name": "ME.BECS.Blueprints.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:5ddfdd0931dfc49b7a37937f64fec1e4",
+        "GUID:103936b61cc594f2a918cf9e6ade6757",
+        "GUID:c86be02c705c6464297ae4152f281812"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

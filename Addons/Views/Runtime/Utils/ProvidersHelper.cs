@@ -5,13 +5,13 @@ namespace ME.BECS.Views {
 
     public struct MeshFilterComponent : IComponent {
 
-        public ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Mesh> mesh;
+        public BECS.RuntimeObjectReference<UnityEngine.Mesh> mesh;
 
     }
 
     public struct MeshRendererComponent : IComponent {
 
-        public ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material> material;
+        public BECS.RuntimeObjectReference<UnityEngine.Material> material;
         public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode;
         public bool receiveShadows;
         public int layer;
@@ -69,13 +69,13 @@ namespace ME.BECS.Views {
                 {
                     // Get mesh
                     if (obj.TryGetComponent<UnityEngine.MeshFilter>(out var filter) == true) {
-                        ent.Get<MeshFilterComponent>().mesh = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
+                        ent.Get<MeshFilterComponent>().mesh = new BECS.RuntimeObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
                     }
 
                     // Get rendering
                     if (obj.TryGetComponent<UnityEngine.MeshRenderer>(out var renderer) == true) {
                         ref var ren = ref ent.Get<MeshRendererComponent>();
-                        ren.material = new ME.BECS.Addons.RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
+                        ren.material = new BECS.RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
                         ren.shadowCastingMode = renderer.shadowCastingMode;
                         ren.receiveShadows = renderer.receiveShadows;
                         ren.layer = renderer.gameObject.layer;
