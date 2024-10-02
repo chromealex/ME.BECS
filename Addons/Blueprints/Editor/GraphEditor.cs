@@ -16,19 +16,12 @@ namespace ME.BECS.Blueprints.Editor {
     public class NodeView : BaseNodeView {
 
         public override bool expanded => true;
-        public override void OnCreated() {
+
+        public override void Initialize(BaseGraphView owner, BaseNode node) {
             
-            base.OnCreated();
-
-            this.styleSheets.Add(GraphEditor.nodeStyleSheet);
-
-        }
-
-        public override bool RefreshPorts() {
+            base.Initialize(owner, node);
             
             this.styleSheets.Add(GraphEditor.nodeStyleSheet);
-
-            return base.RefreshPorts();
             
         }
 
@@ -51,9 +44,50 @@ namespace ME.BECS.Blueprints.Editor {
                 drop.choices = items.Select(x => {
                     return ((HeaderAttribute)x.GetCustomAttribute(typeof(HeaderAttribute))).header;
                 }).ToList();
-                drop.index = System.Array.IndexOf(values, node.operationType);
+                drop.index = System.Array.IndexOf(values, node.operation);
                 drop.RegisterValueChangedCallback((evt) => {
-                    node.operationType = (ME.BECS.Blueprints.Nodes.OpType)values.GetValue(drop.index);
+                    node.operation = (ME.BECS.Blueprints.Nodes.OpType)values.GetValue(drop.index);
+                });
+
+            }
+            
+        }
+
+    }
+
+    [ME.BECS.Extensions.GraphProcessor.NodeCustomEditor(typeof(ME.BECS.Blueprints.Nodes.If))]
+    public class LogicalIfNodeView : NodeView {
+
+        public override void OnCreated() {
+            
+            base.OnCreated();
+            
+            var group = new Group("IF", new UnityEngine.Vector2());
+            group.transparent = true;
+            this.owner.AddGroup(group);
+            ((ME.BECS.Blueprints.Nodes.If)this.nodeTarget).groupGuid = group.GUID;
+            
+            this.nodeTarget.OnPositionChanged();
+
+        }
+
+        protected override void DrawDefaultInspector(bool fromInspector = false) {
+
+            if (fromInspector == false) {
+
+                var node = (ME.BECS.Blueprints.Nodes.If)this.nodeTarget;
+                var drop = new DropdownField();
+                this.controlsContainer.Add(drop);
+                var enumType = typeof(ME.BECS.Blueprints.Nodes.OpIf);
+                var memberInfos = enumType.GetMembers();
+                var values = System.Enum.GetValues(enumType);
+                var items = memberInfos.Where(x => x.DeclaringType == enumType && x.GetCustomAttribute(typeof(HeaderAttribute)) != null).ToArray();
+                drop.choices = items.Select(x => {
+                    return ((HeaderAttribute)x.GetCustomAttribute(typeof(HeaderAttribute))).header;
+                }).ToList();
+                drop.index = System.Array.IndexOf(values, node.operation);
+                drop.RegisterValueChangedCallback((evt) => {
+                    node.operation = (ME.BECS.Blueprints.Nodes.OpIf)values.GetValue(drop.index);
                 });
 
             }
@@ -65,7 +99,7 @@ namespace ME.BECS.Blueprints.Editor {
     public class BlueprintGraphView : BaseGraphView {
         
         public BlueprintGraphView(UnityEditor.EditorWindow window) : base(window) { }
-
+        
     }
 
     public class GraphEditor : BaseGraphWindow {
@@ -206,110 +240,44 @@ namespace ME.BECS.Blueprints.Editor {
             this.prevScale = this.graphView.viewTransform.scale;
             this.prevPos = this.graphView.viewTransform.position;
             
-            var scaleX = this.graphView.viewTransform.scale.x;
-            var scaleY = this.graphView.viewTransform.scale.y;
-            var op = Mathf.Lerp(0f, maxOpacity, Mathf.Clamp01(scaleX - 0.25f) * 2f);
-            this.background.style.opacity = new StyleFloat(op);
-            this.background.style.backgroundPositionX = new StyleBackgroundPosition(new BackgroundPosition(BackgroundPositionKeyword.Top, this.graphView.viewTransform.position.x));
-            this.background.style.backgroundPositionY = new StyleBackgroundPosition(new BackgroundPosition(BackgroundPositionKeyword.Top, this.graphView.viewTransform.position.y));
-            if (op <= 0f) {
-                this.background.style.backgroundSize = new StyleBackgroundSize(new BackgroundSize(512f, 512f));
-            } else {
-                this.background.style.backgroundSize = new StyleBackgroundSize(new BackgroundSize(512f * scaleX, 512f * scaleY));
-            }
-            this.background.MarkDirtyRepaint();
-
-            //this.graphView.focusable = true;
-            //this.graphView.pickingMode = PickingMode.Position;
-            //this.graphView.UnregisterCallback<ContextualMenuPopulateEvent>(this.graphView.BuildContextualMenu);
-            //this.graphView.RegisterCallback<ContextualMenuPopulateEvent>(this.graphView.BuildContextualMenu);
-
             if (this.graphView != null) {
                 if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);
                 this.graphView.RemoveManipulator(contextMenu);
                 this.graphView.AddManipulator(contextMenu);
             }
-            
+
+            this.OnScaleChanged();
+
         }
         
-        private UnityEngine.UIElements.VisualElement background;
+        private GridBackground background;
         private UnityEditor.UIElements.Toolbar toolbar;
         private Button saveButton;
         private static IManipulator contextMenu;
+
+        private void OnScaleChanged() {
+            
+            var scaleX = this.graphView.viewTransform.scale.x;
+            var op = Mathf.Lerp(0f, maxOpacity, Mathf.Clamp01(scaleX - 0.25f) * 2f);
+            this.background.opacity = op;
+
+        }
 
         protected override void InitializeWindow(BaseGraph graph) {
             var view = new BlueprintGraphView(this);
             view.RegisterCallback<MouseMoveEvent>((evt) => {
                 this.OnTransformChanged(view);
             });
+            var grid = new GridBackground();
+            this.background = grid;
+            view.Add(grid);
+            grid.SendToBack();
             this.wantsMouseMove = true;
             view.viewTransformChanged += this.OnTransformChanged;
             this.rootView.Add(view);
             this.LoadStyle();
+
             view.styleSheets.Add(styleSheetBase);
-            {
-                var gridSpacing = 10f;
-                var gridBlockSpacing = gridSpacing * 10f;
-                var gridColor = new Color(0.1f, 0.1f, 0.1f, 0.6f);
-                var gridBlockColor = new Color(0.1f, 0.1f, 0.1f, 1f);
-                var back = new IMGUIContainer(() => {
-                    static void DrawGrid(Vector2 min, Vector2 max, float spacing, Color gridColor, Vector2 offset, float opacity) {
-                        
-                        offset.x %= spacing;
-                        offset.y %= spacing;
-                        min.x -= offset.x;
-                        max.x -= offset.x;
-                        min.y -= offset.y;
-                        max.y -= offset.y;
-                        
-                        //Get the bounding points, clamped by the spacing
-                        Vector2 start = new Vector2(
-                            Mathf.Ceil(min.x / spacing) * spacing,
-                            Mathf.Ceil(min.y / spacing) * spacing
-                        );
-                        Vector2 end = new Vector2(
-                            Mathf.Floor(max.x / spacing) * spacing,
-                            Mathf.Floor(max.y / spacing) * spacing
-                        );
-
-                        gridColor.a *= opacity;
-                        
-                        //Find the number of interactions will be done for each axis
-                        int widthLines = Mathf.CeilToInt((end.x - start.x) / spacing);
-                        int heightLines = Mathf.CeilToInt((end.y - start.y) / spacing);
-
-                        //Start the line rendering elements
-                        UnityEditor.Handles.BeginGUI();
-                        UnityEditor.Handles.color = gridColor;
-
-                        //Render the grid lines
-                        for (int x = 0; x <= widthLines; x++) {
-                            UnityEditor.Handles.DrawLine(
-                                new Vector3(start.x + x * spacing + offset.x, min.y + offset.y),
-                                new Vector3(start.x + x * spacing + offset.x, max.y + offset.y)
-                            );
-                        }
-                        for (int y = 0; y <= heightLines; y++) {
-                            UnityEditor.Handles.DrawLine(
-                                new Vector3(min.x + offset.x, start.y + y * spacing + offset.y),
-                                new Vector3(max.x + offset.x, start.y + y * spacing + offset.y)
-                            );
-                        }
-
-                        //End the rendering
-                        UnityEditor.Handles.EndGUI();
-                    }
-
-                    var size = view.worldBound.size;
-                    DrawGrid(Vector2.zero, size, gridSpacing * this.graphView.viewTransform.scale.x, gridColor, this.graphView.viewTransform.position, this.background.style.opacity.value);
-                    DrawGrid(Vector2.zero, size, gridBlockSpacing * this.graphView.viewTransform.scale.x, gridBlockColor, this.graphView.viewTransform.position, 1f);
-                });
-                back.MarkDirtyRepaint();
-                back.AddToClassList("background");
-                this.background = back;
-                view.Add(back);
-                back.SendToBack();
-            }
             if (this.toolbar != null && this.rootView.Contains(this.toolbar) == true) this.rootView.Remove(this.toolbar);
             var toolbar = new UnityEditor.UIElements.Toolbar();
             this.toolbar = toolbar;
@@ -321,8 +289,9 @@ namespace ME.BECS.Blueprints.Editor {
                         graph.connections = new Connection[graph.edges.Count];
                         for (var index = 0; index < graph.edges.Count; ++index) {
                             var edge = graph.edges[index];
-                            var from = (Graph.Node)edge.outputNode;
-                            var to = (Graph.Node)edge.inputNode;
+                            var from = edge.outputNode as Graph.Node;
+                            var to = edge.inputNode as Graph.Node;
+                            if (from == null || to == null) continue;
                             var connection = new Connection();
                             connection.from = from.id;
                             connection.fromIndex = 0;
@@ -374,19 +343,23 @@ namespace ME.BECS.Blueprints.Editor {
                     if (text.components.Count > 0) {
                         var components = new System.Collections.Generic.List<string>();
                         var componentsWithVars = new System.Collections.Generic.List<string>();
-                        foreach (var kv in text.components) {
-                            components.Add(kv.Key.FullName);
-                            componentsWithVars.Add(kv.Key.FullName + " " + kv.Value.componentVariableName);
+                        var comps = text.components.Where(x => x.Value.isStatic == false && (string.IsNullOrEmpty(x.Key.entity) == true || x.Key.entity == "ent"));
+                        foreach (var kv in comps) {
+                            components.Add(kv.Key.type.FullName);
+                            componentsWithVars.Add(kv.Key.type.FullName + " " + kv.Value.componentVariableName);
                         }
 
                         variables.Add("COMPONENTS", string.Join(", ", components));
                         variables.Add("COMPONENTS_WITH_VARS", "ref " + string.Join(", ref ", componentsWithVars));
                     }
                     var result = tpl.GetString(counters, variables);
-                    //Debug.Log(result);
-                    var path = $"{System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(graph))}/{name}.cs";
-                    System.IO.File.WriteAllText(path, result);
-                    AssetDatabase.ImportAsset(path);
+                    if (graph.debug == true) {
+                        Debug.Log(result);
+                    } else {
+                        var path = $"{System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(graph))}/{name}.cs";
+                        System.IO.File.WriteAllText(path, result);
+                        AssetDatabase.ImportAsset(path);
+                    }
                 });
                 compileButton.text = "Compile Graphs";
                 toolbar.Add(compileButton);
@@ -397,14 +370,8 @@ namespace ME.BECS.Blueprints.Editor {
             this.UpdateToolbar();
             if (this.graphView != null) this.OnTransformChanged(view, true);
             
-        }
+            this.rootView.styleSheets.Add(GraphEditor.nodeStyleSheet);
 
-        protected override void InitializeGraphView(BaseGraphView view) {
-            
-            this.rootView.styleSheets.Add(nodeStyleSheet);
-
-            base.InitializeGraphView(view);
-            
         }
 
     }

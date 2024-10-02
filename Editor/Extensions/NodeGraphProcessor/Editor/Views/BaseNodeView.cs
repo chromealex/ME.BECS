@@ -71,7 +71,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		
 		#region  Initialization
 		
-		public void Initialize(BaseGraphView owner, BaseNode node)
+		public virtual void Initialize(BaseGraphView owner, BaseNode node)
 		{
 			nodeTarget = node;
 			this.owner = owner;
@@ -244,6 +244,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 			
 			mainContainer.Add(controlsContainer);
+			
+			nodeBorder = this.Q("node-border");
+			nodeBorder.style.overflow = new StyleEnum<Overflow>(Overflow.Visible);
 
 			this.TestSync();
 
@@ -390,6 +393,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			{
 				selectionBorder = this.Q("selection-border");
 				nodeBorder = this.Q("node-border");
+				nodeBorder.style.overflow = new StyleEnum<Overflow>(Overflow.Visible);
 
 				schedule.Execute(() => {
 					selectionBorder.style.height = nodeBorder.localBound.height;
@@ -493,6 +497,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 
 			p.Initialize(this, portData?.displayName);
+			if (portData.optional == true) {
+				p.AddToClassList("optional");
+			}
 
 			scg::List< PortView > ports;
 			portsPerFieldName.TryGetValue(p.fieldName, out ports);
@@ -507,7 +514,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		}
 
         protected virtual PortView CreatePortView(Direction direction, FieldInfo fieldInfo, PortData portData, BaseEdgeConnectorListener listener)
-        	=> PortView.CreatePortView(direction, fieldInfo, portData, listener);
+        	=> PortView.CreatePortView(direction, fieldInfo, portData, listener, this);
 
         public void InsertPort(PortView portView, int index)
 		{
@@ -1170,6 +1177,14 @@ namespace ME.BECS.Extensions.GraphProcessor
 					owner.RegisterCompleteObjectUndo("Moved graph node");
 
                 nodeTarget.position = newPos;
+                if (nodeTarget.OnPositionChanged() == true) {
+	                foreach (var node in this.owner.groupViews) {
+		                node.SetPosition(node.group.position);
+	                }
+	                foreach (var node in this.owner.nodeViews) {
+		                node.SetPosition(node.nodeTarget.position);
+	                }
+                }
                 initializing = false;
             }
 		}

@@ -5,6 +5,7 @@ using UnityEngine.UIElements;
 namespace ME.BECS.Views.Editor {
 
     [CustomPropertyDrawer(typeof(Config))]
+    [CustomPropertyDrawer(typeof(ConfigDrawerAttribute))]
     public class ConfigDrawer : PropertyDrawer {
 
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {

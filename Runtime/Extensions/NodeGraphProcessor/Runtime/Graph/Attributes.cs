@@ -13,16 +13,20 @@ namespace ME.BECS.Extensions.GraphProcessor
 	{
 		public string		name;
 		public bool			allowMultiple = false;
+		public bool optional;
+		public System.Type fieldType;
 
 		/// <summary>
 		/// Mark the field as an input port
 		/// </summary>
 		/// <param name="name">display name</param>
 		/// <param name="allowMultiple">is connecting multiple edges allowed</param>
-		public InputAttribute(string name = null, bool allowMultiple = false)
+		public InputAttribute(string name = null, bool allowMultiple = false, bool optional = false, System.Type fieldType = null)
 		{
 			this.name = name;
 			this.allowMultiple = allowMultiple;
+			this.optional = optional;
+			this.fieldType = fieldType;
 		}
 	}
 
@@ -34,16 +38,20 @@ namespace ME.BECS.Extensions.GraphProcessor
 	{
 		public string		name;
 		public bool			allowMultiple = true;
+		public bool optional;
+		public System.Type fieldType;
 
 		/// <summary>
 		/// Mark the field as an output port
 		/// </summary>
 		/// <param name="name">display name</param>
 		/// <param name="allowMultiple">is connecting multiple edges allowed</param>
-		public OutputAttribute(string name = null, bool allowMultiple = true)
+		public OutputAttribute(string name = null, bool allowMultiple = true, bool optional = false, System.Type fieldType = null)
 		{
 			this.name = name;
 			this.allowMultiple = allowMultiple;
+			this.optional = optional;
+			this.fieldType = fieldType;
 		}
 	}
 

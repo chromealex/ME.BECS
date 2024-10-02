@@ -79,7 +79,7 @@ namespace ME.BECS.Extensions.GraphProcessor
             hierarchy.Add(main);
 
             capabilities |= Capabilities.Movable | Capabilities.Resizable;
-            style.overflow = Overflow.Hidden;
+            style.overflow = Overflow.Visible;
 
             ClearClassList();
             AddToClassList("pinnedElement");

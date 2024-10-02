@@ -62,6 +62,7 @@ MonoBehaviour:
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -82,6 +83,7 @@ MonoBehaviour:
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -102,6 +104,7 @@ MonoBehaviour:
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 00841636-789a-48ef-be03-f8aa80297e69
         groupGUID: 
@@ -126,6 +129,7 @@ MonoBehaviour:
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: f2eb1633-2d56-411e-a98f-c1fbf8f04f5c
         groupGUID: 

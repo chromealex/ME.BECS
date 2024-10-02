@@ -5,6 +5,7 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
 using System;
 using System.Reflection;
+using UnityEditor.UIElements;
 
 namespace ME.BECS.Extensions.GraphProcessor
 {
@@ -56,11 +57,28 @@ namespace ME.BECS.Extensions.GraphProcessor
 			this.tooltip = portData.tooltip;
 		}
 
-		public static PortView CreatePortView(Direction direction, FieldInfo fieldInfo, PortData portData, BaseEdgeConnectorListener edgeConnectorListener)
+		public static PortView CreatePortView(Direction direction, FieldInfo fieldInfo, PortData portData, BaseEdgeConnectorListener edgeConnectorListener, BaseNodeView nodeView)
 		{
 			var pv = new PortView(direction, fieldInfo, portData, edgeConnectorListener);
 			pv.m_EdgeConnector = new BaseEdgeConnector(edgeConnectorListener);
 			pv.AddManipulator(pv.m_EdgeConnector);
+
+			if (direction == Direction.Input) {
+				var value = fieldInfo.GetValue(nodeView.nodeTarget);
+				if (value != null) {
+					var defaultValue = new VisualElement();
+					pv.Add(defaultValue);
+					defaultValue.AddToClassList("default-value");
+					var so = new UnityEditor.SerializedObject(nodeView.nodeTarget.graph);
+					var nodes = so.FindProperty("nodes");
+					var index = nodeView.nodeTarget.graph.nodes.IndexOf(nodeView.nodeTarget);
+					var item = nodes.GetArrayElementAtIndex(index);
+					var prop = item.FindPropertyRelative(fieldInfo.Name);
+					var propField = new UnityEditor.UIElements.PropertyField(prop);
+					propField.BindProperty(prop);
+					defaultValue.Add(propField);
+				}
+			}
 
 			// Force picking in the port label to enlarge the edge creation zone
 			var portLabel = pv.Q("type");
@@ -172,6 +190,18 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}).ExecuteLater(50); // Hummm
 
 			UpdatePortSize();
+		}
+
+		protected override void ExecuteDefaultAction(EventBase evt) {
+			
+			base.ExecuteDefaultAction(evt);
+
+			if (this.connected == true) {
+				this.AddToClassList("connected");
+			} else {
+				this.RemoveFromClassList("connected");
+			}
+			
 		}
 
 		public scg::List< EdgeView >	GetEdges()

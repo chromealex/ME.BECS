@@ -378,6 +378,7 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
     border-right-width: 5px;
     border-left-color: rgba(0, 0, 0, 0.3);
     border-right-color: rgba(0, 0, 0, 0.3);
+    overflow: visible;
 }
 
 .title-container {

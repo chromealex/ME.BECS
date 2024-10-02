@@ -17,7 +17,8 @@ namespace ME.BECS.Extensions.GraphProcessor
         public Vector2          size;
         public bool enabled = true;
         public string GUID;
-
+        public bool transparent = false;
+		
 		/// <summary>
 		/// Store the GUIDs of the node in the group
 		/// </summary>

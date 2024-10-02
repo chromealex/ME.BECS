@@ -24,13 +24,14 @@
 
 .math-operation #controls {
     position: absolute;
-    width: 100%;
+    width: 50px;
     height: 100%;
     background-color: rgba(0, 0, 0, 0);
     padding: 0px;
     border-width: 0px;
     justify-content: center;
     align-items: center;
+    align-self: center;
 }
 .math-operation #controls Label {
     display: none;
@@ -63,4 +64,16 @@
 }
 .math-operation .unity-base-popup-field__arrow {
     display: none;
+}
+
+
+.scope {
+    background-color: rgba(0, 0, 0, 0) !important;
+}
+.scope #centralContainer {
+    background-color: rgba(0, 0, 0, 0) !important;
+}
+
+.optional {
+    -unity-font-style: italic;
 }

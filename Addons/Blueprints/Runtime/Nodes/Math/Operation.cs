@@ -24,43 +24,33 @@ namespace ME.BECS.Blueprints.Nodes {
         public override string style => "math-operation";
 
         [gp::Input(name = "X", allowMultiple = false)]
-        public float x;
+        public string x;
         [gp::Input(name = "Y", allowMultiple = false)]
-        public float y;
+        public string y;
 
-        [gp::Output(name = "Result", allowMultiple = false)]
-        public float result;
+        [gp::Output(name = "Result", allowMultiple = true)]
+        public string result;
 
-        public OpType operationType;
+        public OpType operation;
         
-        public override int InputCount => 2;
-        public override int OutputCount => 1;
-
         public override void Execute(Writer writer) {
 
             var op = writer.New();
-            writer.Add($"var {op} = {this.GetOp(this.input.value[0].value, this.input.value[1].value)};");
-            this.output.value[0] = new ME.BECS.Blueprints.PortData() {
-                value = op,
-            };
+            writer.Add($"var {op} = {this.GetOp(this.x, this.y)};");
+            this.result = op;
             
         }
 
         private string GetOp(string v1, string v2) {
 
-            if (this.operationType == OpType.Add) {
-                return $"{v1} + {v2}";
-            } else if (this.operationType == OpType.Subtract) {
-                return $"{v1} - {v2}";
-            } else if (this.operationType == OpType.Multiply) {
-                return $"{v1} * {v2}";
-            } else if (this.operationType == OpType.Divide) {
-                return $"{v1} / {v2}";
-            } else if (this.operationType == OpType.Power) {
-                return $"math.pow({v1}, {v2})";
-            }
-
-            return string.Empty;
+            return this.operation switch {
+                OpType.Add => $"{v1} + {v2}",
+                OpType.Subtract => $"{v1} - {v2}",
+                OpType.Multiply => $"{v1} * {v2}",
+                OpType.Divide => $"{v1} / {v2}",
+                OpType.Power => $"math.pow({v1}, {v2})",
+                _ => string.Empty
+            };
 
         }
 

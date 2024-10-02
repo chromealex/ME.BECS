@@ -24,6 +24,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// Display name on the node
 		/// </summary>
 		public string	displayName;
+		public bool optional;
 		/// <summary>
 		/// The type that will be used for coloring with the type stylesheet
 		/// </summary>
@@ -49,6 +50,7 @@ namespace ME.BECS.Extensions.GraphProcessor
         {
 			return identifier == other.identifier
 				&& displayName == other.displayName
+				&& optional == other.optional
 				&& displayType == other.displayType
 				&& acceptMultipleEdges == other.acceptMultipleEdges
 				&& sizeInPixel == other.sizeInPixel
@@ -60,6 +62,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
 			identifier = other.identifier;
 			displayName = other.displayName;
+			optional = other.optional;
 			displayType = other.displayType;
 			acceptMultipleEdges = other.acceptMultipleEdges;
 			sizeInPixel = other.sizeInPixel;

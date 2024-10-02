@@ -446,7 +446,8 @@ namespace ME.BECS.Editor {
             var popup = new ME.BECS.Editor.Extensions.SubclassSelector.AdvancedTypePopup(types,
                 ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.k_MaxTypePopupLineCount,
                 state,
-                showNullElement
+                showNullElement,
+                new UnityEngine.Vector2(200f, 0f)
             );
             popup.OnItemSelected += item => {
                 var type = item.Type;

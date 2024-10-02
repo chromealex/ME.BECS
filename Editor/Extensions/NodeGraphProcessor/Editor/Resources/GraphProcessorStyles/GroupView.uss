@@ -53,11 +53,3 @@
     margin-top: 4px;
     margin-bottom: 4px;
 }
-
-.mainContainer > #centralContainer {
-    background-color: rgba(45, 45, 45, 1);
-}
-
-.scope {
-    border-color: #1a1a1a;
-}

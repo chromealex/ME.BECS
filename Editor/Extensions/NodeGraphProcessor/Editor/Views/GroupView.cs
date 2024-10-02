@@ -24,7 +24,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		
 		private static void BuildContextualMenu(ContextualMenuPopulateEvent evt) {}
 		
-		public void Initialize(BaseGraphView graphView, Group block)
+		public virtual void Initialize(BaseGraphView graphView, Group block)
 		{
 			group = block;
 			owner = graphView;
@@ -138,8 +138,16 @@ namespace ME.BECS.Extensions.GraphProcessor
         public void UpdateGroupColor(Color newColor)
         {
             group.color = newColor;
-            style.backgroundColor = newColor;
-            ApplyClassByBackColor(newColor);
+            if (this.group.transparent == true) {
+                style.borderBottomColor = style.borderLeftColor = style.borderRightColor = style.borderTopColor = newColor;
+                this.RemoveFromClassList("light-color");
+                this.RemoveFromClassList("dark-color");
+                this.AddToClassList("light-color");
+            } else {
+                style.backgroundColor = newColor;
+                ApplyClassByBackColor(newColor);
+            }
+
         }
         
         public void ApplyClassByBackColor(Color backColor)

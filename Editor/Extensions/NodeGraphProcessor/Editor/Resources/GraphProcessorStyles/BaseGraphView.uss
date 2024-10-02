@@ -175,3 +175,28 @@
 .node-required-dependency-checked .node-required-dependency-true {
     display: flex;
 }
+
+
+.mainContainer > #centralContainer {
+    background-color: rgba(45, 45, 45, 1);
+}
+
+.scope {
+    border-color: #1a1a1a;
+}
+
+.default-value {
+    position: absolute;
+    margin-left: -70px;
+    width: 60px;
+    -unity-font-style: normal;
+}
+
+.default-value PropertyField .unity-object-field__label,
+.default-value PropertyField .unity-property-field__label{
+    display: none;
+}
+
+PortView.connected .default-value {
+    display: none;
+}

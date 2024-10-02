@@ -75,6 +75,14 @@ PortView > #connector > #cap:hover
     --port-color: #FF00FF;
 }
 
+.Port_Ent {
+    --port-color: #d580ff;
+}
+
+.Port_NodeLink {
+    --port-color: rgba(255, 255, 255, 0.1);
+}
+
 .Vertical
 {
     height: 6px;

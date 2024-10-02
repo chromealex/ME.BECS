@@ -96,6 +96,10 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// <summary>True if the node can be deleted, false otherwise</summary>
 		public virtual bool			deletable => true;
 
+		public virtual bool OnPositionChanged() {
+			return false;
+		}
+
 		/// <summary>
 		/// Container of input ports
 		/// </summary>
@@ -192,22 +196,26 @@ namespace ME.BECS.Extensions.GraphProcessor
 			public string						name;
 			public string						fieldName;
 			public FieldInfo					info;
+			public System.Type					fieldType;
 			public bool							input;
 			public bool							isMultiple;
 			public string						tooltip;
 			public CustomPortBehaviorDelegate	behavior;
 			public bool							vertical;
+			public bool optional;
 
-			public NodeFieldInformation(FieldInfo info, string name, bool input, bool isMultiple, string tooltip, bool vertical, CustomPortBehaviorDelegate behavior)
+			public NodeFieldInformation(FieldInfo info, System.Type fieldType, string name, bool input, bool isMultiple, string tooltip, bool vertical, CustomPortBehaviorDelegate behavior, bool optional)
 			{
 				this.input = input;
 				this.isMultiple = isMultiple;
 				this.info = info;
+				this.fieldType = fieldType != null ? fieldType : info.FieldType;
 				this.name = name;
 				this.fieldName = info.Name;
 				this.behavior = behavior;
 				this.tooltip = tooltip;
 				this.vertical = vertical;
+				this.optional = optional;
 			}
 		}
 
@@ -262,7 +270,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			var node = Activator.CreateInstance(nodeType) as BaseNode;
 
 			node.position = new Rect(position, new Vector2(100, 100));
-
+			
 			ExceptionToLog.Call((x) => x.OnNodeCreated(), node);
 
 			return node;
@@ -334,7 +342,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 				else
 				{
 					// If we don't have a custom behavior on the node, we just have to create a simple port
-					AddPort(nodeField.input, nodeField.fieldName, new PortData { acceptMultipleEdges = nodeField.isMultiple, displayName = nodeField.name, tooltip = nodeField.tooltip, vertical = nodeField.vertical });
+					AddPort(nodeField.input, nodeField.fieldName, new PortData { acceptMultipleEdges = nodeField.isMultiple, displayName = nodeField.name, optional = nodeField.optional, tooltip = nodeField.tooltip, vertical = nodeField.vertical });
 				}
 			}
 		}
@@ -436,7 +444,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 			else
 			{
-				var customPortTypeBehavior = customPortTypeBehaviorMap[fieldInfo.info.FieldType];
+				var customPortTypeBehavior = customPortTypeBehaviorMap[fieldInfo.fieldType];
 
 				foreach (var portData in customPortTypeBehavior(fieldName, fieldInfo.name, fieldInfo.info.GetValue(this)))
 					AddPortData(portData);
@@ -509,7 +517,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			if (info.behavior != null)
 				return true;
 
-			if (customPortTypeBehaviorMap.ContainsKey(info.info.FieldType))
+			if (customPortTypeBehaviorMap.ContainsKey(info.fieldType))
 				return true;
 			
 			return false;
@@ -612,14 +620,18 @@ namespace ME.BECS.Extensions.GraphProcessor
 				isMultiple = (inputAttribute != null) ? inputAttribute.allowMultiple : (outputAttribute.allowMultiple);
 				input = inputAttribute != null;
 				tooltip = tooltipAttribute?.tooltip;
+				var fieldType = (inputAttribute != null ? inputAttribute.fieldType : outputAttribute.fieldType);
 
+				var optional = false;
+				if (inputAttribute != null) optional = inputAttribute.optional;
+				if (outputAttribute != null) optional = outputAttribute.optional;
 				if (!String.IsNullOrEmpty(inputAttribute?.name))
 					name = inputAttribute.name;
 				if (!String.IsNullOrEmpty(outputAttribute?.name))
 					name = outputAttribute.name;
 
 				// By default we set the behavior to null, if the field have a custom behavior, it will be set in the loop just below
-				nodeFields[field.Name] = new NodeFieldInformation(field, name, input, isMultiple, tooltip, vertical != null, null);
+				nodeFields[field.Name] = new NodeFieldInformation(field, fieldType, name, input, isMultiple, tooltip, vertical != null, null, optional);
 			}
 
 			foreach (var method in methods)
@@ -728,7 +740,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
 			// Fixup port data info if needed:
 			if (portData.displayType == null)
-				portData.displayType = nodeFields[fieldName].info.FieldType;
+				portData.displayType = nodeFields[fieldName].fieldType;
 
 			if (input)
 				inputPorts.Add(new NodePort(this, fieldName, portData));

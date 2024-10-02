@@ -273,7 +273,8 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     ),
                     SubclassSelectorDrawer.k_MaxTypePopupLineCount,
                     state,
-                    true
+                    true,
+                    new Vector2(200f, 0f)
                 );
                 popup.OnItemSelected += item => {
                     var type = item.Type;

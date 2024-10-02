@@ -116,9 +116,10 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
         private bool showNullElement;
 
         public event Action<AdvancedTypePopupItem> OnItemSelected;
-
-        public AdvancedTypePopup(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state, bool showNullElement) : base(state) {
+        
+        public AdvancedTypePopup(IEnumerable<Type> types, int maxLineCount, AdvancedDropdownState state, bool showNullElement, Vector2 minSize) : base(state) {
             this.SetTypes(types);
+            this.minimumSize = minSize;
             this.minimumSize = new Vector2(this.minimumSize.x, EditorGUIUtility.singleLineHeight * maxLineCount + AdvancedTypePopup.k_HeaderHeight);
             this.showNullElement = showNullElement;
         }

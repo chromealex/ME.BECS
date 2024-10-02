@@ -2,6 +2,8 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
+    public class ConfigDrawerAttribute : UnityEngine.PropertyAttribute {}
+    
     [System.Serializable]
     public struct Config : System.IEquatable<Config> {
 
