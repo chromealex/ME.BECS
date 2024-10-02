@@ -114,7 +114,7 @@ MonoBehaviour:
           x: 147
           y: 0
           width: 300
-          height: 149
+          height: 140
         expanded: 1
         enabled: 1
         debug: 0
@@ -126,7 +126,7 @@ MonoBehaviour:
       type: {class: BuildGraphSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
       data:
         agentTypesConfig:
-          id: 5
+          id: 58
     - rid: 8346928920201003106
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

@@ -1,4 +1,4 @@
-namespace ME.BECS.Addons {
+namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     

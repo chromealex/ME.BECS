@@ -50,7 +50,7 @@ namespace ME.BECS.UnitsHealthBars {
 
         }
 
-        public ME.BECS.Addons.ObjectReference<UnityEngine.Material> healthBarMaterial;
+        public BECS.ObjectReference<UnityEngine.Material> healthBarMaterial;
         public BarSettings barSettings;
         private ME.BECS.NativeCollections.NativeParallelList<BarItem> bars;
         private VisualWorld visualWorld;

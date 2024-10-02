@@ -10,7 +10,7 @@ namespace ME.BECS.Pathfinding {
     [UnityEngine.Tooltip("Schedule building a pathfinding graph.")]
     public unsafe struct BuildGraphSystem : IAwake, IDestroy {
 
-        public ME.BECS.Addons.ObjectReference<AgentTypesConfig> agentTypesConfig;
+        public BECS.ObjectReference<AgentTypesConfig> agentTypesConfig;
 
         [Unity.Collections.ReadOnlyAttribute]
         internal Unity.Collections.NativeArray<Ent> graphs;
