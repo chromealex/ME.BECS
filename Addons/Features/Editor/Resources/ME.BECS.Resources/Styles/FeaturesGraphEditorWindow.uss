@@ -6,3 +6,10 @@
     left: 0;
     bottom: 0;
 }
+
+GridBackground {
+    --line-color: rgba(255, 255, 255, 0.02);
+    --spacing: 4;
+    --thick-line-color: rgba(255, 255, 255, 0.05);
+    --thick-lines: 1;
+}

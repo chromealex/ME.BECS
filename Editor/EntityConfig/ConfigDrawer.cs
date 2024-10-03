@@ -11,6 +11,7 @@ namespace ME.BECS.Views.Editor {
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var sourceId = property.FindPropertyRelative(nameof(Config.sourceId));
+            if (sourceId == null) return null;
             EntityConfigsRegistry.Initialize();
             
             var container = new UnityEngine.UIElements.VisualElement();

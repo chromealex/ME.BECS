@@ -46,6 +46,8 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
     [CustomPropertyDrawer(typeof(ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute))]
     public class SubclassSelectorDrawer : PropertyDrawer {
 
+        public static System.Action<Object> onOpen;
+
         class U<T> where T : unmanaged { }
         public static bool IsUnmanaged(System.Type t) {
             try { typeof(U<>).MakeGenericType(t); return true; }
@@ -172,6 +174,15 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
                 //button.text = this.GetTypeName(property).text;
                 container.Add(button);
+
+                {
+                    var openButton = new Button(() => {
+                        SubclassSelectorDrawer.onOpen?.Invoke(property.objectReferenceValue);
+                    });
+                    openButton.AddToClassList("open-button");
+                    openButton.text = "Open";
+                    container.Add(openButton);
+                }
             }
 
             if (attr.showContent == true) {

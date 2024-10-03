@@ -257,6 +257,14 @@ namespace ME.BECS.Blueprints {
             this.warnings.Add($"[ {node} ] {text}");
         }
 
+        public bool HasDefaultComponent(ComponentField component, out ComponentInfo componentInfo) {
+            if (this.components.TryGetValue(new KV(null, component.component.GetType()), out componentInfo) == true) {
+                return true;
+            }
+            componentInfo = default;
+            return false;
+        }
+
     }
 
     public class BlueprintGraph : ME.BECS.Extensions.GraphProcessor.BaseGraph {

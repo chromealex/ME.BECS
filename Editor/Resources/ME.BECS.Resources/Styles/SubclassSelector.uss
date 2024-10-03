@@ -54,3 +54,15 @@
     height: 24px;
     -unity-text-align: middle-left;
 }
+
+
+.graph-node .subclass-button-selector {
+    position: relative;
+    flex-grow: 1;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.open-button {
+    display: none;
+}

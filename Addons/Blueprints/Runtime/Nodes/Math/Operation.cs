@@ -35,7 +35,7 @@ namespace ME.BECS.Blueprints.Nodes {
         
         public override void Execute(Writer writer) {
 
-            var op = writer.New();
+            var op = writer.New(this.operation.ToString().Substring(0, 3));
             writer.Add($"var {op} = {this.GetOp(this.x, this.y)};");
             this.result = op;
             

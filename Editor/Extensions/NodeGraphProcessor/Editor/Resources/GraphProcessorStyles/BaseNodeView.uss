@@ -405,3 +405,27 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
     border-top-left-radius: 0px;
     border-top-right-radius: 0px;
 }
+
+
+.graph-node #controls .subclass-button-selector {
+    border-radius: 5px;
+    margin-bottom: 0px;
+}
+
+.graph-node #controls .subclass-selector {
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.graph-node .open-button {
+    display: flex;
+    background-color: rgba(22, 116, 238, 0.5);
+    border-radius: 5px;
+    font-size: 11px;
+    height: 24px;
+    margin: 0px;
+}
+
+.graph-node .open-button:hover {
+    background-color: rgba(22, 116, 238, 0.3);
+}

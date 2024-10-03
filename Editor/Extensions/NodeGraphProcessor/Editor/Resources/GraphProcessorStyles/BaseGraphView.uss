@@ -200,3 +200,16 @@
 PortView.connected .default-value {
     display: none;
 }
+
+GridBackground {
+    --line-color: rgba(255, 255, 255, 0.02);
+    --spacing: 4;
+    --thick-line-color: rgba(255, 255, 255, 0.05);
+    --thick-lines: 1;
+}
+
+
+
+.graph-node .subclass-selector-container {
+    display: none;
+}
