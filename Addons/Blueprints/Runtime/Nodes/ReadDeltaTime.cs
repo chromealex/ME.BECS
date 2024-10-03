@@ -11,7 +11,7 @@ namespace ME.BECS.Blueprints.Nodes {
 
         public override void Execute(Writer writer) {
 
-            var op = writer.New();
+            var op = writer.New("dt");
             writer.Add($"var {op} = this.systemContext.deltaTime;");
             this.result = op;
             

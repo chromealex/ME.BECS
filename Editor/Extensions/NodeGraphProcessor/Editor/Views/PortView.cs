@@ -74,9 +74,11 @@ namespace ME.BECS.Extensions.GraphProcessor
 					var index = nodeView.nodeTarget.graph.nodes.IndexOf(nodeView.nodeTarget);
 					var item = nodes.GetArrayElementAtIndex(index);
 					var prop = item.FindPropertyRelative(fieldInfo.Name);
-					var propField = new UnityEditor.UIElements.PropertyField(prop);
-					propField.BindProperty(prop);
-					defaultValue.Add(propField);
+					if (prop != null) {
+						var propField = new UnityEditor.UIElements.PropertyField(prop);
+						propField.BindProperty(prop);
+						defaultValue.Add(propField);
+					}
 				}
 			}
 

@@ -35,55 +35,72 @@ namespace ME.BECS.Blueprints {
 
     }
 
+    public abstract class BaseComponentField {
+
+        public string fieldName;
+
+        public abstract IComponent GetComponent();
+
+        public override string ToString() {
+            
+            return $"{this.GetFullName()}, field: {this.fieldName}";
+            
+        }
+
+        public bool IsValid() {
+            if (this.GetComponent() == null || string.IsNullOrEmpty(this.fieldName) == true || (this.GetComponent().GetType().GetField(this.fieldName) == null && this.GetComponent().GetType().GetProperty(this.fieldName) == null)) return false;
+            return true;
+        }
+
+        public bool IsRef() {
+            if (this.GetComponent().GetType().GetField(this.fieldName) != null) return true;
+            var prop = this.GetComponent().GetType().GetProperty(this.fieldName);
+            if (prop == null) return false;
+            return prop.GetGetMethod().ReturnType.IsByRef;
+        }
+
+        public bool Is<T>() {
+            if (this.IsValid() == false) return false;
+            var type = this.GetComponent().GetType();
+            System.Type t = null;
+            if (type.GetField(this.fieldName) != null) {
+                t = type.GetField(this.fieldName)?.FieldType;
+            }
+            if (type.GetProperty(this.fieldName) != null) {
+                t = type.GetProperty(this.fieldName)?.PropertyType;
+            }
+            if (t == null) return false;
+            return typeof(T).IsAssignableFrom(t);
+        }
+
+        public string GetFullName() {
+            var name = this.GetComponent().GetType().FullName;
+            name = name.Replace("+", ".");
+            return name;
+        }
+
+
+    }
+    
     [System.Serializable]
-    public class ComponentField {
+    public class ComponentField : BaseComponentField {
 
         [SerializeReference]
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: true, showContent: false, runtimeAssembliesOnly: true)]
         public IComponent component;
-        public string fieldName;
 
-        public bool IsValid() {
-            if (this.component == null || string.IsNullOrEmpty(this.fieldName) == true || this.component.GetType().GetField(this.fieldName) == null) return false;
-            return true;
-        }
-
-        public bool Is<T>() {
-            if (this.IsValid() == false) return false;
-            return typeof(T).IsAssignableFrom(this.component.GetType().GetField(this.fieldName).FieldType);
-        }
-
-        public string GetFullName() {
-            var name = this.component.GetType().FullName;
-            name = name.Replace("+", ".");
-            return name;
-        }
+        public override IComponent GetComponent() => this.component;
 
     }
 
     [System.Serializable]
-    public class StaticComponentField {
+    public class StaticComponentField : BaseComponentField {
 
         [SerializeReference]
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: true, showContent: false, runtimeAssembliesOnly: true)]
         public IConfigComponentStatic component;
-        public string fieldName;
-
-        public bool IsValid() {
-            if (this.component == null || string.IsNullOrEmpty(this.fieldName) == true || this.component.GetType().GetField(this.fieldName) == null) return false;
-            return true;
-        }
-
-        public bool Is<T>() {
-            if (this.IsValid() == false) return false;
-            return typeof(T).IsAssignableFrom(this.component.GetType().GetField(this.fieldName).FieldType);
-        }
-
-        public string GetFullName() {
-            var name = this.component.GetType().FullName;
-            name = name.Replace("+", ".");
-            return name;
-        }
+        
+        public override IComponent GetComponent() => this.component;
 
     }
 
@@ -99,32 +116,32 @@ namespace ME.BECS.Blueprints {
 
     public class Writer {
 
-        public struct ComponentInfo {
+        public struct ComponentInfo : System.IEquatable<ComponentInfo> {
 
             public string variableName;
             public string componentVariableName;
             public bool isStatic;
 
+            public bool Equals(ComponentInfo other) {
+                return this.componentVariableName == other.componentVariableName;
+            }
+
+            public override bool Equals(object obj) {
+                return obj is ComponentInfo other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return (this.componentVariableName != null ? this.componentVariableName.GetHashCode() : 0);
+            }
+
         }
 
         public System.Collections.Generic.List<string> list = new System.Collections.Generic.List<string>();
-        public System.Collections.Generic.List<string> variables = new System.Collections.Generic.List<string>();
+        public System.Collections.Generic.HashSet<string> variables = new System.Collections.Generic.HashSet<string>();
         public System.Collections.Generic.Dictionary<KV, ComponentInfo> components = new System.Collections.Generic.Dictionary<KV, ComponentInfo>();
         public int variableId;
         public int componentId;
-        public System.Collections.Generic.List<BaseNode> scopes = new System.Collections.Generic.List<BaseNode>();
         public System.Collections.Generic.List<string> warnings = new System.Collections.Generic.List<string>();
-        
-        public string New(string prefix = "v") {
-
-            if (string.IsNullOrEmpty(prefix) == true) prefix = "v";
-            
-            ++this.variableId;
-            var op = prefix + this.variableId;
-            this.variables.Add(op);
-            return op;
-
-        }
         
         public void Add(string str) {
 
@@ -162,6 +179,41 @@ namespace ME.BECS.Blueprints {
             }
 
         }
+
+        public string New(string prefix = "v") {
+
+            if (string.IsNullOrEmpty(prefix) == true) prefix = "v";
+            prefix = char.ToLower(prefix[0]) + prefix.Substring(1);
+            
+            // Try add var without index
+            var op = prefix;
+            if (this.variables.Add(op) == true) {
+                return op;
+            }
+            
+            ++this.variableId;
+            op = prefix + this.variableId;
+            this.variables.Add(op);
+            return op;
+
+        }
+
+        private string GetNextComponentName(System.Type type) {
+
+            var componentVariableName = type.Name;
+            componentVariableName = char.ToLower(componentVariableName[0]) + componentVariableName.Substring(1);
+
+            if (this.components.ContainsValue(new ComponentInfo() {
+                    componentVariableName = componentVariableName,
+                }) == true) {
+
+                componentVariableName += (++this.componentId);
+
+            }
+
+            return componentVariableName;
+
+        }
         
         public ComponentInfo AddGetComponent(string entity, System.Type type, string variableName, bool isStatic) {
             if (string.IsNullOrEmpty(entity) == true) entity = null;
@@ -175,7 +227,7 @@ namespace ME.BECS.Blueprints {
             } else {
                 info = new ComponentInfo() {
                     variableName = variableName,
-                    componentVariableName = $"comp{(++this.componentId)}",
+                    componentVariableName = this.GetNextComponentName(type),//$"comp{(++this.componentId)}",
                     isStatic = isStatic,
                 };
             }
@@ -184,15 +236,17 @@ namespace ME.BECS.Blueprints {
             return info;
         }
 
-        public void AddScope(BaseNode node, string groupGuid) {
-            this.scopes.Add(node);
+        public bool AddNewOp(string entity, BaseComponentField componentField, out ComponentInfo componentInfo, bool isStatic = false) {
+            var component = componentField.GetComponent().GetType();
+            if (entity == "ent") entity = null;
+            return this.AddNewOp(entity, component, out componentInfo, isStatic, componentField.fieldName);
         }
 
-        public bool AddNewOp(string entity, System.Type type, out ComponentInfo componentInfo, bool isStatic = false) {
+        public bool AddNewOp(string entity, System.Type type, out ComponentInfo componentInfo, bool isStatic = false, string customFieldName = null) {
             if (entity == "ent") entity = null;
             componentInfo = this.AddGetComponent(entity, type, null, isStatic);
             if (componentInfo.variableName == null) {
-                var op = this.New(entity);
+                var op = this.New(customFieldName ?? entity);
                 componentInfo = this.AddGetComponent(entity, type, op, isStatic);
                 return false;
             }
@@ -233,28 +287,62 @@ namespace ME.BECS.Blueprints {
                 
         }*/
 
+        private bool IsAllComplete(Graph.Node node) {
+            var group = node.graph.groups.FirstOrDefault(x => x.GUID == node.groupGUID);
+            var allComplete = true;
+            foreach (var nodeGuid in group.innerNodeGUIDs) {
+                var n = (Graph.Node)this.graph.nodesPerGUID[nodeGuid];
+                if (n is ME.BECS.Blueprints.Nodes.If ifNode) {
+                    if (string.IsNullOrEmpty(ifNode.groupGuid) == false) {
+                        if (this.IsAllComplete(ifNode.groupGuid) == false) return false;
+                    }
+                }
+                if (this.complete.Contains(n.id) == false) {
+                    allComplete = false;
+                    break;
+                }
+            }
+            return allComplete;
+        }
+
+        private bool IsAllComplete(string groupGuid) {
+            var group = this.graph.groups.FirstOrDefault(x => x.GUID == groupGuid);
+            var allComplete = true;
+            foreach (var nodeGuid in group.innerNodeGUIDs) {
+                var n = (Graph.Node)this.graph.nodesPerGUID[nodeGuid];
+                if (n is ME.BECS.Blueprints.Nodes.If ifNode) {
+                    if (string.IsNullOrEmpty(ifNode.groupGuid) == false) {
+                        if (this.IsAllComplete(ifNode.groupGuid) == false) return false;
+                    }
+                }
+                if (this.complete.Contains(n.id) == false) {
+                    allComplete = false;
+                    break;
+                }
+            }
+            return allComplete;
+        }
+        
         public override void Run() {
             
             int count = this.processList.Count;
 
+            var openedGroups = new System.Collections.Generic.HashSet<string>();
             for (int i = 0; i < count; i++) {
                 var node = this.processList[i];
                 node.OnProcess();
                 if (string.IsNullOrEmpty(node.groupGUID) == false) {
-                    var group = node.graph.groups.FirstOrDefault(x => x.GUID == node.groupGUID);
-                    var allComplete = true;
-                    foreach (var nodeGuid in group.innerNodeGUIDs) {
-                        var n = (Graph.Node)node.graph.nodesPerGUID[nodeGuid];
-                        if (this.complete.Contains(n.id) == false) {
-                            allComplete = false;
-                            break;
-                        }
-                    }
-                    if (allComplete == true) {
+                    if (this.IsAllComplete(node.groupGUID) == true) {
+                        openedGroups.Remove(node.groupGUID);
                         this.writer.Add("}");
+                    } else {
+                        openedGroups.Add(node.groupGUID);
                     }
                 }
+            }
 
+            for (int i = 0; i < openedGroups.Count; ++i) {
+                this.writer.Add("}");
             }
 
         }
@@ -347,12 +435,13 @@ namespace ME.BECS.Blueprints {
             
             var writer = new Writer();
             var completeNodes = new System.Collections.Generic.HashSet<int>();
-            var lookup = new System.Collections.Generic.HashSet<int>();
-            var queue = new System.Collections.Generic.Queue<Node>();
+            //var lookup = new System.Collections.Generic.HashSet<int>();
+            //var queue = new System.Collections.Generic.Queue<Node>();
             foreach (var node in this.nodes) {
-                var n = (Node)node;
-                n.writer = writer;
-                n.complete = completeNodes;
+                if (node is Node n) {
+                    n.writer = writer;
+                    n.complete = completeNodes;
+                }
                 //queue.Enqueue(n);
             }
 

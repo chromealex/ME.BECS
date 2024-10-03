@@ -24,7 +24,7 @@ namespace ME.BECS.Blueprints.Nodes {
         public void CustomOutputConfig(scg::List<SerializableEdge> edges, NodePort outputPort) {
 
             if (this.component.Is<Config>() == true) {
-                foreach (var edge in edges) edge.passThroughBuffer = $"{{ent}}.Read<{this.component.GetFullName()}>.{this.component.fieldName}";
+                foreach (var edge in edges) edge.passThroughBuffer = $"{{ent}}.Read<{this.component.GetFullName()}>().{this.component.fieldName}";
             } else {
                 foreach (var edge in edges) edge.passThroughBuffer = this.result;
             }
@@ -33,10 +33,17 @@ namespace ME.BECS.Blueprints.Nodes {
 
         public override void Execute(Writer writer) {
 
-            if (this.component.IsValid() == false) return;
+            if (this.component.IsValid() == false) {
+                writer.AddWarning(this, $"Component is not valid ({this.component.ToString()})");
+                return;
+            }
 
-            if (writer.AddNewOp(this.entity, this.component.component.GetType(), out var name) == false) {
-                writer.Add($"ref readonly var {name.variableName} = ref {this.ReadInput()}.Read<{this.component.GetFullName()}>.{this.component.fieldName};");
+            if (writer.AddNewOp(this.entity, this.component, out var name) == false) {
+                if (this.component.IsRef() == true) {
+                    writer.Add($"ref readonly var {name.variableName} = ref {this.ReadInput()}.Read<{this.component.GetFullName()}>().{this.component.fieldName};");
+                } else {
+                    writer.Add($"var {name.variableName} = {this.ReadInput()}.Read<{this.component.GetFullName()}>().{this.component.fieldName};");
+                }
             }
             this.result = name.variableName;
             

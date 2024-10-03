@@ -22,7 +22,10 @@ namespace ME.BECS.Blueprints.Nodes {
         
         public override void Execute(Writer writer) {
 
-            if (this.component.IsValid() == false) return;
+            if (this.component.IsValid() == false) {
+                writer.AddWarning(this, $"Component is not valid ({this.component.ToString()})");
+                return;
+            }
 
             var ent = this.ReadInput(out var res);
             if (res == false) {

@@ -55,7 +55,6 @@ namespace ME.BECS.Blueprints.Nodes {
         public override void Execute(Writer writer) {
 
             writer.Add($"if ({this.GetOp(this.a, this.b)}) {{");
-            writer.AddScope(this, this.groupGuid);
 
         }
 

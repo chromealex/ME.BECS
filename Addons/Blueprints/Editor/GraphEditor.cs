@@ -163,8 +163,7 @@ namespace ME.BECS.Blueprints.Editor {
             this.hasUnsavedChanges = true;
             this.UpdateToolbar();
 
-            if (obj.addedNode != null) {
-                var node = (Graph.Node)obj.addedNode;
+            if (obj.addedNode != null && obj.addedNode is Graph.Node node) {
                 node.OnCreated();
             }
             

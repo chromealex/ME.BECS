@@ -34,15 +34,26 @@ namespace ME.BECS.Blueprints.Editor {
             void UpdateField() {
                 var type = ME.BECS.Editor.EditorUtils.GetTypeFromPropertyField(component.managedReferenceFullTypename);
                 if (type != null) {
-                    var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                    field.choices = fields.Select(x => x.FieldType.Name + " " + x.Name).ToList();
+                    var fields = type.GetMembers(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).Where(x => {
+                        if (x is System.Reflection.FieldInfo) return true;
+                        return x is System.Reflection.PropertyInfo prop && prop.CanRead == true;
+                    }).ToList();
+                    field.choices = fields.Select(x => {
+                        if (x is System.Reflection.FieldInfo fieldInfo) {
+                            return $"{fieldInfo.FieldType.Name} {x.Name}";
+                        }
+                        if (x is System.Reflection.PropertyInfo propertyInfo) {
+                            return $"{propertyInfo.PropertyType.Name} {x.Name}";
+                        }
+                        return null;
+                    }).ToList();
                     field.index = System.Array.IndexOf(field.choices.ToArray(), property.FindPropertyRelative("fieldName").stringValue);
                     if (field.index < 0 && field.choices.Count > 0) {
                         field.index = 0;
                     }
                     field.RegisterValueChangedCallback(evt => {
                         property.serializedObject.Update();
-                        property.FindPropertyRelative("fieldName").stringValue = evt.newValue;
+                        property.FindPropertyRelative("fieldName").stringValue = fields[field.index].Name;
                         property.serializedObject.ApplyModifiedProperties();
                         property.serializedObject.Update();
                     });
