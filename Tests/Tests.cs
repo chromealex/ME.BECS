@@ -5,11 +5,13 @@ namespace ME.BECS.Tests {
     public static class AllTests {
 
         public static void Start() {
+            ObjectReferenceRegistry.ClearRuntimeObjects();
             var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.BurstHelper.Editor");
             type.GetMethod("Load").Invoke(null, null);
         }
 
         public static void Dispose() {
+            ObjectReferenceRegistry.ClearRuntimeObjects();
             Worlds.ResetWorldsCounter();
         }
 

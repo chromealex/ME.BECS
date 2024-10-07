@@ -49,6 +49,7 @@ namespace ME.BECS.Tests {
             config.aspects.components = new IAspect[1] {
                 new TestAspect(),
             };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
 
             {
                 using var world = World.Create();
@@ -72,6 +73,7 @@ namespace ME.BECS.Tests {
             config.sharedData.components = new IConfigComponentShared[1] {
                 new TestConfigShared1Component() { data = 1 },
             };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
 
             {
                 using var world = World.Create();
@@ -97,6 +99,7 @@ namespace ME.BECS.Tests {
                 new TestConfig1StaticComponent() { data = 1 },
                 new TestConfig2StaticComponent() { data = 2 },
             };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
 
             {
                 using var world = World.Create();

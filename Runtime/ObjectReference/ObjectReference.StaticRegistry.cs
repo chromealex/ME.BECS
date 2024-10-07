@@ -7,6 +7,9 @@ namespace ME.BECS {
 
         public static ObjectReferenceRegistryData data;
         
+        public static System.Collections.Generic.List<ObjectReferenceRegistryData.Item> additionalRuntimeObjects = new System.Collections.Generic.List<ObjectReferenceRegistryData.Item>();
+        private static uint nextRuntimeId;
+        
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
@@ -43,6 +46,33 @@ namespace ME.BECS {
 
         }
 
+        public static void AddRuntimeObject(UnityEngine.Object obj) {
+
+            var nextId = ObjectReferenceRegistry.data.sourceId;
+            ObjectReferenceRegistryData.Item item = default;
+            for (var index = 0; index < additionalRuntimeObjects.Count; ++index) {
+                var elem = additionalRuntimeObjects[index];
+                if (elem.source == obj) {
+                    item = elem;
+                    ++item.references;
+                    additionalRuntimeObjects[index] = item;
+                    return;
+                }
+            }
+
+            item = new ObjectReferenceRegistryData.Item() {
+                references = 1u,
+                source = obj,
+                sourceId = nextId + (++nextRuntimeId),
+            };
+            additionalRuntimeObjects.Add(item);
+
+        }
+
+        public static void ClearRuntimeObjects() {
+            additionalRuntimeObjects.Clear();
+        }
+
         public static T GetObjectBySourceId<T>(uint sourceId) where T : UnityEngine.Object {
 
             if (ObjectReferenceRegistry.data == null) return null;
@@ -71,6 +101,10 @@ namespace ME.BECS {
         public static uint GetId(UnityEngine.Object obj) {
 
             foreach (var item in data.items) {
+                if (item.source == obj) return item.sourceId;
+            }
+
+            foreach (var item in additionalRuntimeObjects) {
                 if (item.source == obj) return item.sourceId;
             }
 

@@ -5,8 +5,43 @@ namespace ME.BECS {
     using ME.BECS.Jobs;
     using Unity.Jobs;
     using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Collections;
 
     public unsafe partial struct OneShotTasks {
+
+        [BURST(CompileSynchronously = true)]
+        private struct ResolveTasksParallelJob : IJobParallelFor {
+
+            [NativeDisableUnsafePtrRestriction]
+            public State* state;
+            public OneShotType type;
+            public ushort updateType;
+            public NativeList<Task>.ParallelWriter results;
+
+            public void Execute(int index) {
+
+                this.state->oneShotTasks.ResolveThread(this.state, this.type, this.updateType, (uint)index, this.results);
+                
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct ResolveTasksComplete : IJobParallelFor {
+
+            [NativeDisableUnsafePtrRestriction]
+            public State* state;
+            public OneShotType type;
+            [ReadOnly]
+            public NativeArray<Task>.ReadOnly items;
+            
+            public void Execute(int index) {
+                
+                this.state->oneShotTasks.ResolveCompleteThread(this.state, this.type, this.items, index);
+                
+            }
+
+        }
 
         [BURST(CompileSynchronously = true)]
         private struct ResolveTasksJob : IJobSingle {
@@ -27,12 +62,7 @@ namespace ME.BECS {
         [INLINE(256)]
         [NotThreadSafe]
         public static JobHandle ResolveTasks(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
-            var job = new ResolveTasksJob() {
-                state = state,
-                type = type,
-                updateType = updateType,
-            };
-            return job.ScheduleSingleByRef(dependsOn);
+            return state->oneShotTasks.ResolveTasksJobs(state, type, updateType, dependsOn);
         }
 
     }

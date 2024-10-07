@@ -429,3 +429,10 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 .graph-node .open-button:hover {
     background-color: rgba(22, 116, 238, 0.3);
 }
+
+.not-editable #controls .subclass-button-selector {
+    display: none;
+}
+
+.not-editable .graph-node .open-button {
+}

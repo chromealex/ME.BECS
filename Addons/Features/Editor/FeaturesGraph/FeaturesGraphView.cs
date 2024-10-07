@@ -10,9 +10,29 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         public FeaturesGraphView(UnityEditor.EditorWindow window) : base(window) { }
 
+        public bool isEditable;
         private float timer;
         private System.Action<UnityEditor.Experimental.GraphView.NodeCreationContext> baseNodeCreationRequest;
+        
+        public void UpdateEnableState() {
+            
+            if (this.isEditable == false) {
+                this.AddToClassList("not-editable");
+                var elements = this.Query<VisualElement>().ToList();
+                foreach (var element in elements) {
+                    if (element.ClassListContains("open-button") == true ||
+                        (element is Toggle && element.parent is Foldout)) {
+                        
+                    } else {
+                        element.pickingMode = PickingMode.Ignore;
+                    }
+                }
 
+                this.contentContainer.pickingMode = PickingMode.Position;
+            }
+
+        }
+        
         protected override void InitializeView() {
             
             base.InitializeView();
@@ -50,6 +70,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
                     this.baseNodeCreationRequest?.Invoke(evt);
                 }
             };
+
+            this.UpdateEnableState();
 
         }
 

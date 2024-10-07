@@ -13,7 +13,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
             public string label;
             public BaseGraph graph;
-            public System.Action onClick;
 
         }
         
@@ -66,7 +65,9 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
             UnityEditor.Selection.selectionChanged -= this.OnSelectionChanged;
             UnityEditor.Selection.selectionChanged += this.OnSelectionChanged;
-
+            
+            if (this.graphView is FeaturesGraphView view) view.UpdateEnableState();
+            
         }
 
         protected override void OnDestroy() {
@@ -164,6 +165,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
             
             this.OnScaleChanged();
+            if (this.graphView is FeaturesGraphView view) view.UpdateEnableState();
 
         }
 
@@ -185,13 +187,24 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
         }
 
+        private void OnFocus() {
+            if (this.graphView is FeaturesGraphView view) view.UpdateEnableState();
+        }
+
+        protected override void InitializeGraphView(BaseGraphView viewBase) {
+            base.InitializeGraphView(viewBase);
+            if (viewBase is FeaturesGraphView view) view.UpdateEnableState();
+        }
+
         private GridBackground background;
         private UnityEditor.UIElements.ToolbarBreadcrumbs breadcrumb;
         private UnityEditor.UIElements.Toolbar toolbar;
         private UnityEngine.UIElements.Button saveButton;
         private const float maxOpacity = 1f;
         protected override void InitializeWindow(BaseGraph graph) {
+            
             var view = new FeaturesGraphView(this);
+            view.isEditable = graph.builtInGraph == false;
             view.RegisterCallback<MouseMoveEvent>((evt) => {
                 this.OnTransformChanged(view);
             });
@@ -205,6 +218,23 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.rootView.Add(view);
             this.LoadStyle();
             view.styleSheets.Add(styleSheetBase);
+
+            if (view.isEditable == false) {
+                var editableLock = new Image();
+                editableLock.AddToClassList("editable-lock");
+                editableLock.image = EditorUtils.LoadResource<Texture2D>("editable-lock", false);
+                {
+                    var label = new Label("Readonly Mode");
+                    label.AddToClassList("editable-header");
+                    editableLock.Add(label);
+                }
+                {
+                    var label = new Label("Edit mode is disabled because of this graph is built-in");
+                    label.AddToClassList("editable-description");
+                    editableLock.Add(label);
+                }
+                view.Add(editableLock);
+            }
 
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen -= this.OnOpen;
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen += this.OnOpen;
@@ -246,6 +276,8 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.rootView.Add(this.breadcrumb);
 
             this.UpdateBreadcrumbs();
+            view.UpdateEnableState();
+
         }
 
         private void UpdateBreadcrumbs() {
@@ -253,7 +285,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.breadcrumb.Clear();
             foreach (var item in this.breadcrumbs) {
                 this.breadcrumb.PushItem(item.label, () => {
-                    item.onClick.Invoke();
+                    this.MoveTo(item.graph);
                 });
             }
             
@@ -265,7 +297,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 this.breadcrumbs.Add(new BreadcrumbItem() {
                     label = graph.name,
                     graph = graph,
-                    onClick = () => this.MoveTo(graph),
                 });
                 this.SelectAsset(graph);
             }

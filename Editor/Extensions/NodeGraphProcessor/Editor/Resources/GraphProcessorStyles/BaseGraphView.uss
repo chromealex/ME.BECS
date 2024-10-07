@@ -213,3 +213,29 @@ GridBackground {
 .graph-node .subclass-selector-container {
     display: none;
 }
+
+
+.not-editable #title Toggle {
+    display: none;
+}
+
+.editable-lock {
+    position: absolute;
+    top: 40px;
+    width: 70px;
+    height: 70px;
+    opacity: 0.5;
+}
+
+.editable-lock .editable-header {
+    position: absolute;
+    left: 70px;
+    font-size: 40px;
+    -unity-font-style: bold;
+}
+
+.editable-lock .editable-description {
+    position: absolute;
+    left: 70px;
+    top: 50px;
+}
