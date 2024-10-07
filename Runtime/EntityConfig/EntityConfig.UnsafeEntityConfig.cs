@@ -418,6 +418,10 @@ namespace ME.BECS {
             if (this.IsValid() == false) {
                 throw new System.Exception();
             }
+
+            if (this.baseConfig != null) {
+                this.baseConfig->Apply(in ent);
+            }
             
             ent.Set(new EntityConfigComponent() {
                 id = this.id,
