@@ -368,6 +368,9 @@ namespace ME.BECS.Blueprints {
         }
         
         [System.Serializable]
+        public abstract class BlueprintGraphNode {}
+        
+        [System.Serializable]
         public abstract class Node : BlueprintNode {
 
             public class NodeLink { }
@@ -414,6 +417,16 @@ namespace ME.BECS.Blueprints {
 
         }
 
+        [System.Serializable]
+        public struct Line {
+
+            [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: false, runtimeAssembliesOnly: true, showLabel: false)]
+            [SerializeReference]
+            public BlueprintGraphNode node;
+
+        }
+        
+        public Line[] lines;
         public SystemJobType systemType = SystemJobType.Parallel;
         public int nextId;
         public Connection[] connections;

@@ -62,6 +62,13 @@
     border-radius: 5px;
     background-color: rgba(0, 0, 0, 0);
 }
+.column .unity-toggle .unity-toggle__input {
+    background-color: rgba(32, 138, 175, 0.5);
+    border-radius: 4px;
+}
+.column .unity-toggle.unity-disabled .unity-toggle__input {
+    background-color: rgba(0, 0, 0, 0.02);
+}
 .column .unity-toggle .unity-toggle__checkmark {
     -unity-background-image-tint-color: rgba(120, 120, 120, 1);
 }

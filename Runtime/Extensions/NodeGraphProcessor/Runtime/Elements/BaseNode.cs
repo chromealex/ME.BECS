@@ -602,7 +602,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			{
 				var inputAttribute = field.GetCustomAttribute< InputAttribute >();
 				var outputAttribute = field.GetCustomAttribute< OutputAttribute >();
-				var tooltipAttribute = field.GetCustomAttribute< TooltipAttribute >();
+				var tooltipAttribute = field.GetCustomAttribute< UnityEngine.TooltipAttribute >();
 				var showInInspector = field.GetCustomAttribute< ShowInInspector >();
 				var vertical = field.GetCustomAttribute< VerticalAttribute >();
 				bool isMultiple = false;

@@ -5,6 +5,13 @@ namespace ME.BECS.Blueprints.Nodes {
     using ME.BECS.Extensions.GraphProcessor;
 
     [System.Serializable]
+    public class EntRead : Graph.BlueprintGraphNode {
+
+        public ComponentField component;
+
+    }
+
+    [System.Serializable]
     [Extensions.GraphProcessor.NodeMenuItem("Read from Component")]
     public class ReadFromComponent : Graph.Node {
 

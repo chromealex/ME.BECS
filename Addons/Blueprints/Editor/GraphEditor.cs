@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,7 +5,6 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 using ME.BECS.Editor;
-using UnityEditor.Experimental.GraphView;
 
 namespace ME.BECS.Blueprints.Editor {
     
@@ -116,7 +114,7 @@ namespace ME.BECS.Blueprints.Editor {
             win.Show();
 
         }
-
+        
         [UnityEditor.Callbacks.OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line) {
             var graph = UnityEditor.EditorUtility.InstanceIDToObject(instanceID) as ME.BECS.Blueprints.Graph;
@@ -263,6 +261,7 @@ namespace ME.BECS.Blueprints.Editor {
         }
 
         protected override void InitializeWindow(BaseGraph graph) {
+
             var view = new BlueprintGraphView(this);
             view.RegisterCallback<MouseMoveEvent>((evt) => {
                 this.OnTransformChanged(view);
@@ -363,14 +362,14 @@ namespace ME.BECS.Blueprints.Editor {
                 compileButton.text = "Compile Graphs";
                 toolbar.Add(compileButton);
             }
-            
+
             this.rootView.Add(toolbar);
-            
+
             this.UpdateToolbar();
             if (this.graphView != null) this.OnTransformChanged(view, true);
-            
-            this.rootView.styleSheets.Add(GraphEditor.nodeStyleSheet);
 
+            this.rootView.styleSheets.Add(GraphEditor.nodeStyleSheet);
+            
         }
 
     }

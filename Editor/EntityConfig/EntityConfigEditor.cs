@@ -46,7 +46,6 @@ namespace ME.BECS.Editor {
         
         private void DrawComponents(VisualElement root, SerializedObject serializedObject) {
 
-            var world = Context.world;
             var container = root;
 
             var scrollView = new ScrollView(ScrollViewMode.Vertical);
@@ -65,9 +64,12 @@ namespace ME.BECS.Editor {
                 components.AddToClassList("entity-state-components");
                 componentsContainer.Add(components);
 
+                var tooltip = new VisualElement();
+                components.Add(tooltip);
+                EditorUIUtils.DrawTooltip(tooltip, "<b>IConfigComponent</b>\nWill be applied at runtime and stores on entity in world state.");
                 var componentsLabel = new Label("Components");
                 componentsLabel.AddToClassList("entity-components-label");
-                components.Add(componentsLabel);
+                tooltip.Add(componentsLabel);
 
                 var componentsList = new VisualElement();
                 componentsList.AddToClassList("entity-components-list");
@@ -89,9 +91,12 @@ namespace ME.BECS.Editor {
                 components.AddToClassList("entity-shared-components");
                 componentsContainer.Add(components);
 
+                var tooltip = new VisualElement();
+                components.Add(tooltip);
+                EditorUIUtils.DrawTooltip(tooltip, "<b>ISharedComponent</b>\nWill be applied at runtime and stores in special container in world state.");
                 var componentsLabel = new Label("Shared Components");
                 componentsLabel.AddToClassList("entity-components-label");
-                components.Add(componentsLabel);
+                tooltip.Add(componentsLabel);
 
                 var componentsList = new VisualElement();
                 componentsList.AddToClassList("entity-components-list");
@@ -112,9 +117,12 @@ namespace ME.BECS.Editor {
                 components.AddToClassList("entity-static-components");
                 componentsContainer.Add(components);
 
+                var tooltip = new VisualElement();
+                components.Add(tooltip);
+                EditorUIUtils.DrawTooltip(tooltip, "<b>IConfigStaticComponent</b>\nWill <b>not</b> be applied at runtime, it will stored in this config.");
                 var componentsLabel = new Label("Static Components");
                 componentsLabel.AddToClassList("entity-components-label");
-                components.Add(componentsLabel);
+                tooltip.Add(componentsLabel);
 
                 var componentsList = new VisualElement();
                 componentsList.AddToClassList("entity-components-list");
@@ -134,10 +142,13 @@ namespace ME.BECS.Editor {
                 components.AddToClassList("entity-components");
                 components.AddToClassList("entity-aspects");
                 componentsContainer.Add(components);
-
+                
+                var tooltip = new VisualElement();
+                components.Add(tooltip);
+                EditorUIUtils.DrawTooltip(tooltip, "<b>IAspect</b>\nWill be applied at runtime on entity with QueryWith attribute.");
                 var componentsLabel = new Label("Aspects");
                 componentsLabel.AddToClassList("entity-components-label");
-                components.Add(componentsLabel);
+                tooltip.Add(componentsLabel);
 
                 var componentsList = new VisualElement();
                 componentsList.AddToClassList("entity-components-list");

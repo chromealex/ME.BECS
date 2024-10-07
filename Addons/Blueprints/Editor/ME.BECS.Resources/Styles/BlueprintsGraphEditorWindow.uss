@@ -24,3 +24,9 @@ GridBackground {
     --thick-line-color: rgba(255, 255, 255, 0.05);
     --thick-lines: 1;
 }
+
+
+
+.line {
+    min-height: 30px;
+}
