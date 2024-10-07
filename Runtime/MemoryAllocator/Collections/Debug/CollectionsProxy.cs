@@ -346,6 +346,44 @@ namespace ME.BECS {
         }
 
     }
+    
+    public class UIntDictionaryAutoProxy<V> where V : unmanaged {
+
+        private UIntDictionaryAuto<V> arr;
+        
+        public UIntDictionaryAutoProxy(UIntDictionaryAuto<V> arr) {
+
+            this.arr = arr;
+
+        }
+
+        public uint Count {
+            get {
+                return this.arr.Count;
+            }
+        }
+
+        public MemArrayAuto<uint> buckets => this.arr.buckets;
+        public MemArrayAuto<UIntDictionaryAuto<V>.Entry> entries => this.arr.entries;
+        public uint count => this.arr.count;
+        public uint version => this.arr.version;
+        public int freeList => this.arr.freeList;
+        public uint freeCount => this.arr.freeCount;
+
+        public System.Collections.Generic.KeyValuePair<uint, V>[] items {
+            get {
+                var arr = new System.Collections.Generic.KeyValuePair<uint, V>[this.arr.Count];
+                var i = 0;
+                var e = this.arr.GetEnumerator(Context.world);
+                while (e.MoveNext() == true) {
+                    arr[i++] = new System.Collections.Generic.KeyValuePair<uint, V>(e.Current.key, e.Current.value);
+                }
+                
+                return arr;
+            }
+        }
+
+    }
 
     /*
     public class HashSetProxy<T> where T : unmanaged {

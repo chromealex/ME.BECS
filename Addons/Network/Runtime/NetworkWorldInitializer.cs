@@ -27,6 +27,18 @@ namespace ME.BECS.Network {
             WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.OnViewsUpdate, 1);
 
         }
+        
+        protected override void Start() {
+
+            if (this.world.isCreated == true) {
+
+                this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.BeginTick,
+                    UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+                base.Start();
+
+            }
+
+        }
 
         private unsafe void OnViewsUpdate(ref ViewsModuleData data) {
 

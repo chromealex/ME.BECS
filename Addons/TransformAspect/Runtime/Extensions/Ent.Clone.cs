@@ -32,16 +32,6 @@ namespace ME.BECS.Transforms {
             return ent;
 
         }
-        
-        [INLINE(256)]
-        public static void CopyFrom(this in Ent target, in Ent source) {
-
-            var sourceState = source.World.state;
-            var targetState = target.World.state;
-            Batches.Apply(sourceState);
-            sourceState->components.CopyFrom(sourceState, in source, targetState, in target);
-
-        }
 
     }
 

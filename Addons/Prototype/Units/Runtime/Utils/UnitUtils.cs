@@ -57,6 +57,13 @@ namespace ME.BECS.Units {
         public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, JobInfo jobInfo) {
 
             var ent = Ent.New(jobInfo);
+            return CreateUnit(in ent, in agentType, treeIndex);
+            
+        }
+
+        [INLINE(256)]
+        public static UnitAspect CreateUnit(in Ent ent, in AgentType agentType, int treeIndex) {
+            
             var unit = ent.GetOrCreateAspect<UnitAspect>();
             var rnd = ent.GetRandomVector2OnCircle(1f);
             var rndVec = new float3(rnd.x, 0f, rnd.y);
