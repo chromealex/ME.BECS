@@ -562,7 +562,7 @@ namespace ME.BECS.Editor.Systems {
             var type = sysNode.system.GetType();
             var isSystemBursted = generator.burstedTypes.Contains(type);
             var methodInfo = type.GetMethod(method);
-            var isBursted = generator.burstedTypes.Contains(methodInfo);
+            var isBursted = generator.burstedTypes.Any(x => x == methodInfo);
             var isDiscarded = generator.burstDiscardedTypes.Contains(methodInfo);
             if (isSystemBursted == true && isDiscarded == true) return false;
             if (isSystemBursted == false && isBursted == false) return false;

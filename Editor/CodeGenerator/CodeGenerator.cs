@@ -10,7 +10,7 @@ namespace ME.BECS.Editor {
 
         public System.Collections.Generic.List<CodeGenerator.AssemblyInfo> asms;
         public bool editorAssembly;
-        public UnityEditor.TypeCache.TypeCollection burstedTypes;
+        public System.Collections.Generic.List<System.Type> burstedTypes;
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
 
         public bool IsValidTypeForAssembly(System.Type type) {
@@ -280,13 +280,13 @@ namespace ME.BECS.Editor {
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var content = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
-                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem));
-                var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>();
+                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToArray();
+                var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>().OrderBy(x => x.FullName).ToList();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
-                var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake));
-                var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate));
-                var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy));
-                var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos));
+                var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToArray();
+                var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate)).OrderBy(x => x.FullName).ToArray();
+                var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy)).OrderBy(x => x.FullName).ToArray();
+                var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToArray();
                 foreach (var type in types) {
 
                     if (type.IsValueType == false) continue;
@@ -340,7 +340,7 @@ namespace ME.BECS.Editor {
 
                 }
                 
-                var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>();
+                var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
                 foreach (var component in components) {
 
                     var asm = component.Assembly.GetName().Name;
@@ -357,7 +357,7 @@ namespace ME.BECS.Editor {
                 }
 
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>();
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -383,7 +383,7 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>();
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -403,7 +403,7 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentShared>();
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentShared>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -423,7 +423,7 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>();
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -442,7 +442,7 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigInitialize>();
+                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigInitialize>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;

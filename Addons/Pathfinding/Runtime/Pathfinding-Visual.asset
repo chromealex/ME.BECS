@@ -44,7 +44,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -73, y: 310.5, z: 0}
+  position: {x: -53, y: 355, z: 0}
   scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
@@ -52,6 +52,8 @@ MonoBehaviour:
     - rid: 4603152977822220372
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 3fd31530-262b-45b6-9084-ba6ffac9eef4
         groupGUID: 
@@ -79,6 +81,8 @@ MonoBehaviour:
     - rid: 8346928920201003110
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -98,6 +102,8 @@ MonoBehaviour:
     - rid: 8346928920201003111
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
