@@ -53,7 +53,7 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -79, y: 209, z: 0}
+  position: {x: -311, y: 251, z: 0}
   scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
@@ -126,7 +126,7 @@ MonoBehaviour:
       type: {class: BuildGraphSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
       data:
         agentTypesConfig:
-          id: 58
+          id: 83
     - rid: 8346928920201003106
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
