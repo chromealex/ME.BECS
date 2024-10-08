@@ -89,7 +89,7 @@ namespace ME.BECS {
     public static unsafe class JobUtils {
 
         public const uint CacheLineSize = JobsUtility.CacheLineSize;
-        public static readonly uint ThreadsCount = (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount;
+        public static uint ThreadsCount => (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount;
         public static int ThreadIndex => Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex;
 
         public static void Initialize() {

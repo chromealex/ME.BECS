@@ -8,6 +8,7 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
     using Jobs;
+    using System.Runtime.InteropServices;
     
     public struct BatchList {
 
@@ -124,10 +125,14 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe struct Batches {
 
+        [StructLayout(LayoutKind.Explicit, Size = 24)]
         public struct ThreadItem {
 
+            [FieldOffset(0)]
             public List<uint> items;
+            [FieldOffset(List<uint>.SIZE)]
             public uint Count;
+            [FieldOffset(List<uint>.SIZE + sizeof(uint))]
             public LockSpinner lockSpinner;
 
             public uint GetReservedSizeInBytes() {
@@ -140,7 +145,6 @@ namespace ME.BECS {
         public MemArray<BatchItem> arr;
         public uint openIndex;
         public ReadWriteSpinner workingLock;
-
         internal ReadWriteSpinner lockReadWrite;
 
         public uint GetReservedSizeInBytes(State* state) {

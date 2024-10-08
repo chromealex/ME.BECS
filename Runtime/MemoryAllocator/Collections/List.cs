@@ -9,6 +9,8 @@ namespace ME.BECS {
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListProxy<>))]
     public unsafe struct List<T> : IIsCreated where T : unmanaged {
 
+        public const int SIZE = MemArray<T>.SIZE + sizeof(uint);
+
         public struct Enumerator {
             
             private readonly List<T> list;
@@ -27,7 +29,7 @@ namespace ME.BECS {
 
         }
 
-        internal MemArray<T> arr;
+        private MemArray<T> arr;
         public uint Count;
 
         public readonly bool IsCreated {

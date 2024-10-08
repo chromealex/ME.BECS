@@ -6,18 +6,26 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
 
     [BURST(CompileSynchronously = true)]
-    [StructLayout(LayoutKind.Explicit, Size = 24)]
+    [StructLayout(LayoutKind.Explicit, Size = ReadWriteSpinner.SIZE)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
+
+        #if USE_CACHE_PTR
+        public const int SIZE = 24;
+        #else
+        public const int SIZE = 16;
+        #endif
 
         private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
         [FieldOffset(0)]
         private MemPtr value;
-        [FieldOffset(8)]
+        [FieldOffset(MemPtr.SIZE)]
         private int readValue;
-        [FieldOffset(12)]
+        [FieldOffset(MemPtr.SIZE + sizeof(int))]
         private int writeValue;
-        [FieldOffset(16)]
+        #if USE_CACHE_PTR
+        [FieldOffset(MemPtr.SIZE + sizeof(int) + sizeof(int))]
         private int* ptr;
+        #endif
 
         public bool IsCreated => this.value.IsValid();
 
@@ -28,7 +36,9 @@ namespace ME.BECS {
             state->allocator.MemClear(arr, 0L, size);
             return new ReadWriteSpinner() {
                 value = arr,
+                #if USE_CACHE_PTR
                 ptr = (int*)ptr,
+                #endif
             };
         }
 
@@ -36,7 +46,11 @@ namespace ME.BECS {
         private int ReadCount(State* state) {
             var cnt = 0;
             for (uint i = 0u; i < JobsUtility.MaxJobThreadCount; ++i) {
+                #if USE_CACHE_PTR
                 cnt += this.ptr[i * INTS_PER_CACHE_LINE];
+                #else
+                cnt += *((int*)state->allocator.GetUnsafePtr(this.value) + i * INTS_PER_CACHE_LINE);
+                #endif
             }
             return cnt;
         }
@@ -44,7 +58,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void ReadBegin(State* state) {
             E.IS_CREATED(this);
-            // wait if we have write op running
+            // wait if we have to write op running
             #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
             #endif
@@ -59,14 +73,22 @@ namespace ME.BECS {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // acquire read op
+            #if USE_CACHE_PTR
             ++this.ptr[INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex];
+            #else
+            ++*((int*)state->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex);
+            #endif
         }
 
         [INLINE(256)]
         public void ReadEnd(State* state) {
             E.IS_CREATED(this);
             // release read op
+            #if USE_CACHE_PTR
             --this.ptr[INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex];
+            #else
+            --*((int*)state->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex);
+            #endif
         }
 
         [INLINE(256)]
@@ -125,9 +147,9 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool value) {
-            
+            #if USE_CACHE_PTR
             this.ptr = (int*)allocator.GetUnsafePtr(this.value);
-            
+            #endif
         }
 
     }
@@ -199,12 +221,14 @@ namespace ME.BECS {
 
     [BURST(CompileSynchronously = true)]
     public struct LockSpinner {
-        
+
+        public const int SIZE = sizeof(int);
+
         private int value;
         public bool IsLocked => this.value != 0;
 
         [INLINE(256)]
-        public void Lock() {
+        public bool Lock() {
             #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
             #endif
@@ -214,16 +238,17 @@ namespace ME.BECS {
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max lock iter");
-                    return;
+                    return false;
                 }
                 #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             System.Threading.Interlocked.MemoryBarrier();
+            return true;
         }
         
         [INLINE(256)]
-        public void Unlock() {
+        public bool Unlock() {
             #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
             #endif
@@ -234,11 +259,12 @@ namespace ME.BECS {
                 --i;
                 if (i == 0) {
                     UnityEngine.Debug.LogError("Max unlock iter");
-                    return;
+                    return false;
                 }
                 #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
+            return true;
         }
         
         [INLINE(256)]

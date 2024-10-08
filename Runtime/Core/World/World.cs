@@ -12,6 +12,8 @@ namespace ME.BECS {
         public const ushort FIXED_UPDATE = 2;
         public const ushort LATE_UPDATE = 3;
 
+        public const ushort MAX = 4;
+
     }
 
     public enum WorldMode : byte {

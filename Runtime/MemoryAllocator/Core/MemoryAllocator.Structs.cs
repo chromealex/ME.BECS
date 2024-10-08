@@ -25,8 +25,10 @@
 
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 8)]
+    [StructLayout(LayoutKind.Explicit, Size = MemPtr.SIZE)]
     public readonly struct MemPtr : System.IEquatable<MemPtr> {
+
+        public const int SIZE = 8;
 
         public static readonly MemPtr Invalid = new MemPtr(0u, 0u);
         

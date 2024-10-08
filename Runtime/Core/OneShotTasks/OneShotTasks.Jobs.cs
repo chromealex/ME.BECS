@@ -33,12 +33,12 @@ namespace ME.BECS {
             public State* state;
             public OneShotType type;
             [ReadOnly]
-            public NativeArray<Task>.ReadOnly items;
+            public NativeList<Task> items;
             
             public void Execute(int index) {
                 
                 this.state->oneShotTasks.ResolveCompleteThread(this.state, this.type, this.items, index);
-                
+
             }
 
         }

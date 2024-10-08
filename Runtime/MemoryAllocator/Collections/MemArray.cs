@@ -83,14 +83,16 @@ namespace ME.BECS {
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayProxy<>))]
     public unsafe struct MemArray<T> : IIsCreated where T : unmanaged {
 
+        public const int SIZE = MemArrayData.SIZE;
+        
         public static readonly MemArray<T> Empty = new MemArray<T>() {
             data = new MemArrayData() {
                 arrPtr = MemPtr.Invalid,
                 Length = 0,
             },
         };
-        
-        public MemArrayData data;
+
+        private MemArrayData data;
         public readonly uint Length => this.data.Length;
         public readonly MemPtr arrPtr => this.data.arrPtr;
 
