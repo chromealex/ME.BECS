@@ -90,7 +90,7 @@ namespace ME.BECS {
                 type = type,
                 items = results.AsParallelReader(),
             };
-            handle = jobResult.Schedule(capacity, 64, handle);
+            handle = jobResult.Schedule(results, 64, handle);
             handle = results.Dispose(handle);
             
             return handle;

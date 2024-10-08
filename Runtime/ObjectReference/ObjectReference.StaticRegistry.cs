@@ -88,11 +88,9 @@ namespace ME.BECS {
             var removed = ObjectReferenceRegistry.data.Remove(previousValue);
             var sourceId = ObjectReferenceRegistry.data.Add(newValue, out bool isNew);
 
-            if (isNew == true || removed == true) {
-                #if UNITY_EDITOR
-                UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
-                #endif
-            }
+            #if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
+            #endif
 
             return sourceId;
 

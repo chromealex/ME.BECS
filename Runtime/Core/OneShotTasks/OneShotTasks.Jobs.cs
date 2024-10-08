@@ -27,7 +27,7 @@ namespace ME.BECS {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct ResolveTasksComplete : IJobParallelFor {
+        public struct ResolveTasksComplete : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
             public State* state;

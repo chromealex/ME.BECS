@@ -46,7 +46,7 @@ namespace ME.BECS {
             E.IS_ALIVE(ent);
             var state = ent.World.state;
             state->entities.Lock(state, in ent);
-            //UnityEngine.Debug.Log("Destroy Request: " + ent + " :: " + state->archetypes.entToArchetypeIdx[state, ent.id]);
+            UnityEngine.Debug.Log("Destroy Request: " + ent + " :: " + state->archetypes.entToArchetypeIdx[state, ent.id]);
             E.IS_ALIVE(ent);
             E.IS_IN_TICK(state);
             

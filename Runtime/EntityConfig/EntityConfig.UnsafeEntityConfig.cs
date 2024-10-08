@@ -8,7 +8,7 @@ namespace ME.BECS {
     using Unity.Collections;
     using static Cuts;
 
-    public readonly unsafe struct UnsafeEntityConfig {
+    public readonly unsafe struct UnsafeEntityConfig : IIsCreated {
 
         private readonly struct SharedData<T> where T : class, IConfigComponentShared {
 
@@ -374,6 +374,8 @@ namespace ME.BECS {
         private readonly Aspect<IAspect> aspects;
         private readonly uint id;
         private readonly Ent staticDataEnt;
+
+        public bool IsCreated => this.IsValid();
 
         [INLINE(256)]
         public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default) {
