@@ -3,24 +3,6 @@ namespace ME.BECS.Views {
     using ME.BECS.Transforms;
     using Unity.Mathematics;
 
-    public struct MeshFilterComponent : IComponent {
-
-        public BECS.RuntimeObjectReference<UnityEngine.Mesh> mesh;
-
-    }
-
-    public struct MeshRendererComponent : IComponent {
-
-        public BECS.RuntimeObjectReference<UnityEngine.Material> material;
-        public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode;
-        public bool receiveShadows;
-        public int layer;
-        public uint renderingLayerMask;
-        public int rendererPriority;
-        public int instanceID;
-
-    }
-
     public static class TransformAspectExt {
 
         public static void Set(this ref TransformAspect aspect, UnityEngine.Transform tr) {
@@ -32,10 +14,16 @@ namespace ME.BECS.Views {
         }
 
     }
+
+    public interface IAuthorityComponent {
+
+        void Apply(in Ent container, UnityEngine.Transform transform);
+
+    }
     
     public static class ProvidersHelper {
 
-        public struct TransformItem {
+        private struct TransformItem {
 
             public UnityEngine.Transform obj;
             public Ent parent;
@@ -67,23 +55,29 @@ namespace ME.BECS.Views {
                 }
 
                 {
-                    // Get mesh
+                    // MeshFilter
                     if (obj.TryGetComponent<UnityEngine.MeshFilter>(out var filter) == true) {
-                        ent.Get<MeshFilterComponent>().mesh = new BECS.RuntimeObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
+                        ent.Get<MeshFilterComponent>().mesh = new RuntimeObjectReference<UnityEngine.Mesh>(filter.sharedMesh, world.id);
                     }
 
-                    // Get rendering
+                    // MeshRenderer
                     if (obj.TryGetComponent<UnityEngine.MeshRenderer>(out var renderer) == true) {
                         ref var ren = ref ent.Get<MeshRendererComponent>();
-                        ren.material = new BECS.RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
+                        ren.material = new RuntimeObjectReference<UnityEngine.Material>(renderer.sharedMaterial, world.id);
                         ren.shadowCastingMode = renderer.shadowCastingMode;
-                        ren.receiveShadows = renderer.receiveShadows;
+                        ren.receiveShadows = renderer.receiveShadows == true ? 1 : 0;
                         ren.layer = renderer.gameObject.layer;
                         ren.renderingLayerMask = renderer.renderingLayerMask;
                         ren.rendererPriority = renderer.rendererPriority;
                         ren.instanceID = renderer.GetInstanceID();
                     }
 
+                    // Authoring components
+                    if (obj.TryGetComponent(out IAuthorityComponent authority) == true) {
+                        authority.Apply(in ent, obj);
+                    }
+                    
+                    // Move to childs
                     for (int i = 0; i < obj.transform.childCount; ++i) {
                         var child = obj.transform.GetChild(i);
                         queue.Enqueue(new TransformItem() {

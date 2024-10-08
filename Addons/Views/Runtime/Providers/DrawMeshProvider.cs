@@ -234,7 +234,7 @@ namespace ME.BECS.Views {
             var renderParams = new UnityEngine.RenderParams(rendering.material);
             renderParams.worldBounds = new UnityEngine.Bounds(mesh.bounds.center, mesh.bounds.size);
             renderParams.shadowCastingMode = rendering.shadowCastingMode;
-            renderParams.receiveShadows = rendering.receiveShadows;
+            renderParams.receiveShadows = rendering.receiveShadows == 1 ? true : false;
             renderParams.layer = rendering.layer;
             renderParams.renderingLayerMask = rendering.renderingLayerMask;
             renderParams.rendererPriority = rendering.rendererPriority;
