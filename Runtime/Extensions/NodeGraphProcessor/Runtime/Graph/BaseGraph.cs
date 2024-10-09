@@ -189,6 +189,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 				var id = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this));
 				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.position.x", value.x);
 				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.position.y", value.y);
+				#endif
 			}
 		}
 
@@ -208,8 +209,6 @@ namespace ME.BECS.Extensions.GraphProcessor
 				var id = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this));
 				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.scale.x", value.x);
 				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.scale.y", value.y);
-				#else
-				return Vector3.zero;
 				#endif
 			}			
 		}
