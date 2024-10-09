@@ -562,6 +562,8 @@ namespace ME.BECS.Editor {
                         break;
                     case nameof(QueryBuilder.WithAny): {
                         if (item.parameters[0] == null || item.parameters[1] == null) break;
+                        if (item.parameters[2] == null) item.parameters[2] = typeof(TNull);
+                        if (item.parameters[3] == null) item.parameters[3] = typeof(TNull);
                         var method = typeof(ArchetypeQueries).GetMethod(nameof(ArchetypeQueries.WithAnySync));
                         var gMethod = method.MakeGenericMethod(item.parameters);
                         var d = (QueryWith)System.Delegate.CreateDelegate(typeof(QueryWith), null, gMethod);
@@ -1372,7 +1374,8 @@ namespace ME.BECS.Editor {
                 entities.AddToClassList("sub-container");
                 componentsContainer.Add(entities);
 
-                var componentsLabel = new Label("Entities");
+                var arch = world.state->archetypes.list[world.state->allocator, node.id];
+                var componentsLabel = new Label($"Entities ({arch.entitiesList.Count})");
                 componentsLabel.AddToClassList("archetype-entities-label");
                 entities.Add(componentsLabel);
 
@@ -1457,42 +1460,68 @@ namespace ME.BECS.Editor {
                 var addElementContainer = new VisualElement();
                 container.Add(addElementContainer);
 
+                string GetTypeName(string typeName) {
+                    var names = typeName.Split('.');
+                    return names[names.Length - 1];
+                }
+                
                 {
                     var paramsContainer = new VisualElement();
                     paramsContainer.AddToClassList("parameters-container");
                     {
-                        var stringTypes = new scg::List<string>();
-                        stringTypes.Add(NONE_OPTION);
-                        foreach (var kv in StaticTypesLoadedManaged.loadedTypes) {
-                            stringTypes.Add(kv.Value.FullName);
-                        }
-
                         for (int j = 0; j < this.currentQuery[idx].parameters?.Length; ++j) {
                             var jIdx = j;
                             var t = this.currentQuery[idx].parameters[j];
-                            var selectType = new DropdownField(stringTypes, t?.FullName ?? NONE_OPTION, (str) => {
-                                var names = str.Split('.');
-                                return names[names.Length - 1];
+                            var selectType = new Button();
+                            selectType.text = GetTypeName(t?.FullName ?? NONE_OPTION);
+                            selectType.RegisterCallback<ClickEvent>((evt) => {
+                                var worldBounds = selectType.worldBound;
+                                var state = new UnityEditor.IMGUI.Controls.AdvancedDropdownState();
+                                var assembliesInfo = CodeGenerator.GetAssembliesInfo();
+                                System.Predicate<System.Type> filter = null;
+                                {
+                                    filter += type => {
+                                        if (type.IsValueType == false || ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.IsUnmanaged(type) == false) return false;
+                                        return true;
+                                    };
+                                }
+                                {
+                                    filter += type => {
+                                        var asm = type.Assembly;
+                                        var name = asm.GetName().Name;
+                                        var found = false;
+                                        foreach (var asmInfo in assembliesInfo) {
+                                            if (asmInfo.name == name) {
+                                                if (asmInfo.isEditor == true) return false;
+                                                found = true;
+                                                break;
+                                            }
+                                        }
+                                        return found;
+                                    };
+                                }
+                                var arr = TypeCache.GetTypesDerivedFrom(typeof(IComponent)).ToArray();
+                                var popup = new ME.BECS.Editor.Extensions.SubclassSelector.AdvancedTypePopup(
+                                    arr.Where(p =>
+                                                  (p.IsPublic || p.IsNestedPublic) &&
+                                                  !p.IsAbstract &&
+                                                  !p.IsGenericType &&
+                                                  !ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.k_UnityObjectType.IsAssignableFrom(p) &&
+                                                  (filter == null || filter.GetInvocationList().All(x => ((System.Predicate<System.Type>)x).Invoke(p)) == true)
+                                    ),
+                                    ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.k_MaxTypePopupLineCount,
+                                    state,
+                                    true,
+                                    new Vector2(200f, 0f)
+                                );
+                                popup.OnItemSelected += (item) => {
+                                    var type = item.Type;
+                                    selectType.text = GetTypeName(type?.FullName ?? NONE_OPTION);
+                                    this.currentQuery[idx].parameters[jIdx] = type;
+                                };
+                                popup.Show(worldBounds);
                             });
                             selectType.AddToClassList("type-dropdown");
-                            selectType.RegisterValueChangedCallback((item) => {
-
-                                System.Type type = null;
-                                var typeStr = item.newValue;
-                                foreach (var kv in StaticTypesLoadedManaged.loadedTypes) {
-                                    if (kv.Value.FullName == typeStr) {
-                                        type = kv.Value;
-                                        break;
-                                    }
-                                }
-
-                                if (type != null) {
-                                    this.currentQuery[idx].parameters[jIdx] = type;
-                                } else {
-                                    this.currentQuery[idx].parameters[jIdx] = null;
-                                }
-
-                            });
                             paramsContainer.Add(selectType);
                         }
                     }
@@ -1534,7 +1563,7 @@ namespace ME.BECS.Editor {
                             }
                             break;
                         case nameof(QueryBuilder.WithAny):
-                            System.Array.Resize(ref this.currentQuery[idx].parameters, 2);
+                            System.Array.Resize(ref this.currentQuery[idx].parameters, 4);
                             if (idx == this.currentQuery.Count - 1) {
                                 addElementContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                             }

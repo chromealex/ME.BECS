@@ -199,7 +199,7 @@ namespace ME.BECS.Editor {
         private Label entitiesSize;
         private Label aspectsSize;
         private Label collectionsRegistrySize;
-        private Label persistantAllocatorSize;
+        //private Label persistentAllocatorSize;
         private Label tempAllocatorSize;
         private void DrawAllocator(VisualElement root, in MemoryAllocator allocator) {
 
@@ -214,7 +214,7 @@ namespace ME.BECS.Editor {
             this.entitiesSize = this.AddCounter(container, "Entities Size", className: "small-counter");
             this.aspectsSize = this.AddCounter(container, "Aspects Size", className: "small-counter");
             this.collectionsRegistrySize = this.AddCounter(container, "Collections Registry Size", className: "small-counter");
-            this.persistantAllocatorSize = this.AddCounter(container, "Persistant Allocator Size", className: "small-counter", true);
+            //this.persistentAllocatorSize = this.AddCounter(container, "Persistent Allocator Size", className: "small-counter", true);
             this.tempAllocatorSize = this.AddCounter(container, "Temp Allocator Size", className: "small-counter", true);
             
             this.scrollRoot = new ScrollView();
