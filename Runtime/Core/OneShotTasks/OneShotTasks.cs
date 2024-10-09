@@ -143,7 +143,7 @@ namespace ME.BECS {
                                         updateType = item.updateType,
                                     };
                                     Journal.SetOneShotComponent(in item.ent, item.typeId, OneShotType.CurrentTick);
-                                    collection->items.Add(ref state->allocator, newTask);
+                                    _addressT(ref threadItem.currentTick)->items.Add(ref state->allocator, newTask);
                                 }
                                 item.Dispose(ref state->allocator);
                             }
