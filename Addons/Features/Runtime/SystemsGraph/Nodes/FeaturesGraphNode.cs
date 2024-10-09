@@ -14,7 +14,7 @@ namespace ME.BECS.FeaturesGraph.Nodes {
             
             var q = new System.Collections.Generic.Queue<BaseNode>();
             var visited = new System.Collections.Generic.HashSet<BaseNode>();
-            q.Enqueue(this.featuresGraph.GetStartNode(0));
+            q.Enqueue(((SystemsGraph)this.graph).GetStartNode(0));
             var count = 0;
             var max = 100_000;
             while (q.Count > 0) {

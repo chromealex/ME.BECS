@@ -84,6 +84,13 @@ namespace ME.BECS.Editor.FeaturesGraph {
             
         }
 
+        protected override bool canDeleteSelection {
+            get {
+                if (this.selection.Count == 0) return false;//Debug.Log(base.canDeleteSelection + " :: " + this.selection.Count);
+                return base.canDeleteSelection;
+            }
+        }
+
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt) {
             
             base.BuildContextualMenu(evt);
