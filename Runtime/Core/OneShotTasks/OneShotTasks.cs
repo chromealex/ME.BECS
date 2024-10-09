@@ -7,32 +7,44 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs;
     using System.Runtime.InteropServices;
+    using static Cuts;
     
     public unsafe partial struct OneShotTasks {
 
-        [StructLayout(LayoutKind.Explicit, Size = 24)]
+        [StructLayout(LayoutKind.Explicit, Size = 48)]
         private struct ThreadItem {
 
+            [StructLayout(LayoutKind.Explicit, Size = TaskCollection.SIZE)]
+            public struct TaskCollection {
+
+                public const int SIZE = 20;
+
+                [FieldOffset(0)]
+                public List<Task> items;
+                [FieldOffset(List<Task>.SIZE)]
+                public LockSpinner lockIndex;
+
+            }
+
             [FieldOffset(0)]
-            public List<Task> items;
-            [FieldOffset(List<Task>.SIZE)]
-            public LockSpinner lockIndex;
+            public TaskCollection currentTick;
+            [FieldOffset(TaskCollection.SIZE)]
+            public TaskCollection nextTick;
 
         }
         
         private MemArrayThreadCacheLine<ThreadItem> threadItems;
-        private MemArray<uint> nextTickCount;
 
         [INLINE(256)]
         [NotThreadSafe]
         public static OneShotTasks Create(State* state, uint capacity) {
             var tasks = new OneShotTasks() {
                 threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state->allocator),
-                nextTickCount = new MemArray<uint>(ref state->allocator, UpdateType.MAX),
             };
             for (uint i = 0; i < tasks.threadItems.Length; ++i) {
                 ref var threadItem = ref tasks.threadItems[state, i];
-                threadItem.items = new List<Task>(ref state->allocator, capacity);
+                threadItem.currentTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state->allocator, capacity) };
+                threadItem.nextTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state->allocator, capacity) };
             }
             return tasks;
         }
@@ -54,57 +66,56 @@ namespace ME.BECS {
             var threadIndex = JobUtils.ThreadIndex;
             Journal.SetOneShotComponent(in ent, typeId, type);
             ref var threadItem = ref this.threadItems[state, threadIndex];
-            threadItem.lockIndex.Lock();
-            threadItem.items.Add(ref state->allocator, new Task() {
-                typeId = typeId,
-                groupId = groupId,
-                ent = ent,
-                type = type,
-                data = data,
-                updateType = updateType,
-            });
-            threadItem.lockIndex.Unlock();
-            if (type == OneShotType.NextTick) JobUtils.Increment(ref this.nextTickCount[state, (uint)updateType]);
+            var collection = _addressT(ref threadItem.currentTick);
+            if (type == OneShotType.NextTick) {
+                collection = _addressT(ref threadItem.nextTick);
+            }
+
+            {
+                collection->lockIndex.Lock();
+                collection->items.Add(ref state->allocator, new Task() {
+                    typeId = typeId,
+                    groupId = groupId,
+                    ent = ent,
+                    type = type,
+                    data = data,
+                    updateType = updateType,
+                });
+                collection->lockIndex.Unlock();
+            }
             
         }
 
         [INLINE(256)]
         [NotThreadSafe]
-        public JobHandle ResolveTasksJobs(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
+        public JobHandle Schedule(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
 
-            E.THREAD_CHECK(nameof(this.ResolveTasksJobs));
+            E.THREAD_CHECK(nameof(this.ScheduleJobs));
 
-            var results = new NativeList<Task>((int)this.nextTickCount[state, (uint)updateType], Allocator.TempJob);
             var job = new ResolveTasksParallelJob() {
                 state = state,
                 type = type,
                 updateType = updateType,
-                results = results.AsParallelWriter(),
             };
             var handle = job.Schedule((int)this.threadItems.Length, 1, dependsOn);
-
-            var jobResult = new ResolveTasksComplete() {
-                state = state,
-                type = type,
-                items = results,
-            };
-            handle = jobResult.Schedule(results, 64, handle);
-            handle = results.Dispose(handle);
             
             return handle;
 
         }
         
         [INLINE(256)]
-        public void ResolveThread(State* state, OneShotType type, ushort updateType, uint index, NativeList<Task>.ParallelWriter results) {
+        public void ResolveThread(State* state, OneShotType type, ushort updateType, uint index) {
 
             ref var threadItem = ref this.threadItems[state, index];
-            threadItem.lockIndex.Lock();
-            var removedNextCount = 0u;
-            for (uint j = threadItem.items.Count; j > 0u; --j) {
+            var collection = _addressT(ref threadItem.currentTick);
+            if (type == OneShotType.NextTick) {
+                collection = _addressT(ref threadItem.nextTick);
+            }
+            collection->lockIndex.Lock();
+            for (uint j = collection->items.Count; j > 0u; --j) {
 
                 var idx = j - 1u;
-                var item = threadItem.items[state, idx];
+                var item = collection->items[state, idx];
                 if (item.type == type && item.updateType == updateType) {
                     switch (type) {
                         case OneShotType.CurrentTick:
@@ -118,89 +129,31 @@ namespace ME.BECS {
 
                         case OneShotType.NextTick:
                             if (item.ent.IsAlive() == true) {
-                                results.AddNoResize(item);
-                                --removedNextCount;
+                                {
+                                    Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
+                                    // if we are processing begin of tick - add component
+                                    state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
+                                    // add new task to remove at the end of the tick
+                                    var newTask = new Task() {
+                                        typeId = item.typeId,
+                                        groupId = item.groupId,
+                                        ent = item.ent,
+                                        type = OneShotType.CurrentTick,
+                                        data = default,
+                                        updateType = item.updateType,
+                                    };
+                                    Journal.SetOneShotComponent(in item.ent, item.typeId, OneShotType.CurrentTick);
+                                    collection->items.Add(ref state->allocator, newTask);
+                                }
+                                item.Dispose(ref state->allocator);
                             }
                             break;
                     }
-                    threadItem.items.RemoveAtFast(in state->allocator, idx);
+                    collection->items.RemoveAtFast(in state->allocator, idx);
                 }
 
             }
-            threadItem.lockIndex.Unlock();
-            if (removedNextCount > 0u) JobUtils.Decrement(ref this.nextTickCount[state, (uint)updateType], removedNextCount);
-
-        }
-
-        [INLINE(256)]
-        public void ResolveCompleteThread(State* state, OneShotType type, NativeList<Task> items, int index) {
-
-            var item = items[index];
-            {
-                Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
-                // if we are processing begin of tick - add component
-                state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
-                // add new task to remove at the end of the tick
-                this.Add(state, in item.ent, item.typeId, item.groupId, item.updateType, default, OneShotType.CurrentTick);
-            }
-            item.Dispose(ref state->allocator);
-
-        }
-
-        [INLINE(256)]
-        [NotThreadSafe]
-        public void ResolveTasks(State* state, OneShotType type, ushort updateType) {
-
-            E.THREAD_CHECK(nameof(ResolveTasks));
-            
-            var capacity = (int)this.threadItems.Length;
-            var temp = new UnsafeList<Task>(capacity, Constants.ALLOCATOR_TEMP);
-            var tempContains = new UnsafeHashSet<Task>(capacity, Constants.ALLOCATOR_TEMP);
-            for (uint i = 0; i < this.threadItems.Length; ++i) {
-                
-                ref var threadItem = ref this.threadItems[state, i];
-                threadItem.lockIndex.Lock();
-                for (uint j = threadItem.items.Count; j > 0u; --j) {
-
-                    var idx = j - 1u;
-                    var item = threadItem.items[state, idx];
-                    if (item.type == type && item.updateType == updateType) {
-                        switch (type) {
-                            case OneShotType.CurrentTick:
-                                // if we are processing current tick - remove component
-                                if (item.ent.IsAlive() == true) {
-                                    Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
-                                    item.ent.Remove(item.typeId);
-                                }
-                                item.Dispose(ref state->allocator);
-                                break;
-
-                            case OneShotType.NextTick:
-                                if (item.ent.IsAlive() == true && tempContains.Add(item) == true) {
-                                    temp.Add(item);
-                                }
-                                break;
-                        }
-                        threadItem.items.RemoveAtFast(in state->allocator, idx);
-                    }
-
-                }
-                threadItem.lockIndex.Unlock();
-
-            }
-
-            foreach (var item in temp) {
-
-                {
-                    Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
-                    // if we are processing begin of tick - add component
-                    state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
-                    // add new task to remove at the end of the tick
-                    this.Add(state, in item.ent, item.typeId, item.groupId, item.updateType, default, OneShotType.CurrentTick);
-                }
-                item.Dispose(ref state->allocator);
-
-            }
+            collection->lockIndex.Unlock();
 
         }
 

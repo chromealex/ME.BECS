@@ -10,7 +10,7 @@ namespace ME.BECS {
 
         private static ref World staticWorld => ref EntityConfigRegistryShared.staticWorld.Data;
 
-        private static System.Collections.Generic.Dictionary<EntityConfig, uint> registryToId = new System.Collections.Generic.Dictionary<EntityConfig, uint>();
+        private static readonly System.Collections.Generic.Dictionary<EntityConfig, uint> registryToId = new System.Collections.Generic.Dictionary<EntityConfig, uint>();
         private static UIntDictionary<UnsafeEntityConfig> registryFromId;
 
         public static void Initialize() {

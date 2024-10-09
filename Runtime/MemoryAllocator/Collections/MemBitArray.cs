@@ -31,7 +31,7 @@ namespace ME.BECS {
         public static uint AlignULongBits(uint bitsCount) {
             var delta = bitsCount % 64u;
             if (delta < 64u && delta > 0u) bitsCount += 64u - delta;
-            return bitsCount / 8;
+            return bitsCount / 8u;
         }
         
         [INLINE(256)]

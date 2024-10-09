@@ -30,6 +30,7 @@ namespace ME.BECS.Editor {
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void Load() {
             Worlds.Initialize();
+            SystemsStatic.Initialize();
             StaticTypesInitializer.Load();
             CustomModules.InvokeResetPass();
             {{CUSTOM_METHOD_REGISTRY}}

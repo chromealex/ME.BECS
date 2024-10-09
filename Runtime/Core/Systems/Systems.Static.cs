@@ -77,6 +77,23 @@ namespace ME.BECS {
             registry.Add(graphId, ptr);
 
         }
+
+        public static void Initialize() {
+
+            Dispose();
+
+        }
+        
+        public static void Dispose() {
+
+            SystemsStaticInitialization.dic.Data.Dispose();
+            SystemsStaticGetSystem.dic.Data.Dispose();
+            SystemsStaticOnAwake.dic.Data.Dispose();
+            SystemsStaticOnUpdate.dic.Data.Dispose();
+            SystemsStaticOnDrawGizmos.dic.Data.Dispose();
+            SystemsStaticOnDestroy.dic.Data.Dispose();
+
+        }
         
         public static void RegisterMethod(InitializeGraph callback, int graphId, bool isBurst) {
 

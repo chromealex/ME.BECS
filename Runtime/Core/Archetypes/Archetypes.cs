@@ -341,6 +341,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static Archetypes Create(State* state, uint capacity, uint entitiesCapacity) {
             if (capacity == 0u) capacity = 1u;
+            if (capacity < StaticTypes.counter + 1u) capacity = StaticTypes.counter + 1u;
             var archs = new Archetypes() {
                 list = new List<Archetype>(ref state->allocator, capacity),
                 entToArchetypeIdx = new MemArray<uint>(ref state->allocator, capacity),

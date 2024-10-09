@@ -31,6 +31,7 @@ namespace ME.BECS {
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Load() {
             Worlds.Initialize();
+            SystemsStatic.Initialize();
             StaticTypesInitializer.Load();
             CustomModules.InvokeResetPass();
             {{CUSTOM_METHOD_REGISTRY}}
