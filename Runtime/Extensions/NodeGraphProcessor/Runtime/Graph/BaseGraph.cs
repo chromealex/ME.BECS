@@ -168,13 +168,51 @@ namespace ME.BECS.Extensions.GraphProcessor
 		Scene							linkedScene;
 
 		// Trick to keep the node inspector alive during the editor session
-		//[HideInInspector]
+		[HideInInspector]
 		[SerializeField]
 		internal UnityEngine.Object		nodeInspectorReference;
 
 		//graph visual properties
-		public Vector3					position = Vector3.zero;
-		public Vector3					scale = Vector3.one;
+		public Vector3 position {
+			get {
+				#if UNITY_EDITOR
+				var id = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this));
+				var x = UnityEditor.EditorPrefs.GetFloat($"SystemsGraph.{id}.props.position.x");
+				var y = UnityEditor.EditorPrefs.GetFloat($"SystemsGraph.{id}.props.position.y");
+				return new Vector3(x, y, 0f);
+				#else
+				return Vector3.zero;
+				#endif
+			}
+			set {
+				#if UNITY_EDITOR
+				var id = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this));
+				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.position.x", value.x);
+				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.position.y", value.y);
+			}
+		}
+
+		public Vector3 scale {
+			get {
+				#if UNITY_EDITOR
+				var id = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this));
+				var x = UnityEditor.EditorPrefs.GetFloat($"SystemsGraph.{id}.props.scale.x", 1f);
+				var y = UnityEditor.EditorPrefs.GetFloat($"SystemsGraph.{id}.props.scale.y", 1f);
+				return new Vector3(x, y, 1f);
+				#else
+				return Vector3.one;
+				#endif
+			}
+			set {
+				#if UNITY_EDITOR
+				var id = UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this));
+				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.scale.x", value.x);
+				UnityEditor.EditorPrefs.SetFloat($"SystemsGraph.{id}.props.scale.y", value.y);
+				#else
+				return Vector3.zero;
+				#endif
+			}			
+		}
 
 		/// <summary>
 		/// Triggered when something is changed in the list of exposed parameters

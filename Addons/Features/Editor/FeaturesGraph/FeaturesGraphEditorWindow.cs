@@ -9,10 +9,42 @@ namespace ME.BECS.Editor.FeaturesGraph {
     public class FeaturesGraphEditorWindow : BaseGraphWindow {
 
         [System.Serializable]
-        public class BreadcrumbItem {
+        public class BreadcrumbItem : System.IEquatable<BreadcrumbItem> {
 
             public string label;
             public BaseGraph graph;
+
+            public bool Equals(BreadcrumbItem other) {
+                if (other is null) {
+                    return false;
+                }
+
+                if (ReferenceEquals(this, other)) {
+                    return true;
+                }
+
+                return this.label == other.label && Equals(this.graph, other.graph);
+            }
+
+            public override bool Equals(object obj) {
+                if (obj is null) {
+                    return false;
+                }
+
+                if (ReferenceEquals(this, obj)) {
+                    return true;
+                }
+
+                if (obj.GetType() != this.GetType()) {
+                    return false;
+                }
+
+                return this.Equals((BreadcrumbItem)obj);
+            }
+
+            public override int GetHashCode() {
+                return System.HashCode.Combine(this.label, this.graph);
+            }
 
         }
         
@@ -294,10 +326,11 @@ namespace ME.BECS.Editor.FeaturesGraph {
         private void OnOpen(Object asset) {
 
             if (asset is ME.BECS.FeaturesGraph.SystemsGraph graph) {
-                this.breadcrumbs.Add(new BreadcrumbItem() {
+                var item = new BreadcrumbItem() {
                     label = graph.name,
                     graph = graph,
-                });
+                };
+                if (this.breadcrumbs.Contains(item) == false) this.breadcrumbs.Add(item);
                 this.SelectAsset(graph);
             }
             
