@@ -71,7 +71,7 @@ namespace ME.BECS.Pathfinding {
 
     public struct ChunkCache {
 
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Size = 8)]
         public struct PortalPair {
 
             [FieldOffset(0)]

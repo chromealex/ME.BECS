@@ -13,12 +13,10 @@ namespace ME.BECS.Transforms {
 
     [EditorComment("Current calculated matrix")]
     [ComponentGroup(typeof(TransformComponentGroup))]
-    [LAYOUT(LayoutKind.Explicit, Size = 68)]
+    [LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct WorldMatrixComponent : IComponent {
 
         [FieldOffset(0)]
-        public byte calculated;
-        [FieldOffset(4)]
         public float4x4 value;
         
     }

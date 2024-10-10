@@ -5,8 +5,10 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
 
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = Components.SIZE)]
     public partial struct Components {
+
+        public const int SIZE = LockSpinner.SIZE + UIntDictionary<MemAllocatorPtr>.SIZE + MemArray<MemArray<uint>>.SIZE + MemArray<MemAllocatorPtr>.SIZE;
 
         [FieldOffset(0)]
         public LockSpinner lockSharedIndex;

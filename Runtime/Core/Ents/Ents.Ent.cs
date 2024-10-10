@@ -176,9 +176,9 @@ namespace ME.BECS {
         public override readonly string ToString() {
             if (this.World.isCreated == false) return this.ToString(false);
             if (this.IsAlive() == true) {
-                return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version}, World: {this.worldId})";
+                return string.Format("Ent #{0} Gen: {1} (Version: {2}, World: {3})", this.id, this.gen, this.Version, this.worldId);
             } else {
-                return $"Ent #{this.id} Gen: {this.gen} (World: {this.worldId})";
+                return string.Format("Ent #{0} Gen: {1} (World: {2})", this.id, this.gen, this.worldId);
             }
         }
 
@@ -186,9 +186,9 @@ namespace ME.BECS {
         public readonly string ToString(bool withWorld, bool withVersion = true) {
             if (withWorld == true) return this.ToString();
             if (this.IsAlive() == true && withVersion == true) {
-                return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version})";
+                return string.Format("Ent #{0} Gen: {1} (Version: {2})", this.id, this.gen, this.Version);
             } else {
-                return $"Ent #{this.id} Gen: {this.gen}";
+                return string.Format("Ent #{0} Gen: {1}", this.id, this.gen);
             }
         }
 

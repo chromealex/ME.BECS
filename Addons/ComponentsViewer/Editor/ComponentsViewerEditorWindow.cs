@@ -280,14 +280,20 @@ namespace ME.BECS.Editor.ComponentsViewer {
                                         if (i == fields.Length - 1) tr.AddToClassList("tooltip-table-tr-last");
                                         table.Add(tr);
                                         var fieldSize = 0;
+                                        var sizeOf = 0;
                                         if (field.FieldType.IsEnum == true) {
                                             fieldSize = 4;
+                                            sizeOf = 4;
                                         } else {
                                             fieldSize = System.Runtime.InteropServices.Marshal.SizeOf(field.FieldType);
+                                            sizeOf = GetSizeOf(field.FieldType);
                                         }
 
                                         var lblField = new Label(field.Name);
                                         lblField.AddToClassList("tooltip-table-field");
+                                        if (fieldSize != sizeOf) {
+                                            lblField.AddToClassList("field-size-warning");
+                                        }
                                         tr.Add(lblField);
                                         var sizeField = new Label(EditorUtils.BytesToString(fieldSize));
                                         sizeField.AddToClassList("tooltip-table-size");
@@ -373,6 +379,16 @@ namespace ME.BECS.Editor.ComponentsViewer {
                 }));
             }
 
+        }
+
+        private static readonly System.Reflection.MethodInfo getSizeOfMethodInfo = typeof(ComponentsViewerEditorWindow).GetMethod(nameof(GetSizeOfMethod));
+        private static int GetSizeOf(System.Type compType) {
+            var gMethod = getSizeOfMethodInfo.MakeGenericMethod(compType);
+            return (int)gMethod.Invoke(null, null);
+        }
+
+        public static unsafe int GetSizeOfMethod<T>() where T : unmanaged {
+            return sizeof(T);
         }
 
     }

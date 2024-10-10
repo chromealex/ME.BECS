@@ -75,7 +75,6 @@ namespace ME.BECS.Transforms {
             var matrix = ent.localMatrix;
             if (parent.ent.IsAlive() == true) matrix = math.mul(parent.readWorldMatrix, matrix);
             ent.worldMatrix = matrix;
-            ent.worldMatrixCalculated = 1;
 
         }
 
@@ -83,7 +82,6 @@ namespace ME.BECS.Transforms {
         public static void CalculateMatrix(in TransformAspect ent) {
 
             ent.worldMatrix = ent.localMatrix;
-            ent.worldMatrixCalculated = 1;
 
         }
 
