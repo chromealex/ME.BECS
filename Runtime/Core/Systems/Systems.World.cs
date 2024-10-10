@@ -18,6 +18,18 @@ namespace ME.BECS {
         }
         
     }
+
+    public unsafe struct SystemLink<T> where T : unmanaged {
+
+        private T* ptr;
+
+        internal SystemLink(T* ptr) {
+            this.ptr = ptr;
+        }
+        
+        public ref T Value => ref *this.ptr;
+
+    }
     
     public static unsafe class SystemsWorldExt {
 
@@ -145,7 +157,19 @@ namespace ME.BECS {
 
         }
 
+        public static SystemLink<T> GetSystemLink<T>(this in World world) where T : unmanaged, ISystem {
+
+            return new SystemLink<T>(world.GetSystemPtr<T>());
+            
+        }
+
         public static ref T GetSystem<T>(this in World world) where T : unmanaged, ISystem {
+
+            return ref _ref(world.GetSystemPtr<T>());
+            
+        }
+
+        public static T* GetSystemPtr<T>(this in World world) where T : unmanaged, ISystem {
             
             E.IS_CREATED(world);
             var address = world.id;
@@ -154,9 +178,9 @@ namespace ME.BECS {
                 if (SystemsStatic.TryGetSystem<T>(out var system) == false) {
                     var systemAddr = _addressT(ref rootGroup.GetSystem<T>(out var found));
                     if (found == false) throw E.NOT_FOUND(typeof(T).Name);
-                    return ref _ref(systemAddr);
+                    return systemAddr;
                 } else {
-                    return ref _ref(system);
+                    return system;
                 }
             }
 
