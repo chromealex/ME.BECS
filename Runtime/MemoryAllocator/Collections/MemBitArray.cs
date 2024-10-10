@@ -453,7 +453,6 @@ namespace ME.BECS {
         /// Initializes and returns an instance of UnsafeBitArray which aliases an existing buffer.
         /// </summary>
         /// <param name="ptr">An existing buffer.</param>
-        /// <param name="allocator">The allocator that was used to allocate the bytes. Needed to dispose this array.</param>
         /// <param name="sizeInBytes">The number of bytes. The length will be `sizeInBytes * 8`.</param>
         [INLINE(256)]
         public MemBitArray(MemPtr ptr, int sizeInBytes) {
