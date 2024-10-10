@@ -14,7 +14,7 @@ namespace ME.BECS {
         public readonly byte* GetUnsafePtr(in MemPtr ptr) {
 
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (ptr.zoneId < allocator.zonesListCount && allocator.zonesList[ptr.zoneId] != null && allocator.zonesList[ptr.zoneId]->size < ptr.offset) {
+            if (ptr.zoneId < this.zonesListCount && this.zonesList[ptr.zoneId] != null && this.zonesList[ptr.zoneId]->size < ptr.offset) {
                 throw new System.Exception();
             }
             #endif
@@ -88,10 +88,10 @@ namespace ME.BECS {
                     var newPtr = MemoryAllocator.ZmAlloc(zone, block, size + TSize<MemoryAllocator.MemBlock>.sizeInt);
                     #if MEMORY_ALLOCATOR_BOUNDS_CHECK
                     {
-                        var memPtr = allocator.GetSafePtr(newPtr, ptr.zoneId);
+                        var memPtr = this.GetSafePtr(newPtr, ptr.zoneId);
                         if (memPtr != ptr) {
                             // Something went wrong
-                            JobUtils.Unlock(ref allocator.lockIndex);
+                            JobUtils.Unlock(ref this.lockIndex);
                             throw new System.Exception();
                         }
                     }
@@ -180,7 +180,7 @@ namespace ME.BECS {
             var zoneIndex = ptr.zoneId; //ptr >> 32;
 
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (zoneIndex >= allocator.zonesListCount || allocator.zonesList[zoneIndex] == null) {
+            if (zoneIndex >= this.zonesListCount || this.zonesList[zoneIndex] == null) {
                 throw new System.Exception();
             }
             #endif
