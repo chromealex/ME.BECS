@@ -19,15 +19,22 @@ namespace ME.BECS {
         
     }
 
-    public unsafe struct SystemLink<T> where T : unmanaged {
+    public unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
 
         private T* ptr;
 
+        public bool IsCreated => this.ptr != null;
+        
         internal SystemLink(T* ptr) {
             this.ptr = ptr;
         }
-        
-        public ref T Value => ref *this.ptr;
+
+        public ref T Value {
+            get {
+                E.IS_CREATED(this);
+                return ref *this.ptr;
+            }
+        }
 
     }
     
