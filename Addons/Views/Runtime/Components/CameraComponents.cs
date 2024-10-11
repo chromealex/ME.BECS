@@ -17,6 +17,7 @@ namespace ME.BECS.Views {
 
     }
 
+    [EditorComment("Give access to the camera methods")]
     public struct CameraAspect : IAspect {
         
         public Ent ent { get; set; }

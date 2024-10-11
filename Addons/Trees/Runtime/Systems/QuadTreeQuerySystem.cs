@@ -36,6 +36,7 @@ namespace ME.BECS {
 
     }
 
+    [EditorComment("Filter all entities which suitable for this query")]
     public struct QuadTreeQueryAspect : IAspect {
 
         public Ent ent { get; set; }
