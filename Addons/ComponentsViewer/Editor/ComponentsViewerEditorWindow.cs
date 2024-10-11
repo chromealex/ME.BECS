@@ -36,7 +36,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
 
         public class ComponentColumnInfo {
 
-            public System.Type componentType;
+            public System.Func<System.Type, bool> componentType;
             public string caption;
             public string tooltipOn;
             public string tooltipOff;
@@ -52,13 +52,12 @@ namespace ME.BECS.Editor.ComponentsViewer {
             
             var componentData = new ComponentColumnInfo[] {
                 new ComponentColumnInfo() {
-                    componentType = typeof(IConfigComponent),
+                    componentType = (componentType) => typeof(IConfigComponent).IsAssignableFrom(componentType) || typeof(IConfigComponentStatic).IsAssignableFrom(componentType),
                     caption = "Config",
                     tooltipOn = "You can use <b>{componentLabel}</b> component is EntityConfig.",
                     tooltipOff = "<b>{componentLabel}</b> is a runtime-only component.",
                     onAdd = (component) => {
                         // Remove others
-                        EditorUtils.UpdateComponentScript(component, typeof(IConfigComponentStatic), false);
                         var isShared = typeof(IComponentShared).IsAssignableFrom(component.type);
                         if (isShared == true) {
                             // Replace shared with config shared
@@ -71,6 +70,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         EditorUtils.UpdateComponentScript(component, typeof(IComponent), false);
                     },
                     onRemove = (component) => {
+                        EditorUtils.UpdateComponentScript(component, typeof(IConfigComponentStatic), false);
                         EditorUtils.UpdateComponentScript(component, typeof(IConfigComponent), false);
                         var isShared = typeof(IComponentShared).IsAssignableFrom(component.type);
                         if (isShared == true) {
@@ -80,7 +80,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                     },
                 },
                 new ComponentColumnInfo() {
-                    componentType = typeof(IConfigComponentStatic),
+                    componentType = (componentType) => typeof(IConfigComponentStatic).IsAssignableFrom(componentType),
                     caption = "Static",
                     tooltipOn = "<b>{componentLabel}</b> stored in EntityConfig only as static.",
                     tooltipOff = "<b>{componentLabel}</b> stored in state runtime memory.",
@@ -98,7 +98,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                     },
                 },
                 new ComponentColumnInfo() {
-                    componentType = typeof(IComponentShared),
+                    componentType = (componentType) => typeof(IComponentShared).IsAssignableFrom(componentType),
                     caption = "Shared",
                     tooltipOn = "<b>{componentLabel}</b> is <b>shared</b> component.",
                     tooltipOff = "<b>{componentLabel}</b> is <b>not shared</b> component.",
@@ -120,7 +120,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                     },
                 },
                 new ComponentColumnInfo() {
-                    componentType = typeof(IComponentDestroy),
+                    componentType = (componentType) => typeof(IComponentDestroy).IsAssignableFrom(componentType),
                     caption = "Destroy",
                     tooltipOn = "<b>{componentLabel}</b> is <b>auto-destroy</b> component.",
                     tooltipOff = "<b>{componentLabel}</b> is <b>not auto-destroy</b> component.",
@@ -244,7 +244,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
 
                         foreach (var field in componentData) {
                             
-                            var isEnabled = field.componentType.IsAssignableFrom(component.type);
+                            var isEnabled = field.componentType.Invoke(component.type);
                             var column = new VisualElement();
                             column.AddToClassList("column");
                             var text = field.tooltipOff;
