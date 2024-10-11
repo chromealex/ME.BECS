@@ -71,6 +71,7 @@ namespace ME.BECS {
 
             if (this.world.isCreated == true) {
                 
+                Context.Switch(in this.world);
                 for (var i = 0; i < this.modules.list.Length; ++i) {
                     var module = this.modules.list[i];
                     if (module.IsEnabled() == false) continue;
