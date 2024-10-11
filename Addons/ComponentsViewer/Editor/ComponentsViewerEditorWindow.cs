@@ -266,8 +266,12 @@ namespace ME.BECS.Editor.ComponentsViewer {
                             var column = new VisualElement();
                             column.AddToClassList("column");
                             var size = System.Runtime.InteropServices.Marshal.SizeOf(component.type);
+                            var sizeOf = GetSizeOf(component.type);
                             var lbl = new Label();
                             lbl.text = EditorUtils.BytesToString(size);
+                            if (size != sizeOf) {
+                                lbl.AddToClassList("field-size-warning");
+                            }
                             var fields = component.GetFields();
                             if (fields.Length > 0) {
                                 EditorUIUtils.DrawTooltip(column, () => {
@@ -369,14 +373,18 @@ namespace ME.BECS.Editor.ComponentsViewer {
                 components.AddToClassList("fields-container");
                 componentsContainer.Add(components);
 
-                var asms = CodeGenerator.GetAssembliesInfo();
-                var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom<IAspect>();
-                EditorUIUtils.DrawAspects(components, aspects.Where(x => {
-                    var asm = x.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
-                    if (info.isEditor == true) return false;
-                    return true;
-                }));
+                var aspects = EditorUtils.GetAspects();
+                EditorUIUtils.DrawAspects(components, aspects, (visualElement, tooltip, item) => {
+                    ComponentMetadataEditorWindow.ShowWindow(visualElement, item.info, () => {
+                        if (tooltip == null) {
+                            tooltip = (Label)EditorUIUtils.DrawTooltip(visualElement, item.info.GetEditorComment());
+                        } else if (string.IsNullOrEmpty(item.info.GetEditorComment()) == true) {
+                            EditorUIUtils.RemoveTooltip(tooltip.parent);
+                        }
+                        tooltip.text = item.info.GetEditorComment();
+                        EditorUtils.SaveComponentGroups();
+                    });
+                });
             }
 
         }

@@ -303,8 +303,8 @@ namespace ME.BECS.Editor {
                 var type = EditorUtils.GetTypeFromPropertyField(it.managedReferenceFullTypename);
                 var label = EditorUtils.GetComponentName(type);
                 if (typeof(IAspect).IsAssignableFrom(type) == true) {
-
-                    var fieldContainer = EditorUIUtils.DrawAspects(container, new System.Collections.Generic.List<System.Type>() { type });
+                    
+                    var fieldContainer = EditorUIUtils.DrawAspects(container, new System.Collections.Generic.List<EditorUtils.AspectItem>() { EditorUtils.GetAspect(type) });
                     list.AddRange(fieldContainer);
                     foreach (var fc in fieldContainer) {
                         var lbl = fc.Q(className: "aspect-component-container-field");

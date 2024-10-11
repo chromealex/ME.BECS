@@ -16,6 +16,7 @@ namespace ME.BECS {
 
     }
 
+    [EditorComment("Used by QuadTreeInsertSystem to filter entities by treeIndex")]
     public struct QuadTreeAspect : IAspect {
         
         public Ent ent { get; set; }

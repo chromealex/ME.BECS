@@ -4,6 +4,38 @@ using System.Reflection;
 namespace ME.BECS.Editor {
 
     public static class EditorUtils {
+
+        public struct AspectItem : System.IEquatable<AspectItem> {
+
+            public string value;
+            public System.Type type;
+            public ComponentGroupItem.ComponentMetaInfo info;
+            public int index;
+
+            public AspectItem(ComponentGroupsXml.AspectItem data) {
+
+                this.type = data.type != null ? System.Type.GetType(data.type) : null;
+                this.value = UnityEditor.ObjectNames.NicifyVariableName(this.type != null ? this.type.Name : UNKNOWN_GROUP_NAME);
+                this.index = data.id;
+                this.info = new ComponentGroupItem.ComponentMetaInfo(this.type);
+                this.info.editorComment = data.info.editorComment;
+                this.info.defaultEditorComment = this.type?.GetCustomAttribute<EditorCommentAttribute>()?.comment;
+                
+            }
+
+            public bool Equals(AspectItem other) {
+                return Equals(this.type, other.type);
+            }
+
+            public override bool Equals(object obj) {
+                return obj is AspectItem other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return (this.type != null ? this.type.GetHashCode() : 0);
+            }
+
+        }
         
         public struct ComponentGroupItem : System.IEquatable<ComponentGroupItem> {
 
@@ -145,10 +177,24 @@ namespace ME.BECS.Editor {
 
             }
 
+            [System.Serializable]
+            public class AspectItem {
+
+                public int id;
+                public string type;
+                public Item.ComponentMeta info;
+
+            }
+
             public int nextId;
             [System.Xml.Serialization.XmlArrayAttribute("Items")]
             [System.Xml.Serialization.XmlArrayItemAttribute("Item", typeof(Item))]
             public Item[] items;
+
+            public int nextAspectId;
+            [System.Xml.Serialization.XmlArrayAttribute("Aspects")]
+            [System.Xml.Serialization.XmlArrayItemAttribute("AspectItem", typeof(AspectItem))]
+            public AspectItem[] aspectItems;
 
         }
 
@@ -156,24 +202,41 @@ namespace ME.BECS.Editor {
 
             var dir = "ME.BECS.Cache";
             var file = "ComponentGroups.xml";
-            var path = dir + "/" + file;
+            var path = $"{dir}/{file}";
             if (System.IO.File.Exists(path) == true) {
                 
                 componentGroups = new System.Collections.Generic.List<ComponentGroupItem>();
+                aspects = new System.Collections.Generic.List<AspectItem>();
                 var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
                 using (var reader = System.Xml.XmlReader.Create(path))
                 {
                     var data = (ComponentGroupsXml)ser.Deserialize(reader);
                     componentGroupsNextId = data.nextId;
-                    foreach (var item in data.items) {
+                    if (data.items != null) {
+                        foreach (var item in data.items) {
 
-                        var elem = new ComponentGroupItem(item);
-                        if (item.type != null && elem.type == null) {
-                            // missing type
-                        } else {
-                            componentGroups.Add(elem);
+                            var elem = new ComponentGroupItem(item);
+                            if (item.type != null && elem.type == null) {
+                                // missing type
+                            } else {
+                                componentGroups.Add(elem);
+                            }
+
                         }
+                    }
 
+                    aspectNextId = data.nextAspectId;
+                    if (data.aspectItems != null) {
+                        foreach (var item in data.aspectItems) {
+
+                            var elem = new AspectItem(item);
+                            if (item.type != null && elem.type == null) {
+                                // missing type
+                            } else {
+                                aspects.Add(elem);
+                            }
+
+                        }
                     }
                 }
 
@@ -185,7 +248,7 @@ namespace ME.BECS.Editor {
 
             var dir = "ME.BECS.Cache";
             var file = "ComponentGroups.xml";
-            var path = dir + "/" + file;
+            var path = $"{dir}/{file}";
             if (System.IO.Directory.Exists(dir) == false) {
                 System.IO.Directory.CreateDirectory(dir);
             }
@@ -197,6 +260,7 @@ namespace ME.BECS.Editor {
             {
                 var data = new ComponentGroupsXml();
                 data.items = new ComponentGroupsXml.Item[componentGroups.Count];
+                data.aspectItems = new ComponentGroupsXml.AspectItem[aspects.Count];
                 data.nextId = componentGroupsNextId;
                 var i = 0;
                 foreach (var group in componentGroups) {
@@ -204,6 +268,16 @@ namespace ME.BECS.Editor {
                         id = group.index,
                         type = group.type != null ? group.type.AssemblyQualifiedName : null,
                         components = group.components.Select(x => new ComponentGroupsXml.Item.ComponentMeta() { type = x.type.AssemblyQualifiedName, editorComment = x.editorComment }).ToArray(),
+                    };
+                    ++i;
+                }
+                data.nextAspectId = aspectNextId;
+                i = 0;
+                foreach (var group in aspects) {
+                    data.aspectItems[i] = new ComponentGroupsXml.AspectItem() {
+                        id = group.index,
+                        type = group.type != null ? group.type.AssemblyQualifiedName : null,
+                        info = new ComponentGroupsXml.Item.ComponentMeta() { editorComment = group.info.editorComment },
                     };
                     ++i;
                 }
@@ -264,6 +338,60 @@ namespace ME.BECS.Editor {
 
             return result.OrderBy(x => x.FullName).ToList();
 
+        }
+
+        public static AspectItem GetAspect(System.Type type) {
+            if (aspects == null) LoadComponentGroups();
+            if (aspects == null) return default;
+            return aspects.FirstOrDefault(x => x.type == type);
+        }
+
+        private static int aspectNextId;
+        private static System.Collections.Generic.List<AspectItem> aspects;
+        public static System.Collections.Generic.List<AspectItem> GetAspects() {
+            
+            if (aspects != null && aspects.Count > 0) return aspects;
+
+            LoadComponentGroups();
+
+            var groups = aspects != null ? new System.Collections.Generic.HashSet<AspectItem>(aspects) : new System.Collections.Generic.HashSet<AspectItem>();
+            var asms = CodeGenerator.GetAssembliesInfo();
+            var aspectsItems = UnityEditor.TypeCache.GetTypesDerivedFrom<IAspect>();
+            var componentsList = new System.Collections.Generic.List<System.Type>(aspectsItems.Count);
+            foreach (var component in aspectsItems) {
+                
+                var asm = component.Assembly.GetName().Name;
+                var info = asms.FirstOrDefault(x => x.name == asm);
+                if (info.isEditor == true) continue;
+                if (component.IsInterface == true) continue;
+
+                componentsList.Add(component);
+            }
+
+            foreach (var component in componentsList) {
+                
+                var group = new AspectItem() {
+                    type = component,
+                };
+                if (groups.Contains(group) == false) {
+                    group.value = UnityEditor.ObjectNames.NicifyVariableName(component.Name);
+                    group.info = new ComponentGroupItem.ComponentMetaInfo(component);
+                    group.index = ++aspectNextId;
+                    groups.Add(group);
+                }
+                groups.TryGetValue(group, out group);
+                var meta = new ComponentGroupItem.ComponentMetaInfo(component);
+                if (group.info == null || group.info.editorComment != meta.editorComment) {
+                    group.info = meta;
+                    groups.Remove(group);
+                    groups.Add(group);
+                }
+            }
+            
+            aspects = groups.ToList();
+            SaveComponentGroups();
+            return aspects;
+            
         }
 
         private static int componentGroupsNextId;

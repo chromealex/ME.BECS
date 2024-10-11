@@ -22,35 +22,22 @@ namespace ME.BECS.Units {
 
     [EditorComment("Current unit agent values")]
     [ComponentGroup(typeof(UnitComponentGroup))]
-    [StructLayout(LayoutKind.Explicit, Size = 136)]
     public struct NavAgentRuntimeComponent : IComponent {
 
-        [FieldOffset(0)]
         public AgentType properties;
 
-        [FieldOffset(AgentType.SIZE)]
         public float speed;
-        [FieldOffset(AgentType.SIZE + 4)]
         public int collideWithEnd;
         
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int))]
         public float3 collisionDirection;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12)]
         public float3 avoidanceVector;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 2)]
         public float3 separationVector;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 3)]
         public float3 alignmentVector;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 4)]
         public float3 cohesionVector;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 5)]
         public float3 desiredDirection;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 6)]
         public float3 randomVector;
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 7)]
         public float3 velocity;
 
-        [FieldOffset(AgentType.SIZE + 4 + sizeof(float) + sizeof(int) + 12 * 8)]
         public Ent attackSensor;
 
     }

@@ -67,7 +67,7 @@ namespace ME.BECS.Transforms {
 
     }
 
-    [EditorComment("Is root entity?")]
+    [EditorComment("Is first level entity under the root?")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct IsFirstLevelComponent : IComponent {
 

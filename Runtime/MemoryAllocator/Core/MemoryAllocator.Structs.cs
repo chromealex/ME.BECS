@@ -201,9 +201,11 @@
 
     public unsafe partial struct MemoryAllocator {
         
-        [StructLayout(LayoutKind.Explicit, Size = 40)]
+        [StructLayout(LayoutKind.Explicit, Size = MemZone.SIZE)]
         public struct MemZone {
 
+            public const int SIZE = 4 + MemBlock.SIZE + MemBlockOffset.SIZE + 4 /* align */;
+            
             [FieldOffset(0)]
             public int size;           // total bytes malloced, including header
             [FieldOffset(4)]

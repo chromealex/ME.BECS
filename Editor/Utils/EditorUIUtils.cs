@@ -242,22 +242,30 @@ namespace ME.BECS.Editor {
 
         }
 
-        public static System.Collections.Generic.List<VisualElement> DrawAspects(VisualElement root, System.Collections.Generic.IEnumerable<System.Type> aspects) {
+        public static System.Collections.Generic.List<VisualElement> DrawAspects(VisualElement root, System.Collections.Generic.IEnumerable<EditorUtils.AspectItem> aspects, System.Action<VisualElement, Label, EditorUtils.AspectItem> onEdit = null) {
 
             var result = new System.Collections.Generic.List<VisualElement>();
             foreach (var aspect in aspects) {
                 
-                var label = EditorUtils.GetComponentName(aspect);
-                var fields = EditorUtils.GetAspectTypes(aspect);
+                var label = aspect.value;
+                var fields = EditorUtils.GetAspectTypes(aspect.type);
 
                 var fieldContainer = new VisualElement();
                 fieldContainer.AddToClassList("field");
-
+                
                 var labelField = new Foldout();
                 fieldContainer.Add(labelField);
                 labelField.text = label;
                 labelField.AddToClassList("aspect-component-container-field");
-
+                
+                var foldoutLabel = labelField.Q<Toggle>();
+                var tooltip = (Label)EditorUIUtils.DrawTooltip(foldoutLabel, aspect.info.GetEditorComment());
+                foldoutLabel.RegisterCallback<ClickEvent>(x => {
+                    if (x.clickCount == 2) {
+                        onEdit?.Invoke(foldoutLabel, tooltip, aspect);
+                    }
+                });
+                
                 {
                     var header = new VisualElement();
                     header.AddToClassList("header");
