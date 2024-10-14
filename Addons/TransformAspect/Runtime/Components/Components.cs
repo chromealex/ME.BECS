@@ -16,6 +16,8 @@ namespace ME.BECS.Transforms {
     [LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct WorldMatrixComponent : IComponent {
 
+        public static WorldMatrixComponent Default => new WorldMatrixComponent { value = float4x4.TRS(default, quaternion.identity, new float3(1f)) };
+        
         [FieldOffset(0)]
         public float4x4 value;
         

@@ -20,6 +20,21 @@ namespace ME.BECS.UnitsHealthBars {
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public static void Render(ref Color bordersColor, ref Color backColor, ref Color minHealthColor, ref Color maxHealthColor, ref ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars) {
             
+            return;
+            
+            GL.PushMatrix();
+            GL.LoadPixelMatrix();
+
+            GL.Begin(GL.TRIANGLES);
+            GL.Color(Color.red);
+            GL.Vertex3(0, 0, 0);
+            GL.Vertex3(0, Screen.height / 2, 0);
+            GL.Vertex3(Screen.width / 2, Screen.height / 2, 0);
+            GL.End();
+
+            GL.PopMatrix();
+            return;
+            
             var screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
             var onePixelSize = ScreenToView(1f);
             var borderSize = ScreenToView(1f);
