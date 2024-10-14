@@ -11,7 +11,6 @@ namespace ME.BECS.UnitsHealthBars {
     using ME.BECS.Players;
     
     [BURST(CompileSynchronously = true)]
-    [RequiredDependencies(typeof(CreateSystem), typeof(PlayersSystem))]
     [UnityEngine.Tooltip("Drawing health bars via GL API")]
     public struct DrawHealthBarsSystem : IAwake, IUpdate, IDestroy {
 
@@ -53,12 +52,14 @@ namespace ME.BECS.UnitsHealthBars {
         public BECS.ObjectReference<UnityEngine.Material> healthBarMaterial;
         public BarSettings barSettings;
         private ME.BECS.NativeCollections.NativeParallelList<BarItem> bars;
-        private VisualWorld visualWorld;
-        
+        private World logicWorld;
+        private Ent cameraEnt;
+        private ClassPtr<UnityEngine.Camera> cameraObject;
+
         [BURST(CompileSynchronously = true)]
         public struct Job : IJobParallelForAspect<UnitAspect> {
 
-            public CreateSystem fow;
+            public SystemLink<CreateSystem> fow;
             public PlayerAspect activePlayer;
             public ME.BECS.NativeCollections.NativeParallelList<BarItem> bars;
             public BarSettings barSettings;
@@ -67,7 +68,7 @@ namespace ME.BECS.UnitsHealthBars {
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
 
                 if (unit.readHealth >= unit.readHealthMax) return;
-                if (this.fow.IsVisible(in this.activePlayer, unit.ent) == false) return;
+                if (this.fow.IsCreated == true && this.fow.Value.IsVisible(in this.activePlayer, unit.ent) == false) return;
                 
                 var unitPos = unit.ent.GetAspect<TransformAspect>().GetWorldMatrixPosition();
                 var screenPoint = this.camera.WorldToScreenPoint(unitPos);
@@ -94,17 +95,17 @@ namespace ME.BECS.UnitsHealthBars {
 
         public void OnUpdate(ref SystemContext context) {
 
-            if (this.visualWorld.World.isCreated == false) return;
+            if (this.logicWorld.isCreated == false) return;
 
             this.bars.Clear();
-            var fow = context.world.GetSystem<CreateSystem>();
-            var activePlayer = context.world.GetSystem<PlayersSystem>().GetActivePlayer();
+            var fow = this.logicWorld.GetSystemLink<CreateSystem>();
+            var activePlayer = this.logicWorld.GetSystem<PlayersSystem>().GetActivePlayer();
             if (activePlayer.IsAlive() == false) return;
             
-            var handle = context.Query().Schedule<Job, UnitAspect>(new Job() {
+            var handle = API.Query(in this.logicWorld, context.dependsOn).Schedule<Job, UnitAspect>(new Job() {
                 activePlayer = activePlayer,
                 fow = fow,
-                camera = this.visualWorld.Camera.GetAspect<CameraAspect>(),
+                camera = this.cameraEnt.GetAspect<CameraAspect>(),
                 bars = this.bars,
                 barSettings = this.barSettings,
             });
@@ -116,9 +117,6 @@ namespace ME.BECS.UnitsHealthBars {
         public void OnAwake(ref SystemContext context) {
 
             this.bars = new ME.BECS.NativeCollections.NativeParallelList<BarItem>(100, Constants.ALLOCATOR_DOMAIN);
-            var barsRender = this.visualWorld.GetCameraObject().gameObject.AddComponent<HealthBarsRender>();
-            barsRender.bars = this.bars;
-            barsRender.material = this.healthBarMaterial.Value;
 
         }
 
@@ -128,8 +126,17 @@ namespace ME.BECS.UnitsHealthBars {
 
         }
 
-        public void SetVisualWorld(in VisualWorld visualWorld) {
-            this.visualWorld = visualWorld;
+        public void SetLogicWorld(in World logicWorld) {
+            this.logicWorld = logicWorld;
+        }
+
+        public void SetCamera(in CameraAspect cameraAspect, UnityEngine.Camera camera) {
+            this.cameraEnt = cameraAspect.ent;
+            this.cameraObject = new ClassPtr<UnityEngine.Camera>(camera);
+            
+            var barsRender = this.cameraObject.Value.gameObject.AddComponent<HealthBarsRender>();
+            barsRender.bars = this.bars;
+            barsRender.material = this.healthBarMaterial.Value;
         }
 
     }

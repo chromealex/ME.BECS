@@ -166,7 +166,7 @@ namespace ME.BECS {
 
         public static SystemLink<T> GetSystemLink<T>(this in World world) where T : unmanaged, ISystem {
 
-            return new SystemLink<T>(world.GetSystemPtr<T>());
+            return new SystemLink<T>(world.GetSystemPtr<T>(throwIfNotFound: false));
             
         }
 
@@ -176,7 +176,7 @@ namespace ME.BECS {
             
         }
 
-        public static T* GetSystemPtr<T>(this in World world) where T : unmanaged, ISystem {
+        public static T* GetSystemPtr<T>(this in World world, bool throwIfNotFound = true) where T : unmanaged, ISystem {
             
             E.IS_CREATED(world);
             var address = world.id;
@@ -184,15 +184,20 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
                 if (SystemsStatic.TryGetSystem<T>(out var system) == false) {
                     var systemAddr = _addressT(ref rootGroup.GetSystem<T>(out var found));
-                    if (found == false) throw E.NOT_FOUND(typeof(T).Name);
+                    if (throwIfNotFound == true && found == false) throw E.NOT_FOUND(typeof(T).Name);
+                    if (throwIfNotFound == false) return null;
                     return systemAddr;
                 } else {
                     return system;
                 }
             }
 
-            throw E.NOT_FOUND(typeof(T).Name);
+            if (throwIfNotFound == true) {
+                throw E.NOT_FOUND(typeof(T).Name);
+            }
 
+            return null;
+            
         }
 
     }
