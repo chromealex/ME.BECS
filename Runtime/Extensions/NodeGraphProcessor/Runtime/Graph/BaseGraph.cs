@@ -935,5 +935,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 			return false;
 		}
+
+		public virtual void UpdateSyncState() {
+		}
+
 	}
 }

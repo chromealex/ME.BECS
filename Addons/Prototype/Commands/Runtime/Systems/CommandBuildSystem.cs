@@ -6,6 +6,7 @@ namespace ME.BECS.Commands {
     using Units;
     using Transforms;
     
+    [BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CommandBuildSystem : IUpdate {
 
