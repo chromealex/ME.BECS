@@ -247,7 +247,7 @@ namespace ME.BECS.Views {
 
         public struct EntityData {
 
-            public Transforms.TransformAspect element;
+            public Ent element;
             public uint version;
 
         }
@@ -260,6 +260,7 @@ namespace ME.BECS.Views {
         public UIntDictionary<uint> renderingOnSceneEntToRenderIndex;
         public UIntDictionary<uint> renderingOnSceneRenderIndexToEnt;
         public MemArray<uint> renderingOnSceneEntToPrefabId;
+        public UnsafeParallelHashMap<uint, uint> toAssign;
         public UnsafeParallelHashMap<uint, bool> toChange;
         public UnsafeParallelHashMap<uint, bool> toRemove;
         public UnsafeParallelHashMap<uint, bool> toAdd;
@@ -308,6 +309,7 @@ namespace ME.BECS.Views {
                 renderingOnSceneEntToPrefabId = new MemArray<uint>(ref allocator, entitiesCapacity),
                 applyStateCounter = _make<uint>(0u),
                 updateCounter = _make<uint>(0u),
+                toAssign = new UnsafeParallelHashMap<uint, uint>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
@@ -332,6 +334,7 @@ namespace ME.BECS.Views {
             if (this.toRemove.IsCreated == true) this.toRemove.Dispose();
             if (this.toAdd.IsCreated == true) this.toAdd.Dispose();
             if (this.dirty.IsCreated == true) this.dirty.Dispose();
+            if (this.toAssign.IsCreated == true) this.toAssign.Dispose();
             if (this.toChange.IsCreated == true) this.toChange.Dispose();
             
         }
@@ -378,6 +381,36 @@ namespace ME.BECS.Views {
             }
             
             return true;
+
+        }
+
+        [INLINE(256)]
+        public static bool AssignView(in Ent ent, in Ent sourceEnt) {
+
+            if (sourceEnt.TryRead(out ViewComponent viewComponent) == true &&
+                ent.Has<ViewComponent>() == false) {
+
+                // Clean up source entity
+                sourceEnt.Remove<ViewComponent>();
+                sourceEnt.Remove<IsViewRequested>();
+
+                // Assign ent to the current view
+                ent.Set(new AssignViewComponent() {
+                    source = viewComponent.source,
+                    sourceEnt = sourceEnt,
+                });
+                ent.Set(viewComponent);
+                ent.Set(new IsViewRequested());
+                if (viewComponent.source.providerId < registeredProviders.Data.Length) {
+                    ref var item = ref *(registeredProviders.Data.Ptr + viewComponent.source.providerId);
+                    E.IS_CREATED(item);
+                    ent.Set(item.typeId, null);
+                }
+                return true;
+                
+            }
+
+            return false;
 
         }
 
@@ -470,6 +503,18 @@ namespace ME.BECS.Views {
             JobHandle toRemoveEntitiesJob;
             {
                 // Update views
+                {
+                    // Assign views first
+                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<AssignViewComponent>();
+                    this.provider.Query(ref query);
+                    var toAssignJob = query.ScheduleParallelFor(new Jobs.JobAssignViews() {
+                        viewsWorld = this.data->viewsWorld,
+                        viewsModuleData = this.data,
+                        registeredProviders = UnsafeViewsModule.registeredProviders.Data,
+                        toAssign = this.data->toAssign.AsParallelWriter(),
+                    });
+                    dependsOn = toAssignJob;
+                }
                 JobHandle toRemoveJob;
                 {
                     // DestroyView() case: Remove views from the scene which don't have ViewComponent, but contained in renderingOnSceneBits (DestroyView called)
@@ -586,7 +631,7 @@ namespace ME.BECS.Views {
                         var idx = this.data->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
                         ref var entData = ref *(this.data->renderingOnSceneEnts.Ptr + idx);
                         var view = this.data->renderingOnScene[in allocator, idx];
-                        var ent = entData.element.ent;
+                        var ent = entData.element;
                         if (entData.version != ent.Version) {
                             entData.version = ent.Version;
                             this.provider.ApplyState(in view, in ent);
@@ -604,7 +649,7 @@ namespace ME.BECS.Views {
                         var idx = this.data->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
                         ref var entData = ref *(this.data->renderingOnSceneEnts.Ptr + idx);
                         var view = this.data->renderingOnScene[in allocator, idx];
-                        var ent = entData.element.ent;
+                        var ent = entData.element;
                         if (view.prefabInfo->typeInfo.HasUpdate == true || view.prefabInfo->HasUpdateModules == true) {
                             this.provider.OnUpdate(in view, in ent, dt);
                         }
@@ -617,6 +662,7 @@ namespace ME.BECS.Views {
                 // Clean up
                 this.data->toRemoveTemp.Clear();
                 this.data->toAddTemp.Clear();
+                this.data->toAssign.Clear();
                 this.data->toChange.Clear();
                 this.data->toAdd.Clear();
                 this.data->toRemove.Clear();

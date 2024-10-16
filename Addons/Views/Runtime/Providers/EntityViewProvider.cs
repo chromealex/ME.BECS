@@ -83,6 +83,21 @@ namespace ME.BECS.Views {
                 marker.End();
             }
 
+            if (data->toAssign.Count() > 0) {
+                var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Processing assign entities");
+                marker.Begin();
+                foreach (var item in data->toAssign) {
+                    var toEntId = item.Value;
+                    if (data->renderingOnSceneEntToRenderIndex.TryGetValue(in data->viewsWorld.state->allocator, toEntId, out var index) == true) {
+                        var instanceInfo = data->renderingOnScene[data->viewsWorld.state, index];
+                        var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+                        // Replace with the new ent
+                        instance.ent = new Ent(toEntId, data->connectedWorld);
+                    }
+                }
+                marker.End();
+            }
+            
             if (data->toChange.Count() > 0) {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Processing changed entities");
                 marker.Begin();
@@ -102,7 +117,7 @@ namespace ME.BECS.Views {
                         }
                         {
                             // call spawn methods
-                            instance.ent = data->renderingOnSceneEnts[(int)index].element.ent;
+                            instance.ent = data->renderingOnSceneEnts[(int)index].element;
                             if (instanceInfo.prefabInfo->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
                             if (instanceInfo.prefabInfo->HasEnableFromPoolModules == true) {
                                 instance.DoEnableFromPoolChildren(instance.ent);

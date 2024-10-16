@@ -30,6 +30,12 @@ namespace ME.BECS.Views {
 
     public static class EntExt {
 
+        /// <summary>
+        /// Instantiate view by ViewSource id
+        /// </summary>
+        /// <param name="ent"></param>
+        /// <param name="viewSource"></param>
+        /// <returns></returns>
         [INLINE(256)]
         public static bool InstantiateView(this in Ent ent, in ViewSource viewSource) {
             
@@ -37,6 +43,25 @@ namespace ME.BECS.Views {
 
         }
 
+        /// <summary>
+        /// Uses sourceEnt's view and apply it to ent
+        /// This method removes view from sourceEnt completely
+        /// Use this method to change view owner
+        /// </summary>
+        /// <param name="ent">Entity to receive view</param>
+        /// <param name="sourceEnt">Entity with source view</param>
+        /// <returns>True if operation is success</returns>
+        [INLINE(256)]
+        public static bool AssignView(this in Ent ent, in Ent sourceEnt) {
+            
+            return UnsafeViewsModule.AssignView(in ent, in sourceEnt);
+
+        }
+
+        /// <summary>
+        /// Remove view from entity
+        /// </summary>
+        /// <param name="ent"></param>
         [INLINE(256)]
         public static void DestroyView(this in Ent ent) {
             
