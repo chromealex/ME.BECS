@@ -14,87 +14,34 @@ namespace ME.BECS.FeaturesGraph {
             var startNode = this.GetStartNode(0);
             startNode.syncCount = 0;
             foreach (var node in this.nodes) {
-                node.syncCount = this.GetParallelBranches(node);
+                var visited = new System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
+                this.CollectParents(node, visited);
+                var accumulator = 0;
+                accumulator -= node.GetInputNodes().Count();
+                foreach (var n in visited) {
+                    accumulator += n.GetOutputNodes().Count();
+                    accumulator -= n.GetInputNodes().Count();
+                }
+                node.syncCount = accumulator;
                 node.syncPoint = node.syncCount == 0;
             }
-            /*
-            var q = new System.Collections.Generic.Queue<ME.BECS.Extensions.GraphProcessor.BaseNode>();
-            var visited = new System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
-            q.Enqueue(startNode);
-            var max = 100_000;
-            while (q.Count > 0) {
-
-                if (--max == 0) {
-                    Debug.LogError("max iter");
-                    return;
-                }
-                var curNode = q.Dequeue();
-
-                var failed = false;
-                foreach (var port in curNode.inputPorts) {
-                    var edges = port.GetEdges();
-                    foreach (var edge in edges) {
-                        if (visited.Contains(edge.outputNode) == false) {
-                            failed = true;
-                            break;
-                        }
-                    }
-                    if (failed == true) {
-                        break;
-                    }
-                }
-
-                if (failed == true) {
-                    q.Enqueue(curNode);
-                    continue;
-                }
-
-                if (visited.Add(curNode) == false) continue;
-                var input = curNode.GetInputNodes().ToList();
-                curNode.syncCount -= input.Count;
-                curNode.syncPoint = curNode.syncCount == 0;
-                if (input.Count == 1) {
-                    foreach (var node in input) {
-                        if (node.syncPoint == false) {
-                            curNode.syncCount = node.syncCount;
-                            curNode.syncPoint = false;
-                            break;
-                        }
-                    }
-                }
-
-                var output = curNode.GetOutputNodes().ToList();
-                //Debug.Log("NODE: " + curNode.name + ", input: " + input.Count + ", output: " + output.Count + ", node.syncCount: " + curNode.syncCount);
-                foreach (var node in output) {
-                    node.syncCount += output.Count;
-                }
-                
-                foreach (var node in output) {
-                    if (visited.Contains(node) == false) {
-                        q.Enqueue(node);
-                    }
-                }
-            }*/
             
         }
         
-        private int GetParallelBranches(ME.BECS.Extensions.GraphProcessor.BaseNode node) {
+        private void CollectParents(ME.BECS.Extensions.GraphProcessor.BaseNode node, System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode> visited) {
 
             if (node is ME.BECS.FeaturesGraph.Nodes.StartNode) {
-                return 0;
+                visited.Add(node);
+                return;
             }
-
-            var accumulator = 0;
-            var inputNodes = node.GetOutputNodes().ToList();
-
-            accumulator -= inputNodes.Count;
+            
+            var inputNodes = node.GetInputNodes().ToList();
+            
             foreach (var inputNode in inputNodes) {
-                accumulator += inputNode.GetInputNodes().Count();
-                accumulator += this.GetParallelBranches(inputNode);
+                visited.Add(inputNode);
+                this.CollectParents(inputNode, visited);
             }
-
-            return accumulator;
-
+            
         }
 
         public override void UpdateSyncState() {
