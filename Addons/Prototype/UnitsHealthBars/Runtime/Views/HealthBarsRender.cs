@@ -17,13 +17,9 @@ namespace ME.BECS.UnitsHealthBars {
 
         }
 
-        [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
+        //[BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public static void Render(ref Color bordersColor, ref Color backColor, ref Color minHealthColor, ref Color maxHealthColor, ref ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars) {
             
-            return;
-            
-            GL.PushMatrix();
-            GL.LoadPixelMatrix();
 
             GL.Begin(GL.TRIANGLES);
             GL.Color(Color.red);
@@ -32,7 +28,6 @@ namespace ME.BECS.UnitsHealthBars {
             GL.Vertex3(Screen.width / 2, Screen.height / 2, 0);
             GL.End();
 
-            GL.PopMatrix();
             return;
             
             var screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
@@ -162,10 +157,13 @@ namespace ME.BECS.UnitsHealthBars {
 
         private void DrawLines() {
 
+            GL.PushMatrix();
+            GL.LoadPixelMatrix();
             this.material.SetPass(0);
             {
                 HealthBarUtils.Render(ref this.bordersColor, ref this.backColor, ref this.minHealthColor, ref this.maxHealthColor, ref this.bars);
             }
+            GL.PopMatrix();
             
         }
 
