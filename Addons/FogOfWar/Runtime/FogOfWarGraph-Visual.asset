@@ -50,8 +50,8 @@ MonoBehaviour:
     - rid: 8346928923441103769
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 1
-        syncCount: 0
+        syncPoint: 0
+        syncCount: 1
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 

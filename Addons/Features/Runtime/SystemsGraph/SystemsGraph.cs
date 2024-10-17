@@ -7,7 +7,51 @@ namespace ME.BECS.FeaturesGraph {
     public class SystemsGraph : Extensions.GraphProcessor.BaseGraph {
 
         public SystemGroup runtimeRootSystemGroup;
+
+        [ContextMenu("Update Sync State")]
+        public void UpdateSyncStateForced() {
+            
+            var startNode = this.GetStartNode(0);
+            startNode.syncCount = 0;
+            foreach (var node in this.nodes) {
+                var visited = new System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
+                this.CollectParents(node, visited);
+                var accumulator = 0;
+                accumulator -= node.GetInputNodes().Count();
+                foreach (var n in visited) {
+                    accumulator += n.GetOutputNodes().Count();
+                    accumulator -= n.GetInputNodes().Count();
+                }
+                node.syncCount = accumulator;
+                node.syncPoint = node.syncCount == 0;
+            }
+            
+        }
         
+        private void CollectParents(ME.BECS.Extensions.GraphProcessor.BaseNode node, System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode> visited) {
+
+            if (node is ME.BECS.FeaturesGraph.Nodes.StartNode) {
+                visited.Add(node);
+                return;
+            }
+            
+            var inputNodes = node.GetInputNodes().ToList();
+            
+            foreach (var inputNode in inputNodes) {
+                visited.Add(inputNode);
+                this.CollectParents(inputNode, visited);
+            }
+            
+        }
+
+        public override void UpdateSyncState() {
+            
+            if (this.builtInGraph == true) return;
+
+            this.UpdateSyncStateForced();
+
+        }
+
         public override void InitializeValidation() {
 
             base.InitializeValidation();

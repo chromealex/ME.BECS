@@ -12,7 +12,15 @@ namespace ME.BECS.Views {
         public ViewSource source;
 
     }
-    
+
+    [ComponentGroup(typeof(ViewsComponentGroup))]
+    public struct AssignViewComponent : IComponent {
+
+        public ViewSource source;
+        public Ent sourceEnt;
+
+    }
+
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct IsViewRequested : IComponent {}
 

@@ -10,7 +10,7 @@ namespace ME.BECS.Editor.Systems {
                 var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<BaseGraph>(currentPath);
                 if (graph != null) {
                     var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
-                    var maxId = 1;
+                    var maxId = 1000;
                     foreach (var guid in guids) {
                         var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                         var importer = UnityEditor.AssetImporter.GetAtPath(path);

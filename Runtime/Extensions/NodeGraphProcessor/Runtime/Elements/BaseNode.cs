@@ -45,10 +45,6 @@ namespace ME.BECS.Extensions.GraphProcessor
 			return false;
 		}
 
-		public virtual void UpdateSyncState() {
-			this.syncPoint = false;
-		}
-		
 		[SerializeField]
 		internal string nodeCustomName = null; // The name of the node in case it was renamed by a user
 

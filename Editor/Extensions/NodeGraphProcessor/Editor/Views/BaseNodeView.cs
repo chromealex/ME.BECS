@@ -1216,7 +1216,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
         public void TestSync() {
             
-	        this.nodeTarget.UpdateSyncState();
+	        this.nodeTarget.graph.UpdateSyncState();
 	        this.UpdateSync();
             
         }

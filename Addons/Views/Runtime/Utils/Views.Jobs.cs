@@ -165,8 +165,9 @@ namespace ME.BECS.Views {
             public void Execute(int index, TransformAccess transform) {
                 
                 var entityData = this.renderingOnSceneEnts[index];
-                transform.SetLocalPositionAndRotation(ME.BECS.Transforms.MatrixUtils.GetPosition(entityData.element.readWorldMatrix), ME.BECS.Transforms.MatrixUtils.GetRotation(entityData.element.readWorldMatrix));
-                transform.localScale = ME.BECS.Transforms.MatrixUtils.GetScale(entityData.element.readWorldMatrix);
+                var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                transform.SetLocalPositionAndRotation(ME.BECS.Transforms.MatrixUtils.GetPosition(tr.readWorldMatrix), ME.BECS.Transforms.MatrixUtils.GetRotation(tr.readWorldMatrix));
+                transform.localScale = ME.BECS.Transforms.MatrixUtils.GetScale(tr.readWorldMatrix);
 
             }
 
@@ -185,9 +186,10 @@ namespace ME.BECS.Views {
             public void Execute(int index, TransformAccess transform) {
                 
                 var entityData = this.renderingOnSceneEnts[index];
-                var sourceData = this.beginFrameState->components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.ent.id, entityData.element.ent.gen);
-                var pos = entityData.element.GetWorldMatrixPosition();
-                var rot = entityData.element.GetWorldMatrixRotation();
+                var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                var sourceData = this.beginFrameState->components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
+                var pos = tr.GetWorldMatrixPosition();
+                var rot = tr.GetWorldMatrixRotation();
 
                 var prevTick = (long)this.beginFrameState->tick;
                 var currentTick = this.currentTick;
@@ -202,7 +204,60 @@ namespace ME.BECS.Views {
                     transform.SetLocalPositionAndRotation(math.lerp(ME.BECS.Transforms.MatrixUtils.GetPosition(sourceData.value), pos, factor), math.slerp(sourceRot, rot, factor));
                 }
                 {
-                    transform.localScale = math.lerp(ME.BECS.Transforms.MatrixUtils.GetScale(sourceData.value), entityData.element.readLocalScale, factor);
+                    transform.localScale = math.lerp(ME.BECS.Transforms.MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
+                }
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct JobAssignViews : IJobParallelForCommandBuffer {
+
+            public World viewsWorld;
+            [NativeDisableUnsafePtrRestriction]
+            public ViewsModuleData* viewsModuleData;
+            public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
+            public UnsafeParallelHashMap<uint, uint>.ParallelWriter toAssign;
+            
+            public void Execute(in CommandBufferJobParallel commandBuffer) {
+
+                var assignToEntId = commandBuffer.entId;
+                var assign = commandBuffer.ent.Read<AssignViewComponent>();
+                var sourceEntId = assign.sourceEnt.id;
+                if (this.viewsModuleData->renderingOnSceneBits.IsSet((int)sourceEntId) == true) {
+                    
+                    ref var allocator = ref this.viewsWorld.state->allocator;
+
+                    {
+                        // Assign data
+                        var updateIdx = this.viewsModuleData->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, sourceEntId);
+                        this.viewsModuleData->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, assignToEntId) = updateIdx;
+                        this.viewsModuleData->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = assignToEntId;
+                        this.viewsModuleData->renderingOnSceneBits.Set((int)assignToEntId, true);
+                        this.viewsModuleData->renderingOnSceneEntToPrefabId[in allocator, assignToEntId] = this.viewsModuleData->renderingOnSceneEntToPrefabId[in allocator, sourceEntId];
+                        ref var entData = ref this.viewsModuleData->renderingOnSceneEnts.Ptr[updateIdx];
+                        entData.element = commandBuffer.ent;
+                        entData.version = commandBuffer.ent.Version - 1;
+                    }
+
+                    {
+                        // Remove
+                        this.viewsModuleData->renderingOnSceneBits.Set((int)sourceEntId, false);
+                    }
+                    
+                    // Assign provider
+                    var providerId = assign.source.providerId;
+                    if (providerId > 0u && assign.source.providerId < this.registeredProviders.Length) {
+                        ref var item = ref *(this.registeredProviders.Ptr + assign.source.providerId);
+                        E.IS_CREATED(item);
+                        assign.sourceEnt.Remove(item.typeId);
+                        commandBuffer.ent.Set(item.typeId, null);
+                    }
+
+                    commandBuffer.ent.Remove<AssignViewComponent>();
+                    this.toAssign.TryAdd(sourceEntId, assignToEntId);
+
                 }
 
             }
@@ -259,15 +314,15 @@ namespace ME.BECS.Views {
                 // But we have one case:
                 //   if entity's generation changed
                 //   we need to check
-                if (entData.element.ent.IsAlive() == false || entData.element.ent.Has<ViewComponent>() == false) {
-                    if (this.viewsModuleData->dirty[(int)entData.element.ent.id] == false) {
-                        if (this.toRemove.TryAdd(entData.element.ent.id, false) == true) {
+                if (entData.element.IsAlive() == false || entData.element.Has<ViewComponent>() == false) {
+                    if (this.viewsModuleData->dirty[(int)entData.element.id] == false) {
+                        if (this.toRemove.TryAdd(entData.element.id, false) == true) {
                             
                         }
                     } else {
                         // update entity
-                        entData.element.ent = new Ent(entData.element.ent.id, this.world);
-                        this.toChange.TryAdd(entData.element.ent.id, false);
+                        entData.element = new Ent(entData.element.id, this.world);
+                        this.toChange.TryAdd(entData.element.id, false);
                     }
                 }
             }
@@ -301,7 +356,7 @@ namespace ME.BECS.Views {
                         //   if prefab changed
                         //   if ent generation changed
                         var idx = this.viewsModuleData->renderingOnSceneEntToRenderIndex.ReadValue(in this.state->allocator, entId);
-                        if (commandBuffer.ent != this.viewsModuleData->renderingOnSceneEnts[(int)idx].element.ent ||
+                        if (commandBuffer.ent != this.viewsModuleData->renderingOnSceneEnts[(int)idx].element ||
                             commandBuffer.ent.Read<ViewComponent>().source.prefabId != prefabId) {
 
                             // We need to remove and spawn again for changed entities
@@ -350,6 +405,7 @@ namespace ME.BECS.Views {
                     this.viewsModuleData->dirty.Clear();
                 }
                 if (entitiesCapacity > this.viewsModuleData->toChange.Capacity) this.viewsModuleData->toChange.Capacity = (int)entitiesCapacity;
+                if (entitiesCapacity > this.viewsModuleData->toAssign.Capacity) this.viewsModuleData->toAssign.Capacity = (int)entitiesCapacity;
                 
             }
 

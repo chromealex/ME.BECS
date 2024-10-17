@@ -5,6 +5,7 @@ namespace ME.BECS.Commands {
     using Pathfinding;
     using Units;
     
+    [BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CommandMoveSystem : IUpdate {
 
