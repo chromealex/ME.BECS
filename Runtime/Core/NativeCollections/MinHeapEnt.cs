@@ -5,7 +5,9 @@ namespace ME.BECS.NativeCollections {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Mathematics;
 
-    public unsafe struct NativeMinHeap : IDisposable {
+    public unsafe struct NativeMinHeapEnt : IDisposable {
+
+        public uint Count => (uint)this.mLength;
 
         [NativeDisableUnsafePtrRestriction]
         private void* mBuffer;
@@ -17,15 +19,15 @@ namespace ME.BECS.NativeCollections {
         //private int mMinIndex;
         //private int mMaxIndex;
 
-        public NativeMinHeap(int capacity, Allocator allocator /*, NativeArrayOptions options = NativeArrayOptions.ClearMemory*/) {
+        public NativeMinHeapEnt(int capacity, Allocator allocator /*, NativeArrayOptions options = NativeArrayOptions.ClearMemory*/) {
             Allocate(capacity, allocator, out this);
             /*if ((options & NativeArrayOptions.ClearMemory) != NativeArrayOptions.ClearMemory)
                 return;
             UnsafeUtility.MemClear(m_Buffer, (long) m_capacity * UnsafeUtility.SizeOf<MinHeapNode>());*/
         }
 
-        private static void Allocate(int capacity, Allocator allocator, out NativeMinHeap nativeMinHeap) {
-            var size = (long)UnsafeUtility.SizeOf<MinHeapNode>() * capacity;
+        private static void Allocate(int capacity, Allocator allocator, out NativeMinHeapEnt nativeMinHeap) {
+            var size = (long)UnsafeUtility.SizeOf<MinHeapNodeEnt>() * capacity;
             if (allocator <= Allocator.None) {
                 throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
             }
@@ -39,7 +41,7 @@ namespace ME.BECS.NativeCollections {
                                                       $"Length * sizeof(T) cannot exceed {(object)int.MaxValue} bytes");
             }
 
-            nativeMinHeap.mBuffer = UnsafeUtility.Malloc(size, UnsafeUtility.AlignOf<MinHeapNode>(), allocator);
+            nativeMinHeap.mBuffer = UnsafeUtility.Malloc(size, UnsafeUtility.AlignOf<MinHeapNodeEnt>(), allocator);
             nativeMinHeap.mCapacity = capacity;
             nativeMinHeap.mAllocatorLabel = allocator;
             //nativeMinHeap.mMinIndex = 0;
@@ -53,7 +55,7 @@ namespace ME.BECS.NativeCollections {
             return this.mHead >= 0;
         }
 
-        public void Push(MinHeapNode node) {
+        public void Push(MinHeapNodeEnt node) {
 
             if (this.mHead < 0) {
                 this.mHead = this.mLength;
@@ -85,7 +87,7 @@ namespace ME.BECS.NativeCollections {
             return result;
         }
 
-        public MinHeapNode this[int index] => UnsafeUtility.ReadArrayElement<MinHeapNode>(this.mBuffer, index);
+        public MinHeapNodeEnt this[int index] => UnsafeUtility.ReadArrayElement<MinHeapNodeEnt>(this.mBuffer, index);
 
         public void Clear() {
             this.mHead = -1;
@@ -104,15 +106,15 @@ namespace ME.BECS.NativeCollections {
 
     }
 
-    public struct MinHeapNode {
+    public struct MinHeapNodeEnt {
 
-        public MinHeapNode(uint position, float expectedCost) {
+        public MinHeapNodeEnt(Ent position, float expectedCost) {
             this.Position = position;
             this.ExpectedCost = expectedCost;
             this.Next = -1;
         }
 
-        public uint Position { get; }
+        public Ent Position { get; }
         public float ExpectedCost { get; }
         public int Next { get; set; }
 

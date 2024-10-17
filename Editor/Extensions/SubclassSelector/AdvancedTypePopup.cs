@@ -41,6 +41,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             var isSingleNamespace = true;
             var namespaces = new string[AdvancedTypePopup.kMaxNamespaceNestCount];
             foreach (var type in typeArray) {
+                if (type == null) continue;
                 var splittedTypePath = TypeMenuUtility.GetSplittedTypePath(type);
                 if (splittedTypePath.Length <= 1) {
                     continue;
@@ -69,6 +70,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
 
             // Add type items.
             foreach (var type in typeArray) {
+                if (type == null) continue;
                 var splittedTypePath = TypeMenuUtility.GetSplittedTypePath(type);
                 if (splittedTypePath.Length == 0) {
                     continue;

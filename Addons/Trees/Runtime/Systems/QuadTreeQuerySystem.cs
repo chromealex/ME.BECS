@@ -131,6 +131,7 @@ namespace ME.BECS {
                 // clean up results
                 if (query.results.results.IsCreated == true) query.results.results.Clear();
                 
+                var heap = data.nearestCount > 0u ? new ME.BECS.NativeCollections.NativeMinHeapEnt(this.system.treesCount * (int)data.nearestCount, Unity.Collections.Allocator.Temp) : default;
                 // for each tree
                 for (int i = 0; i < this.system.treesCount; ++i) {
 
@@ -145,11 +146,8 @@ namespace ME.BECS {
                         var visitor = new OctreeNearestAABBVisitor<Ent>();
                         tree.Nearest(worldPos, query.query.range, ref visitor, new AABBDistanceSquaredProvider<Ent>());
                         if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, 1u);
-                        query.results.results.Add(visitor.nearest);
-                        
-                        /*var ent = tree.SearchClosestPointSync(worldPos, checkSelf: true);
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, 1);
-                        query.results.results.Add(ent);*/
+                        //query.results.results.Add(visitor.nearest);
+                        heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, math.lengthsq(worldPos - visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                         
                     } else if (data.nearestCount > 1u) {
                         
@@ -160,8 +158,11 @@ namespace ME.BECS {
                         };
                         tree.Nearest(worldPos, query.query.range, ref visitor, new AABBDistanceSquaredProvider<Ent>());
                         if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
-                        query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
-                        
+                        //query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
+                        foreach (var item in visitor.results) {
+                            heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                        }
+
                     } else {
 
                         var visitor = new RangeAABBUniqueVisitor<Ent>() {
@@ -169,37 +170,19 @@ namespace ME.BECS {
                             rangeSqr = query.query.range * query.query.range,
                             max = data.nearestCount,
                         };
-                        //var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
                         tree.Range(new NativeTrees.AABB(worldPos - query.query.range, worldPos + query.query.range), ref visitor);
                         if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)visitor.results.Count);
                         query.results.results.AddRange(visitor.results.ToNativeArray(Unity.Collections.Allocator.Temp));
                         
-                        /*var results = new Unity.Collections.NativeArray<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
-                        var cnt = tree.QueryKNearest(worldPos, query.query.range, new Unity.Collections.NativeSlice<Ent>(results));
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
-                        query.results.results.AddRange(in results, 0, cnt);*/
-                        
-                        /*var results = new UnsafeList<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
-                        var cnt = tree.QueryKNearest(worldPos, ref results, query.query.range, (int)data.nearestCount);
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
-                        query.results.results.AddRange(in results, 0, (int)cnt);
-                        */
-                        
-                    } /*else {
+                    }
 
-                        var results = new UnsafeList<Ent>((int)data.nearestCount, Unity.Collections.Allocator.Temp);
-                        tree.QueryRange(worldPos, query.query.range, ref results);
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
-                        query.results.results.AddRange(in results, 0, results.Length);
-                        
-                        /*var results = new UnsafeList<Ent>((int)tree.Length, Unity.Collections.Allocator.Temp);
-                        tree.QueryRange(worldPos, ref results, data.range);
-                        if (query.results.results.isCreated == false) query.results.results = new ListAuto<Ent>(query.ent, (uint)results.Length);
-                        query.results.results.AddRange(in results);
-                        *
-                        
-                    }*/
+                }
 
+                if (data.nearestCount > 0u) {
+                    var max = math.min(data.nearestCount, heap.Count);
+                    for (uint i = 0; i < max; ++i) {
+                        query.results.results.Add(heap[heap.Pop()].Position);
+                    }
                 }
 
             }

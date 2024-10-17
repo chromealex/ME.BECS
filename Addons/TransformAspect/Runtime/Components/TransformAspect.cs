@@ -20,8 +20,8 @@ namespace ME.BECS.Transforms {
         [QueryWith]
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
 
-        public bool IsCalculated => this.ent.Has<WorldMatrixComponent>();
-        
+        public bool IsCalculated => math.any(this.GetWorldMatrixRotation().value != default);
+
         public readonly float3 forward {
             [INLINE(256)] get => math.mul(this.rotation, math.forward());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.forward(), value); 

@@ -396,9 +396,12 @@ namespace ME.BECS.Editor {
 
         private static int componentGroupsNextId;
         private static System.Collections.Generic.List<ComponentGroupItem> componentGroups;
-        public static System.Collections.Generic.List<ComponentGroupItem> GetComponentGroups() {
+        public static System.Collections.Generic.List<ComponentGroupItem> GetComponentGroups(bool withUnknownGroup = true) {
 
-            if (componentGroups != null) return componentGroups;
+            if (componentGroups != null) {
+                if (withUnknownGroup == false) return componentGroups.Where(x => x.type != null).ToList();
+                return componentGroups;
+            }
 
             LoadComponentGroups();
             
@@ -419,6 +422,9 @@ namespace ME.BECS.Editor {
             foreach (var component in componentsList) {
                 
                 var attr = component.GetCustomAttribute<ComponentGroupAttribute>();
+                if (withUnknownGroup == false) {
+                    if (attr == null) continue;
+                }
                 var group = new ComponentGroupItem() {
                     type = attr != null ? attr.groupType : null,
                 };
@@ -442,8 +448,10 @@ namespace ME.BECS.Editor {
 
             }
             
-            componentGroups = groups.OrderBy(x => x.order).ToList();
+            var result = groups.OrderBy(x => x.order).ToList();
             SaveComponentGroups();
+            componentGroups = result;
+            if (withUnknownGroup == false) return componentGroups.Where(x => x.type != null).ToList();
             return componentGroups;
 
         }

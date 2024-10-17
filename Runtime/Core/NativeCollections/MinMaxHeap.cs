@@ -27,245 +27,253 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
 namespace ME.BECS.NativeCollections {
-	public static unsafe class UnsafeUtilityEx {
-		public static T* AllocArray<T>(int length, Allocator allocator) where T : unmanaged {
-			return (T*)UnsafeUtility.Malloc(length * UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator);
-		}
-	}
+
+    public static unsafe class UnsafeUtilityEx {
+
+        public static T* AllocArray<T>(int length, Allocator allocator) where T : unmanaged {
+            return (T*)UnsafeUtility.Malloc(length * UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator);
+        }
+
+    }
+
 }
 
 namespace ME.BECS.NativeCollections {
-	public static class HeapUtils {
-		public static int Parent(int index) {
-			return index / 2;
-		}
 
-		public static int Left(int index) {
-			return index * 2;
-		}
+    public static class HeapUtils {
 
-		public static int Right(int index) {
-			return index * 2 + 1;
-		}
-	}
+        public static int Parent(int index) {
+            return index / 2;
+        }
 
-	// Sorted heap with a self balancing tree
-	// Can act as either a min or max heap
-	public unsafe struct MinMaxHeap<T> : IDisposable where T : unmanaged {
-		[NativeDisableContainerSafetyRestriction]
-		T* keys; //objects
-		
-		[NativeDisableContainerSafetyRestriction]
-		float* values;
+        public static int Left(int index) {
+            return index * 2;
+        }
 
-		public int Count;
-		int m_capacity;
+        public static int Right(int index) {
+            return index * 2 + 1;
+        }
 
-		public float HeadValue => values[1];
-		T HeadKey => keys[1];
+    }
 
-		public bool IsFull => Count == m_capacity;
+    // Sorted heap with a self balancing tree
+    // Can act as either a min or max heap
+    public unsafe struct MinMaxHeap<T> : IDisposable where T : unmanaged {
 
-		Allocator m_allocator;
-		
-		public MinMaxHeap(int startCapacity, Allocator allocator) {
-			Count = 0;
-			m_allocator = allocator;
-			
-			// Now alloc starting arrays
-			m_capacity = startCapacity;
-			values = UnsafeUtilityEx.AllocArray<float>(startCapacity + 1, m_allocator);
-			keys = UnsafeUtilityEx.AllocArray<T>(startCapacity + 1, m_allocator);
-		}
-		
-		void Swap(int indexA, int indexB) {
-			float tempVal = values[indexA];
-			values[indexA] = values[indexB];
-			values[indexB] = tempVal;
-			
-			T tempKey = keys[indexA];
-			keys[indexA] = keys[indexB];
-			keys[indexB] = tempKey;
-		}
-		
-		public void Dispose() {
-			UnsafeUtility.Free(values, m_allocator);
-			UnsafeUtility.Free(keys, m_allocator);
-			values = null;
-			keys = null;
-		}
+        [NativeDisableContainerSafetyRestriction]
+        private T* keys; //objects
 
-		public void Resize(int newSize) {
-			// Allocate more space
-			var newValues = UnsafeUtilityEx.AllocArray<float>(newSize + 1, m_allocator);
-			var newKeys = UnsafeUtilityEx.AllocArray<T>(newSize + 1, m_allocator);
-			
-			// Copy over old arrays
-			UnsafeUtility.MemCpy(newValues, values, (m_capacity + 1) * sizeof(int));
-			UnsafeUtility.MemCpy(newKeys, keys, (m_capacity + 1) * sizeof(int));
-			
-			// Get rid of old arrays
-			Dispose();
+        [NativeDisableContainerSafetyRestriction]
+        private float* values;
 
-			// And now use old arrays
-			values = newValues;
-			keys = newKeys;
-			m_capacity = newSize;
-		}
-						
-		// bubble down, MaxHeap version
-		void BubbleDownMax(int index) {
-			int l = HeapUtils.Left(index);
-			int r = HeapUtils.Right(index);
+        public int Count;
+        private int m_capacity;
 
-			// bubbling down, 2 kids
-			while (r <= Count) {
-				// if heap property is violated between index and Left child
-				if (values[index] < values[l]) {
-					if (values[l] < values[r]) {
-						Swap(index, r); // left has bigger priority
-						index = r;
-					} else {
-						Swap(index, l); // right has bigger priority
-						index = l;
-					}
-				} else {
-					// if heap property is violated between index and R
-					if (values[index] < values[r]) {
-						Swap(index, r);
-						index = r;
-					} else {
-						index = l;
-						l = HeapUtils.Left(index);
-						break;
-					}
-				}
+        public float HeadValue => this.values[1];
+        private T HeadKey => this.keys[1];
 
-				l = HeapUtils.Left(index);
-				r = HeapUtils.Right(index);
-			}
+        public bool IsFull => this.Count == this.m_capacity;
 
-			// only left & last children available to test and swap
-			if (l <= Count && values[index] < values[l]) {
-				Swap(index, l);
-			}
-		}
-		
-		void BubbleDownMin(int index) {
-			int l = HeapUtils.Left(index);
-			int r = HeapUtils.Right(index);
+        private Allocator m_allocator;
 
-			// bubbling down, 2 kids
-			while (r <= Count) {
-				// if heap property is violated between index and Left child
-				if (values[index] > values[l]) {
-					if (values[l] > values[r]) {
-						Swap(index, r); // right has smaller priority
-						index = r;
-					} else {
-						Swap(index, l); // left has smaller priority
-						index = l;
-					}
-				} else {
-					// if heap property is violated between index and R
-					if (values[index] > values[r]) {
-						Swap(index, r);
-						index = r;
-					} else {
-						index = l;
-						l = HeapUtils.Left(index);
-						break;
-					}
-				}
+        public MinMaxHeap(int startCapacity, Allocator allocator) {
+            this.Count = 0;
+            this.m_allocator = allocator;
 
-				l = HeapUtils.Left(index);
-				r = HeapUtils.Right(index);
-			}
+            // Now alloc starting arrays
+            this.m_capacity = startCapacity;
+            this.values = UnsafeUtilityEx.AllocArray<float>(startCapacity + 1, this.m_allocator);
+            this.keys = UnsafeUtilityEx.AllocArray<T>(startCapacity + 1, this.m_allocator);
+        }
 
-			// only left & last children available to test and swap
-			if (l <= Count && values[index] > values[l]) {
-				Swap(index, l);
-			}
-		}
+        private void Swap(int indexA, int indexB) {
+            var tempVal = this.values[indexA];
+            this.values[indexA] = this.values[indexB];
+            this.values[indexB] = tempVal;
 
-		void BubbleUpMax(int index) {
-			int p = HeapUtils.Parent(index);
+            var tempKey = this.keys[indexA];
+            this.keys[indexA] = this.keys[indexB];
+            this.keys[indexB] = tempKey;
+        }
 
-			//swap, until Heap property isn't violated anymore
-			while (p > 0 && values[p] < values[index]) {
-				Swap(p, index);
-				index = p;
-				p = HeapUtils.Parent(index);
-			}
-		}
-		
-		void BubbleUpMin(int index) {
-			int p = HeapUtils.Parent(index);
+        public void Dispose() {
+            UnsafeUtility.Free(this.values, this.m_allocator);
+            UnsafeUtility.Free(this.keys, this.m_allocator);
+            this.values = null;
+            this.keys = null;
+        }
 
-			//swap, until Heap property isn't violated anymore
-			while (p > 0 && values[p] > values[index]) {
-				Swap(p, index);
-				index = p;
-				p = HeapUtils.Parent(index);
-			}
-		}
+        public void Resize(int newSize) {
+            // Allocate more space
+            var newValues = UnsafeUtilityEx.AllocArray<float>(newSize + 1, this.m_allocator);
+            var newKeys = UnsafeUtilityEx.AllocArray<T>(newSize + 1, this.m_allocator);
 
-		public void PushObjMax(T key, float val) {
-			// if heap full
-			if (Count == m_capacity) {
-				// if Heads priority is smaller than input priority, then ignore that item
-				if (HeadValue > val) {
-					values[1] = val; // remove top element
-					keys[1] = key;
-					BubbleDownMax(1); // bubble it down
-				}
-			}
-			else {
-				Count++;
-				values[Count] = val;
-				keys[Count] = key;
-				BubbleUpMax(Count);
-			}
-		}
+            // Copy over old arrays
+            UnsafeUtility.MemCpy(newValues, this.values, (this.m_capacity + 1) * sizeof(int));
+            UnsafeUtility.MemCpy(newKeys, this.keys, (this.m_capacity + 1) * sizeof(int));
 
-		public void PushObjMin(T key, float val) {
-			// if heap full
-			if (Count == m_capacity) {
-				// if Heads priority is smaller than input priority, then ignore that item
-				if (HeadValue < val) {
-					values[1] = val; // remove top element
-					keys[1] = key;
-					BubbleDownMin(1); // bubble it down
-				}
-			}
-			else {
-				Count++;
-				values[Count] = val;
-				keys[Count] = key;
-				BubbleUpMin(Count);
-			}
-		}
+            // Get rid of old arrays
+            this.Dispose();
 
-		T PopHeadObj() {
-			T result = HeadKey;
-			
-			values[1] = values[Count];
-			keys[1] = keys[Count];
-			Count--;
-			
-			return result;
-		}
+            // And now use old arrays
+            this.values = newValues;
+            this.keys = newKeys;
+            this.m_capacity = newSize;
+        }
 
-		public T PopObjMax() {
-			T result = PopHeadObj();
-			BubbleDownMax(1);
-			return result;
-		}
+        // bubble down, MaxHeap version
+        private void BubbleDownMax(int index) {
+            var l = HeapUtils.Left(index);
+            var r = HeapUtils.Right(index);
 
-		public T PopObjMin() {
-			T result = PopHeadObj();
-			BubbleDownMin(1);
-			return result;
-		}
-	}
+            // bubbling down, 2 kids
+            while (r <= this.Count) {
+                // if heap property is violated between index and Left child
+                if (this.values[index] < this.values[l]) {
+                    if (this.values[l] < this.values[r]) {
+                        this.Swap(index, r); // left has bigger priority
+                        index = r;
+                    } else {
+                        this.Swap(index, l); // right has bigger priority
+                        index = l;
+                    }
+                } else {
+                    // if heap property is violated between index and R
+                    if (this.values[index] < this.values[r]) {
+                        this.Swap(index, r);
+                        index = r;
+                    } else {
+                        index = l;
+                        l = HeapUtils.Left(index);
+                        break;
+                    }
+                }
+
+                l = HeapUtils.Left(index);
+                r = HeapUtils.Right(index);
+            }
+
+            // only left & last children available to test and swap
+            if (l <= this.Count && this.values[index] < this.values[l]) {
+                this.Swap(index, l);
+            }
+        }
+
+        private void BubbleDownMin(int index) {
+            var l = HeapUtils.Left(index);
+            var r = HeapUtils.Right(index);
+
+            // bubbling down, 2 kids
+            while (r <= this.Count) {
+                // if heap property is violated between index and Left child
+                if (this.values[index] > this.values[l]) {
+                    if (this.values[l] > this.values[r]) {
+                        this.Swap(index, r); // right has smaller priority
+                        index = r;
+                    } else {
+                        this.Swap(index, l); // left has smaller priority
+                        index = l;
+                    }
+                } else {
+                    // if heap property is violated between index and R
+                    if (this.values[index] > this.values[r]) {
+                        this.Swap(index, r);
+                        index = r;
+                    } else {
+                        index = l;
+                        l = HeapUtils.Left(index);
+                        break;
+                    }
+                }
+
+                l = HeapUtils.Left(index);
+                r = HeapUtils.Right(index);
+            }
+
+            // only left & last children available to test and swap
+            if (l <= this.Count && this.values[index] > this.values[l]) {
+                this.Swap(index, l);
+            }
+        }
+
+        private void BubbleUpMax(int index) {
+            var p = HeapUtils.Parent(index);
+
+            //swap, until Heap property isn't violated anymore
+            while (p > 0 && this.values[p] < this.values[index]) {
+                this.Swap(p, index);
+                index = p;
+                p = HeapUtils.Parent(index);
+            }
+        }
+
+        private void BubbleUpMin(int index) {
+            var p = HeapUtils.Parent(index);
+
+            //swap, until Heap property isn't violated anymore
+            while (p > 0 && this.values[p] > this.values[index]) {
+                this.Swap(p, index);
+                index = p;
+                p = HeapUtils.Parent(index);
+            }
+        }
+
+        public void PushObjMax(T key, float val) {
+            // if heap full
+            if (this.Count == this.m_capacity) {
+                // if Heads priority is smaller than input priority, then ignore that item
+                if (this.HeadValue > val) {
+                    this.values[1] = val; // remove top element
+                    this.keys[1] = key;
+                    this.BubbleDownMax(1); // bubble it down
+                }
+            } else {
+                this.Count++;
+                this.values[this.Count] = val;
+                this.keys[this.Count] = key;
+                this.BubbleUpMax(this.Count);
+            }
+        }
+
+        public void PushObjMin(T key, float val) {
+            // if heap full
+            if (this.Count == this.m_capacity) {
+                // if Heads priority is smaller than input priority, then ignore that item
+                if (this.HeadValue < val) {
+                    this.values[1] = val; // remove top element
+                    this.keys[1] = key;
+                    this.BubbleDownMin(1); // bubble it down
+                }
+            } else {
+                this.Count++;
+                this.values[this.Count] = val;
+                this.keys[this.Count] = key;
+                this.BubbleUpMin(this.Count);
+            }
+        }
+
+        private T PopHeadObj() {
+            var result = this.HeadKey;
+
+            this.values[1] = this.values[this.Count];
+            this.keys[1] = this.keys[this.Count];
+            this.Count--;
+
+            return result;
+        }
+
+        public T PopObjMax() {
+            var result = this.PopHeadObj();
+            this.BubbleDownMax(1);
+            return result;
+        }
+
+        public T PopObjMin() {
+            var result = this.PopHeadObj();
+            this.BubbleDownMin(1);
+            return result;
+        }
+
+    }
+
 }

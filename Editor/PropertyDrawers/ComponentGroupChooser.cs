@@ -18,7 +18,7 @@ namespace ME.BECS.Editor {
             
                 var so = property.serializedObject;
                 var prop = property;
-                var choices = EditorUtils.GetComponentGroups();
+                var choices = EditorUtils.GetComponentGroups(withUnknownGroup: false);
                 Button nameField = null;
                 nameField = new Button(() => {
                     var rect = nameField.worldBound;
@@ -35,7 +35,7 @@ namespace ME.BECS.Editor {
                         so.Update();
                     }, types, showNullElement: false);
                 });
-                var idx = choices.FirstOrDefault(x => x.type.AssemblyQualifiedName == prop.stringValue).index - 1;
+                var idx = choices.FindIndex(x => x.type.AssemblyQualifiedName == prop.stringValue);
                 if (idx >= 0) {
                     nameField.text = choices[idx].value;
                 } else {
