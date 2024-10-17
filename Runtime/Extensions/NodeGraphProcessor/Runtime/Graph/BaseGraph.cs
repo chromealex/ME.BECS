@@ -43,7 +43,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// <summary>Invalid compute order number of a node can't process</summary>
 		public static readonly int invalidComputeOrder = -1;
 
-		public int id;
+		[HideInInspector] public int id;
 		public bool builtInGraph;
 		public bool isInnerGraph;
 		public int GetId() {
@@ -59,18 +59,6 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 			return hash;
 
-		}
-		
-		public void OnValidate() {
-			#if UNITY_EDITOR
-			var path = UnityEditor.AssetDatabase.GetAssetPath(this);
-			var id = GetStringHash(path);
-			if (id < 0) id = -id;
-			if (id != this.id && this.builtInGraph == false) {
-				this.id = id;
-				UnityEditor.EditorUtility.SetDirty(this);
-			}
-			#endif
 		}
 
 		/// <summary>

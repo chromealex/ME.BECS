@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: Pathfinding-BuildGraph
   m_EditorClassIdentifier: 
-  id: 10
+  id: 9
   builtInGraph: 1
   isInnerGraph: 1
   serializedNodes: []
@@ -53,8 +53,6 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -311, y: 251, z: 0}
-  scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
     RefIds:

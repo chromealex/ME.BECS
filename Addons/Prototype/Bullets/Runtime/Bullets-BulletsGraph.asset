@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: Bullets-BulletsGraph
   m_EditorClassIdentifier: 
-  id: 40
+  id: 22
   builtInGraph: 1
+  isInnerGraph: 1
   serializedNodes: []
   nodes:
   - rid: 8346928838201573445
@@ -52,15 +53,14 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: -168, y: 260, z: 0}
-  scale: {x: 1, y: 1, z: 1}
-  isInnerGraph: 1
   references:
     version: 2
     RefIds:
     - rid: 8346928838201573445
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -76,9 +76,12 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928838201573446
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -94,9 +97,12 @@ MonoBehaviour:
         debug: 0
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
     - rid: 8346928838201573451
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
         groupGUID: 
@@ -117,6 +123,8 @@ MonoBehaviour:
     - rid: 8346928838201573453
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 8f7458ea-71e7-432a-91e0-28e061f19696
         groupGUID: 

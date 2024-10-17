@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: Pathfinding-UpdateGraph
   m_EditorClassIdentifier: 
-  id: 11
+  id: 12
   builtInGraph: 1
   isInnerGraph: 1
   serializedNodes: []
@@ -53,14 +53,14 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 63, y: 318.5, z: 0}
-  scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
     RefIds:
     - rid: 8346928920201003110
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -80,6 +80,8 @@ MonoBehaviour:
     - rid: 8346928920201003111
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -99,6 +101,8 @@ MonoBehaviour:
     - rid: 8346928920201003112
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 3afde76d-2cd9-4fc0-9833-024bcb6d5b37
         groupGUID: 
@@ -128,6 +132,8 @@ MonoBehaviour:
     - rid: 8346928920201003114
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 8676df3e-3ddb-4a3b-a006-4ab38b94f254
         groupGUID: 

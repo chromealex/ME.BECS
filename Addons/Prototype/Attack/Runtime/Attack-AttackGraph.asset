@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: Attack-AttackGraph
   m_EditorClassIdentifier: 
-  id: 30
+  id: 6
   builtInGraph: 1
   isInnerGraph: 1
   serializedNodes: []
@@ -79,14 +79,14 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 168, y: 251.5, z: 0}
-  scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
     RefIds:
     - rid: 8346928838201573445
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -106,6 +106,8 @@ MonoBehaviour:
     - rid: 8346928838201573446
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 0
+        syncCount: -1
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -125,6 +127,8 @@ MonoBehaviour:
     - rid: 8346928838201573447
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 0
+        syncCount: 1
         nodeCustomName: 
         GUID: c94c0ee5-4e54-496f-b8fb-2d9ef726964b
         groupGUID: 
@@ -148,6 +152,8 @@ MonoBehaviour:
     - rid: 8346928838201573449
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 0
+        syncCount: 1
         nodeCustomName: 
         GUID: 66e29378-443a-4830-b0d7-fb461eeb3fc8
         groupGUID: 
@@ -171,6 +177,8 @@ MonoBehaviour:
     - rid: 8346928838201573451
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
         groupGUID: 
@@ -194,6 +202,8 @@ MonoBehaviour:
     - rid: 8346928920201003120
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 0
+        syncCount: -1
         nodeCustomName: 
         GUID: 79dd30a3-db46-4ba6-83ca-9716d0837232
         groupGUID: 

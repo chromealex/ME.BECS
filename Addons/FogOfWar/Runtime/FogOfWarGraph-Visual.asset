@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
   m_Name: FogOfWarGraph-Visual
   m_EditorClassIdentifier: 
-  id: 21
+  id: 7
   builtInGraph: 1
   isInnerGraph: 1
   serializedNodes: []
@@ -44,14 +44,14 @@ MonoBehaviour:
   serializedParameterList: []
   stickyNotes: []
   nodeInspectorReference: {fileID: 0}
-  position: {x: 303.5, y: 406.5, z: 0}
-  scale: {x: 1, y: 1, z: 1}
   references:
     version: 2
     RefIds:
     - rid: 8346928923441103769
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -71,6 +71,8 @@ MonoBehaviour:
     - rid: 8346928923441103770
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
@@ -90,6 +92,8 @@ MonoBehaviour:
     - rid: 8346928923441103775
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 37b28351-46ed-4aeb-b7d4-f48fd39cdc77
         groupGUID: 
