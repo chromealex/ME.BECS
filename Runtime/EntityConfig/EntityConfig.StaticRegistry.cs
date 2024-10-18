@@ -13,6 +13,7 @@ namespace ME.BECS {
         #endif
         public static void Initialize() {
             
+            ObjectReferenceRegistry.Load();
             InitializeConfigs();
             
         }

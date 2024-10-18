@@ -33,11 +33,13 @@ namespace ME.BECS {
                 }
 
                 var obj = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
-                if (obj == null) {
-                    var path = "Assets/Resources/ObjectReferenceRegistry.asset";
+                var path = "Assets/Resources/ObjectReferenceRegistry.asset";
+                if (obj == null && System.IO.File.Exists(path) == false) {
                     var file = ObjectReferenceRegistryData.CreateInstance<ObjectReferenceRegistryData>();
                     UnityEditor.AssetDatabase.CreateAsset(file, path);
                     UnityEditor.AssetDatabase.ImportAsset(path);
+                } else if (obj == null) {
+                    UnityEngine.Debug.LogError("ObjectReferenceRegistry can not be loaded");
                 }
                 #endif
             }
