@@ -3,6 +3,7 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
     using Unity.Collections;
+    using Unity.Collections.LowLevel.Unsafe;
     
     public class WorldSystemRegistry {
 
@@ -19,9 +20,10 @@ namespace ME.BECS {
         
     }
 
-    public unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
+    public readonly unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
 
-        private T* ptr;
+        [NativeDisableUnsafePtrRestriction]
+        private readonly T* ptr;
 
         public bool IsCreated => this.ptr != null;
         
