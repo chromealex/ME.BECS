@@ -20,10 +20,10 @@ namespace ME.BECS {
         
     }
 
-    public unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
+    public readonly unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
 
         [NativeDisableUnsafePtrRestriction]
-        private T* ptr;
+        private readonly T* ptr;
 
         public bool IsCreated => this.ptr != null;
         
