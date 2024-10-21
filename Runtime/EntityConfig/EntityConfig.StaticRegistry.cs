@@ -8,20 +8,22 @@ namespace ME.BECS {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
         
-        #if UNITY_EDITOR
-        [UnityEditor.InitializeOnLoadMethod]
-        #endif
         public static void Initialize() {
             
             ObjectReferenceRegistry.Load();
-            InitializeConfigs();
+            Load();
             
         }
 
-        private static void InitializeConfigs() {
+        private static void Load() {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (ObjectReferenceRegistry.data == null) return;
+            LoadForced();
+
+        }
+
+        private static void LoadForced() {
 
             try {
 

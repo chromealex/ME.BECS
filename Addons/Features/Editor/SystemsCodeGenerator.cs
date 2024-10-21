@@ -179,7 +179,7 @@ namespace ME.BECS.Editor.Systems {
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            methodContent.Add($"dep{index.ToString()} = Batches.Apply(localContext{index.ToString()}.dependsOn, world.state);");
+                            methodContent.Add($"dep{index.ToString()} = Batches.Apply(dep{index.ToString()}, world.state);");
                         }
                         
                         while (q.Count > 0) {
@@ -329,10 +329,12 @@ namespace ME.BECS.Editor.Systems {
                                         }
 
                                         methodContent.Add("{");
-                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, {dependsOn});");
+                                        methodContent.Add($"var input = {dependsOn};");
+                                        methodContent.Add($"dep{index.ToString()} = input;");
+                                        AddApply(systemNode, index, ref schemeDependsOn);
+                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, dep{index.ToString()});");
                                         methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
                                         methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
-                                        AddApply(systemNode, index, ref schemeDependsOn);
                                         methodContent.Add("}");
                                         collectedDeps.Add($"dep{index.ToString()}");
 

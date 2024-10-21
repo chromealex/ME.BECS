@@ -9,7 +9,7 @@ namespace ME.BECS.Attack {
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Search Target system")]
-    [RequiredDependencies(typeof(FogOfWar.CreateSystem), typeof(QuadTreeQuerySystem))]
+    [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public struct SearchTargetSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]

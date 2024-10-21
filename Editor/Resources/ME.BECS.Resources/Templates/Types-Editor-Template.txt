@@ -5,6 +5,7 @@ namespace ME.BECS.Editor {
     using Unity.Collections.LowLevel.Unsafe;
     using UnityEngine.Scripting;
     using static Cuts;
+    using UnityEditor;
     
     [UnityEngine.Scripting.PreserveAttribute]
     public static unsafe class AOTBurstHelper {
@@ -22,11 +23,13 @@ namespace ME.BECS.Editor {
         }
     }
     
+    [InitializeOnLoad]
     [UnityEngine.Scripting.PreserveAttribute]
     [UnityEngine.DefaultExecutionOrder(-100_000)]
     [BURST]
     public static unsafe class StaticMethods {
         
+        [InitializeOnLoadMethod]
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void Load() {
             Worlds.Initialize();

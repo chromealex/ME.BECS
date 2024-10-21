@@ -1,13 +1,13 @@
 namespace ME.BECS {
 
     #if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoadAttribute]
+    [UnityEditor.InitializeOnLoad]
     #endif
     public static class ObjectReferenceRegistry {
 
         public static ObjectReferenceRegistryData data;
-        
-        public static System.Collections.Generic.List<ObjectReferenceRegistryData.Item> additionalRuntimeObjects = new System.Collections.Generic.List<ObjectReferenceRegistryData.Item>();
+
+        private static readonly System.Collections.Generic.List<ObjectReferenceRegistryData.Item> additionalRuntimeObjects = new System.Collections.Generic.List<ObjectReferenceRegistryData.Item>();
         private static uint nextRuntimeId;
         
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
@@ -17,25 +17,30 @@ namespace ME.BECS {
             
         }
         
-        #if UNITY_EDITOR
-        [UnityEditor.InitializeOnLoadMethod]
-        #endif
         public static void Load() {
 
             if (data != null) return;
+            LoadForced();
+            
+        }
+
+        #if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+        #endif
+        public static void LoadForced() {
             
             {
                 // Validate Resources directory
                 #if UNITY_EDITOR
-                var dir = "Resources";
-                if (UnityEditor.AssetDatabase.IsValidFolder("Assets/" + dir) == false) {
+                const string dir = "Resources";
+                const string path = "Assets/Resources/ObjectReferenceRegistry.asset";
+                if (UnityEditor.AssetDatabase.IsValidFolder($"Assets/{dir}") == false) {
                     UnityEditor.AssetDatabase.CreateFolder("Assets", dir);
                 }
 
                 var obj = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
-                var path = "Assets/Resources/ObjectReferenceRegistry.asset";
                 if (obj == null && System.IO.File.Exists(path) == false) {
-                    var file = ObjectReferenceRegistryData.CreateInstance<ObjectReferenceRegistryData>();
+                    var file = UnityEngine.ScriptableObject.CreateInstance<ObjectReferenceRegistryData>();
                     UnityEditor.AssetDatabase.CreateAsset(file, path);
                     UnityEditor.AssetDatabase.ImportAsset(path);
                 } else if (obj == null) {
@@ -47,11 +52,11 @@ namespace ME.BECS {
             data = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
 
         }
-
+        
         public static void AddRuntimeObject(UnityEngine.Object obj) {
 
             var nextId = ObjectReferenceRegistry.data.sourceId;
-            ObjectReferenceRegistryData.Item item = default;
+            ObjectReferenceRegistryData.Item item;
             for (var index = 0; index < additionalRuntimeObjects.Count; ++index) {
                 var elem = additionalRuntimeObjects[index];
                 if (elem.source == obj) {
