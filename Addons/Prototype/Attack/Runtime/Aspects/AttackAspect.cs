@@ -15,6 +15,10 @@ namespace ME.BECS.Attack {
 
         public void SetTarget(Ent ent) {
             if (ent.IsAlive() == true) {
+                if (this.ent.Has<CanFireWhileMovesTag>() == true && this.ent.Read<AttackTargetComponent>().target != ent) {
+                    this.CanFire = false;
+                }
+                
                 this.ent.Set(new AttackTargetComponent() {
                     target = ent,
                 });
@@ -24,6 +28,7 @@ namespace ME.BECS.Attack {
         }
         
         public float ReloadProgress => this.component.reloadTimer / this.component.reloadTime;
+        public float FireProgress => this.component.fireTimer / this.component.fireTime;
 
         public bool IsReloaded {
             get => this.ent.Has<ReloadedComponent>();
@@ -33,6 +38,18 @@ namespace ME.BECS.Attack {
                 } else {
                     this.component.reloadTimer = 0f;
                     this.ent.Remove<ReloadedComponent>();
+                }
+            }
+        }
+        
+        public bool CanFire {
+            get => this.ent.Has<CanFireComponent>();
+            set {
+                if (value == true) {
+                    this.ent.Set(new CanFireComponent());
+                } else {
+                    this.component.fireTimer = 0f;
+                    this.ent.Remove<CanFireComponent>();
                 }
             }
         }
@@ -46,5 +63,6 @@ namespace ME.BECS.Attack {
     }
     
     public struct ReloadedComponent : IComponent {}
+    public struct CanFireComponent : IComponent {}
 
 }

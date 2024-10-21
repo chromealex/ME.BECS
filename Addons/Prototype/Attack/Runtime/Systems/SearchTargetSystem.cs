@@ -16,7 +16,7 @@ namespace ME.BECS.Attack {
         public unsafe struct SearchTargetJob : ME.BECS.Jobs.IJobParallelForAspect<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public World world;
-            public FogOfWar.CreateSystem fogOfWar;
+            public SystemLink<FogOfWar.CreateSystem> fogOfWar;
             
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
@@ -29,7 +29,7 @@ namespace ME.BECS.Attack {
                     if (ent.IsAlive() == false) continue;
                     var result = ent.GetAspect<UnitAspect>();
                     if (UnitUtils.GetTeam(in result) == team) continue;
-                    if (this.fogOfWar.IsVisible(in player, in ent) == false) continue;
+                    if (this.fogOfWar.IsCreated == true && this.fogOfWar.Value.IsVisible(in player, in ent) == false) continue;
 
                     var dist = math.length(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
                     if (dist <= math.sqrt(aspect.attackRangeSqr) + result.readRadius) {
@@ -53,7 +53,7 @@ namespace ME.BECS.Attack {
 
             var dependsOn = context.Query().Without<AttackTargetComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
                 world = context.world,
-                fogOfWar = context.world.GetSystem<ME.BECS.FogOfWar.CreateSystem>(),
+                fogOfWar = context.world.GetSystemLink<ME.BECS.FogOfWar.CreateSystem>(),
             });
             context.SetDependency(dependsOn);
 
