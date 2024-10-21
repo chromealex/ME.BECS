@@ -44,9 +44,11 @@ namespace ME.BECS.Attack {
 
             var dependsOn = context.Query()
                                    .With<AttackTargetComponent>()
+                                   .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobSet, AttackAspect>();
             dependsOn = context.Query(dependsOn)
                                    .Without<AttackTargetComponent>()
+                                   .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobRemove, AttackAspect>();
             context.SetDependency(dependsOn);
 
