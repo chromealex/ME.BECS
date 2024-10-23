@@ -80,8 +80,11 @@ namespace ME.BECS.Units {
         public readonly void Hit(float damage, in Ent source, JobInfo jobInfo) {
             if (this.health > 0f) {
                 JobUtils.Decrement(ref this.health, damage);
-                this.ent.SetOneShot(new DamageTookComponent() {
-                    sourceUnit = source,
+                var ent = Ent.New(jobInfo);
+                ent.SetOneShot(new DamageTookComponent() {
+                    source = source,
+                    target = this.ent,
+                    damage = damage,
                 }, OneShotType.NextTick);
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, in this.ent.Read<UnitHealthComponent>().effectOnHit, jobInfo);
