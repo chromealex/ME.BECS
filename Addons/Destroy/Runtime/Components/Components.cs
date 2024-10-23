@@ -12,5 +12,12 @@ namespace ME.BECS {
         public float lifetime;
 
     }
+    
+    [ComponentGroup(typeof(DestroyComponentGroup))]
+    public struct DestroyWithTicks : IConfigComponent {
+
+        public int ticks;
+
+    }
 
 }

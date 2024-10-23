@@ -5,7 +5,7 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
-    [UnityEngine.Tooltip("Update entities with lifetime component (ent.Destroy(lifetime) API).")]
+    [UnityEngine.Tooltip("Update entities with lifetime component (ent.Destroy(float lifetime) API).")]
     [BURST(CompileSynchronously = true)]
     public struct DestroyWithLifetimeSystem : IUpdate {
         
