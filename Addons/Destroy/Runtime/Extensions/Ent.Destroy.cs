@@ -10,8 +10,14 @@ namespace ME.BECS {
 
         public static void DestroyEndTick(this in Ent ent) {
 
-            ent.Set(new DestroyWithLifetime() { lifetime = 0f, });
+            ent.Set(new DestroyWithTicks() { ticks = 0UL, });
             
+        }
+
+        public static void Destroy(this in Ent ent, ulong ticks) {
+
+            ent.Set(new DestroyWithTicks() { ticks = ticks, });
+
         }
 
     }
