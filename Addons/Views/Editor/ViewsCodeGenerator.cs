@@ -46,6 +46,7 @@ namespace ME.BECS.Views.Editor {
             var def = new CodeGenerator.MethodDefinition() {
                 methodName = "ViewsLoad",
                 type = "ME.BECS.Views.ViewsModuleData",
+                registerMethodName = "RegisterCallback",
                 definition = "ref ME.BECS.Views.ViewsModuleData viewsModule",
                 content = string.Join("\n", content.ToArray()),
             };

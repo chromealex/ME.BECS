@@ -5,6 +5,7 @@ namespace ME.BECS.Editor {
     using Unity.Collections.LowLevel.Unsafe;
     using UnityEngine.Scripting;
     using static Cuts;
+    using Unity.Burst;
     using UnityEditor;
     
     [UnityEngine.Scripting.PreserveAttribute]

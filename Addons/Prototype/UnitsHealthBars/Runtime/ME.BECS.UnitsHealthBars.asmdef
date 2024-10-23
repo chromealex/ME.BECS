@@ -13,7 +13,8 @@
         "ME.BECS.FogOfWar",
         "ME.BECS.Units",
         "ME.BECS.Views",
-        "ME.BECS.ObjectReference.Runtime"
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

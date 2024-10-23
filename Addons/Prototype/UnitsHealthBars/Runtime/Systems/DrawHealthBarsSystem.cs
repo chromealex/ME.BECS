@@ -67,7 +67,7 @@ namespace ME.BECS.UnitsHealthBars {
             
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
 
-                if (unit.readHealth >= unit.readHealthMax) return;
+                //if (unit.readHealth >= unit.readHealthMax) return;
                 if (this.fow.IsCreated == true && this.fow.Value.IsVisible(in this.activePlayer, unit.ent) == false) return;
                 
                 var unitPos = unit.ent.GetAspect<TransformAspect>().GetWorldMatrixPosition();
@@ -131,6 +131,7 @@ namespace ME.BECS.UnitsHealthBars {
         }
 
         public void SetCamera(in CameraAspect cameraAspect, UnityEngine.Camera camera) {
+            CameraUtils.UpdateCamera(in cameraAspect, camera);
             this.cameraEnt = cameraAspect.ent;
             this.cameraObject = new ClassPtr<UnityEngine.Camera>(camera);
             

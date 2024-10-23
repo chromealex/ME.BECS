@@ -11,10 +11,11 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
 
     [StructLayout(LayoutKind.Sequential, Size = MemArrayAutoData.SIZE)]
+    [System.Serializable]
     public struct MemArrayAutoData {
 
         #if USE_CACHE_PTR
-        public const int SIZE = 32;
+        public const int SIZE = 36;
         #else
         public const int SIZE = 24;
         #endif
@@ -30,7 +31,7 @@ namespace ME.BECS {
 
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayAutoProxy<>))]
-    public unsafe struct MemArrayAuto<T> : IUnmanagedList where T : unmanaged {
+    public unsafe struct MemArrayAuto<T> : IMemArray, IUnmanagedList where T : unmanaged {
 
         public static readonly MemArrayAuto<T> Empty = new MemArrayAuto<T>() {
             data = new MemArrayAutoData() {
@@ -49,6 +50,10 @@ namespace ME.BECS {
             get => this.data.arrPtr.IsValid();
         }
 
+        public Ent Ent => this.ent;
+
+        public uint GetConfigId() => this.data.Length;
+        
         object[] IUnmanagedList.ToManagedArray() {
             var arr = new object[this.data.Length];
             for (uint i = 0u; i < this.data.Length; ++i) {
@@ -58,10 +63,23 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public MemArrayAuto(in Ent ent, void* data, uint length) : this(in ent, length, ClearOptions.UninitializedMemory) {
+
+            if (this.IsCreated == true) {
+
+                var elemSize = TSize<T>.size;
+                _memcpy(data, this.GetUnsafePtr(), length * elemSize);
+                
+            }
+
+        }
+
+        [INLINE(256)]
         public MemArrayAuto(in Ent ent, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (length == 0u) {
                 this = MemArrayAuto<T>.Empty;
+                this.data.ent = ent;
                 return;
             }
 

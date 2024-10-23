@@ -25,6 +25,7 @@ namespace ME.BECS.Network.Editor {
             var def = new CodeGenerator.MethodDefinition() {
                 methodName = "NetworkLoad",
                 type = "ME.BECS.Network.UnsafeNetworkModule.MethodsStorage",
+                registerMethodName = "RegisterCallback",
                 definition = "ref ME.BECS.Network.UnsafeNetworkModule.MethodsStorage methods",
                 content = string.Join("\n", content.ToArray()),
             };

@@ -6,7 +6,7 @@ namespace ME.BECS.Pathfinding {
 
         public float2 offset;
         public uint2 size;
-        public bool ignoreGraphRadius;
+        public byte ignoreGraphRadius;
         public byte cost;
         public MemArrayAuto<float> heights;
         public uint heightsSizeX;

@@ -6,12 +6,78 @@ namespace ME.BECS {
     [CreateAssetMenu(menuName = "ME.BECS/Entity Config")]
     public class EntityConfig : ScriptableObject {
 
+        [System.Serializable]
+        public struct CollectionsData {
+
+            [System.Serializable]
+            public struct Collection {
+
+                public uint id;
+                [UnityEngine.SerializeReference]
+                public System.Collections.Generic.List<object> array;
+
+            }
+
+            public uint nextId;
+            public System.Collections.Generic.List<Collection> items;
+
+            public void CleanUp(EntityConfig config) {
+
+                if (this.items == null) return;
+                // Clean up unused collections
+                var used = new System.Collections.Generic.HashSet<uint>(this.items.Count);
+                foreach (var item in this.items) {
+                    used.Add(item.id);
+                }
+
+                foreach (var comp in config.data.components) {
+                    var ids = this.GetCollectionIds(comp);
+                    foreach (var id in ids) {
+                        used.Remove(id);
+                    }
+                }
+
+                foreach (var comp in config.staticData.components) {
+                    var ids = this.GetCollectionIds(comp);
+                    foreach (var id in ids) {
+                        used.Remove(id);
+                    }
+                }
+
+                if (used.Count > 0) {
+                    for (int i = this.items.Count - 1; i >= 0; --i) {
+                        var item = this.items[i];
+                        if (used.Contains(item.id) == true) {
+                            this.items.RemoveAt(i);
+                            used.Remove(item.id);
+                            Logger.Editor.Log($"[ EntityConfig ] Removed unused array from {config.name} with id {item.id}");
+                            continue;
+                        }
+                        this.items[i] = item;
+                    }
+                }
+            }
+
+            private System.Collections.Generic.List<uint> GetCollectionIds(IComponent comp) {
+                var list = new System.Collections.Generic.List<uint>();
+                var fields = comp.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                foreach (var field in fields) {
+                    if (typeof(IUnmanagedList).IsAssignableFrom(field.FieldType) == true) {
+                        list.Add(((IUnmanagedList)field.GetValue(comp)).GetConfigId());
+                    }
+                }
+                return list;
+            }
+
+        }
+
         public EntityConfig baseConfig;
         public ComponentsStorage<IConfigComponent> data = new() { isShared = false, components = System.Array.Empty<IConfigComponent>() };
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
         public ComponentsStorage<IConfigComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IConfigComponentStatic>() };
         public ComponentsStorage<IConfigInitialize> dataInitialize = new() { isShared = false, components = System.Array.Empty<IConfigInitialize>() };
         public ComponentsStorage<IAspect> aspects = new() { isShared = false, components = System.Array.Empty<IAspect>() };
+        public CollectionsData collectionsData;
 
         public void OnValidate() {
             var list = new System.Collections.Generic.List<IConfigInitialize>();
@@ -22,6 +88,7 @@ namespace ME.BECS {
                 isShared = false,
                 components = list.ToArray(),
             };
+            this.collectionsData.CleanUp(this);
         }
 
         public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u, Ent ent = default) {
@@ -56,6 +123,27 @@ namespace ME.BECS {
             
             unsafeConfig.Apply(in ent);
             
+        }
+
+        public uint GetCollection(uint id, out CollectionsData.Collection data, out int index) {
+            if (id == 0u) id = ++this.collectionsData.nextId;
+            if (this.collectionsData.items == null) this.collectionsData.items = new System.Collections.Generic.List<CollectionsData.Collection>();
+            for (var i = 0; i < this.collectionsData.items.Count; ++i) {
+                var item = this.collectionsData.items[i];
+                if (item.id == id) {
+                    data = item;
+                    index = i;
+                    return id;
+                }
+            }
+
+            data = new CollectionsData.Collection() {
+                id = id,
+                array = new System.Collections.Generic.List<object>(),
+            };
+            index = this.collectionsData.items.Count;
+            this.collectionsData.items.Add(data);
+            return id;
         }
 
     }

@@ -38,6 +38,9 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<System.IntPtr>> defaultValuesBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<System.IntPtr>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<System.IntPtr>>.align, 10205);
         public static ref ME.BECS.Internal.Array<System.IntPtr> defaultValues => ref defaultValuesBurst.Data;
 
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> collectionsCountBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10206);
+        public static ref ME.BECS.Internal.Array<uint> collectionsCount => ref collectionsCountBurst.Data;
+
     }
 
     public struct StaticSharedTypes {
@@ -122,8 +125,9 @@ namespace ME.BECS {
 
     public struct StaticTypesStatic<T> where T : unmanaged, IConfigComponentStatic {
 
-        public static void AOT() {
+        public static unsafe void AOT() {
             default(EntityConfig).data.AOTStatic<T>();
+            UnsafeEntityConfig.StaticData.MethodCaller<T>.Call(default, null, default);
         }
 
     }
@@ -131,7 +135,7 @@ namespace ME.BECS {
     public unsafe struct ConfigInitializeTypes<T> where T : unmanaged, IConfigInitialize {
 
         public static void AOT() {
-            UnsafeEntityConfig.DataInitialize.MethodCaller<T>.CallNoBurst(null, default);
+            UnsafeEntityConfig.DataInitialize.MethodCaller<T>.Call(null, default);
         }
 
     }
@@ -194,8 +198,16 @@ namespace ME.BECS {
             }
         }
 
-        public static void AOT() {
+        public static unsafe void AOT() {
             default(EntityConfig).data.AOT<T>();
+            UnsafeEntityConfig.Data.MethodCaller<T>.Call(default, null, default);
+        }
+
+        [INLINE(256)]
+        public static void SetCollectionsCount(uint count) {
+
+            StaticTypes.collectionsCount.Get(StaticTypes<T>.typeId) = count;
+            
         }
 
         [INLINE(256)]

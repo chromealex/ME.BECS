@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace ME.BECS {
 
     using Extensions.SubclassSelector;

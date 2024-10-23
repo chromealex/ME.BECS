@@ -44,9 +44,17 @@ namespace ME.BECS.Editor {
         public struct MethodDefinition {
 
             public string methodName;
+            public string customMethodParamsCall;
             public string type;
+            public string registerMethodName;
             public string definition;
             public string content;
+            public bool burstCompile;
+
+            public string GetMethodParamsCall() {
+                if (this.customMethodParamsCall != null) return this.customMethodParamsCall;
+                return this.methodName;
+            }
 
         }
         
@@ -252,7 +260,7 @@ namespace ME.BECS.Editor {
 
         private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
 
-            var postfix = string.Empty;
+            string postfix;
             if (editorAssembly == true) {
                 postfix = "Editor";
             } else {
@@ -369,12 +377,14 @@ namespace ME.BECS.Editor {
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
                         var type = component.FullName.Replace("+", ".");
-                        var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
-                        typesContent.Add(str);
+                        {
+                            var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
+                            typesContent.Add(str);
+                        }
                         componentTypes.Add(component);
                         if (isTagType == false) {
                             if (component.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
-                                str = $"StaticTypes<{type}>.SetDefaultValue({type}.Default);";
+                                var str = $"StaticTypes<{type}>.SetDefaultValue({type}.Default);";
                                 typesContent.Add(str);
                             }
                         }
@@ -461,8 +471,6 @@ namespace ME.BECS.Editor {
                     }
                 }
 
-                var methodRegistryContents = System.Array.Empty<string>();
-                var methodContents = System.Array.Empty<string>();
                 var methods = new System.Collections.Generic.List<MethodDefinition>();
                 var publicContent = new System.Collections.Generic.List<string>();
                 {
@@ -480,13 +488,8 @@ namespace ME.BECS.Editor {
 
                 }
 
-                methodRegistryContents = methods.Where(x => x.definition != null && x.type != null).Select(x => {
-                    return $"WorldStaticCallbacks.RegisterCallback<{x.type}>({x.methodName});";
-                }).ToArray();
-
-                methodContents = methods.Where(x => x.definition != null).Select(x => {
-                    return $"public static void {x.methodName}({x.definition}) {{\n{x.content}\n}}";
-                }).ToArray();
+                var methodRegistryContents = methods.Where(x => x.definition != null && x.type != null).Select(x => $"WorldStaticCallbacks.{x.registerMethodName}<{x.type}>({x.GetMethodParamsCall()});").ToArray();
+                var methodContents = methods.Where(x => x.definition != null).Select(x => $"{(x.burstCompile == true ? "[BurstCompile]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}").ToArray();
 
                 var newContent = template.Replace("{{CONTENT}}", string.Join("\n", content));
                 newContent = newContent.Replace("{{CUSTOM_METHOD_REGISTRY}}", string.Join("\n", methodRegistryContents));
@@ -494,6 +497,7 @@ namespace ME.BECS.Editor {
                 newContent = newContent.Replace("{{CONTENT_TYPES}}", string.Join("\n", typesContent));
                 newContent = newContent.Replace("{{EDITOR}}", editorAssembly == true ? ".Editor" : string.Empty);
                 var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
+                newContent = EditorUtils.ReFormatCode(newContent);
                 if (prevContent != newContent) {
                     System.IO.File.WriteAllText(path, newContent);
                     UnityEditor.AssetDatabase.ImportAsset(path);

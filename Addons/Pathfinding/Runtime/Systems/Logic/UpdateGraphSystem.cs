@@ -55,7 +55,7 @@ namespace ME.BECS.Pathfinding {
                     var graph = this.graphSystem.graphs[(int)g];
                     var root = graph.Read<RootGraphComponent>();
                     var agentRadius = root.agentRadius;
-                    if (obstacle.ignoreGraphRadius == true) {
+                    if (obstacle.ignoreGraphRadius == 1) {
                         agentRadius = 0f;
                     }
                     var obstacleSizeOffset = new float2(agentRadius * 2f);

@@ -106,7 +106,7 @@ namespace ME.BECS.Editor.Systems {
             }
             
             var newContent = string.Join("\n", content);
-            return EditorUtils.FormatCode(newContent.Split("\n"));
+            return newContent;
             
         }
 

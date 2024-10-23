@@ -921,6 +921,13 @@ namespace ME.BECS.Editor {
 
         }
 
+        public static string ReFormatCode(string text) {
+
+            text = new System.Text.RegularExpressions.Regex(@"^[^\S\n]+(.+?)\s*$", System.Text.RegularExpressions.RegexOptions.Multiline).Replace(text, "$1");
+            return FormatCode(text.Split("\n"), defaultIndent: 0);
+
+        }
+
     }
 
 }

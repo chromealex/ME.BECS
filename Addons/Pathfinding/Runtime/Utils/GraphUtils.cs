@@ -141,7 +141,7 @@ namespace ME.BECS.Pathfinding {
                 size = size,
                 heights = heights,
                 heightsSizeX = heightsSizeX,
-                ignoreGraphRadius = ignoreGraphRadius,
+                ignoreGraphRadius = (byte)(ignoreGraphRadius == true ? 1 : 0),
                 cost = cost,
                 nodes = new ListAuto<GraphNodeMemory>(in ent, (uint)(size.x * size.y * buildGraphSystem.graphs.Length)),
                 obstacleChannel = obstacleChannel,

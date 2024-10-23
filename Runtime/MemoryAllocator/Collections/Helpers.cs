@@ -11,9 +11,15 @@ namespace ME.BECS {
     public interface IUnmanagedList : IIsCreated {
 
         object[] ToManagedArray();
+        Ent Ent { get; }
+        uint GetConfigId();
 
     }
-    
+
+    public interface IMemArray { }
+
+    public interface IMemList { }
+
     public enum InsertionBehavior {
 
         None = 0,

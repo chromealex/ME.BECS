@@ -10,7 +10,6 @@ namespace ME.BECS.Editor {
     public class ListAutoDrawer : PropertyDrawer {
 
         private TempObject tempObject;
-        private VisualElement prevRoot;
 
         public class TempObject : ScriptableObject {
 
@@ -26,9 +25,23 @@ namespace ME.BECS.Editor {
 
         }
 
+        public class TempListObject : ScriptableObject {
+
+            public ConfigList arr;
+
+        }
+
+        private static ScriptableObject CreateTempListObject(uint id, System.Type type) {
+            var so = ScriptableObject.CreateInstance<TempListObject>();
+            so.arr = new ConfigList() {
+                id = id,
+                type = type,
+            };
+            return so;
+        }
+        
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
-            //var list = (IUnmanagedList)property.boxedValue;
             var list = (IUnmanagedList)PropertyEditorUtils.GetTargetObjectOfProperty(property);
             var root = new VisualElement();
             this.CreateGUI(root, list, property);
@@ -38,6 +51,29 @@ namespace ME.BECS.Editor {
 
         public void CreateGUI(VisualElement root, IUnmanagedList list, SerializedProperty property) {
 
+            if (property.serializedObject.targetObject is EntityConfig config) {
+                SerializedProperty id = null;
+                if (list is IMemArray) {
+                    id = property.FindPropertyRelative("data").FindPropertyRelative("Length");
+                } else if (list is IMemList) {
+                    id = property.FindPropertyRelative("Count");
+                }
+
+                if (id == null) {
+                    root.Add(new Label("Unsupported collection type"));
+                    return;
+                }
+                var so = CreateTempListObject(id.uintValue, list.GetType().GenericTypeArguments[0]);
+                var p = new SerializedObject(so).FindProperty(nameof(TempListObject.arr));
+                var elem = ConfigListDrawer.CreatePropertyGUI(p, property, config, (newId) => {
+                    id.serializedObject.Update();
+                    id.uintValue = newId;
+                    id.serializedObject.ApplyModifiedProperties();
+                    id.serializedObject.Update();
+                });
+                root.Add(elem);
+                return;
+            }
             if (list.IsCreated == false) {
                 var container = new VisualElement();
                 container.AddToClassList("unity-base-field");
@@ -59,20 +95,14 @@ namespace ME.BECS.Editor {
                 return;
             }
             var arr = list.ToManagedArray();
-            if (this.tempObject != null && this.tempObject.arr.Length == arr.Length) {
-                root.Add(this.prevRoot);
-                root.AddToClassList("array-view");
-                return;
-            }
             if (this.tempObject != null) Object.DestroyImmediate(this.tempObject);
-            var instance = TempObject.CreateInstance<TempObject>();
+            var instance = ScriptableObject.CreateInstance<TempObject>();
             this.tempObject = instance;
             instance.arr = arr.Select(x => new TempObject.Element() { obj = x }).ToArray();
             var prop = new SerializedObject(instance).FindProperty(nameof(TempObject.arr));
             var field = new PropertyField(prop, property.displayName);
             field.BindProperty(prop);
-            this.prevRoot = field;
-            root.Add(this.prevRoot);
+            root.Add(field);
             root.AddToClassList("array-view");
             //drawer.SetFoldoutState(true);
 
@@ -80,7 +110,7 @@ namespace ME.BECS.Editor {
 
         ~ListAutoDrawer() {
             if (this.tempObject != null) {
-                EditorApplication.delayCall += () => TempObject.DestroyImmediate(this.tempObject);
+                EditorApplication.delayCall += () => Object.DestroyImmediate(this.tempObject);
             }
             this.tempObject = null;
         }

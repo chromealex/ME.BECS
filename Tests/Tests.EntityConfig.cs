@@ -38,6 +38,305 @@ namespace ME.BECS.Tests {
             public int data;
         }
 
+        public struct TestArrayComponent : IConfigComponent {
+
+            public struct Test {
+
+                public int data;
+
+            }
+            
+            public MemArrayAuto<Test> arr;
+
+        }
+
+        public struct TestArrayComponentStatic : IConfigComponentStatic {
+
+            public struct Test {
+
+                public int data;
+
+            }
+            
+            public MemArrayAuto<Test> arr;
+
+        }
+
+        public struct TestArrayComponentShared : IConfigComponentShared {
+
+            public struct Test {
+
+                public int data;
+
+            }
+            
+            public MemArrayAuto<Test> arr;
+
+        }
+
+        public struct TestListComponent : IConfigComponent {
+
+            public struct Test {
+
+                public int data;
+
+            }
+            
+            public ListAuto<Test> arr;
+
+        }
+
+        [Test]
+        public void ApplyWithArrayInheritance() {
+
+            EntityConfig baseConfig;
+            EntityConfig applyConfig;
+            {
+                var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+                baseConfig = config;
+                config.data.components = new IConfigComponent[1] {
+                    new TestArrayComponent() {
+                        arr = new MemArrayAuto<TestArrayComponent.Test>() {
+                            data = new MemArrayAutoData() {
+                                Length = 1u,
+                            },
+                        },
+                    },
+                };
+                config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection>();
+                config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
+                    id = 1u,
+                    array = new System.Collections.Generic.List<object>() {
+                        new TestArrayComponent.Test() { data = 1 },
+                        new TestArrayComponent.Test() { data = 2 },
+                        new TestArrayComponent.Test() { data = 3 },
+                        new TestArrayComponent.Test() { data = 4 },
+                    },
+                });
+                ObjectReferenceRegistry.AddRuntimeObject(config);
+            }
+            {
+                var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+                config.baseConfig = baseConfig;
+                applyConfig = config;
+                config.data.components = new IConfigComponent[1] {
+                    new TestArrayComponent() {
+                        arr = new MemArrayAuto<TestArrayComponent.Test>() {
+                            data = new MemArrayAutoData() {
+                                Length = 1u,
+                            },
+                        },
+                    },
+                };
+                config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection>();
+                config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
+                    id = 1u,
+                    array = new System.Collections.Generic.List<object>() {
+                        new TestArrayComponent.Test() { data = 5 },
+                        new TestArrayComponent.Test() { data = 6 },
+                        new TestArrayComponent.Test() { data = 7 },
+                        new TestArrayComponent.Test() { data = 8 },
+                    },
+                });
+                ObjectReferenceRegistry.AddRuntimeObject(config);
+            }
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                applyConfig.Apply(ent);
+                Assert.IsTrue(ent.Has<TestArrayComponent>());
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr.Length, 4);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[0].data, 5);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[1].data, 6);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[2].data, 7);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[3].data, 8);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(applyConfig);
+            UnityEngine.Object.DestroyImmediate(baseConfig);
+
+        }
+
+        [Test]
+        public void ApplyWithArray() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.data.components = new IConfigComponent[1] {
+                new TestArrayComponent() {
+                    arr = new MemArrayAuto<TestArrayComponent.Test>() {
+                        data = new MemArrayAutoData() {
+                            Length = 1u,
+                        },
+                    },
+                },
+            };
+            config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection>();
+            config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
+                id = 1u,
+                array = new System.Collections.Generic.List<object>() {
+                    new TestArrayComponent.Test() { data = 1 },
+                    new TestArrayComponent.Test() { data = 2 },
+                    new TestArrayComponent.Test() { data = 3 },
+                    new TestArrayComponent.Test() { data = 4 },
+                },
+            });
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.IsTrue(ent.Has<TestArrayComponent>());
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr.Length, 4);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[0].data, 1);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[1].data, 2);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[2].data, 3);
+                Assert.AreEqual(ent.Read<TestArrayComponent>().arr[3].data, 4);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void ApplyWithArrayStatic() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.staticData.components = new IConfigComponentStatic[1] {
+                new TestArrayComponentStatic() {
+                    arr = new MemArrayAuto<TestArrayComponentStatic.Test>() {
+                        data = new MemArrayAutoData() {
+                            Length = 1u,
+                        },
+                    },
+                },
+            };
+            config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection>();
+            config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
+                id = 1u,
+                array = new System.Collections.Generic.List<object>() {
+                    new TestArrayComponent.Test() { data = 1 },
+                    new TestArrayComponent.Test() { data = 2 },
+                    new TestArrayComponent.Test() { data = 3 },
+                    new TestArrayComponent.Test() { data = 4 },
+                },
+            });
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.AreEqual(ent.ReadStatic<TestArrayComponentStatic>().arr.Length, 4);
+                Assert.AreEqual(ent.ReadStatic<TestArrayComponentStatic>().arr[0].data, 1);
+                Assert.AreEqual(ent.ReadStatic<TestArrayComponentStatic>().arr[1].data, 2);
+                Assert.AreEqual(ent.ReadStatic<TestArrayComponentStatic>().arr[2].data, 3);
+                Assert.AreEqual(ent.ReadStatic<TestArrayComponentStatic>().arr[3].data, 4);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void ApplyWithArrayShared() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.sharedData.components = new IConfigComponentShared[1] {
+                new TestArrayComponentShared() {
+                    arr = new MemArrayAuto<TestArrayComponentShared.Test>() {
+                        data = new MemArrayAutoData() {
+                            Length = 1u,
+                        },
+                    },
+                },
+            };
+            config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection>();
+            config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
+                id = 1u,
+                array = new System.Collections.Generic.List<object>() {
+                    new TestArrayComponent.Test() { data = 1 },
+                    new TestArrayComponent.Test() { data = 2 },
+                    new TestArrayComponent.Test() { data = 3 },
+                    new TestArrayComponent.Test() { data = 4 },
+                },
+            });
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                Ent ent1;
+                {
+                    var ent = Ent.New();
+                    ent1 = ent;
+                    config.Apply(ent);
+                    Assert.IsTrue(ent.HasShared<TestArrayComponentShared>());
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr.Length, 4);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[0].data, 1);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[1].data, 2);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[2].data, 3);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[3].data, 4);
+                }
+                Ent ent2;
+                {
+                    var ent = Ent.New();
+                    ent2 = ent;
+                    config.Apply(ent);
+                    Assert.IsTrue(ent.HasShared<TestArrayComponentShared>());
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr.Length, 4);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[0].data, 1);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[1].data, 2);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[2].data, 3);
+                    Assert.AreEqual(ent.ReadShared<TestArrayComponentShared>().arr[3].data, 4);
+                }
+                Assert.AreEqual(ent1.ReadShared<TestArrayComponentShared>().arr.arrPtr, ent2.ReadShared<TestArrayComponentShared>().arr.arrPtr);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void ApplyWithList() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            var comp = new TestListComponent() {
+                arr = new ListAuto<TestListComponent.Test>() {
+                    Count = 1u,
+                },
+            };
+            config.data.components = new IConfigComponent[1] {
+                comp,
+            };
+            config.collectionsData.items = new System.Collections.Generic.List<EntityConfig.CollectionsData.Collection>();
+            config.collectionsData.items.Add(new EntityConfig.CollectionsData.Collection() {
+                id = 1u,
+                array = new System.Collections.Generic.List<object>() {
+                    new TestArrayComponent.Test() { data = 1 },
+                    new TestArrayComponent.Test() { data = 2 },
+                    new TestArrayComponent.Test() { data = 3 },
+                    new TestArrayComponent.Test() { data = 4 },
+                },
+            });
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.IsTrue(ent.Has<TestListComponent>());
+                Assert.AreEqual(ent.Read<TestListComponent>().arr.Count, 4);
+                Assert.AreEqual(ent.Read<TestListComponent>().arr[0].data, 1);
+                Assert.AreEqual(ent.Read<TestListComponent>().arr[1].data, 2);
+                Assert.AreEqual(ent.Read<TestListComponent>().arr[2].data, 3);
+                Assert.AreEqual(ent.Read<TestListComponent>().arr[3].data, 4);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
         [Test]
         public void Apply() {
 

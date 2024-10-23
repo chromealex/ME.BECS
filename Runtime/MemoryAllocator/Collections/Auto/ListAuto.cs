@@ -12,7 +12,7 @@ namespace ME.BECS {
 
     [System.SerializableAttribute]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListProxy<>))]
-    public unsafe struct ListAuto<T> : IIsCreated, IUnmanagedList where T : unmanaged {
+    public unsafe struct ListAuto<T> : IMemList, IUnmanagedList where T : unmanaged {
 
         public struct Enumerator {
             
@@ -37,7 +37,10 @@ namespace ME.BECS {
         internal MemArrayAuto<T> arr;
         public uint Count;
 
+        public uint GetConfigId() => this.Count;
+
         public readonly Ent ent => this.arr.ent;
+        public Ent Ent => this.ent;
 
         object[] IUnmanagedList.ToManagedArray() {
             var arr = new object[this.Count];
@@ -59,7 +62,16 @@ namespace ME.BECS {
                 return this.arr.Length;
             }
         }
+        
+        [INLINE(256)]
+        public ListAuto(in Ent ent, void* data, uint length) {
 
+            this = default;
+            this.arr = new MemArrayAuto<T>(in ent, data, length);
+            this.Count = length;
+
+        }
+        
         [INLINE(256)]
         public ListAuto(in Ent ent, uint capacity) {
 

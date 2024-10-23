@@ -66,7 +66,6 @@ namespace ME.BECS.Editor.Aspects {
                 var strType = EditorUtils.GetTypeName(type);
                 var types = new System.Collections.Generic.List<string>();
                 var fieldsCount = 0;
-                var i = 0;
                 var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).OrderBy(x => x.FieldType.FullName).ToArray();
                 foreach (var field in fields) {
                     var fieldType = field.FieldType;
@@ -75,7 +74,6 @@ namespace ME.BECS.Editor.Aspects {
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
                         types.Add($"aspect.{field.Name} = new {EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>(in world);");
-                        ++i;
                     }
                 }
 
@@ -92,6 +90,7 @@ ref var aspect = ref world.InitializeAspect<{strType}>();
             var def = new CodeGenerator.MethodDefinition() {
                 methodName = "AspectsConstruct",
                 type = "World",
+                registerMethodName = "RegisterCallback",
                 definition = "ref World world",
                 content = string.Join("\n", content),
             };

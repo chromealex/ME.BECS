@@ -20,23 +20,11 @@ namespace ME.BECS.UnitsHealthBars {
         //[BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public static void Render(ref Color bordersColor, ref Color backColor, ref Color minHealthColor, ref Color maxHealthColor, ref ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars) {
             
-            return;
-            
-            GL.Begin(GL.TRIANGLES);
-            GL.Color(Color.red);
-            GL.Vertex3(0, 0, 0);
-            GL.Vertex3(0, Screen.height / 2, 0);
-            GL.Vertex3(Screen.width / 2, Screen.height / 2, 0);
-            GL.End();
-
-            return;
-            
             var screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
             var onePixelSize = ScreenToView(1f);
             var borderSize = ScreenToView(1f);
-            GL.PushMatrix();
-            GL.LoadPixelMatrix();
             GL.Begin(GL.QUADS);
+            DrawQuad(new Rect(0f, 0f, 10f, 10f), 1f);
             var list = bars.ToList(Unity.Collections.Allocator.Temp);
             list.Sort(new BarZSorting());
             foreach (var item in list) {
@@ -49,7 +37,7 @@ namespace ME.BECS.UnitsHealthBars {
                 var bottom = barRect.position.y + (unitHeightPos.y - barRect.position.y) * 4f;
                 var top = bottom + ScreenToView(height);
                 var rect = new Rect(left, bottom, ScreenToView(width), ScreenToView(height));
-                if (rect.Overlaps(screenRect) == false) continue;
+                //if (rect.Overlaps(screenRect) == false) continue;
                 //rect.position *= 2f;
                 rect.position -= new Vector2(screenRect.width * 0.5f, screenRect.height * 0.5f);
                 GL.Color(backColor);
@@ -89,7 +77,6 @@ namespace ME.BECS.UnitsHealthBars {
                 }
             }
             GL.End();
-            GL.PopMatrix();
             
         }
         
@@ -109,7 +96,7 @@ namespace ME.BECS.UnitsHealthBars {
             GL.Vertex(GetVertex(rect.xMax, rect.yMax));
             GL.TexCoord(new Vector3(1f, 0f, 0f));
             GL.Vertex(GetVertex(rect.xMax, rect.yMin));
-            
+
         }
 
         private static Vector3 GetVertex(float x, float y) {
@@ -130,13 +117,13 @@ namespace ME.BECS.UnitsHealthBars {
 
         public void OnEnable() {
             
-            UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += this.EndCameraRendering;
+            UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += this.EndCameraRendering;
 
         }
 
         public void OnDisable() {
             
-            UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= this.EndCameraRendering;
+            UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= this.EndCameraRendering;
 
         }
         

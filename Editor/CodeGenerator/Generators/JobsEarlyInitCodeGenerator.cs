@@ -1,10 +1,5 @@
-using System.Linq;
-using System.Reflection;
-
 namespace ME.BECS.Editor.Jobs {
     
-    using ME.BECS.Jobs;
-
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
 
         private void Generate<TJobBase, TComponent>(System.Collections.Generic.List<string> dataList, string method) {

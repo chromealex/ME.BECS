@@ -4,6 +4,7 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using UnityEngine.Scripting;
+    using Unity.Burst;
     using static Cuts;
     
     [UnityEngine.Scripting.PreserveAttribute]

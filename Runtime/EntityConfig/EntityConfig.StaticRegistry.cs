@@ -7,7 +7,7 @@ namespace ME.BECS {
     public class EntityConfigsRegistry {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
-        
+
         public static void Initialize() {
             
             ObjectReferenceRegistry.Load();
