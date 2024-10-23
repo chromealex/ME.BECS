@@ -11,8 +11,8 @@
         "Unity.Collections",
         "ME.BECS.Effects",
         "ME.BECS.Views",
-        "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.WorldHelper"
+        "ME.BECS.WorldHelper",
+        "ME.BECS.Destroy"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

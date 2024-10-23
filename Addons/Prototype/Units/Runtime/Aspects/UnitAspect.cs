@@ -81,11 +81,12 @@ namespace ME.BECS.Units {
             if (this.health > 0f) {
                 JobUtils.Decrement(ref this.health, damage);
                 var ent = Ent.New(jobInfo);
-                ent.SetOneShot(new DamageTookComponent() {
+                ent.Set(new DamageTookComponent() {
                     source = source,
                     target = this.ent,
                     damage = damage,
-                }, OneShotType.NextTick);
+                });
+                ent.Destroy(1UL);
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, in this.ent.Read<UnitHealthComponent>().effectOnHit, jobInfo);
             }

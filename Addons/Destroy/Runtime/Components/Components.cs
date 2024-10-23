@@ -16,7 +16,7 @@ namespace ME.BECS {
     [ComponentGroup(typeof(DestroyComponentGroup))]
     public struct DestroyWithTicks : IConfigComponent {
 
-        public int ticks;
+        public ulong ticks;
 
     }
 
