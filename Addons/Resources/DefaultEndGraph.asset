@@ -21,6 +21,7 @@ MonoBehaviour:
   - rid: 5232414874647134275
   - rid: 5232414874647134279
   - rid: 5232414874647134280
+  - rid: 8030410147904356353
   edges:
   - GUID: 36ce3440-f290-44e7-8cc0-6a866ca5cd5e
     owner: {fileID: 11400000}
@@ -46,12 +47,20 @@ MonoBehaviour:
     outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: 353896df-57a0-4097-a533-db961ab6e13d
+  - GUID: d8da93ed-7ad1-4dc0-ad4e-92ab8bf670f7
     owner: {fileID: 11400000}
-    inputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
+    inputNodeGUID: 75e5c9cd-0374-4923-8c3b-fd8ba94ea37f
     outputNodeGUID: StartNode
     inputFieldName: inputNodes
     outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 85f071b7-f2da-417f-8307-e6762c5f95eb
+    owner: {fileID: 11400000}
+    inputNodeGUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
+    outputNodeGUID: 75e5c9cd-0374-4923-8c3b-fd8ba94ea37f
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
   groups: []
@@ -72,7 +81,7 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: a3f3b33b-30b6-4101-8c89-c4afc62d20a3
         groupGUID: 
-        computeOrder: 1
+        computeOrder: 2
         position:
           serializedVersion: 2
           x: 150
@@ -94,7 +103,7 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: 199e6da4-c752-47a3-b843-b969578961f5
         groupGUID: 
-        computeOrder: 2
+        computeOrder: 3
         position:
           serializedVersion: 2
           x: 489
@@ -122,10 +131,10 @@ MonoBehaviour:
         computeOrder: 0
         position:
           serializedVersion: 2
-          x: 0
-          y: 0
+          x: -350
+          y: -9
           width: 100
-          height: 100
+          height: 80
         expanded: 1
         enabled: 1
         debug: 0
@@ -140,7 +149,7 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
-        computeOrder: 3
+        computeOrder: 4
         position:
           serializedVersion: 2
           x: 874.88
@@ -153,6 +162,31 @@ MonoBehaviour:
         nodeLock: 0
         customRuntimeSystemRoot: {fileID: 11400000, guid: feed8d6fed2754cc8a718381dc683e6d, type: 2}
         isInstance: 0
+    - rid: 8030410147904356353
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: 75e5c9cd-0374-4923-8c3b-fd8ba94ea37f
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: -184
+          y: -9
+          width: 300
+          height: 100
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 8030410147904356354
+    - rid: 8030410147904356354
+      type: {class: DestroyWithTicksSystem, ns: ME.BECS, asm: ME.BECS.Destroy}
+      data: 
     - rid: 8346928896279576650
       type: {class: TransformWorldMatrixUpdateSystem, ns: ME.BECS.Transforms, asm: ME.BECS.Transforms}
       data: 

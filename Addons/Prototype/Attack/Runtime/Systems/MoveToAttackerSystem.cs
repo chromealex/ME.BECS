@@ -22,7 +22,7 @@ namespace ME.BECS.Attack {
             // may be we need to group by DamageTookComponent.sourceUnit first?
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit, ref TransformAspect tr) {
 
-                var attacker = unit.ent.Read<DamageTookComponent>().sourceUnit;
+                var attacker = unit.ent.Read<DamageTookComponent>().source;
                 if (attacker.IsAlive() == false) return;
                 
                 // move to attacker
