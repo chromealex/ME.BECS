@@ -15,7 +15,7 @@ namespace ME.BECS.Attack {
 
         public void SetTarget(Ent ent) {
             if (ent.IsAlive() == true) {
-                if (this.ent.Has<CanFireWhileMovesTag>() == true && this.ent.Read<AttackTargetComponent>().target != ent) {
+                if (this.ent.Read<AttackTargetComponent>().target != ent) {
                     this.CanFire = false;
                 }
                 
