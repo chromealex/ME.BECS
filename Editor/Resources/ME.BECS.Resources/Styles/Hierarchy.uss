@@ -3,6 +3,7 @@
 
 .toolbar-container {
     height: 24px;
+    min-height: 24px;
 }
 
 .toolbar-container .unity-toolbar {
