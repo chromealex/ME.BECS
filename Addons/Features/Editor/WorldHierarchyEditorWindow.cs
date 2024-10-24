@@ -661,11 +661,11 @@ namespace ME.BECS.Editor {
                     menu.menu.AppendAction("Select View", (evt) => {
                         var vm = initializer?.GetModule<ViewsModule>();
                         if (vm != null) {
-                            var selections = new System.Collections.Generic.List<Object>();
+                            var selections = new System.Collections.Generic.List<GameObject>();
                             foreach (var selection in this.selected) {
                                 var view = vm.GetViewByEntity(selection);
                                 if (view is Component comp) {
-                                    selections.Add(comp);
+                                    selections.Add(comp.gameObject);
                                 }
                             }
 
@@ -800,7 +800,7 @@ namespace ME.BECS.Editor {
                     element.Redraw(this.settingsChanged);
                     this.elements[k] = element;
                 }
-                if (element.container.parent == null) root.Add(element.container);
+                if (element.container.parent == null || element.container.parent != root) root.Add(element.container);
                 if (this.entToElement.TryAdd(element.value, element) == false) {
                     this.entToElement[element.value] = element;
                 }
