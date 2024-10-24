@@ -355,6 +355,13 @@ namespace ME.BECS.Editor {
 
         }
 
+        public static bool IsDarkColor(UnityEngine.Color backColor) {
+            UnityEngine.Color color = backColor;
+            color = UnityEngine.Color.Lerp(new UnityEngine.Color32(16, 16, 16, 255), color, color.a);
+            double l = 0.2126d * color.r + 0.7152d * color.g + 0.0722d * color.b;
+            return l > 0.4d;
+        }
+
     }
 
 }

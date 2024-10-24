@@ -150,14 +150,11 @@ namespace ME.BECS.Extensions.GraphProcessor
 
         }
         
-        public void ApplyClassByBackColor(Color backColor)
-        {
-            Color color = backColor;
-            color = Color.Lerp(new Color32(16, 16, 16, 255), color, color.a);
-            double l = 0.2126d * color.r + 0.7152d * color.g + 0.0722d * color.b;
+        public void ApplyClassByBackColor(Color backColor) {
+            var isDark = ME.BECS.Editor.EditorUIUtils.IsDarkColor(backColor);
             this.RemoveFromClassList("light-color");
             this.RemoveFromClassList("dark-color");
-            if (l > 0.4d) {
+            if (isDark == true) {
                 this.AddToClassList("dark-color");
             } else {
                 this.AddToClassList("light-color");

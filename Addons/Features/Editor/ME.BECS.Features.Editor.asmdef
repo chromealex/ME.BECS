@@ -6,13 +6,15 @@
         "ME.BECS.Editor",
         "ME.BECS.Features",
         "Unity.Burst",
-        "Unity.Collections"
+        "Unity.Collections",
+        "ME.BECS.Transforms",
+        "ME.BECS.Views"
     ],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

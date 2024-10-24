@@ -672,6 +672,15 @@ namespace ME.BECS.Views {
 
         }
 
+        public IView GetViewByEntity(Ent entity) {
+            if (this.data->renderingOnSceneEntToRenderIndex.TryGetValue(this.data->viewsWorld.state->allocator, entity.id, out var index) == true) {
+                var info = this.data->renderingOnScene[this.data->viewsWorld.state->allocator, index];
+                return (IView)System.Runtime.InteropServices.GCHandle.FromIntPtr(info.obj).Target;
+            }
+
+            return null;
+        }
+
     }
 
 }

@@ -1,0 +1,186 @@
+.h-root {
+}
+
+.toolbar-container {
+    height: 24px;
+}
+
+.toolbar-container .unity-toolbar {
+    background-color: rgba(40, 40, 40, 1);
+}
+
+.search-container ToolbarSearchField {
+    width: auto;
+    margin: 1px;
+    flex-grow: 1;
+}
+
+.toolbar-container DropdownField {
+    width: 40px;
+    max-width: 40px;
+    margin: 0px;
+}
+.toolbar-container DropdownField .unity-base-field__input {
+    min-width: 30px;
+}
+.toolbar-container DropdownField PopupTextElement {
+    padding-left: 2px;
+}
+
+.toolbar-container .filter-button {
+    margin: 0px;
+    border-radius: 0px;
+    border-width: 0px;
+    background-color: rgba(0, 0, 0, 0.3);
+    margin-left: 1px;
+    align-items: center;
+    justify-content: center;
+}
+.toolbar-container .filter-button Image {
+    align-self: center;
+    width: 14px;
+    height: 14px;
+}
+
+.toolbar-container Button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-container DropdownField .unity-base-field__input {
+    border-radius: 0px;
+    border-width: 0px;
+    background-color: rgba(0, 0, 0, 0.3);
+    margin: 0px;
+}
+.toolbar-container DropdownField:hover .unity-base-field__input {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.h-root .h-element {
+}
+
+.h-root .h-element {
+}
+
+.h-root .h-element > Foldout > Toggle {
+    padding: 2px 4px 2px 20px;
+    margin: 0px;
+}
+
+.h-root .h-element > Foldout > Toggle .unity-base-field__input {
+    flex-shrink: 1;
+}
+
+.h-root .h-element > Foldout > Toggle .unity-toggle__checkmark {
+    visibility: hidden;
+}
+
+.h-root .h-element.has-children > Foldout > Toggle .unity-toggle__checkmark {
+    visibility: visible;
+}
+
+.h-root .h-element.hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.h-root .h-element.selected {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+.h-root .h-element.selected.hover {
+    background-color: rgba(100, 100, 100, 0.2);
+}
+
+.h-root .h-element .name {
+    flex-grow: 1;
+}
+.h-root .h-element .version {
+    color: rgba(255, 255, 255, 0.5);
+    align-self: flex-end;
+    width: 30px;
+    -unity-text-align: middle-right;
+    text-overflow: ellipsis;
+}
+
+.tags {
+    margin-left: 2px;
+    padding-left: 2px;
+    margin-right: 4px;
+    flex-direction: row;
+    justify-content: flex-end;
+    flex-grow: 1;
+}
+
+.tag-label {
+    width: 6px;
+    height: 6px;
+    max-height: 6px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    margin-top: 5px;
+    padding-left: 3px;
+    padding-right: 3px;
+    margin-right: 4px;
+    opacity: 0.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dark-color {
+    color: rgba(0, 0, 0, 1);
+}
+
+.light-color {
+    color: rgba(255, 255, 255, 1);
+}
+
+
+
+/*
+ * Filter window
+ */
+.filter-root {
+    align-items: stretch;
+}
+
+.filter-item {
+    flex-grow: 1;
+    padding: 1px 10px;
+    margin: 0px;
+    margin-bottom: 1px;
+    align-items: stretch;
+}
+.filter-item:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.filter-item .unity-toggle__checkmark {
+    display: none;
+}
+
+.filter-item Label {
+    flex-grow: 1;
+}
+
+.filter-item .filter-checkmark {
+    visibility: hidden;
+}
+.filter-item.checked .filter-checkmark {
+    visibility: visible;
+}
+
+.filter-item .unity-toggle__label {
+    flex-grow: 1;
+    width: 100%;
+}
+
+.filter-header {
+    -unity-font-style: bold;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+}
+
+.filter-checkmark {
+    width: 20px;
+}

@@ -122,6 +122,7 @@ namespace ME.BECS.Editor {
             public System.Collections.Generic.List<ComponentMetaInfo> components;
             public int index;
             public int order;
+            public string ValueShort => EditorUtils.GetShortName(this.value);
 
             public ComponentGroupItem(ComponentGroupsXml.Item data) {
 
@@ -150,6 +151,10 @@ namespace ME.BECS.Editor {
                 return (this.type != null ? this.type.GetHashCode() : 0);
             }
 
+        }
+
+        public static string GetShortName(string value) {
+            return string.Join(string.Empty, System.Text.RegularExpressions.Regex.Matches(value, @"\b[a-zA-Z]").Select(x => x.Value).ToArray());
         }
 
         private static readonly string UNKNOWN_GROUP_NAME = "Ungrouped";

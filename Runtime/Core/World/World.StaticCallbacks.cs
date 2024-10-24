@@ -14,7 +14,7 @@ namespace ME.BECS {
     public static class WorldStaticCallbacksTypes<T> where T : unmanaged {
 
         public static uint id;
-        public static readonly System.Collections.Generic.Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>> callbacks = new System.Collections.Generic.Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>>();
+        public static readonly scg::Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>> callbacks = new scg::Dictionary<uint, WorldStaticCallbacks.CallbackDelegate<T>>();
 
     }
 
@@ -28,7 +28,7 @@ namespace ME.BECS {
 
         private static scg::HashSet<System.Collections.IDictionary> allDics = new scg::HashSet<System.Collections.IDictionary>();
         
-        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
             CustomModules.RegisterResetPass(Reset);
