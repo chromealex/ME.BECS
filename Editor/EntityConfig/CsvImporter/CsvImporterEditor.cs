@@ -344,7 +344,6 @@ namespace ME.BECS.Editor.CsvImporter {
             var temp = TempComponent.CreateInstance<TempComponent>();
             
             foreach (var config in configFiles) {
-                config.instance.aspects.components = config.aspects.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                 foreach (var comp in config.components) {
                     var instance = comp.componentInstance;
                     temp.component = instance;
@@ -418,6 +417,7 @@ namespace ME.BECS.Editor.CsvImporter {
 
             if (updateComponents == true) {
                 foreach (var config in configFiles) {
+                    config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                     if (config.baseConfig >= 0) config.instance.baseConfig = configFiles[config.baseConfig].instance;
                     config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
                     config.instance.sharedData = new ComponentsStorage<IConfigComponentShared>() { isShared = true };
