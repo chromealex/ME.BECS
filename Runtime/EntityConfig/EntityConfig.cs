@@ -31,6 +31,7 @@ namespace ME.BECS {
                 }
 
                 foreach (var comp in config.data.components) {
+                    if (comp == null) continue;
                     var ids = this.GetCollectionIds(comp);
                     foreach (var id in ids) {
                         used.Remove(id);
@@ -38,6 +39,7 @@ namespace ME.BECS {
                 }
 
                 foreach (var comp in config.staticData.components) {
+                    if (comp == null) continue;
                     var ids = this.GetCollectionIds(comp);
                     foreach (var id in ids) {
                         used.Remove(id);
