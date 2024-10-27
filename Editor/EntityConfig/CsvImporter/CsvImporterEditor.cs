@@ -144,7 +144,9 @@ namespace ME.BECS.Editor.CsvImporter {
                 } else {
                     var hasErrors = false;
                     var err = string.Empty;
-                    var configs = new scg::List<ConfigFile>(); 
+                    var configs = new scg::List<ConfigFile>();
+                    var csvs = new scg::List<scg::List<string[]>>();
+                    var configsPerItem = new scg::List<scg::List<ConfigFile>>();
                     var data = new scg::List<string>();
                     var versions = new scg::List<string>();
                     foreach (var item in list) {
@@ -158,8 +160,25 @@ namespace ME.BECS.Editor.CsvImporter {
                     }
 
                     foreach (var item in data) {
-                        configs.AddRange(this.Parse(item, targetDir, out var ver));
+                        var csv = CSVParser.ReadCSV(item);
+                        csvs.Add(csv);
+                        var configFiles = this.ParseConfigs(csv, targetDir, out var ver);
+                        configsPerItem.Add(configFiles);
+                        configs.AddRange(configFiles);
                         versions.Add(ver);
+                        Debug.Log($"Configs with version {ver} has been updated");
+                    }
+                    
+                    for (var index = 0; index < data.Count; ++index) {
+                        this.ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
+                    }
+
+                    foreach (var config in configs) {
+                        CreateConfig(config);
+                    }
+
+                    for (var index = 0; index < data.Count; ++index) {
+                        this.Parse(configs, configsPerItem[index], csvs[index]);
                     }
 
                     if (hasErrors == true) {
@@ -177,7 +196,21 @@ namespace ME.BECS.Editor.CsvImporter {
                 }
             }
         }
-        
+
+        private static void CreateConfig(ConfigFile config) {
+            if (config.instance != null) return;
+            EntityConfig configInstance = null;
+            if (System.IO.File.Exists(config.fullPath) == false) {
+                configInstance = EntityConfig.CreateInstance<EntityConfig>();
+                AssetDatabase.CreateAsset(configInstance, config.fullPath);
+                AssetDatabase.ImportAsset(config.fullPath);
+            } else {
+                configInstance = AssetDatabase.LoadAssetAtPath<EntityConfig>(config.fullPath);
+            }
+            configInstance.collectionsData = new EntityConfig.CollectionsData();
+            config.instance = configInstance;
+        }
+
         public class ConfigFile {
 
             public class Component {
@@ -218,35 +251,47 @@ namespace ME.BECS.Editor.CsvImporter {
 
         }
 
-        public scg::List<ConfigFile> Parse(string csvText, string targetDir, out string version) {
-            var csv = CSVParser.ReadCSV(csvText);
+        public scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version) {
             version = csv[0][0];
             var configFiles = new scg::List<ConfigFile>();
+            var offset = 2;
+            var line = csv[0];
+            {
+                // Read config names
+                for (int j = offset; j < line.Length; ++j) {
+                    var configName = line[j];
+                    configFiles.Add(new ConfigFile(targetDir, configName));
+                }
+            }
+            return configFiles;
+        }
+
+        public void ParseBaseConfigs(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
+            var offset = 2;
+            var line = csv[1];
+            {
+                // Read base configs
+                for (int j = offset; j < line.Length; ++j) {
+                    var configName = line[j];
+                    if (string.IsNullOrEmpty(configName) == false) {
+                        var idx = allConfigs.FindIndex(x => x.path.EndsWith(configName));
+                        var configIdx = j - offset;
+                        var config = configFiles[configIdx];
+                        config.baseConfig = idx;
+                    }
+                }
+            }
+        }
+
+        public void Parse(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
             var components = TypeCache.GetTypesDerivedFrom<IComponent>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var aspects = TypeCache.GetTypesDerivedFrom<IAspect>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var componentName = string.Empty;
             System.Type componentType = null;
-            for (int i = 0; i < csv.Count; ++i) {
+            for (int i = 2; i < csv.Count; ++i) {
                 var line = csv[i];
-                if (i == 0) {
-                    // Read config names
-                    for (int j = offset; j < line.Length; ++j) {
-                        var configName = line[j];
-                        configFiles.Add(new ConfigFile(targetDir, configName));
-                    }
-                } else if (i == 1) {
-                    // Read base configs
-                    for (int j = offset; j < line.Length; ++j) {
-                        var configName = line[j];
-                        if (string.IsNullOrEmpty(configName) == false) {
-                            var idx = configFiles.FindIndex(x => x.path.EndsWith(configName));
-                            var configIdx = j - offset;
-                            var config = configFiles[configIdx];
-                            config.baseConfig = idx;
-                        }
-                    }
-                } else {
+                {
                     // Read components and aspects
                     if (string.IsNullOrEmpty(line[0]) == false || string.IsNullOrEmpty(componentName) == true) {
                         componentName = line[0];
@@ -292,28 +337,12 @@ namespace ME.BECS.Editor.CsvImporter {
                     }
                 }
             }
-            Debug.Log($"Configs with version {version} has been updated");
-            return configFiles;
         }
 
         public static void Link(scg::List<ConfigFile> configFiles, bool updateComponents = true) {
             
             var temp = TempComponent.CreateInstance<TempComponent>();
             
-            foreach (var config in configFiles) {
-                if (config.instance != null) continue;
-                EntityConfig configInstance = null;
-                if (System.IO.File.Exists(config.fullPath) == false) {
-                    configInstance = EntityConfig.CreateInstance<EntityConfig>();
-                    AssetDatabase.CreateAsset(configInstance, config.fullPath);
-                    AssetDatabase.ImportAsset(config.fullPath);
-                } else {
-                    configInstance = AssetDatabase.LoadAssetAtPath<EntityConfig>(config.fullPath);
-                }
-                configInstance.collectionsData = new EntityConfig.CollectionsData();
-                config.instance = configInstance;
-            }
-
             foreach (var config in configFiles) {
                 config.instance.aspects.components = config.aspects.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                 foreach (var comp in config.components) {

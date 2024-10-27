@@ -173,7 +173,7 @@ namespace ME.BECS.Editor.JSON {
             try {
                 var obj = JsonParser.ParseValue(data);
                 return obj != null && obj is System.Collections.Generic.Dictionary<string, object>;
-            } catch (System.Exception ex) {
+            } catch (System.Exception) {
                 return false;
             }
         }
