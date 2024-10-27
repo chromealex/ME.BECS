@@ -162,15 +162,24 @@ namespace ME.BECS.Editor.CsvImporter {
                     foreach (var item in data) {
                         var csv = CSVParser.ReadCSV(item);
                         csvs.Add(csv);
-                        var configFiles = this.ParseConfigs(csv, targetDir, out var ver);
+                        var configFiles = ParseConfigs(csv, targetDir, out var ver);
                         configsPerItem.Add(configFiles);
                         configs.AddRange(configFiles);
                         versions.Add(ver);
                         Debug.Log($"Configs with version {ver} has been updated");
                     }
+
+                    {
+                        // add project configs
+                        foreach (var item in ObjectReferenceRegistry.data.items) {
+                            if (item.source is EntityConfig) {
+                                configs.Add(new ConfigFile((EntityConfig)item.source));
+                            }
+                        }
+                    }
                     
                     for (var index = 0; index < data.Count; ++index) {
-                        this.ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
+                        ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
                     }
 
                     foreach (var config in configs) {
@@ -178,7 +187,7 @@ namespace ME.BECS.Editor.CsvImporter {
                     }
 
                     for (var index = 0; index < data.Count; ++index) {
-                        this.Parse(configs, configsPerItem[index], csvs[index]);
+                        Parse(configs, configsPerItem[index], csvs[index]);
                     }
 
                     if (hasErrors == true) {
@@ -229,6 +238,7 @@ namespace ME.BECS.Editor.CsvImporter {
 
             }
 
+            public bool imported;
             public string name;
             public string path;
             public string fullPath;
@@ -239,6 +249,15 @@ namespace ME.BECS.Editor.CsvImporter {
 
             public ConfigFile() { }
 
+            public ConfigFile(EntityConfig config) {
+                this.name = config.name;
+                this.fullPath = AssetDatabase.GetAssetPath(config);
+                this.path = EditorUtils.GetFullPathWithoutExtension(this.fullPath);
+                this.instance = config;
+                this.baseConfig = -1;
+                this.imported = false;
+            }
+
             public ConfigFile(string targetDir, string data) {
                 this.name = data;
                 this.path = System.IO.Path.Combine(targetDir, data);
@@ -247,11 +266,12 @@ namespace ME.BECS.Editor.CsvImporter {
                 this.baseConfig = -1;
                 this.components = new scg::List<Component>();
                 this.aspects = new scg::List<Aspect>();
+                this.imported = true;
             }
 
         }
 
-        public scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version) {
+        public static scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version) {
             version = csv[0][0];
             var configFiles = new scg::List<ConfigFile>();
             var offset = 2;
@@ -266,7 +286,7 @@ namespace ME.BECS.Editor.CsvImporter {
             return configFiles;
         }
 
-        public void ParseBaseConfigs(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
+        public static void ParseBaseConfigs(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
             var line = csv[1];
             {
@@ -283,7 +303,7 @@ namespace ME.BECS.Editor.CsvImporter {
             }
         }
 
-        public void Parse(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
+        public static void Parse(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
             var components = TypeCache.GetTypesDerivedFrom<IComponent>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var aspects = TypeCache.GetTypesDerivedFrom<IAspect>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
@@ -339,11 +359,11 @@ namespace ME.BECS.Editor.CsvImporter {
             }
         }
 
-        public static void Link(scg::List<ConfigFile> configFiles, bool updateComponents = true) {
+        public static void Link(scg::List<ConfigFile> configFiles) {
             
             var temp = TempComponent.CreateInstance<TempComponent>();
-            
             foreach (var config in configFiles) {
+                if (config.components == null) continue;
                 foreach (var comp in config.components) {
                     var instance = comp.componentInstance;
                     temp.component = instance;
@@ -415,17 +435,16 @@ namespace ME.BECS.Editor.CsvImporter {
             }
             TempComponent.DestroyImmediate(temp);
 
-            if (updateComponents == true) {
-                foreach (var config in configFiles) {
-                    config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
-                    if (config.baseConfig >= 0) config.instance.baseConfig = configFiles[config.baseConfig].instance;
-                    config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
-                    config.instance.sharedData = new ComponentsStorage<IConfigComponentShared>() { isShared = true };
-                    config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();
-                    config.instance.staticData.components = config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray();
-                    config.instance.OnValidate();
-                    EditorUtility.SetDirty(config.instance);
-                }
+            foreach (var config in configFiles) {
+                if (config.imported == false) continue;
+                config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
+                if (config.baseConfig >= 0) config.instance.baseConfig = configFiles[config.baseConfig].instance;
+                config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
+                config.instance.sharedData = new ComponentsStorage<IConfigComponentShared>() { isShared = true };
+                config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();
+                config.instance.staticData.components = config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray();
+                config.instance.OnValidate();
+                EditorUtility.SetDirty(config.instance);
             }
             
         }

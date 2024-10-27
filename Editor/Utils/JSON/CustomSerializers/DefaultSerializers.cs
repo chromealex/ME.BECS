@@ -13,7 +13,7 @@ namespace ME.BECS.Editor.JSON {
             }
 
             if (str.StartsWith(protocol) == true) {
-                var configObj = ObjectReferenceRegistry.GetAssetByPathPart<T>(str.Substring(protocol.Length));
+                var configObj = EditorUtils.GetAssetByPathPart<T>(str.Substring(protocol.Length));
                 return this.Deserialize(ObjectReferenceRegistry.GetId(configObj), configObj, customData);
             } else {
                 return null;

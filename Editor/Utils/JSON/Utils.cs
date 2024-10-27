@@ -88,7 +88,7 @@ namespace ME.BECS.Editor.JSON {
                 foreach (var kv in keys) {
                     comp.fields.Add(kv.Key, kv.Value);
                 }
-                CsvImporter.EntityConfigCsvImporterEditor.Link(list, false);
+                CsvImporter.EntityConfigCsvImporterEditor.Link(list);
                 copy.managedReferenceValue = comp.componentInstance;
 
             }

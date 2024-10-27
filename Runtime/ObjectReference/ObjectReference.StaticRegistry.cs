@@ -9,7 +9,7 @@ namespace ME.BECS {
 
         public static ObjectReferenceRegistryData data;
 
-        private static readonly System.Collections.Generic.List<ObjectReferenceRegistryData.Item> additionalRuntimeObjects = new System.Collections.Generic.List<ObjectReferenceRegistryData.Item>();
+        internal static readonly System.Collections.Generic.List<ObjectReferenceRegistryData.Item> additionalRuntimeObjects = new System.Collections.Generic.List<ObjectReferenceRegistryData.Item>();
         private static uint nextRuntimeId;
         
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
@@ -118,29 +118,6 @@ namespace ME.BECS {
             return 0u;
             
         }
-
-        #if UNITY_EDITOR
-        private static string GetFullPathWithoutExtension(string path) {
-            var dir = System.IO.Path.GetDirectoryName(path);
-            if (string.IsNullOrEmpty(dir) == false) {
-                path = System.IO.Path.Combine(dir, System.IO.Path.GetFileNameWithoutExtension(path));
-            } else {
-                path = System.IO.Path.GetFileNameWithoutExtension(path);
-            }
-
-            return path;
-        }
-        
-        public static T GetAssetByPathPart<T>(string pathPart) where T : UnityEngine.Object {
-            pathPart = GetFullPathWithoutExtension(pathPart);
-            var items = data.items.Concat(additionalRuntimeObjects).Where(x => x.source is T).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(x.source)).ToArray();
-            foreach (var item in items) {
-                var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(item.source));
-                if (path.EndsWith(pathPart) == true) return (T)item.source;
-            }
-            return null;
-        }
-        #endif
 
     }
 
