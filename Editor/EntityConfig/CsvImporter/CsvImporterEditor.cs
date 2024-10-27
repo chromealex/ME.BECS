@@ -21,7 +21,7 @@ namespace ME.BECS.Editor.CsvImporter {
         
         private void LoadStyle() {
             if (this.styleSheetBase == null) {
-                this.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCsvImporter.uss");
+                this.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/CsvImporter.uss");
             }
             if (this.styleSheetTooltip == null) {
                 this.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
