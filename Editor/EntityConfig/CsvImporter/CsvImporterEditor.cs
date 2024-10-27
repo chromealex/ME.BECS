@@ -14,10 +14,14 @@ namespace ME.BECS.Editor.CsvImporter {
         public StyleSheet styleSheetBase;
         public StyleSheet styleSheetTooltip;
         public StyleSheet styleSheet;
+
+        private Button loadingButton;
+        private Label loadingIndicator;
+        private Label result;
         
         private void LoadStyle() {
             if (this.styleSheetBase == null) {
-                this.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Entity.uss");
+                this.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfigCsvImporter.uss");
             }
             if (this.styleSheetTooltip == null) {
                 this.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
@@ -34,27 +38,85 @@ namespace ME.BECS.Editor.CsvImporter {
             root.styleSheets.Add(this.styleSheetBase);
             root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
-            
-            var targetDir = this.serializedObject.FindProperty("targetDirectory");
-            root.Add(new UnityEditor.UIElements.PropertyField(targetDir));
-            
-            var csvUrls = this.serializedObject.FindProperty("csvUrls");
-            root.Add(new UnityEditor.UIElements.PropertyField(csvUrls));
+            root.AddToClassList("root");
 
-            root.Add(new Button(() => {
+            var targetDir = this.serializedObject.FindProperty("targetDirectory");
+            {
+                var container = new VisualElement();
+                EditorUIUtils.DrawTooltip(container, "Target directory which will be used to generate entity config files.");
+                root.Add(container);
+                var prop = new UnityEditor.UIElements.PropertyField(targetDir);
+                prop.AddToClassList("target-directory");
+                container.Add(prop);
+            }
+
+            var csvUrls = this.serializedObject.FindProperty("csvUrls");
+            {
+                var container = new VisualElement();
+                EditorUIUtils.DrawTooltip(container, "Multiple csv urls which data will be combined to make cross-links.");
+                root.Add(container);
+                var prop = new UnityEditor.UIElements.PropertyField(csvUrls);
+                prop.AddToClassList("csv-urls");
+                container.Add(prop);
+            }
+
+            var button = new Button(() => {
                 var strings = new string[csvUrls.arraySize];
                 for (int i = 0; i < csvUrls.arraySize; ++i) {
                     strings[i] = csvUrls.GetArrayElementAtIndex(i).stringValue;
                 }
-                this.Load(strings, AssetDatabase.GetAssetPath(targetDir.objectReferenceValue));
-            }) { text = "Load" });
-            
+
+                this.loadingButton.SetEnabled(false);
+                this.loadingIndicator.style.display = DisplayStyle.Flex;
+                this.Load(strings, AssetDatabase.GetAssetPath(targetDir.objectReferenceValue), () => {
+                    this.loadingButton.SetEnabled(true);
+                    this.loadingIndicator.style.display = DisplayStyle.None;
+                });
+            }) { text = "Load" };
+            button.AddToClassList("load-button");
+            this.loadingButton = button;
+            root.Add(button);
+
+            this.loadingIndicator = new Label();
+            this.loadingIndicator.AddToClassList("loader");
+            root.Add(this.loadingIndicator);
+
+            this.result = new Label();
+            this.result.AddToClassList("result");
+            this.result.pickingMode = PickingMode.Ignore;
+            root.Add(this.result);
+
             return root;
 
         }
 
-        public void Load(string[] urls, string targetDir) {
+        private int loaderIndex;
+        private readonly System.Text.StringBuilder loaderText = new System.Text.StringBuilder();
+        private string GetLoaderText() {
+            ++this.loaderIndex;
+            const int dots = 5;
+            var idx = this.loaderIndex % dots;
+            this.loaderText.Clear();
+            for (int i = 0; i < dots; ++i) {
+                if (idx == i) {
+                    this.loaderText.Append("<size=10>[</size>");
+                    this.loaderText.Append('.');
+                    this.loaderText.Append("<size=10>]</size>");
+                } else {
+                    this.loaderText.Append("<size=10>[</size>");
+                    this.loaderText.Append(' ');
+                    this.loaderText.Append("<size=10>]</size>");
+                }
+            }
+            return this.loaderText.ToString();
+        }
+        
+        public void Load(string[] urls, string targetDir, System.Action callback) {
 
+            this.result.RemoveFromClassList("hide");
+            this.result.RemoveFromClassList("success");
+            this.result.RemoveFromClassList("failed");
+            
             var list = new scg::List<UnityEngine.Networking.UnityWebRequest>();
             foreach (var url in urls) {
 
@@ -75,14 +137,43 @@ namespace ME.BECS.Editor.CsvImporter {
                         break;
                     }
                 }
+
+                this.loadingIndicator.text = this.GetLoaderText();
                 if (allDone == false) {
                     UnityEditor.EditorApplication.delayCall += OnDelayCall;
                 } else {
+                    var hasErrors = false;
+                    var err = string.Empty;
                     var configs = new scg::List<ConfigFile>(); 
+                    var data = new scg::List<string>();
+                    var versions = new scg::List<string>();
                     foreach (var item in list) {
-                        configs.AddRange(this.Parse(item.downloadHandler.text, targetDir));
+                        hasErrors = item.responseCode != 200 || string.IsNullOrEmpty(item.error) == false;
+                        if (hasErrors == true) {
+                            err = item.error;
+                            break;
+                        }
+
+                        data.Add(item.downloadHandler.text);
                     }
-                    Link(configs);
+
+                    foreach (var item in data) {
+                        configs.AddRange(this.Parse(item, targetDir, out var ver));
+                        versions.Add(ver);
+                    }
+
+                    if (hasErrors == true) {
+                        this.result.AddToClassList("failed");
+                        this.result.text = err;
+                    } else {
+                        Link(configs);
+                        this.result.AddToClassList("success");
+                        this.result.text = $"Operation succeed. Version has been updated to {string.Join(", ", versions)}.";
+                    }
+
+                    EditorApplication.delayCall += () => { this.result.AddToClassList("hide"); };
+
+                    callback.Invoke();
                 }
             }
         }
@@ -98,11 +189,19 @@ namespace ME.BECS.Editor.CsvImporter {
 
             }
 
+            public class Aspect {
+
+                public string name;
+                public System.Type type;
+
+            }
+
             public string name;
             public string path;
             public string fullPath;
             public int baseConfig;
             public scg::List<Component> components;
+            public scg::List<Aspect> aspects;
             public EntityConfig instance;
 
             public ConfigFile() { }
@@ -114,16 +213,18 @@ namespace ME.BECS.Editor.CsvImporter {
                 EditorUtils.CreateDirectoriesByPath(this.fullPath);
                 this.baseConfig = -1;
                 this.components = new scg::List<Component>();
+                this.aspects = new scg::List<Aspect>();
             }
 
         }
 
-        public scg::List<ConfigFile> Parse(string csvText, string targetDir) {
+        public scg::List<ConfigFile> Parse(string csvText, string targetDir, out string version) {
             var csv = CSVParser.ReadCSV(csvText);
-            var version = csv[0][0];
+            version = csv[0][0];
             var configFiles = new scg::List<ConfigFile>();
             var offset = 2;
             var components = TypeCache.GetTypesDerivedFrom<IComponent>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
+            var aspects = TypeCache.GetTypesDerivedFrom<IAspect>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var componentName = string.Empty;
             System.Type componentType = null;
             for (int i = 0; i < csv.Count; ++i) {
@@ -146,33 +247,48 @@ namespace ME.BECS.Editor.CsvImporter {
                         }
                     }
                 } else {
-                    // Read components
+                    // Read components and aspects
                     if (string.IsNullOrEmpty(line[0]) == false || string.IsNullOrEmpty(componentName) == true) {
                         componentName = line[0];
                         componentType = components.FirstOrDefault(x => x.FullName.EndsWith(componentName));
+                        if (componentType == null) componentType = aspects.FirstOrDefault(x => x.FullName.EndsWith(componentName));
                     }
 
                     if (componentType == null) {
-                        Debug.LogWarning($"Component Type not found: {componentName}");
+                        Debug.LogWarning($"Component Type or Aspect Type not found: {componentName}");
                         continue;
                     }
+
+                    var isAspect = typeof(IAspect).IsAssignableFrom(componentType);
                     for (int j = offset; j < line.Length; ++j) {
                         var configIdx = j - offset;
                         var fieldName = line[1];
                         var value = line[j];
                         if (string.IsNullOrEmpty(value) == true) continue;
                         var configFile = configFiles[configIdx];
-                        var component = configFile.components.FirstOrDefault(x => x.type == componentType);
-                        if (component == null) {
-                            component = new ConfigFile.Component() {
-                                name = componentName,
-                                type = componentType,
-                                componentInstance = System.Activator.CreateInstance(componentType),
-                                fields = new System.Collections.Generic.Dictionary<string, string>(),
-                            };
-                            configFile.components.Add(component);
+                        if (isAspect == true) {
+                            var aspect = configFile.aspects.FirstOrDefault(x => x.type == componentType);
+                            if (aspect == null) {
+                                aspect = new ConfigFile.Aspect() {
+                                    name = componentName,
+                                    type = componentType,
+                                };
+                                configFile.aspects.Add(aspect);
+                            }
+                        } else {
+                            var component = configFile.components.FirstOrDefault(x => x.type == componentType);
+                            if (component == null) {
+                                component = new ConfigFile.Component() {
+                                    name = componentName,
+                                    type = componentType,
+                                    componentInstance = System.Activator.CreateInstance(componentType),
+                                    fields = new System.Collections.Generic.Dictionary<string, string>(),
+                                };
+                                configFile.components.Add(component);
+                            }
+
+                            component.fields.Add(fieldName, value);
                         }
-                        component.fields.Add(fieldName, value);
                     }
                 }
             }
@@ -199,6 +315,7 @@ namespace ME.BECS.Editor.CsvImporter {
             }
 
             foreach (var config in configFiles) {
+                config.instance.aspects.components = config.aspects.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                 foreach (var comp in config.components) {
                     var instance = comp.componentInstance;
                     temp.component = instance;

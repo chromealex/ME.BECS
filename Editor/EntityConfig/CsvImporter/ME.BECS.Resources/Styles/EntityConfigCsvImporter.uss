@@ -1,0 +1,73 @@
+.root {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.target-directory {
+    padding: 5px;
+}
+.target-directory ObjectField {
+    width: 100%;
+}
+
+.csv-urls {
+    padding: 5px;
+}
+
+.load-button {
+    width: auto;
+    align-self: center;
+    padding: 6px 24px;
+}
+
+PropertyField {
+    width: 100%;
+}
+
+.loader {
+    display: none;
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    top: 0px;
+    background-color: rgba(0, 0, 0, 0.5);
+    -unity-text-align: middle-center;
+    font-size: 50px;
+    border-radius: 10px;
+}
+
+.result {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    font-size: 16px;
+    padding: 10px;
+    opacity: 0;
+    scale: 1 1;
+    transform-origin: 0% 0%;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.result.success {
+    background-color: rgb(177, 197, 102);
+    color: rgba(0, 0, 0, 1);
+    display: flex;
+    opacity: 1;
+}
+.result.failed {
+    background-color: rgb(211, 53, 53);
+    color: rgba(0, 0, 0, 1);
+    display: flex;
+    opacity: 1;
+}
+
+.result.hide {
+    transition-property: opacity, scale;
+    transition-duration: 0.5s;
+    transition-delay: 2s;
+    opacity: 0;
+    scale: 1 0;
+}
