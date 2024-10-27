@@ -108,7 +108,7 @@ namespace ME.BECS.Pathfinding {
         public static void DestroyGraphMask(in Ent ent) {
 
             { // Apply to graphs
-                var mask = ent.Read<GraphMaskComponent>();
+                var mask = ent.Read<GraphMaskRuntimeComponent>();
                 mask.Destroy();
             }
             ent.DestroyHierarchy();
@@ -139,19 +139,22 @@ namespace ME.BECS.Pathfinding {
             var obstacle = new GraphMaskComponent() {
                 offset = float2.zero,
                 size = size,
-                heights = heights,
                 heightsSizeX = heightsSizeX,
                 ignoreGraphRadius = (byte)(ignoreGraphRadius == true ? 1 : 0),
                 cost = cost,
-                nodes = new ListAuto<GraphNodeMemory>(in ent, (uint)(size.x * size.y * buildGraphSystem.graphs.Length)),
                 obstacleChannel = obstacleChannel,
+            };
+            var runtime = new GraphMaskRuntimeComponent() {
+                heights = heights,
+                nodes = new ListAuto<GraphNodeMemory>(in ent, (uint)(size.x * size.y * buildGraphSystem.graphs.Length)),
             };
             var obstacleTr = ent.GetOrCreateAspect<TransformAspect>();
             obstacleTr.position = position;
             obstacleTr.rotation = rotation;
             ent.Set(obstacle);
+            ent.Set(runtime);
             ent.Set(new IsGraphMaskDirtyComponent());
-            ent.RegisterAutoDestroy<GraphMaskComponent>();
+            ent.RegisterAutoDestroy<GraphMaskRuntimeComponent>();
             return ent;
 
         }

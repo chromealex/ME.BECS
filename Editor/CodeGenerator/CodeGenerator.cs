@@ -8,21 +8,15 @@ namespace ME.BECS.Editor {
 
     public abstract class CustomCodeGenerator {
 
-        public System.Collections.Generic.List<CodeGenerator.AssemblyInfo> asms;
+        public System.Collections.Generic.List<AssemblyInfo> asms;
         public bool editorAssembly;
         public System.Collections.Generic.List<System.Type> burstedTypes;
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
 
         public bool IsValidTypeForAssembly(System.Type type) {
 
-            if (type == null) return false;
+            return EditorUtils.IsValidTypeForAssembly(this.editorAssembly, type, this.asms);
             
-            var asm = type.Assembly.GetName().Name;
-            var info = this.asms.FirstOrDefault(x => x.name == asm);
-            if (this.editorAssembly == false && info.isEditor == true) return false;
-            if (this.editorAssembly == true && info.isEditor == false) return false;
-            return true;
-
         }
         
         public virtual void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
@@ -58,70 +52,12 @@ namespace ME.BECS.Editor {
 
         }
         
-        public struct AssemblyInfo {
-
-            public string name;
-            public string[] includePlatforms;
-            public string[] references;
-            public bool isEditor;
-
-            public AssemblyInfo Init() {
-
-                this.isEditor = false;
-                if (this.includePlatforms != null) {
-                    var hasEditor = System.Array.IndexOf(this.includePlatforms, "Editor") >= 0;
-                    this.isEditor = hasEditor == true && this.includePlatforms.Length == 1;
-                }
-
-                if (this.references != null) {
-                    for (int i = 0; i < this.references.Length; ++i) {
-                        ref var r = ref this.references[i];
-                        if (r.StartsWith("GUID:") == true) {
-                            var asmName = UnityEditor.AssetDatabase.GUIDToAssetPath(r.Substring(5, r.Length - 5));
-                            if (string.IsNullOrEmpty(asmName) == false) {
-                                var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(asmName);
-                                if (asset != null) {
-                                    var txt = asset.name;
-                                    r = txt;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return this;
-
-            }
-
-            public bool HasReference(string asm) {
-                return System.Array.IndexOf(this.references, asm) >= 0;
-            }
-
-        }
-        
         public const string ECS = "ME.BECS";
         public const string AWAKE_METHOD = "BurstCompileOnAwake";
         public const string UPDATE_METHOD = "BurstCompileOnUpdate";
         public const string DESTROY_METHOD = "BurstCompileOnDestroy";
         public const string DRAWGIZMOS_METHOD = "BurstCompileOnDrawGizmos";
 
-        private static System.Collections.Generic.List<AssemblyInfo> loadedAssemblies;
-        public static System.Collections.Generic.List<AssemblyInfo> GetAssembliesInfo() {
-            if (loadedAssemblies == null) {
-                var list = new System.Collections.Generic.List<AssemblyInfo>();
-                var asmdefs = UnityEditor.AssetDatabase.FindAssets("t:asmdef");
-                foreach (var guid in asmdefs) {
-                    var asmPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                    var info = System.IO.File.ReadAllText(asmPath);
-                    list.Add(UnityEngine.JsonUtility.FromJson<AssemblyInfo>(info).Init());
-                }
-
-                loadedAssemblies = list;
-            }
-
-            return loadedAssemblies;
-        }
-        
         static CodeGenerator() {
             
             UnityEngine.Application.logMessageReceived += OnLogAdded;
@@ -200,7 +136,7 @@ namespace ME.BECS.Editor {
 
         public static void RegenerateBurstAOT() {
 
-            var list = GetAssembliesInfo();
+            var list = EditorUtils.GetAssembliesInfo();
             {
                 var dir = $"Assets/{ECS}.BurstHelper/Runtime";
                 Build(list, dir);

@@ -2,18 +2,27 @@ namespace ME.BECS.Pathfinding {
 
     using Unity.Mathematics;
     
-    public struct GraphMaskComponent : IConfigComponent, IComponentDestroy {
+    public struct GraphMaskComponent : IConfigComponent, IConfigInitialize {
 
         public float2 offset;
         public uint2 size;
         public byte ignoreGraphRadius;
         public byte cost;
-        public MemArrayAuto<float> heights;
         public uint heightsSizeX;
-        public ListAuto<GraphNodeMemory> nodes;
-        public LockSpinner nodesLock;
         public ObstacleChannel obstacleChannel;
 
+        public void OnInitialize(in Ent ent) {
+            
+        }
+
+    }
+
+    public struct GraphMaskRuntimeComponent : IComponentDestroy {
+
+        public MemArrayAuto<float> heights;
+        public ListAuto<GraphNodeMemory> nodes;
+        public LockSpinner nodesLock;
+        
         public unsafe void Destroy() {
 
             var nextTick = this.nodes.ent.World.state->tick + 1UL;
@@ -29,7 +38,7 @@ namespace ME.BECS.Pathfinding {
             this.nodesLock.Unlock();
             
         }
-        
+
     }
     
     public struct IsGraphMaskDirtyComponent : IComponent {}

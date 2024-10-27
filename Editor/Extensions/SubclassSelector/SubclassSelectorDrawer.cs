@@ -245,7 +245,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             if (!this.m_TypePopups.TryGetValue(managedReferenceFieldTypename, out var result)) {
                 var state = new AdvancedDropdownState();
 
-                var assembliesInfo = CodeGenerator.GetAssembliesInfo();
+                var assembliesInfo = EditorUtils.GetAssembliesInfo();
                 var baseType = EditorUtils.GetTypeFromPropertyField(managedReferenceFieldTypename, isType);
                 //Debug.Log(managedReferenceFieldTypename + " => " + baseType);
                 System.Predicate<System.Type> filter = null;

@@ -4,7 +4,8 @@ namespace ME.BECS.Editor {
 
     public class PropertyEditorUtils {
 
-        private static object GetValue_Imp(object source, string name) {
+        private static object GetValue_Imp(object source, string name, out System.Type fieldType) {
+            fieldType = null;
             if (source == null) {
                 return null;
             }
@@ -14,6 +15,7 @@ namespace ME.BECS.Editor {
             while (type != null) {
                 var f = type.GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                 if (f != null) {
+                    fieldType = f.FieldType;
                     return f.GetValue(source);
                 }
 
@@ -31,8 +33,8 @@ namespace ME.BECS.Editor {
             return null;
         }
 
-        private static object GetValue_Imp(object source, string name, int index) {
-            var enumerable = PropertyEditorUtils.GetValue_Imp(source, name) as System.Collections.IEnumerable;
+        private static object GetValue_Imp(object source, string name, int index, out System.Type fieldType) {
+            var enumerable = PropertyEditorUtils.GetValue_Imp(source, name, out fieldType) as System.Collections.IEnumerable;
             if (enumerable == null) {
                 return null;
             }
@@ -51,7 +53,68 @@ namespace ME.BECS.Editor {
             return enm.Current;
         }
 
+        private static System.Type GetType_Imp(System.Type source, string name) {
+            if (source == null) {
+                return null;
+            }
+
+            var type = source;
+
+            while (type != null) {
+                var f = type.GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (f != null) {
+                    return f.FieldType;
+                }
+
+                var p = type.GetProperty(
+                    name,
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.IgnoreCase);
+                if (p != null) {
+                    return p.PropertyType;
+                }
+
+                type = type.BaseType;
+            }
+
+            return null;
+        }
+
+        private static System.Type GetType_Imp(System.Type source, string name, int index) {
+            var tp = PropertyEditorUtils.GetType_Imp(source, name);
+            if (typeof(System.Collections.IEnumerable).IsAssignableFrom(tp) == true) {
+                return tp.GenericTypeArguments[0];
+            }
+            return tp;
+        }
+
+        public static System.Type GetTargetTypeOfProperty(UnityEditor.SerializedProperty prop) {
+            if (prop == null) {
+                return null;
+            }
+
+            var path = prop.propertyPath.Replace(".Array.data[", "[");
+            var obj = prop.serializedObject.targetObject.GetType();
+            var elements = path.Split('.');
+            foreach (var element in elements) {
+                if (element.Contains("[")) {
+                    var elementName = element.Substring(0, element.IndexOf("["));
+                    var index = System.Convert.ToInt32(element.Substring(element.IndexOf("[")).Replace("[", "").Replace("]", ""));
+                    obj = PropertyEditorUtils.GetType_Imp(obj, elementName, index);
+                } else {
+                    obj = PropertyEditorUtils.GetType_Imp(obj, element);
+                }
+            }
+
+            return obj;
+        }
+
         public static object GetTargetObjectOfProperty(UnityEditor.SerializedProperty prop) {
+            return GetTargetObjectOfProperty(prop, out _);
+        }
+
+        public static object GetTargetObjectOfProperty(UnityEditor.SerializedProperty prop, out System.Type fieldType) {
+            fieldType = null;
             if (prop == null) {
                 return null;
             }
@@ -63,13 +126,33 @@ namespace ME.BECS.Editor {
                 if (element.Contains("[")) {
                     var elementName = element.Substring(0, element.IndexOf("["));
                     var index = System.Convert.ToInt32(element.Substring(element.IndexOf("[")).Replace("[", "").Replace("]", ""));
-                    obj = PropertyEditorUtils.GetValue_Imp(obj, elementName, index);
+                    obj = PropertyEditorUtils.GetValue_Imp(obj, elementName, index, out fieldType);
                 } else {
-                    obj = PropertyEditorUtils.GetValue_Imp(obj, element);
+                    obj = PropertyEditorUtils.GetValue_Imp(obj, element, out fieldType);
                 }
             }
 
             return obj;
+        }
+
+        public static uint GetLevel(UnityEditor.SerializedProperty prop, out uint arrayIndex) {
+            arrayIndex = 0u;
+            if (prop == null) {
+                return 0u;
+            }
+
+            var path = prop.propertyPath.Replace(".Array.data[", "[");
+            var elements = path.Split('.');
+            var cnt = 0u;
+            foreach (var element in elements) {
+                if (element.Contains("[")) {
+                    var index = System.Convert.ToUInt32(element.Substring(element.IndexOf("[")).Replace("[", "").Replace("]", ""));
+                    arrayIndex = index;
+                }
+                ++cnt;
+            }
+
+            return cnt;
         }
 
         public static object GetTargetObjectOfProperty(UnityEditor.SerializedProperty prop, object targetObj) {
@@ -79,9 +162,9 @@ namespace ME.BECS.Editor {
                 if (element.Contains("[")) {
                     var elementName = element.Substring(0, element.IndexOf("["));
                     var index = System.Convert.ToInt32(element.Substring(element.IndexOf("[")).Replace("[", "").Replace("]", ""));
-                    targetObj = PropertyEditorUtils.GetValue_Imp(targetObj, elementName, index);
+                    targetObj = PropertyEditorUtils.GetValue_Imp(targetObj, elementName, index, out _);
                 } else {
-                    targetObj = PropertyEditorUtils.GetValue_Imp(targetObj, element);
+                    targetObj = PropertyEditorUtils.GetValue_Imp(targetObj, element, out _);
                 }
             }
 
@@ -96,9 +179,9 @@ namespace ME.BECS.Editor {
                 if (element.Contains("[")) {
                     var elementName = element.Substring(0, element.IndexOf("["));
                     var index = System.Convert.ToInt32(element.Substring(element.IndexOf("[")).Replace("[", "").Replace("]", ""));
-                    obj = PropertyEditorUtils.GetValue_Imp(obj, elementName, index);
+                    obj = PropertyEditorUtils.GetValue_Imp(obj, elementName, index, out _);
                 } else {
-                    obj = PropertyEditorUtils.GetValue_Imp(obj, element);
+                    obj = PropertyEditorUtils.GetValue_Imp(obj, element, out _);
                 }
             }
 

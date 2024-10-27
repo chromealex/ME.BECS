@@ -35,11 +35,11 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct UpdateGraphMaskJob : IJobParallelForComponents<GraphMaskComponent> {
+        public unsafe struct UpdateGraphMaskJob : IJobParallelForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
 
             public BuildGraphSystem graphSystem;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref GraphMaskComponent obstacle) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref GraphMaskComponent obstacle, ref GraphMaskRuntimeComponent obstacleRuntime) {
 
                 ent.Remove<IsGraphMaskDirtyComponent>();
                 
@@ -104,11 +104,11 @@ namespace ME.BECS.Pathfinding {
                                             var localPos = worldPos - position;
                                             localPos.x += obstacleSize.x * 0.5f;
                                             localPos.z += obstacleSize.y * 0.5f;
-                                            var newHeight = GraphUtils.GetObstacleHeight(in localPos, in obstacle.heights, in obstacleSize, obstacle.heightsSizeX);
+                                            var newHeight = GraphUtils.GetObstacleHeight(in localPos, in obstacleRuntime.heights, in obstacleSize, obstacle.heightsSizeX);
                                             if (newHeight >= 0f && JobUtils.SetIfGreater(ref node.height, newHeight + position.y) == true) {
-                                                obstacle.nodesLock.Lock();
-                                                obstacle.nodes.Add(new GraphNodeMemory(in graph, new Graph.TempNode() { chunkIndex = chunkIndex, nodeIndex = nodeIndex }, in node));
-                                                obstacle.nodesLock.Unlock();
+                                                obstacleRuntime.nodesLock.Lock();
+                                                obstacleRuntime.nodes.Add(new GraphNodeMemory(in graph, new Graph.TempNode() { chunkIndex = chunkIndex, nodeIndex = nodeIndex }, in node));
+                                                obstacleRuntime.nodesLock.Unlock();
                                                 JobUtils.SetIfGreater(ref node.cost, obstacle.cost);
                                             }
                                         }
@@ -127,7 +127,7 @@ namespace ME.BECS.Pathfinding {
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var graphMaskUpdate = API.Query(in context, context.dependsOn).With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().Schedule<UpdateGraphMaskJob, GraphMaskComponent>(new UpdateGraphMaskJob() {
+            var graphMaskUpdate = API.Query(in context, context.dependsOn).With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().Schedule<UpdateGraphMaskJob, GraphMaskComponent, GraphMaskRuntimeComponent>(new UpdateGraphMaskJob() {
                 graphSystem = graphSystem,
             });
             

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using ME.BECS.Editor.Extensions.SubclassSelector;
 using UnityEditor;
@@ -332,6 +333,27 @@ namespace ME.BECS.Editor {
                     propertyField.RegisterCallback<ChangeEvent<StyleFont>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleFontDefinition>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleLength>, PropertyField>((evt, p) => rebuild(), propertyField);
+                    propertyField.AddManipulator(new ContextualMenuManipulator((menu) => {
+                        menu.menu.AppendAction("Copy JSON", (evt) => {
+                            var json = JSON.JsonUtils.ComponentToJSON(copy);
+                            EditorUtils.Copy(json);
+                        });
+                        var pasteStatus = DropdownMenuAction.Status.Normal;
+                        var buffer = EditorUtils.ReadCopyBuffer();
+                        if (string.IsNullOrEmpty(buffer) == true) {
+                            pasteStatus = DropdownMenuAction.Status.Disabled;
+                        } else if (JSON.JsonUtils.IsValidJson(buffer) == false) {
+                            pasteStatus = DropdownMenuAction.Status.Disabled;
+                        }
+                        menu.menu.AppendAction("Paste JSON", (evt) => {
+                            copy.serializedObject.Update();
+                            JSON.JsonUtils.JSONToComponent(buffer, copy);
+                            copy.serializedObject.ApplyModifiedProperties();
+                            copy.serializedObject.Update();
+                            propertyField.Bind(serializedObject);
+                            propertyField.BindProperty(copy);
+                        }, pasteStatus);
+                    }));
 
                     propContainer.Add(propertyField);
                     if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {

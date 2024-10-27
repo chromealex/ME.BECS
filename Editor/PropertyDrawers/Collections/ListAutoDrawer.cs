@@ -43,6 +43,7 @@ namespace ME.BECS.Editor {
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
 
             var list = (IUnmanagedList)PropertyEditorUtils.GetTargetObjectOfProperty(property);
+            ValidateDefault(property, ref list);
             var root = new VisualElement();
             this.CreateGUI(root, list, property);
             return root;
@@ -106,6 +107,14 @@ namespace ME.BECS.Editor {
             root.AddToClassList("array-view");
             //drawer.SetFoldoutState(true);
 
+        }
+
+        private static void ValidateDefault(SerializedProperty property, ref IUnmanagedList list) {
+            if (list == null) {
+                PropertyEditorUtils.GetTargetObjectOfProperty(property, out var fieldType);
+                property.boxedValue = System.Activator.CreateInstance(fieldType);
+                list = (IUnmanagedList)PropertyEditorUtils.GetTargetObjectOfProperty(property);
+            }
         }
 
         ~ListAutoDrawer() {

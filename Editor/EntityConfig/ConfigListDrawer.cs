@@ -1,8 +1,5 @@
-using System.Linq;
-
 namespace ME.BECS.Editor {
 
-    using UnityEngine;
     using UnityEditor;
     using UnityEngine.UIElements;
     using UnityEditor.UIElements;

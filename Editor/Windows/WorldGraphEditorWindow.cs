@@ -1477,7 +1477,7 @@ namespace ME.BECS.Editor {
                             selectType.RegisterCallback<ClickEvent>((evt) => {
                                 var worldBounds = selectType.worldBound;
                                 var state = new UnityEditor.IMGUI.Controls.AdvancedDropdownState();
-                                var assembliesInfo = CodeGenerator.GetAssembliesInfo();
+                                var assembliesInfo = EditorUtils.GetAssembliesInfo();
                                 System.Predicate<System.Type> filter = null;
                                 {
                                     filter += type => {

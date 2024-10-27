@@ -2,6 +2,47 @@ using System.Linq;
 using System.Reflection;
 
 namespace ME.BECS.Editor {
+    
+    public struct AssemblyInfo {
+
+        public string name;
+        public string[] includePlatforms;
+        public string[] references;
+        public bool isEditor;
+
+        public AssemblyInfo Init() {
+
+            this.isEditor = false;
+            if (this.includePlatforms != null) {
+                var hasEditor = System.Array.IndexOf(this.includePlatforms, "Editor") >= 0;
+                this.isEditor = hasEditor == true && this.includePlatforms.Length == 1;
+            }
+
+            if (this.references != null) {
+                for (int i = 0; i < this.references.Length; ++i) {
+                    ref var r = ref this.references[i];
+                    if (r.StartsWith("GUID:") == true) {
+                        var asmName = UnityEditor.AssetDatabase.GUIDToAssetPath(r.Substring(5, r.Length - 5));
+                        if (string.IsNullOrEmpty(asmName) == false) {
+                            var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(asmName);
+                            if (asset != null) {
+                                var txt = asset.name;
+                                r = txt;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return this;
+
+        }
+
+        public bool HasReference(string asm) {
+            return System.Array.IndexOf(this.references, asm) >= 0;
+        }
+
+    }
 
     public static class EditorUtils {
 
@@ -302,7 +343,7 @@ namespace ME.BECS.Editor {
             var result = new System.Collections.Generic.List<System.Type>();
             if (type != null) {
                 
-                var asms = CodeGenerator.GetAssembliesInfo();
+                var asms = EditorUtils.GetAssembliesInfo();
                 var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>();
                 foreach (var component in components) {
                     
@@ -321,7 +362,7 @@ namespace ME.BECS.Editor {
 
             } else {
                 
-                var asms = CodeGenerator.GetAssembliesInfo();
+                var asms = EditorUtils.GetAssembliesInfo();
                 var components = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>();
                 foreach (var component in components) {
                     
@@ -360,7 +401,7 @@ namespace ME.BECS.Editor {
             LoadComponentGroups();
 
             var groups = aspects != null ? new System.Collections.Generic.HashSet<AspectItem>(aspects) : new System.Collections.Generic.HashSet<AspectItem>();
-            var asms = CodeGenerator.GetAssembliesInfo();
+            var asms = EditorUtils.GetAssembliesInfo();
             var aspectsItems = UnityEditor.TypeCache.GetTypesDerivedFrom<IAspect>();
             var componentsList = new System.Collections.Generic.List<System.Type>(aspectsItems.Count);
             foreach (var component in aspectsItems) {
@@ -411,7 +452,7 @@ namespace ME.BECS.Editor {
             LoadComponentGroups();
             
             var groups = componentGroups != null ? new System.Collections.Generic.HashSet<ComponentGroupItem>(componentGroups) : new System.Collections.Generic.HashSet<ComponentGroupItem>();
-            var asms = CodeGenerator.GetAssembliesInfo();
+            var asms = EditorUtils.GetAssembliesInfo();
             var components = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>();
             var componentsList = new System.Collections.Generic.List<System.Type>(components.Count);
             foreach (var component in components) {
@@ -544,7 +585,7 @@ namespace ME.BECS.Editor {
 
         public static void ShowPopup(UnityEngine.Rect popupPosition, System.Action<System.Type> onSelect, System.Type baseType, bool unmanagedTypes, bool runtimeAssembliesOnly, bool showNullElement = true) {
 
-            var assembliesInfo = CodeGenerator.GetAssembliesInfo();
+            var assembliesInfo = EditorUtils.GetAssembliesInfo();
 
             System.Predicate<System.Type> filter = null;
             if (unmanagedTypes == true) {
@@ -871,7 +912,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        public static CodeGenerator.AssemblyInfo GetAssemblyInfo(ME.BECS.Extensions.GraphProcessor.BaseGraph graph) {
+        public static AssemblyInfo GetAssemblyInfo(ME.BECS.Extensions.GraphProcessor.BaseGraph graph) {
             var path = UnityEditor.AssetDatabase.GetAssetPath(graph);
             path = path.Replace("\\", "/");
             var splitted = path.Split('/');
@@ -881,7 +922,7 @@ namespace ME.BECS.Editor {
                 foreach (var guid in asms) {
                     var p = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                     var info = System.IO.File.ReadAllText(p);
-                    return UnityEngine.JsonUtility.FromJson<CodeGenerator.AssemblyInfo>(info).Init();
+                    return UnityEngine.JsonUtility.FromJson<AssemblyInfo>(info).Init();
                 }
             }
 
@@ -911,8 +952,8 @@ namespace ME.BECS.Editor {
             var indent = defaultIndent;
             for (int i = 0; i < content.Length; ++i) {
                 var line = content[i];
-                var open = line.Contains('{');
-                var close = line.Contains('}');
+                var open = line.Contains('{') || line.Contains('[');
+                var close = line.Contains('}') || line.Contains(']');
                 if (close == true) --indent;
                 for (int j = 0; j < indent; ++j) {
                     result.Append(' ', indentSize);
@@ -931,6 +972,57 @@ namespace ME.BECS.Editor {
             text = new System.Text.RegularExpressions.Regex(@"^[^\S\n]+(.+?)\s*$", System.Text.RegularExpressions.RegexOptions.Multiline).Replace(text, "$1");
             return FormatCode(text.Split("\n"), defaultIndent: 0);
 
+        }
+
+        public static void Copy(string json) {
+            UnityEngine.GUIUtility.systemCopyBuffer = json;
+        }
+
+        public static string ReadCopyBuffer() {
+            return UnityEngine.GUIUtility.systemCopyBuffer;
+        }
+
+        
+        private static System.Collections.Generic.List<AssemblyInfo> loadedAssemblies;
+        public static System.Collections.Generic.List<AssemblyInfo> GetAssembliesInfo() {
+            if (loadedAssemblies == null) {
+                var list = new System.Collections.Generic.List<AssemblyInfo>();
+                var asmdefs = UnityEditor.AssetDatabase.FindAssets("t:asmdef");
+                foreach (var guid in asmdefs) {
+                    var asmPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                    var info = System.IO.File.ReadAllText(asmPath);
+                    list.Add(UnityEngine.JsonUtility.FromJson<AssemblyInfo>(info).Init());
+                }
+
+                loadedAssemblies = list;
+            }
+
+            return loadedAssemblies;
+        }
+
+        public static bool IsValidTypeForAssembly(bool editorAssembly, System.Type type, System.Collections.Generic.List<AssemblyInfo> asms = null) {
+            
+            if (type == null) return false;
+            if (asms == null) asms = EditorUtils.GetAssembliesInfo();
+            
+            var asm = type.Assembly.GetName().Name;
+            var info = asms.FirstOrDefault(x => x.name == asm);
+            if (editorAssembly == false && info.isEditor == true) return false;
+            if (editorAssembly == true && info.isEditor == false) return false;
+            return true;
+
+        }
+
+        public static void CreateDirectoriesByPath(string fullPath) {
+            var items = fullPath.Split('/');
+            var path = items[0];
+            for (int i = 1; i < items.Length; ++i) {
+                if (System.IO.Directory.Exists(path) == false) {
+                    System.IO.Directory.CreateDirectory(path);
+                    UnityEditor.AssetDatabase.ImportAsset(path);
+                }
+                path += $"/{items[i]}";
+            }
         }
 
     }
