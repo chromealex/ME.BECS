@@ -6,7 +6,8 @@
         "ME.BECS.Editor",
         "ME.BECS",
         "ME.BECS.Features.Editor",
-        "Unity.Collections"
+        "Unity.Collections",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"

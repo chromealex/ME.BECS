@@ -38,6 +38,57 @@ namespace ME.BECS.Views {
     }
 
     [ComponentGroup(typeof(ViewsComponentGroup))]
+    public struct InstantiateAvatarViewComponent : IConfigComponentStatic, IConfigInitialize {
+
+        [System.Serializable]
+        public struct AnimationData {
+
+            [System.Serializable]
+            public struct FirePoint {
+
+                public uint id;
+                public Unity.Mathematics.float3 position;
+                public Unity.Mathematics.quaternion rotation;
+
+            }
+
+            public uint animationId;
+            public FirePoint firePoint;
+            public uint fireFrame;
+
+        }
+
+        [System.Serializable]
+        public struct AnimatorData {
+
+            public View view;
+            public MemArrayAuto<AnimationData> points;
+
+            public bool GetAnimationData(uint animationId, out AnimationData animationData) {
+                for (uint i = 0; i < this.points.Length; ++i) {
+                    var point = this.points[i];
+                    if (point.animationId == animationId) {
+                        animationData = point;
+                        return true;
+                    }
+                }
+                animationData = default;
+                return false;
+            }
+
+        }
+
+        public AnimatorData animatorData;
+
+        public void OnInitialize(in Ent ent) {
+
+            ent.InstantiateView(this.animatorData.view);
+
+        }
+
+    }
+
+    [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct MeshFilterComponent : IComponent {
 
         public RuntimeObjectReference<UnityEngine.Mesh> mesh;

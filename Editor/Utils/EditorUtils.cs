@@ -1046,6 +1046,53 @@ namespace ME.BECS.Editor {
             return null;
         }
 
+        public static uint GetEntityCollection(UnityEditor.SerializedObject config, uint id, out UnityEditor.SerializedProperty data, out int index) {
+            var collectionsData = config.FindProperty(nameof(EntityConfig.collectionsData));
+            if (id == 0u) id = ++collectionsData.FindPropertyRelative(nameof(EntityConfig.collectionsData.nextId)).uintValue;
+            var items = collectionsData.FindPropertyRelative(nameof(EntityConfig.collectionsData.items));
+            for (var i = 0; i < items.arraySize; ++i) {
+                var item = items.GetArrayElementAtIndex(i);
+                if (item.FindPropertyRelative(nameof(EntityConfig.CollectionsData.Collection.id)).uintValue == id) {
+                    data = item;
+                    index = i;
+                    return id;
+                }
+            }
+
+            {
+                index = items.arraySize++;
+                var item = items.GetArrayElementAtIndex(index);
+                data = item;
+                item.FindPropertyRelative(nameof(EntityConfig.CollectionsData.Collection.id)).uintValue = id;
+                item.FindPropertyRelative(nameof(EntityConfig.CollectionsData.Collection.array)).arraySize = 0;
+                return id;
+            }
+        }
+
+        public static uint GetArraySize(UnityEditor.SerializedProperty arr) {
+            var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
+            arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
+            return (uint)data.FindPropertyRelative("array").arraySize;
+        }
+
+        public static void SetArraySize(UnityEditor.SerializedProperty arr, uint size) {
+            var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
+            arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
+            data.FindPropertyRelative("array").arraySize = (int)size;
+        }
+
+        public static UnityEditor.SerializedProperty GetArrayElementByIndex(UnityEditor.SerializedProperty arr, uint index) {
+            var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
+            arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
+            return data.FindPropertyRelative("array").GetArrayElementAtIndex((int)index);
+        }
+
+        public static void RemoveArrayElementByIndex(UnityEditor.SerializedProperty arr, uint index) {
+            var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
+            arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
+            data.FindPropertyRelative("array").DeleteArrayElementAtIndex((int)index);
+        }
+
     }
 
 }

@@ -60,15 +60,21 @@ namespace ME.BECS {
                 }
             }
 
-            private System.Collections.Generic.List<uint> GetCollectionIds(IComponent comp) {
+            private System.Collections.Generic.List<uint> GetCollectionIds(object comp) {
                 var list = new System.Collections.Generic.List<uint>();
+                this.GetCollectionIds(comp, list);
+                return list;
+            }
+
+            private void GetCollectionIds(object comp, System.Collections.Generic.List<uint> collect) {
                 var fields = comp.GetType().GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                 foreach (var field in fields) {
                     if (typeof(IUnmanagedList).IsAssignableFrom(field.FieldType) == true) {
-                        list.Add(((IUnmanagedList)field.GetValue(comp)).GetConfigId());
+                        collect.Add(((IUnmanagedList)field.GetValue(comp)).GetConfigId());
+                    } else if (field.FieldType.IsPrimitive == false) {
+                        this.GetCollectionIds(field.GetValue(comp), collect);
                     }
                 }
-                return list;
             }
 
         }

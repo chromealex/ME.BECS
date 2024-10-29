@@ -7,13 +7,6 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
 
-    public struct ApplyEntityConfigData {
-
-        public Ent ent;
-        public uint typeId;
-
-    }
-    
     public readonly unsafe struct UnsafeEntityConfig : IIsCreated {
 
         private readonly struct SharedData {
@@ -318,9 +311,9 @@ namespace ME.BECS {
                 public System.IntPtr pointer;
                 public System.Runtime.InteropServices.GCHandle handle;
 
-                public void Call(byte* comp, in Ent ent) {
+                public void Call(in UnsafeEntityConfig config, void* comp, in Ent ent) {
                     var del = new Unity.Burst.FunctionPointer<MethodCallerDelegate>(this.pointer);
-                    del.Invoke(comp, in ent);
+                    del.Invoke(in config, comp, in ent);
                 }
 
                 public void Dispose() {
@@ -344,14 +337,15 @@ namespace ME.BECS {
             private readonly Func* functionPointers;
             
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
-            private delegate void MethodCallerDelegate(void* component, in Ent ent);
+            private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
             
             internal static class MethodCaller<T> where T : unmanaged, IConfigInitialize {
 
                 [UnityEngine.Scripting.PreserveAttribute]
                 [AOT.MonoPInvokeCallbackAttribute(typeof(MethodCallerDelegate))]
-                public static void Call(void* component, in Ent ent) {
+                public static void Call(in UnsafeEntityConfig config, void* component, in Ent ent) {
 
+                    WorldStaticCallbacks.RaiseConfigComponentCallback<T>(in config, component, in ent);
                     _ptrToStruct(component, out T tempData);
                     tempData.OnInitialize(in ent);
                     _structToPtr(ref tempData, component);
@@ -409,11 +403,11 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Apply(in Ent ent) {
+            public void Apply(in UnsafeEntityConfig config, in Ent ent) {
 
                 for (uint i = 0u; i < this.count; ++i) {
                     var data = this.data + this.offsets[i];
-                    this.functionPointers[i].Call(data, in ent);
+                    this.functionPointers[i].Call(in config, data, in ent);
                 }
 
             }
@@ -681,7 +675,7 @@ namespace ME.BECS {
             this.aspects.Apply(in ent);
             this.data.Apply(in this, in ent);
             this.dataShared.Apply(in this, in ent);
-            this.dataInitialize.Apply(in ent);
+            this.dataInitialize.Apply(in this, in ent);
             
         }
 

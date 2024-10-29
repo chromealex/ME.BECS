@@ -93,15 +93,29 @@ namespace ME.BECS {
         public static uint Assign(UnityEngine.Object previousValue, UnityEngine.Object newValue) {
             
             if (ObjectReferenceRegistry.data == null) return 0u;
-            
-            var removed = ObjectReferenceRegistry.data.Remove(previousValue);
-            var sourceId = ObjectReferenceRegistry.data.Add(newValue, out bool isNew);
 
-            #if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
-            #endif
+            if (previousValue == newValue) {
+                var id = GetId(newValue);
+                if (id == 0u) {
+                    var sourceId = ObjectReferenceRegistry.data.Add(newValue, out _);
+                    #if UNITY_EDITOR
+                    UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
+                    #endif
+                    return sourceId;
+                }
+                return id;
+            }
 
-            return sourceId;
+            {
+                var removed = ObjectReferenceRegistry.data.Remove(previousValue);
+                var sourceId = ObjectReferenceRegistry.data.Add(newValue, out bool isNew);
+
+                #if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
+                #endif
+
+                return sourceId;
+            }
 
         }
 

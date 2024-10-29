@@ -135,7 +135,7 @@ namespace ME.BECS {
     public unsafe struct ConfigInitializeTypes<T> where T : unmanaged, IConfigInitialize {
 
         public static void AOT() {
-            UnsafeEntityConfig.DataInitialize.MethodCaller<T>.Call(null, default);
+            UnsafeEntityConfig.DataInitialize.MethodCaller<T>.Call(default, null, default);
         }
 
     }

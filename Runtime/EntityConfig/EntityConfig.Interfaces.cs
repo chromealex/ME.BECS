@@ -10,7 +10,7 @@ namespace ME.BECS {
     /// Use this interface to initialize entity
     /// when you apply EntityConfig
     /// </summary>
-    public interface IConfigInitialize {
+    public interface IConfigInitialize : IComponent {
 
         void OnInitialize(in Ent ent);
 
