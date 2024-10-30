@@ -22,7 +22,7 @@ namespace ME.BECS.Tests {
             public World visualWorld;
 
             public void OnUpdate(ref SystemContext context) {
-                GlobalEvents.RaiseEvent(Event.Create(1u, this.visualWorld));
+                GlobalEvents.RaiseEvent(Event.Create(1u, this.visualWorld), in context);
             }
 
         }

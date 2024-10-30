@@ -34,8 +34,9 @@ namespace ME.BECS {
         /// Call this method from logic step
         /// </summary>
         /// <param name="evt"></param>
-        public static void RaiseEvent(in Event evt) {
-            RaiseEvent(in evt, null);
+        /// <param name="context"></param>
+        public static void RaiseEvent(in Event evt, in SystemContext context) {
+            RaiseEvent(in evt, null, in context);
         }
 
         /// <summary>
@@ -43,10 +44,11 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="data"></param>
-        public static void RaiseEvent(in Event evt, void* data) {
+        /// <param name="context"></param>
+        public static void RaiseEvent(in Event evt, void* data, in SystemContext context) {
             
-            E.IS_LOGIC_MODE(Context.world.state->mode);
-            E.IS_IN_TICK(Context.world.state);
+            E.IS_LOGIC_MODE(context.world.state->mode);
+            E.IS_IN_TICK(context.world.state);
             
             WorldEvents.events.Data.Resize(evt.worldId + 1u);
             ref var item = ref WorldEvents.events.Data.Get(evt.worldId);
