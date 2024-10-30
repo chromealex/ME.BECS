@@ -208,7 +208,6 @@ namespace ME.BECS {
     
     public unsafe partial struct World {
 
-        [BURST(CompileSynchronously = true)]
         public struct GlobalEventsProcessJob : IJob {
 
             public ushort worldId;
@@ -249,9 +248,11 @@ namespace ME.BECS {
 
             if (this.id >= WorldEvents.events.Data.Length) return dependsOn;
             
-            return new GlobalEventsProcessJob() {
+            dependsOn.Complete();
+            new GlobalEventsProcessJob() {
                 worldId = this.id,
-            }.Schedule(dependsOn);
+            }.Execute();
+            return dependsOn;
 
         }
         

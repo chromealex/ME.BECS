@@ -32,8 +32,7 @@ namespace ME.BECS.Network {
 
             if (this.world.isCreated == true) {
 
-                this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.BeginTick,
-                    UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+                this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.Initialized, UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
                 base.Start();
 
             }
