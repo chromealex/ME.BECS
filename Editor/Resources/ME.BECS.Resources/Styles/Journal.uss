@@ -180,6 +180,10 @@
     margin-left: 0px;
 }
 
+.unity-base-field__inspector-field {
+    margin-right: 0px;
+}
+
 .entity-journal .unity-toggle__checkmark {
     margin-left: 3px;
     margin-right: 4px;
