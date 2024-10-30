@@ -495,8 +495,8 @@ namespace ME.BECS.Editor {
             }
             
             var result = groups.OrderBy(x => x.order).ToList();
-            SaveComponentGroups();
             componentGroups = result;
+            SaveComponentGroups();
             if (withUnknownGroup == false) return componentGroups.Where(x => x.type != null).ToList();
             return componentGroups;
 
