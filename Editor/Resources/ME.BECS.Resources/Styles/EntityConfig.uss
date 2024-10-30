@@ -193,7 +193,23 @@
 .tag-component Toggle:hover {
     background-color: rgba(0, 0, 0, 0);
 }
-.fields-container .field .unity-toggle,
+.fields-container .field.tag-component .unity-toggle,
 .fields-container .field.tag-component .unity-toggle:hover {
     background-color: rgba(0, 0, 0, 0);
+}
+
+.quaternion-field {
+    flex-direction: row;
+}
+.quaternion-field Label {
+    width: auto;
+    min-width: 20px;
+}
+.quaternion-field FloatField {
+    width: 33%;
+    flex-grow: 1;
+}
+.quaternion-field FloatInput {
+    flex-grow: 1;
+    margin-right: 20px;
 }

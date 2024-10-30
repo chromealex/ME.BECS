@@ -192,12 +192,20 @@
     padding: 3px;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
     transition-property: background-color;
     transition-duration: 0.3s;
 }
+.fields-container .field .unity-toggle:checked {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
 .fields-container .field .unity-toggle:hover,
 .fields-container Label.field:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.35);
     transition-property: background-color;
     transition-duration: 0.3s;
 }
