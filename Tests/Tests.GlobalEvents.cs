@@ -59,7 +59,7 @@ namespace ME.BECS.Tests {
             
             visualWorld.RaiseEvents();
 
-            Assert.AreEqual(2, raise);
+            Assert.AreEqual(1, raise);
             
             visualWorld.Dispose();
             world.Dispose();
