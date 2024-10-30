@@ -292,23 +292,27 @@ namespace ME.BECS.Editor {
                         if (this.Move(1, out var newSelection, evt.shiftKey) == true) {
                             evt.StopImmediatePropagation();
                             scrollView.ScrollTo(newSelection.container);
+                            this.DrawInspector();
                         }
                     } else if (evt.keyCode == KeyCode.UpArrow) {
                         if (this.Move(-1, out var newSelection, evt.shiftKey) == true) {
                             evt.StopImmediatePropagation();
                             scrollView.ScrollTo(newSelection.container);
+                            this.DrawInspector();
                         }
                     } else if (evt.keyCode == KeyCode.RightArrow) {
                         if (this.UnfoldSelection(out var list) == true) {
                             evt.StopImmediatePropagation();
                             scrollView.ScrollTo(list.First().container);
                             scrollView.ScrollTo(list.Last().container);
+                            this.DrawInspector();
                         }
                     } else if (evt.keyCode == KeyCode.LeftArrow) {
                         if (this.FoldSelection(out var list) == true) {
                             evt.StopImmediatePropagation();
                             scrollView.ScrollTo(list.First().container);
                             scrollView.ScrollTo(list.Last().container);
+                            this.DrawInspector();
                         }
                     }
                 }, TrickleDown.TrickleDown);

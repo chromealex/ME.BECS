@@ -72,6 +72,13 @@
     flex-shrink: 1;
 }
 
+.h-root .h-element > Foldout > Toggle .unity-base-field__input .unity-toggle__text {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
 .h-root .h-element > Foldout > Toggle .unity-toggle__checkmark {
     visibility: hidden;
 }
@@ -85,10 +92,10 @@
 }
 
 .h-root .h-element.selected {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(21, 122, 189, 0.2);
 }
 .h-root .h-element.selected.hover {
-    background-color: rgba(100, 100, 100, 0.2);
+    background-color: rgba(21, 122, 189, 0.4);
 }
 
 .h-root .h-element .name {
@@ -103,6 +110,7 @@
 }
 
 .tags {
+    min-width: 20px;
     margin-left: 2px;
     padding-left: 2px;
     margin-right: 4px;
