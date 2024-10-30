@@ -36,6 +36,7 @@ namespace ME.BECS.Editor {
             Worlds.Initialize();
             SystemsStatic.Initialize();
             StaticTypesInitializer.Load();
+            GlobalEvents.Initialize();
             CustomModules.InvokeResetPass();
             {{CUSTOM_METHOD_REGISTRY}}
             EntityConfigRegistry.Initialize();

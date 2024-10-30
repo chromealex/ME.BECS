@@ -4,7 +4,128 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Jobs.LowLevel.Unsafe;
     using System.Runtime.InteropServices;
+    using static Cuts;
 
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct ReadWriteNativeSpinner : IIsCreated {
+
+        private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
+        private Unity.Collections.Allocator allocator;
+        private void* value;
+        private int readValue;
+        private int writeValue;
+
+        public bool IsCreated => this.value != null;
+
+        [INLINE(256)]
+        public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
+            var size = TSize<int>.size * INTS_PER_CACHE_LINE * JobsUtility.MaxJobThreadCount;
+            var arr = _make(size, TAlign<int>.alignInt, allocator);
+            _memclear(arr, size);
+            return new ReadWriteNativeSpinner() {
+                allocator = allocator,
+                value = arr,
+            };
+        }
+
+        [INLINE(256)]
+        private int ReadCount() {
+            var cnt = 0;
+            for (uint i = 0u; i < JobsUtility.MaxJobThreadCount; ++i) {
+                cnt += *((int*)this.value + i * INTS_PER_CACHE_LINE);
+            }
+            return cnt;
+        }
+        
+        [INLINE(256)]
+        public void ReadBegin() {
+            E.IS_CREATED(this);
+            // wait if we have to write op running
+            #if EXCEPTIONS_INTERNAL
+            var i = 100_000_000;
+            #endif
+            while (System.Threading.Volatile.Read(ref this.writeValue) == 1) {
+                #if EXCEPTIONS_INTERNAL
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
+                #endif
+                Unity.Burst.Intrinsics.Common.Pause();
+            }
+            // acquire read op
+            ++*((int*)this.value + INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex);
+        }
+
+        [INLINE(256)]
+        public void ReadEnd() {
+            E.IS_CREATED(this);
+            // release read op
+            --*((int*)this.value + INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex);
+        }
+
+        [INLINE(256)]
+        public void WriteBegin() {
+            E.IS_CREATED(this);
+            // acquire write op
+            #if EXCEPTIONS_INTERNAL
+            var i = 100_000_000;
+            #endif
+            E.ADDR_4(ref this.writeValue);
+            while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
+                #if EXCEPTIONS_INTERNAL
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
+                #endif
+                Unity.Burst.Intrinsics.Common.Pause();
+            }
+            // wait if we have read op running
+            #if EXCEPTIONS_INTERNAL
+            i = 100_000_000;
+            #endif
+            while (this.ReadCount() > 0) {
+                #if EXCEPTIONS_INTERNAL
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
+                #endif
+                Unity.Burst.Intrinsics.Common.Pause();
+            }
+        }
+
+        [INLINE(256)]
+        public void WriteEnd() {
+            E.IS_CREATED(this);
+            // release write op
+            #if EXCEPTIONS_INTERNAL
+            var i = 100_000_000;
+            #endif
+            E.ADDR_4(ref this.writeValue);
+            while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 1) != 1) {
+                #if EXCEPTIONS_INTERNAL
+                --i;
+                if (i == 0) {
+                    UnityEngine.Debug.LogError("Max lock iter");
+                    return;
+                }
+                #endif
+                Unity.Burst.Intrinsics.Common.Pause();
+            }
+        }
+
+        [INLINE(256)]
+        public void Dispose() {
+            _free(this.value, this.allocator);
+        }
+
+    }
+    
     [BURST(CompileSynchronously = true)]
     [StructLayout(LayoutKind.Explicit, Size = ReadWriteSpinner.SIZE)]
     public unsafe struct ReadWriteSpinner : IIsCreated {

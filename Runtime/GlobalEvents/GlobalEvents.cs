@@ -16,12 +16,23 @@ namespace ME.BECS {
         }
         
         public NativeHashMap<Event, Item> events;
+        public LockSpinner spinner;
+
+        public void Lock() {
+            this.spinner.Lock();
+        }
+        
+        public void Unlock() {
+            this.spinner.Unlock();
+        }
 
     }
 
     public class WorldEvents {
 
         public static readonly SharedStatic<Internal.Array<GlobalEventsData>> events = SharedStatic<Internal.Array<GlobalEventsData>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldEvents>(TAlign<Internal.Array<GlobalEventsData>>.align, 30100L);
+        public static readonly SharedStatic<ReadWriteNativeSpinner> readWriteSpinner = SharedStatic<ReadWriteNativeSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<WorldEvents>(TAlign<ReadWriteNativeSpinner>.align, 30101L);
+        public static readonly SharedStatic<LockSpinner> spinner = SharedStatic<LockSpinner>.GetOrCreate<WorldEvents>();
 
     }
 
@@ -30,8 +41,12 @@ namespace ME.BECS {
 
     public static unsafe class GlobalEvents {
 
+        public static void Initialize() {
+            WorldEvents.readWriteSpinner.Data = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_DOMAIN);
+        }
+        
         /// <summary>
-        /// Call this method from logic step
+        /// Call this method from logic system
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="context"></param>
@@ -40,29 +55,73 @@ namespace ME.BECS {
         }
 
         /// <summary>
-        /// Call this method from logic step
+        /// Call this method from logic job
+        /// </summary>
+        /// <param name="evt"></param>
+        /// <param name="jobInfo"></param>
+        public static void RaiseEvent(in Event evt, in JobInfo jobInfo) {
+            RaiseEvent(in evt, null, jobInfo.worldId);
+        }
+
+        /// <summary>
+        /// Call this method from logic job with data
+        /// </summary>
+        /// <param name="evt"></param>
+        /// <param name="data"></param>
+        /// <param name="jobInfo"></param>
+        public static void RaiseEvent(in Event evt, void* data, in JobInfo jobInfo) {
+            RaiseEvent(in evt, data, jobInfo.worldId);
+        }
+
+        /// <summary>
+        /// Call this method from logic system with data
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="data"></param>
         /// <param name="context"></param>
         public static void RaiseEvent(in Event evt, void* data, in SystemContext context) {
+            RaiseEvent(in evt, data, context.world.id);
+        }
+        
+        /// <summary>
+        /// Call this method from logic step
+        /// </summary>
+        /// <param name="evt"></param>
+        /// <param name="data"></param>
+        /// <param name="logicWorldId"></param>
+        public static void RaiseEvent(in Event evt, void* data, ushort logicWorldId) {
+
+            var world = Worlds.GetWorld(evt.worldId);
+            var logicWorld = Worlds.GetWorld(logicWorldId);
+            E.IS_VISUAL_MODE(world.state->mode);
+            E.IS_LOGIC_MODE(logicWorld.state->mode);
+            E.IS_IN_TICK(logicWorld.state);
             
-            E.IS_LOGIC_MODE(context.world.state->mode);
-            E.IS_IN_TICK(context.world.state);
+            ValidateCapacity();
             
-            WorldEvents.events.Data.Resize(evt.worldId + 1u);
+            WorldEvents.readWriteSpinner.Data.ReadBegin();
             ref var item = ref WorldEvents.events.Data.Get(evt.worldId);
-            if (item.events.IsCreated == false) item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_DOMAIN);
+            if (item.events.IsCreated == false) {
+                item.Lock();
+                if (item.events.IsCreated == false) {
+                    item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_DOMAIN);
+                }
+                item.Unlock();
+            }
             var val = new GlobalEventsData.Item() {
                 data = data,
                 dataSet = true,
             };
+            item.Lock();
             if (item.events.TryAdd(evt, val) == false) {
                 var elem = item.events[evt];
                 elem.data = val.data;
                 elem.dataSet = true;
                 item.events[evt] = elem;
             }
+            item.Unlock();
+            WorldEvents.events.Data.Get(evt.worldId) = item;
+            WorldEvents.readWriteSpinner.Data.ReadEnd();
 
         }
 
@@ -93,20 +152,42 @@ namespace ME.BECS {
             var world = Worlds.GetWorld(evt.worldId);
             E.IS_VISUAL_MODE(world.state->mode);
             
-            WorldEvents.events.Data.Resize(evt.worldId + 1u);
+            ValidateCapacity();
+            
+            WorldEvents.readWriteSpinner.Data.ReadBegin();
             ref var item = ref WorldEvents.events.Data.Get(evt.worldId);
-            if (item.events.IsCreated == false) item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_DOMAIN);
+            if (item.events.IsCreated == false) {
+                item.Lock();
+                if (item.events.IsCreated == false) {
+                    item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_DOMAIN);
+                }
+                item.Unlock();
+            }
             var val = new GlobalEventsData.Item() {
                 callback = callback,
                 withData = withData,
             };
+            item.Lock();
             if (item.events.TryAdd(evt, val) == false) {
                 var elem = item.events[evt];
                 elem.callback = val.callback;
                 elem.withData = val.withData;
                 item.events[evt] = elem;
             }
+            item.Unlock();
+            WorldEvents.events.Data.Get(evt.worldId) = item;
+            WorldEvents.readWriteSpinner.Data.ReadEnd();
 
+        }
+
+        private static void ValidateCapacity() {
+            if (Worlds.MaxWorldId > WorldEvents.events.Data.Length) {
+                WorldEvents.readWriteSpinner.Data.WriteBegin();
+                if (Worlds.MaxWorldId > WorldEvents.events.Data.Length) {
+                    WorldEvents.events.Data.Resize(Worlds.MaxWorldId + 1u);
+                }
+                WorldEvents.readWriteSpinner.Data.WriteEnd();
+            }
         }
 
     }
@@ -115,9 +196,11 @@ namespace ME.BECS {
 
         public readonly void RaiseEvents() {
             
-            E.IS_VISUAL_MODE(this.state->mode);
+            E.IS_NOT_IN_TICK(this.state);
 
+            WorldEvents.readWriteSpinner.Data.ReadBegin();
             ref var item = ref WorldEvents.events.Data.Get(this.id);
+            item.Lock();
             foreach (var kv in item.events) {
                 ref var val = ref kv.Value;
                 if (val.dataSet == true) {
@@ -131,7 +214,9 @@ namespace ME.BECS {
                     }
                 }
             }
-            
+            item.Unlock();
+            WorldEvents.readWriteSpinner.Data.ReadEnd();
+
         }
         
     }

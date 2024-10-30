@@ -18,7 +18,7 @@ namespace ME.BECS.Tests {
         }
 
         public struct TestSystem : IUpdate {
-            
+
             public World visualWorld;
 
             public void OnUpdate(ref SystemContext context) {

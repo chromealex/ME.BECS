@@ -6,9 +6,10 @@ namespace ME.BECS {
         public uint id;
         public ushort worldId;
         
-        public static Event Create(uint id, ushort worldId) => new Event { id = id, worldId = worldId };
+        public static Event Create(uint id, ushort visualWorldId) => new Event { id = id, worldId = visualWorldId };
 
-        public static Event Create(uint id, in World world) => new Event { id = id, worldId = world.id };
+        public static Event Create(uint id, in World visualWorld) => new Event { id = id, worldId = visualWorld.id };
+        public static Event Create(uint id) => new Event { id = id, worldId = 0 };
 
         public bool Equals(Event other) {
             return this.id == other.id && this.worldId == other.worldId;

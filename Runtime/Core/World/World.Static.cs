@@ -277,6 +277,8 @@ namespace ME.BECS {
         private static readonly Unity.Burst.SharedStatic<ushort> worldsCounterBurst = Unity.Burst.SharedStatic<ushort>.GetOrCreate<Worlds>();
         private static ref ushort counter => ref worldsCounterBurst.Data;
 
+        public static uint MaxWorldId => counter;
+
         public static void Initialize() {
 
             #if UNITY_EDITOR
