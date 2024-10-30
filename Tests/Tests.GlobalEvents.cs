@@ -57,7 +57,7 @@ namespace ME.BECS.Tests {
 
             world.Tick(UnityEngine.Time.deltaTime, UpdateType.FIXED_UPDATE).Complete();
             
-            visualWorld.RaiseEvents();
+            visualWorld.RaiseEvents(default);
 
             Assert.AreEqual(1, raise);
             

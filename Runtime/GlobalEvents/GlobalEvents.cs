@@ -1,8 +1,11 @@
 namespace ME.BECS {
     
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Burst;
     using Unity.Collections;
     using System.Runtime.InteropServices;
+    using Unity.Jobs;
 
     public unsafe struct GlobalEventsData {
 
@@ -18,10 +21,12 @@ namespace ME.BECS {
         public NativeHashMap<Event, Item> events;
         public LockSpinner spinner;
 
+        [INLINE(256)]
         public void Lock() {
             this.spinner.Lock();
         }
         
+        [INLINE(256)]
         public void Unlock() {
             this.spinner.Unlock();
         }
@@ -50,6 +55,7 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="context"></param>
+        [INLINE(256)]
         public static void RaiseEvent(in Event evt, in SystemContext context) {
             RaiseEvent(in evt, null, in context);
         }
@@ -59,6 +65,7 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="jobInfo"></param>
+        [INLINE(256)]
         public static void RaiseEvent(in Event evt, in JobInfo jobInfo) {
             RaiseEvent(in evt, null, jobInfo.worldId);
         }
@@ -69,6 +76,7 @@ namespace ME.BECS {
         /// <param name="evt"></param>
         /// <param name="data"></param>
         /// <param name="jobInfo"></param>
+        [INLINE(256)]
         public static void RaiseEvent(in Event evt, void* data, in JobInfo jobInfo) {
             RaiseEvent(in evt, data, jobInfo.worldId);
         }
@@ -79,6 +87,7 @@ namespace ME.BECS {
         /// <param name="evt"></param>
         /// <param name="data"></param>
         /// <param name="context"></param>
+        [INLINE(256)]
         public static void RaiseEvent(in Event evt, void* data, in SystemContext context) {
             RaiseEvent(in evt, data, context.world.id);
         }
@@ -89,6 +98,7 @@ namespace ME.BECS {
         /// <param name="evt"></param>
         /// <param name="data"></param>
         /// <param name="logicWorldId"></param>
+        [INLINE(256)]
         public static void RaiseEvent(in Event evt, void* data, ushort logicWorldId) {
 
             var world = Worlds.GetWorld(evt.worldId);
@@ -130,6 +140,7 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="callback"></param>
+        [INLINE(256)]
         public static void RegisterEvent(in Event evt, GlobalEventWithDataCallback callback) {
 
             RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), withData: true);
@@ -141,12 +152,14 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="callback"></param>
+        [INLINE(256)]
         public static void RegisterEvent(in Event evt, GlobalEventCallback callback) {
 
             RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), withData: false);
 
         }
         
+        [INLINE(256)]
         private static void RegisterEvent(in Event evt, System.IntPtr callback, bool withData) {
 
             var world = Worlds.GetWorld(evt.worldId);
@@ -180,6 +193,7 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
         private static void ValidateCapacity() {
             if (Worlds.MaxWorldId > WorldEvents.events.Data.Length) {
                 WorldEvents.readWriteSpinner.Data.WriteBegin();
@@ -194,28 +208,50 @@ namespace ME.BECS {
     
     public unsafe partial struct World {
 
-        public readonly void RaiseEvents() {
+        [BURST(CompileSynchronously = true)]
+        public struct GlobalEventsProcessJob : IJob {
+
+            public ushort worldId;
+            
+            public void Execute() {
+                
+                WorldEvents.readWriteSpinner.Data.ReadBegin();
+                if (this.worldId >= WorldEvents.events.Data.Length) {
+                    WorldEvents.readWriteSpinner.Data.ReadEnd();
+                    return;
+                }
+                ref var item = ref WorldEvents.events.Data.Get(this.worldId);
+                item.Lock();
+                foreach (var kv in item.events) {
+                    ref var val = ref kv.Value;
+                    if (val.dataSet == true) {
+                        val.dataSet = false;
+                        if (val.withData == true) {
+                            var del = Marshal.GetDelegateForFunctionPointer<GlobalEventWithDataCallback>(val.callback);
+                            del.Invoke(val.data);
+                        } else {
+                            var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
+                            del.Invoke();
+                        }
+                    }
+                }
+                item.Unlock();
+                WorldEvents.readWriteSpinner.Data.ReadEnd();
+                
+            }
+
+        }
+        
+        [INLINE(256)]
+        public readonly JobHandle RaiseEvents(JobHandle dependsOn) {
             
             E.IS_NOT_IN_TICK(this.state);
 
-            WorldEvents.readWriteSpinner.Data.ReadBegin();
-            ref var item = ref WorldEvents.events.Data.Get(this.id);
-            item.Lock();
-            foreach (var kv in item.events) {
-                ref var val = ref kv.Value;
-                if (val.dataSet == true) {
-                    val.dataSet = false;
-                    if (val.withData == true) {
-                        var del = Marshal.GetDelegateForFunctionPointer<GlobalEventWithDataCallback>(val.callback);
-                        del.Invoke(val.data);
-                    } else {
-                        var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
-                        del.Invoke();
-                    }
-                }
-            }
-            item.Unlock();
-            WorldEvents.readWriteSpinner.Data.ReadEnd();
+            if (this.id >= WorldEvents.events.Data.Length) return dependsOn;
+            
+            return new GlobalEventsProcessJob() {
+                worldId = this.id,
+            }.Schedule(dependsOn);
 
         }
         
