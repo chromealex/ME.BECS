@@ -371,6 +371,7 @@ namespace ME.BECS.Editor {
                     var labelField = new Foldout();
                     labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     labelField.text = label;
+                    labelField.AddToClassList("tag-component");
                     labelField.AddToClassList("field");
                     if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
                         color.a = 0.1f;

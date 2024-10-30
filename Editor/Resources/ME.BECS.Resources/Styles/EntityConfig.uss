@@ -180,3 +180,20 @@
     padding-bottom: 2px;
     margin-right: 4px;
 }
+
+.tag-component #unity-checkmark {
+    visibility: hidden;
+}
+.tag-component #unity-content {
+    display: none;
+    margin: 0px;
+    padding: 0px;
+}
+.tag-component Toggle,
+.tag-component Toggle:hover {
+    background-color: rgba(0, 0, 0, 0);
+}
+.fields-container .field .unity-toggle,
+.fields-container .field.tag-component .unity-toggle:hover {
+    background-color: rgba(0, 0, 0, 0);
+}
