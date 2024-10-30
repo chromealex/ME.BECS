@@ -75,17 +75,18 @@ namespace ME.BECS {
             for (int i = 0; i < this.items.Length; ++i) {
                 if (this.items[i].source == source) {
                     ref var item = ref this.items[i];
+                    if (item.references == 0u) return false;
                     --item.references;
-                    if (item.references == 0u) {
-                        if (this.items.Length == 1) {
-                            this.items = System.Array.Empty<Item>();
-                        } else {
-                            this.items[i] = this.items[this.items.Length - 1];
-                            System.Array.Resize(ref this.items, this.items.Length - 1);
-                        }
-
-                        return true;
-                    }
+                    // if (item.references == 0u) {
+                    //     if (this.items.Length == 1) {
+                    //         this.items = System.Array.Empty<Item>();
+                    //     } else {
+                    //         this.items[i] = this.items[this.items.Length - 1];
+                    //         System.Array.Resize(ref this.items, this.items.Length - 1);
+                    //     }
+                    //
+                    //     return true;
+                    // }
                 }
             }
 
