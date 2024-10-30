@@ -235,3 +235,7 @@
     margin-top: -2px;
     font-size: 12px;
 }
+
+.fields-container Label.no-children {
+    padding-left: 22px;
+}

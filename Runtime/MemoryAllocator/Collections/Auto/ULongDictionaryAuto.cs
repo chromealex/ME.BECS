@@ -134,6 +134,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public readonly Enumerator GetEnumerator() {
+
+            E.IS_CREATED(this);
+
+            return new Enumerator(in this, this.ent.World.state);
+
+        }
+
+        [INLINE(256)]
         public readonly Enumerator GetEnumerator(World world) {
 
             E.IS_CREATED(this);

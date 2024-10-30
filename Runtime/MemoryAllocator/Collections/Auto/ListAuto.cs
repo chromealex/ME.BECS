@@ -11,7 +11,7 @@ namespace ME.BECS {
     using static Cuts;
 
     [System.SerializableAttribute]
-    [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListProxy<>))]
+    [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListAutoProxy<>))]
     public unsafe struct ListAuto<T> : IMemList, IUnmanagedList where T : unmanaged {
 
         public struct Enumerator {

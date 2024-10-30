@@ -116,10 +116,10 @@
     height: 6px;
     max-height: 6px;
     background-color: rgba(0, 0, 0, 0.3);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.4);
     border-radius: 3px;
     margin-top: 5px;
-    padding-left: 3px;
-    padding-right: 3px;
     margin-right: 4px;
     opacity: 0.6;
     overflow: hidden;

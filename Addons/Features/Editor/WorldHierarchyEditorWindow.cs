@@ -365,6 +365,7 @@ namespace ME.BECS.Editor {
                     if (val == null) return "<b>W</b>";
                     if (list.Count == 0) return null;
                     var idx = list.IndexOf(val);
+                    if (idx >= this.aliveWorlds.Count) return null;
                     return $"#{this.aliveWorlds[idx].id}";
                 });
                 selection.RegisterValueChangedCallback((evt) => {
@@ -797,7 +798,7 @@ namespace ME.BECS.Editor {
                         this.entToElement.Remove(element.value);
                         element.value = ent;
                     }
-                    element.Redraw(this.settingsChanged);
+                    element.Redraw(true);
                     this.elements[k] = element;
                 }
                 if (element.container.parent == null || element.container.parent != root) root.Add(element.container);

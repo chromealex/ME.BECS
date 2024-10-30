@@ -188,6 +188,7 @@ namespace ME.BECS.Views {
                 var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), data->toAddTemp[i].prefabInfo.info);
                 data->renderingOnScene.Add(ref data->viewsWorld.state->allocator, instanceInfo);
             }
+            dependsOn = Batches.Apply(dependsOn, in data->viewsWorld);
 
             return dependsOn;
 
@@ -232,7 +233,7 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         private static UnityEngine.RenderParams GetRenderingParams(ref MeshRendererComponent rendering, ref UnityEngine.Mesh mesh) {
             var renderParams = new UnityEngine.RenderParams(rendering.material);
-            renderParams.worldBounds = new UnityEngine.Bounds(mesh.bounds.center, mesh.bounds.size);
+            renderParams.worldBounds = default;//new UnityEngine.Bounds(mesh.bounds.center, mesh.bounds.size);
             renderParams.shadowCastingMode = rendering.shadowCastingMode;
             renderParams.receiveShadows = rendering.receiveShadows == 1 ? true : false;
             renderParams.layer = rendering.layer;

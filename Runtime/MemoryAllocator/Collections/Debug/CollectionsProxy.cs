@@ -58,10 +58,9 @@ namespace ME.BECS {
 
         public T[] items {
             get {
-                var world = Context.world;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[i];
                 }
 
                 return arr;
@@ -122,6 +121,41 @@ namespace ME.BECS {
                 var arr = new T[this.arr.Count];
                 for (uint i = 0; i < this.arr.Count; ++i) {
                     arr[i] = this.arr[world.state->allocator, i];
+                }
+
+                return arr;
+            }
+        }
+
+    }
+
+    public unsafe class ListAutoProxy<T> where T : unmanaged {
+
+        private ListAuto<T> arr;
+        
+        public ListAutoProxy(ListAuto<T> arr) {
+
+            this.arr = arr;
+
+        }
+
+        public uint Capacity {
+            get {
+                return this.arr.Capacity;
+            }
+        }
+
+        public uint Count {
+            get {
+                return this.arr.Count;
+            }
+        }
+
+        public T[] items {
+            get {
+                var arr = new T[this.arr.Count];
+                for (uint i = 0; i < this.arr.Count; ++i) {
+                    arr[i] = this.arr[i];
                 }
 
                 return arr;
@@ -336,7 +370,7 @@ namespace ME.BECS {
             get {
                 var arr = new System.Collections.Generic.KeyValuePair<ulong, V>[this.arr.Count];
                 var i = 0;
-                var e = this.arr.GetEnumerator(Context.world);
+                var e = this.arr.GetEnumerator();
                 while (e.MoveNext() == true) {
                     arr[i++] = new System.Collections.Generic.KeyValuePair<ulong, V>(e.Current.key, e.Current.value);
                 }
@@ -374,7 +408,7 @@ namespace ME.BECS {
             get {
                 var arr = new System.Collections.Generic.KeyValuePair<uint, V>[this.arr.Count];
                 var i = 0;
-                var e = this.arr.GetEnumerator(Context.world);
+                var e = this.arr.GetEnumerator();
                 while (e.MoveNext() == true) {
                     arr[i++] = new System.Collections.Generic.KeyValuePair<uint, V>(e.Current.key, e.Current.value);
                 }
