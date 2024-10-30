@@ -2,8 +2,6 @@ using UnityEngine;
 
 namespace ME.BECS {
     
-    using Unity.Jobs;
-
     [DefaultExecutionOrder(-10_000)]
     public class WorldInitializer : BaseWorldInitializer {
 

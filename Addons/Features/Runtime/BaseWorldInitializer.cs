@@ -120,6 +120,7 @@ namespace ME.BECS {
             if (this.world.isCreated == true) {
                 ProfilerCounters.Initialize();
                 ProfilerCounters.SampleWorldBeginFrame(in this.world);
+                this.world.RaiseEvents();
             }
             return dependsOn;
         }
