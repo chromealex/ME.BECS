@@ -20,8 +20,19 @@ namespace ME.BECS.Attack {
                 var unit = sensor.ent.GetParent();
                 if (sensor.target.IsAlive() == true) {
                     unit.Set(new IsUnitStaticComponent());
-                    var tr = unit.GetAspect<TransformAspect>();
-                    tr.rotation = quaternion.LookRotationSafe(sensor.target.GetAspect<TransformAspect>().position - tr.position, math.up());
+                }
+
+            }
+
+        }
+        
+        [BURST(CompileSynchronously = true)]
+        public struct JobRotate : IJobParallelForAspect<AttackAspect, TransformAspect> {
+
+            public void Execute(in JobInfo jobInfo, ref AttackAspect sensor, ref TransformAspect transformAspect) {
+                
+                if (sensor.target.IsAlive() == true) {
+                    transformAspect.rotation = quaternion.LookRotationSafe(sensor.target.GetAspect<TransformAspect>().position - transformAspect.position, math.up());
                 }
 
             }
@@ -46,6 +57,10 @@ namespace ME.BECS.Attack {
                                    .With<AttackTargetComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobSet, AttackAspect>();
+            dependsOn = context.Query(dependsOn)
+                                   .With<AttackTargetComponent>()
+                                   .Without<CanFireWhileMovesTag>()
+                                   .Schedule<JobRotate, AttackAspect, TransformAspect>();
             dependsOn = context.Query(dependsOn)
                                    .Without<AttackTargetComponent>()
                                    .Without<CanFireWhileMovesTag>()
