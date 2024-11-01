@@ -105,11 +105,13 @@ namespace ME.BECS.Pathfinding {
                                             localPos.x += obstacleSize.x * 0.5f;
                                             localPos.z += obstacleSize.y * 0.5f;
                                             var newHeight = GraphUtils.GetObstacleHeight(in localPos, in obstacleRuntime.heights, in obstacleSize, obstacle.heightsSizeX);
-                                            if (newHeight >= 0f && JobUtils.SetIfGreater(ref node.height, newHeight + position.y) == true) {
+                                            var totalHeight = newHeight + position.y;
+                                            if (newHeight >= 0f && totalHeight > node.height) {
                                                 obstacleRuntime.nodesLock.Lock();
                                                 obstacleRuntime.nodes.Add(new GraphNodeMemory(in graph, new Graph.TempNode() { chunkIndex = chunkIndex, nodeIndex = nodeIndex }, in node));
                                                 obstacleRuntime.nodesLock.Unlock();
                                                 JobUtils.SetIfGreater(ref node.cost, obstacle.cost);
+                                                JobUtils.SetIfGreater(ref node.height, totalHeight);
                                             }
                                         }
                                         node.obstacleChannel = obstacle.obstacleChannel;
