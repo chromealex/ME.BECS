@@ -148,6 +148,8 @@ namespace ME.BECS {
 
         protected virtual void OnDestroy() {
 
+            this.previousFrameDependsOn.Complete();
+            
             for (var i = 0; i < this.modules.list.Length; ++i) {
                 var module = this.modules.list[i];
                 if (module.IsEnabled() == false) continue;
