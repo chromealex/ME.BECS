@@ -37,8 +37,8 @@ namespace ME.BECS.UnitsHealthBars {
                 var bottom = barRect.position.y + (unitHeightPos.y - barRect.position.y) * 4f;
                 var top = bottom + ScreenToView(height);
                 var rect = new Rect(left, bottom, ScreenToView(width), ScreenToView(height));
-                //if (rect.Overlaps(screenRect) == false) continue;
-                //rect.position *= 2f;
+                if (rect.Overlaps(screenRect) == false) continue;
+                rect.position *= 2f;
                 rect.position -= new Vector2(screenRect.width * 0.5f, screenRect.height * 0.5f);
                 GL.Color(backColor);
                 var backRect = rect;
