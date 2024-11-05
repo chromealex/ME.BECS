@@ -921,7 +921,7 @@ namespace ME.BECS.Pathfinding {
                 changedChunks = changedChunks,
             }.Schedule(dependsOn);
 
-            var results = new Unity.Collections.NativeList<ResultItem>((int)(root.chunkWidth * root.chunkHeight), Unity.Collections.Allocator.TempJob);
+            var results = new Unity.Collections.NativeList<ResultItem>((int)((root.chunkWidth + root.chunkHeight) * (changedChunks.IsCreated == true ? changedChunks.Length : root.chunks.Length)), Unity.Collections.Allocator.TempJob);
             // calculate portal connections inside chunk
             var localJobHandle = new CalculateConnectionsJob() {
                 world = world,
@@ -962,7 +962,7 @@ namespace ME.BECS.Pathfinding {
                 properties = properties,
             });
 
-            var results = new Unity.Collections.NativeList<ResultItem>((int)(properties.chunkWidth * properties.chunkHeight), Unity.Collections.Allocator.TempJob);
+            var results = new Unity.Collections.NativeList<ResultItem>((int)((properties.chunkWidth + properties.chunkHeight) * changedChunks.Length), Unity.Collections.Allocator.TempJob);
             var buildChunks = new BuildChunksJob() {
                 graph = graph,
                 world = world,
