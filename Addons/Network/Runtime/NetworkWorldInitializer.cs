@@ -122,6 +122,14 @@ namespace ME.BECS.Network {
 
         }*/
 
+        protected override void OnDestroy() {
+            
+            WorldStaticCallbacks.UnregisterCallback<ViewsModuleData>(this.ViewsLoad);
+            WorldStaticCallbacks.UnregisterCallback<ViewsModuleData>(this.OnViewsUpdate, 1);
+            
+            base.OnDestroy();
+            
+        }
     }
 
 }
