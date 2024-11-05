@@ -70,7 +70,7 @@ namespace ME.BECS.Network {
         [UnityEngine.Tooltip("Input lag in ticks. How much ticks should be added to current tick when send network event.")]
         public uint inputLag;
         [UnityEngine.SerializeReference]
-        [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(runtimeAssembliesOnly: true, showLabel = true)]
+        [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(runtimeAssembliesOnly: true, showLabel = false)]
         [UnityEngine.Tooltip("Custom transport implementation for INetworkTransport interface.")]
         public INetworkTransport transport;
         public EventsStorageProperties eventsStorageProperties;

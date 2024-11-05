@@ -10,36 +10,48 @@ namespace ME.BECS.FogOfWar {
         public UnityEngine.Renderer[] allRenderers;
         public UnityEngine.Renderer[] excludeRenderers;
         private bool isVisible;
-        private CreateSystem fow;
+        protected CreateSystem fow;
 
-        public void OnInitialize(in EntRO ent) {
+        public virtual void OnInitialize(in EntRO ent) {
             
             this.fow = ent.World.GetSystem<CreateSystem>();
             this.UpdateVisibility(in ent, true);
             
         }
 
-        public void UpdateVisibility(in EntRO ent, bool forced) {
-            var activePlayer = PlayerUtils.GetActivePlayer();
-            this.ApplyVisibility(this.fow.IsVisible(in activePlayer, ent.GetEntity()), forced);
+        public virtual void OnBecomeVisible(in EntRO ent) {}
+        public virtual void OnBecomeInvisible(in EntRO ent) {}
+
+        public virtual void UpdateVisibility(in EntRO ent, bool forced) {
+            this.ApplyFowVisibility(in ent, forced);
         }
 
-        private void ApplyVisibility(bool state, bool forced = false) {
+        protected void ApplyFowVisibility(in EntRO ent, bool forced) {
+            var activePlayer = PlayerUtils.GetActivePlayer();
+            this.ApplyVisibility(in ent, this.fow.IsVisible(in activePlayer, ent.GetEntity()), forced);
+        }
+
+        protected void ApplyVisibility(in EntRO ent, bool state, bool forced = false) {
             if (state != this.isVisible || forced == true) {
                 this.isVisible = state;
                 foreach (var rnd in this.allRenderers) {
                     rnd.enabled = state;
                 }
+                if (state == true) {
+                    this.OnBecomeVisible(in ent);
+                } else {
+                    this.OnBecomeInvisible(in ent);
+                }
             }
         }
 
-        public void ApplyState(in EntRO ent) {
+        public virtual void ApplyState(in EntRO ent) {
             
             this.UpdateVisibility(in ent, false);
             
         }
 
-        public void OnValidate(UnityEngine.GameObject go) {
+        public virtual void OnValidate(UnityEngine.GameObject go) {
             var renderers = go.GetComponentsInChildren<UnityEngine.Renderer>(true).ToList();
             renderers.RemoveAll(x => this.excludeRenderers.Contains(x));
             this.allRenderers = renderers.ToArray();

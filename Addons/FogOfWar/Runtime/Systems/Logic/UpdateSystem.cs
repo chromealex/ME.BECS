@@ -16,6 +16,8 @@ namespace ME.BECS.FogOfWar {
             public FogOfWarStaticComponent props;
             
             public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
+
+                if (tr.IsCalculated == false) return;
                 
                 var fow = UnitUtils.GetTeam(in unit).Read<FogOfWarComponent>();
                 FogOfWarUtils.Write(in this.props, in fow, in tr, in unit);

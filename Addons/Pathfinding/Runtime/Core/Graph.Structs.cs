@@ -58,11 +58,11 @@ namespace ME.BECS.Pathfinding {
     [System.Serializable]
     public struct Filter {
 
-        public bool ignoreNonWalkable;
+        public byte ignoreNonWalkable;
         public NodeFlag flags;
 
         public readonly bool IsValid(in Node node) {
-            if (this.ignoreNonWalkable == false && node.walkable == false) return false;
+            if (this.ignoreNonWalkable == 0 && node.walkable == false) return false;
             if (node.flags == 0) return true;
             return ((uint)this.flags & node.flags) != 0;
         }
@@ -285,14 +285,14 @@ namespace ME.BECS.Pathfinding {
             public struct Item {
 
                 public byte direction;
-                public bool hasLineOfSight;
+                public byte hasLineOfSight;
                 public float bestCost;
 
             }
 
             public uint index;
             public MemArray<Item> flowField;
-            public bool hasLOS;
+            public byte hasLineOfSight;
 
             [INLINE(256)]
             public readonly Chunk Clone(ref MemoryAllocator allocator) {

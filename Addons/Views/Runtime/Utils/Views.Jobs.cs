@@ -314,7 +314,7 @@ namespace ME.BECS.Views {
                 // But we have one case:
                 //   if entity's generation changed
                 //   we need to check
-                if (entData.element.IsAlive() == false || entData.element.Has<ViewComponent>() == false) {
+                if (entData.element.IsAlive() == false || entData.element.IsActive() == false || entData.element.Has<ViewComponent>() == false) {
                     if (this.viewsModuleData->dirty[(int)entData.element.id] == false) {
                         if (this.toRemove.TryAdd(entData.element.id, false) == true) {
                             

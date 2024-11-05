@@ -84,9 +84,9 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static void LookToTarget(ref ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 prevPosition, float dt) {
+        public static void LookToTarget(ref ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 target, float dt) {
 
-            var lookDir = tr.position - prevPosition;
+            var lookDir = target - tr.position;
             if (math.lengthsq(lookDir) >= math.EPSILON) {
                 var speed = unit.rotationSpeed;
                 tr.rotation = math.slerp(tr.rotation, quaternion.LookRotation(lookDir, math.up()), dt * speed);
@@ -139,13 +139,13 @@ namespace ME.BECS.Units {
                 float3 rnd3d;
                 if (target.TryRead(out UnitQuadSizeComponent quad) == true) {
                     var rnd = sourceUnit.GetRandomVector2(-(float2)quad.size * 0.5f, (float2)quad.size * 0.5f);
-                    rnd3d = new float3(rnd.x, 0f, rnd.y);
+                    rnd3d = new float3(rnd.x, sourceUnit.GetRandomValue(0f, quad.height), rnd.y);
                     rnd3d = math.mul(tr.rotation, rnd3d);
                 } else {
                     var props = target.Read<NavAgentRuntimeComponent>().properties;
                     var radius = props.radius;
                     var rnd = sourceUnit.GetRandomVector2InCircle(radius);
-                    rnd3d = new float3(rnd.x, 0f, rnd.y);
+                    rnd3d = new float3(rnd.x, sourceUnit.GetRandomValue(0f, props.height), rnd.y);
                 }
                 pos += rnd3d;
             }

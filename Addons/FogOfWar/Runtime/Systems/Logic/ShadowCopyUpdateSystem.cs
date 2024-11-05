@@ -28,10 +28,13 @@ namespace ME.BECS.FogOfWar {
                         ent.DestroyHierarchy();
                     } else {
                         // if object is still alive - update properties
+                        PlayerUtils.SetOwner(in ent, PlayerUtils.GetOwner(in shadowCopy.original));
                         var tr = shadowCopy.original.GetAspect<TransformAspect>();
                         shadowTr.position = tr.position;
                         shadowTr.rotation = tr.rotation;
-                        ent.Set(shadowCopy.original.Read<UnitHealthComponent>());
+                        if (shadowCopy.original.TryRead(out UnitHealthComponent healthComponent) == true) {
+                            ent.Set(healthComponent);
+                        }
                     }
                 }
 

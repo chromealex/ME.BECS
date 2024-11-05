@@ -15,6 +15,7 @@ namespace ME.BECS.FogOfWar {
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CreateSystem : IAwake, IUpdate {
 
+        public float2 mapPosition;
         public float2 mapSize;
         public float resolution;
         internal Ent heights;
@@ -42,6 +43,7 @@ namespace ME.BECS.FogOfWar {
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
             var heights = Ent.New(in context);
             heights.Set(new FogOfWarStaticComponent() {
+                mapPosition = this.mapPosition,
                 worldSize = this.mapSize,
                 size = fowSize,
                 heights = new MemArrayAuto<float>(heights, fowSize.x * fowSize.y),
@@ -93,12 +95,17 @@ namespace ME.BECS.FogOfWar {
                 ref var fow = ref this.heights.Get<FogOfWarStaticComponent>();
                 var chunk = this.graph.chunks[index];
                 var maxHeight = 0f;
+                var cellSize = new uint2((uint)math.ceil((float)this.fowSize.x / (this.graph.chunkWidth * this.graph.width)), (uint)math.ceil((float)this.fowSize.y / (this.graph.chunkHeight * this.graph.height)));
                 for (uint i = 0; i < chunk.nodes.Length; ++i) {
                     var nodeHeight = chunk.nodes[this.world.state, i].height;
                     var worldPos = Graph.GetPosition(this.graph, in chunk, i);
                     var height = math.max(nodeHeight, this.pathfinding.ReadHeights().GetHeight(worldPos));
                     var xy = FogOfWarUtils.WorldToFogMapPosition(in fow, in worldPos);
-                    fow.heights[xy.y * this.fowSize.x + xy.x] = height;
+                    for (uint x = 0u; x < cellSize.x; ++x) {
+                        for (uint y = 0u; y < cellSize.y; ++y) {
+                            fow.heights[(xy.y + y) * this.fowSize.x + (xy.x + x)] = height;
+                        }
+                    }
                     if (height > maxHeight) {
                         maxHeight = height;
                     }

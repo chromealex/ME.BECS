@@ -8,7 +8,6 @@ namespace ME.BECS.FogOfWar {
     using Unity.Mathematics;
     using static Cuts;
 
-    [RequiredDependencies(typeof(CreateSystem))]
     public struct CreateTextureSystem : IAwake, IDestroy {
 
         public View renderView;
@@ -19,8 +18,11 @@ namespace ME.BECS.FogOfWar {
 
         [WithoutBurst]
         public void OnAwake(ref SystemContext context) {
+
+            var logicWorld = context.world.parent;
+            E.IS_CREATED(logicWorld);
             
-            var system = context.world.GetSystem<CreateSystem>();
+            var system = logicWorld.GetSystem<CreateSystem>();
             {
                 var fowSize = math.max(32u, (uint2)(system.mapSize * system.resolution));
                 var tex = new UnityEngine.Texture2D((int)fowSize.x, (int)fowSize.y, UnityEngine.TextureFormat.RGBA32, false);

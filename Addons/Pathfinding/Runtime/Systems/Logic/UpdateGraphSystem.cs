@@ -18,16 +18,21 @@ namespace ME.BECS.Pathfinding {
         [BURST(CompileSynchronously = true)]
         public unsafe struct ResetPathJob : IJobParallelForComponents<TargetPathComponent> {
 
+            public Ent graph;
             public Unity.Collections.NativeArray<ulong> dirtyChunks;
             public World world;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TargetPathComponent path) {
+
+                if (path.path.graph != this.graph) return;
                 
                 for (uint i = 0; i < this.dirtyChunks.Length; ++i) {
                     if (this.dirtyChunks[(int)i] != this.world.state->tick) continue;
                     ref var chunk = ref path.path.chunks[this.world.state, i];
                     ref var flowField = ref chunk.flowField;
-                    if (flowField.IsCreated == true) flowField.Dispose(ref this.world.state->allocator);
+                    if (flowField.IsCreated == true) {
+                        flowField.Dispose(ref this.world.state->allocator);
+                    }
                 }
 
             }
@@ -75,6 +80,7 @@ namespace ME.BECS.Pathfinding {
                     var chunks = Graph.GetChunksByBounds(in root, in obstacleBounds);
                     foreach (var chunkIndex in chunks) {
 
+                        if (chunkIndex == uint.MaxValue) continue;
                         var chunkComponent = root.chunks[chunkIndex];
                         root.changedChunks[chunkIndex] = dirtyTick;
                         UnityEngine.Rect chunkBounds;
@@ -142,6 +148,7 @@ namespace ME.BECS.Pathfinding {
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
                 dependsOn = API.Query(in context.world, dependsOn).Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
+                    graph = graphEnt,
                     world = context.world,
                     dirtyChunks = tempDirty,
                 });

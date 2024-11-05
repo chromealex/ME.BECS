@@ -30,9 +30,11 @@ namespace ME.BECS.Attack {
         public struct JobRotate : IJobParallelForAspect<AttackAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, ref AttackAspect sensor, ref TransformAspect transformAspect) {
-                
-                if (sensor.target.IsAlive() == true) {
-                    transformAspect.rotation = quaternion.LookRotationSafe(sensor.target.GetAspect<TransformAspect>().position - transformAspect.position, math.up());
+
+                var unit = sensor.target;
+                if (unit.IsAlive() == true) {
+                    if (unit.GetAspect<UnitAspect>().IsPathFollow == true) return; 
+                    transformAspect.rotation = quaternion.LookRotationSafe(unit.GetAspect<TransformAspect>().position - transformAspect.position, math.up());
                 }
 
             }

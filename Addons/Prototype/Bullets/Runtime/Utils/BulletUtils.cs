@@ -26,8 +26,8 @@ namespace ME.BECS.Bullets {
 
             return root.Read<FirePointComponent>().point;
 
-        } 
-        
+        }
+
         /// <summary>
         /// Create bullet entity
         /// </summary>
@@ -38,14 +38,14 @@ namespace ME.BECS.Bullets {
         /// <param name="target">If set - use this to target bullet at runtime</param>
         /// <param name="targetPosition">If set</param>
         /// <param name="config">Bullet config</param>
-        /// <param name="view">Bullet view</param>
         /// <param name="muzzleView">Muzzle view</param>
         /// <param name="muzzleLifetime">Muzzle lifetime</param>
+        /// <param name="jobInfo"></param>
         /// <returns></returns>
         [INLINE(256)]
-        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View view, in View muzzleView, float muzzleLifetime = 0.2f, JobInfo jobInfo = default) {
+        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View muzzleView, float muzzleLifetime = 0.2f, JobInfo jobInfo = default) {
 
-            {
+            if (muzzleView.IsValid == true) {
                 var muzzleEnt = Ent.New(jobInfo);
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
                 tr.position = position;
@@ -57,7 +57,6 @@ namespace ME.BECS.Bullets {
             {
                 var ent = Ent.New(jobInfo);
                 config.Apply(ent);
-                ent.InstantiateView(view);
                 var attack = ent.GetOrCreateAspect<QuadTreeQueryAspect>();
                 attack.query.treeMask = targetsMask; // Search for targets in this tree
                 attack.query.range = math.max(1f, ent.Read<BulletConfigComponent>().hitRange);

@@ -43,16 +43,16 @@ namespace ME.BECS.UnitsHealthBars {
             internal float health;
             public float sectionWidth;
             public float height;
+            public float referenceScale;
 
-            public float Width => this.Sections * (this.sectionWidth + 1f) - 1f;
-            public float Height => this.height + 2f;
+            public float GetWidth(float scale) => this.Sections * (this.sectionWidth * scale + 1f) - 1f;
+            public float GetHeight(float scale) => this.height * scale + 2f;
 
         }
 
         public BECS.ObjectReference<UnityEngine.Material> healthBarMaterial;
         public BarSettings barSettings;
         private ME.BECS.NativeCollections.NativeParallelList<BarItem> bars;
-        private World logicWorld;
         private Ent cameraEnt;
         private ClassPtr<UnityEngine.Camera> cameraObject;
 
@@ -95,14 +95,17 @@ namespace ME.BECS.UnitsHealthBars {
 
         public void OnUpdate(ref SystemContext context) {
 
-            if (this.logicWorld.isCreated == false) return;
+            var logicWorld = context.world.parent;
+            E.IS_CREATED(logicWorld);
 
+            if (this.cameraEnt.IsAlive() == false) return;
+            
             this.bars.Clear();
-            var fow = this.logicWorld.GetSystemLink<CreateSystem>();
-            var activePlayer = this.logicWorld.GetSystem<PlayersSystem>().GetActivePlayer();
+            var fow = logicWorld.GetSystemLink<CreateSystem>();
+            var activePlayer = logicWorld.GetSystem<PlayersSystem>().GetActivePlayer();
             if (activePlayer.IsAlive() == false) return;
             
-            var handle = API.Query(in this.logicWorld, context.dependsOn).Schedule<Job, UnitAspect>(new Job() {
+            var handle = API.Query(in logicWorld, context.dependsOn).Schedule<Job, UnitAspect>(new Job() {
                 activePlayer = activePlayer,
                 fow = fow,
                 camera = this.cameraEnt.GetAspect<CameraAspect>(),
@@ -126,16 +129,13 @@ namespace ME.BECS.UnitsHealthBars {
 
         }
 
-        public void SetLogicWorld(in World logicWorld) {
-            this.logicWorld = logicWorld;
-        }
-
         public void SetCamera(in CameraAspect cameraAspect, UnityEngine.Camera camera) {
             CameraUtils.UpdateCamera(in cameraAspect, camera);
             this.cameraEnt = cameraAspect.ent;
             this.cameraObject = new ClassPtr<UnityEngine.Camera>(camera);
             
             var barsRender = this.cameraObject.Value.gameObject.AddComponent<HealthBarsRender>();
+            barsRender.referenceScale = this.barSettings.referenceScale;
             barsRender.bars = this.bars;
             barsRender.material = this.healthBarMaterial.Value;
         }

@@ -61,17 +61,25 @@ namespace ME.BECS.Views {
 
         [INLINE(256)]
         public static CameraAspect CreateCamera(UnityEngine.Camera camera, in World world) {
+
+            var aspect = CreateCamera(in world);
+            UpdateCamera(aspect, camera);
+            return aspect;
+            
+        }
+
+        [INLINE(256)]
+        public static CameraAspect CreateCamera(in World world) {
             
             var ent = Ent.New(in world);
             ent.Set<ME.BECS.Transforms.TransformAspect>();
             var aspect = ent.GetOrCreateAspect<CameraAspect>();
             ref var comp = ref aspect.component;
             comp.localPlanes = new MemArrayAuto<UnityEngine.Plane>(in ent, 6);
-            UpdateCamera(aspect, camera);
             return aspect;
             
         }
-        
+
         [INLINE(256)]
         public static bool TestPlanesAABB(in MemArrayAuto<UnityEngine.Plane> planes, in UnityEngine.Bounds bounds) {
             

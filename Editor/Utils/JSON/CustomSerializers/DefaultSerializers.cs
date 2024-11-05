@@ -70,8 +70,9 @@ namespace ME.BECS.Editor.JSON {
         public override bool IsValid(System.Type type) => type.IsEnum;
         public override object FromString(System.Type fieldType, string value) => System.Enum.Parse(fieldType, value);
         public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
-            var val = (long)obj;
-            builder.Append(val.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append('"');
+            builder.Append(obj.ToString());
+            builder.Append('"');
         }
         public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
             property.boxedValue = this.FromString(obj.GetType(), (string)obj);

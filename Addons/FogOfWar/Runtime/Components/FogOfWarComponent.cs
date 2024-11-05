@@ -21,6 +21,7 @@ namespace ME.BECS.FogOfWar {
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarStaticComponent : IComponent {
 
+        public float2 mapPosition;
         public float2 worldSize;
         public uint2 size;
         public MemArrayAuto<float> heights;

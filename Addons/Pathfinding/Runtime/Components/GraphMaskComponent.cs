@@ -1,18 +1,22 @@
 namespace ME.BECS.Pathfinding {
 
     using Unity.Mathematics;
-    
+
     public struct GraphMaskComponent : IConfigComponent, IConfigInitialize {
 
         public float2 offset;
         public uint2 size;
         public byte ignoreGraphRadius;
         public byte cost;
+        public float height;
         public uint heightsSizeX;
         public ObstacleChannel obstacleChannel;
 
         public void OnInitialize(in Ent ent) {
-            
+
+            var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+            GraphUtils.CreateGraphMask(in ent, tr.position, tr.rotation, this.size, this.cost, this.height, this.obstacleChannel, this.ignoreGraphRadius == 1);
+
         }
 
     }

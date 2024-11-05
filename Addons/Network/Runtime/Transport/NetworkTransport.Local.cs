@@ -6,6 +6,8 @@ namespace ME.BECS.Network {
 
     public class LocalTransport : INetworkTransport {
 
+        public bool useAbsoluteTime = true;
+        
         private struct ConnectJob : Unity.Jobs.IJob {
 
             public World world;
@@ -80,11 +82,13 @@ namespace ME.BECS.Network {
             
             if (this.Status != TransportStatus.Connected) return null;
 
-            var currentTime = System.DateTime.UtcNow.ToUniversalTime().Subtract(
-                new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)
-            ).TotalMilliseconds;
-            this.ServerTime = currentTime;
-            
+            if (this.useAbsoluteTime == true) {
+                var currentTime = System.DateTime.UtcNow.ToUniversalTime().Subtract(
+                    new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)
+                ).TotalMilliseconds;
+                this.ServerTime = currentTime;
+            }
+
             if (this.sendBytes.Count > 0) {
 
                 return this.sendBytes.Dequeue();

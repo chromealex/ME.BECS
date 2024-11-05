@@ -305,28 +305,35 @@ namespace ME.BECS.Editor {
 
             {
                 var data = new ComponentGroupsXml();
-                data.items = new ComponentGroupsXml.Item[componentGroups.Count];
-                data.aspectItems = new ComponentGroupsXml.AspectItem[aspects.Count];
                 data.nextId = componentGroupsNextId;
                 var i = 0;
-                foreach (var group in componentGroups) {
-                    data.items[i] = new ComponentGroupsXml.Item() {
-                        id = group.index,
-                        type = group.type != null ? group.type.AssemblyQualifiedName : null,
-                        components = group.components.Select(x => new ComponentGroupsXml.Item.ComponentMeta() { type = x.type.AssemblyQualifiedName, editorComment = x.editorComment }).ToArray(),
-                    };
-                    ++i;
+                if (componentGroups != null) {
+                    data.items = new ComponentGroupsXml.Item[componentGroups.Count];
+                    foreach (var group in componentGroups) {
+                        data.items[i] = new ComponentGroupsXml.Item() {
+                            id = group.index,
+                            type = group.type != null ? group.type.AssemblyQualifiedName : null,
+                            components = group.components.Select(x => new ComponentGroupsXml.Item.ComponentMeta()
+                                                                     { type = x.type.AssemblyQualifiedName, editorComment = x.editorComment }).ToArray(),
+                        };
+                        ++i;
+                    }
                 }
+
                 data.nextAspectId = aspectNextId;
-                i = 0;
-                foreach (var group in aspects) {
-                    data.aspectItems[i] = new ComponentGroupsXml.AspectItem() {
-                        id = group.index,
-                        type = group.type != null ? group.type.AssemblyQualifiedName : null,
-                        info = new ComponentGroupsXml.Item.ComponentMeta() { editorComment = group.info.editorComment },
-                    };
-                    ++i;
+                if (aspects != null) {
+                    i = 0;
+                    data.aspectItems = new ComponentGroupsXml.AspectItem[aspects.Count];
+                    foreach (var group in aspects) {
+                        data.aspectItems[i] = new ComponentGroupsXml.AspectItem() {
+                            id = group.index,
+                            type = group.type != null ? group.type.AssemblyQualifiedName : null,
+                            info = new ComponentGroupsXml.Item.ComponentMeta() { editorComment = group.info.editorComment },
+                        };
+                        ++i;
+                    }
                 }
+
                 var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
                 var writer = new System.Xml.XmlTextWriter(path, System.Text.Encoding.UTF8);
                 writer.Formatting = System.Xml.Formatting.Indented;

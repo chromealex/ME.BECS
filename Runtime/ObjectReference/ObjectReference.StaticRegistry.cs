@@ -55,7 +55,7 @@ namespace ME.BECS {
 
         }
         
-        public static void AddRuntimeObject(UnityEngine.Object obj) {
+        public static uint AddRuntimeObject(UnityEngine.Object obj) {
 
             var nextId = ObjectReferenceRegistry.data.sourceId;
             ObjectReferenceRegistryData.Item item;
@@ -65,7 +65,7 @@ namespace ME.BECS {
                     item = elem;
                     ++item.references;
                     additionalRuntimeObjects[index] = item;
-                    return;
+                    return item.sourceId;
                 }
             }
 
@@ -75,6 +75,8 @@ namespace ME.BECS {
                 sourceId = nextId + (++nextRuntimeId),
             };
             additionalRuntimeObjects.Add(item);
+
+            return item.sourceId;
 
         }
 
@@ -86,7 +88,7 @@ namespace ME.BECS {
 
             if (ObjectReferenceRegistry.data == null) return null;
             
-            return (T)ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId);
+            return ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId) as T;
 
         }
 

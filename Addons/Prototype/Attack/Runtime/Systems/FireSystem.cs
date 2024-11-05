@@ -25,17 +25,12 @@ namespace ME.BECS.Attack {
                         rot = firePointTr.GetWorldMatrixRotation();
                     }
 
-                    BulletUtils.CreateBullet(aspect.ent, pos, rot, query.query.treeMask, aspect.target, default, aspect.component.bulletConfig, aspect.component.bulletView,
-                        aspect.component.muzzleView, jobInfo: jobInfo);
+                    BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.query.treeMask, aspect.target, default, aspect.component.bulletConfig, 
+                                             aspect.component.muzzleView, jobInfo: jobInfo);
 
-                    // fire - reset target and reload
-                    aspect.IsReloaded = false;
-                    aspect.CanFire = false;
-
+                    aspect.UseFire();
+                    
                 }
-
-                // we remove target to initiate the new search (may be another target will be better)
-                aspect.SetTarget(default);
 
             }
 
@@ -46,6 +41,7 @@ namespace ME.BECS.Attack {
             var dependsOn = context.Query()
                                .With<ReloadedComponent>()
                                .With<CanFireComponent>()
+                               .Without<FireUsedComponent>()
                                .With<AttackTargetComponent>()
                                .Schedule<FireJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>();
             context.SetDependency(dependsOn);

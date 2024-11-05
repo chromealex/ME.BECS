@@ -6,10 +6,16 @@ namespace ME.BECS.Attack {
 
         [QueryWith]
         public AspectDataPtr<AttackComponent> attackDataPtr;
+        [QueryWith]
+        public AspectDataPtr<AttackRuntimeComponent> attackRuntimeDataPtr;
         public AspectDataPtr<AttackTargetComponent> targetDataPtr;
 
-        public ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
-        public ref float attackRangeSqr => ref this.component.attackRangeSqr;
+        public readonly ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref AttackRuntimeComponent componentRuntime => ref this.attackRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly AttackRuntimeComponent readComponentRuntime => ref this.attackRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref float attackRangeSqr => ref this.component.attackRangeSqr;
+        public readonly ref readonly float readAttackRangeSqr => ref this.readComponent.attackRangeSqr;
         
         public Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 
@@ -24,11 +30,12 @@ namespace ME.BECS.Attack {
                 });
             } else {
                 this.ent.Remove<AttackTargetComponent>();
+                this.CanFire = false;
             }
         }
         
-        public float ReloadProgress => this.component.reloadTimer / this.component.reloadTime;
-        public float FireProgress => this.component.fireTimer / this.component.fireTime;
+        public float ReloadProgress => this.componentRuntime.reloadTimer / this.component.reloadTime;
+        public float FireProgress => this.componentRuntime.fireTimer / this.component.fireTime;
 
         public bool IsReloaded {
             get => this.ent.Has<ReloadedComponent>();
@@ -36,7 +43,7 @@ namespace ME.BECS.Attack {
                 if (value == true) {
                     this.ent.Set(new ReloadedComponent());
                 } else {
-                    this.component.reloadTimer = 0f;
+                    this.componentRuntime.reloadTimer = 0f;
                     this.ent.Remove<ReloadedComponent>();
                 }
             }
@@ -48,21 +55,19 @@ namespace ME.BECS.Attack {
                 if (value == true) {
                     this.ent.Set(new CanFireComponent());
                 } else {
-                    this.component.fireTimer = 0f;
+                    this.componentRuntime.fireTimer = 0f;
                     this.ent.Remove<CanFireComponent>();
+                    this.ent.SetTag<FireUsedComponent>(false);
                 }
             }
         }
 
+        public bool IsFireUsed() => this.ent.Has<FireUsedComponent>();
+        
+        public void UseFire() {
+            this.ent.SetTag<FireUsedComponent>(true);
+        }
+
     }
-
-    public struct AttackTargetComponent : IComponent {
-
-        public Ent target;
-
-    }
-    
-    public struct ReloadedComponent : IComponent {}
-    public struct CanFireComponent : IComponent {}
 
 }

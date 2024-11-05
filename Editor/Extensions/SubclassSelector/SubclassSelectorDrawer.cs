@@ -293,7 +293,11 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     if (type != null) {
                         var methodInfo = type.GetMember("Default", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         if (methodInfo.Length == 1) {
-                            instance = ((System.Reflection.PropertyInfo)methodInfo[0]).GetMethod.Invoke(null, null);
+                            if (methodInfo[0] is System.Reflection.PropertyInfo propertyInfo) {
+                                instance = propertyInfo.GetMethod.Invoke(null, null);
+                            } else if (methodInfo[0] is System.Reflection.FieldInfo fieldInfo) {
+                                instance = fieldInfo.GetValue(null);
+                            }
                         }
                     }
                     this.m_TargetProperty.serializedObject.ApplyModifiedProperties();

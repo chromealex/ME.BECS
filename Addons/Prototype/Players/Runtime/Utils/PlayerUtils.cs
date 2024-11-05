@@ -48,12 +48,12 @@ namespace ME.BECS.Players {
 
         [INLINE(256)]
         public static uint GetPlayerId(in PlayerAspect player) {
-            return player.index;
+            return player.readIndex;
         }
 
         [INLINE(256)]
         public static Ent GetTeam(in PlayerAspect player) {
-            return player.team;
+            return player.readTeam;
         }
 
     }

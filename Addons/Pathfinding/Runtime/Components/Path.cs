@@ -30,7 +30,7 @@ namespace ME.BECS.Pathfinding {
     public struct TargetPathComponent : IComponent {
 
         public Path path;
-        public MemArrayAuto<bool> chunksToUpdate;
+        public MemArrayAuto<byte> chunksToUpdate;
 
     }
 

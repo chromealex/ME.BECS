@@ -4,6 +4,10 @@
     border-radius: 5px;
 }
 
+.subclass-selector .subclass-selector-container {
+    flex-grow: 1;
+}
+
 .subclass-selector .subclass-button-selector {
     position: absolute;
     top: 0px;

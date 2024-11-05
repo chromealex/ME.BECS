@@ -23,20 +23,20 @@ namespace ME.BECS.Pathfinding {
 
                 var targetInfo = targetData.target.Read<TargetInfoComponent>();
                 Path path;
-                MemArrayAuto<bool> chunksToUpdate;
+                MemArrayAuto<byte> chunksToUpdate;
                 if (ent.TryRead(out TargetPathComponent targetPathComponent) == true) {
                     // update path
                     path = targetPathComponent.path;
                     Graph.SetTarget(ref path, targetInfo.position, in this.filter);
                     // use target chunks which must be updated in path follow system
                     chunksToUpdate = targetPathComponent.chunksToUpdate;
-                    var updateRequired = new NativeReference<bool>(true, Allocator.Temp);
+                    var updateRequired = new NativeReference<byte>(1, Allocator.Temp);
                     Graph.PathUpdateSync(in this.world, ref path, in path.graph, chunksToUpdate, path.filter, updateRequired);
                     var arr = targetPathComponent.chunksToUpdate;
                     _memclear(arr.GetUnsafePtr(), arr.Length * TSize<bool>.size);
                 } else {
                     Graph.MakePath(in this.world, out path, in targetData.graphEnt, in targetInfo.position, this.filter);
-                    chunksToUpdate = new MemArrayAuto<bool>(targetData.target, path.chunks.Length);
+                    chunksToUpdate = new MemArrayAuto<byte>(targetData.target, path.chunks.Length);
                 }
                 ent.Set(new TargetPathComponent() {
                     path = path,

@@ -80,7 +80,7 @@ namespace ME.BECS.Pathfinding {
                 var root = path.graph.Read<RootGraphComponent>();
                 var chunkIndex = Graph.GetChunkIndex(in root, pos, false);
                 if (chunkIndex != uint.MaxValue) {
-                    targetPathComponent.chunksToUpdate[chunkIndex] = true;
+                    targetPathComponent.chunksToUpdate[chunkIndex] = 1;
                 }
 
             }
@@ -113,7 +113,14 @@ namespace ME.BECS.Pathfinding {
                 var force = 0f;
                 if (lengthSq > math.EPSILON) {
                     this.buildGraphSystem.heights.GetHeight(tr.position, out var unitNormal);
-                    tr.rotation = math.slerp(tr.rotation, quaternion.LookRotation(unit.componentRuntime.desiredDirection, unitNormal), this.dt * unit.rotationSpeed);
+                    var rot = tr.rotation;
+                    var toRot = quaternion.LookRotation(unit.componentRuntime.desiredDirection, unitNormal);
+                    var maxDegreesDelta = this.dt * unit.rotationSpeed;
+                    var qAngle = math.angle(rot, toRot);
+                    if (qAngle != 0f) {
+                        toRot = math.slerp(rot, toRot, math.min(1.0f, maxDegreesDelta / qAngle));
+                    }
+                    tr.rotation = toRot;
                     var angle = UnityEngine.Vector3.Angle(tr.forward, unit.componentRuntime.desiredDirection);
                     force = 1f - angle / 180f;
                 }

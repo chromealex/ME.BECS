@@ -30,7 +30,9 @@ namespace ME.BECS {
                 configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.items.Length, Constants.ALLOCATOR_DOMAIN);
                 foreach (var item in ObjectReferenceRegistry.data.items) {
                     if (item.source is EntityConfig entityConfig) {
-                        configs.Data.TryAdd(item.sourceId, entityConfig.AsUnsafeConfig());
+                        var unsafeConfig = entityConfig.AsUnsafeConfig();
+                        if (unsafeConfig.IsValid() == false) continue;
+                        configs.Data.TryAdd(item.sourceId, unsafeConfig);
                     }
                 }
 

@@ -55,7 +55,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static Ent New(JobInfo jobInfo) {
+        public static Ent New(in JobInfo jobInfo) {
             return Ent.New(jobInfo.worldId, jobInfo);
         }
 

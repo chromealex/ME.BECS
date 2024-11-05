@@ -34,6 +34,10 @@ namespace ME.BECS.Bullets {
 
     public struct BulletViewPoint : IConfigComponentStatic {
 
+        public static BulletViewPoint Default = new BulletViewPoint() {
+            rotation = quaternion.identity,
+        };
+
         public float3 position;
         public quaternion rotation;
 

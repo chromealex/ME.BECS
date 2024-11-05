@@ -43,7 +43,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// <summary>Invalid compute order number of a node can't process</summary>
 		public static readonly int invalidComputeOrder = -1;
 
-		[HideInInspector] public int id;
+		public int id;
 		public bool builtInGraph;
 		public bool isInnerGraph;
 		public int GetId() {

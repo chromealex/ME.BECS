@@ -28,6 +28,7 @@ namespace ME.BECS.Units {
         }
 
         public readonly ref float sightRangeSqr => ref this.component.sightRangeSqr;
+        public readonly ref readonly float readSightRangeSqr => ref this.readComponent.sightRangeSqr;
         public readonly ref float height => ref this.componentRuntime.properties.height;
         public readonly ref readonly float readHeight => ref this.readComponentRuntime.properties.height;
         public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;
@@ -47,6 +48,7 @@ namespace ME.BECS.Units {
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
         public readonly ref float decelerationSpeed => ref this.component.decelerationSpeed;
         public readonly ref float rotationSpeed => ref this.component.rotationSpeed;
+        public readonly ref readonly float readRotationSpeed => ref this.readComponent.rotationSpeed;
         public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.Get(this.ent.id, this.ent.gen).unitCommandGroup;
         public readonly ref Ent unitSelectionGroup => ref this.unitSelectionGroupDataPtr.Get(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;
@@ -55,6 +57,7 @@ namespace ME.BECS.Units {
         public readonly ref int collideWithEnd => ref this.componentRuntime.collideWithEnd;
         public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly NavAgentComponent readComponent => ref this.navAgentDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentRuntimeComponent readComponentRuntime => ref this.navAgentRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
 

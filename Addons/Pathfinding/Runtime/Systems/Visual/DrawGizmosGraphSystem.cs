@@ -29,9 +29,14 @@ namespace ME.BECS.Pathfinding {
 
         public void OnDrawGizmos(ref SystemContext context) {
 
+            var logicWorld = context.world.parent;
+            E.IS_CREATED(logicWorld);
+            
+            if (logicWorld.isCreated == false) return;
+            
             Ent drawGraphEnt = default;
             var idx = 0;
-            foreach (var graphEnt in context.world.GetSystem<BuildGraphSystem>().graphs) {
+            foreach (var graphEnt in logicWorld.GetSystem<BuildGraphSystem>().graphs) {
 
                 if (this.drawIndex == idx) {
 
@@ -45,8 +50,8 @@ namespace ME.BECS.Pathfinding {
             }
 
             if (this.drawPath == true) {
-
-                var arr = API.Query(in context).With<ME.BECS.Units.CommandGroupComponent>().ToArray();
+                
+                var arr = API.Query(in logicWorld, context.dependsOn).With<ME.BECS.Units.CommandGroupComponent>().ToArray();
                 foreach (var group in arr) {
 
                     var groupAspect = group.GetAspect<ME.BECS.Units.UnitCommandGroupAspect>();
@@ -60,7 +65,7 @@ namespace ME.BECS.Pathfinding {
                         if (targetComponent.graphEnt != drawGraphEnt) continue;
                         
                         var path = target.Read<TargetPathComponent>().path;
-                        Graph.DrawGizmos(path, new Graph.GizmosParameters() { drawNormals = this.drawNormals });
+                        Graph.DrawGizmos(path, new Graph.GizmosParameters() { drawNormals = this.drawNormals, });
                         
                         UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
                         UnityEngine.Gizmos.DrawWireSphere(target.Read<TargetPathComponent>().path.to, math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)));

@@ -43,7 +43,7 @@ namespace ME.BECS.Units {
     }
     
     [ComponentGroup(typeof(UnitComponentGroup))]
-    public struct IsUnitStaticComponent : IComponent {}
+    public struct IsUnitStaticComponent : IConfigComponent {}
 
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitQuadSizeComponent : IConfigComponent {

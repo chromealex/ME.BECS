@@ -14,6 +14,7 @@ namespace ME.BECS.FogOfWar {
         private static readonly int @params = Shader.PropertyToID("_Params");
 
         public Material material;
+        public Transform transformScale;
         private float2 worldSize;
         private Vector3 offset;
 
@@ -27,16 +28,22 @@ namespace ME.BECS.FogOfWar {
 
             this.worldSize = fowSystem.mapSize;
 
+            if (this.transformScale != null) {
+                this.transformScale.localScale = new Vector3(this.worldSize.x, 1f, this.worldSize.y);
+                this.transformScale.localPosition = new Vector3(this.worldSize.x * 0.5f, 0f, this.worldSize.y * 0.5f);
+            }
+
         }
 
         protected override void OnUpdate(in EntRO ent, float dt) {
-            
-            var fowSystem = ent.World.GetSystem<CreateSystem>();
-            var system = ent.World.GetSystem<CreateTextureSystem>();
-            var visualWorld = ent.World.GetSystem<UpdateTextureSystem>().GetVisualWorld();
+
+            var updateTextureSystem = ent.World.GetSystem<UpdateTextureSystem>();
+            var logicWorld = ent.World.parent;
+            var fowSystem = logicWorld.GetSystem<CreateSystem>();
+            var system = logicWorld.GetSystem<CreateTextureSystem>();
             this.material.SetTexture(fogTex, system.GetTexture());
 
-            var camera = visualWorld.Camera.GetAspect<CameraAspect>();
+            var camera = updateTextureSystem.GetCamera();
             var proj = (Matrix4x4)camera.projectionMatrix;
             var cam = (Matrix4x4)camera.worldToCameraMatrix;
             var inverseMVP = (proj * cam).inverse;
@@ -58,7 +65,6 @@ namespace ME.BECS.FogOfWar {
             }
             
             var p = new Vector4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
-            this.material.SetTexture(fogTex, system.GetTexture());
             var heightResolution = fowSystem.resolution;
             this.material.SetFloat(resolution, heightResolution);
             this.material.SetMatrix(inverseMvp, inverseMVP);

@@ -374,6 +374,8 @@ namespace ME.BECS {
             if (worldId >= worldsStorage.Length) {
                 worldsStorage.Resize((worldId + 1u) * 2u);
             }
+            
+            WorldsParent.Resize(world.id);
 
             if (name.IsEmpty == true) {
                 name = $"World #{world.id}";
@@ -396,6 +398,8 @@ namespace ME.BECS {
             Worlds.ReleaseWorldId(world.id);
             ref var worldsStorage = ref WorldsStorage.worlds;
             worldsStorage.Get(world.id) = default;
+            
+            WorldsParent.Clear(world.id);
 
         }
 

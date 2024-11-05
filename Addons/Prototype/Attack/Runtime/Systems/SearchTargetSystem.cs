@@ -21,7 +21,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
                 var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
-                var player = unit.owner.GetAspect<Players.PlayerAspect>();
+                var player = unit.readOwner.GetAspect<Players.PlayerAspect>();
                 var team = player.team;
                 UnitAspect nearestResult = default;
                 for (uint i = 0u; i < query.results.results.Count; ++i) {
@@ -31,18 +31,23 @@ namespace ME.BECS.Attack {
                     if (UnitUtils.GetTeam(in result) == team) continue;
                     if (this.fogOfWar.IsCreated == true && this.fogOfWar.Value.IsVisible(in player, in ent) == false) continue;
 
-                    var dist = math.length(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
-                    if (dist <= math.sqrt(aspect.attackRangeSqr) + result.readRadius) {
+                    var distSq = math.lengthsq(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+                    var rangeSqr = aspect.readAttackRangeSqr;
+                    if (distSq <= rangeSqr || math.sqrt(distSq) <= math.sqrt(rangeSqr) + result.readRadius) {
                         nearestResult = result;
                         break;
                     }
                     
                 }
 
-                if (nearestResult.IsAlive() == true && nearestResult.health > 0f) {
+                if (nearestResult.IsAlive() == true && nearestResult.readHealth > 0f) {
                     
                     aspect.SetTarget(nearestResult.ent);
 
+                } else {
+                    
+                    aspect.SetTarget(default);
+                    
                 }
 
             }
@@ -51,7 +56,7 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().Without<AttackTargetComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
+            var dependsOn = context.Query().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
                 world = context.world,
                 fogOfWar = context.world.GetSystemLink<ME.BECS.FogOfWar.CreateSystem>(),
             });

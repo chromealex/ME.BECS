@@ -16,8 +16,8 @@ namespace ME.BECS.FogOfWar {
         public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect unitTr, in UnitAspect unit) {
 
             var pos = WorldToFogMapPosition(in props, unitTr.GetWorldMatrixPosition());
-            var range = WorldToFogMapValue(in props, math.sqrt(unit.sightRangeSqr));
-            var height = unitTr.GetWorldMatrixPosition().y + unit.height;
+            var range = WorldToFogMapValue(in props, math.sqrt(unit.readSightRangeSqr));
+            var height = unitTr.GetWorldMatrixPosition().y + unit.readHeight;
             SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, range, height);
 
         }
@@ -99,8 +99,8 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static float3 FogMapToWorldPosition(in FogOfWarStaticComponent props, in uint2 position) {
             
-            var xf = position.x / (float)props.size.x * props.worldSize.x;
-            var yf = position.y / (float)props.size.y * props.worldSize.y;
+            var xf = (position.x - props.mapPosition.x * 0.5f) / (float)props.size.x * props.worldSize.x;
+            var yf = (position.y - props.mapPosition.y * 0.5f) / (float)props.size.y * props.worldSize.y;
             var h = props.heights[position.y * props.size.x + position.x];
             return new float3(xf, h, yf);
 
@@ -109,8 +109,8 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static uint2 WorldToFogMapPosition(in FogOfWarStaticComponent props, in float3 position) {
             
-            var xf = position.x / props.worldSize.x * props.size.x;
-            var yf = position.z / props.worldSize.y * props.size.y;
+            var xf = (position.x - props.mapPosition.x * 0.5f) / props.worldSize.x * props.size.x;
+            var yf = (position.z - props.mapPosition.y * 0.5f) / props.worldSize.y * props.size.y;
 
             //fast round to int (int)(x + 0.5f)
             var x = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
@@ -189,11 +189,6 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        private static float GetTerrainHeight(in FogOfWarStaticComponent props,  uint x, uint y) {
-            return props.heights[y * props.size.x + x];
-        }
-
-        [INLINE(256)]
         private static bool Raycast(in FogOfWarStaticComponent props, int x0, int y0, int x1, int y1, float terrainHeight) {
 
             var steep = math.abs(y1 - y0) > math.abs(x1 - x0);
@@ -221,14 +216,14 @@ namespace ME.BECS.FogOfWar {
             var ystep = y0 < y1 ? 1 : -1;
             var y = y0;
 
-            for (var x = x0; x <= x1; x++) {
+            for (var x = x0; x <= x1; ++x) {
 
-                var px = x;
-                var py = y;
+                var px = (steep == true ? y : x);
+                var py = (steep == true ? x : y);
                 if (px < 0 || px >= props.size.x) return false;
                 if (py < 0 || py >= props.size.y) return false;
-                
-                var height = steep == true ? GetTerrainHeight(in props, (uint)y, (uint)x) : GetTerrainHeight(in props, (uint)x, (uint)y);
+            
+                var height = GetHeight(in props, (uint)px, (uint)py);
                 if (height > terrainHeight) {
                     return false;
                 }
@@ -240,7 +235,7 @@ namespace ME.BECS.FogOfWar {
                     error += dx;
                 }
             }
-
+            
             return true;
         }
 

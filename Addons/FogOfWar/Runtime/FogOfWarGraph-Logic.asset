@@ -297,6 +297,9 @@ MonoBehaviour:
     - rid: 8346928923441103772
       type: {class: CreateSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
       data:
+        mapPosition:
+          x: 0
+          y: 0
         mapSize:
           x: 500
           y: 500

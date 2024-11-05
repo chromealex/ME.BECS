@@ -13,33 +13,33 @@ namespace ME.BECS.FogOfWar {
     public struct ShadowCopySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct CreateJob : IJobParallelForAspect<UnitAspect> {
+        public struct CreateJob : IJobComponents<OwnerComponent> {
 
             public Players.PlayersSystem playersSystem;
             
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref OwnerComponent ownerComponent) {
 
-                var tr = unit.ent.GetAspect<TransformAspect>();
-                var owner = unit.readOwner.GetAspect<PlayerAspect>();
+                var tr = ent.GetAspect<TransformAspect>();
+                var owner = ownerComponent.ent.GetAspect<PlayerAspect>();
                 // Create shadow copy for each player
                 var teams = this.playersSystem.GetTeams();
                 for (uint i = 0u; i < teams.Length; ++i) {
                     var team = teams[(int)i];
                     // We do not need shadow copy for the same team
                     if (team == owner.readTeam) continue;
-                    var ent = Ent.New(jobInfo);
-                    PlayerUtils.SetOwner(in ent, owner);
-                    var shadowTr = ent.GetOrCreateAspect<TransformAspect>();
+                    var copyEnt = Ent.New(in jobInfo);
+                    PlayerUtils.SetOwner(in copyEnt, owner);
+                    var shadowTr = copyEnt.GetOrCreateAspect<TransformAspect>();
                     shadowTr.position = tr.position;
                     shadowTr.rotation = tr.rotation;
-                    ent.Set(new FogOfWarShadowCopyComponent() {
+                    copyEnt.Set(new FogOfWarShadowCopyComponent() {
                         forTeam = team,
-                        original = unit.ent,
+                        original = ent,
                     });
-                    ent.InstantiateView(unit.ent.ReadStatic<UnitShadowCopyViewComponent>().view);
+                    copyEnt.InstantiateView(ent.ReadStatic<UnitShadowCopyViewComponent>().view);
                 }
 
-                unit.ent.Set(new FogOfWarHasShadowCopyComponent());
+                ent.Set(new FogOfWarHasShadowCopyComponent());
 
             }
 
@@ -48,7 +48,7 @@ namespace ME.BECS.FogOfWar {
         public void OnUpdate(ref SystemContext context) {
 
             // Collect all units which has not presented as shadow copy
-            var dependsOn = context.Query().Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().Schedule<CreateJob, UnitAspect>(new CreateJob() {
+            var dependsOn = context.Query().Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().Schedule<CreateJob, OwnerComponent>(new CreateJob() {
                 playersSystem = context.world.GetSystem<PlayersSystem>(),
             });
             context.SetDependency(dependsOn);

@@ -1,3 +1,5 @@
+using ME.BECS.Transforms;
+using ME.BECS.Views;
 
 namespace ME.BECS.Attack {
     
@@ -16,20 +18,33 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect) {
 
-                aspect.component.fireTimer += this.dt;
-                if (aspect.component.fireTimer >= aspect.component.fireTime) {
+                aspect.componentRuntime.fireTimer += this.dt;
+                if (aspect.componentRuntime.fireTimer >= aspect.readComponent.fireTime) {
 
-                    aspect.CanFire = true;
+                    // time to attack is up
+                    // fire - reset target and reload
+                    aspect.IsReloaded = false;
+                    aspect.CanFire = false;
 
                 }
+                
+                if (aspect.IsFireUsed() == false) {
 
+                    // use default attack time
+                    if (aspect.componentRuntime.fireTimer >= aspect.readComponent.attackTime) {
+                        // Fire
+                        aspect.CanFire = true;
+                    }
+
+                }
+                
             }
 
         }
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().With<ReloadedComponent>().Without<CanFireComponent>().Schedule<Job, AttackAspect>(new Job() {
+            var dependsOn = context.Query().With<ReloadedComponent>().With<AttackTargetComponent>().Schedule<Job, AttackAspect>(new Job() {
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);

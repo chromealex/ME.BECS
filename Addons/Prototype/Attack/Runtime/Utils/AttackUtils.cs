@@ -23,7 +23,7 @@ namespace ME.BECS.Attack {
             var attackAspect = attackSensor.GetAspect<AttackAspect>();
             var attackQueryAspect = attackSensor.GetAspect<QuadTreeQueryAspect>();
             attackQueryAspect.query.treeMask = targetsMask;
-            attackQueryAspect.query.range = math.sqrt(math.max(attackAspect.attackRangeSqr, unit.sightRangeSqr));
+            attackQueryAspect.query.range = math.sqrt(math.max(attackAspect.readAttackRangeSqr, unit.readSightRangeSqr));
             attackQueryAspect.query.nearestCount = 1;
             var point = config.AsUnsafeConfig().ReadStatic<BulletViewPoint>();
             BulletUtils.RegisterFirePoint(attackSensor, point.position, point.rotation, jobInfo);
@@ -38,13 +38,13 @@ namespace ME.BECS.Attack {
             var unitTr = unit.ent.GetAspect<TransformAspect>();
             var targetTr = target.GetAspect<TransformAspect>();
             var attackSensor = unit.componentRuntime.attackSensor.Read<AttackComponent>();
-            var sightRangeSqr = unit.sightRangeSqr;
+            var sightRangeSqr = unit.readSightRangeSqr;
             var dir = targetTr.GetWorldMatrixPosition() - unitTr.GetWorldMatrixPosition();
             var distSq = math.lengthsq(dir);
             // if our unit is in range [attackRange, sightRange] - find target point
             if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.attackRangeSqr) {
                 var offset = unit.radius;
-                // find point on line
+                // find point on the line
                 var dirNormalized = math.normalize(dir);
                 var attackRangeSqr = attackSensor.attackRangeSqr;
                 position = targetTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(attackRangeSqr) - offset);

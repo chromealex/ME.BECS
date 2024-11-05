@@ -18,28 +18,29 @@ namespace ME.BECS.UnitsHealthBars {
         }
 
         //[BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
-        public static void Render(ref Color bordersColor, ref Color backColor, ref Color minHealthColor, ref Color maxHealthColor, ref ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars) {
+        public static void Render(float referenceScale, ref Color bordersColor, ref Color backColor, ref Color minHealthColor, ref Color maxHealthColor, ref ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars) {
+
+            var scale = referenceScale > 0f ? Screen.height / referenceScale : 1f;
             
             var screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
             var onePixelSize = ScreenToView(1f);
-            var borderSize = ScreenToView(1f);
+            var borderSize = ScreenToView(2f);
             GL.Begin(GL.QUADS);
-            DrawQuad(new Rect(0f, 0f, 10f, 10f), 1f);
             var list = bars.ToList(Unity.Collections.Allocator.Temp);
             list.Sort(new BarZSorting());
             foreach (var item in list) {
                 var barRect = item;
                 var barSettings = barRect.settings;
-                var width = barSettings.Width;
-                var height = barSettings.Height;
+                var width = barSettings.GetWidth(scale);
+                var height = barSettings.GetHeight(scale);
                 var unitHeightPos = barRect.heightPosition;
                 var left = barRect.position.x - ScreenToView(width * 0.5f);
                 var bottom = barRect.position.y + (unitHeightPos.y - barRect.position.y) * 4f;
                 var top = bottom + ScreenToView(height);
                 var rect = new Rect(left, bottom, ScreenToView(width), ScreenToView(height));
                 if (rect.Overlaps(screenRect) == false) continue;
-                rect.position *= 2f;
-                rect.position -= new Vector2(screenRect.width * 0.5f, screenRect.height * 0.5f);
+                //rect.position *= 2f;
+                //rect.position -= new Vector2(screenRect.width * 0.5f, screenRect.height * 0.5f);
                 GL.Color(backColor);
                 var backRect = rect;
                 backRect.xMin -= borderSize;
@@ -49,10 +50,10 @@ namespace ME.BECS.UnitsHealthBars {
                 DrawQuad(backRect, onePixelSize);
                 {
                     GL.Color(bordersColor);
-                    DrawQuad(new Rect(left - onePixelSize, bottom, onePixelSize, ScreenToView(barSettings.Height)), onePixelSize);
+                    DrawQuad(new Rect(left - onePixelSize, bottom, onePixelSize, ScreenToView(height)), onePixelSize);
                 }
                 for (int i = 0; i < barSettings.Sections; ++i) {
-                    rect.width = ScreenToView(barSettings.sectionWidth);
+                    rect.width = ScreenToView(barSettings.sectionWidth * scale);
                     var color = Color.Lerp(minHealthColor, maxHealthColor, math.pow(barRect.healthPercent, 2));
                     if (i < barRect.barLerpIndex) {
                         GL.Color(color);
@@ -66,14 +67,14 @@ namespace ME.BECS.UnitsHealthBars {
                     rect.xMin += rect.width;
                     {
                         GL.Color(bordersColor);
-                        DrawQuad(new Rect(rect.xMin, rect.yMin, onePixelSize, ScreenToView(barSettings.Height)), onePixelSize);
+                        DrawQuad(new Rect(rect.xMin, rect.yMin, onePixelSize, ScreenToView(height)), onePixelSize);
                     }
                     rect.xMin += onePixelSize;
                 }
                 {
                     GL.Color(bordersColor);
-                    DrawQuad(new Rect(left - onePixelSize, bottom - onePixelSize, ScreenToView(barSettings.Width) + onePixelSize * 2f, onePixelSize), onePixelSize);
-                    DrawQuad(new Rect(left - onePixelSize, top, ScreenToView(barSettings.Width) + onePixelSize * 2f, onePixelSize), onePixelSize);
+                    DrawQuad(new Rect(left - onePixelSize, bottom - onePixelSize, ScreenToView(width) + onePixelSize * 2f, onePixelSize), onePixelSize);
+                    DrawQuad(new Rect(left - onePixelSize, top, ScreenToView(width) + onePixelSize * 2f, onePixelSize), onePixelSize);
                 }
             }
             GL.End();
@@ -110,6 +111,7 @@ namespace ME.BECS.UnitsHealthBars {
 
         public ME.BECS.NativeCollections.NativeParallelList<DrawHealthBarsSystem.BarItem> bars;
         public Material material;
+        public float referenceScale;
         public Color bordersColor = new Color(0.06f, 0.06f, 0.06f);
         public Color backColor = new Color(0.16f, 0.16f, 0.16f);
         public Color minHealthColor = new Color(1f, 0.01f, 0f);
@@ -138,7 +140,11 @@ namespace ME.BECS.UnitsHealthBars {
                 this.DrawLines();
             }
         }
- 
+
+        public void OnPostRender() {
+            this.DrawLines();
+        }
+
         private bool CheckFilter(Camera camera) {
             return (camera.cullingMask & (1 << this.gameObject.layer)) != 0;
         }
@@ -149,7 +155,7 @@ namespace ME.BECS.UnitsHealthBars {
             GL.LoadPixelMatrix();
             this.material.SetPass(0);
             {
-                HealthBarUtils.Render(ref this.bordersColor, ref this.backColor, ref this.minHealthColor, ref this.maxHealthColor, ref this.bars);
+                HealthBarUtils.Render(this.referenceScale, ref this.bordersColor, ref this.backColor, ref this.minHealthColor, ref this.maxHealthColor, ref this.bars);
             }
             GL.PopMatrix();
             

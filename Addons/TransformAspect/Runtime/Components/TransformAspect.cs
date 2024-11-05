@@ -20,7 +20,7 @@ namespace ME.BECS.Transforms {
         [QueryWith]
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
 
-        public bool IsCalculated => math.any(this.GetWorldMatrixRotation().value != default);
+        public bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
 
         public readonly float3 forward {
             [INLINE(256)] get => math.mul(this.rotation, math.forward());

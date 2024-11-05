@@ -595,19 +595,24 @@ namespace ME.BECS {
             [INLINE(256)]
             public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
-                var state = this.staticDataEnt.World.state;
-                return state->components.Has<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen, checkEnabled: false);
+                return this.staticDataEnt.Has<T>(checkEnabled: false);
 
             }
 
             [INLINE(256)]
             public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
-            
-                var state = this.staticDataEnt.World.state;
-                return state->components.Read<T>(state, this.staticDataEnt.id, this.staticDataEnt.gen);
+
+                return this.staticDataEnt.Read<T>();
 
             }
-            
+
+            [INLINE(256)]
+            public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
+
+                return this.staticDataEnt.TryRead(out component);
+                
+            }
+
         }
         
         private readonly uint id;
@@ -623,9 +628,9 @@ namespace ME.BECS {
         public bool IsCreated => this.IsValid();
 
         [INLINE(256)]
-        public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default) {
+        public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default, bool autoRegisterConfig = true) {
             
-            this.id = id > 0u ? id : EntityConfigRegistry.Register(config, out _);
+            this.id = id > 0u || autoRegisterConfig == false ? id : EntityConfigRegistry.Register(config, out _);
             this.data = new Data(config.data.components);
             this.dataShared = new SharedData(config.sharedData.components);
             this.dataInitialize = new DataInitialize(config.dataInitialize.components);
@@ -634,7 +639,7 @@ namespace ME.BECS {
             
             this.baseConfig = null;
             if (config.baseConfig is not null) {
-                this.baseConfig = _make(new UnsafeEntityConfig(config.baseConfig, staticDataEnt: staticDataEnt));
+                this.baseConfig = _make(new UnsafeEntityConfig(config.baseConfig, staticDataEnt: staticDataEnt, autoRegisterConfig: false));
             }
 
             this.staticData = default;
@@ -659,13 +664,20 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Apply(in Ent ent) {
-
+            
             if (this.IsValid() == false) {
                 throw new System.Exception();
             }
+            
+            this.Apply_INTERNAL(in ent);
+
+        }
+        
+        [INLINE(256)]
+        private void Apply_INTERNAL(in Ent ent) {
 
             if (this.baseConfig != null) {
-                this.baseConfig->Apply(in ent);
+                this.baseConfig->Apply_INTERNAL(in ent);
             }
             
             ent.Set(new EntityConfigComponent() {
@@ -728,6 +740,13 @@ namespace ME.BECS {
         public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
             return this.staticData.ReadStatic<T>();
+
+        }
+
+        [INLINE(256)]
+        public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
+
+            return this.staticData.TryReadStatic(out component);
 
         }
 

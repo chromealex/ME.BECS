@@ -118,8 +118,19 @@ namespace ME.BECS.Players {
         }
 
         [INLINE(256)]
-        public PlayerAspect GetPlayerEntity(uint index) {
+        public readonly PlayerAspect GetPlayerEntity(uint index) {
             return this.players[(int)index].GetAspect<PlayerAspect>();
+        }
+
+        [INLINE(256)]
+        public PlayerAspect GetFirstPlayerByTeamId(uint teamId) {
+            for (uint i = 0u; i < this.players.Length; ++i) {
+                var player = this.players[(int)i].GetAspect<PlayerAspect>();
+                if (player.readTeam == this.teams[(int)(teamId - 1u)]) {
+                    return player;
+                }
+            }
+            return default;
         }
 
     }

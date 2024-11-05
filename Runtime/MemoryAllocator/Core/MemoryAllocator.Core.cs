@@ -194,6 +194,10 @@ namespace ME.BECS {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             MemoryAllocator.CHECK_ZONE_ID(block->id);
             #endif
+
+            if (block->state == MemoryAllocator.BLOCK_STATE_FREE) {
+                throw new System.Exception("Seems like ptr is free already");
+            }
             
             // mark as free
             block->state = MemoryAllocator.BLOCK_STATE_FREE;
