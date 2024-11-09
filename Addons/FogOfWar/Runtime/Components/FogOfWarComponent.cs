@@ -2,6 +2,13 @@ namespace ME.BECS.FogOfWar {
     
     using Unity.Mathematics;
 
+    public enum RevealType : byte {
+
+        Range = 0,
+        Rect = 1,
+
+    }
+    
     public struct FogOfWarComponentGroup {
         
         public static UnityEngine.Color color = UnityEngine.Color.gray;
@@ -55,10 +62,21 @@ namespace ME.BECS.FogOfWar {
 
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarRevealerComponent : IConfigComponent {
-
+        
+        /// <summary>
+        /// 0 - range, 1 - rect
+        /// </summary>
+        public byte type;
+        /// <summary>
+        /// If rect type used as sizeX
+        /// </summary>
         public float range;
+        /// <summary>
+        /// Used with rect type (sizeY)
+        /// </summary>
+        public float rangeY;
         public float height;
-
+        
     }
     
     [ComponentGroup(typeof(FogOfWarComponentGroup))]

@@ -37,7 +37,11 @@ namespace ME.BECS.FogOfWar {
                 if (tr.IsCalculated == false) return;
                 
                 var fow = UnitUtils.GetTeam(in ent).Read<FogOfWarComponent>();
-                FogOfWarUtils.Write(in this.props, in fow, in tr, revealer.height, revealer.range);
+                if (revealer.type == 0) {
+                    FogOfWarUtils.Write(in this.props, in fow, in tr, revealer.height, revealer.range);
+                } else if (revealer.type == 1) {
+                    FogOfWarUtils.Write(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY);
+                }
 
             }
 
