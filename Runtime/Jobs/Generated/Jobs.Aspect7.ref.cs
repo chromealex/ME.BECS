@@ -112,7 +112,7 @@ namespace ME.BECS.Jobs {
                 for (uint i = 0u; i < jobData.buffer->count; ++i) {
                     jobInfo.index = i;
                     var entId = *(jobData.buffer->entities + i);
-                    var gen = jobData.buffer->state->entities.GetGeneration(jobData.buffer->state, entId);
+                    var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                     aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect1.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect2.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect3.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect4.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect5.ent = new Ent(entId, gen, jobData.buffer->worldId);aspect6.ent = new Ent(entId, gen, jobData.buffer->worldId);
                     jobData.jobData.Execute(in jobInfo, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6);
                 }

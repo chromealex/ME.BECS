@@ -1,5 +1,7 @@
 namespace ME.BECS.Attack {
 
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    
     public struct AttackAspect : IAspect {
         
         public Ent ent { get; set; }
@@ -22,6 +24,7 @@ namespace ME.BECS.Attack {
         
         public Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 
+        [INLINE(256)]
         public void SetTarget(Ent ent) {
             if (ent.IsAlive() == true) {
                 if (this.ent.Read<AttackTargetComponent>().target != ent) {
@@ -41,7 +44,9 @@ namespace ME.BECS.Attack {
         public float FireProgress => this.componentRuntime.fireTimer / this.component.fireTime;
 
         public bool IsReloaded {
+            [INLINE(256)]
             get => this.ent.Has<ReloadedComponent>();
+            [INLINE(256)]
             set {
                 if (value == true) {
                     this.ent.Set(new ReloadedComponent());
@@ -53,7 +58,9 @@ namespace ME.BECS.Attack {
         }
         
         public bool CanFire {
+            [INLINE(256)]
             get => this.ent.Has<CanFireComponent>();
+            [INLINE(256)]
             set {
                 if (value == true) {
                     this.ent.Set(new CanFireComponent());
@@ -65,8 +72,10 @@ namespace ME.BECS.Attack {
             }
         }
 
+        [INLINE(256)]
         public bool IsFireUsed() => this.ent.Has<FireUsedComponent>();
         
+        [INLINE(256)]
         public void UseFire() {
             this.ent.SetTag<FireUsedComponent>(true);
             this.ent.SetOneShot(new OnFireEvent(), OneShotType.NextTick);

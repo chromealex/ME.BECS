@@ -13,6 +13,7 @@ namespace ME.BECS.Bullets {
         /// If hitRangeSqr > 0  -> use splash damage
         /// If hitRangeSqr <= 0 -> use single damage at point or for targetEnt
         /// </summary>
+        [ValueSqr]
         public float hitRangeSqr;
 
         public float speed;

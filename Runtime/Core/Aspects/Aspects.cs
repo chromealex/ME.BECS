@@ -35,7 +35,7 @@ namespace ME.BECS {
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 Journal.CreateComponent<T>(in ent, in res);
-                this.state->batches.Set_INTERNAL(typeId, in ent, this.state);
+                Batches.Set_INTERNAL(typeId, in ent, this.state);
             } else {
                 Journal.UpdateComponent<T>(in ent, in res);
             }
@@ -105,7 +105,7 @@ namespace ME.BECS {
         public static void Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
             var world = ent.World;
-            world.state->aspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
+            AspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
             
         }
 

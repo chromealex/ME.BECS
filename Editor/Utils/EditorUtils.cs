@@ -511,7 +511,7 @@ namespace ME.BECS.Editor {
         }
         
         public static string GetEntityName(Ent ent) {
-            return ent.ToString(withWorld: false);
+            return ent.ToString(withWorld: false).ToString();
         }
 
         public static string BytesToString(int bytes) {

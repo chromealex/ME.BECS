@@ -93,9 +93,18 @@ namespace ME.BECS.Editor {
                     filenamePostfix = ".ref",
                     variables = new [] {
                         new System.Collections.Generic.KeyValuePair<string, string>("inref", "ref"),
+                        new System.Collections.Generic.KeyValuePair<string, string>("GetRead", "Get"),
                         new System.Collections.Generic.KeyValuePair<string, string>("RWRO", "RW"),
                     },
                 },
+                /*new VariantInfo() {
+                    filenamePostfix = ".in",
+                    variables = new [] {
+                        new System.Collections.Generic.KeyValuePair<string, string>("inref", "in"),
+                        new System.Collections.Generic.KeyValuePair<string, string>("GetRead", "Read"),
+                        new System.Collections.Generic.KeyValuePair<string, string>("RWRO", "RO"),
+                    },
+                },*/
             };
             var templates = UnityEditor.AssetDatabase.FindAssets("t:TextAsset .Tpl");
             foreach (var guid in templates) {

@@ -21,24 +21,24 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void OnEntityAdd(State* state, uint entId) {
+        public static void OnEntityAdd(State* state, uint entId) {
             
-            if (entId >= this.list.Length) {
-                this.readWriteSpinner.WriteBegin(state);
-                this.list.Resize(ref state->allocator, entId + 1u, 2);
-                this.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
-                this.readWriteSpinner.WriteEnd();
+            if (entId >= state->collectionsRegistry.list.Length) {
+                state->collectionsRegistry.readWriteSpinner.WriteBegin(state);
+                state->collectionsRegistry.list.Resize(ref state->allocator, entId + 1u, 2);
+                state->collectionsRegistry.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
+                state->collectionsRegistry.readWriteSpinner.WriteEnd();
             }
             
         }
 
         [INLINE(256)]
-        public void Destroy(State* state, in Ent ent) {
+        public static void Destroy(State* state, in Ent ent) {
 
-            this.readWriteSpinner.ReadBegin(state);
-            ref var list = ref this.list[in state->allocator, ent.id];
+            state->collectionsRegistry.readWriteSpinner.ReadBegin(state);
+            ref var list = ref state->collectionsRegistry.list[in state->allocator, ent.id];
             if (list.IsCreated == true) {
-                ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
+                ref var entitySpinner = ref state->collectionsRegistry.readWriteSpinnerPerEntity[in state->allocator, ent.id];
                 entitySpinner.Lock();
                 if (list.IsCreated == true) {
                     for (uint i = 0; i < list.Count; ++i) {
@@ -49,44 +49,44 @@ namespace ME.BECS {
                 }
                 entitySpinner.Unlock();
             }
-            this.readWriteSpinner.ReadEnd(state);
+            state->collectionsRegistry.readWriteSpinner.ReadEnd(state);
             
         }
         
         [INLINE(256)]
-        public void Add(State* state, in Ent ent, in MemPtr ptr) {
+        public static void Add(State* state, in Ent ent, in MemPtr ptr) {
             
-            this.readWriteSpinner.ReadBegin(state);
-            ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
+            state->collectionsRegistry.readWriteSpinner.ReadBegin(state);
+            ref var entitySpinner = ref state->collectionsRegistry.readWriteSpinnerPerEntity[in state->allocator, ent.id];
             entitySpinner.Lock();
-            ref var list = ref this.list[in state->allocator, ent.id];
+            ref var list = ref state->collectionsRegistry.list[in state->allocator, ent.id];
             if (list.IsCreated == false) list = new List<MemPtr>(ref state->allocator, 1u);
             list.Add(ref state->allocator, ptr);
             entitySpinner.Unlock();
-            this.readWriteSpinner.ReadEnd(state);
+            state->collectionsRegistry.readWriteSpinner.ReadEnd(state);
             
         }
 
         [INLINE(256)]
-        public void Remove(State* state, in Ent ent, in MemPtr ptr) {
+        public static void Remove(State* state, in Ent ent, in MemPtr ptr) {
             
-            this.readWriteSpinner.ReadBegin(state);
-            ref var list = ref this.list[in state->allocator, ent.id];
+            state->collectionsRegistry.readWriteSpinner.ReadBegin(state);
+            ref var list = ref state->collectionsRegistry.list[in state->allocator, ent.id];
             if (list.IsCreated == true) {
-                ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
+                ref var entitySpinner = ref state->collectionsRegistry.readWriteSpinnerPerEntity[in state->allocator, ent.id];
                 entitySpinner.Lock();
                 list.Remove(ref state->allocator, ptr);
                 entitySpinner.Unlock();
             }
-            this.readWriteSpinner.ReadEnd(state);
+            state->collectionsRegistry.readWriteSpinner.ReadEnd(state);
             
         }
 
-        public uint GetReservedSizeInBytes(State* state) {
+        public static uint GetReservedSizeInBytes(State* state) {
 
             var size = 0u;
-            for (uint i = 0u; i < this.list.Length; ++i) {
-                var item = this.list[state, i];
+            for (uint i = 0u; i < state->collectionsRegistry.list.Length; ++i) {
+                var item = state->collectionsRegistry.list[state, i];
                 size += item.GetReservedSizeInBytes();
                 for (uint j = 0u; j < item.Count; ++j) {
                     var obj = item[state, j];

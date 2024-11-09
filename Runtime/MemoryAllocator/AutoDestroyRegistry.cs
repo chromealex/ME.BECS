@@ -38,29 +38,29 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void OnEntityAdd(State* state, uint entId) {
+        public static void OnEntityAdd(State* state, uint entId) {
             
-            if (entId >= this.list.Length) {
-                this.readWriteSpinner.WriteBegin(state);
-                this.list.Resize(ref state->allocator, entId + 1u, 2);
-                this.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
-                this.readWriteSpinner.WriteEnd();
+            if (entId >= state->autoDestroyRegistry.list.Length) {
+                state->autoDestroyRegistry.readWriteSpinner.WriteBegin(state);
+                state->autoDestroyRegistry.list.Resize(ref state->allocator, entId + 1u, 2);
+                state->autoDestroyRegistry.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
+                state->autoDestroyRegistry.readWriteSpinner.WriteEnd();
             }
             
         }
 
         [INLINE(256)]
-        public void Destroy(State* state, in Ent ent) {
+        public static void Destroy(State* state, in Ent ent) {
 
-            this.readWriteSpinner.ReadBegin(state);
-            ref var list = ref this.list[in state->allocator, ent.id];
+            state->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
+            ref var list = ref state->autoDestroyRegistry.list[in state->allocator, ent.id];
             if (list.IsCreated == true) {
-                ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
+                ref var entitySpinner = ref state->autoDestroyRegistry.readWriteSpinnerPerEntity[in state->allocator, ent.id];
                 entitySpinner.Lock();
                 if (list.IsCreated == true) {
                     for (uint i = 0; i < list.Count; ++i) {
                         var typeId = list[in state->allocator, i];
-                        var comp = state->components.ReadUnknownType(state, typeId, ent.id, ent.gen, out var exists);
+                        var comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out var exists);
                         if (exists == true) {
                             // component exists - call destroy method
                             var func = new Unity.Burst.FunctionPointer<DestroyDelegate>(StaticTypesDestroyRegistry.registry.Data.Get(typeId));
@@ -72,34 +72,34 @@ namespace ME.BECS {
                 }
                 entitySpinner.Unlock();
             }
-            this.readWriteSpinner.ReadEnd(state);
+            state->autoDestroyRegistry.readWriteSpinner.ReadEnd(state);
             
         }
         
         [INLINE(256)]
-        public void Add(State* state, in Ent ent, uint typeId) {
+        public static void Add(State* state, in Ent ent, uint typeId) {
             
-            this.readWriteSpinner.ReadBegin(state);
-            ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
+            state->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
+            ref var entitySpinner = ref state->autoDestroyRegistry.readWriteSpinnerPerEntity[in state->allocator, ent.id];
             entitySpinner.Lock();
-            ref var list = ref this.list[in state->allocator, ent.id];
+            ref var list = ref state->autoDestroyRegistry.list[in state->allocator, ent.id];
             if (list.IsCreated == false) list = new List<uint>(ref state->allocator, 1u);
             list.Add(ref state->allocator, typeId);
             entitySpinner.Unlock();
-            this.readWriteSpinner.ReadEnd(state);
+            state->autoDestroyRegistry.readWriteSpinner.ReadEnd(state);
             
         }
 
         [INLINE(256)]
-        public void Remove(State* state, in Ent ent, uint typeId) {
+        public static void Remove(State* state, in Ent ent, uint typeId) {
             
-            this.readWriteSpinner.ReadBegin(state);
-            ref var entitySpinner = ref this.readWriteSpinnerPerEntity[in state->allocator, ent.id];
+            state->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
+            ref var entitySpinner = ref state->autoDestroyRegistry.readWriteSpinnerPerEntity[in state->allocator, ent.id];
             entitySpinner.Lock();
-            ref var list = ref this.list[in state->allocator, ent.id];
+            ref var list = ref state->autoDestroyRegistry.list[in state->allocator, ent.id];
             if (list.IsCreated == true) list.Remove(ref state->allocator, typeId);
             entitySpinner.Unlock();
-            this.readWriteSpinner.ReadEnd(state);
+            state->autoDestroyRegistry.readWriteSpinner.ReadEnd(state);
             
         }
 

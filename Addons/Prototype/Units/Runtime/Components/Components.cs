@@ -11,12 +11,16 @@ namespace ME.BECS.Units {
     
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct NavAgentComponent : IConfigComponent {
+        
+        public static NavAgentComponent Default = new NavAgentComponent() {
+            sightRange = Sector.Default,
+        };
 
         public float maxSpeed;
         public float accelerationSpeed;
         public float decelerationSpeed;
         public float rotationSpeed;
-        public float sightRangeSqr;
+        public Sector sightRange;
 
     }
 

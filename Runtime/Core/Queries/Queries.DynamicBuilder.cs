@@ -478,7 +478,7 @@ namespace ME.BECS {
                     for (uint i = 0u; i < this.commandBuffer->count; ++i) {
 
                         var entId = this.commandBuffer->entities[i];
-                        var entGen = this.commandBuffer->state->entities.GetGeneration(this.commandBuffer->state, entId);
+                        var entGen = Ents.GetGeneration(this.commandBuffer->state, entId);
                         var buffer = new CommandBufferJob(entId, entGen, this.commandBuffer);
                         forEach.Invoke(in buffer);
 

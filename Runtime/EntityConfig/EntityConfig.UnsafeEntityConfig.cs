@@ -125,7 +125,7 @@ namespace ME.BECS {
                     var hash = this.hashes[i];
                     var func = this.functionPointers[i];
                     if (func.IsValid() == true) func.Call(in config, data, in ent);
-                    state->batches.SetShared(in ent, groupId, data, dataSize, typeId, sharedTypeId, state, hash);
+                    Batches.SetShared(in ent, groupId, data, dataSize, typeId, sharedTypeId, state, hash);
                 }
 
             }
@@ -253,7 +253,7 @@ namespace ME.BECS {
                     var typeId = this.typeIds[i];
                     var func = this.functionPointers[i];
                     if (func.IsValid() == true) func.Call(in config, data, in ent);
-                    state->batches.Set(in ent, typeId, data, state);
+                    Batches.Set(in ent, typeId, data, state);
                 }
 
             }
@@ -465,7 +465,7 @@ namespace ME.BECS {
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
                     state->aspectsStorage.Initialize(state, this.typeIds[i], this.sizes[i]);
-                    state->aspectsStorage.SetAspect(state, in ent, this.typeIds[i]);
+                    AspectsStorage.SetAspect(state, in ent, this.typeIds[i]);
                 }
 
             }
@@ -586,7 +586,7 @@ namespace ME.BECS {
                         var del = (MethodCallerDelegate)System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
                         del.Invoke(in config, (void*)ptr, in ent);
                     }
-                    state->batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
+                    Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
                     gcHandle.Free();
                 }
 
@@ -597,7 +597,7 @@ namespace ME.BECS {
 
                 E.IS_ALIVE(this.staticDataEnt);
                 var world = this.staticDataEnt.World;
-                return world.state->components.Has<T>(world.state, checkEnabled: false, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen);
+                return Components.Has<T>(world.state, checkEnabled: false, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen);
 
             }
 
@@ -606,7 +606,7 @@ namespace ME.BECS {
 
                 E.IS_ALIVE(this.staticDataEnt);
                 var world = this.staticDataEnt.World;
-                return world.state->components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out _);
+                return Components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out _);
 
             }
 
@@ -615,7 +615,7 @@ namespace ME.BECS {
 
                 E.IS_ALIVE(this.staticDataEnt);
                 var world = this.staticDataEnt.World;
-                component = world.state->components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out var exists);
+                component = Components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out var exists);
                 return exists;
 
             }

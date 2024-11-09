@@ -7,6 +7,30 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using Unity.Mathematics;
     using static Cuts;
+    
+    public readonly ref struct FowMathSector {
+
+        private readonly float2 position;
+        private readonly float2 lookDirection;
+        private readonly float sector;
+        private readonly bool checkSector;
+        
+        public FowMathSector(in FogOfWarStaticComponent props, in float3 position, in quaternion rotation, float sector) {
+            this.position = position.xz;
+            this.lookDirection = math.normalize(math.mul(rotation, math.forward())).xz;
+            this.sector = math.radians(sector);
+            this.checkSector = sector > 0f && sector < 360f;
+        }
+
+        public bool IsValid(in FogOfWarStaticComponent props, uint x, uint y) {
+            if (this.checkSector == false) return true;
+            var dir = math.normalize(FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(x, y)).xz - this.position);
+            var dot = math.clamp(math.dot(dir, this.lookDirection), -1f, 1f);
+            var angle = math.acos(dot);
+            return angle < this.sector * 0.5f;
+        }
+        
+    }
 
     public static unsafe class FogOfWarUtils {
 
@@ -17,24 +41,27 @@ namespace ME.BECS.FogOfWar {
 
             var pos = WorldToFogMapPosition(in props, unitTr.GetWorldMatrixPosition());
             var fowRange = WorldToFogMapValue(in props, math.sqrt(unit.readSightRangeSqr));
+            var fowRangeMin = WorldToFogMapValue(in props, math.sqrt(unit.readMinSightRangeSqr));
             var height = unitTr.GetWorldMatrixPosition().y + unit.readHeight;
-            SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, fowRange, height);
+            var sector = new FowMathSector(in props, unitTr.GetWorldMatrixPosition(), unitTr.GetWorldMatrixRotation(), unit.readSector);
+            SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, fowRangeMin, fowRange, height, in sector);
 
         }
 
         [INLINE(256)]
-        public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float range) {
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float range, float rangeMin) {
 
             var worldPos = tr.GetWorldMatrixPosition();
             var fowPos = WorldToFogMapPosition(in props, worldPos);
             var fowRange = WorldToFogMapValue(in props, range);
+            var fowRangeMin = WorldToFogMapValue(in props, rangeMin);
             var fowHeight = worldPos.y + height;
-            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, fowRange, fowHeight);
+            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, fowRangeMin, fowRange, fowHeight, default);
 
         }
 
         [INLINE(256)]
-        public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float sizeX, float sizeY) {
+        public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float sizeX, float sizeY) {
 
             var worldPos = tr.GetWorldMatrixPosition();
             var fowPos = WorldToFogMapPosition(in props, worldPos);
@@ -173,22 +200,27 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int radius, float height) {
+        public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, float height, in FowMathSector sector) {
 
+            var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
             for (var r = -radius; r < radius; ++r) {
 
-                var hh = (int) math.sqrt(radiusSqr - r * r);
+                var hh = (int)math.sqrt(radiusSqr - r * r);
                 var x = x0 + r;
                 if (x < 0 || x >= props.size.x) continue;
 
-                var ph = y0 + hh;
-                for (var y = y0 - hh; y < ph; ++y) {
+                for (var y = y0 - hh; y < y0 + hh; ++y) {
 
                     if (y < 0 || y >= props.size.y) continue;
                     if (IsVisible(in props, in map, (uint)x, (uint)y) == true) {
                         continue;
                     }
+
+                    var localY = y - y0;
+                    if (r * r <= radiusMinSqr && localY * localY <= radiusMinSqr) continue;
+
+                    if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
 
                     if (Raycast(in props, x0, y0, x, y, height) == true) {
                         var index = y * (int)props.size.x + x;

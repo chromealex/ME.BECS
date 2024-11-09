@@ -9,7 +9,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->batches.SetShared(in ent, in data, world.state);
+            return Batches.SetShared(in ent, in data, world.state);
 
         }
 
@@ -18,16 +18,16 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->batches.RemoveShared<T>(in ent, world.state, hash);
+            return Batches.RemoveShared<T>(in ent, world.state, hash);
 
         }
 
         [INLINE(256)]
-        public static bool HasShared<T>(in this Ent ent) where T : unmanaged, IComponentShared {
+        public static bool HasShared<T>(in this Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->batches.HasShared<T>(in ent, world.state);
+            return Batches.HasShared<T>(in ent, world.state, hash);
 
         }
 
@@ -36,7 +36,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return ref world.state->batches.GetShared<T>(in ent, world.state, hash);
+            return ref Batches.GetShared<T>(in ent, world.state, hash);
 
         }
 
@@ -45,7 +45,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return ref world.state->batches.ReadShared<T>(in ent, world.state, hash);
+            return ref Batches.ReadShared<T>(in ent, world.state, hash);
 
         }
 

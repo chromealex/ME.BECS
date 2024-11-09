@@ -85,7 +85,7 @@ namespace ME.BECS.Editor {
                     var draw = true;
                     {
                         if (string.IsNullOrEmpty(search.text) == false) {
-                            if (text.ToLower().Contains(search.text) == false) {
+                            if (text.ToString().ToLower().Contains(search.text) == false) {
                                 draw = false;
                             }
                         }
@@ -136,7 +136,7 @@ namespace ME.BECS.Editor {
                         elem.root.AddToClassList("element");
                         elem.root.AddToClassList(data.GetClass());
                         elem.tick.text = data.tick.ToString();
-                        elem.name.text = text;
+                        elem.name.text = text.ToString();
 
                     } else {
                         

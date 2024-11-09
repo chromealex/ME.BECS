@@ -21,7 +21,7 @@ namespace ME.BECS {
             for (uint i = 0u; i < AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId).Length; ++i) {
 
                 var typeId = AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId).Get(i);
-                var has = world.state->components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
+                var has = Components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     IS_VALID_FOR_ASPECT_BurstDiscard(in ent, typeId);
                     throw new RequiredComponentException($"Entity {ent.ToString()} has no component {typeId}, but it is required");

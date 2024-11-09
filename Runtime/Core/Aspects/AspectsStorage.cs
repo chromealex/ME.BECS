@@ -130,15 +130,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void SetAspect(State* state, in Ent ent, uint aspectTypeId) {
+        public static void SetAspect(State* state, in Ent ent, uint aspectTypeId) {
 
             for (uint i = 0u; i < AspectTypeInfo.with.Get(aspectTypeId).Length; ++i) {
 
                 var typeId = AspectTypeInfo.with.Get(aspectTypeId).Get(i);
-                var has = state->components.HasUnknownType(state, typeId, ent.id, ent.gen, checkEnabled: false);
+                var has = Components.HasUnknownType(state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
-                    state->components.SetUnknownType(state, typeId, StaticTypes.groups.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
-                    state->batches.Set_INTERNAL(typeId, in ent, state);
+                    Components.SetUnknownType(state, typeId, StaticTypes.groups.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
+                    Batches.Set_INTERNAL(typeId, in ent, state);
                 }
 
             }

@@ -33,7 +33,7 @@ namespace ME.BECS {
 
             if (ent.World.isCreated == false) return false;
             var state = ent.World.state;
-            return state->entities.IsAlive(state, ent);
+            return Ents.IsAlive(state, ent);
 
         }
 
@@ -45,31 +45,28 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var state = ent.World.state;
-            state->entities.Lock(state, in ent);
-            //UnityEngine.Debug.Log("Destroy Request: " + ent + " :: " + state->archetypes.entToArchetypeIdx[state, ent.id]);
+            Ents.Lock(state, in ent);
             E.IS_ALIVE(ent);
             E.IS_IN_TICK(state);
-            
             {
-                state->autoDestroyRegistry.Destroy(state, in ent);
+                AutoDestroyRegistry.Destroy(state, in ent);
             }
             {
-                state->entities.Remove(state, in ent);
+                Ents.Remove(state, in ent);
             }
             {
-                state->components.ClearShared(state, ent.id);
+                Components.ClearShared(state, ent.id);
             }
             {
-                state->batches.Clear(state, in ent);
+                Batches.Clear(state, in ent);
             }
             {
-                state->archetypes.RemoveEntity(state, in ent);
+                Archetypes.RemoveEntity(state, in ent);
             }
             {
-                state->collectionsRegistry.Destroy(state, in ent);
+                CollectionsRegistry.Destroy(state, in ent);
             }
-            //UnityEngine.Debug.Log("Destroy Request Complete: " + ent + " :: " + state->archetypes.entToArchetypeIdx[state, ent.id]);
-            state->entities.Unlock(state, in ent);
+            Ents.Unlock(state, in ent);
             
         }
 

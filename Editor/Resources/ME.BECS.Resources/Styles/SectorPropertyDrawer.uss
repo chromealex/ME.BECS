@@ -3,7 +3,16 @@
     border-color: rgba(0, 0, 0, 0.2);
     border-radius: 5px;
     margin: 10px;
+    margin-left: 0px;
+    margin-right: 0px;
     padding: 5px;
+    padding-right: 2px;
+    padding-left: 2px;
+}
+
+SectorPreview {
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 
 .preview {

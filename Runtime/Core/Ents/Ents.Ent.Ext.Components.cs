@@ -12,7 +12,7 @@ namespace ME.BECS {
 
             var world = ent.World;
             Journal.EnableComponent<T>(in ent);
-            return world.state->batches.Enable<T>(in ent, world.state);
+            return Batches.Enable<T>(in ent, world.state);
 
         }
 
@@ -24,7 +24,7 @@ namespace ME.BECS {
             
             var world = ent.World;
             Journal.DisableComponent<T>(in ent);
-            return world.state->batches.Disable<T>(in ent, world.state);
+            return Batches.Disable<T>(in ent, world.state);
 
         }
 
@@ -33,8 +33,8 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            Journal.SetComponent<T>(in ent, in data);
-            return world.state->batches.Set(in ent, in data, world.state);
+            Journal.SetComponent(in ent, in data);
+            return Batches.Set(in ent, in data, world.state);
 
         }
 
@@ -44,7 +44,7 @@ namespace ME.BECS {
             E.IS_ALIVE(ent);
             var world = ent.World;
             Journal.RemoveComponent<T>(in ent);
-            return world.state->batches.Remove<T>(in ent, world.state);
+            return Batches.Remove<T>(in ent, world.state);
 
         }
 
@@ -53,7 +53,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return ref world.state->batches.Get<T>(in ent, world.state);
+            return ref Batches.Get<T>(in ent, world.state);
 
         }
 
@@ -62,7 +62,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return world.state->components.Has<T>(world.state, ent.id, ent.gen, checkEnabled);
+            return Components.Has<T>(world.state, ent.id, ent.gen, checkEnabled);
 
         }
 
@@ -71,7 +71,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return ref world.state->components.Read<T>(world.state, ent.id, ent.gen);
+            return ref Components.Read<T>(world.state, ent.id, ent.gen);
 
         }
 
@@ -80,7 +80,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            return ref world.state->components.Read<T>(world.state, ent.id, ent.gen, out exists);
+            return ref Components.Read<T>(world.state, ent.id, ent.gen, out exists);
 
         }
 
@@ -89,7 +89,7 @@ namespace ME.BECS {
 
             E.IS_ALIVE(ent);
             var world = ent.World;
-            component = world.state->components.Read<T>(world.state, ent.id, ent.gen, out var exists);
+            component = Components.Read<T>(world.state, ent.id, ent.gen, out var exists);
             return exists;
 
         }

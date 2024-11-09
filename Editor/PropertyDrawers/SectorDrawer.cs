@@ -25,6 +25,8 @@ namespace ME.BECS.Attack.Editor {
             var root = new VisualElement();
             root.styleSheets.Add(SectorDrawer.styleSheetBase);
             root.AddToClassList("root");
+            var label = new Label(property.displayName);
+            root.Add(label);
             SectorPreview sectorPreview = null;
             {
                 sectorPreview = new SectorPreview();
@@ -117,6 +119,12 @@ namespace ME.BECS.Attack.Editor {
     public class SectorPreview : VisualElement {
 
         public Color angleColor = Color.green;
+        public Color fillColor = new Color(0f, 0f, 0f, 0.5f);
+        public Color minRangeFillColor = new Color(1f, 0f, 0f, 0.2f);
+        public Color borderColor = new Color(0f, 0f, 0f, 0.5f);
+        public Color gridBackColor = new Color(1f, 1f, 1f, 0.05f);
+        public Color gridMainColor = new Color(1f, 1f, 1f, 0.1f);
+        public Color directionColor = new Color(1f, 1f, 0f, 0.3f);
 
         public float angle;
         public float range;
@@ -132,36 +140,113 @@ namespace ME.BECS.Attack.Editor {
 
             var rect = mgc.visualElement.worldBound;
             var centerPos = new float2(rect.width * 0.5f, rect.height * 0.5f);
-            var scale = math.min(rect.width, rect.height) / this.range * 0.5f;
+            var padding = 20f;
+            var scale = (math.min(rect.width, rect.height) - padding) / this.range * 0.5f;
             //var capLeft = centerPos + new float2(0f, 30f);
             var capLeft = math.mul(quaternion.Euler(0f, 0f, -math.radians(this.angle * 0.5f)), new float3(0f, -this.range * scale, 0f));
             var capRight = math.mul(quaternion.Euler(0f, 0f, math.radians(this.angle * 0.5f)), new float3(0f, -this.range * scale, 0f));
 
+            {
+                // Draw grid
+                DrawGrid(painter, rect, 1f, scale, this.gridBackColor);
+                DrawGrid(painter, rect, 5f, scale, this.gridMainColor);
+            }
+
+            {
+                // Draw border
+                painter.strokeColor = this.borderColor;
+                painter.lineWidth = 3f;
+                painter.lineCap = LineCap.Butt;
+                painter.BeginPath();
+                painter.MoveTo(new Vector2(0f, 0f));
+                painter.LineTo(new Vector2(rect.width, 0f));
+                painter.LineTo(new Vector2(rect.width, rect.height));
+                painter.LineTo(new Vector2(0f, rect.height));
+                painter.ClosePath();
+                painter.Stroke();
+            }
+            
             if (this.angle >= 360f) {
                 painter.strokeColor = this.angleColor;
+                painter.fillColor = this.fillColor;
                 painter.lineWidth = 1f;
                 painter.lineCap = LineCap.Butt;
                 painter.BeginPath();
-                if (this.minRange > 0f) painter.Arc(centerPos, this.minRange * scale, new Angle(-90f), new Angle(360f - 90f), ArcDirection.Clockwise);
                 painter.Arc(centerPos, this.range * scale, new Angle(-90f), new Angle(360f - 90f), ArcDirection.Clockwise);
                 painter.ClosePath();
+                painter.Fill(FillRule.OddEven);
                 painter.Stroke();
-                return;
+                
+                if (this.minRange > 0f) {
+                    painter.strokeColor = this.angleColor;
+                    painter.fillColor = this.minRangeFillColor;
+                    painter.lineWidth = 1f;
+                    painter.lineCap = LineCap.Butt;
+                    painter.BeginPath();
+                    painter.Arc(centerPos, this.minRange * scale, new Angle(-90f), new Angle(360f - 90f), ArcDirection.Clockwise);
+                    painter.ClosePath();
+                    painter.Fill(FillRule.OddEven);
+                    painter.Stroke();
+                }
+            } else {
+                painter.strokeColor = this.angleColor;
+                painter.fillColor = this.fillColor;
+                painter.lineWidth = 1f;
+                painter.lineCap = LineCap.Round;
+                painter.BeginPath();
+                painter.Arc(centerPos, this.minRange * scale, new Angle(-this.angle * 0.5f - 90f), new Angle(this.angle * 0.5f - 90f), ArcDirection.Clockwise);
+                painter.LineTo(centerPos + capRight.xy);
+                painter.Arc(centerPos, this.range * scale, new Angle(this.angle * 0.5f - 90f), new Angle(-this.angle * 0.5f - 90f), ArcDirection.CounterClockwise);
+                painter.LineTo(centerPos + capLeft.xy);
+                painter.LineTo(centerPos + math.normalize(capLeft.xy) * this.minRange * scale);
+                painter.ClosePath();
+                painter.Fill(FillRule.OddEven);
+                painter.Stroke();
+            }
+
+            {
+                // Draw direction
+                DrawArrow(30f, this.directionColor, 40f);
+                DrawArrow(20f, this.directionColor, 50f);
+                DrawArrow(10f, this.directionColor, 60f);
+
+                void DrawArrow(float arrowSize, Color color, float paddingOffset) {
+                    painter.strokeColor = color;
+                    painter.lineWidth = 2f;
+                    painter.lineCap = LineCap.Butt;
+                    painter.BeginPath();
+                    painter.MoveTo(new Vector2(rect.width * 0.5f, rect.height * 0.5f));
+                    painter.LineTo(new Vector2(rect.width * 0.5f, padding + paddingOffset));
+                    painter.MoveTo(new Vector2(rect.width * 0.5f, padding + paddingOffset));
+                    painter.LineTo(new Vector2(rect.width * 0.5f + arrowSize, 0f + padding + paddingOffset + arrowSize));
+                    painter.MoveTo(new Vector2(rect.width * 0.5f, padding + paddingOffset));
+                    painter.LineTo(new Vector2(rect.width * 0.5f - arrowSize, 0f + padding + paddingOffset + arrowSize));
+                    painter.ClosePath();
+                    painter.Stroke();
+                }
+                
             }
             
-            painter.strokeColor = this.angleColor;
+        }
+
+        private static void DrawGrid(Painter2D painter, Rect rect, float cellSize, float scale, Color color) {
+            painter.strokeColor = color;
             painter.lineWidth = 1f;
-            painter.lineCap = LineCap.Round;
+            painter.lineCap = LineCap.Butt;
             painter.BeginPath();
-            painter.Arc(centerPos, this.minRange * scale, new Angle(-this.angle * 0.5f - 90f), new Angle(this.angle * 0.5f - 90f), ArcDirection.Clockwise);
-            painter.LineTo(centerPos + capRight.xy);
-            painter.Arc(centerPos, this.range * scale, new Angle(this.angle * 0.5f - 90f), new Angle(-this.angle * 0.5f - 90f), ArcDirection.CounterClockwise);
-            painter.LineTo(centerPos + capLeft.xy);
-            painter.LineTo(centerPos + math.normalize(capLeft.xy) * this.minRange * scale);
+            var step = cellSize * scale;
+            var startOffset = rect.width * 0.5f % step;
+            for (float x = startOffset; x <= rect.width; x += step) {
+                painter.MoveTo(new Vector2(x, 0f));
+                painter.LineTo(new Vector2(x, rect.height));
+            }
+            startOffset = rect.height * 0.5f % step;
+            for (float y = startOffset; y <= rect.height; y += step) {
+                painter.MoveTo(new Vector2(0f, y));
+                painter.LineTo(new Vector2(rect.width, y));
+            }
             painter.ClosePath();
-            painter.Fill(FillRule.OddEven);
             painter.Stroke();
-            
         }
 
         public void RedrawElement() {

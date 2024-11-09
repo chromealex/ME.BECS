@@ -134,13 +134,13 @@ namespace ME.BECS {
             }
 
             using (new ProfilerMarker("Components").Auto()) {
-                ProfilerCountersDefinition.componentsSize.Data.Sample(world.state->components.GetReservedSizeInBytes(world.state));
+                ProfilerCountersDefinition.componentsSize.Data.Sample(Components.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("Archetypes").Auto()) {
                 ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state->archetypes.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("EntitiesCount").Auto()) {
-                ProfilerCountersDefinition.batchesSize.Data.Sample(world.state->batches.GetReservedSizeInBytes(world.state));
+                ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("Entities").Auto()) {
                 ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state->entities.GetReservedSizeInBytes(world.state));

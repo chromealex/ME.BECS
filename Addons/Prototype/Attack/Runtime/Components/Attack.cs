@@ -1,20 +1,5 @@
 namespace ME.BECS.Attack {
 
-    [System.Serializable]
-    public struct Sector {
-
-        public static Sector Default => new Sector() {
-            rangeSqr = 0f,
-            sector = 360f,
-        };
-
-        public float rangeSqr;
-        public float minRangeSqr;
-        [UnityEngine.RangeAttribute(0f, 360f)]
-        public float sector;
-        
-    }
-    
     public struct AttackComponent : IConfigComponent, IConfigInitialize {
 
         public static AttackComponent Default => new AttackComponent() {

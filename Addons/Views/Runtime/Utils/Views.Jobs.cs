@@ -187,7 +187,7 @@ namespace ME.BECS.Views {
                 
                 var entityData = this.renderingOnSceneEnts[index];
                 var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                var sourceData = this.beginFrameState->components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
+                var sourceData = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
                 var pos = tr.GetWorldMatrixPosition();
                 var rot = tr.GetWorldMatrixRotation();
 

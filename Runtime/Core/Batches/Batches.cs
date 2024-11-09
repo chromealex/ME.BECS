@@ -78,7 +78,7 @@ namespace ME.BECS {
                 var addItems = ComponentsFastTrack.Create(this.addItems);
                 var removeItems = ComponentsFastTrack.Create(this.removeItems);
                 MemoryAllocator.ValidateConsistency(ref state->allocator);
-                archetypes.ApplyBatch(state, entId, in addItems, in removeItems);
+                Archetypes.ApplyBatch(state, entId, in addItems, in removeItems);
                 this.addItems.Dispose();
                 this.removeItems.Dispose();
                 this.Count = 0u;
@@ -129,7 +129,7 @@ namespace ME.BECS {
     }
     
     [BURST(CompileSynchronously = true)]
-    public unsafe struct Batches {
+    public unsafe partial struct Batches {
 
         [StructLayout(LayoutKind.Explicit, Size = 24)]
         public struct ThreadItem {
@@ -153,17 +153,17 @@ namespace ME.BECS {
         public ReadWriteSpinner workingLock;
         internal ReadWriteSpinner lockReadWrite;
 
-        public uint GetReservedSizeInBytes(State* state) {
+        public static uint GetReservedSizeInBytes(State* state) {
 
-            if (this.items.IsCreated == false) return 0u;
+            if (state->batches.items.IsCreated == false) return 0u;
 
             var size = 0u;
-            for (uint i = 0u; i < this.items.Length; ++i) {
-                ref var item = ref this.items[in state->allocator, i];
+            for (uint i = 0u; i < state->batches.items.Length; ++i) {
+                ref var item = ref state->batches.items[in state->allocator, i];
                 size += item.GetReservedSizeInBytes();
             }
-            for (uint i = 0u; i < this.arr.Length; ++i) {
-                ref var item = ref this.arr[in state->allocator, i];
+            for (uint i = 0u; i < state->batches.arr.Length; ++i) {
+                ref var item = ref state->batches.arr[in state->allocator, i];
                 size += item.GetReservedSizeInBytes();
             }
             
@@ -189,10 +189,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void OnEntityAddThreadItem(State* state, uint entId) {
+        public static void OnEntityAddThreadItem(State* state, uint entId) {
             
-            for (uint i = 0u; i < this.items.Length; ++i) {
-                ref var threadItem = ref this.items[state, i];
+            for (uint i = 0u; i < state->batches.items.Length; ++i) {
+                ref var threadItem = ref state->batches.items[state, i];
                 if (entId >= threadItem.items.Capacity) {
                     JobUtils.Lock(ref threadItem.lockSpinner);
                     if (entId >= threadItem.items.Capacity) {
@@ -205,52 +205,52 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Clear(State* state, in Ent ent) {
+        public static void Clear(State* state, in Ent ent) {
 
-            this.lockReadWrite.ReadBegin(state);
-            if (ent.id >= this.arr.Length) {
-                this.lockReadWrite.ReadEnd(state);
+            state->batches.lockReadWrite.ReadBegin(state);
+            if (ent.id >= state->batches.arr.Length) {
+                state->batches.lockReadWrite.ReadEnd(state);
                 return;
             }
-            ref var item = ref this.arr[state, ent.id];
+            ref var item = ref state->batches.arr[state, ent.id];
             item.lockIndex.Lock();
             //UnityEngine.Debug.Log("Destroy: " + ent.id + " :: " + ent + ", stored: " + item.ent);
             item.Clear();
             item.lockIndex.Unlock();
-            this.lockReadWrite.ReadEnd(state);
+            state->batches.lockReadWrite.ReadEnd(state);
 
         }
 
         [INLINE(256)]
-        internal void OpenFromJob(State* state) {
-            this.workingLock.ReadBegin(state);
-            JobUtils.Increment(ref this.openIndex);
-            this.workingLock.ReadEnd(state);
+        internal static void OpenFromJob(State* state) {
+            state->batches.workingLock.ReadBegin(state);
+            JobUtils.Increment(ref state->batches.openIndex);
+            state->batches.workingLock.ReadEnd(state);
         }
 
         [INLINE(256)]
-        internal void CloseFromJob(State* state) {
-            this.workingLock.ReadBegin(state);
-            JobUtils.Decrement(ref this.openIndex);
-            this.workingLock.ReadEnd(state);
+        internal static void CloseFromJob(State* state) {
+            state->batches.workingLock.ReadBegin(state);
+            JobUtils.Decrement(ref state->batches.openIndex);
+            state->batches.workingLock.ReadEnd(state);
         }
 
         [INLINE(256)]
-        internal void ApplyFromJob(State* state) {
+        internal static void ApplyFromJob(State* state) {
 
-            if (this.openIndex > 0u) {
+            if (state->batches.openIndex > 0u) {
                 return;
             }
-            if (this.items.Length == 0u) return;
+            if (state->batches.items.Length == 0u) return;
 
-            JobUtils.Increment(ref this.openIndex);
-            this.workingLock.WriteBegin(state);
+            JobUtils.Increment(ref state->batches.openIndex);
+            state->batches.workingLock.WriteBegin(state);
 
             // Collect
-            var temp = new UnsafeList<uint>((int)this.items.Length, Constants.ALLOCATOR_TEMP);
-            for (uint i = 0u; i < this.items.Length; ++i) {
+            var temp = new UnsafeList<uint>((int)state->batches.items.Length, Constants.ALLOCATOR_TEMP);
+            for (uint i = 0u; i < state->batches.items.Length; ++i) {
 
-                this.ApplyFromJobThread(state, i, ref temp);
+                Batches.ApplyFromJobThread(state, i, ref temp);
 
             }
             // Sort
@@ -259,10 +259,10 @@ namespace ME.BECS {
             }
             // Apply
             {
-                this.lockReadWrite.ReadBegin(state);
+                state->batches.lockReadWrite.ReadBegin(state);
                 for (int i = 0; i < temp.Length; ++i) {
                     var entId = temp[i];
-                    ref var element = ref this.arr[in state->allocator, entId];
+                    ref var element = ref state->batches.arr[in state->allocator, entId];
                     if (element.Count > 0u) {
                         JobUtils.Lock(ref element.lockIndex);
                         if (element.Count > 0u) {
@@ -271,18 +271,18 @@ namespace ME.BECS {
                         JobUtils.Unlock(ref element.lockIndex);
                     }
                 }
-                this.lockReadWrite.ReadEnd(state);
+                state->batches.lockReadWrite.ReadEnd(state);
             }
             
-            this.workingLock.WriteEnd();
-            JobUtils.Decrement(ref this.openIndex);
+            state->batches.workingLock.WriteEnd();
+            JobUtils.Decrement(ref state->batches.openIndex);
 
         }
         
         [INLINE(256)]
-        private void ApplyFromJobThread(State* state, uint threadIndex, ref UnsafeList<uint> list) {
+        private static void ApplyFromJobThread(State* state, uint threadIndex, ref UnsafeList<uint> list) {
 
-            ref var threadItem = ref this.items[state, threadIndex];
+            ref var threadItem = ref state->batches.items[state, threadIndex];
             if (threadItem.Count == 0u) {
                 return;
             }
@@ -385,35 +385,34 @@ namespace ME.BECS {
 
     }
 
-    [BURST(CompileSynchronously = true)]
-    public static unsafe partial class BatchesExt {
+    public unsafe partial struct Batches {
 
         [INLINE(256)]
-        public static void OnEntityAdd(this ref Batches batches, State* state, uint entId) {
+        public static void OnEntityAdd(State* state, uint entId) {
 
-            if (entId >= batches.arr.Length) {
-                batches.lockReadWrite.WriteBegin(state);
-                if (entId >= batches.arr.Length) {
-                    batches.arr.Resize(ref state->allocator, entId + 1u, 2);
+            if (entId >= state->batches.arr.Length) {
+                state->batches.lockReadWrite.WriteBegin(state);
+                if (entId >= state->batches.arr.Length) {
+                    state->batches.arr.Resize(ref state->allocator, entId + 1u, 2);
                 }
-                batches.lockReadWrite.WriteEnd();
+                state->batches.lockReadWrite.WriteEnd();
             }
-            batches.OnEntityAddThreadItem(state, entId);
+            Batches.OnEntityAddThreadItem(state, entId);
 
         }
         
         [INLINE(256)]
-        internal static void Set_INTERNAL(this ref Batches batches, uint typeId, in Ent ent, State* state) {
+        internal static void Set_INTERNAL(uint typeId, in Ent ent, State* state) {
             
             E.IS_IN_TICK(state);
 
             if (ent.IsAlive() == false) return;
             
-            batches.lockReadWrite.ReadBegin(state);
-            ref var threadItem = ref batches.items[state, (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex];
+            state->batches.lockReadWrite.ReadBegin(state);
+            ref var threadItem = ref state->batches.items[state, (uint)JobUtils.ThreadIndex];
             threadItem.lockSpinner.Lock();
             {
-                ref var item = ref batches.arr[state, ent.id];
+                ref var item = ref state->batches.arr[state, ent.id];
                 item.lockIndex.Lock();
                 item.ent = ent;
                 {
@@ -430,22 +429,22 @@ namespace ME.BECS {
                 item.lockIndex.Unlock();
             }
             threadItem.lockSpinner.Unlock();
-            batches.lockReadWrite.ReadEnd(state);
+            state->batches.lockReadWrite.ReadEnd(state);
 
         }
 
         [INLINE(256)]
-        internal static void Remove_INTERNAL(this ref Batches batches, uint typeId, in Ent ent, State* state) {
+        internal static void Remove_INTERNAL(uint typeId, in Ent ent, State* state) {
             
             E.IS_IN_TICK(state);
             
             if (ent.IsAlive() == false) return;
             
-            batches.lockReadWrite.ReadBegin(state);
-            ref var threadItem = ref batches.items[state, (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex];
+            state->batches.lockReadWrite.ReadBegin(state);
+            ref var threadItem = ref state->batches.items[state, (uint)JobUtils.ThreadIndex];
             threadItem.lockSpinner.Lock();
             {
-                ref var item = ref batches.arr[state, ent.id];
+                ref var item = ref state->batches.arr[state, ent.id];
                 item.lockIndex.Lock();
                 item.ent = ent;
                 {
@@ -462,7 +461,7 @@ namespace ME.BECS {
                 item.lockIndex.Unlock();
             }
             threadItem.lockSpinner.Unlock();
-            batches.lockReadWrite.ReadEnd(state);
+            state->batches.lockReadWrite.ReadEnd(state);
             
         }
 

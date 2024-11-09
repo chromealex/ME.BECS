@@ -49,7 +49,7 @@ namespace ME.BECS {
 
         public void Execute() {
             var state = Worlds.GetWorld(this.worldId).state;
-            state->collectionsRegistry.Remove(state, in this.ent, in this.ptr);
+            CollectionsRegistry.Remove(state, in this.ent, in this.ptr);
             state->allocator.Free(this.ptr);
         }
 

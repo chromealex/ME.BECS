@@ -471,7 +471,7 @@ namespace ME.BECS.Editor {
                 }
 
                 if (versionChanged == true) {
-                    this.foldout.text = this.value.ToString(withWorld: false, withVersion: false);
+                    this.foldout.text = this.value.ToString(withWorld: false, withVersion: false).ToString();
                     this.versionLabel.text = this.value.Version.ToString();
                     this.foldout.style.paddingLeft = new StyleLength(0f + 20f * this.level);
                     this.RedrawTags(force);
@@ -509,7 +509,7 @@ namespace ME.BECS.Editor {
                         if (groupsTags.Contains(group) == true) continue;
                         foreach (var comp in group.components) {
                             if (StaticTypesLoadedManaged.typeToId.TryGetValue(comp.type, out var typeId) == true) {
-                                if (state->components.HasUnknownType(state, typeId, this.value.id, this.value.gen, true) == true) {
+                                if (Components.HasUnknownType(state, typeId, this.value.id, this.value.gen, true) == true) {
                                     if (this.window.ignoredGroups.Contains(group) == false) groupsTags.Add(group);
                                     this.window.uniqueGroups.Add(group);
                                 }
@@ -783,7 +783,7 @@ namespace ME.BECS.Editor {
                                 break;
                             }
                         } else if (StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var id) == true) {
-                            if (state->components.HasUnknownType(state, id, ent.id, ent.gen, true) == true) {
+                            if (Components.HasUnknownType(state, id, ent.id, ent.gen, true) == true) {
                                 contains = true;
                                 break;
                             }

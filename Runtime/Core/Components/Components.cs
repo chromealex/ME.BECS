@@ -75,7 +75,7 @@ namespace ME.BECS {
             if (StaticTypes<T>.isTag == true) return default;
             return new RefRW<T>() {
                 state = state,
-                storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
                 worldId = worldId,
             };
         }
@@ -85,7 +85,7 @@ namespace ME.BECS {
             if (StaticTypes<T>.isTag == true) return default;
             return new RefRO<T>() {
                 state = state,
-                storage = this.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
+                storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
             };
         }
 

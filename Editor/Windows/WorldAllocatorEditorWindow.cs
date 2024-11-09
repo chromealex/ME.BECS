@@ -171,12 +171,12 @@ namespace ME.BECS.Editor {
             
             this.reservedSize.text = EditorUtils.BytesToString(allocator.GetReservedSize());
             this.usedSize.text = EditorUtils.BytesToString(allocator.GetUsedSize());
-            this.componentsSize.text = EditorUtils.BytesToString((int)this.world.state->components.GetReservedSizeInBytes(this.world.state));
+            this.componentsSize.text = EditorUtils.BytesToString((int)Components.GetReservedSizeInBytes(this.world.state));
             this.archetypesSize.text = EditorUtils.BytesToString((int)this.world.state->archetypes.GetReservedSizeInBytes(this.world.state));
-            this.batchesSize.text = EditorUtils.BytesToString((int)this.world.state->batches.GetReservedSizeInBytes(this.world.state));
+            this.batchesSize.text = EditorUtils.BytesToString((int)Batches.GetReservedSizeInBytes(this.world.state));
             this.entitiesSize.text = EditorUtils.BytesToString((int)this.world.state->entities.GetReservedSizeInBytes(this.world.state));
             this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state->aspectsStorage.GetReservedSizeInBytes(this.world.state));
-            this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)this.world.state->collectionsRegistry.GetReservedSizeInBytes(this.world.state));
+            this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)CollectionsRegistry.GetReservedSizeInBytes(this.world.state));
             /*{
                 var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Allocator;
                 this.persistantAllocatorSize.text =

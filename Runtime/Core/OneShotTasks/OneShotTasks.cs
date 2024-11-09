@@ -50,22 +50,22 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Add<T>(State* state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
+        public static void Add<T>(State* state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             var dataPtr = new MemAllocatorPtr();
             if (type == OneShotType.NextTick) dataPtr.Set(ref state->allocator, in data);
-            this.Add(state, in ent, StaticTypes<T>.typeId, StaticTypes<T>.groupId, updateType, dataPtr, type);
+            Add(state, in ent, StaticTypes<T>.typeId, StaticTypes<T>.groupId, updateType, dataPtr, type);
 
         }
 
         [INLINE(256)]
-        public void Add(State* state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
+        public static void Add(State* state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
             var threadIndex = JobUtils.ThreadIndex;
             Journal.SetOneShotComponent(in ent, typeId, type);
-            ref var threadItem = ref this.threadItems[state, threadIndex];
+            ref var threadItem = ref state->oneShotTasks.threadItems[state, threadIndex];
             var collection = _addressT(ref threadItem.currentTick);
             if (type == OneShotType.NextTick) {
                 collection = _addressT(ref threadItem.nextTick);
@@ -88,25 +88,25 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [NotThreadSafe]
-        public JobHandle Schedule(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
+        public static JobHandle Schedule(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
 
-            E.THREAD_CHECK(nameof(this.ScheduleJobs));
+            E.THREAD_CHECK(nameof(ScheduleJobs));
 
             var job = new ResolveTasksParallelJob() {
                 state = state,
                 type = type,
                 updateType = updateType,
             };
-            var handle = job.Schedule((int)this.threadItems.Length, 1, dependsOn);
+            var handle = job.Schedule((int)state->oneShotTasks.threadItems.Length, 1, dependsOn);
             
             return handle;
 
         }
         
         [INLINE(256)]
-        public void ResolveThread(State* state, OneShotType type, ushort updateType, uint index) {
+        public static void ResolveThread(State* state, OneShotType type, ushort updateType, uint index) {
 
-            ref var threadItem = ref this.threadItems[state, index];
+            ref var threadItem = ref state->oneShotTasks.threadItems[state, index];
             var collection = _addressT(ref threadItem.currentTick);
             if (type == OneShotType.NextTick) {
                 collection = _addressT(ref threadItem.nextTick);
@@ -132,7 +132,7 @@ namespace ME.BECS {
                                 {
                                     Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
                                     // if we are processing begin of tick - add component
-                                    state->batches.Set(in item.ent, item.typeId, item.GetData(state), state);
+                                    Batches.Set(in item.ent, item.typeId, item.GetData(state), state);
                                     // add new task to remove at the end of the tick
                                     var newTask = new Task() {
                                         typeId = item.typeId,

@@ -41,8 +41,12 @@ namespace ME.BECS.Units {
             set => this.ent.SetTag<UnitHoldComponent>(value);
         }
 
-        public readonly ref float sightRangeSqr => ref this.component.sightRangeSqr;
-        public readonly ref readonly float readSightRangeSqr => ref this.readComponent.sightRangeSqr;
+        public readonly ref float minSightRangeSqr => ref this.component.sightRange.minRangeSqr;
+        public readonly ref float sightRangeSqr => ref this.component.sightRange.rangeSqr;
+        public readonly ref float sector => ref this.component.sightRange.sector;
+        public readonly ref readonly float readMinSightRangeSqr => ref this.readComponent.sightRange.minRangeSqr;
+        public readonly ref readonly float readSightRangeSqr => ref this.readComponent.sightRange.rangeSqr;
+        public readonly ref readonly float readSector => ref this.readComponent.sightRange.sector;
         public readonly ref float height => ref this.componentRuntime.properties.height;
         public readonly ref readonly float readHeight => ref this.readComponentRuntime.properties.height;
         public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;

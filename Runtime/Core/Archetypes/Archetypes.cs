@@ -98,7 +98,7 @@ namespace ME.BECS {
                 MemoryAllocator.ValidateConsistency(ref state->allocator);
                 newArchetype.AddEntity(state, entId);
                 MemoryAllocator.ValidateConsistency(ref state->allocator);
-                archetypes.Add(state, in newArchetype, out var newIdx);
+                Add(state, in newArchetype, out var newIdx);
                 
                 return newIdx;
             }
@@ -210,18 +210,18 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal void Add(State* state, in Archetype archetype, out uint idx) {
+        internal static void Add(State* state, in Archetype archetype, out uint idx) {
             
             MemoryAllocator.ValidateConsistency(ref state->allocator);
             ref var allocator = ref state->allocator;
-            idx = this.list.Add(ref allocator, archetype);
+            idx = state->archetypes.list.Add(ref allocator, archetype);
             var idxLength = idx + 1u;
-            var len = math.max(idxLength, this.allArchetypes.Capacity);
-            this.allArchetypes.Add(ref allocator, idx);
+            var len = math.max(idxLength, state->archetypes.allArchetypes.Capacity);
+            state->archetypes.allArchetypes.Add(ref allocator, idx);
             // archetypesWithTypeIdBits[index] (bits) length must be less or equals than allArchetypesForQuery's length
             // because we use intersects method to find out bits overlapping, so we need to use len parameter in both
-            this.allArchetypesForQuery.Resize(ref allocator, len);
-            this.allArchetypesForQuery.Set(in allocator, (int)idx, true);
+            state->archetypes.allArchetypesForQuery.Resize(ref allocator, len);
+            state->archetypes.allArchetypesForQuery.Set(in allocator, (int)idx, true);
             MemoryAllocator.ValidateConsistency(ref state->allocator);
             { // collect with
                 var e = archetype.components.GetEnumerator(in allocator);
@@ -229,7 +229,7 @@ namespace ME.BECS {
                     var cId = e.Current;
                     {
                         MemoryAllocator.ValidateConsistency(ref state->allocator);
-                        ref var list = ref this.archetypesWithTypeIdBits[in allocator, cId];
+                        ref var list = ref state->archetypes.archetypesWithTypeIdBits[in allocator, cId];
                         MemoryAllocator.ValidateConsistency(ref state->allocator);
                         if (list.isCreated == false) list = new BitArray(ref allocator, len);
                         list.Resize(ref allocator, len);
@@ -249,8 +249,8 @@ namespace ME.BECS {
             }
             MemoryAllocator.ValidateConsistency(ref state->allocator);
             {
-                this.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u, 2);
-                ref var arr = ref this.componentsCountToArchetypeIds[in allocator, archetype.componentsCount];
+                state->archetypes.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u, 2);
+                ref var arr = ref state->archetypes.componentsCountToArchetypeIds[in allocator, archetype.componentsCount];
                 if (arr.isCreated == false) arr = new UIntDictionary<List<uint>>(ref allocator, 1u);
                 var hash = archetype.components.hash;
                 ref var list = ref arr.GetValue(ref allocator, hash, out var exist);
@@ -267,73 +267,73 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void AddEntity(State* state, UnsafeList<Ent>* list, uint maxId) {
+        public static void AddEntity(State* state, UnsafeList<Ent>* list, uint maxId) {
 
-            JobUtils.Lock(ref this.lockIndex);
-            this.entToArchetypeIdx.Resize(ref state->allocator, maxId + 1u, 2);
-            this.entToIdxInArchetype.Resize(ref state->allocator, maxId + 1u, 2);
+            JobUtils.Lock(ref state->archetypes.lockIndex);
+            state->archetypes.entToArchetypeIdx.Resize(ref state->allocator, maxId + 1u, 2);
+            state->archetypes.entToIdxInArchetype.Resize(ref state->allocator, maxId + 1u, 2);
 
             for (int i = 0; i < list->Length; ++i) {
                 var ent = list->ElementAt(i);
-                this.list[in state->allocator, 0].AddEntity(state, ent.id);
+                state->archetypes.list[in state->allocator, 0].AddEntity(state, ent.id);
             }
-            JobUtils.Unlock(ref this.lockIndex);
+            JobUtils.Unlock(ref state->archetypes.lockIndex);
 
         }
 
         [INLINE(256)]
-        public void AddEntity(State* state, in Ent ent) {
+        public static void AddEntity(State* state, in Ent ent) {
 
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref this.lockIndex);
+            JobUtils.Lock(ref state->archetypes.lockIndex);
             CheckEntityTimes(state, ent.id, 0);
             CheckNoEntity(state, ent.id, 0);
-            this.entToArchetypeIdx.Resize(ref state->allocator, ent.id + 1u, 2);
-            this.entToIdxInArchetype.Resize(ref state->allocator, ent.id + 1u, 2);
-            this.list[in state->allocator, 0].AddEntity(state, ent.id);
-            this.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
+            state->archetypes.entToArchetypeIdx.Resize(ref state->allocator, ent.id + 1u, 2);
+            state->archetypes.entToIdxInArchetype.Resize(ref state->allocator, ent.id + 1u, 2);
+            state->archetypes.list[in state->allocator, 0].AddEntity(state, ent.id);
+            state->archetypes.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
             CheckEntityTimes(state, ent.id, 1);
             CheckEntity(state, ent.id, 0);
-            JobUtils.Unlock(ref this.lockIndex);
+            JobUtils.Unlock(ref state->archetypes.lockIndex);
             
         }
 
         [INLINE(256)]
-        public void RemoveEntity(State* state, in Ent ent) {
+        public static void RemoveEntity(State* state, in Ent ent) {
 
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref this.lockIndex);
+            JobUtils.Lock(ref state->archetypes.lockIndex);
             CheckEntityTimes(state, ent.id, 1);
-            var idx = this.entToArchetypeIdx[in state->allocator, ent.id];
+            var idx = state->archetypes.entToArchetypeIdx[in state->allocator, ent.id];
             CheckEntity(state, ent.id, (int)idx);
-            this.list[in state->allocator, idx].RemoveEntity(state, ent.id);
-            this.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
+            state->archetypes.list[in state->allocator, idx].RemoveEntity(state, ent.id);
+            state->archetypes.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
             CheckNoEntity(state, ent.id, (int)idx);
             CheckNoEntity(state, ent.id, 0);
             CheckNoEntity((int)idx, state, ent.id);
             CheckEntityTimes(state, ent.id, 1);
-            JobUtils.Unlock(ref this.lockIndex);
+            JobUtils.Unlock(ref state->archetypes.lockIndex);
             
         }
 
         [INLINE(256)]
-        public void ApplyBatch(State* state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
+        public static void ApplyBatch(State* state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
 
             if (addItems.Count > 0 || removeItems.Count > 0) {
-                JobUtils.Lock(ref this.lockIndex);
+                JobUtils.Lock(ref state->archetypes.lockIndex);
                 CheckEntityTimes(state, entId, 1);
-                var idx = this.entToArchetypeIdx[in state->allocator, entId];
-                ref var archetype = ref this.list[in state->allocator, idx];
+                var idx = state->archetypes.entToArchetypeIdx[in state->allocator, entId];
+                ref var archetype = ref state->archetypes.list[in state->allocator, idx];
                 // Look up for new archetype
                 CheckEntity(state, entId, (int)idx);
                 CheckArch(state, archetype, (int)idx);
-                this.entToArchetypeIdx[in state->allocator, entId] = archetype.GetNext(state, entId, in addItems, in removeItems, ref this);
+                state->archetypes.entToArchetypeIdx[in state->allocator, entId] = archetype.GetNext(state, entId, in addItems, in removeItems, ref state->archetypes);
                 CheckArch(state, archetype, (int)idx);
-                CheckEntity(state, entId, (int)this.entToArchetypeIdx[in state->allocator, entId]);
+                CheckEntity(state, entId, (int)state->archetypes.entToArchetypeIdx[in state->allocator, entId]);
                 CheckEntityTimes(state, entId, 1);
-                JobUtils.Unlock(ref this.lockIndex);
+                JobUtils.Unlock(ref state->archetypes.lockIndex);
             }
 
         }

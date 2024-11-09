@@ -19,7 +19,7 @@ namespace ME.BECS {
 
             public void Execute(int index) {
 
-                this.state->oneShotTasks.ResolveThread(this.state, this.type, this.updateType, (uint)index);
+                ResolveThread(this.state, this.type, this.updateType, (uint)index);
                 
             }
 
@@ -28,7 +28,7 @@ namespace ME.BECS {
         [INLINE(256)]
         [NotThreadSafe]
         public static JobHandle ScheduleJobs(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
-            return state->oneShotTasks.Schedule(state, type, updateType, dependsOn);
+            return OneShotTasks.Schedule(state, type, updateType, dependsOn);
         }
 
     }

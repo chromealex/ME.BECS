@@ -20,7 +20,7 @@ namespace ME.BECS {
             this.buffer = buffer;
             this.index = index;
             this.entId = this.buffer->entities[index];
-            this.entGen = this.buffer->state->entities.GetGeneration(this.buffer->state, this.entId);
+            this.entGen = Ents.GetGeneration(this.buffer->state, this.entId);
         }
 
         [INLINE(256)]
@@ -78,7 +78,7 @@ namespace ME.BECS {
         public ref readonly T Read<T>(uint index) where T : unmanaged, IComponent {
 
             var entId = this.buffer->entities[index];
-            return ref this.buffer->Read<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId));
+            return ref this.buffer->Read<T>(entId, Ents.GetGeneration(this.buffer->state, entId));
 
         }
 
@@ -86,7 +86,7 @@ namespace ME.BECS {
         public ref T Get<T>(uint index) where T : unmanaged, IComponent {
 
             var entId = this.buffer->entities[index];
-            return ref this.buffer->Get<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId));
+            return ref this.buffer->Get<T>(entId, Ents.GetGeneration(this.buffer->state, entId));
 
         }
 
@@ -94,7 +94,7 @@ namespace ME.BECS {
         public bool Set<T>(uint index, in T data) where T : unmanaged, IComponent {
             
             var entId = this.buffer->entities[index];
-            return this.buffer->Set<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId), in data);
+            return this.buffer->Set<T>(entId, Ents.GetGeneration(this.buffer->state, entId), in data);
 
         }
 
@@ -102,7 +102,7 @@ namespace ME.BECS {
         public bool Remove<T>(uint index) where T : unmanaged, IComponent {
             
             var entId = this.buffer->entities[index];
-            return this.buffer->Remove<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId));
+            return this.buffer->Remove<T>(entId, Ents.GetGeneration(this.buffer->state, entId));
 
         }
 
@@ -110,7 +110,7 @@ namespace ME.BECS {
         public bool Has<T>(uint index, bool checkEnabled = true) where T : unmanaged, IComponent {
             
             var entId = this.buffer->entities[index];
-            return this.buffer->Has<T>(entId, this.buffer->state->entities.GetGeneration(this.buffer->state, entId), checkEnabled);
+            return this.buffer->Has<T>(entId, Ents.GetGeneration(this.buffer->state, entId), checkEnabled);
 
         }
 
@@ -205,7 +205,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public ref readonly T Read<T>(uint id, ushort gen) where T : unmanaged, IComponent {
 
-            return ref this.state->components.Read<T>(this.state, id, gen);
+            return ref Components.Read<T>(this.state, id, gen);
 
         }
 
@@ -217,7 +217,7 @@ namespace ME.BECS {
             }
             E.IS_IN_TICK(this.state);
             var ent = new Ent(id, gen, this.worldId);
-            return ref this.state->components.Get<T>(this.state, ent);
+            return ref Components.Get<T>(this.state, ent);
 
         }
 
@@ -230,7 +230,7 @@ namespace ME.BECS {
             }
             E.IS_IN_TICK(this.state);
             var ent = new Ent(id, gen, this.worldId);
-            return this.state->components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent, in data);
+            return Components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent, in data);
 
         }
 
@@ -243,7 +243,7 @@ namespace ME.BECS {
             } else {
                 E.IS_IN_TICK(this.state);
                 var ent = new Ent(id, gen, this.worldId);
-                return this.state->components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent);
+                return Components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent);
             }
 
         }
@@ -251,7 +251,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Has<T>(uint id, ushort gen, bool checkEnabled) where T : unmanaged, IComponent {
 
-            return this.state->components.Has<T>(this.state, id, gen, checkEnabled);
+            return Components.Has<T>(this.state, id, gen, checkEnabled);
 
         }
 

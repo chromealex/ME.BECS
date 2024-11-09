@@ -27,10 +27,10 @@ namespace ME.BECS {
 
                     var type = item.Value;
                     var gHasMethod = methodHas.MakeGenericMethod(type);
-                    var has = (bool)gHasMethod.Invoke(world.state->components, new object[] { this.ent });
+                    var has = (bool)gHasMethod.Invoke(null, new object[] { this.ent });
                     if (has == true) {
                         var gReadMethod = methodRead.MakeGenericMethod(type);
-                        var data = gReadMethod.Invoke(world.state->components, new object[] { this.ent });
+                        var data = gReadMethod.Invoke(null, new object[] { this.ent });
                         result.Add(data);
                     }
 
@@ -53,10 +53,10 @@ namespace ME.BECS {
                     
                     var type = item.Value;
                     var gHasMethod = methodHas.MakeGenericMethod(type);
-                    var has = (bool)gHasMethod.Invoke(world.state->components, new object[] { this.ent });
+                    var has = (bool)gHasMethod.Invoke(null, new object[] { this.ent });
                     if (has == true) {
                         var gReadMethod = methodRead.MakeGenericMethod(type);
-                        var data = gReadMethod.Invoke(world.state->components, new object[] { this.ent });
+                        var data = gReadMethod.Invoke(null, new object[] { this.ent });
                         result.Add(data);
                     }
                     

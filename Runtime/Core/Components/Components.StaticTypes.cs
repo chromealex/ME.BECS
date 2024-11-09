@@ -139,12 +139,6 @@ namespace ME.BECS {
 
     }
 
-    public struct StaticTypesDefaultValue<T> where T : unmanaged {
-
-        public static readonly Unity.Burst.SharedStatic<T> value = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypesDefaultValue<T>>();
-
-    }
-
     public struct StaticTypesHasDefaultValue<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesHasDefaultValue<T>>();
@@ -187,10 +181,10 @@ namespace ME.BECS {
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
         public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
 
-        public static ref readonly T defaultValue {
+        public static unsafe ref readonly T defaultValue {
             get {
                 if (StaticTypesHasDefaultValue<T>.value.Data == true) {
-                    return ref StaticTypesDefaultValue<T>.value.Data;
+                    return ref *(T*)StaticTypes.defaultValues.Get(StaticTypes<T>.typeId);
                 }
 
                 return ref defaultZero;
@@ -227,10 +221,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static unsafe void SetDefaultValue(T data) {
 
-            StaticTypesDefaultValue<T>.value.Data = data;
             StaticTypesHasDefaultValue<T>.value.Data = true; 
             var defaultValuePtr = (T*)_make(TSize<T>.sizeInt, TAlign<T>.alignInt, Constants.ALLOCATOR_DOMAIN);
-            *defaultValuePtr = StaticTypes<T>.defaultValue;
+            *defaultValuePtr = data;
             StaticTypes.defaultValues.Get(StaticTypes<T>.typeId) = (System.IntPtr)defaultValuePtr;
             
         }

@@ -25,7 +25,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 var world = this.World;
-                return world.state->entities.GetVersion(world.state, in this);
+                return Ents.GetVersion(world.state, in this);
             }
         }
 
@@ -37,7 +37,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly uint GetVersion(uint groupId) {
             var world = this.World;
-            return world.state->entities.GetVersion(world.state, in this, groupId);
+            return Ents.GetVersion(world.state, in this, groupId);
         }
 
         [INLINE(256)]
@@ -92,20 +92,20 @@ namespace ME.BECS {
 
             Ent newEnt;
             {
-                newEnt = world.state->entities.Add(world.state, worldId, out var reused, jobInfo);
+                newEnt = Ents.Add(world.state, worldId, out var reused, jobInfo);
                 if (reused == false) {
-                    world.state->entities.Lock(world.state, in newEnt);
-                    world.state->components.OnEntityAdd(world.state, newEnt.id);
-                    world.state->batches.OnEntityAdd(world.state, newEnt.id);
-                    world.state->collectionsRegistry.OnEntityAdd(world.state, newEnt.id);
-                    world.state->autoDestroyRegistry.OnEntityAdd(world.state, newEnt.id);
-                    world.state->entities.Unlock(world.state, in newEnt);
+                    Ents.Lock(world.state, in newEnt);
+                    Components.OnEntityAdd(world.state, newEnt.id);
+                    Batches.OnEntityAdd(world.state, newEnt.id);
+                    CollectionsRegistry.OnEntityAdd(world.state, newEnt.id);
+                    AutoDestroyRegistry.OnEntityAdd(world.state, newEnt.id);
+                    Ents.Unlock(world.state, in newEnt);
                 }
             }
             {
-                world.state->entities.Lock(world.state, in newEnt);
-                world.state->archetypes.AddEntity(world.state, newEnt);
-                world.state->entities.Unlock(world.state, in newEnt);
+                Ents.Lock(world.state, in newEnt);
+                Archetypes.AddEntity(world.state, newEnt);
+                Ents.Unlock(world.state, in newEnt);
             }
 
             return newEnt;
@@ -122,7 +122,7 @@ namespace ME.BECS {
         public Ent(uint id, in World world) {
             this.pack = default;
             this.id = id;
-            this.gen = world.state->entities.GetGeneration(world.state, id);
+            this.gen = Ents.GetGeneration(world.state, id);
             this.worldId = world.id;
         }
 
@@ -130,7 +130,7 @@ namespace ME.BECS {
         public Ent(uint id, State* state, ushort worldId) {
             this.pack = default;
             this.id = id;
-            this.gen = state->entities.GetGeneration(state, id);
+            this.gen = Ents.GetGeneration(state, id);
             this.worldId = worldId;
         }
 
@@ -174,21 +174,20 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public override readonly string ToString() {
-            if (this.World.isCreated == false) return this.ToString(false);
             if (this.IsAlive() == true) {
-                return string.Format("Ent #{0} Gen: {1} (Version: {2}, World: {3})", this.id, this.gen, this.Version, this.worldId);
+                return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version}, World: {this.worldId})";
             } else {
-                return string.Format("Ent #{0} Gen: {1} (World: {2})", this.id, this.gen, this.worldId);
+                return $"Ent #{this.id} Gen: {this.gen} (World: {this.worldId})";
             }
         }
 
         [INLINE(256)]
-        public readonly string ToString(bool withWorld, bool withVersion = true) {
+        public readonly Unity.Collections.FixedString128Bytes ToString(bool withWorld, bool withVersion = true) {
             if (withWorld == true) return this.ToString();
             if (this.IsAlive() == true && withVersion == true) {
-                return string.Format("Ent #{0} Gen: {1} (Version: {2})", this.id, this.gen, this.Version);
+                return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version})";
             } else {
-                return string.Format("Ent #{0} Gen: {1}", this.id, this.gen);
+                return $"Ent #{this.id} Gen: {this.gen}";
             }
         }
 

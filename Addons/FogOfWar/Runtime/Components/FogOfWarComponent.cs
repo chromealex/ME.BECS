@@ -68,11 +68,13 @@ namespace ME.BECS.FogOfWar {
         /// </summary>
         public byte type;
         /// <summary>
-        /// If rect type used as sizeX
+        /// Rect type: sizeX
+        /// Range type: range
         /// </summary>
         public float range;
         /// <summary>
-        /// Used with rect type (sizeY)
+        /// Rect type: sizeY
+        /// Range type: minRange
         /// </summary>
         public float rangeY;
         public float height;

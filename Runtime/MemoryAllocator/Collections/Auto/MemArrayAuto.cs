@@ -98,7 +98,7 @@ namespace ME.BECS {
             }
             
             this.data.arrPtr = memPtr;
-            state->collectionsRegistry.Add(state, in ent, in this.data.arrPtr);
+            CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
 
         }
 
@@ -122,7 +122,7 @@ namespace ME.BECS {
             if (clearOptions == ClearOptions.ClearMemory) {
                 this.Clear();
             }
-            state->collectionsRegistry.Add(state, in ent, in this.data.arrPtr);
+            CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
             
         }
 
@@ -142,7 +142,7 @@ namespace ME.BECS {
             this.data.Length = arr.Length;
             this.data.arrPtr = state->allocator.AllocArray<T>(arr.Length);
             NativeArrayUtils.CopyNoChecks(in arr, 0u, ref this, 0u, arr.Length);
-            state->collectionsRegistry.Add(state, in ent, in this.data.arrPtr);
+            CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
 
         }
 
@@ -163,7 +163,7 @@ namespace ME.BECS {
             this.data.arrPtr = state->allocator.AllocArray<T>(arr.Length, out var ptr);
             var size = TSize<T>.size;
             _memcpy(arr.ptr, ptr, this.Length * size);
-            state->collectionsRegistry.Add(state, in ent, in this.data.arrPtr);
+            CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
             
         }
 
@@ -189,7 +189,7 @@ namespace ME.BECS {
         public void Dispose() {
 
             var state = this.data.ent.World.state;
-            state->collectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
+            CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             if (this.data.arrPtr.IsValid() == true) {
                 state->allocator.Free(this.data.arrPtr);
             }
@@ -342,10 +342,10 @@ namespace ME.BECS {
             newLength *= growFactor;
 
             var state = this.data.ent.World.state;
-            state->collectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
+            CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             var prevLength = this.Length;
             this.data.arrPtr = state->allocator.ReAllocArray(this.data.arrPtr, newLength, out T* ptr);
-            state->collectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
+            CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in state->allocator, ptr);
             #endif
@@ -371,10 +371,10 @@ namespace ME.BECS {
             newLength *= growFactor;
 
             var state = this.data.ent.World.state;
-            state->collectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
+            CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             var prevLength = this.Length;
             this.data.arrPtr = state->allocator.Alloc(elementSize * newLength, out var tPtr);
-            state->collectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
+            CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in state->allocator, (T*)tPtr);
             #endif
