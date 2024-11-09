@@ -60,17 +60,17 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Ent New(in World world, JobInfo jobInfo = default) {
+        public static Ent New(in World world, in JobInfo jobInfo = default) {
             return Ent.New(world.id, jobInfo);
         }
 
         [INLINE(256)]
-        public static Ent New(in SystemContext systemContext, JobInfo jobInfo = default) {
-            return Ent.New(systemContext.world.id, jobInfo);
+        public static Ent New(in SystemContext systemContext, in JobInfo jobInfo = default) {
+            return Ent.New(systemContext.world.id, in jobInfo);
         }
 
         [INLINE(256)]
-        public static Ent New(ushort worldId, JobInfo jobInfo = default) {
+        public static Ent New(ushort worldId, in JobInfo jobInfo = default) {
 
             if (JobUtils.IsInParallelJob() == true) {
                 // Create entity with offset because we are in parallel mode
@@ -85,7 +85,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal static Ent New_INTERNAL(ushort worldId, JobInfo jobInfo) {
+        internal static Ent New_INTERNAL(ushort worldId, in JobInfo jobInfo) {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
             E.IS_IN_TICK(world.state);
@@ -119,7 +119,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Ent(uint id, World world) {
+        public Ent(uint id, in World world) {
             this.pack = default;
             this.id = id;
             this.gen = world.state->entities.GetGeneration(world.state, id);

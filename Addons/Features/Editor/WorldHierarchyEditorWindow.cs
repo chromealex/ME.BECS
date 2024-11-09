@@ -739,22 +739,23 @@ namespace ME.BECS.Editor {
             return element;
         }
         
+        private System.Collections.Generic.List<Ent> cache = new System.Collections.Generic.List<Ent>();
         private void DrawEntities(VisualElement root) {
             
-            var cache = new System.Collections.Generic.List<Ent>();
+            this.cache.Clear();
             for (uint i = 0u; i < this.selectedWorld.state->archetypes.list.Count; ++i) {
                 var arch = this.selectedWorld.state->archetypes.list[this.selectedWorld.state, i];
                 for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
                     var entId = arch.entitiesList[this.selectedWorld.state->allocator, j];
                     var ent = new Ent(entId, this.selectedWorld);
                     if (ent.Read<ParentComponent>().value == default) {
-                        cache.Add(ent);
+                        this.cache.Add(ent);
                     }
                 }
             }
 
             var k = 0;
-            this.DrawEntities(ref k, 0, root, cache);
+            this.DrawEntities(ref k, 0, root, this.cache);
             
             for (int i = k; i < this.elements.Count; ++i) {
                 this.elements[i].Hide();

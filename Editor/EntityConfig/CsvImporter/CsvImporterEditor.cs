@@ -440,7 +440,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                 if (config.baseConfig >= 0) config.instance.baseConfig = configFiles[config.baseConfig].instance;
                 config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
-                config.instance.sharedData = new ComponentsStorage<IConfigComponentShared>() { isShared = true };
+                config.instance.sharedData = new ComponentsStorage<IConfigComponentShared>();
                 config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();
                 config.instance.staticData.components = config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray();
                 config.instance.OnValidate();

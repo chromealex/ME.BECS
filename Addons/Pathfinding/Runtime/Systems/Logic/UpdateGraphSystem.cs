@@ -147,7 +147,7 @@ namespace ME.BECS.Pathfinding {
                 _memcpy(changedChunks.GetUnsafePtr(), tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
-                dependsOn = API.Query(in context.world, dependsOn).Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
+                dependsOn = context.Query(dependsOn).Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
                     graph = graphEnt,
                     world = context.world,
                     dirtyChunks = tempDirty,

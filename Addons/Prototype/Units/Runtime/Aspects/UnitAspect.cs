@@ -20,11 +20,25 @@ namespace ME.BECS.Units {
         [QueryWith]
         public AspectDataPtr<OwnerComponent> ownerDataPtr;
 
-        public readonly bool isStatic {
+        public readonly bool IsStatic {
             [INLINE(256)]
             get => this.ent.Has<IsUnitStaticComponent>();
             [INLINE(256)]
             set => this.ent.SetTag<IsUnitStaticComponent>(value);
+        }
+
+        public readonly bool IsPathFollow {
+            [INLINE(256)]
+            get => this.ent.Has<PathFollowComponent>();
+            [INLINE(256)]
+            set => this.ent.SetTag<PathFollowComponent>(value);
+        }
+
+        public readonly bool IsHold {
+            [INLINE(256)]
+            get => this.ent.Has<UnitHoldComponent>();
+            [INLINE(256)]
+            set => this.ent.SetTag<UnitHoldComponent>(value);
         }
 
         public readonly ref float sightRangeSqr => ref this.component.sightRangeSqr;
@@ -33,10 +47,10 @@ namespace ME.BECS.Units {
         public readonly ref readonly float readHeight => ref this.readComponentRuntime.properties.height;
         public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;
         public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
-        public readonly ref float health => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).health;
-        public readonly ref float healthMax => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).healthMax;
-        public readonly ref readonly float readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
-        public readonly ref readonly float readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
+        public readonly ref uint health => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).health;
+        public readonly ref uint healthMax => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).healthMax;
+        public readonly ref readonly uint readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
+        public readonly ref readonly uint readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
         public readonly ref AgentType agentProperties => ref this.componentRuntime.properties;
         public readonly ref uint typeId => ref this.componentRuntime.properties.typeId;
         public readonly ref readonly uint readTypeId => ref this.readComponentRuntime.properties.typeId;
@@ -69,29 +83,32 @@ namespace ME.BECS.Units {
 
         public readonly bool WillRemoveSelectionGroup() => UnitUtils.WillRemoveSelectionGroup(in this);
 
-        public readonly bool IsPathFollow {
-            get => this.ent.Has<PathFollowComponent>();
-            set => this.ent.SetTag<PathFollowComponent>(value);
-        }
-
-        public readonly bool IsHold {
-            get => this.ent.Has<UnitHoldComponent>();
-            set => this.ent.SetTag<UnitHoldComponent>(value);
+        [INLINE(256)]
+        public readonly bool HasSelectionGroup() {
+            return this.readUnitSelectionGroup.IsAlive();
         }
 
         [INLINE(256)]
-        public readonly void Hit(float damage, in Ent source, JobInfo jobInfo) {
-            if (this.health > 0f) {
-                JobUtils.Decrement(ref this.health, damage);
-                var ent = Ent.New(jobInfo);
+        public readonly bool HasCommandGroup() {
+            return this.readUnitCommandGroup.IsAlive();
+        }
+
+        [INLINE(256)]
+        [NotThreadSafe]
+        public readonly void Hit(uint damage, in Ent source, in JobInfo jobInfo) {
+            if (this.readHealth > 0u) {
+                var ent = Ent.New(in jobInfo);
                 ent.Set(new DamageTookComponent() {
                     source = source,
                     target = this.ent,
                     damage = damage,
                 });
                 ent.Destroy(1UL);
+                this.ent.SetOneShot(new DamageTookEvent() {
+                    source = source,
+                });
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, in this.ent.Read<UnitHealthComponent>().effectOnHit, jobInfo);
+                ME.BECS.Effects.EffectUtils.CreateEffect(tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect, in jobInfo);
             }
         }
 

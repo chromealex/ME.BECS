@@ -9,12 +9,13 @@
         "ME.BECS.Players",
         "Unity.Mathematics",
         "ME.BECS.Pathfinding",
-        "ME.BECS.ObjectReference.Runtime",
         "ME.BECS.Views",
         "ME.BECS.Effects",
+        "ME.BECS.Destroy",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
-        "ME.BECS.WorldHelper"
+        "ME.BECS.WorldHelper",
+        "ME.BECS.Trees"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

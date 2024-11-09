@@ -13,6 +13,14 @@ namespace ME.BECS.Views {
 
     }
 
+    [EditorComment("Provides custom id for prefab pooling")]
+    [ComponentGroup(typeof(ViewsComponentGroup))]
+    public struct ViewCustomIdComponent : IComponent {
+
+        public uint uniqueId;
+
+    }
+
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct AssignViewComponent : IComponent {
 

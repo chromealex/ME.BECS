@@ -38,6 +38,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         public void OnAwake(ref SystemContext context) {
+            
             // for each player
             // create fog of war
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
@@ -133,6 +134,48 @@ namespace ME.BECS.FogOfWar {
                 heights = this.heights,
             }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), context.dependsOn);
             context.SetDependency(JobHandle.CombineDependencies(cleanUpHandle, updateHeightHandle));
+
+        }
+
+        [INLINE(256)]
+        public bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
+
+            var team = player.readTeam;
+            return this.IsVisibleAny(in team, in points);
+            
+        }
+
+        [INLINE(256)]
+        public bool IsVisibleAny(in Ent team, in MemArrayAuto<float3> points) {
+
+            for (uint i = 0u; i < points.Length; ++i) {
+                var worldPos = points[i];
+                if (this.IsVisible(in team, in worldPos) == true) {
+                    return true;
+                }
+            }
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
+
+            var team = player.readTeam;
+            return this.IsExploredAny(in team, in points);
+            
+        }
+
+        [INLINE(256)]
+        public bool IsExploredAny(in Ent team, in MemArrayAuto<float3> points) {
+
+            for (uint i = 0u; i < points.Length; ++i) {
+                var worldPos = points[i];
+                if (this.IsExplored(in team, in worldPos) == true) {
+                    return true;
+                }
+            }
+            return false;
 
         }
 

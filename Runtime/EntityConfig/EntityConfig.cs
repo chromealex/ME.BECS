@@ -80,11 +80,11 @@ namespace ME.BECS {
         }
 
         public EntityConfig baseConfig;
-        public ComponentsStorage<IConfigComponent> data = new() { isShared = false, components = System.Array.Empty<IConfigComponent>() };
-        public ComponentsStorage<IConfigComponentShared> sharedData = new() { isShared = true, components = System.Array.Empty<IConfigComponentShared>() };
-        public ComponentsStorage<IConfigComponentStatic> staticData = new() { isShared = false, components = System.Array.Empty<IConfigComponentStatic>() };
-        public ComponentsStorage<IConfigInitialize> dataInitialize = new() { isShared = false, components = System.Array.Empty<IConfigInitialize>() };
-        public ComponentsStorage<IAspect> aspects = new() { isShared = false, components = System.Array.Empty<IAspect>() };
+        public ComponentsStorage<IConfigComponent> data = new() { components = System.Array.Empty<IConfigComponent>() };
+        public ComponentsStorage<IConfigComponentShared> sharedData = new() { components = System.Array.Empty<IConfigComponentShared>() };
+        public ComponentsStorage<IConfigComponentStatic> staticData = new() { components = System.Array.Empty<IConfigComponentStatic>() };
+        public ComponentsStorage<IConfigInitialize> dataInitialize = new() { components = System.Array.Empty<IConfigInitialize>() };
+        public ComponentsStorage<IAspect> aspects = new() { components = System.Array.Empty<IAspect>() };
         public CollectionsData collectionsData;
 
         public void OnValidate() {
@@ -93,7 +93,6 @@ namespace ME.BECS {
             list.AddRange(this.sharedData.components.OfType<IConfigInitialize>());
             list.AddRange(this.staticData.components.OfType<IConfigInitialize>());
             this.dataInitialize = new ComponentsStorage<IConfigInitialize>() {
-                isShared = false,
                 components = list.ToArray(),
             };
             this.collectionsData.CleanUp(this);
@@ -112,11 +111,6 @@ namespace ME.BECS {
         public UnsafeEntityConfig AsUnsafeConfig() {
             EntityConfigRegistry.Register(this, out var config);
             return config;
-        }
-
-        public void ResetCache() {
-            this.data.ResetCache();
-            this.staticData.ResetCache();
         }
 
         public void Apply(in Ent ent) {

@@ -17,12 +17,9 @@ namespace ME.BECS.Pathfinding {
         public uint2 gridSize;
         private Ent currentBuildingGrid;
         private ClassPtr<UnityEngine.Texture2D> texture;
-        private VisualWorld visualWorld;
         private Ent placeholder;
 
-        [INLINE(256)]
-        public VisualWorld GetVisualWorld() => this.visualWorld;
-
+        /*
         [INLINE(256)]
         public void SetVisualWorld(in VisualWorld visualWorld) {
             this.visualWorld = visualWorld;
@@ -36,6 +33,7 @@ namespace ME.BECS.Pathfinding {
             this.currentBuildingGrid.Set<TransformAspect>();
             this.currentBuildingGrid.InstantiateView(this.gridView);
         }
+        */
 
         [INLINE(256)]
         public void SetPlaceholder(in Ent placeholder) {

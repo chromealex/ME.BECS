@@ -9,15 +9,23 @@ namespace ME.BECS.FogOfWar {
             this.ApplyFowShadowCopyVisibility(in ent, forced);
         }
 
+        public Ent GetShadowCopyTeam(in EntRO ent) => ent.Read<FogOfWarShadowCopyComponent>().forTeam;
+
         protected void ApplyFowShadowCopyVisibility(in EntRO ent, bool forced) {
             var activePlayer = PlayerUtils.GetActivePlayer();
-            var objectForTeam = ent.Read<FogOfWarShadowCopyComponent>().forTeam;
+
+            var objectForTeam = this.GetShadowCopyTeam(in ent);
             if (activePlayer.readTeam != objectForTeam) {
                 this.ApplyVisibility(in ent, false, forced);
                 return;
             }
-            var position = ent.GetAspect<TransformAspect>().GetWorldMatrixPosition();
-            this.ApplyVisibility(in ent, this.fow.IsVisible(in activePlayer, in position) == false && this.fow.IsExplored(in activePlayer, in position) == true, forced);
+            
+            if (ent.TryRead(out FogOfWarShadowCopyPointsComponent points) == true) {
+                this.ApplyVisibility(in ent, this.fow.IsVisibleAny(in activePlayer, in points.points) == false && this.fow.IsExploredAny(in activePlayer, in points.points) == true, forced);
+            } else {
+                var position = ent.GetAspect<TransformAspect>().GetWorldMatrixPosition();
+                this.ApplyVisibility(in ent, this.fow.IsVisible(in activePlayer, in position) == false && this.fow.IsExplored(in activePlayer, in position) == true, forced);
+            }
         }
 
     }

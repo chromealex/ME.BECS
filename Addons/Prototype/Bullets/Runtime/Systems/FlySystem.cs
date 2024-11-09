@@ -17,7 +17,7 @@ namespace ME.BECS.Bullets {
             
             public void Execute(in JobInfo jobInfo, ref BulletAspect aspect, ref TransformAspect tr) {
 
-                if (aspect.config.autoTarget == true && aspect.component.targetEnt.IsAlive() == true) {
+                if (aspect.config.autoTarget == 1 && aspect.component.targetEnt.IsAlive() == true) {
                     aspect.component.targetWorldPos = aspect.component.targetEnt.GetAspect<TransformAspect>().GetWorldMatrixPosition();
                 }
 

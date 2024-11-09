@@ -82,9 +82,9 @@ namespace ME.BECS {
 
         }
 
-        public IView GetViewByEntity(Ent entity) {
-            var view = this.viewsGameObjects.GetViewByEntity(entity);
-            if (view == null) view = this.viewsDrawMeshes.GetViewByEntity(entity);
+        public IView GetViewByEntity(in Ent entity) {
+            var view = this.viewsGameObjects.GetViewByEntity(in entity);
+            if (view == null) view = this.viewsDrawMeshes.GetViewByEntity(in entity);
             return view;
         }
 

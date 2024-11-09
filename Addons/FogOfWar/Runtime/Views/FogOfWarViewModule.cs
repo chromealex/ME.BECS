@@ -4,6 +4,7 @@ namespace ME.BECS.FogOfWar {
 
     using Views;
     using Players;
+    using Units;
 
     public class FogOfWarViewModule : IViewApplyState, IViewInitialize, IViewOnValidate {
         
@@ -19,6 +20,8 @@ namespace ME.BECS.FogOfWar {
             
         }
 
+        public bool IsVisible() => this.isVisible;
+
         public virtual void OnBecomeVisible(in EntRO ent) {}
         public virtual void OnBecomeInvisible(in EntRO ent) {}
 
@@ -27,11 +30,33 @@ namespace ME.BECS.FogOfWar {
         }
 
         protected void ApplyFowVisibility(in EntRO ent, bool forced) {
-            var activePlayer = PlayerUtils.GetActivePlayer();
-            this.ApplyVisibility(in ent, this.fow.IsVisible(in activePlayer, ent.GetEntity()), forced);
+            this.ApplyVisibility(in ent, this.IsVisible(in ent), forced);
         }
 
-        protected void ApplyVisibility(in EntRO ent, bool state, bool forced = false) {
+        public Ent GetTeam(in EntRO ent) => PlayerUtils.GetOwner(in ent).readTeam;
+        
+        public bool IsVisible(in EntRO ent) {
+            var activePlayer = PlayerUtils.GetActivePlayer();
+            var isShadowCopy = ent.TryRead(out FogOfWarShadowCopyComponent shadowCopyComponent);
+            if (isShadowCopy == true) {
+                if (ent.Has<FogOfWarShadowCopyWasVisible>() == false) return false;
+                if (shadowCopyComponent.forTeam != activePlayer.team) return false;
+            }
+            var state = false;
+            if (ent.TryRead(out FogOfWarShadowCopyPointsComponent points) == true) {
+                state = this.fow.IsVisibleAny(in activePlayer, in points.points);
+            } else {
+                state = this.fow.IsVisible(in activePlayer, ent.GetEntity());
+                if (activePlayer.readTeam == UnitUtils.GetTeam(in ent)) isShadowCopy = false;
+            }
+            if (isShadowCopy == true) {
+                state = !state;
+            }
+
+            return state;
+        }
+
+        protected virtual void ApplyVisibility(in EntRO ent, bool state, bool forced = false) {
             if (state != this.isVisible || forced == true) {
                 this.isVisible = state;
                 foreach (var rnd in this.allRenderers) {
@@ -53,7 +78,7 @@ namespace ME.BECS.FogOfWar {
 
         public virtual void OnValidate(UnityEngine.GameObject go) {
             var renderers = go.GetComponentsInChildren<UnityEngine.Renderer>(true).ToList();
-            renderers.RemoveAll(x => this.excludeRenderers.Contains(x));
+            if (this.excludeRenderers != null) renderers.RemoveAll(x => this.excludeRenderers.Contains(x));
             this.allRenderers = renderers.ToArray();
         }
 

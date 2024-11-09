@@ -59,7 +59,7 @@ namespace ME.BECS {
     public unsafe struct BatchItem {
 
         public Ent ent;
-        internal BatchList addItems;
+        private BatchList addItems;
         private BatchList removeItems;
         public LockSpinner lockIndex;
         public uint Count;
@@ -89,8 +89,11 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Add(uint typeId) {
 
-            if (this.removeItems.Count > 0u) this.removeItems.Remove(typeId);
-            this.addItems.Add(typeId);
+            var removed = false;
+            if (this.removeItems.Count > 0u) {
+                removed = this.removeItems.Remove(typeId);
+            }
+            if (removed == false) this.addItems.Add(typeId);
             this.Count = this.addItems.Count + this.removeItems.Count;
 
         }
@@ -98,8 +101,11 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Remove(uint typeId) {
 
-            if (this.addItems.Count > 0u) this.addItems.Remove(typeId);
-            this.removeItems.Add(typeId);
+            var removed = false;
+            if (this.addItems.Count > 0u) {
+                removed = this.addItems.Remove(typeId);
+            }
+            if (removed == false) this.removeItems.Add(typeId);
             this.Count = this.addItems.Count + this.removeItems.Count;
             
         }

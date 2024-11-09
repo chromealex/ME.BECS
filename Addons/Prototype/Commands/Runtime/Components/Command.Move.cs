@@ -7,7 +7,6 @@ namespace ME.BECS.Commands {
 
         public float3 TargetPosition => this.targetPosition;
 
-        // Move params
         public float3 targetPosition;
 
     }

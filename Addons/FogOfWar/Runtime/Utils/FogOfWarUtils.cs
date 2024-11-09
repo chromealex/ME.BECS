@@ -16,9 +16,20 @@ namespace ME.BECS.FogOfWar {
         public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect unitTr, in UnitAspect unit) {
 
             var pos = WorldToFogMapPosition(in props, unitTr.GetWorldMatrixPosition());
-            var range = WorldToFogMapValue(in props, math.sqrt(unit.readSightRangeSqr));
+            var fowRange = WorldToFogMapValue(in props, math.sqrt(unit.readSightRangeSqr));
             var height = unitTr.GetWorldMatrixPosition().y + unit.readHeight;
-            SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, range, height);
+            SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, fowRange, height);
+
+        }
+
+        [INLINE(256)]
+        public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float range) {
+
+            var worldPos = tr.GetWorldMatrixPosition();
+            var fowPos = WorldToFogMapPosition(in props, worldPos);
+            var fowRange = WorldToFogMapValue(in props, range);
+            var fowHeight = worldPos.y + height;
+            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, fowRange, fowHeight);
 
         }
 
@@ -242,6 +253,21 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static void CleanUpTexture(Unity.Collections.NativeArray<byte> data) {
             _memclear(data.GetUnsafePtr(), TSize<byte>.sizeInt * data.Length);
+        }
+
+        [INLINE(256)]
+        public static Ent Reveal(in ME.BECS.Players.PlayerAspect owner, in float3 position, float range, float height, float lifetime, in JobInfo jobInfo = default) {
+            var ent = Ent.New(in jobInfo);
+            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.position = position;
+            entTr.rotation = quaternion.identity;
+            ent.Set(new FogOfWarRevealerComponent() {
+                range = range,
+                height = height,
+            });
+            ent.Destroy(lifetime);
+            return ent;
         }
 
     }

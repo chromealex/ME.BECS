@@ -119,6 +119,13 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
+        public static Ent GetTeam(in EntRO ent) {
+
+            return ME.BECS.Players.PlayerUtils.GetOwner(in ent).readTeam;
+
+        }
+
+        [INLINE(256)]
         public static Ent GetTeam(in UnitAspect unit) {
 
             return unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>().readTeam;

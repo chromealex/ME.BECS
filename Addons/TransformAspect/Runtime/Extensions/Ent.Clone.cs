@@ -5,18 +5,18 @@ namespace ME.BECS.Transforms {
     public static unsafe class EntCloneExt {
 
         [INLINE(256)]
-        public static Ent Clone(this in Ent source, bool cloneHierarchy) {
-            return source.Clone(source.worldId, cloneHierarchy);
+        public static Ent Clone(this in Ent source, bool cloneHierarchy, in JobInfo jobInfo = default) {
+            return source.Clone(source.worldId, cloneHierarchy, in jobInfo);
         }
 
         [INLINE(256)]
-        public static Ent Clone(this in Ent source, ushort worldId, bool cloneHierarchy) {
+        public static Ent Clone(this in Ent source, ushort worldId, bool cloneHierarchy, in JobInfo jobInfo = default) {
 
             if (cloneHierarchy == false) {
                 return source.Clone();
             }
             
-            var ent = Ent.New(worldId);
+            var ent = Ent.New(worldId, in jobInfo);
             ent.CopyFrom(in source);
             {
                 ref readonly var children = ref source.Read<ChildrenComponent>().list;
@@ -25,7 +25,7 @@ namespace ME.BECS.Transforms {
                     childrenTarget = new ListAuto<Ent>(in ent, children.Count);
                     for (uint i = 0u; i < children.Count; ++i) {
                         var child = children[i];
-                        childrenTarget.Add(child.Clone(worldId, true));
+                        childrenTarget.Add(child.Clone(worldId, true, in jobInfo));
                     }
                 }
             }

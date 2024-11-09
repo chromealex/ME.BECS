@@ -112,6 +112,7 @@ namespace ME.BECS {
             return this;
         }
         
+        
         [INLINE(256)]
         public QueryBuilder WithAll<T0, T1>() where T0 : unmanaged, IComponent
                                               where T1 : unmanaged, IComponent {
@@ -189,7 +190,7 @@ namespace ME.BECS {
             this.builderDependsOn = ArchetypeQueries.With(ref this, AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId));
             return this;
         }
-
+        
         private struct Job : IJobCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);

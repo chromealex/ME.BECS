@@ -19,7 +19,7 @@ namespace ME.BECS.Attack {
 
                 var unit = sensor.ent.GetParent();
                 if (sensor.target.IsAlive() == true) {
-                    unit.Set(new IsUnitStaticComponent());
+                    unit.GetAspect<UnitAspect>().IsHold = true;
                 }
 
             }
@@ -47,7 +47,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, ref AttackAspect sensor) {
 
                 var unit = sensor.ent.GetParent();
-                if (sensor.target.IsAlive() == false) unit.Remove<IsUnitStaticComponent>();
+                if (sensor.target.IsAlive() == false) unit.GetAspect<UnitAspect>().IsHold = false;
 
             }
 

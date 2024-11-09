@@ -85,7 +85,22 @@ namespace ME.BECS.Commands {
             
             var commandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, jobInfo);
             commandGroup.ent.Set(data);
-            //PathUtils.UpdateTarget(in buildGraphSystem, in commandGroup, in worldPos);
+            
+        }
+
+        /// <summary>
+        /// Clear command chain for all units in selection
+        /// Add new command
+        /// </summary>
+        /// <param name="buildGraphSystem"></param>
+        /// <param name="selectionGroupAspect"></param>
+        /// <param name="data"></param>
+        /// <param name="jobInfo"></param>
+        [INLINE(256)]
+        public static void SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionTempGroupAspect selectionGroupAspect, in T data, JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+            
+            var commandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, jobInfo);
+            commandGroup.ent.Set(data);
             
         }
 

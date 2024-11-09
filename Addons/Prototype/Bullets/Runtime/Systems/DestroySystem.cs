@@ -17,21 +17,21 @@ namespace ME.BECS.Bullets {
 
             public void Execute(in JobInfo jobInfo, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
-                if (bullet.config.hitRange > 0f) {
+                if (bullet.config.hitRangeSqr > 0f) {
 
                     // use splash
                     for (uint i = 0u; i < query.results.results.Count; ++i) {
                         var unit = query.results.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, jobInfo);
+                        targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.component.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
                     var targetUnit = bullet.component.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, jobInfo);
+                    targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, in jobInfo);
                     
                 } else if (bullet.component.targetEnt == Ent.Null) {
 
@@ -40,13 +40,13 @@ namespace ME.BECS.Bullets {
                         var unit = query.results.results[0];
                         if (unit.IsAlive() == true) {
                             var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, jobInfo);
+                            targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, in jobInfo);
                         }
                     }
 
                 }
 
-                EffectUtils.CreateEffect(tr.position, tr.rotation, in bullet.config.effectOnDestroy, jobInfo);
+                EffectUtils.CreateEffect(tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect, in jobInfo);
                 bullet.ent.DestroyHierarchy();
 
             }

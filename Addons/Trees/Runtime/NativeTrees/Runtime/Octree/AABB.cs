@@ -3,31 +3,30 @@ using Unity.Mathematics;
 using UnityEngine;
 using static Unity.Mathematics.math;
 
-namespace NativeTrees
-{
+namespace NativeTrees {
+
     /// <summary>
     /// 3D axis aligned bounding box with support for fast ray intersection checking.
     /// Optimized for burst compilation.
     /// </summary>
     /// <remarks>Differs from Unity's <see cref="Bounds"/> as this stores the min and max.
     /// Which is faster for overlap and ray intersection checking</remarks>
-    public struct AABB
-    {
+    public struct AABB {
+
         public float3 min;
         public float3 max;
 
-        public float3 Center => .5f * (min + max);
-        public float3 Size => max - min;
-        
-      
+        public float3 Center => .5f * (this.min + this.max);
+        public float3 Size => this.max - this.min;
+
+
         /// <summary>
         /// Construct an AABB
         /// </summary>
         /// <param name="min">Bottom left</param>
         /// <param name="max">Top right</param>
         /// <remarks>Does not check wether max is greater than min for maximum performance.</remarks>
-        public AABB(float3 min, float3 max)
-        {
+        public AABB(float3 min, float3 max) {
             this.min = min;
             this.max = max;
         }
@@ -36,34 +35,57 @@ namespace NativeTrees
         /// Returns wether this AABB overlaps with another AABB
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Overlaps(in AABB other) =>
-            all(max >= other.min) && 
-            all(other.max >= min);
+        public bool Overlaps(in AABB other) {
+            return all(this.max >= other.min) &&
+                   all(other.max >= this.min);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(float3 point) => all(point >= min) && all(point <= max);
+        public bool Contains(float3 point) {
+            return all(point >= this.min) && all(point <= this.max);
+        }
 
         /// <summary>
         /// Returns wether this AABB fully contains another
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(in AABB other)
-        {
-            return all(min <= other.min) && 
-                   all(max >= other.max);
+        public bool Contains(in AABB other) {
+            return all(this.min <= other.min) &&
+                   all(this.max >= other.max);
         }
 
         /// <summary>
         /// Returns the closest point on this AABB from a given point. If the point lies in this AABB, the point itself is returned.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float3 ClosestPoint(float3 point) => clamp(point, min, max);
+        public float3 ClosestPoint(float3 point) {
+            return clamp(point, this.min, this.max);
+        }
+
+        /// <summary>
+        /// Returns the closest point on this AABB from a given point. If the point lies in this AABB, the point itself is returned.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float2 ClosestPoint(float2 point) {
+            return clamp(point, this.min.xz, this.max.xz);
+        }
 
         /// <summary>
         /// Returns the squared distance of a point to this AABB. If the point lies in the box, zero is returned.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float DistanceSquared(float3 point) => distancesq(point, ClosestPoint(point));
+        public float DistanceSquared(float3 point) {
+            return distancesq(point, this.ClosestPoint(point));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float DistanceSquared(float3 point, bool ignoreY) {
+            if (ignoreY == true) {
+                return distancesq(point.xz, this.ClosestPoint(point.xz));
+            }
+
+            return distancesq(point, this.ClosestPoint(point));
+        }
 
         /// <summary>
         /// Returns if a ray intersects with this bounding box. If you need the test the same ray
@@ -73,16 +95,18 @@ namespace NativeTrees
         /// and may return a false positive in that case. See https://tavianator.com/2011/ray_box.html and https://tavianator.com/2015/ray_box_nan.html</remarks>
         /// <returns>Wether the ray intersects this bounding box</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in Ray ray) => IntersectsRay((PrecomputedRay) ray);
+        public bool IntersectsRay(in Ray ray) {
+            return this.IntersectsRay((PrecomputedRay)ray);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in PrecomputedRay ray) => IntersectsRay(ray.origin, ray.invDir, out _);
+        public bool IntersectsRay(in PrecomputedRay ray) {
+            return this.IntersectsRay(ray.origin, ray.invDir, out _);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in PrecomputedRay ray, out float3 point)
-        {
-            if (IntersectsRay(ray.origin, ray.invDir, out float tMin))
-            {
+        public bool IntersectsRay(in PrecomputedRay ray, out float3 point) {
+            if (this.IntersectsRay(ray.origin, ray.invDir, out var tMin)) {
                 point = ray.origin + ray.dir * tMin;
                 return true;
             }
@@ -92,7 +116,9 @@ namespace NativeTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in PrecomputedRay ray, out float tMin) => IntersectsRay(ray.origin, ray.invDir, out tMin);
+        public bool IntersectsRay(in PrecomputedRay ray, out float tMin) {
+            return this.IntersectsRay(ray.origin, ray.invDir, out tMin);
+        }
 
         /// <summary>
         /// Returns if a ray intersects with this bounding box.
@@ -101,26 +127,32 @@ namespace NativeTrees
         /// and may return a false positive in that case. See https://tavianator.com/2011/ray_box.html and https://tavianator.com/2015/ray_box_nan.html</remarks>
         /// <returns>Wether the ray intersects this bounding box</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in float3 rayPos, in float3 rayInvDir, out float tMin) 
-        {
-            float3 t1 = (min - rayPos) * rayInvDir;
-            float3 t2 = (max - rayPos) * rayInvDir;
+        public bool IntersectsRay(in float3 rayPos, in float3 rayInvDir, out float tMin) {
+            var t1 = (this.min - rayPos) * rayInvDir;
+            var t2 = (this.max - rayPos) * rayInvDir;
 
-            float3 tMin1 = min(t1, t2);
-            float3 tMax1 = max(t1, t2);
+            var tMin1 = min(t1, t2);
+            var tMax1 = max(t1, t2);
 
             tMin = max(0, cmax(tMin1));
-            float tMax = cmin(tMax1);
-            
+            var tMax = cmin(tMax1);
+
             return tMax >= tMin;
         }
-        
+
         /// <summary>
         /// Returns wether max is greater or equal than min
         /// </summary>
-        public bool IsValid => all(max >= min);
+        public bool IsValid => all(this.max >= this.min);
 
-        public static explicit operator Bounds(AABB aabb) => new Bounds(aabb.Center, aabb.Size);
-        public static implicit operator AABB(Bounds bounds) => new AABB(bounds.min, bounds.max);
+        public static explicit operator Bounds(AABB aabb) {
+            return new Bounds(aabb.Center, aabb.Size);
+        }
+
+        public static implicit operator AABB(Bounds bounds) {
+            return new AABB(bounds.min, bounds.max);
+        }
+
     }
+
 }

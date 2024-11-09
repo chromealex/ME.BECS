@@ -74,23 +74,12 @@ namespace ME.BECS {
 
     }
 
-    public static unsafe class EntAspectsExt {
-
-        [INLINE(256)]
-        public static void Set<T>(in this Ent ent) where T : unmanaged, IAspect {
-
-            var world = ent.World;
-            world.state->aspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
-            
-        }
-
-    }
-
     public unsafe struct AspectsStorage {
 
         public struct Aspect {
 
             public MemPtr constructedAspect;
+            public LockSpinner lockSpinner;
             public ushort version;
 
         }
@@ -128,10 +117,12 @@ namespace ME.BECS {
             
             ref var item = ref this.list[state, typeId];
             if (item.constructedAspect.IsValid() == false) {
-                item = new Aspect() {
-                    constructedAspect = state->allocator.Alloc(size),
-                    version = state->allocator.version,
-                };
+                item.lockSpinner.Lock();
+                if (item.constructedAspect.IsValid() == false) {
+                    item.constructedAspect = state->allocator.Alloc(size);
+                    item.version = state->allocator.version;
+                }
+                item.lockSpinner.Unlock();
             }
 
             return state->allocator.GetUnsafePtr(in item.constructedAspect);

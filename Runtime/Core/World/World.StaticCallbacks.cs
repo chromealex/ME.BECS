@@ -18,7 +18,7 @@ namespace ME.BECS {
 
     }
 
-    public class WorldStaticConfigComponentCallbacksTypes<T> where T : unmanaged, IComponent {
+    public class WorldStaticConfigComponentCallbacksTypes<T> where T : unmanaged, IComponentBase {
 
         public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentCallbacksTypes<T>>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.align, 20001);
 
@@ -46,7 +46,7 @@ namespace ME.BECS {
         public delegate void CallbackDelegate<T>(ref T data) where T : unmanaged;
         public unsafe delegate void ConfigComponentCallbackDelegate(in UnsafeEntityConfig config, void* componentPtr, in Ent ent);
 
-        public static void RegisterConfigComponentCallback<T>(ConfigComponentCallbackDelegate callback) where T : unmanaged, IComponent {
+        public static void RegisterConfigComponentCallback<T>(ConfigComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
 
             var maxTypeId = StaticTypes.counter;
             WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Resize(maxTypeId + 1u);
@@ -54,7 +54,7 @@ namespace ME.BECS {
 
         }
         
-        public static unsafe void RaiseConfigComponentCallback<T>(in UnsafeEntityConfig config, void* component, in Ent ent) where T : unmanaged, IComponent {
+        public static unsafe void RaiseConfigComponentCallback<T>(in UnsafeEntityConfig config, void* component, in Ent ent) where T : unmanaged, IComponentBase {
 
             if (WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Length == 0u) return;
             WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId).Invoke(in config, component, in ent);

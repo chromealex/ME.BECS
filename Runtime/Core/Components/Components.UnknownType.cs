@@ -21,24 +21,6 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public void CopyFrom(State* sourceState, in Ent ent, State* targetState, in Ent targetEnt) {
-
-            var srcArchId = sourceState->archetypes.entToArchetypeIdx[sourceState, ent.id];
-            ref var srcArch = ref sourceState->archetypes.list[sourceState, srcArchId];
-            var e = srcArch.components.GetEnumerator(sourceState);
-            while (e.MoveNext() == true) {
-                var typeId = e.Current;
-                var groupId = StaticTypes.groups.Get(typeId);
-                ref var ptr = ref this.items[in sourceState->allocator, typeId];
-                ref var storage = ref ptr.As<DataDenseSet>(in sourceState->allocator);
-                var data = storage.Get(sourceState, ent.id, ent.gen, true, out _);
-                targetState->components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data);
-                targetState->batches.Set_INTERNAL(typeId, in targetEnt, targetState);
-            }
-            
-        }
-
-        [INLINE(256)]
         public void OnEntityAdd(State* state, uint entityId) {
 
             var c = StaticTypes.counter;

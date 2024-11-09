@@ -8,14 +8,14 @@ namespace ME.BECS.Effects {
     public static class EffectUtils {
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(float3 position, in EffectConfig effect, JobInfo jobInfo = default) {
-            return CreateEffect(position, quaternion.identity, in effect, jobInfo);
+        public static EffectAspect CreateEffect(in float3 position, in EffectConfig effect, in JobInfo jobInfo = default) {
+            return CreateEffect(in position, quaternion.identity, in effect, in jobInfo);
         }
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(float3 position, quaternion rotation, in EffectConfig effect, JobInfo jobInfo = default) {
+        public static EffectAspect CreateEffect(in float3 position, in quaternion rotation, in EffectConfig effect, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(jobInfo);
+            var ent = Ent.New(in jobInfo);
             effect.config.Apply(ent);
             var tr = ent.GetOrCreateAspect<TransformAspect>();
             tr.position = position;

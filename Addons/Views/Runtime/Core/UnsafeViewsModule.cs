@@ -224,12 +224,14 @@ namespace ME.BECS.Views {
 
         public System.IntPtr obj;
         public readonly SourceRegistry.Info* prefabInfo;
+        public uint uniqueId;
         public uint index;
 
-        public SceneInstanceInfo(System.IntPtr obj, SourceRegistry.Info* prefabInfo) {
+        public SceneInstanceInfo(System.IntPtr obj, SourceRegistry.Info* prefabInfo, uint uniqueId) {
             this = default;
             this.obj = obj;
             this.prefabInfo = prefabInfo;
+            this.uniqueId = uniqueId;
             this.index = 0u;
         }
 
@@ -672,7 +674,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public IView GetViewByEntity(Ent entity) {
+        public IView GetViewByEntity(in Ent entity) {
             if (this.data->renderingOnSceneEntToRenderIndex.TryGetValue(this.data->viewsWorld.state->allocator, entity.id, out var index) == true) {
                 var info = this.data->renderingOnScene[this.data->viewsWorld.state->allocator, index];
                 return (IView)System.Runtime.InteropServices.GCHandle.FromIntPtr(info.obj).Target;

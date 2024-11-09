@@ -188,7 +188,6 @@ namespace ME.BECS.Editor {
 
                 foreach (var target in serializedObject.targetObjects) {
                     if (target is EntityConfig config) {
-                        config.ResetCache();
                         try {
                             config.Sync();
                         } catch (System.Exception) {
@@ -282,7 +281,7 @@ namespace ME.BECS.Editor {
             var prop = serializedObject.FindProperty(componentsArr.propertyPath);
             ++prop.arraySize;
             var lastProp = prop.GetArrayElementAtIndex(prop.arraySize - 1);
-            var obj = lastProp.SetManagedReference(componentType);
+            var obj = lastProp.CreateComponent(componentType);
             lastProp.isExpanded = obj != null;
             lastProp.serializedObject.ApplyModifiedProperties();
             lastProp.serializedObject.Update();

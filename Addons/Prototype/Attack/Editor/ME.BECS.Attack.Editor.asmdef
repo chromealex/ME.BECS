@@ -1,0 +1,20 @@
+{
+    "name": "ME.BECS.Attack.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS.Editor",
+        "ME.BECS.Attack",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

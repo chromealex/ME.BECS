@@ -24,7 +24,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position, JobInfo jobInfo = default) {
+        public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position, in JobInfo jobInfo = default) {
             
             unitCommandGroup.ent.Set(new ME.BECS.Transforms.LocalPositionComponent() {
                 value = position,
@@ -34,7 +34,7 @@ namespace ME.BECS.Pathfinding {
             var typeIds = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<uint>(buildGraphSystem.graphs.Length, Unity.Collections.Allocator.Temp);
             for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
                 var unit = unitCommandGroup.units[i].GetAspect<UnitAspect>();
-                if (unit.isStatic == false) typeIds.Add(unit.typeId);
+                if (unit.IsStatic == false) typeIds.Add(unit.typeId);
             }
             
             // clamp position for each graph to find middle point
@@ -59,7 +59,7 @@ namespace ME.BECS.Pathfinding {
                 var state = unitCommandGroup.ent.World.state;
                 foreach (var typeId in typeIds) {
                     var target = unitCommandGroup.targets[typeId];
-                    if (target.IsAlive() == true) {
+                    if (target.IsAlive() == true && target.Has<TargetPathComponent>() == true) {
                         var root = buildGraphSystem.GetGraphByTypeId(typeId).Read<RootGraphComponent>();
                         var chunkIndex = Graph.GetChunkIndex(in root, position);
                         ref var prevPath = ref target.Get<TargetPathComponent>().path;
@@ -104,6 +104,12 @@ namespace ME.BECS.Pathfinding {
 
                     // we need to update last chunk only if last node has been changed
                     // set path follow flag
+                    for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
+                        var unit = unitCommandGroup.units[i];
+                        var aspect = unit.GetAspect<UnitAspect>();
+                        aspect.IsPathFollow = true;
+                        aspect.collideWithEnd = 0;
+                    }
                     unitCommandGroup.Unlock();
                     return;
 
@@ -116,10 +122,10 @@ namespace ME.BECS.Pathfinding {
 
                 // set target for each unique type id in group
                 {
-                    var targetInfo = CreateTargetInfo(in middlePoint, jobInfo);
+                    var targetInfo = CreateTargetInfo(in middlePoint, in jobInfo);
                     targetInfo.SetParent(unitCommandGroup.ent);
                     foreach (var typeId in typeIds) {
-                        PathUtils.AddTarget(in buildGraphSystem, in unitCommandGroup, typeId, in targetInfo, jobInfo);
+                        PathUtils.AddTarget(in buildGraphSystem, in unitCommandGroup, typeId, in targetInfo, in jobInfo);
                     }
                 }
 
@@ -138,9 +144,9 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static void AddTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, uint typeId, in Ent targetInfo, JobInfo jobInfo = default) {
+        private static void AddTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, uint typeId, in Ent targetInfo, in JobInfo jobInfo = default) {
 
-            var targetEnt = Ent.New(jobInfo);
+            var targetEnt = Ent.New(in jobInfo);
             targetEnt.SetParent(unitCommandGroup.ent);
             targetEnt.Set(TargetComponent.Create(in targetInfo, buildGraphSystem.GetGraphByTypeId(typeId)));
             unitCommandGroup.targets[typeId] = targetEnt;
@@ -151,7 +157,7 @@ namespace ME.BECS.Pathfinding {
         public static void DestroyTargets(in UnitCommandGroupAspect unitCommandGroup) {
             for (uint i = 0; i < unitCommandGroup.targets.Length; ++i) {
                 ref var target = ref unitCommandGroup.targets[i];
-                if (target.IsAlive() == false) continue;
+                if (target.IsAlive() == false || target.Has<TargetPathComponent>() == false) continue;
                 var targetComponent = target.Read<TargetComponent>();
                 if (targetComponent.target.IsAlive() == false) continue;
                 ref var pathComponent = ref target.Get<TargetPathComponent>();
@@ -162,16 +168,17 @@ namespace ME.BECS.Pathfinding {
                 ref var target = ref unitCommandGroup.targets[i];
                 if (target.IsAlive() == false) continue;
                 var targetComponent = target.Read<TargetComponent>();
-                if (targetComponent.target.IsAlive() == false) continue;
-                targetComponent.target.DestroyHierarchy();
+                if (targetComponent.target.IsAlive() == true) {
+                    targetComponent.target.DestroyHierarchy();
+                }
                 target.DestroyHierarchy();
                 target = default;
             }
         }
         
         [INLINE(256)]
-        public static Ent CreateTargetInfo(in float3 position, JobInfo jobInfo) {
-            var ent = Ent.New(jobInfo);
+        public static Ent CreateTargetInfo(in float3 position, in JobInfo jobInfo) {
+            var ent = Ent.New(in jobInfo);
             ent.Set(new TargetInfoComponent() {
                 position = position,
                 volume = (int)(DEFAULT_VOLUME_RADIUS * UnitUtils.FLOAT_TO_UINT),
@@ -220,6 +227,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static void RemoveUnitFromGroup(in UnitAspect unit) {
 
+            if (unit.HasCommandGroup() == false) return;
             var group = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
             group.Lock();
             if (unit.WillRemoveCommandGroup() == true) {

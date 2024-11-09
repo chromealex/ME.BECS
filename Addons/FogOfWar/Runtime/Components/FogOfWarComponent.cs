@@ -35,7 +35,7 @@ namespace ME.BECS.FogOfWar {
 
     [EditorComment("Tag indicates shadow copy creation")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct FogOfWarShadowCopyRequiredComponent : IComponent {}
+    public struct FogOfWarShadowCopyRequiredComponent : IConfigComponent {}
 
     [EditorComment("Stores links to original entity")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
@@ -46,16 +46,22 @@ namespace ME.BECS.FogOfWar {
 
     }
 
-    [EditorComment("View which represents shadow copy view")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct UnitShadowCopyViewComponent : IConfigComponentStatic, IConfigInitialize {
+    public struct FogOfWarShadowCopyPointsComponent : IComponent {
 
-        public ME.BECS.Views.View view;
-
-        public void OnInitialize(in Ent ent) {
-            ent.Set(new FogOfWarShadowCopyRequiredComponent());
-        }
+        public MemArrayAuto<float3> points;
 
     }
+
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct FogOfWarRevealerComponent : IConfigComponent {
+
+        public float range;
+        public float height;
+
+    }
+    
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct FogOfWarShadowCopyWasVisible : IComponent {}
 
 }

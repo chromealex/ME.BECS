@@ -14,8 +14,11 @@ namespace ME.BECS.Attack {
         public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref AttackRuntimeComponent componentRuntime => ref this.attackRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackRuntimeComponent readComponentRuntime => ref this.attackRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
-        public readonly ref float attackRangeSqr => ref this.component.attackRangeSqr;
-        public readonly ref readonly float readAttackRangeSqr => ref this.readComponent.attackRangeSqr;
+        public readonly ref float attackRangeSqr => ref this.component.sector.rangeSqr;
+        public readonly ref readonly float readAttackRangeSqr => ref this.readComponent.sector.rangeSqr;
+        public readonly ref readonly float readMinAttackRangeSqr => ref this.readComponent.sector.minRangeSqr;
+        public readonly ref readonly float readAttackSector => ref this.readComponent.sector.sector;
+        public readonly ref readonly byte readIgnoreSelf => ref this.readComponent.ignoreSelf;
         
         public Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 
@@ -66,6 +69,7 @@ namespace ME.BECS.Attack {
         
         public void UseFire() {
             this.ent.SetTag<FireUsedComponent>(true);
+            this.ent.SetOneShot(new OnFireEvent(), OneShotType.NextTick);
         }
 
     }

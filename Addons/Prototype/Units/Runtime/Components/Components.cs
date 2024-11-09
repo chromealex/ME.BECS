@@ -67,14 +67,25 @@ namespace ME.BECS.Units {
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitHealthComponent : IConfigComponent {
  
-        public float healthMax;
-        public float health;
-
-        public ME.BECS.Effects.EffectConfig effectOnHit;
-        public ME.BECS.Effects.EffectConfig effectOnDestroy;
+        public uint healthMax;
+        public uint health;
 
     }
-    
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitEffectOnHitComponent : IConfigComponentStatic {
+ 
+        public ME.BECS.Effects.EffectConfig effect;
+
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitEffectOnDestroyComponent : IConfigComponentStatic {
+ 
+        public ME.BECS.Effects.EffectConfig effect;
+
+    }
+
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitCommandGroupComponent : IComponent {
 
@@ -105,13 +116,21 @@ namespace ME.BECS.Units {
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct IsCommandGroupDirty : IComponent {}
     
-    [EditorComment("Added as one-shot component on damage took")]
+    [EditorComment("Added as new entity one shot")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct DamageTookComponent : IComponent {
 
         public Ent source;
         public Ent target;
-        public float damage;
+        public uint damage;
+
+    }
+    
+    [EditorComment("Added as one-shot component on target unit")]
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct DamageTookEvent : IComponent {
+
+        public Ent source;
 
     }
     
@@ -125,6 +144,13 @@ namespace ME.BECS.Units {
 
         public ListAuto<Ent> units;
         
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitLookAtComponent : IComponent {
+
+        public float3 target;
+
     }
 
 }

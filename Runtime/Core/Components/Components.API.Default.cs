@@ -50,7 +50,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly ref readonly T Read<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged, IComponent {
+        public readonly ref readonly T Read<T>(State* state, uint entId, ushort gen, out bool exists) where T : unmanaged, IComponentBase {
 
             var typeId = StaticTypes<T>.typeId;
             var data = this.ReadUnknownType(state, typeId, entId, gen, out exists);
@@ -90,7 +90,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has<T>(State* state, uint entId, ushort gen, bool checkEnabled) where T : unmanaged, IComponent {
+        public bool Has<T>(State* state, uint entId, ushort gen, bool checkEnabled) where T : unmanaged, IComponentBase {
 
             var typeId = StaticTypes<T>.typeId;
             return this.HasUnknownType(state, typeId, entId, gen, checkEnabled);

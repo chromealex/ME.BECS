@@ -30,13 +30,15 @@ namespace ME.BECS {
 
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
-            
+            this.previousFrameDependsOn.Complete();
+
         }
 
         public void FixedUpdate() {
 
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+            this.previousFrameDependsOn.Complete();
             
         }
 
@@ -55,7 +57,7 @@ namespace ME.BECS {
                     this.previousFrameDependsOn = module.obj.OnUpdate(this.previousFrameDependsOn);
                 }
             }
-
+            
             base.LateUpdate();
 
         }

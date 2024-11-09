@@ -74,7 +74,9 @@ namespace ME.BECS.Network {
         public void FixedUpdate() {
             if (this.networkModule is null) {
                 // Use default initializer behaviour if network module not found as FIXED_UPDATE
+                this.previousFrameDependsOn.Complete();
                 this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+                this.previousFrameDependsOn.Complete();
             }
         }
 
@@ -88,7 +90,9 @@ namespace ME.BECS.Network {
             
             // From here there are some code which overrides default world initializer behaviour
             if (this.world.isCreated == true) {
-
+                
+                this.previousFrameDependsOn.Complete();
+                
                 var dt = UnityEngine.Time.deltaTime;
                 // Update logic - depends on tick time
                 var handle = this.networkModule.UpdateInitializer(dt, this, this.previousFrameDependsOn, ref this.world);
@@ -106,6 +110,9 @@ namespace ME.BECS.Network {
                     }
 
                 }
+                
+                this.previousFrameDependsOn.Complete();
+                
             }
             
         }

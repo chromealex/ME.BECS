@@ -1,7 +1,7 @@
-namespace NativeTrees
-{
-    public interface IOctreeRayIntersecter<T>
-    {
+namespace NativeTrees {
+
+    public interface IOctreeRayIntersecter<T> {
+
         /// <summary>
         /// Return wether the object in question intersects with the input ray.
         /// </summary>
@@ -13,5 +13,7 @@ namespace NativeTrees
         /// <remarks>Note that the <see cref="NativeOctree{T}"/> does not prune based on AABB's. So if your
         /// intersection test is fairly expensive, it may be a good idea to first test against the object's bounds in this method.</remarks>
         bool IntersectRay(in PrecomputedRay ray, T obj, AABB objBounds, out float distance);
+
     }
+
 }

@@ -118,7 +118,7 @@ namespace ME.BECS {
     public struct StaticTypesShared<T> where T : unmanaged, IComponentShared {
 
         public static void AOT() {
-            default(EntityConfig).data.AOTShared<T>();
+            
         }
 
     }
@@ -126,7 +126,6 @@ namespace ME.BECS {
     public struct StaticTypesStatic<T> where T : unmanaged, IConfigComponentStatic {
 
         public static unsafe void AOT() {
-            default(EntityConfig).data.AOTStatic<T>();
             UnsafeEntityConfig.StaticData.MethodCaller<T>.Call(default, null, default);
         }
 
@@ -140,7 +139,7 @@ namespace ME.BECS {
 
     }
 
-    public struct StaticTypesDefaultValue<T> where T : unmanaged, IComponent {
+    public struct StaticTypesDefaultValue<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<T> value = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypesDefaultValue<T>>();
 
@@ -177,7 +176,7 @@ namespace ME.BECS {
 
     }
     
-    public struct StaticTypes<T> where T : unmanaged, IComponent {
+    public struct StaticTypes<T> where T : unmanaged, IComponentBase {
 
         private static readonly T defaultZero = default;
 
@@ -199,7 +198,6 @@ namespace ME.BECS {
         }
 
         public static unsafe void AOT() {
-            default(EntityConfig).data.AOT<T>();
             UnsafeEntityConfig.Data.MethodCaller<T>.Call(default, null, default);
         }
 

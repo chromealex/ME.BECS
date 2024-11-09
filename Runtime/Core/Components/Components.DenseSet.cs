@@ -269,7 +269,7 @@ namespace ME.BECS {
         public bool Remove(State* state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            var page = this.dataPages[state, pageIndex];
+            ref var page = ref this.dataPages[state, pageIndex];
             if (page.IsCreated == false) {
                 this.readWriteSpinner.ReadEnd(state);
                 return false;

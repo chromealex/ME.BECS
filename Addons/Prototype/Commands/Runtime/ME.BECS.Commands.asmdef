@@ -9,8 +9,7 @@
         "ME.BECS.Players",
         "Unity.Collections",
         "Unity.Mathematics",
-        "Unity.Burst",
-        "ME.BECS.ObjectReference.Runtime"
+        "Unity.Burst"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

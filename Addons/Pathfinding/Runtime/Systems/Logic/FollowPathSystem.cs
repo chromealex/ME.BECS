@@ -7,6 +7,7 @@ namespace ME.BECS.Pathfinding {
     using Unity.Mathematics;
     using Unity.Collections;
     using ME.BECS.Units;
+    using ME.BECS.Transforms;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Schedule building a path.")]
@@ -30,14 +31,14 @@ namespace ME.BECS.Pathfinding {
         public float movementForce;
         
         [BURST(CompileSynchronously = true)]
-        public struct PathFollowJob : ME.BECS.Jobs.IJobParallelForAspect<Transforms.TransformAspect, UnitAspect> {
+        public struct PathFollowJob : IJobParallelForAspect<TransformAspect, UnitAspect> {
 
             public World world;
             public float dt;
             public BuildGraphSystem buildGraphSystem;
             public FollowPathSystem followPathSystem;
             
-            public void Execute(in JobInfo jobInfo, ref ME.BECS.Transforms.TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var pos = tr.position;
 
@@ -86,7 +87,7 @@ namespace ME.BECS.Pathfinding {
             }
 
             [INLINE(256)]
-            private void Move(ref ME.BECS.Transforms.TransformAspect tr, ref UnitAspect unit, in float3 movementDirection, bool isMoving) {
+            private void Move(ref TransformAspect tr, ref UnitAspect unit, in float3 movementDirection, bool isMoving) {
 
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
@@ -108,20 +109,20 @@ namespace ME.BECS.Pathfinding {
                     }
                 }*/
                 unit.componentRuntime.desiredDirection = desiredDirection;
-                var lengthSq = math.lengthsq(unit.componentRuntime.desiredDirection);
+                var lengthSq = math.lengthsq(unit.readComponentRuntime.desiredDirection);
                 
                 var force = 0f;
                 if (lengthSq > math.EPSILON) {
                     this.buildGraphSystem.heights.GetHeight(tr.position, out var unitNormal);
                     var rot = tr.rotation;
-                    var toRot = quaternion.LookRotation(unit.componentRuntime.desiredDirection, unitNormal);
-                    var maxDegreesDelta = this.dt * unit.rotationSpeed;
+                    var toRot = quaternion.LookRotation(unit.readComponentRuntime.desiredDirection, unitNormal);
+                    var maxDegreesDelta = this.dt * unit.readRotationSpeed;
                     var qAngle = math.angle(rot, toRot);
                     if (qAngle != 0f) {
                         toRot = math.slerp(rot, toRot, math.min(1.0f, maxDegreesDelta / qAngle));
                     }
                     tr.rotation = toRot;
-                    var angle = UnityEngine.Vector3.Angle(tr.forward, unit.componentRuntime.desiredDirection);
+                    var angle = UnityEngine.Vector3.Angle(tr.forward, unit.readComponentRuntime.desiredDirection);
                     force = 1f - angle / 180f;
                 }
 
@@ -152,15 +153,31 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        [BURST(CompileSynchronously = true)]
+        public struct SpeedDownOnHoldJob : IJobParallelForAspect<UnitAspect> {
+
+            public float dt;
+            
+            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+                
+                unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.decelerationSpeed);
+                
+            }
+
+        }
+
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<IsUnitStaticComponent>().Schedule<PathFollowJob, Transforms.TransformAspect, UnitAspect>(new PathFollowJob() {
+            var dependsOnFollow = context.Query().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().Schedule<PathFollowJob, TransformAspect, UnitAspect>(new PathFollowJob() {
                 world = context.world,
                 dt = context.deltaTime,
                 buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
                 followPathSystem = this,
             });
-            context.SetDependency(dependsOn);
+            var dependsOnStop = context.Query().Without<IsUnitStaticComponent>().With<UnitHoldComponent>().Schedule<SpeedDownOnHoldJob, UnitAspect>(new SpeedDownOnHoldJob() {
+                dt = context.deltaTime,
+            });
+            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(dependsOnFollow, dependsOnStop));
             
         }
 

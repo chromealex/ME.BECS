@@ -7,22 +7,26 @@ namespace ME.BECS.Bullets {
         /// <summary>
         /// Damage value
         /// </summary>
-        public float damage;
+        public uint damage;
 
         /// <summary>
-        /// If hitRange > 0 - use splash damage
-        /// If hitRange <= 0 - use single damage at point or for targetEnt
+        /// If hitRangeSqr > 0  -> use splash damage
+        /// If hitRangeSqr <= 0 -> use single damage at point or for targetEnt
         /// </summary>
-        public float hitRange;
+        public float hitRangeSqr;
 
         public float speed;
 
         /// <summary>
         /// If set - bullet will move towards target point if it moves
         /// </summary>
-        public bool autoTarget;
+        public byte autoTarget;
 
-        public ME.BECS.Effects.EffectConfig effectOnDestroy;
+    }
+
+    public struct BulletEffectOnDestroy : IConfigComponentStatic {
+
+        public ME.BECS.Effects.EffectConfig effect;
 
     }
 

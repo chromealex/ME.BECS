@@ -14,9 +14,9 @@ namespace ME.BECS.Units {
         public struct DestroyJob : IJobAspect<UnitAspect> {
 
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
-                if (unit.health <= 0f) {
+                if (unit.readHealth <= 0u) {
                     var tr = unit.ent.GetAspect<TransformAspect>();
-                    EffectUtils.CreateEffect(tr.position, tr.rotation, in unit.ent.Read<UnitHealthComponent>().effectOnDestroy, jobInfo);
+                    EffectUtils.CreateEffect(tr.position, tr.rotation, unit.ent.ReadStatic<UnitEffectOnDestroyComponent>().effect, jobInfo);
                     UnitUtils.DestroyUnit(unit);
                 }
             }

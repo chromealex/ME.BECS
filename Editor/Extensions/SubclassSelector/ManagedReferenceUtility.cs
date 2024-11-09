@@ -13,6 +13,28 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             return obj;
         }
 
+        public static object CreateComponent(this SerializedProperty property, Type type) {
+            var instance = CreateInstance(type);
+            if (instance == null && type != null) instance = Activator.CreateInstance(type);
+            property.managedReferenceValue = instance;
+            return instance;
+        }
+
+        public static object CreateInstance(Type type) {
+            if (type == null) return null;
+            object instance = null;
+            var methodInfo = type.GetMember("Default", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (methodInfo.Length == 1) {
+                if (methodInfo[0] is System.Reflection.PropertyInfo propertyInfo) {
+                    instance = propertyInfo.GetMethod.Invoke(null, null);
+                } else if (methodInfo[0] is System.Reflection.FieldInfo fieldInfo) {
+                    instance = fieldInfo.GetValue(null);
+                }
+            }
+
+            return instance;
+        }
+
     }
 
 }

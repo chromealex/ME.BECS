@@ -20,13 +20,27 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in UnitSelectionGroupAspect selectionGroup, in JobInfo jobInfo) {
 
+            return CreateCommandGroup(targetsCapacity, in selectionGroup.units, in jobInfo);
+
+        }
+
+        [INLINE(256)]
+        public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in UnitSelectionTempGroupAspect selectionGroup, in JobInfo jobInfo) {
+
+            return CreateCommandGroup(targetsCapacity, in selectionGroup.units, in jobInfo);
+
+        }
+
+        [INLINE(256)]
+        public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in ListAuto<Ent> units, in JobInfo jobInfo) {
+
             var ent = Ent.New(in jobInfo);
             var aspect = ent.GetOrCreateAspect<UnitCommandGroupAspect>();
-            aspect.units = new ListAuto<Ent>(in ent, selectionGroup.units.Count);
+            aspect.units = new ListAuto<Ent>(in ent, units.Count);
             aspect.targets = new MemArrayAuto<Ent>(in ent, targetsCapacity);
             {
-                for (uint i = 0; i < selectionGroup.units.Count; ++i) {
-                    var unit = selectionGroup.units[i];
+                for (uint i = 0; i < units.Count; ++i) {
+                    var unit = units[i];
                     aspect.Add(unit.GetAspect<UnitAspect>());
                 }
             }

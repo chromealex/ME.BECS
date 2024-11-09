@@ -92,12 +92,27 @@ namespace ME.BECS {
 
     } 
 
-    public static class AspectExt {
+    public static unsafe class AspectExt {
 
         [INLINE(256)]
         public static bool IsAlive<T>(this ref T aspect) where T : unmanaged, IAspect {
 
             return aspect.ent.IsAlive();
+
+        }
+
+        [INLINE(256)]
+        public static void Set<T>(in this Ent ent) where T : unmanaged, IAspect {
+
+            var world = ent.World;
+            world.state->aspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
+            
+        }
+
+        [INLINE(256)]
+        public static T Get<T>(this in Ent ent) where T : unmanaged, IAspect {
+
+            return ent.GetAspect<T>();
 
         }
 

@@ -184,7 +184,7 @@ namespace ME.BECS {
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
             
-            internal static class MethodCaller<T> where T : unmanaged, IComponent {
+            internal static class MethodCaller<T> where T : unmanaged, IComponentBase {
 
                 [UnityEngine.Scripting.PreserveAttribute]
                 [AOT.MonoPInvokeCallbackAttribute(typeof(MethodCallerDelegate))]
@@ -595,22 +595,29 @@ namespace ME.BECS {
             [INLINE(256)]
             public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
-                return this.staticDataEnt.Has<T>(checkEnabled: false);
+                E.IS_ALIVE(this.staticDataEnt);
+                var world = this.staticDataEnt.World;
+                return world.state->components.Has<T>(world.state, checkEnabled: false, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen);
 
             }
 
             [INLINE(256)]
             public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
-                return this.staticDataEnt.Read<T>();
+                E.IS_ALIVE(this.staticDataEnt);
+                var world = this.staticDataEnt.World;
+                return world.state->components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out _);
 
             }
 
             [INLINE(256)]
             public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
 
-                return this.staticDataEnt.TryRead(out component);
-                
+                E.IS_ALIVE(this.staticDataEnt);
+                var world = this.staticDataEnt.World;
+                component = world.state->components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out var exists);
+                return exists;
+
             }
 
         }
@@ -654,12 +661,24 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public bool TryRead<T>(out T data) where T : unmanaged, IComponent {
-            return this.data.TryRead(out data);
+            if (this.data.TryRead<T>(out data) == false) {
+                if (this.baseConfig != null) {
+                    return this.baseConfig->TryRead<T>(out data);
+                }
+                return false;
+            }
+            return true;
         }
 
         [INLINE(256)]
         public bool Has<T>() where T : unmanaged, IComponent {
-            return this.data.Has<T>();
+            if (this.data.Has<T>() == false) {
+                if (this.baseConfig != null) {
+                    return this.baseConfig->Has<T>();
+                }
+                return false;
+            }
+            return true;
         }
 
         [INLINE(256)]

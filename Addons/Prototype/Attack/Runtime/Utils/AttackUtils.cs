@@ -9,8 +9,16 @@ namespace ME.BECS.Attack {
 
     public static class AttackUtils {
 
+        public enum PositionToAttack {
+
+            None,
+            RotateToTarget,
+            MoveToPoint,
+
+        }
+        
         [INLINE(256)]
-        public static Ent CreateAttackSensor(in UnitAspect unit, int targetsMask, Config config, JobInfo jobInfo) {
+        public static Ent CreateAttackSensor(int targetsMask, Config config, in JobInfo jobInfo) {
             
             var attackSensor = Ent.New(jobInfo);
             config.Apply(attackSensor);
@@ -23,7 +31,10 @@ namespace ME.BECS.Attack {
             var attackAspect = attackSensor.GetAspect<AttackAspect>();
             var attackQueryAspect = attackSensor.GetAspect<QuadTreeQueryAspect>();
             attackQueryAspect.query.treeMask = targetsMask;
-            attackQueryAspect.query.range = math.sqrt(math.max(attackAspect.readAttackRangeSqr, unit.readSightRangeSqr));
+            attackQueryAspect.query.rangeSqr = attackAspect.readAttackRangeSqr;
+            attackQueryAspect.query.minRangeSqr = attackAspect.readMinAttackRangeSqr;
+            attackQueryAspect.query.sector = attackAspect.readAttackSector;
+            attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
             attackQueryAspect.query.nearestCount = 1;
             var point = config.AsUnsafeConfig().ReadStatic<BulletViewPoint>();
             BulletUtils.RegisterFirePoint(attackSensor, point.position, point.rotation, jobInfo);
@@ -32,26 +43,37 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static bool GetPositionToAttack(in UnitAspect unit, in Ent target, out float3 position) {
+        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, float nodeSize, out float3 position) {
 
             position = default;
             var unitTr = unit.ent.GetAspect<TransformAspect>();
             var targetTr = target.GetAspect<TransformAspect>();
-            var attackSensor = unit.componentRuntime.attackSensor.Read<AttackComponent>();
-            var sightRangeSqr = unit.readSightRangeSqr;
+            var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
+            var offset = unit.readRadius + nodeSize * 2f;
+            var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
             var dir = targetTr.GetWorldMatrixPosition() - unitTr.GetWorldMatrixPosition();
+            var dirNormalized = math.normalizesafe(dir);
             var distSq = math.lengthsq(dir);
-            // if our unit is in range [attackRange, sightRange] - find target point
-            if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.attackRangeSqr) {
-                var offset = unit.radius;
-                // find point on the line
-                var dirNormalized = math.normalize(dir);
-                var attackRangeSqr = attackSensor.attackRangeSqr;
-                position = targetTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
-                return true;
+            var minRange = attackSensor.sector.minRangeSqr;
+            if (distSq <= minRange) {
+                // get out from target
+                position = unitTr.GetWorldMatrixPosition() - dirNormalized * (minRange + offset);
+                return PositionToAttack.MoveToPoint;
             }
+            // if our unit is in range [attackRange, sightRange] - find target point
+            if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq > attackSensor.sector.rangeSqr) {
+                // find point on the line
+                var attackRangeSqr = attackSensor.sector.rangeSqr;
+                position = targetTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
+                return PositionToAttack.MoveToPoint;
+            } else if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq <= attackSensor.sector.rangeSqr) {
+                // we are in attack range already - try to look at attacker
+                return PositionToAttack.RotateToTarget;
+            }
+            
+            position = unitTr.GetWorldMatrixPosition() - dirNormalized * offset * 2f;
 
-            return false;
+            return PositionToAttack.MoveToPoint;
 
         }
 

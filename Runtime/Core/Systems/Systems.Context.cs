@@ -9,8 +9,10 @@ namespace ME.BECS {
         public readonly World world;
         public JobHandle dependsOn { get; private set; }
 
+        public JobInfo jobInfo => JobInfo.Create(this.world.id);
+
         [INLINE(256)]
-        internal SystemContext(float deltaTime, in World world, JobHandle dependsOn) {
+        private SystemContext(float deltaTime, in World world, JobHandle dependsOn) {
             this.deltaTime = deltaTime;
             this.world = world;
             this.dependsOn = dependsOn;

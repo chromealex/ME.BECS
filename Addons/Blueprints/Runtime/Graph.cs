@@ -39,7 +39,7 @@ namespace ME.BECS.Blueprints {
 
         public string fieldName;
 
-        public abstract IComponent GetComponent();
+        public abstract IComponentBase GetComponent();
 
         public override string ToString() {
             
@@ -89,7 +89,7 @@ namespace ME.BECS.Blueprints {
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: true, showContent: false, runtimeAssembliesOnly: true)]
         public IComponent component;
 
-        public override IComponent GetComponent() => this.component;
+        public override IComponentBase GetComponent() => this.component;
 
     }
 
@@ -100,7 +100,7 @@ namespace ME.BECS.Blueprints {
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: true, showContent: false, runtimeAssembliesOnly: true)]
         public IConfigComponentStatic component;
         
-        public override IComponent GetComponent() => this.component;
+        public override IComponentBase GetComponent() => this.component;
 
     }
 

@@ -23,10 +23,10 @@ namespace ME.BECS.Units {
         public readonly void Add(in UnitAspect unit) => UnitUtils.AddToSelectionGroup(in this, in unit);
 
         [INLINE(256)]
-        public readonly void Remove(in UnitAspect unit) => UnitUtils.RemoveFromSelectionGroup(in unit);
+        public readonly void Remove(in UnitAspect unit) => UnitUtils.RemoveFromSelectionGroup(in this, in unit);
 
         [INLINE(256)]
-        public readonly void RemoveAll() => UnitUtils.DestroySelectionGroup(this);
+        public readonly void RemoveAll() => UnitUtils.DestroySelectionGroup(in this);
 
         [INLINE(256)]
         public void Replace(in UnitSelectionTempGroupAspect group) {

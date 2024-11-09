@@ -10,14 +10,19 @@ namespace ME.BECS.Commands {
     public struct CommandMoveSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<UnitCommandGroupAspect> {
+        public struct Job : IJobAspect<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
             public void Execute(in JobInfo jobInfo, ref UnitCommandGroupAspect commandGroup) {
 
                 var move = commandGroup.ent.Read<CommandMove>();
-                PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in move.targetPosition, jobInfo);
+                PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in move.targetPosition, in jobInfo);
+                
+                for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
+                    var unit = commandGroup.readUnits[i].GetAspect<UnitAspect>();
+                    unit.IsHold = false;
+                }
                 
                 commandGroup.ent.SetTag<IsCommandGroupDirty>(false);
                 

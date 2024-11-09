@@ -12,6 +12,7 @@ namespace ME.BECS.Views {
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using System.Runtime.InteropServices;
 
     public struct ViewRoot {
 
@@ -22,6 +23,18 @@ namespace ME.BECS.Views {
     }
     
     public struct EntityViewProviderTag : IComponent {}
+
+    [StructLayout(LayoutKind.Explicit)]
+    public ref struct PrefabKey {
+
+        [FieldOffset(0)]
+        public uint prefabId;
+        [FieldOffset(4)]
+        public uint uniqueId;
+        [FieldOffset(0)]
+        public ulong key;
+
+    }
     
     [BURST(CompileSynchronously = true)]
     public unsafe struct EntityViewProvider : IViewProvider<EntityView> {
@@ -36,7 +49,7 @@ namespace ME.BECS.Views {
 
         }
 
-        private scg::Dictionary<uint, scg::Stack<Item>> prefabIdToPool;
+        private scg::Dictionary<ulong, scg::Stack<Item>> prefabIdToPool;
         private scg::HashSet<EntityView> tempViews;
         private scg::List<ViewRoot> roots;
         private scg::List<HeapReference> heaps;
@@ -58,7 +71,7 @@ namespace ME.BECS.Views {
             //if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
             //this.disabledRoot.localScale = UnityEngine.Vector3.zero;
             this.heaps = new scg::List<HeapReference>();
-            this.prefabIdToPool = new scg::Dictionary<uint, scg::Stack<Item>>();
+            this.prefabIdToPool = new scg::Dictionary<ulong, scg::Stack<Item>>();
             this.tempViews = new scg::HashSet<EntityView>();
             this.roots = new scg::List<ViewRoot>();
             this.renderingOnSceneTransforms = new TransformAccessArray((int)properties.renderingObjectsCapacity, JobsUtility.JobWorkerCount);
@@ -218,11 +231,12 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public SceneInstanceInfo Spawn(SourceRegistry.Info* prefabInfo, in Ent ent, out bool isNew) {
 
+            var customViewId = ent.Read<ViewCustomIdComponent>().uniqueId;
             System.IntPtr objPtr;
             EntityView objInstance;
             if (prefabInfo->sceneSource == false) {
 
-                if (this.prefabIdToPool.TryGetValue(prefabInfo->prefabId, out var list) == true && list.Count > 0) {
+                if (this.prefabIdToPool.TryGetValue(new PrefabKey() { prefabId = prefabInfo->prefabId, uniqueId = customViewId }.key, out var list) == true && list.Count > 0) {
 
                     var instance = list.Pop();
                     if (this.tempViews.Contains(instance.obj) == true) {
@@ -268,7 +282,7 @@ namespace ME.BECS.Views {
             SceneInstanceInfo info;
             {
                 this.renderingOnSceneTransforms.Add(objInstance.transform);
-                info = new SceneInstanceInfo(objPtr, prefabInfo);
+                info = new SceneInstanceInfo(objPtr, prefabInfo, customViewId);
             }
 
             {
@@ -295,6 +309,8 @@ namespace ME.BECS.Views {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             instance.ent = default;
+            
+            var customViewId = instanceInfo.uniqueId;
 
             {
                 if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
@@ -306,7 +322,7 @@ namespace ME.BECS.Views {
             // Store despawn in temp (don't deactivate)
             this.tempViews.Add(instance);
             
-            if (this.prefabIdToPool.TryGetValue(instanceInfo.prefabInfo->prefabId, out var list) == true) {
+            if (this.prefabIdToPool.TryGetValue(new PrefabKey() { prefabId = instanceInfo.prefabInfo->prefabId, uniqueId = customViewId }.key, out var list) == true) {
 
                 list.Push(new Item() {
                     info = instanceInfo.prefabInfo,
@@ -322,7 +338,7 @@ namespace ME.BECS.Views {
                     obj = instance,
                     ptr = instanceInfo.obj,
                 });
-                this.prefabIdToPool.Add(instanceInfo.prefabInfo->prefabId, stack);
+                this.prefabIdToPool.Add(new PrefabKey() { prefabId = instanceInfo.prefabInfo->prefabId, uniqueId = customViewId }.key, stack);
                 
             }
             

@@ -67,6 +67,13 @@ namespace ME.BECS.Views {
         public ViewRoot rootInfo;
         public EntRO ent;
 
+        public T GetModule<T>() where T : IViewModule {
+            foreach (var module in this.viewModules) {
+                if (module is T mod) return mod;
+            }
+            return default;
+        }
+
         /// <summary>
         /// Called once when this view creates on scene
         /// </summary>

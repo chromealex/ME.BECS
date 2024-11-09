@@ -1,6 +1,8 @@
 namespace ME.BECS {
-    
-    public interface IComponent {}
+
+    public interface IComponentBase {}
+
+    public interface IComponent : IComponentBase {}
 
     public interface IComponentShared : IComponent {
 

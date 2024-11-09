@@ -7,14 +7,11 @@
         "Unity.Collections",
         "ME.BECS.Transforms",
         "Unity.Burst",
-        "Unity.Jobs",
         "ME.BECS.Units",
         "ME.BECS.Players",
         "ME.BECS.Views",
         "ME.BECS.Trees",
-        "ME.BECS.SceneEntityView",
-        "ME.BECS.ObjectReference.Runtime",
-        "ME.BECS.WorldHelper"
+        "ME.BECS.SceneEntityView"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

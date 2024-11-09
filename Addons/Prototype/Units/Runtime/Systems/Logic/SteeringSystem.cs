@@ -47,7 +47,7 @@ namespace ME.BECS.Units {
                 var cohesionUnitsCount = 0u;
                 var alignmentUnitsCount = 0u;
                 var query = unit.ent.GetAspect<QuadTreeQueryAspect>();
-                var rangeSq = query.query.range * query.query.range;
+                var rangeSq = query.query.rangeSqr;
                 var srcPos = tr.position;
                 srcPos.y = 0f;
                 for (uint i = 0, size = query.results.results.Count; i < size; ++i) {
