@@ -93,6 +93,17 @@ namespace ME.BECS {
             }
             
         }
+        
+        public static void UnregisterCallback<T>(CallbackDelegate<T> callback, uint subId = 0u) where T : unmanaged {
+            
+            if (WorldStaticCallbacksTypes<T>.callbacks.TryGetValue(subId, out var callbacks) == true) {
+
+                callbacks -= callback;
+                WorldStaticCallbacksTypes<T>.callbacks[subId] = callbacks;
+
+            }
+            
+        }
 
     }
 
