@@ -7,6 +7,14 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
+        public static bool IsEnabled<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
+            
+            var typeId = StaticTypes<T>.typeId;
+            return Components.ReadState(state, typeId, in ent);
+            
+        }
+
+        [INLINE(256)]
         public static bool Enable<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
             
             var typeId = StaticTypes<T>.typeId;
@@ -117,6 +125,32 @@ namespace ME.BECS {
             var groupId = StaticTypes<T>.groupId;
             var data = Components.GetUnknownType(state, typeId, groupId, in ent, out isNew);
             return (T*)data;
+
+        }
+
+        public static bool HasStaticDirect<T>(Ent ent) where T : unmanaged, IConfigComponentStatic {
+
+            return ent.HasStatic<T>();
+
+        }
+
+        public static T ReadStaticDirect<T>(Ent ent) where T : unmanaged, IConfigComponentStatic {
+
+            if (StaticTypes<T>.isTag == true) return StaticTypes<T>.defaultValue;
+
+            return ent.ReadStatic<T>();
+
+        }
+
+        public static bool IsTagDirect<T>() where T : unmanaged, IComponent {
+
+            return StaticTypesIsTag<T>.value.Data;
+
+        }
+        
+        public static bool IsEnabledDirect<T>(Ent ent) where T : unmanaged, IComponent {
+
+            return Components.ReadState(ent.World.state, StaticTypes<T>.typeId, in ent);
 
         }
 

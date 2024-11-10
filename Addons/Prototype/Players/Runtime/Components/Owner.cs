@@ -13,4 +13,10 @@ namespace ME.BECS.Players {
 
     }
 
+    public struct OwnerChangedEvent : IComponent {
+
+        public Ent prevOwner;
+
+    }
+
 }

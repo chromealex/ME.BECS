@@ -68,6 +68,17 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool ReadState(State* state, uint typeId, in Ent ent) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+            
+            ref var ptr = ref state->components.items[in state->allocator, typeId];
+            ref var storage = ref ptr.As<DataDenseSet>(in state->allocator);
+            return storage.ReadState(state, ent.id, ent.gen);
+
+        }
+
+        [INLINE(256)]
         public static byte* GetUnknownType(State* state, uint typeId, uint groupId, in Ent ent, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);

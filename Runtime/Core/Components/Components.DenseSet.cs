@@ -176,6 +176,19 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public bool ReadState(State* state, uint entityId, ushort entityGen) {
+
+            var pageIndex = _pageIndex(entityId);
+            this.readWriteSpinner.ReadBegin(state);
+            ref var page = ref this.dataPages[state, pageIndex];
+            var val = _offsetState(_getBlock(state, in page, entityId, this.dataSize));
+            var res = *val == 0 ? true : false;
+            this.readWriteSpinner.ReadEnd(state);
+            return res;
+
+        }
+
+        [INLINE(256)]
         public bool Set(State* state, uint entityId, ushort entityGen, void* data, out bool changed) {
 
             changed = false;

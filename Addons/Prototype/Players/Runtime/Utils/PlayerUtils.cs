@@ -43,7 +43,15 @@ namespace ME.BECS.Players {
         [INLINE(256)]
         public static void SetOwner(in Ent entity, in PlayerAspect player) {
             E.REQUIRED<PlayerComponent>(player.ent);
-            entity.Get<OwnerComponent>().ent = player.ent;
+            ref var owner = ref entity.Get<OwnerComponent>();
+            if (owner.ent != player.ent) {
+                var prevOwner = owner.ent;
+                owner.ent = player.ent;
+                entity.SetOneShot(new OwnerChangedEvent() {
+                    prevOwner = prevOwner,
+                });
+            }
+            
         }
 
         [INLINE(256)]

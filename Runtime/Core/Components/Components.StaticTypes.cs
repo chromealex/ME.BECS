@@ -60,6 +60,7 @@ namespace ME.BECS {
     public struct StaticTypesLoadedManaged {
 
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
+        public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedStaticTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
         public static readonly System.Collections.Generic.Dictionary<System.Type, uint> typeToId = new System.Collections.Generic.Dictionary<System.Type, uint>();
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedSharedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
         public static readonly System.Collections.Generic.Dictionary<uint, bool> loadedSharedTypesCustomHash = new System.Collections.Generic.Dictionary<uint, bool>();
@@ -271,7 +272,11 @@ namespace ME.BECS {
 
         [Unity.Burst.BurstDiscard]
         public static void AddTypeToCache() {
-            StaticTypesLoadedManaged.loadedTypes.Add(StaticTypes<T>.typeId, typeof(T));
+            if (typeof(IConfigComponentStatic).IsAssignableFrom(typeof(T)) == true) {
+                StaticTypesLoadedManaged.loadedStaticTypes.Add(StaticTypes<T>.typeId, typeof(T));
+            } else {
+                StaticTypesLoadedManaged.loadedTypes.Add(StaticTypes<T>.typeId, typeof(T));
+            }
             StaticTypesLoadedManaged.typeToId.Add(typeof(T), StaticTypes<T>.typeId);
         }
 

@@ -442,7 +442,7 @@ namespace ME.BECS.Editor {
                     var type = StaticTypesLoadedManaged.loadedTypes[cId];
                     {
                         var gMethod = methodRead.MakeGenericMethod(type);
-                        var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                        var val = gMethod.Invoke(null, new object[] { this.entity });
                         this.tempObject.data[i] = val;
                     }
                     ++i;
@@ -456,7 +456,7 @@ namespace ME.BECS.Editor {
                     var type = StaticTypesLoadedManaged.loadedTypes[cId];
                     {
                         var gMethod = methodRead.MakeGenericMethod(type);
-                        var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                        var val = gMethod.Invoke(null, new object[] { this.entity });
                         this.tempObject.data[i] = val;
                     }
                     ++i;
