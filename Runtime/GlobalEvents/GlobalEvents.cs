@@ -13,14 +13,25 @@ namespace ME.BECS {
 
             public void* data;
             public System.IntPtr callback;
+            public GCHandle handle;
             public bool dataSet;
             public bool withData;
+
+            public void Dispose() {
+                this.handle.Free();
+            }
 
         }
         
         public NativeHashMap<Event, Item> events;
         public LockSpinner spinner;
 
+        public void Dispose() {
+            foreach (var kv in this.events) {
+                kv.Value.Dispose();
+            }
+        }
+        
         [INLINE(256)]
         public void Lock() {
             this.spinner.Lock();
@@ -47,7 +58,19 @@ namespace ME.BECS {
     public static unsafe class GlobalEvents {
 
         public static void Initialize() {
+            Dispose();
             WorldEvents.readWriteSpinner.Data = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_DOMAIN);
+        }
+
+        public static void Dispose() {
+            ref var items = ref WorldEvents.events.Data;
+            for (uint i = 0u; i < items.Length; ++i) {
+                ref var item = ref items.Get(i);
+                if (item.events.IsCreated == false) {
+                    item.Dispose();
+                }
+            }
+            items.Dispose();
         }
         
         /// <summary>
@@ -143,7 +166,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void RegisterEvent(in Event evt, GlobalEventWithDataCallback callback) {
 
-            RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), withData: true);
+            var handle = GCHandle.Alloc(callback, GCHandleType.Pinned);
+            RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), handle, withData: true);
 
         }
         
@@ -155,12 +179,13 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void RegisterEvent(in Event evt, GlobalEventCallback callback) {
 
-            RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), withData: false);
+            var handle = GCHandle.Alloc(callback, GCHandleType.Pinned);
+            RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), handle, withData: false);
 
         }
         
         [INLINE(256)]
-        private static void RegisterEvent(in Event evt, System.IntPtr callback, bool withData) {
+        private static void RegisterEvent(in Event evt, System.IntPtr callback, GCHandle handle, bool withData) {
 
             var world = Worlds.GetWorld(evt.worldId);
             E.IS_VISUAL_MODE(world.state->mode);
@@ -178,6 +203,7 @@ namespace ME.BECS {
             }
             var val = new GlobalEventsData.Item() {
                 callback = callback,
+                handle = handle,
                 withData = withData,
             };
             item.Lock();
@@ -231,10 +257,18 @@ namespace ME.BECS {
                         val.dataSet = false;
                         if (val.withData == true) {
                             var del = Marshal.GetDelegateForFunctionPointer<GlobalEventWithDataCallback>(val.callback);
-                            del.Invoke(val.data);
+                            try {
+                                del.Invoke(val.data);
+                            } catch (System.Exception ex) {
+                                UnityEngine.Debug.LogException(ex);
+                            }
                         } else {
                             var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
-                            del.Invoke();
+                            try {
+                                del.Invoke();
+                            } catch (System.Exception ex) {
+                                UnityEngine.Debug.LogException(ex);
+                            }
                         }
                     }
                 }
