@@ -8,7 +8,6 @@ namespace ME.BECS.Attack {
     using ME.BECS.Commands;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Move unit if it was damaged and is not attacking and without hold")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct MoveToAttackerSystem : IUpdate {
