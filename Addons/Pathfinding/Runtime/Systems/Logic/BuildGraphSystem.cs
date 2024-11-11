@@ -19,8 +19,10 @@ namespace ME.BECS.Pathfinding {
         [Unity.Collections.ReadOnlyAttribute]
         internal Unity.Collections.NativeArray<ME.BECS.Units.AgentType> types;
         internal Heights heights;
-        public float nodeSize;
+        private float nodeSize;
 
+        public readonly float GetNodeSize() => this.nodeSize;
+        
         public readonly Heights ReadHeights() => this.heights;
 
         public void OnAwake(ref SystemContext context) {

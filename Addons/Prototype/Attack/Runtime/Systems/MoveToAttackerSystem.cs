@@ -24,7 +24,7 @@ namespace ME.BECS.Attack {
                 if (component.source.IsAlive() == false) return;
 
                 // move to attacker
-                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.nodeSize, out var worldPos);
+                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos);
                 if (result == AttackUtils.PositionToAttack.MoveToPoint) {
                     CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
                         targetPosition = worldPos,
@@ -48,7 +48,7 @@ namespace ME.BECS.Attack {
 
                 var target = unit.ent.Read<UnitAttackCommandComponent>();
                 if (target.target.IsAlive() == true) {
-                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.nodeSize, out var worldPos);
+                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out var worldPos);
                     if (result == AttackUtils.PositionToAttack.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {

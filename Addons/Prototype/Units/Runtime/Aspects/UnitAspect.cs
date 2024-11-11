@@ -59,10 +59,13 @@ namespace ME.BECS.Units {
         public readonly ref uint typeId => ref this.componentRuntime.properties.typeId;
         public readonly ref readonly uint readTypeId => ref this.readComponentRuntime.properties.typeId;
         public readonly ref float3 velocity => ref this.componentRuntime.velocity;
+        public readonly ref readonly float3 readVelocity => ref this.readComponentRuntime.velocity;
         public readonly ref float radius => ref this.componentRuntime.properties.radius;
         public readonly ref readonly float readRadius => ref this.readComponentRuntime.properties.radius;
         public readonly ref float speed => ref this.componentRuntime.speed;
+        public readonly ref readonly float readSpeed => ref this.readComponentRuntime.speed;
         public readonly ref float maxSpeed => ref this.component.maxSpeed;
+        public readonly ref readonly float readMaxSpeed => ref this.readComponent.maxSpeed;
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
         public readonly ref float decelerationSpeed => ref this.component.decelerationSpeed;
         public readonly ref readonly float readAccelerationSpeed => ref this.readComponent.accelerationSpeed;

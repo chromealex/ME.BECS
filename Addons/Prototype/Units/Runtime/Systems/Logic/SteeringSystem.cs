@@ -13,20 +13,14 @@ namespace ME.BECS.Units {
     public struct SteeringSystem : IUpdate, IDrawGizmos {
 
         public static SteeringSystem Default => new SteeringSystem() {
-            calculateAvoidance = true,
             calculateSeparation = true,
             calculateCohesion = true,
             calculateAlignment = true,
-            alignmentSpeed = 3f,
-            maxAgentRadius = 2.5f,
         };
 
-        public bool calculateAvoidance;
         public bool calculateSeparation;
         public bool calculateCohesion;
         public bool calculateAlignment;
-        public float alignmentSpeed;
-        public float maxAgentRadius;
         public bool drawGizmos;
 
         [BURST(CompileSynchronously = true)]
@@ -38,9 +32,7 @@ namespace ME.BECS.Units {
             
             public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
 
-                var facingCone = math.cos(math.radians(120f));
                 var collisionDir = float3.zero;
-                var avoidanceVector = float3.zero;
                 var cohesionVector = float3.zero;
                 var separationVector = float3.zero;
                 var alignmentVector = float3.zero;
@@ -67,73 +59,46 @@ namespace ME.BECS.Units {
                     }
                     var targetPos = entTr.position;
                     targetPos.y = 0f;
-                    var vec = targetPos - srcPos;
+                    var vec = srcPos - targetPos;
                     if (math.all(vec == float3.zero) == true) {
                         vec = unit.randomVector;
                     }
                     var normal = math.normalizesafe(vec);
-
+                    var lengthSqr = math.lengthsq(vec);
+                    
                     // check collide with end
                     // if unit collides with another unit which stops
                     // and belongs to the same group
                     var isGroupEquals = entUnit.IsPathFollow == false &&
-                                        entUnit.unitCommandGroup == unit.unitCommandGroup;
+                                        entUnit.readUnitCommandGroup == unit.readUnitCommandGroup;
 
                     var radiusSum = unit.radius + entUnit.radius;
                     var radiusSumSq = radiusSum * radiusSum;
                     
-                    var lengthSqr = math.lengthsq(vec);
                     if (isGroupEquals == false && lengthSqr <= rangeSq && unit.IsPathFollow == true) {
-                        var isFacing = IsFacing(tr.right, normal, facingCone);
-                        var relativePos = srcPos - targetPos;
-                        var relativeVel = unit.velocity - entUnit.velocity;
-                        // check avoidance
-                        if (this.system.calculateAvoidance == true) {
-                            var relativeSpeed = math.lengthsq(relativeVel);
-                            if (relativeSpeed > 0f) {
-                                var timeToCollision = -1f * math.dot(relativePos, relativeVel) / (relativeSpeed * relativeSpeed);
-                                if (timeToCollision > 0f) {
-                                    avoidanceVector += relativePos + relativeVel * timeToCollision;
-                                }
-                            }
-                        }
-
                         // check separation
                         if (this.system.calculateSeparation == true) {
-                            var maxSepDistSq = 1f + this.system.maxAgentRadius;
-                            var distSq = math.lengthsq(relativePos);
-                            if (distSq < maxSepDistSq) {
-                                var strength = unit.accelerationSpeed * (maxSepDistSq - distSq) / (maxSepDistSq - radiusSumSq);
-                                separationVector += -normal * strength;
-                            }
+                            separationVector += -vec;
                         }
 
                         // check cohesion
                         if (this.system.calculateCohesion == true) {
-                            if (isFacing == true) {
-                                cohesionVector += targetPos;
-                                ++cohesionUnitsCount;
-                            }
+                            cohesionVector += targetPos;
+                            ++cohesionUnitsCount;
                         }
                         
                         // check alignment
                         if (this.system.calculateAlignment == true) {
-                            if (isFacing == true) {
-                                var vel = -relativeVel;
-                                vel /= unit.maxSpeed;
-                                alignmentVector += vel;
-                                ++alignmentUnitsCount;
-                            }
+                            alignmentVector += entUnit.readVelocity;
+                            ++alignmentUnitsCount;
                         }
                     }
 
-                    var length = math.sqrt(lengthSqr);
-                    if (length <= radiusSum) {
+                    if (unit.IsPathFollow == false && lengthSqr <= radiusSumSq) {
                         {
                             // move to normal
-                            var collision = -normal * (radiusSum - length);
+                            var collision = -normal * (radiusSum - math.sqrt(lengthSqr));
                             collisionDir += collision;
-                            //tr.position += collision;
                         }
                         {
                             // set the flag
@@ -145,16 +110,15 @@ namespace ME.BECS.Units {
 
                 }
 
-                unit.componentRuntime.collisionDirection = math.normalizesafe(collisionDir);
-                unit.componentRuntime.avoidanceVector = math.normalizesafe(avoidanceVector);
-                unit.componentRuntime.separationVector = math.normalizesafe(separationVector);
+                unit.componentRuntime.collisionDirection = -math.normalizesafe(collisionDir);
+                unit.componentRuntime.separationVector = math.normalizesafe(-separationVector);
                 if (cohesionUnitsCount > 0u) {
-                    unit.componentRuntime.cohesionVector = math.normalizesafe(cohesionVector / cohesionUnitsCount);
+                    unit.componentRuntime.cohesionVector = math.normalizesafe(cohesionVector / cohesionUnitsCount - srcPos);
                 } else {
                     unit.componentRuntime.cohesionVector = float3.zero;
                 }
                 if (alignmentUnitsCount > 0u) {
-                    unit.componentRuntime.alignmentVector = math.lerp(unit.componentRuntime.alignmentVector, alignmentVector / alignmentUnitsCount, this.dt * this.system.alignmentSpeed);
+                    unit.componentRuntime.alignmentVector = math.normalizesafe(alignmentVector / alignmentUnitsCount);
                 } else {
                     unit.componentRuntime.alignmentVector = float3.zero;
                 }

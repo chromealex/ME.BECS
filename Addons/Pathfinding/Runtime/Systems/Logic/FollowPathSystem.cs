@@ -16,15 +16,13 @@ namespace ME.BECS.Pathfinding {
 
         public static FollowPathSystem Default => new FollowPathSystem() {
             collisionForce = 15f,
-            avoidanceForce = 1f,
-            cohesionForce = 2f,
+            cohesionForce = 1f,
             separationForce = 1f,
-            alignmentForce = 0.5f,
-            movementForce = 5f,
+            alignmentForce = 1f,
+            movementForce = 1f,
         };
 
         public float collisionForce;
-        public float avoidanceForce;
         public float cohesionForce;
         public float separationForce;
         public float alignmentForce;
@@ -91,23 +89,13 @@ namespace ME.BECS.Pathfinding {
 
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
-                var desiredDirection = math.normalizesafe(movementDirection * this.followPathSystem.movementForce + 
-                                                          unit.componentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
-                                                          unit.componentRuntime.collisionDirection * this.followPathSystem.collisionForce +
-                                                          unit.componentRuntime.separationVector * this.followPathSystem.separationForce + 
-                                                          unit.componentRuntime.avoidanceVector * this.followPathSystem.avoidanceForce + 
-                                                          unit.componentRuntime.alignmentVector * this.followPathSystem.alignmentForce);
+                var vel = unit.componentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
+                          unit.componentRuntime.separationVector * this.followPathSystem.separationForce + 
+                          unit.componentRuntime.alignmentVector * this.followPathSystem.alignmentForce +
+                          unit.componentRuntime.collisionDirection * this.followPathSystem.collisionForce +
+                          movementDirection * this.followPathSystem.movementForce;
+                var desiredDirection = math.normalizesafe(vel);
 
-                /*{
-                    var prevPos = tr.position;
-                    prevPos.y = 0f;
-                    var newPos = prevPos;
-                    newPos += desiredDirection * unit.speed * this.dt;
-                    var movePos = GraphUtils.GetPositionWithMapBorders(graph, out var collisionDirection, in newPos, in prevPos, in agent.filter);
-                    if (math.all(movePos == prevPos) == true) {
-                        desiredDirection = collisionDirection;
-                    }
-                }*/
                 unit.componentRuntime.desiredDirection = desiredDirection;
                 var lengthSq = math.lengthsq(unit.readComponentRuntime.desiredDirection);
                 
@@ -127,17 +115,19 @@ namespace ME.BECS.Pathfinding {
                 }
 
                 if (isMoving == false && lengthSq <= math.EPSILON) {
-                    unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.decelerationSpeed);
+                    unit.speed = math.lerp(unit.readSpeed, 0f, this.dt * unit.readDecelerationSpeed);
                 } else {
-                    var accSpeed = unit.accelerationSpeed;
-                    unit.speed = math.lerp(unit.speed, math.select(0f, math.select(unit.speed * 0.5f, unit.maxSpeed, force * 0.5f > 0.4f), force > 0.5f), this.dt * accSpeed);
+                    var accSpeed = unit.readAccelerationSpeed;
+                    unit.speed = math.lerp(unit.readSpeed, math.select(0f, math.select(unit.readSpeed * 0.5f, unit.readMaxSpeed, force * 0.5f > 0.4f), force > 0.5f), this.dt * accSpeed);
                 }
 
                 {
                     var prevPos = tr.position;
                     prevPos.y = 0f;
                     var newPos = prevPos;
-                    newPos += tr.forward * unit.speed * this.dt;
+                    //newPos += tr.forward * unit.speed * this.dt;
+                    newPos = Math.MoveTowards(newPos, newPos + unit.componentRuntime.desiredDirection, unit.readSpeed * this.dt);
+                    //newPos += unit.componentRuntime.collisionDirection * (this.followPathSystem.collisionForce * this.dt);
                     newPos = GraphUtils.GetPositionWithMapBorders(graph, out var collisionDirection, in newPos, in prevPos, in agent.filter);
                     unit.velocity = newPos - prevPos;
                     var delta = collisionDirection * this.followPathSystem.collisionForce * this.dt;
@@ -160,7 +150,7 @@ namespace ME.BECS.Pathfinding {
             
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
                 
-                unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.decelerationSpeed);
+                unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.readDecelerationSpeed);
                 
             }
 

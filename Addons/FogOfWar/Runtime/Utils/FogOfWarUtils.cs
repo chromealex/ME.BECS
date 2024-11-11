@@ -218,7 +218,7 @@ namespace ME.BECS.FogOfWar {
                     }
 
                     var localY = y - y0;
-                    if (r * r <= radiusMinSqr && localY * localY <= radiusMinSqr) continue;
+                    if (radiusMinSqr > 0 && r * r <= radiusMinSqr && localY * localY <= radiusMinSqr) continue;
 
                     if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
 

@@ -34,7 +34,6 @@ namespace ME.BECS.Units {
         public int collideWithEnd;
         
         public float3 collisionDirection;
-        public float3 avoidanceVector;
         public float3 separationVector;
         public float3 alignmentVector;
         public float3 cohesionVector;

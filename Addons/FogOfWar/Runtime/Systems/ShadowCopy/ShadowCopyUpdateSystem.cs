@@ -20,7 +20,7 @@ namespace ME.BECS.FogOfWar {
                     ent.DestroyHierarchy();
                     return;
                 }
-                    
+                
                 // if object is still alive - update properties
                 var origTr = shadowCopy.original.GetAspect<TransformAspect>();
                 var pos = origTr.position;
