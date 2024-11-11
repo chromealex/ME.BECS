@@ -48,7 +48,7 @@ namespace ME.BECS.Attack {
 
                 var target = unit.ent.Read<UnitAttackCommandComponent>();
                 if (target.target.IsAlive() == true) {
-                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.agentTypesConfig.Value.graphProperties.nodeSize, out var worldPos);
+                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.nodeSize, out var worldPos);
                     if (result == AttackUtils.PositionToAttack.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {
