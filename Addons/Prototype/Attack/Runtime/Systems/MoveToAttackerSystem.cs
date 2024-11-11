@@ -8,6 +8,7 @@ namespace ME.BECS.Attack {
     using ME.BECS.Commands;
     using ME.BECS.Transforms;
 
+    [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Move unit if it was damaged and is not attacking and without hold")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct MoveToAttackerSystem : IUpdate {
@@ -16,7 +17,6 @@ namespace ME.BECS.Attack {
         public struct MoveToAttackerJob : IJobAspect<UnitAspect, TransformAspect> {
 
             public BuildGraphSystem buildGraphSystem;
-            public float nodeSize;
             
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit, ref TransformAspect transform) {
 
@@ -24,7 +24,7 @@ namespace ME.BECS.Attack {
                 if (component.source.IsAlive() == false) return;
 
                 // move to attacker
-                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.nodeSize, out var worldPos);
+                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.nodeSize, out var worldPos);
                 if (result == AttackUtils.PositionToAttack.MoveToPoint) {
                     CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
                         targetPosition = worldPos,
@@ -66,7 +66,6 @@ namespace ME.BECS.Attack {
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var nodeSize = buildGraphSystem.agentTypesConfig.Value.graphProperties.nodeSize;
             var dependsOnMoveToTarget = context.Query()
                                                .Without<IsUnitStaticComponent>()
                                                .Without<PathFollowComponent>()
@@ -75,7 +74,6 @@ namespace ME.BECS.Attack {
                                                .With<DamageTookEvent>()
                                                .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect>(new MoveToAttackerJob() {
                                                    buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
-                                                   nodeSize = nodeSize,
                                                });
             var dependsOnStop = context.Query()
                             .With<UnitAttackCommandComponent>()

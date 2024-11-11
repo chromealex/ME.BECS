@@ -19,11 +19,14 @@ namespace ME.BECS.Pathfinding {
         [Unity.Collections.ReadOnlyAttribute]
         internal Unity.Collections.NativeArray<ME.BECS.Units.AgentType> types;
         internal Heights heights;
+        public float nodeSize;
 
         public readonly Heights ReadHeights() => this.heights;
 
         public void OnAwake(ref SystemContext context) {
 
+            this.nodeSize = this.agentTypesConfig.Value.graphProperties.nodeSize;
+            
             Heights heights = default;
             { // terrain case
                 var terrain = UnityEngine.Terrain.activeTerrain;
