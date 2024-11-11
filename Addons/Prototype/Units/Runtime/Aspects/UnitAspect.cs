@@ -65,6 +65,8 @@ namespace ME.BECS.Units {
         public readonly ref float maxSpeed => ref this.component.maxSpeed;
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
         public readonly ref float decelerationSpeed => ref this.component.decelerationSpeed;
+        public readonly ref readonly float readAccelerationSpeed => ref this.readComponent.accelerationSpeed;
+        public readonly ref readonly float readDecelerationSpeed => ref this.readComponent.decelerationSpeed;
         public readonly ref float rotationSpeed => ref this.component.rotationSpeed;
         public readonly ref readonly float readRotationSpeed => ref this.readComponent.rotationSpeed;
         public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.Get(this.ent.id, this.ent.gen).unitCommandGroup;

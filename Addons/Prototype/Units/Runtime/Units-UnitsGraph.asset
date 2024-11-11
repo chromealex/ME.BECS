@@ -75,7 +75,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         isInstance: 0
     - rid: 8346928920201003081
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -96,7 +97,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         isInstance: 0
     - rid: 8346928920201003082
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -117,7 +119,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         system:
           rid: 8346928920201003083
     - rid: 8346928920201003083
@@ -142,7 +145,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         system:
           rid: 8346928920201003085
     - rid: 8346928920201003085
@@ -153,5 +157,8 @@ MonoBehaviour:
         calculateCohesion: 1
         calculateAlignment: 1
         alignmentSpeed: 8
+        avoidanceSpeed: 0
+        separationSpeed: 0
+        collisionSpeed: 0
         maxAgentRadius: 0.5
         drawGizmos: 1

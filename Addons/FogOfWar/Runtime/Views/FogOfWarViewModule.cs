@@ -1,15 +1,11 @@
-using System.Linq;
-
 namespace ME.BECS.FogOfWar {
 
     using Views;
     using Players;
     using Units;
 
-    public class FogOfWarViewModule : IViewApplyState, IViewInitialize, IViewOnValidate {
+    public class FogOfWarViewModule : CollectRenderers, IViewApplyState, IViewInitialize {
         
-        public UnityEngine.Renderer[] allRenderers;
-        public UnityEngine.Renderer[] excludeRenderers;
         private bool isVisible;
         protected CreateSystem fow;
 
@@ -36,6 +32,9 @@ namespace ME.BECS.FogOfWar {
         public Ent GetTeam(in EntRO ent) => PlayerUtils.GetOwner(in ent).readTeam;
         
         public bool IsVisible(in EntRO ent) {
+            if (ent.Has<OwnerComponent>() == false) return true;
+            // Neutral player always has index 0
+            if (PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
             var activePlayer = PlayerUtils.GetActivePlayer();
             var isShadowCopy = ent.TryRead(out FogOfWarShadowCopyComponent shadowCopyComponent);
             if (isShadowCopy == true) {
@@ -74,12 +73,6 @@ namespace ME.BECS.FogOfWar {
             
             this.UpdateVisibility(in ent, false);
             
-        }
-
-        public virtual void OnValidate(UnityEngine.GameObject go) {
-            var renderers = go.GetComponentsInChildren<UnityEngine.Renderer>(true).ToList();
-            if (this.excludeRenderers != null) renderers.RemoveAll(x => this.excludeRenderers.Contains(x));
-            this.allRenderers = renderers.ToArray();
         }
 
     }

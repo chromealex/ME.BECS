@@ -11,7 +11,9 @@ namespace ME.BECS.Attack {
 
         public void ApplyState(in EntRO ent) {
 
-            var attack = ent.GetAspect<ME.BECS.Units.UnitAspect>().readComponentRuntime.attackSensor.Read<AttackRuntimeComponent>();
+            var sensor = ent.GetAspect<ME.BECS.Units.UnitAspect>().readComponentRuntime.attackSensor;
+            if (sensor.IsAlive() == false) return;
+            var attack = sensor.Read<AttackRuntimeComponent>();
             this.animator.SetFloat(attackHash, attack.fireTimer);
             
         }

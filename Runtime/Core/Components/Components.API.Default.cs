@@ -142,7 +142,7 @@ namespace ME.BECS {
 
         }
 
-        public static bool IsTagDirect<T>() where T : unmanaged, IComponent {
+        public static bool IsTagDirect<T>() where T : unmanaged, IComponentBase {
 
             return StaticTypesIsTag<T>.value.Data;
 

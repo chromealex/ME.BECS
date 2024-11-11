@@ -622,7 +622,7 @@ namespace ME.BECS {
 
         }
         
-        private readonly uint id;
+        public readonly uint id;
         [NativeDisableUnsafePtrRestriction]
         private readonly UnsafeEntityConfig* baseConfig;
         private readonly Data data;

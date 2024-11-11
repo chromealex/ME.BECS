@@ -102,10 +102,10 @@ namespace ME.BECS {
         public static void RaiseEvent(in Event evt, void* data, ushort logicWorldId) {
 
             var world = Worlds.GetWorld(evt.worldId);
-            var logicWorld = Worlds.GetWorld(logicWorldId);
+            //var logicWorld = Worlds.GetWorld(logicWorldId);
             E.IS_VISUAL_MODE(world.state->mode);
-            E.IS_LOGIC_MODE(logicWorld.state->mode);
-            E.IS_IN_TICK(logicWorld.state);
+            //E.IS_LOGIC_MODE(logicWorld.state->mode);
+            //E.IS_IN_TICK(logicWorld.state);
             
             ValidateCapacity();
             
@@ -220,6 +220,10 @@ namespace ME.BECS {
                     return;
                 }
                 ref var item = ref WorldEvents.events.Data.Get(this.worldId);
+                if (item.events.IsCreated == false) {
+                    WorldEvents.readWriteSpinner.Data.ReadEnd();
+                    return;
+                }
                 item.Lock();
                 foreach (var kv in item.events) {
                     ref var val = ref kv.Value;

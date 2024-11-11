@@ -22,6 +22,14 @@ namespace ME.BECS {
             return false;
         }
         
+        public static bool operator ==(Config a, Config b) {
+            return a.sourceId == b.sourceId;
+        }
+
+        public static bool operator !=(Config a, Config b) {
+            return !(a == b);
+        }
+
         [INLINE(256)]
         public readonly UnsafeEntityConfig AsUnsafeConfig() {
             return EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);

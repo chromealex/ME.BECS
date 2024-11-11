@@ -75,7 +75,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         isInstance: 0
     - rid: 8346928920201003111
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -96,7 +97,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         isInstance: 0
     - rid: 8346928920201003112
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -117,7 +119,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         system:
           rid: 8346928920201003113
     - rid: 8346928920201003113
@@ -148,7 +151,8 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 0}
+        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
+          type: 2}
         system:
           rid: 8346928920201003115
     - rid: 8346928920201003115
