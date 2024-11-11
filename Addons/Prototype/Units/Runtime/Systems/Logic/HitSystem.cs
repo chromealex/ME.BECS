@@ -15,6 +15,7 @@ namespace ME.BECS.Units {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DamageTookComponent damageComponent) {
                 if (damageComponent.damage == 0u) return;
+                if (damageComponent.target.IsAlive() == false) return;
                 var unit = damageComponent.target.GetAspect<UnitAspect>();
                 var newHealth = (int)unit.readHealth - (int)damageComponent.damage;
                 if (newHealth <= 0) {
