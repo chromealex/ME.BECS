@@ -20,7 +20,7 @@ namespace ME.BECS {
         }
 
         public override int GetHashCode() {
-            return System.HashCode.Combine(this.id, this.worldId);
+            return ((int)this.id + 17) ^ this.worldId;
         }
 
     }
