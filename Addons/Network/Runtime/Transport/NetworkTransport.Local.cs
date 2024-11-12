@@ -202,7 +202,7 @@ namespace ME.BECS.Network {
             public byte b8;
 
         }
-        
+
         public void Send(byte[] bytes) {
 
             if (this.simulationMode == SimulationMode.SimulateReplay) {
@@ -210,6 +210,10 @@ namespace ME.BECS.Network {
                 return;
             }
             
+            if (this.Status != TransportStatus.Connected) {
+                throw new System.Exception("Transport is not connected");
+            }
+
             if (this.simulationMode == SimulationMode.RecordReplay) {
                 var header = new PackageHeader() { length = bytes.Length };
                 this.replayFile.WriteByte(header.b1);
@@ -219,10 +223,6 @@ namespace ME.BECS.Network {
                 this.replayFile.Write(bytes, 0, bytes.Length);
             }
             
-            if (this.Status != TransportStatus.Connected) {
-                throw new System.Exception("Transport is not connected");
-            }
-
             this.sendBytes.Enqueue(bytes);
             
         }
