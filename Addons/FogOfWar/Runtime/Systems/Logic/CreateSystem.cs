@@ -1,3 +1,4 @@
+//[assembly: Unity.Jobs.RegisterGenericJobTypeAttribute(typeof(ME.BECS.FogOfWar.CreateSystem.UpdateHeightJob))] 
 
 namespace ME.BECS.FogOfWar {
     
@@ -34,36 +35,6 @@ namespace ME.BECS.FogOfWar {
                 aspect.ent.Set(map);
                 
             }
-
-        }
-
-        public void OnAwake(ref SystemContext context) {
-            
-            // for each player
-            // create fog of war
-            var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
-            var heights = Ent.New(in context);
-            heights.Set(new FogOfWarStaticComponent() {
-                mapPosition = this.mapPosition,
-                worldSize = this.mapSize,
-                size = fowSize,
-                heights = new MemArrayAuto<float>(heights, fowSize.x * fowSize.y),
-            });
-            this.heights = heights;
-            var dependsOn = context.Query().Schedule<CreateJob, TeamAspect>(new CreateJob() {
-                fowSize = fowSize,
-            });
-            
-            var pathfinding = context.world.GetSystem<BuildGraphSystem>();
-            var firstGraph = pathfinding.GetGraphByTypeId(0u).Read<RootGraphComponent>();
-            var updateHeightHandle = new UpdateHeightJob() {
-                fowSize = fowSize,
-                pathfinding = pathfinding,
-                world = context.world,
-                graph = firstGraph,
-                heights = this.heights,
-            }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), dependsOn);
-            context.SetDependency(updateHeightHandle);
 
         }
 
@@ -115,6 +86,36 @@ namespace ME.BECS.FogOfWar {
                 JobUtils.SetIfGreater(ref fow.maxHeight, maxHeight);
 
             }
+
+        }
+
+        public void OnAwake(ref SystemContext context) {
+            
+            // for each player
+            // create fog of war
+            var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
+            var heights = Ent.New(in context);
+            heights.Set(new FogOfWarStaticComponent() {
+                mapPosition = this.mapPosition,
+                worldSize = this.mapSize,
+                size = fowSize,
+                heights = new MemArrayAuto<float>(heights, fowSize.x * fowSize.y),
+            });
+            this.heights = heights;
+            var dependsOn = context.Query().Schedule<CreateJob, TeamAspect>(new CreateJob() {
+                fowSize = fowSize,
+            });
+            
+            var pathfinding = context.world.GetSystem<BuildGraphSystem>();
+            var firstGraph = pathfinding.GetGraphByTypeId(0u).Read<RootGraphComponent>();
+            var updateHeightHandle = new UpdateHeightJob() {
+                fowSize = fowSize,
+                pathfinding = pathfinding,
+                world = context.world,
+                graph = firstGraph,
+                heights = this.heights,
+            }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), dependsOn);
+            context.SetDependency(updateHeightHandle);
 
         }
 

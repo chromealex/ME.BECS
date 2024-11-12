@@ -15,6 +15,7 @@
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
         "ME.BECS.WorldHelper",
+        "Unity.Collections",
         "ME.BECS.Trees"
     ],
     "includePlatforms": [],
