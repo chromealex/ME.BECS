@@ -12,34 +12,54 @@ namespace ME.BECS {
         
         [HIC]
         public void Log(str text, bool showCallstack = false) {
-            var type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Log);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Log, showCallstack == true ? UnityEngine.StackTraceLogType.Full : UnityEngine.StackTraceLogType.None);
+            UnityEngine.StackTraceLogType type = UnityEngine.StackTraceLogType.None;
+            if (showCallstack == false) {
+                type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Log);
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Log, UnityEngine.StackTraceLogType.None);
+            }
             UnityEngine.Debug.Log(text);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Log, type);
+            if (showCallstack == false) {
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Log, type);
+            }
         }
 
         [HIC]
         public void Warning(str text, bool showCallstack = false) {
-            var type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Warning);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Warning, showCallstack == true ? UnityEngine.StackTraceLogType.Full : UnityEngine.StackTraceLogType.None);
+            UnityEngine.StackTraceLogType type = UnityEngine.StackTraceLogType.None;
+            if (showCallstack == false) {
+                type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Warning);
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Warning, UnityEngine.StackTraceLogType.None);
+            }
             UnityEngine.Debug.LogWarning(text);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Warning, type);
+            if (showCallstack == false) {
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Warning, type);
+            }
         }
 
         [HIC]
         public void Error(str text, bool showCallstack = true) {
-            var type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Error);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Error, showCallstack == true ? UnityEngine.StackTraceLogType.Full : UnityEngine.StackTraceLogType.None);
+            UnityEngine.StackTraceLogType type = UnityEngine.StackTraceLogType.None;
+            if (showCallstack == false) {
+                type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Error);
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Error, UnityEngine.StackTraceLogType.None);
+            }
             UnityEngine.Debug.LogError(text);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Error, type);
+            if (showCallstack == false) {
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Error, type);
+            }
         }
 
         [HIC]
         public void Exception(System.Exception ex, bool showCallstack = true) {
-            var type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Exception);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Exception, showCallstack == true ? UnityEngine.StackTraceLogType.Full : UnityEngine.StackTraceLogType.None);
+            UnityEngine.StackTraceLogType type = UnityEngine.StackTraceLogType.None;
+            if (showCallstack == false) {
+                type = UnityEngine.Application.GetStackTraceLogType(UnityEngine.LogType.Exception);
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Exception, UnityEngine.StackTraceLogType.None);
+            }
             UnityEngine.Debug.LogException(ex);
-            UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Exception, type);
+            if (showCallstack == false) {
+                UnityEngine.Application.SetStackTraceLogType(UnityEngine.LogType.Exception, type);
+            }
         }
 
     }

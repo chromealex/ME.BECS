@@ -37,6 +37,10 @@ namespace ME.BECS.Network {
         [NativeDisableUnsafePtrRestriction]
         public byte* data;
 
+        public override string ToString() {
+            return $"[ PACKAGE ] Tick: {this.tick}, playerId: {this.playerId}, methodId: {this.methodId}, dataSize: {this.dataSize}, localOrder: {this.localOrder}";
+        }
+
         internal void Dispose() {
             _free(this.data);
         }
@@ -276,15 +280,16 @@ namespace ME.BECS.Network {
                 
             }
 
-            public void Add(NetworkPackage package) {
+            public void Add(NetworkPackage package, ulong currentTick) {
 
                 ref var list = ref this.eventsByTick.GetValue(ref this.state->allocator, package.tick);
                 if (list.IsCreated == false) list = new SortedNetworkPackageList(ref this.state->allocator, this.properties.capacityPerTick);
                 list.Add(ref this.state->allocator, package);
+                
+                Logger.Network.Log($"Added package (now: {currentTick}): {package}");
 
                 if (package.tick < this.oldestTick || this.oldestTick == EMPTY_TICK) {
-                    // Update oldest tick to rollback in the future
-                    //UnityEngine.Debug.Log("Set oldest tick: " + package.tick);
+                    // Update the oldest tick to rollback in the future
                     this.oldestTick = package.tick;
                 }
 
@@ -320,6 +325,7 @@ namespace ME.BECS.Network {
                     for (uint i = 0u; i < events.Count; ++i) {
 
                         var evt = events[in allocator, i];
+                        Logger.Network.Log($"Play event for tick {tick}: {evt}");
                         dependsOn = data->methodsStorage.Call(in evt, dt, in world, dependsOn);
 
                     }
@@ -559,12 +565,14 @@ namespace ME.BECS.Network {
                 this.previousTimestamp = startTime;
                 this.currentTimestamp = startTime;
                 world.state->tick = this.GetTargetTick();
+                Logger.Network.LogInfo($"SetServerStartTime: {startTime} => tick: {this.GetTargetTick()}", true);
             }
 
             [INLINE(256)]
             public void SetServerTime(double timeFromStart) {
                 this.previousTimestamp = this.currentTimestamp;
                 this.currentTimestamp = timeFromStart;
+                Logger.Network.LogInfo($"SetServerTime: {timeFromStart} => tick: {this.GetTargetTick()}", true);
             }
 
             [INLINE(256)]
@@ -594,11 +602,16 @@ namespace ME.BECS.Network {
 
                     var rollbackState = this.statesStorage.GetStateForRollback(tickToRollback);
                     if (rollbackState == null) {
-                        // can't find state to rollback
+                        // can't find state to roll back
                         // that means that requested tick had never seen before (player connected in the middle of the game)
                         // or it was reset by statesStorageProperties.capacity (event is out of history storage)
-                        // so we can use reset state as an oldest state in history or throw an exception
+                        // so we can use reset state as the oldest state in history or throw an exception
                         rollbackState = this.statesStorage.GetResetState();
+                    }
+
+                    if (rollbackState == null) {
+                        Logger.Network.Error("Rollback State is null. That means you are run out of state's history.");
+                        throw new System.Exception();
                     }
 
                     currentTick = rollbackState->tick;
@@ -800,7 +813,7 @@ namespace ME.BECS.Network {
 
             if ((eventsBehaviour & EventsBehaviourState.RunLocal) != 0) {
                 // Store locally
-                moduleData->eventsStorage.Add(package);
+                moduleData->eventsStorage.Add(package, moduleData->GetTargetTick());
             }
 
             if ((eventsBehaviour & EventsBehaviourState.SendToNetwork) != 0) {
@@ -833,11 +846,11 @@ namespace ME.BECS.Network {
                     if (bytes != null) {
                         var readBuffer = new StreamBufferReader(bytes);
                         var package = NetworkPackage.Create(ref readBuffer);
-                        this.data->eventsStorage.Add(package);
+                        this.data->eventsStorage.Add(package, currentTick);
                         readBuffer.Dispose();
                     }
                 }
-                //if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.Log($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {unchecked(targetTick - currentTick)}");
+                if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.LogInfo($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {unchecked(targetTick - currentTick)}");
                 {
                     // Do we need the rollback?
                     dependsOn = this.data->Rollback(ref currentTick, ref targetTick, dependsOn);
@@ -854,7 +867,6 @@ namespace ME.BECS.Network {
                     dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, dependsOn);
                     {
                         // Apply events for this tick
-                        //dependsOn.Complete();
                         dependsOn = this.data->Tick(tick, deltaTime, in world, dependsOn);
                     }
                     
