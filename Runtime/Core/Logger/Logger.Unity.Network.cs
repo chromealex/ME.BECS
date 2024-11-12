@@ -9,7 +9,7 @@ namespace ME.BECS {
         public class Network : BaseLogger<UnityLogger> {
 
             [HIC][CND("LOGS_NETWORK_INFO_FULL")]
-            new public static void LogInfo(str text, bool showCallstack = false) {
+            public static void LogInfo(str text, bool showCallstack = false) {
                 BaseLogger<UnityLogger>.Log(text, showCallstack);
             }
 

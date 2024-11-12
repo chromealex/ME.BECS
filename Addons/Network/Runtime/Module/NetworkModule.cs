@@ -159,6 +159,22 @@ namespace ME.BECS.Network {
             return this.network.data->startFrameState;
         }
 
+        public INetworkTransport GetTransport() {
+            return this.network.GetTransport();
+        }
+
+        public ULongDictionaryAuto<SortedNetworkPackageList> GetEvents() {
+            return this.network.GetEvents();
+        }
+
+        public bool RewindTo(ulong targetTick) {
+            return this.network.RewindTo(targetTick);
+        }
+
+        public ulong GetCurrentTick() {
+            return this.network.data->connectedWorld.state->tick;
+        }
+
     }
 
 }

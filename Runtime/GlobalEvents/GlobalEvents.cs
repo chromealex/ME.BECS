@@ -13,6 +13,7 @@ namespace ME.BECS {
 
             public void* data;
             public System.IntPtr callback;
+            public bool callbackSet;
             public GCHandle handle;
             public bool dataSet;
             public bool withData;
@@ -153,7 +154,6 @@ namespace ME.BECS {
                 item.events[evt] = elem;
             }
             item.Unlock();
-            WorldEvents.events.Data.Get(evt.worldId) = item;
             WorldEvents.readWriteSpinner.Data.ReadEnd();
 
         }
@@ -205,12 +205,14 @@ namespace ME.BECS {
                 callback = callback,
                 handle = handle,
                 withData = withData,
+                callbackSet = true,
             };
             item.Lock();
             if (item.events.TryAdd(evt, val) == false) {
                 var elem = item.events[evt];
                 elem.callback = val.callback;
                 elem.withData = val.withData;
+                elem.callbackSet = true;
                 item.events[evt] = elem;
             }
             item.Unlock();
@@ -253,7 +255,7 @@ namespace ME.BECS {
                 item.Lock();
                 foreach (var kv in item.events) {
                     ref var val = ref kv.Value;
-                    if (val.dataSet == true) {
+                    if (val.dataSet == true && val.callbackSet == true) {
                         val.dataSet = false;
                         if (val.withData == true) {
                             var del = Marshal.GetDelegateForFunctionPointer<GlobalEventWithDataCallback>(val.callback);

@@ -3,6 +3,15 @@ namespace ME.BECS {
     [System.Serializable]
     public struct StateProperties {
 
+        public static StateProperties Min => new StateProperties() {
+            entitiesCapacity = 1u,
+            storageCapacity = 1u,
+            archetypesCapacity = 1u,
+            queriesCapacity = 1u,
+            sharedComponentsCapacity = 1u,
+            mode = WorldMode.Logic,
+        };
+
         [UnityEngine.MinAttribute(1)]
         [UnityEngine.Tooltip("Resize internal storage and fill pools with entities by default. Set up this value to fit max entities count of your world.")]
         public uint entitiesCapacity;

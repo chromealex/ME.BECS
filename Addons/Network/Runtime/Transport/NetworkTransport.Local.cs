@@ -55,6 +55,7 @@ namespace ME.BECS.Network {
                             header.b7 = tr.header[6];
                             header.b8 = tr.header[7];
                             var startTick = header.tick;
+                            this.transport.Value.StartTick = startTick;
                             this.networkModule.Value.SetServerStartTime(startTick * this.networkModule.Value.properties.tickTime, in this.world);
                             var eventsCount = 0;
                             while (pos < tr.replayFileRead.Length) {
@@ -126,7 +127,8 @@ namespace ME.BECS.Network {
         private readonly byte[] header = new byte[8];
         private byte[] buffer = new byte[100];
         private byte[] replayDataBytes;
-        
+        public ulong StartTick { private set; get; }
+
         public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
 
         public TransportStatus Status { get; set; }

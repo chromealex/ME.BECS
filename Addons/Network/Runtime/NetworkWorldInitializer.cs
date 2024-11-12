@@ -93,7 +93,7 @@ namespace ME.BECS.Network {
                 
                 this.previousFrameDependsOn.Complete();
                 
-                var dt = UnityEngine.Time.deltaTime;
+                var dt = this.GetDeltaTime();
                 // Update logic - depends on tick time
                 var handle = this.networkModule.UpdateInitializer(dt, this, this.previousFrameDependsOn, ref this.world);
                 handle.Complete();
@@ -117,6 +117,8 @@ namespace ME.BECS.Network {
             
         }
 
+        public virtual float GetDeltaTime() => UnityEngine.Time.deltaTime;
+        
         /*
         protected override void LateUpdate() {
 
