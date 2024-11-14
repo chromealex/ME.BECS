@@ -23,6 +23,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool SetPtr(in this Ent ent, uint typeId, void* data) {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            return Batches.Set(in ent, typeId, data, world.state);
+
+        }
+
+        [INLINE(256)]
         public static bool SetPtr<T>(in this Ent ent, T* data) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

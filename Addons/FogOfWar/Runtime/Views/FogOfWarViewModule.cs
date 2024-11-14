@@ -34,7 +34,7 @@ namespace ME.BECS.FogOfWar {
         public bool IsVisible(in EntRO ent) {
             if (ent.Has<OwnerComponent>() == false) return true;
             // Neutral player always has index 0
-            //if (PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
+            if (PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
             var activePlayer = PlayerUtils.GetActivePlayer();
             var isShadowCopy = ent.TryRead(out FogOfWarShadowCopyComponent shadowCopyComponent);
             if (isShadowCopy == true) {

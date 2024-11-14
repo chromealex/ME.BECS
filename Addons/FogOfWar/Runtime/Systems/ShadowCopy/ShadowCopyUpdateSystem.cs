@@ -25,7 +25,10 @@ namespace ME.BECS.FogOfWar {
                 var origTr = shadowCopy.original.GetAspect<TransformAspect>();
                 var pos = origTr.position;
                 var rot = origTr.rotation;
+                var marker = new Unity.Profiling.ProfilerMarker("ent.CopyFrom");
+                marker.Begin();
                 ent.CopyFrom<ParentComponent, ChildrenComponent>(in shadowCopy.original);
+                marker.End();
                 var tr = ent.GetAspect<TransformAspect>();
                 tr.position = pos;
                 tr.rotation = rot;

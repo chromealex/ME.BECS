@@ -62,6 +62,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static unsafe uint GetRandomValue(this in Ent ent, uint min, uint max) {
+            var world = ent.World;
+            var state = world.state;
+            var seed = Ents.GetNextSeed(state, in ent);
+            return ent.World.GetRandomValue(seed, min, max);
+        }
+
+        [INLINE(256)]
         public static unsafe float2 GetRandomVector2(this in Ent ent) {
             var world = ent.World;
             var state = world.state;
@@ -184,6 +192,14 @@ namespace ME.BECS {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var result = rnd.NextFloat(min, max);
+            return result;
+        }
+
+        [INLINE(256)]
+        public readonly uint GetRandomValue(uint seed, uint min, uint max) {
+            E.IS_IN_TICK(this.state);
+            var rnd = new RandomProcessor(seed).random;
+            var result = rnd.NextUInt(min, max);
             return result;
         }
 

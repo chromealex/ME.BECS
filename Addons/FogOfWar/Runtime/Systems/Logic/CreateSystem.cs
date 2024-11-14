@@ -148,12 +148,13 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public bool IsVisibleAny(in Ent team, in MemArrayAuto<float3> points) {
-
+            
+            ref readonly var fow = ref team.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
             for (uint i = 0u; i < points.Length; ++i) {
                 var worldPos = points[i];
-                if (this.IsVisible(in team, in worldPos) == true) {
-                    return true;
-                }
+                var pos = FogOfWarUtils.WorldToFogMapPosition(in props, in worldPos);
+                if (FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y) == true) return true;
             }
             return false;
 
@@ -170,11 +171,12 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public bool IsExploredAny(in Ent team, in MemArrayAuto<float3> points) {
 
+            ref readonly var fow = ref team.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
             for (uint i = 0u; i < points.Length; ++i) {
                 var worldPos = points[i];
-                if (this.IsExplored(in team, in worldPos) == true) {
-                    return true;
-                }
+                var pos = FogOfWarUtils.WorldToFogMapPosition(in props, in worldPos);
+                if (FogOfWarUtils.IsExplored(in props, in fow, pos.x, pos.y) == true) return true;
             }
             return false;
 

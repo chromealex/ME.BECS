@@ -18,8 +18,8 @@ namespace ME.BECS.FogOfWar {
         public float fadeOutSpeed;
 
         private Ent lastActivePlayer;
-
         private Ent camera;
+        private ulong lastTick;
 
         public void SetCamera(in ME.BECS.Views.CameraAspect camera) {
             this.camera = camera.ent;
@@ -106,7 +106,7 @@ namespace ME.BECS.FogOfWar {
             
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
             var activePlayer = playersSystem.GetActivePlayer();
-            if (this.lastActivePlayer != activePlayer.ent) {
+            if (this.lastActivePlayer != activePlayer.ent || logicWorld.state->tick < this.lastTick) {
                 // clean up textures because we need to rebuild them for current player
                 FogOfWarUtils.CleanUpTexture(createTexture.GetBuffer());
             }
@@ -114,6 +114,7 @@ namespace ME.BECS.FogOfWar {
             var fow = activePlayer.readTeam.Read<FogOfWarComponent>();
             
             var buffer = createTexture.GetBuffer();
+            this.lastTick = logicWorld.state->tick;
         
             var system = logicWorld.GetSystem<CreateSystem>();
             var props = system.heights.Read<FogOfWarStaticComponent>();
