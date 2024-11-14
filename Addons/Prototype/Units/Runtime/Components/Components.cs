@@ -36,6 +36,7 @@ namespace ME.BECS.Units {
         public float3 collisionDirection;
         public float3 separationVector;
         public float3 alignmentVector;
+        public float3 avoidanceVector;
         public float3 cohesionVector;
         public float3 desiredDirection;
         public float3 randomVector;
