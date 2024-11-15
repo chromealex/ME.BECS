@@ -72,7 +72,6 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public RefRW<T> GetRW<T>(State* state, ushort worldId) where T : unmanaged, IComponent {
-            if (StaticTypes<T>.isTag == true) return default;
             return new RefRW<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -82,7 +81,6 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public RefRO<T> GetRO<T>(State* state) where T : unmanaged, IComponent {
-            if (StaticTypes<T>.isTag == true) return default;
             return new RefRO<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),

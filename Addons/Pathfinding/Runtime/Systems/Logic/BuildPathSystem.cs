@@ -33,7 +33,7 @@ namespace ME.BECS.Pathfinding {
                     var updateRequired = new NativeReference<byte>(1, Allocator.Temp);
                     Graph.PathUpdateSync(in this.world, ref path, in path.graph, chunksToUpdate, path.filter, updateRequired);
                     var arr = targetPathComponent.chunksToUpdate;
-                    _memclear(arr.GetUnsafePtr(), arr.Length * TSize<bool>.size);
+                    _memclear(arr.GetUnsafePtr(), arr.Length * TSize<byte>.size);
                 } else {
                     Graph.MakePath(in this.world, out path, in targetData.graphEnt, in targetInfo.position, this.filter);
                     chunksToUpdate = new MemArrayAuto<byte>(targetData.target, path.chunks.Length);

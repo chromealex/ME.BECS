@@ -96,7 +96,7 @@ namespace ME.BECS {
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
+                    if (elemSize > 0u) _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -228,7 +228,7 @@ namespace ME.BECS {
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
+                    if (elemSize > 0u) _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -386,7 +386,7 @@ namespace ME.BECS {
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
+                    if (elemSize > 0u) _memcpy((void*)ptr, this.data + this.offsets[i], elemSize);
                     {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -574,7 +574,6 @@ namespace ME.BECS {
                 
                 this.staticDataEnt = ent;
                 
-                var state = ent.World.state;
                 for (int i = 0; i < sourceConfig.staticData.components.Length; ++i) {
                     var comp = sourceConfig.staticData.components[i];
                     StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);

@@ -315,7 +315,7 @@ namespace ME.BECS.Views {
                 //   if entity's generation changed
                 //   we need to check
                 if (entData.element.IsAlive() == false || entData.element.IsActive() == false || entData.element.Has<ViewComponent>() == false) {
-                    if (this.viewsModuleData->dirty[(int)entData.element.id] == false) {
+                    if (this.viewsModuleData->dirty[(int)entData.element.id] == 0) {
                         if (this.toRemove.TryAdd(entData.element.id, false) == true) {
                             
                         }
@@ -366,7 +366,7 @@ namespace ME.BECS.Views {
                             this.toAdd.TryAdd(entId, false);
 
                             // Mark entity as dirty
-                            this.viewsModuleData->dirty[(int)entId] = true;
+                            this.viewsModuleData->dirty[(int)entId] = 1;
 
                         }
                         
@@ -400,7 +400,7 @@ namespace ME.BECS.Views {
                 if (entitiesCapacity > this.viewsModuleData->toAdd.Capacity) this.viewsModuleData->toAdd.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData->dirty.Length) {
                     this.viewsModuleData->dirty.Length = (int)entitiesCapacity;
-                    _memclear(this.viewsModuleData->dirty.Ptr, entitiesCapacity * TSize<bool>.size);
+                    _memclear(this.viewsModuleData->dirty.Ptr, entitiesCapacity * TSize<byte>.size);
                 } else {
                     this.viewsModuleData->dirty.Clear();
                 }

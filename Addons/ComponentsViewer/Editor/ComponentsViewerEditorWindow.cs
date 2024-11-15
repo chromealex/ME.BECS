@@ -21,14 +21,16 @@ namespace ME.BECS.Editor.ComponentsViewer {
         private static StyleSheet styleSheetBase;
         private static StyleSheet styleSheetTooltip;
         private static StyleSheet styleSheet;
-        
-        private void LoadStyle() {
+
+        private static void LoadStyle() {
             if (styleSheetBase == null) {
                 styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
             }
+
             if (styleSheetTooltip == null) {
                 styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
             }
+
             if (styleSheet == null) {
                 styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/ComponentsViewerEditorWindow.uss");
             }
@@ -45,11 +47,11 @@ namespace ME.BECS.Editor.ComponentsViewer {
             public Toggle toggle;
 
         }
-        
+
         private void CreateGUI() {
 
-            this.LoadStyle();
-            
+            LoadStyle();
+
             var componentData = new ComponentColumnInfo[] {
                 new ComponentColumnInfo() {
                     componentType = (componentType) => typeof(IConfigComponent).IsAssignableFrom(componentType) || typeof(IConfigComponentStatic).IsAssignableFrom(componentType),
@@ -67,6 +69,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         } else {
                             EditorUtils.UpdateComponentScript(component, typeof(IConfigComponent), true);
                         }
+
                         EditorUtils.UpdateComponentScript(component, typeof(IComponent), false);
                     },
                     onRemove = (component) => {
@@ -93,9 +96,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         EditorUtils.UpdateComponentScript(component, typeof(IConfigComponentStatic), true);
                         EditorUtils.UpdateComponentScript(component, typeof(IComponent), false);
                     },
-                    onRemove = (component) => {
-                        EditorUtils.UpdateComponentScript(component, typeof(IConfigComponentStatic), false);
-                    },
+                    onRemove = (component) => { EditorUtils.UpdateComponentScript(component, typeof(IConfigComponentStatic), false); },
                 },
                 new ComponentColumnInfo() {
                     componentType = (componentType) => typeof(IComponentShared).IsAssignableFrom(componentType),
@@ -112,6 +113,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         } else {
                             EditorUtils.UpdateComponentScript(component, typeof(IComponentShared), true);
                         }
+
                         EditorUtils.UpdateComponentScript(component, typeof(IComponent), false);
                     },
                     onRemove = (component) => {
@@ -130,12 +132,10 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         EditorUtils.UpdateComponentScript(component, typeof(IComponentDestroy), true);
                         EditorUtils.UpdateComponentScript(component, typeof(IComponent), false);
                     },
-                    onRemove = (component) => {
-                        EditorUtils.UpdateComponentScript(component, typeof(IComponentDestroy), false);
-                    },
+                    onRemove = (component) => { EditorUtils.UpdateComponentScript(component, typeof(IComponentDestroy), false); },
                 },
             };
-            
+
             var root = this.rootVisualElement;
             var container = new VisualElement();
             container.styleSheets.Add(styleSheetBase);
@@ -145,13 +145,13 @@ namespace ME.BECS.Editor.ComponentsViewer {
 
             var scrollView = new ScrollView();
             container.Add(scrollView);
-            
+
             {
                 var componentsContainer = new Foldout();
                 componentsContainer.AddToClassList("main-container");
                 componentsContainer.text = "Components";
                 scrollView.Add(componentsContainer);
-                
+
                 var components = new VisualElement();
                 components.AddToClassList("container");
                 components.AddToClassList("fields-container");
@@ -170,7 +170,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         color.a = 0.1f;
                         groupFoldout.style.backgroundColor = new StyleColor(color);
                     }
-                    
+
                     {
                         var header = new VisualElement();
                         header.AddToClassList("header");
@@ -210,7 +210,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                     }
 
                     for (var index = 0; index < group.components.Count; ++index) {
-                        
+
                         var component = group.components[index];
                         var componentContainer = new VisualElement();
                         componentContainer.AddToClassList("component-data");
@@ -235,6 +235,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                                         } else if (string.IsNullOrEmpty(component.GetEditorComment()) == true) {
                                             EditorUIUtils.RemoveTooltip(tooltip.parent);
                                         }
+
                                         tooltip.text = component.GetEditorComment();
                                         EditorUtils.SaveComponentGroups();
                                     });
@@ -243,7 +244,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         }
 
                         foreach (var field in componentData) {
-                            
+
                             var isEnabled = field.componentType.Invoke(component.type);
                             var column = new VisualElement();
                             column.AddToClassList("column");
@@ -259,9 +260,9 @@ namespace ME.BECS.Editor.ComponentsViewer {
                             field.toggle = toggle;
                             column.Add(toggle);
                             componentContainer.Add(column);
-                            
+
                         }
-                        
+
                         {
                             var column = new VisualElement();
                             column.AddToClassList("column");
@@ -272,6 +273,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                             if (size != sizeOf) {
                                 lbl.AddToClassList("field-size-warning");
                             }
+
                             var fields = component.GetFields();
                             if (fields.Length > 0) {
                                 EditorUIUtils.DrawTooltip(column, () => {
@@ -298,6 +300,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                                         if (fieldSize != sizeOf) {
                                             lblField.AddToClassList("field-size-warning");
                                         }
+
                                         tr.Add(lblField);
                                         var sizeField = new Label(EditorUtils.BytesToString(fieldSize));
                                         sizeField.AddToClassList("tooltip-table-size");
@@ -307,10 +310,11 @@ namespace ME.BECS.Editor.ComponentsViewer {
                                     return table;
                                 }, new StyleLength(new Length(200f, LengthUnit.Pixel)));
                             }
+
                             column.Add(lbl);
                             componentContainer.Add(column);
                         }
-                        
+
                         {
                             var column = new VisualElement();
                             column.AddToClassList("column");
@@ -333,7 +337,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                                 }
 
                                 column.Add(open);
-                                
+
                                 void UpdateOnScriptLoad() {
                                     var hasFile = component.fileIsReady == true && component.file != null;
                                     open.SetEnabled(hasFile);
@@ -354,8 +358,9 @@ namespace ME.BECS.Editor.ComponentsViewer {
                                     }
                                 }
                             }
+
                             componentContainer.Add(column);
-                            
+
                         }
                     }
 
@@ -367,7 +372,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                 componentsContainer.AddToClassList("main-container");
                 componentsContainer.text = "Aspects";
                 scrollView.Add(componentsContainer);
-                
+
                 var components = new VisualElement();
                 components.AddToClassList("container");
                 components.AddToClassList("fields-container");
@@ -381,15 +386,18 @@ namespace ME.BECS.Editor.ComponentsViewer {
                         } else if (string.IsNullOrEmpty(item.info.GetEditorComment()) == true) {
                             EditorUIUtils.RemoveTooltip(tooltip.parent);
                         }
+
                         tooltip.text = item.info.GetEditorComment();
                         EditorUtils.SaveComponentGroups();
                     });
                 });
+
             }
 
         }
 
         private static readonly System.Reflection.MethodInfo getSizeOfMethodInfo = typeof(ComponentsViewerEditorWindow).GetMethod(nameof(GetSizeOfMethod));
+
         private static int GetSizeOf(System.Type compType) {
             var gMethod = getSizeOfMethodInfo.MakeGenericMethod(compType);
             return (int)gMethod.Invoke(null, null);

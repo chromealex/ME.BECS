@@ -244,105 +244,113 @@ namespace ME.BECS.Editor {
 
         }
 
+        private static object loadComponentGroupLock = new object();
         public static void LoadComponentGroups() {
 
-            var dir = "ME.BECS.Cache";
-            var file = "ComponentGroups.xml";
-            var path = $"{dir}/{file}";
-            if (System.IO.File.Exists(path) == true) {
-                
-                componentGroups = new System.Collections.Generic.List<ComponentGroupItem>();
-                aspects = new System.Collections.Generic.List<AspectItem>();
-                var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
-                using (var reader = System.Xml.XmlReader.Create(path))
-                {
-                    var data = (ComponentGroupsXml)ser.Deserialize(reader);
-                    componentGroupsNextId = data.nextId;
-                    if (data.items != null) {
-                        foreach (var item in data.items) {
+            lock (loadComponentGroupLock) {
 
-                            var elem = new ComponentGroupItem(item);
-                            if (item.type != null && elem.type == null) {
-                                // missing type
-                            } else {
-                                componentGroups.Add(elem);
+                var dir = "ME.BECS.Cache";
+                var file = "ComponentGroups.xml";
+                var path = $"{dir}/{file}";
+                if (System.IO.File.Exists(path) == true) {
+
+                    componentGroups = new System.Collections.Generic.List<ComponentGroupItem>();
+                    aspects = new System.Collections.Generic.List<AspectItem>();
+                    var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
+                    using (var reader = System.Xml.XmlReader.Create(path)) {
+                        var data = (ComponentGroupsXml)ser.Deserialize(reader);
+                        componentGroupsNextId = data.nextId;
+                        if (data.items != null) {
+                            foreach (var item in data.items) {
+
+                                var elem = new ComponentGroupItem(item);
+                                if (item.type != null && elem.type == null) {
+                                    // missing type
+                                } else {
+                                    componentGroups.Add(elem);
+                                }
+
                             }
+                        }
 
+                        aspectNextId = data.nextAspectId;
+                        if (data.aspectItems != null) {
+                            foreach (var item in data.aspectItems) {
+
+                                var elem = new AspectItem(item);
+                                if (item.type != null && elem.type == null) {
+                                    // missing type
+                                } else {
+                                    aspects.Add(elem);
+                                }
+
+                            }
                         }
                     }
 
-                    aspectNextId = data.nextAspectId;
-                    if (data.aspectItems != null) {
-                        foreach (var item in data.aspectItems) {
-
-                            var elem = new AspectItem(item);
-                            if (item.type != null && elem.type == null) {
-                                // missing type
-                            } else {
-                                aspects.Add(elem);
-                            }
-
-                        }
-                    }
                 }
 
             }
-
+            
         }
         
         public static void SaveComponentGroups() {
 
-            var dir = "ME.BECS.Cache";
-            var file = "ComponentGroups.xml";
-            var path = $"{dir}/{file}";
-            if (System.IO.Directory.Exists(dir) == false) {
-                System.IO.Directory.CreateDirectory(dir);
-            }
+            lock (loadComponentGroupLock) {
 
-            if (System.IO.File.Exists(path) == true) {
-                System.IO.File.WriteAllText(path, string.Empty);
-            }
-
-            {
-                var data = new ComponentGroupsXml();
-                data.nextId = componentGroupsNextId;
-                var i = 0;
-                if (componentGroups != null) {
-                    data.items = new ComponentGroupsXml.Item[componentGroups.Count];
-                    foreach (var group in componentGroups) {
-                        data.items[i] = new ComponentGroupsXml.Item() {
-                            id = group.index,
-                            type = group.type != null ? group.type.AssemblyQualifiedName : null,
-                            components = group.components.Select(x => new ComponentGroupsXml.Item.ComponentMeta()
-                                                                     { type = x.type.AssemblyQualifiedName, editorComment = x.editorComment }).ToArray(),
-                        };
-                        ++i;
-                    }
+                var dir = "ME.BECS.Cache";
+                var file = "ComponentGroups.xml";
+                var path = $"{dir}/{file}";
+                if (System.IO.Directory.Exists(dir) == false) {
+                    System.IO.Directory.CreateDirectory(dir);
                 }
 
-                data.nextAspectId = aspectNextId;
-                if (aspects != null) {
-                    i = 0;
-                    data.aspectItems = new ComponentGroupsXml.AspectItem[aspects.Count];
-                    foreach (var group in aspects) {
-                        data.aspectItems[i] = new ComponentGroupsXml.AspectItem() {
-                            id = group.index,
-                            type = group.type != null ? group.type.AssemblyQualifiedName : null,
-                            info = new ComponentGroupsXml.Item.ComponentMeta() { editorComment = group.info.editorComment },
-                        };
-                        ++i;
-                    }
+                if (System.IO.File.Exists(path) == true) {
+                    System.IO.File.WriteAllText(path, string.Empty);
                 }
 
-                var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
-                var writer = new System.Xml.XmlTextWriter(path, System.Text.Encoding.UTF8);
-                writer.Formatting = System.Xml.Formatting.Indented;
-                writer.Indentation = 4;
-                ser.Serialize(writer, data);
-                writer.Dispose();
-                
-            }
+                {
+                    var data = new ComponentGroupsXml();
+                    data.nextId = componentGroupsNextId;
+                    var i = 0;
+                    if (componentGroups != null) {
+                        data.items = new ComponentGroupsXml.Item[componentGroups.Count];
+                        foreach (var group in componentGroups) {
+                            data.items[i] = new ComponentGroupsXml.Item() {
+                                id = group.index,
+                                type = group.type != null ? group.type.AssemblyQualifiedName : null,
+                                components = group.components.Select(x => new ComponentGroupsXml.Item.ComponentMeta()
+                                                                         { type = x.type.AssemblyQualifiedName, editorComment = x.editorComment }).ToArray(),
+                            };
+                            ++i;
+                        }
+                    }
 
+                    data.nextAspectId = aspectNextId;
+                    if (aspects != null) {
+                        i = 0;
+                        data.aspectItems = new ComponentGroupsXml.AspectItem[aspects.Count];
+                        foreach (var group in aspects) {
+                            data.aspectItems[i] = new ComponentGroupsXml.AspectItem() {
+                                id = group.index,
+                                type = group.type != null ? group.type.AssemblyQualifiedName : null,
+                                info = new ComponentGroupsXml.Item.ComponentMeta() { editorComment = group.info.editorComment },
+                            };
+                            ++i;
+                        }
+                    }
+
+                    var ser = new System.Xml.Serialization.XmlSerializer(typeof(ComponentGroupsXml));
+                    var writer = new System.Xml.XmlTextWriter(path, System.Text.Encoding.UTF8);
+                    writer.Formatting = System.Xml.Formatting.Indented;
+                    writer.Indentation = 4;
+                    ser.Serialize(writer, data);
+                    writer.Dispose();
+
+                }
+
+            }
+            
         }
 
         public static System.Collections.Generic.List<System.Type> GetComponentsByGroup(System.Type type) {

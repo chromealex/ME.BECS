@@ -106,7 +106,15 @@ namespace ME.BECS {
             }
 
         }
-        
+
+        [INLINE(256)]
+        public static bool HasTag<T>(in this Ent ent, bool value) where T : unmanaged, IComponent {
+
+            E.IS_ALIVE(ent);
+            return ent.Has<T>() == value;
+
+        }
+
     }
 
 }

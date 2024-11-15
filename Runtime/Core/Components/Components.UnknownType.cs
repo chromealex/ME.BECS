@@ -93,7 +93,6 @@ namespace ME.BECS {
         public static byte* GetUnknownType(State* state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
-            E.IS_NOT_TAG(typeId);
 
             var data = storage.AsPtr<DataDenseSet>(in state->allocator)->Get(state, ent.id, ent.gen, false, out isNew);
             Ents.UpVersion(state, in ent, groupId);
@@ -155,7 +154,6 @@ namespace ME.BECS {
         public static ref MemAllocatorPtr GetUnsafeSparseSetPtr(State* state, uint typeId) {
 
             E.IS_VALID_TYPE_ID(typeId);
-            E.IS_NOT_TAG(typeId);
 
             return ref state->components.items[state, typeId];
             

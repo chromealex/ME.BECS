@@ -266,7 +266,7 @@ namespace ME.BECS.Views {
         public UnsafeParallelHashMap<uint, bool> toChange;
         public UnsafeParallelHashMap<uint, bool> toRemove;
         public UnsafeParallelHashMap<uint, bool> toAdd;
-        public UnsafeList<bool> dirty;
+        public UnsafeList<byte> dirty;
         public UnsafeList<EntityData> renderingOnSceneEnts;
         public List<SceneInstanceInfo> renderingOnScene;
         
@@ -315,7 +315,7 @@ namespace ME.BECS.Views {
                 toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                dirty = new UnsafeList<bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
+                dirty = new UnsafeList<byte>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
                 toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
             };
