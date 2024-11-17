@@ -27,16 +27,16 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealJob : IJobParallelForComponents<FogOfWarRevealerComponent> {
+        public struct RevealJob : IJobParallelForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
                 
-                var fow = UnitUtils.GetTeam(in ent).Read<FogOfWarComponent>();
+                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 if (revealer.type == (byte)RevealType.Range) {
                     FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY);
                 } else if (revealer.type == (byte)RevealType.Rect) {
@@ -53,7 +53,7 @@ namespace ME.BECS.FogOfWar {
             var dependsOn = context.Query().Schedule<Job, TransformAspect, UnitAspect>(new Job() {
                 props = fowStaticData,
             });
-            dependsOn = context.Query(dependsOn).WithAspect<TransformAspect>().With<OwnerComponent>().Schedule<RevealJob, FogOfWarRevealerComponent>(new RevealJob() {
+            dependsOn = context.Query(dependsOn).WithAspect<TransformAspect>().Schedule<RevealJob, FogOfWarRevealerComponent, OwnerComponent>(new RevealJob() {
                 props = fowStaticData,
             });
             context.SetDependency(dependsOn);

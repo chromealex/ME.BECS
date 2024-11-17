@@ -8,31 +8,33 @@ namespace ME.BECS {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
 
-        public static void Initialize() {
+        public static void Initialize(bool isEditor = false) {
             
             ObjectReferenceRegistry.Load();
-            Load();
+            Load(isEditor);
             
         }
 
-        private static void Load() {
+        private static void Load(bool isEditor) {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (ObjectReferenceRegistry.data == null) return;
-            LoadForced();
+            LoadForced(isEditor);
 
         }
 
-        private static void LoadForced() {
+        private static void LoadForced(bool isEditor) {
 
             try {
 
                 configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.items.Length, Constants.ALLOCATOR_DOMAIN);
-                foreach (var item in ObjectReferenceRegistry.data.items) {
-                    if (item.source is EntityConfig entityConfig) {
-                        var unsafeConfig = entityConfig.AsUnsafeConfig();
-                        if (unsafeConfig.IsValid() == false) continue;
-                        configs.Data.TryAdd(item.sourceId, unsafeConfig);
+                if (isEditor == false) {
+                    foreach (var item in ObjectReferenceRegistry.data.items) {
+                        if (item.source is EntityConfig entityConfig) {
+                            var unsafeConfig = entityConfig.AsUnsafeConfig();
+                            if (unsafeConfig.IsValid() == false) continue;
+                            configs.Data.TryAdd(item.sourceId, unsafeConfig);
+                        }
                     }
                 }
 
@@ -65,13 +67,6 @@ namespace ME.BECS {
 
             return ObjectReferenceRegistry.GetObjectBySourceId<EntityConfig>(sourceId);
             
-        }
-
-        [INLINE(256)]
-        public static uint Assign(EntityConfig previousValue, EntityConfig newValue) {
-
-            return ObjectReferenceRegistry.Assign(previousValue, newValue);
-
         }
 
     }

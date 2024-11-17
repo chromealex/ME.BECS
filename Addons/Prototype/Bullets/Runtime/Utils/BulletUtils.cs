@@ -9,11 +9,11 @@ namespace ME.BECS.Bullets {
     public static class BulletUtils {
 
         [INLINE(256)]
-        public static void RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, JobInfo jobInfo) {
+        public static void RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, in JobInfo jobInfo) {
 
-            var point = Ent.New(jobInfo);
+            var point = Ent.New(in jobInfo, editorName: "FirePoint");
             var tr = point.GetOrCreateAspect<TransformAspect>();
-            point.SetParent(root);
+            point.SetParent(in root);
             tr.position = position;
             tr.rotation = rotation;
 
@@ -46,7 +46,7 @@ namespace ME.BECS.Bullets {
         public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View muzzleView, float muzzleLifetime = 0.2f, in JobInfo jobInfo = default) {
 
             if (muzzleView.IsValid == true) {
-                var muzzleEnt = Ent.New(in jobInfo);
+                var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
                 tr.position = position;
                 tr.rotation = rotation;
@@ -55,7 +55,7 @@ namespace ME.BECS.Bullets {
             }
 
             {
-                var ent = Ent.New(in jobInfo);
+                var ent = Ent.New(in jobInfo, "Bullet");
                 PlayerUtils.SetOwner(in ent, PlayerUtils.GetOwner(in sourceUnit));
                 config.Apply(ent);
                 var attack = ent.GetOrCreateAspect<QuadTreeQueryAspect>();

@@ -15,4 +15,7 @@ namespace ME.BECS.Players {
 
     }
 
+    public struct IsPlayerDefeatTag : IComponent { }
+    public struct IsPlayerVictoryTag : IComponent { }
+
 }

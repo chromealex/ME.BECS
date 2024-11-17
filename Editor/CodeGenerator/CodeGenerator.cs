@@ -117,13 +117,12 @@ namespace ME.BECS.Editor {
                     foreach (var key in postfix.variables) {
                         variables[key.Key] = key.Value;
                     }
-                    var maxCount = 10;
+                    const uint maxCount = 10u;
                     for (int i = 1; i < maxCount; ++i) {
                         var keys = new System.Collections.Generic.Dictionary<string, int>() {
                             { "count", i },
                         };
                         var filePath = dir + System.IO.Path.DirectorySeparatorChar + System.IO.Path.GetFileName(path).Replace(".Tpl.txt", $"{i}{postfix.filenamePostfix}.cs");
-                        
                         var tpl = new Tpl(text);
                         System.IO.File.WriteAllText(filePath, tpl.GetString(keys, variables));
                         UnityEditor.AssetDatabase.ImportAsset(filePath);

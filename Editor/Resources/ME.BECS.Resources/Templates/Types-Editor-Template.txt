@@ -38,7 +38,7 @@ namespace ME.BECS.Editor {
             CustomModules.InvokeResetPass();
             {{CUSTOM_METHOD_REGISTRY}}
             EntityConfigRegistry.Initialize();
-            EntityConfigsRegistry.Initialize();
+            EntityConfigsRegistry.Initialize(true);
             CustomModules.InvokeFirstPass();
             CustomModules.InvokeSecondPass();
         }

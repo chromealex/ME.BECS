@@ -23,9 +23,10 @@ namespace ME.BECS.Players {
             this.players = new MemArrayAuto<Ent>(in ent, this.playersCount);
             this.teams = new MemArrayAuto<Ent>(in ent, this.playersCount);
             for (uint i = 0u; i < this.players.Length; ++i) {
-                var team = Ent.New(in context.world);
+                var id = i + 1u;
+                var team = Ent.New(in context.world, editorName: $"Team#{id}");
                 team.Set(new TeamComponent() {
-                    id = i + 1u,
+                    id = id,
                 });
                 this.teams[(int)i] = team;
                 //UnityEngine.Debug.Log("Team: " + team);

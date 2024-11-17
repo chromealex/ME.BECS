@@ -9,7 +9,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, uint capacity = 10u, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "CommandGroup");
             var aspect = ent.GetOrCreateAspect<UnitCommandGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, capacity);
             aspect.targets = new MemArrayAuto<Ent>(in ent, targetsCapacity);
@@ -34,7 +34,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitCommandGroupAspect CreateCommandGroup(uint targetsCapacity, in ListAuto<Ent> units, in JobInfo jobInfo) {
 
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "CommandGroup");
             var aspect = ent.GetOrCreateAspect<UnitCommandGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, units.Count);
             aspect.targets = new MemArrayAuto<Ent>(in ent, targetsCapacity);

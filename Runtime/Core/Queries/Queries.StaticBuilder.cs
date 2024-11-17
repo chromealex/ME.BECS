@@ -95,7 +95,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public QueryBuilderStatic WithAll<T0, T1>() where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent {
+        public QueryBuilderStatic WithAll<T0, T1>() where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.With<T0>();
             this.With<T1>();
@@ -103,21 +103,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public QueryBuilderStatic WithAny<T0, T1>() where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent {
+        public QueryBuilderStatic WithAny<T0, T1>() where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.queryDataStatic->withAny.Add(ref this.state->allocator, new UIntPair(StaticTypes<T0>.typeId, StaticTypes<T1>.typeId));
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilderStatic With<T>() where T : unmanaged, IComponent {
+        public QueryBuilderStatic With<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.queryDataStatic->with.Add(ref this.state->allocator, StaticTypes<T>.typeId);
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilderStatic Without<T>() where T : unmanaged, IComponent {
+        public QueryBuilderStatic Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.queryDataStatic->without.Add(ref this.state->allocator, StaticTypes<T>.typeId);
             return this;

@@ -1,9 +1,39 @@
+.h-root-decorations {
+    flex-direction: row;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+}
+
+.h-root-decorations .content-column {
+    flex-grow: 1;
+    background-color: rgba(0, 0, 0, 0.0);
+    height: 100%;
+}
+.h-root-decorations .tags-column {
+    border-left-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(0, 0, 0, 0.05);
+    width: 60px;
+    padding-right: 4px;
+    height: 100%;
+}
+.h-root-decorations .version-column {
+    border-left-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(0, 0, 0, 0.05);
+    width: 54px;
+    height: 100%;
+}
+
 .h-root {
 }
 
 .toolbar-container {
-    height: 24px;
-    min-height: 24px;
+    height: 22px;
+    min-height: 22px;
 }
 
 .toolbar-container .unity-toolbar {
@@ -64,7 +94,7 @@
 }
 
 .h-root .h-element > Foldout > Toggle {
-    padding: 2px 4px 2px 20px;
+    padding: 1px 4px 1px 4px;
     margin: 0px;
 }
 
@@ -104,8 +134,9 @@
 .h-root .h-element .version {
     color: rgba(255, 255, 255, 0.5);
     align-self: flex-end;
-    width: 30px;
+    width: 50px;
     -unity-text-align: middle-right;
+    overflow: hidden;
     text-overflow: ellipsis;
 }
 

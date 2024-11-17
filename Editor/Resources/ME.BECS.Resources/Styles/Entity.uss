@@ -102,6 +102,7 @@
 }
 
 .entity-header .entity-id-container,
+.entity-header .entity-name-container,
 .entity-header .entity-gen-container,
 .entity-header .entity-version-container {
     flex-direction: column;
@@ -110,6 +111,7 @@
 }
 
 .entity-header .entity-arch-label,
+.entity-header .entity-name-label,
 .entity-header .entity-id-label,
 .entity-header .entity-gen-label,
 .entity-header .entity-version-label,
@@ -217,6 +219,7 @@
 
 .entity-mini .label-header,
 .entity-mini .entity-id-label,
+.entity-mini .entity-name-label,
 .entity-mini .entity-gen-label,
 .entity-mini .entity-version-label,
 .entity-mini .entity-arch-label {

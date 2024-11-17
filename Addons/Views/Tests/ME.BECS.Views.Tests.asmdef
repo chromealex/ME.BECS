@@ -8,6 +8,7 @@
         "ME.BECS.Views",
         "Unity.Burst",
         "Unity.Collections",
+        "Unity.Mathematics",
         "ME.BECS.Transforms",
         "ME.BECS.Tests"
     ],

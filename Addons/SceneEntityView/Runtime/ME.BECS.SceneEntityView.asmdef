@@ -6,7 +6,8 @@
         "ME.BECS.Transforms",
         "ME.BECS.Features",
         "ME.BECS.Views",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "Unity.Collections"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

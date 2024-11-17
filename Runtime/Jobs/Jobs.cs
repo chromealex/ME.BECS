@@ -6,6 +6,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs.LowLevel.Unsafe;
+    using Unity.Collections;
     using Unity.Jobs;
 
     public interface IJobParallelForComponentsBase { }
@@ -19,14 +20,13 @@ namespace ME.BECS {
         public uint index;
         public uint itemsPerThread;
         public ushort worldId;
-        
-        public bool IsCreated { private set; get; }
+
+        public bool IsCreated => this.worldId > 0;
 
         public uint Offset => this.index * this.itemsPerThread;
 
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
-                IsCreated = true,
                 itemsPerThread = 1u,
                 worldId = worldId,
             };
@@ -35,14 +35,14 @@ namespace ME.BECS {
     }
     
     [BURST(CompileSynchronously = true)]
-    public unsafe struct DisposeJob : Unity.Jobs.IJob {
+    public unsafe struct DisposeJob : IJob {
         public MemPtr ptr;
         public ushort worldId;
         public void Execute() => Worlds.GetWorld(this.worldId).state->allocator.Free(this.ptr);
     }
 
     [BURST(CompileSynchronously = true)]
-    public unsafe struct DisposeAutoJob : Unity.Jobs.IJob {
+    public unsafe struct DisposeAutoJob : IJob {
         public MemPtr ptr;
         public Ent ent;
         public ushort worldId;
@@ -56,23 +56,23 @@ namespace ME.BECS {
     }
 
     [BURST(CompileSynchronously = true)]
-    public unsafe struct DisposePtrJob : Unity.Jobs.IJob {
+    public unsafe struct DisposePtrJob : IJob {
         [NativeDisableUnsafePtrRestriction]
         public void* ptr;
         public void Execute() => _free(ref this.ptr);
     }
 
     [BURST(CompileSynchronously = true)]
-    public unsafe struct DisposeWithAllocatorPtrJob : Unity.Jobs.IJob {
+    public unsafe struct DisposeWithAllocatorPtrJob : IJob {
 
-        public Unity.Collections.AllocatorManager.AllocatorHandle allocator;
+        public AllocatorManager.AllocatorHandle allocator;
         [NativeDisableUnsafePtrRestriction]
         public void* ptr;
-        public void Execute() => Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
+        public void Execute() => AllocatorManager.Free(this.allocator, this.ptr);
 
     }
 
-    public struct DisposeHandleJob : Unity.Jobs.IJob {
+    public struct DisposeHandleJob : IJob {
         public GCHandle gcHandle;
         public void Execute() {
             if (this.gcHandle.IsAllocated == true) this.gcHandle.Free();
@@ -81,16 +81,16 @@ namespace ME.BECS {
 
     public struct JobSingleThread {
 
-        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.ArrayCacheLine<byte>> singleThreadsBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.ArrayCacheLine<byte>>.GetOrCreate<JobSingleThread>();
-        public static ref ME.BECS.Internal.ArrayCacheLine<byte> singleThreads => ref singleThreadsBurst.Data;
+        public static readonly Unity.Burst.SharedStatic<Internal.ArrayCacheLine<byte>> singleThreadsBurst = Unity.Burst.SharedStatic<Internal.ArrayCacheLine<byte>>.GetOrCreate<JobSingleThread>();
+        public static ref Internal.ArrayCacheLine<byte> singleThreads => ref singleThreadsBurst.Data;
         
     }
 
     public static unsafe class JobUtils {
 
         public const uint CacheLineSize = JobsUtility.CacheLineSize;
-        public static uint ThreadsCount => (uint)Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndexCount;
-        public static int ThreadIndex => Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex;
+        public static uint ThreadsCount => (uint)JobsUtility.ThreadIndexCount;
+        public static int ThreadIndex => JobsUtility.ThreadIndex;
 
         public static void Initialize() {
             CleanUp();

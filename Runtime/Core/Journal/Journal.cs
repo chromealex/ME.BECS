@@ -135,7 +135,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void CreateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
+        public static void CreateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponentBase {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
@@ -145,7 +145,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [Conditional(JournalConditionals.JOURNAL)]
-        public static void UpdateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
+        public static void UpdateComponent<T>(in Ent ent, in T data) where T : unmanaged, IComponentBase {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
@@ -347,7 +347,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void CreateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
+        public void CreateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponentBase {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
@@ -355,7 +355,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void UpdateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponent {
+        public void UpdateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponentBase {
 
             if (this.isCreated == false) return;
             this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.UpdateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });

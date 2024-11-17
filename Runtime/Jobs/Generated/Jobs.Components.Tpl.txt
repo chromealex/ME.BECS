@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryScheduleExtensions {
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             {count( )[builder.With<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.builderDependsOn);
@@ -16,17 +16,17 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             return staticQuery.Schedule<T, {count(,)[T#i#]}>(in job, in context.world, context.dependsOn);
         }
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             var state = world.state;
             var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, {count(,)[T#i#]}>(in job);
         }
 
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponent]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
@@ -36,23 +36,23 @@ namespace ME.BECS.Jobs {
 
     public static partial class EarlyInit {
         public static void DoComponents<T, {count(,)[T#i#]}>()
-                {count( )[where T#i# : unmanaged, IComponent]}
+                {count( )[where T#i# : unmanaged, IComponentBase]}
                 where T : struct, IJobComponents<{count(,)[T#i#]}> => JobComponentsExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
     }
 
     [JobProducerType(typeof(JobComponentsExtensions.JobProcess<{count[,]}>))]
-    public interface IJobComponents<{count(,)[T#i#]}> : IJobComponentsBase {count( )[where T#i# : unmanaged, IComponent]} {
+    public interface IJobComponents<{count(,)[T#i#]}> : IJobComponentsBase {count( )[where T#i# : unmanaged, IComponentBase]} {
         void Execute(in JobInfo jobInfo, in Ent ent, {count(,)[{{inref}} T#i# c#i#]});
     }
 
     public static unsafe partial class JobComponentsExtensions {
         
         public static void JobEarlyInitialize<T, {count(,)[T#i#]}>()
-            {count( )[where T#i# : unmanaged, IComponent]}
+            {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobComponents<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
 
         private static System.IntPtr GetReflectionData<T, {count(,)[T#i#]}>()
-            {count( )[where T#i# : unmanaged, IComponent]}
+            {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobComponents<{count(,)[T#i#]}> {
             JobProcess<T, {count(,)[T#i#]}>.Initialize();
             System.IntPtr reflectionData = JobProcess<T, {count(,)[T#i#]}>.jobReflectionData.Data;
@@ -60,7 +60,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, JobHandle dependsOn = default)
-            {count( )[where T#i# : unmanaged, IComponent]}
+            {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobComponents<{count(,)[T#i#]}> {
             
             buffer->sync = false;
@@ -76,7 +76,7 @@ namespace ME.BECS.Jobs {
         }
 
         private struct JobData<T, {count(,)[T#i#]}>
-            {count( )[where T#i# : unmanaged, IComponent]}
+            {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct {
             [NativeDisableUnsafePtrRestriction]
             public T jobData;
@@ -86,7 +86,7 @@ namespace ME.BECS.Jobs {
         }
 
         internal struct JobProcess<T, {count(,)[T#i#]}>
-            {count( )[where T#i# : unmanaged, IComponent]}
+            {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobComponents<{count(,)[T#i#]}> {
 
             internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();

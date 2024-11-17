@@ -88,6 +88,8 @@ namespace ME.BECS.Editor {
     
     public unsafe class WorldHierarchyEditorWindow : EditorWindow {
 
+        private const float TAG_WIDTH = 8f;
+
         private StyleSheet styleSheet;
         private StyleSheet styleSheetTooltip;
         private World selectedWorld;
@@ -96,6 +98,8 @@ namespace ME.BECS.Editor {
         private VisualElement hierarchyRoot;
         private string search;
         private readonly System.Collections.Generic.HashSet<System.Type> searchTypes = new System.Collections.Generic.HashSet<System.Type>();
+        private readonly System.Collections.Generic.HashSet<string> searchNames = new System.Collections.Generic.HashSet<string>();
+        private VisualElement tagsBackground;
 
         [UnityEditor.MenuItem("ME.BECS/Hierarchy...")]
         public static void ShowWindow() {
@@ -316,6 +320,28 @@ namespace ME.BECS.Editor {
                         }
                     }
                 }, TrickleDown.TrickleDown);
+                {
+                    var decorationsRoot = new VisualElement();
+                    decorationsRoot.AddToClassList("h-root-decorations");
+                    scrollView.Add(decorationsRoot);
+
+                    {
+                        var col = new VisualElement();
+                        col.AddToClassList("content-column");
+                        decorationsRoot.Add(col);
+                    }
+                    {
+                        var col = new VisualElement();
+                        col.AddToClassList("tags-column");
+                        this.tagsBackground = col;
+                        decorationsRoot.Add(col);
+                    }
+                    {
+                        var col = new VisualElement();
+                        col.AddToClassList("version-column");
+                        decorationsRoot.Add(col);
+                    }
+                }
                 this.hierarchyRoot = new VisualElement();
                 this.hierarchyRoot.AddToClassList("h-root");
                 scrollView.Add(this.hierarchyRoot);
@@ -389,6 +415,7 @@ namespace ME.BECS.Editor {
                 field.RegisterValueChangedCallback((evt) => {
                     this.search = evt.newValue;
                     this.searchTypes.Clear();
+                    this.searchNames.Clear();
                     if (string.IsNullOrEmpty(this.search) == false) {
                         var val = this.search.Split(' ');
                         var groups = EditorUtils.GetComponentGroups();
@@ -409,6 +436,7 @@ namespace ME.BECS.Editor {
                                     }
                                 }
                             }
+                            this.searchNames.Add(v);
                         }
                     }
                     this.settingsChanged = true;
@@ -471,7 +499,7 @@ namespace ME.BECS.Editor {
                 }
 
                 if (versionChanged == true) {
-                    this.foldout.text = this.value.ToString(withWorld: false, withVersion: false).ToString();
+                    this.foldout.text = this.value.ToString(withWorld: false, withVersion: false, withGen: false).ToString();
                     this.versionLabel.text = this.value.Version.ToString();
                     this.foldout.style.paddingLeft = new StyleLength(0f + 20f * this.level);
                     this.RedrawTags(force);
@@ -518,6 +546,7 @@ namespace ME.BECS.Editor {
                     }
                     tags = groupsTags.ToList();
                     this.window.entToTags.Add(this.value, tags);
+                    this.window.tagsCount = Mathf.Max(this.window.tagsCount, tags.Count);
                     if (this.tagsContainer.childCount == tags.Count) {
                         for (int i = 0; i < tags.Count; ++i) {
                             var tag = tags[i];
@@ -553,6 +582,8 @@ namespace ME.BECS.Editor {
                         }
                     }
                 }
+                this.tagsContainer.style.width = new StyleLength(this.window.GetTagsWidth());
+                this.tagsContainer.style.maxWidth = new StyleLength(this.window.GetTagsWidth());
             }
 
             public void Hide() {
@@ -564,6 +595,10 @@ namespace ME.BECS.Editor {
                 
             }
 
+        }
+
+        private float GetTagsWidth() {
+            return TAG_WIDTH * this.tagsCount + 4f + 2f + 8f + 6f;
         }
 
         private readonly System.Collections.Generic.List<Element> elements = new System.Collections.Generic.List<Element>();
@@ -740,6 +775,8 @@ namespace ME.BECS.Editor {
         }
         
         private System.Collections.Generic.List<Ent> cache = new System.Collections.Generic.List<Ent>();
+        private int tagsCount;
+
         private void DrawEntities(VisualElement root) {
             
             this.cache.Clear();
@@ -773,25 +810,47 @@ namespace ME.BECS.Editor {
             if (this.searchTypes.Count == 0 && string.IsNullOrEmpty(this.search) == false) return;
             
             foreach (var ent in list) {
-                if (this.searchTypes.Count > 0) {
-                    var contains = false;
+                if (this.entToTags.TryGetValue(ent, out var tags) == true) {
+                    var ignore = false;
+                    foreach (var tag in tags) {
+                        if (this.ignoredGroups.Contains(tag) == false) continue;
+                        ignore = true;
+                        break;
+                    }
+                    if (ignore == true) continue;
+                }
+
+                if (this.searchTypes.Count > 0 || this.searchNames.Count > 0) {
+                    var containsType = false;
                     var state = ent.World.state;
                     foreach (var type in this.searchTypes) {
                         if (StaticTypesGroups.groups.TryGetValue(type, out var groupId) == true) {
                             if (ent.GetVersion(groupId) > 0u) {
-                                contains = true;
+                                containsType = true;
                                 break;
                             }
                         } else if (StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var id) == true) {
                             if (Components.HasUnknownType(state, id, ent.id, ent.gen, true) == true) {
-                                contains = true;
+                                containsType = true;
                                 break;
                             }
                         }
                     }
 
-                    if (contains == false) continue;
+                    var containsName = false;
+                    var name = ent.EditorName;
+                    if (name.IsEmpty == false) {
+                        var n = name.ToString();
+                        foreach (var searchName in this.searchNames) {
+                            if (searchName.Contains(n, System.StringComparison.InvariantCultureIgnoreCase) == false) continue;
+                            containsName = true;
+                            break;
+                        }
+                    }
+                    
+                    if (containsType == false && containsName == false) continue;
                 }
+
                 Element element;
                 if (k >= this.elements.Count) {
                     this.elements.Add(this.MakeElement(ent));
@@ -830,6 +889,8 @@ namespace ME.BECS.Editor {
                 }
 
             }
+            
+            this.tagsBackground.style.width = new StyleLength(this.GetTagsWidth());
             
         }
 

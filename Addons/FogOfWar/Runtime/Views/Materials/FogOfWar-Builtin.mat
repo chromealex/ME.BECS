@@ -228,12 +228,12 @@ Material:
     - _BorderColor: {r: 0, g: 0, b: 0, a: 0.09803922}
     - _CamPos: {r: 130, g: 625, b: -175.4, a: 0}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
-    - _Color: {r: 0, g: 0, b: 0, a: 0.6039216}
+    - _Color: {r: 0, g: 0, b: 0, a: 0.69411767}
     - _EdgeColor1: {r: 1, g: 1, b: 1, a: 1}
     - _Emission: {r: 0, g: 0, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Explored: {r: 0.6320754, g: 0.6320754, b: 0.6320754, a: 1}
-    - _ExploredColor: {r: 0, g: 0, b: 0, a: 0.29803923}
+    - _ExploredColor: {r: 0, g: 0, b: 0, a: 0.5176471}
     - _FogColor: {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
     - _HueVariation: {r: 1, g: 0.5, b: 0, a: 0.1}
     - _Params: {r: 0.5, g: 0.5, b: 0.0038461538, a: 0}

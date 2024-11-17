@@ -1,5 +1,7 @@
 namespace ME.BECS.Players {
 
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    
     public struct PlayerAspect : IAspect {
         
         public Ent ent { get; set; }
@@ -21,6 +23,12 @@ namespace ME.BECS.Players {
         
         public readonly ref Ent currentSelection => ref this.playerCurrentSelectionDataPtr.Get(this.ent.id, this.ent.gen).currentSelection;
         public readonly ref readonly Ent readCurrentSelection => ref this.playerCurrentSelectionDataPtr.Read(this.ent.id, this.ent.gen).currentSelection;
+
+        [INLINE(256)]
+        public void SetDefeat() => this.ent.SetTag<IsPlayerDefeatTag>(true);
+
+        [INLINE(256)]
+        public void SetVictory() => this.ent.SetTag<IsPlayerVictoryTag>(true);
 
     }
 

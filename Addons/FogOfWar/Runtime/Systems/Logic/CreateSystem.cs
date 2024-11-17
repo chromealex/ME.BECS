@@ -21,6 +21,8 @@ namespace ME.BECS.FogOfWar {
         public float resolution;
         internal Ent heights;
 
+        public Ent GetHeights() => this.heights;
+        
         [BURST(CompileSynchronously = true)]
         public struct CreateJob : IJobParallelForAspect<TeamAspect> {
 
@@ -94,7 +96,7 @@ namespace ME.BECS.FogOfWar {
             // for each player
             // create fog of war
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
-            var heights = Ent.New(in context);
+            var heights = Ent.New(in context, editorName: "FOW");
             heights.Set(new FogOfWarStaticComponent() {
                 mapPosition = this.mapPosition,
                 worldSize = this.mapSize,

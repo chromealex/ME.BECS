@@ -1,10 +1,5 @@
-using System.Linq;
-
 namespace ME.BECS {
 
-    #if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoad]
-    #endif
     public static class ObjectReferenceRegistry {
 
         public static ObjectReferenceRegistryData data;
@@ -21,7 +16,7 @@ namespace ME.BECS {
         
         public static void Load() {
 
-            if (data != null) return;
+            if (ObjectReferenceRegistry.data != null) return;
             LoadForced();
             
         }
@@ -51,10 +46,10 @@ namespace ME.BECS {
                 #endif
             }
 
-            data = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
+            ObjectReferenceRegistry.data = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
 
         }
-        
+
         public static uint AddRuntimeObject(UnityEngine.Object obj) {
 
             var nextId = ObjectReferenceRegistry.data.sourceId;
@@ -92,42 +87,13 @@ namespace ME.BECS {
 
         }
 
-        public static uint Assign(UnityEngine.Object previousValue, UnityEngine.Object newValue) {
-            
-            if (ObjectReferenceRegistry.data == null) return 0u;
-
-            if (previousValue == newValue) {
-                var id = GetId(newValue);
-                if (id == 0u) {
-                    var sourceId = ObjectReferenceRegistry.data.Add(newValue, out _);
-                    #if UNITY_EDITOR
-                    UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
-                    #endif
-                    return sourceId;
-                }
-                return id;
-            }
-
-            {
-                var removed = ObjectReferenceRegistry.data.Remove(previousValue);
-                var sourceId = ObjectReferenceRegistry.data.Add(newValue, out bool isNew);
-
-                #if UNITY_EDITOR
-                UnityEditor.EditorUtility.SetDirty(ObjectReferenceRegistry.data);
-                #endif
-
-                return sourceId;
-            }
-
-        }
-
         public static uint GetId(UnityEngine.Object obj) {
 
-            foreach (var item in data.items) {
+            foreach (var item in ObjectReferenceRegistry.data.items) {
                 if (item.source == obj) return item.sourceId;
             }
 
-            foreach (var item in additionalRuntimeObjects) {
+            foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
                 if (item.source == obj) return item.sourceId;
             }
 

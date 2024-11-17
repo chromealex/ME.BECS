@@ -4,13 +4,90 @@ namespace ME.BECS.FogOfWar {
     using Players;
     using Units;
 
+    public class ForOfWarCrossFadeViewModule : FogOfWarViewModule, IViewUpdate {
+
+        private static readonly int lodFade = UnityEngine.Shader.PropertyToID("_LODFade");
+
+        public UnityEngine.Material material;
+        public UnityEngine.Material crossFadeMaterial;
+        public UnityEngine.Renderer[] renderers;
+        public float crossFadeDuration = 2f;
+
+        private bool crossFade;
+        private float crossFadeTimer;
+        private UnityEngine.MaterialPropertyBlock propertyBlock;
+        private bool targetState;
+
+        public override void OnInitialize(in EntRO ent) {
+            
+            base.OnInitialize(in ent);
+
+            this.crossFadeMaterial.EnableKeyword("CROSS_FADE");
+            this.propertyBlock = new UnityEngine.MaterialPropertyBlock();
+            
+        }
+
+        public override void OnBecomeVisible(in EntRO ent) {
+            
+            base.OnBecomeVisible(in ent);
+            
+            foreach (var renderer in this.renderers) {
+                renderer.enabled = true;
+                renderer.sharedMaterial = this.crossFadeMaterial;
+            }
+            this.crossFade = true;
+            this.crossFadeTimer = 0f;
+            this.targetState = true;
+
+        }
+
+        public override void OnBecomeInvisible(in EntRO ent) {
+            
+            base.OnBecomeInvisible(in ent);
+
+            foreach (var renderer in this.renderers) {
+                renderer.sharedMaterial = this.crossFadeMaterial;
+            }
+            this.crossFade = true;
+            this.crossFadeTimer = 0f;
+            this.targetState = false;
+            
+        }
+
+        public void OnUpdate(in EntRO ent, float dt) {
+
+            if (this.crossFade == true) {
+                this.crossFadeTimer += dt / this.crossFadeDuration;
+                this.material.EnableKeyword("CROSS_FADE");
+                var val = (this.targetState == true ? this.crossFadeTimer : 1f - this.crossFadeTimer);
+                foreach (var renderer in this.renderers) {
+                    renderer.GetPropertyBlock(this.propertyBlock);
+                    this.propertyBlock.SetFloat(lodFade, val);
+                    renderer.SetPropertyBlock(this.propertyBlock);
+                }
+                if (this.crossFadeTimer >= 1f) {
+                    this.crossFadeTimer = 0f;
+                    this.crossFade = false;
+                    {
+                        foreach (var renderer in this.renderers) {
+                            renderer.sharedMaterial = this.material;
+                            if (this.targetState == false) renderer.enabled = false;
+                        }
+                    }
+                }
+            }
+
+        }
+
+    }
+    
     public class FogOfWarViewModule : CollectRenderers, IViewApplyState, IViewInitialize {
         
         private bool isVisible;
         protected CreateSystem fow;
 
         public virtual void OnInitialize(in EntRO ent) {
-            
+
             this.fow = ent.World.GetSystem<CreateSystem>();
             this.UpdateVisibility(in ent, true);
             
@@ -33,8 +110,6 @@ namespace ME.BECS.FogOfWar {
         
         public bool IsVisible(in EntRO ent) {
             if (ent.Has<OwnerComponent>() == false) return true;
-            // Neutral player always has index 0
-            if (PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
             var activePlayer = PlayerUtils.GetActivePlayer();
             var isShadowCopy = ent.TryRead(out FogOfWarShadowCopyComponent shadowCopyComponent);
             if (isShadowCopy == true) {
@@ -50,6 +125,8 @@ namespace ME.BECS.FogOfWar {
             }
             if (isShadowCopy == true) {
                 state = !state;
+                // Neutral player always has index 0
+                if (state == false && PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
             }
 
             return state;
@@ -68,7 +145,7 @@ namespace ME.BECS.FogOfWar {
                 }
             }
         }
-
+        
         public virtual void ApplyState(in EntRO ent) {
             
             this.UpdateVisibility(in ent, false);

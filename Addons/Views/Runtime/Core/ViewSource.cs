@@ -13,20 +13,4 @@ namespace ME.BECS.Views {
         
     }
 
-    public static class ViewsRegistry {
-        
-        public static EntityView GetEntityViewByPrefabId(uint prefabId) {
-
-            return BECS.ObjectReferenceRegistry.GetObjectBySourceId<EntityView>(prefabId);
-
-        }
-
-        public static uint Assign(EntityView previousValue, EntityView newValue) {
-
-            return BECS.ObjectReferenceRegistry.Assign(previousValue, newValue);
-
-        }
-
-    }
-
 }

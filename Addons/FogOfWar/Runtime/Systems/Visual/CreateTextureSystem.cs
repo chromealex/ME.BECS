@@ -32,7 +32,7 @@ namespace ME.BECS.FogOfWar {
                 this.texture = new ClassPtr<UnityEngine.Texture2D>(tex);
             }
 
-            var render = Ent.New(in context);
+            var render = Ent.New(in context, editorName: "FOW Renderer");
             var tr = render.GetOrCreateAspect<TransformAspect>();
             var pos = tr.position;
             pos.x = 0f;

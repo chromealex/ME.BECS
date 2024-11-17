@@ -114,17 +114,17 @@ namespace ME.BECS {
         
         
         [INLINE(256)]
-        public QueryBuilder WithAll<T0, T1>() where T0 : unmanaged, IComponent
-                                              where T1 : unmanaged, IComponent {
+        public QueryBuilder WithAll<T0, T1>() where T0 : unmanaged, IComponentBase
+                                              where T1 : unmanaged, IComponentBase {
             this.With<T0>();
             this.With<T1>();
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilder WithAll<T0, T1, T2>() where T0 : unmanaged, IComponent
-                                                  where T1 : unmanaged, IComponent
-                                                  where T2 : unmanaged, IComponent {
+        public QueryBuilder WithAll<T0, T1, T2>() where T0 : unmanaged, IComponentBase
+                                                  where T1 : unmanaged, IComponentBase
+                                                  where T2 : unmanaged, IComponentBase {
             this.With<T0>();
             this.With<T1>();
             this.With<T2>();
@@ -132,10 +132,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public QueryBuilder WithAll<T0, T1, T2, T3>() where T0 : unmanaged, IComponent
-                                                      where T1 : unmanaged, IComponent
-                                                      where T2 : unmanaged, IComponent
-                                                      where T3 : unmanaged, IComponent {
+        public QueryBuilder WithAll<T0, T1, T2, T3>() where T0 : unmanaged, IComponentBase
+                                                      where T1 : unmanaged, IComponentBase
+                                                      where T2 : unmanaged, IComponentBase
+                                                      where T3 : unmanaged, IComponentBase {
             this.With<T0>();
             this.With<T1>();
             this.With<T2>();
@@ -144,41 +144,41 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public QueryBuilder WithAny<T0, T1>() where T0 : unmanaged, IComponent
-                                              where T1 : unmanaged, IComponent {
+        public QueryBuilder WithAny<T0, T1>() where T0 : unmanaged, IComponentBase
+                                              where T1 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, TNull, TNull>(ref this);
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilder WithAny<T0, T1, T2>() where T0 : unmanaged, IComponent
-                                                  where T1 : unmanaged, IComponent
-                                                  where T2 : unmanaged, IComponent {
+        public QueryBuilder WithAny<T0, T1, T2>() where T0 : unmanaged, IComponentBase
+                                                  where T1 : unmanaged, IComponentBase
+                                                  where T2 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, TNull>(ref this);
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilder WithAny<T0, T1, T2, T3>() where T0 : unmanaged, IComponent 
-                                                      where T1 : unmanaged, IComponent 
-                                                      where T2 : unmanaged, IComponent 
-                                                      where T3 : unmanaged, IComponent {
+        public QueryBuilder WithAny<T0, T1, T2, T3>() where T0 : unmanaged, IComponentBase 
+                                                      where T1 : unmanaged, IComponentBase 
+                                                      where T2 : unmanaged, IComponentBase 
+                                                      where T3 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilder With<T>() where T : unmanaged, IComponent {
+        public QueryBuilder With<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.builderDependsOn = ArchetypeQueries.With<T>(ref this);
             return this;
         }
 
         [INLINE(256)]
-        public QueryBuilder Without<T>() where T : unmanaged, IComponent {
+        public QueryBuilder Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.builderDependsOn = ArchetypeQueries.Without<T>(ref this);
             return this;

@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryParallelScheduleExtensions {
         
-        public static JobHandle Schedule<T, T0,T1,T2,T3>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
+        public static JobHandle Schedule<T, T0,T1,T2,T3>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase {
             builder.With<T0>(); builder.With<T1>(); builder.With<T2>(); builder.With<T3>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
@@ -16,17 +16,17 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        public static JobHandle Schedule<T, T0,T1,T2,T3>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
+        public static JobHandle Schedule<T, T0,T1,T2,T3>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase {
             return staticQuery.Schedule<T, T0,T1,T2,T3>(in job, in context.world, context.dependsOn);
         }
         
-        public static JobHandle Schedule<T, T0,T1,T2,T3>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
+        public static JobHandle Schedule<T, T0,T1,T2,T3>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase {
             var state = world.state;
             var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, T0,T1,T2,T3>(in job);
         }
 
-        public static JobHandle Schedule<T, T0,T1,T2,T3>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
+        public static JobHandle Schedule<T, T0,T1,T2,T3>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForComponents<T0,T1,T2,T3> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase {
             staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
@@ -36,23 +36,23 @@ namespace ME.BECS.Jobs {
     
     public static partial class EarlyInit {
         public static void DoParallelForComponents<T, T0,T1,T2,T3>()
-                where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+                where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase
                 where T : struct, IJobParallelForComponents<T0,T1,T2,T3> => JobParallelForComponentsExtensions.JobEarlyInitialize<T, T0,T1,T2,T3>();
     }
 
     [JobProducerType(typeof(JobParallelForComponentsExtensions.JobProcess<,,,,>))]
-    public interface IJobParallelForComponents<T0,T1,T2,T3> : IJobParallelForComponentsBase where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
+    public interface IJobParallelForComponents<T0,T1,T2,T3> : IJobParallelForComponentsBase where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase {
         void Execute(in JobInfo jobInfo, in Ent ent, ref T0 c0,ref T1 c1,ref T2 c2,ref T3 c3);
     }
 
     public static unsafe partial class JobParallelForComponentsExtensions {
         
         public static void JobEarlyInitialize<T, T0,T1,T2,T3>()
-            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3> => JobProcess<T, T0,T1,T2,T3>.Initialize();
 
         private static System.IntPtr GetReflectionData<T, T0,T1,T2,T3>()
-            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3> {
             JobProcess<T, T0,T1,T2,T3>.Initialize();
             System.IntPtr reflectionData = JobProcess<T, T0,T1,T2,T3>.jobReflectionData.Data;
@@ -60,7 +60,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, T0,T1,T2,T3>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
-            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3> {
             
             dependsOn = new StartParallelJob() {
@@ -82,7 +82,7 @@ namespace ME.BECS.Jobs {
         }
 
         private struct JobData<T, T0,T1,T2,T3>
-            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase
             where T : struct {
             [NativeDisableUnsafePtrRestriction]
             public T jobData;
@@ -92,7 +92,7 @@ namespace ME.BECS.Jobs {
         }
 
         internal struct JobProcess<T, T0,T1,T2,T3>
-            where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent
+            where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3> {
 
             internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3>>();

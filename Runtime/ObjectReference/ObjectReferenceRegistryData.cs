@@ -56,18 +56,35 @@ namespace ME.BECS {
             }
 
             isNew = true;
+            var nextId = this.GetNextId(source);
             {
                 // Add new item
                 var item = new Item() {
-                    sourceId = ++this.sourceId,
+                    sourceId = nextId,
                     source = source,
                     references = 1,
                 };
                 System.Array.Resize(ref this.items, this.items.Length + 1);
                 this.items[this.items.Length - 1] = item;
-                return this.sourceId;
+                return nextId;
             }
 
+        }
+
+        private uint GetNextId(UnityEngine.Object source) {
+            #if UNITY_EDITOR
+            var path = UnityEditor.AssetDatabase.GetAssetPath(source);
+            var guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
+            var hashId = 0u;
+            for (int i = 0; i < guid.Length; ++i) {
+                hashId ^= (uint)(guid[i] + 31);
+            }
+            if (hashId > this.sourceId) this.sourceId = hashId;
+            return hashId;
+            #else
+            var nextId = ++this.sourceId;
+            return nextId.ToString();
+            #endif
         }
 
         public bool Remove(UnityEngine.Object source) {

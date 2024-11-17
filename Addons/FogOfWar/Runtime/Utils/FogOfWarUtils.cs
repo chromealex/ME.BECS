@@ -49,14 +49,31 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, float range, float rangeMin) {
+
+            var fowPos = WorldToFogMapPosition(in props, position);
+            var fowRange = WorldToFogMapValue(in props, range);
+            var fowRangeMin = WorldToFogMapValue(in props, rangeMin);
+            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, fowRangeMin, fowRange, -1f, default);
+
+        }
+
+        [INLINE(256)]
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, float height, float range, float rangeMin) {
+
+            var fowPos = WorldToFogMapPosition(in props, position);
+            var fowRange = WorldToFogMapValue(in props, range);
+            var fowRangeMin = WorldToFogMapValue(in props, rangeMin);
+            var fowHeight = position.y + height;
+            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, fowRangeMin, fowRange, fowHeight, default);
+
+        }
+
+        [INLINE(256)]
         public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float range, float rangeMin) {
 
             var worldPos = tr.GetWorldMatrixPosition();
-            var fowPos = WorldToFogMapPosition(in props, worldPos);
-            var fowRange = WorldToFogMapValue(in props, range);
-            var fowRangeMin = WorldToFogMapValue(in props, rangeMin);
-            var fowHeight = worldPos.y + height;
-            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, fowRangeMin, fowRange, fowHeight, default);
+            WriteRange(in props, in fow, in worldPos, height, range, rangeMin);
 
         }
 
@@ -191,7 +208,7 @@ namespace ME.BECS.FogOfWar {
                 for (var y = y0; y < y0 + sizeY; ++y) {
                     if (y < 0 || y >= props.size.y) continue;
                     var index = y * (int)props.size.x + x;
-                    if (GetHeight(in props, (uint)x, (uint)y) > height) continue;
+                    if (height < 0f || GetHeight(in props, (uint)x, (uint)y) > height) continue;
                     map.nodes[index * BYTES_PER_NODE] = 255;
                     map.explored[index * BYTES_PER_NODE] = 255;
                 }
@@ -206,11 +223,13 @@ namespace ME.BECS.FogOfWar {
             var radiusSqr = radius * radius;
             for (var r = -radius; r < radius; ++r) {
 
-                var hh = (int)math.sqrt(radiusSqr - r * r);
                 var x = x0 + r;
                 if (x < 0 || x >= props.size.x) continue;
 
-                for (var y = y0 - hh; y < y0 + hh; ++y) {
+                var hh = (int)math.sqrt(radiusSqr - r * r);
+                var min = y0 - hh;//math.min(0, y0 - hh);
+                var max = y0 + hh;//math.min(props.size.y, (uint)(y0 + hh));
+                for (var y = min; y < max; ++y) {
 
                     if (y < 0 || y >= props.size.y) continue;
                     if (IsVisible(in props, in map, (uint)x, (uint)y) == true) {
@@ -222,7 +241,7 @@ namespace ME.BECS.FogOfWar {
 
                     if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
 
-                    if (Raycast(in props, x0, y0, x, y, height) == true) {
+                    if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
                         var index = y * (int)props.size.x + x;
                         map.nodes[index * BYTES_PER_NODE] = 255;
                         map.explored[index * BYTES_PER_NODE] = 255;
@@ -292,7 +311,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent Reveal(in ME.BECS.Players.PlayerAspect owner, in float3 position, float range, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = position;
@@ -308,7 +327,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent Reveal(in ME.BECS.Players.PlayerAspect owner, in float3 position, float sizeX, float sizeY, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = position;

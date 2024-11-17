@@ -20,7 +20,7 @@ namespace ME.BECS.Transforms {
         [QueryWith]
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
 
-        public bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
+        public readonly bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
 
         public readonly float3 forward {
             [INLINE(256)] get => math.mul(this.rotation, math.forward());
@@ -192,16 +192,6 @@ namespace ME.BECS.Transforms {
         public static implicit operator TransformAspect(in Ent ent) {
             if (ent.IsAlive() == false) return default;
             return ent.GetOrCreateAspect<TransformAspect>();
-        }
-
-        public static void TestInitialize(in World world) {
-            ref var tr = ref world.InitializeAspect<TransformAspect>();
-            tr.localPositionData = new AspectDataPtr<LocalPositionComponent>(in world);
-            tr.localRotationData = new AspectDataPtr<LocalRotationComponent>(in world);
-            tr.localScaleData = new AspectDataPtr<LocalScaleComponent>(in world);
-            tr.parentData = new AspectDataPtr<ParentComponent>(in world);
-            tr.childrenData = new AspectDataPtr<ChildrenComponent>(in world);
-            tr.worldMatrixData = new AspectDataPtr<WorldMatrixComponent>(in world);
         }
 
     }

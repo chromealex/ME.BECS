@@ -27,7 +27,7 @@ namespace ME.BECS.Tests {
                 var dt = 0.01f;
                 
                 var world = World.Create();
-                ME.BECS.Transforms.TransformAspect.TestInitialize(in world);
+                TestInitialize(in world);
                 ME.BECS.Views.ViewsTypeInfo.RegisterType<ME.BECS.Views.DefaultView>(new ME.BECS.Views.ViewTypeInfo() {
                     flags = (ME.BECS.Views.TypeFlags)0,
                 });
@@ -92,7 +92,7 @@ namespace ME.BECS.Tests {
                 var dt = 0.01f;
                 
                 var world = World.Create();
-                ME.BECS.Transforms.TransformAspect.TestInitialize(in world);
+                TestInitialize(in world);
                 ME.BECS.Views.ViewsTypeInfo.RegisterType<ME.BECS.Views.DefaultView>(new ME.BECS.Views.ViewTypeInfo() {
                     flags = (ME.BECS.Views.TypeFlags)0,
                 });
@@ -144,6 +144,16 @@ namespace ME.BECS.Tests {
                 UnityEngine.GameObject.DestroyImmediate(go);
             }
 
+        }
+
+        public static void TestInitialize(in World world) {
+            ref var tr = ref world.InitializeAspect<ME.BECS.Transforms.TransformAspect>();
+            tr.localPositionData = new AspectDataPtr<ME.BECS.Transforms.LocalPositionComponent>(in world);
+            tr.localRotationData = new AspectDataPtr<ME.BECS.Transforms.LocalRotationComponent>(in world);
+            tr.localScaleData = new AspectDataPtr<ME.BECS.Transforms.LocalScaleComponent>(in world);
+            tr.parentData = new AspectDataPtr<ME.BECS.Transforms.ParentComponent>(in world);
+            tr.childrenData = new AspectDataPtr<ME.BECS.Transforms.ChildrenComponent>(in world);
+            tr.worldMatrixData = new AspectDataPtr<ME.BECS.Transforms.WorldMatrixComponent>(in world);
         }
 
     }

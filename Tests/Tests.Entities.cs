@@ -26,6 +26,7 @@ namespace ME.BECS.Tests {
                 using var world = World.Create();
                 var ent = Ent.New();
                 ent.Set(new TestComponent() { data = 123 });
+                Batches.Apply(world.state);
                 var entCopy = ent.Clone();
                 
                 Assert.AreEqual(123, entCopy.Read<TestComponent>().data);
@@ -43,6 +44,7 @@ namespace ME.BECS.Tests {
                 var entCopy = Ent.New();
                 entCopy.Set(new TestComponent() { data = 124 });
                 entCopy.Set(new Test1Component() { data = 100 });
+                Batches.Apply(world.state);
                 entCopy.CopyFrom(ent);
                 
                 Assert.AreEqual(123, entCopy.Read<TestComponent>().data);

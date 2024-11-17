@@ -1,9 +1,9 @@
-using ME.BECS.Transforms;
-
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
+    using ME.BECS.Transforms;
+    using ME.BECS.Players;
 
     public static partial class UnitUtils {
 
@@ -12,7 +12,7 @@ namespace ME.BECS.Units {
         public const float UINT_TO_FLOAT = 1f / FLOAT_TO_UINT;
 
         [INLINE(256)]
-        public static float3 GetSpiralPosition(float3 center, int index, float radius) {
+        public static float3 GetSpiralPosition(in float3 center, int index, float radius) {
             if (index == 0) return center;
             // (dx, dy) is a vector - direction in which we move right now
             int dx = 0;
@@ -54,9 +54,9 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, JobInfo jobInfo) {
+        public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
-            var ent = Ent.New(jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "Unit");
             return CreateUnit(in ent, in agentType, treeIndex);
             
         }
@@ -95,18 +95,18 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static bool IsOwner(in Ent unit, ME.BECS.Players.PlayerAspect owner) {
-            return unit.Read<ME.BECS.Players.OwnerComponent>().ent == owner.ent;
+        public static bool IsOwner(in Ent unit, in PlayerAspect owner) {
+            return unit.Read<OwnerComponent>().ent == owner.ent;
         }
 
         [INLINE(256)]
-        public static bool IsTeam(in Ent unit, ME.BECS.Players.PlayerAspect owner) {
-            return GetTeam(unit) == ME.BECS.Players.PlayerUtils.GetTeam(owner);
+        public static bool IsTeam(in Ent unit, in PlayerAspect owner) {
+            return GetTeam(unit) == PlayerUtils.GetTeam(owner);
         }
 
         [INLINE(256)]
-        public static void SetOwner(in Ent unit, in ME.BECS.Players.PlayerAspect player) {
-            unit.Set(new ME.BECS.Players.OwnerComponent() {
+        public static void SetOwner(in Ent unit, in PlayerAspect player) {
+            unit.Set(new OwnerComponent() {
                 ent = player.ent,
             });
         }
@@ -114,21 +114,21 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static Ent GetTeam(in Ent ent) {
 
-            return ME.BECS.Players.PlayerUtils.GetOwner(in ent).readTeam;
+            return PlayerUtils.GetOwner(in ent).readTeam;
 
         }
 
         [INLINE(256)]
         public static Ent GetTeam(in EntRO ent) {
 
-            return ME.BECS.Players.PlayerUtils.GetOwner(in ent).readTeam;
+            return PlayerUtils.GetOwner(in ent).readTeam;
 
         }
 
         [INLINE(256)]
         public static Ent GetTeam(in UnitAspect unit) {
 
-            return unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>().readTeam;
+            return unit.readOwner.GetAspect<PlayerAspect>().readTeam;
 
         }
 

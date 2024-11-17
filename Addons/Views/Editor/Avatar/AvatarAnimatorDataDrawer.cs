@@ -227,7 +227,7 @@ namespace ME.BECS.Views.Editor {
                             if (clip != null) {
                                 avatarPreview.RemoveFromClassList("no-preview");
                                 selectedClip.clip = clip;
-                                ObjectReferenceRegistry.Assign(clip, clip);
+                                ObjectReferenceRegistryUtils.Assign(clip, clip);
                                 this.LoadPoints(animatorData, pointsContainer, clip);
                                 info.text = $"Frame rate: {clip.frameRate}, Length: {clip.length}";
                                 progress.lowValue = 0f;

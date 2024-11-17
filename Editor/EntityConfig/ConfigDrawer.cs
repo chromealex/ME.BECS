@@ -23,7 +23,7 @@ namespace ME.BECS.Views.Editor {
                 objectField.value = EntityConfigsRegistry.GetEntityConfigBySourceId(sourceId.uintValue);
                 objectField.RegisterValueChangedCallback((evt) => {
                     if (evt.newValue == evt.previousValue) return;
-                    var pId = EntityConfigsRegistry.Assign((EntityConfig)evt.previousValue, (EntityConfig)evt.newValue);
+                    var pId = ME.BECS.Editor.ObjectReferenceRegistryUtils.Assign((EntityConfig)evt.previousValue, (EntityConfig)evt.newValue);
                     var prop = property.serializedObject.FindProperty(sourceId.propertyPath);
                     prop.serializedObject.Update();
                     sourceId.uintValue = pId;

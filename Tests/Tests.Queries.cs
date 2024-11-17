@@ -216,6 +216,36 @@ namespace ME.BECS.Tests {
         }
         
         [Test]
+        public void Static() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.data.components = new IConfigComponent[] {
+                new Tests_EntityConfig.TestConfig1Component() { data = 1 },
+                new Tests_EntityConfig.TestConfig2Component() { data = 2 },
+            };
+            config.staticData.components = new IConfigComponentStatic[] {
+                new Tests_EntityConfig.TestConfig1StaticComponent() { data = 1 },
+                new Tests_EntityConfig.TestConfig2StaticComponent() { data = 2 },
+            };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Ent filteredEnt = default;
+                API.Query(world, Batches.Apply(default, world))
+                   .With<Tests_EntityConfig.TestConfig1StaticComponent>()
+                   .Without<Tests_EntityConfig.TestArrayComponentStatic>()
+                   .ForEach((in CommandBufferJob commandBuffer) => { filteredEnt = ent; });
+                Assert.AreEqual(filteredEnt, ent);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
         public void With() {
 
             {

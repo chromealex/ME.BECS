@@ -202,6 +202,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
+                if (tr.IsCalculated == false) return;
                 var data = query.query;
                 var worldPos = tr.GetWorldMatrixPosition();
                 var worldRot = tr.GetWorldMatrixRotation();

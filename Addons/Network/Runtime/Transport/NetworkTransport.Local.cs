@@ -85,6 +85,7 @@ namespace ME.BECS.Network {
                             new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)
                         ).TotalMilliseconds;
                         this.networkModule.Value.SetServerStartTime(currentTime, in this.world);
+                        this.transport.Value.StartTick = this.world.state->tick;
 
                     }
 

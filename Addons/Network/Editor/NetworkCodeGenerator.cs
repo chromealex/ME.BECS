@@ -1,4 +1,6 @@
 
+using System.Linq;
+
 namespace ME.BECS.Network.Editor {
 
     using ME.BECS.Editor;
@@ -8,7 +10,7 @@ namespace ME.BECS.Network.Editor {
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
-            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>();
+            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute<NetworkMethodAttribute>().OrderBy(x => x.Name).ToList();
             references.Add(typeof(UnsafeNetworkModule));
             foreach (var method in methods) {
 

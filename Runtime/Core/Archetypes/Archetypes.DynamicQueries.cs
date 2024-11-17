@@ -10,10 +10,10 @@ namespace ME.BECS {
     public static unsafe class ArchetypeQueries {
         
         [INLINE(256)]
-        public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponent
-                                                                                 where T1 : unmanaged, IComponent
-                                                                                 where T2 : unmanaged, IComponent
-                                                                                 where T3 : unmanaged, IComponent {
+        public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponentBase
+                                                                                 where T1 : unmanaged, IComponentBase
+                                                                                 where T2 : unmanaged, IComponentBase
+                                                                                 where T3 : unmanaged, IComponentBase {
 
             builder.WaitForAllJobs();
             WithAny(ref builder, StaticTypes<T0>.typeId, StaticTypes<T1>.typeId, StaticTypes<T2>.typeId, StaticTypes<T3>.typeId);
@@ -21,7 +21,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void WithSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
+        public static void WithSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
 
             builder.WaitForAllJobs();
             With(ref builder, StaticTypes<T>.typeId);
@@ -29,7 +29,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void WithoutSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
+        public static void WithoutSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
 
             builder.WaitForAllJobs();
             Without(ref builder, StaticTypes<T>.typeId);
@@ -166,17 +166,15 @@ namespace ME.BECS {
 
                 this.queryData->archetypesBits.Intersect(temp);
                 
-                temp.Dispose();
-                
             }
 
         }
 
         [INLINE(256)]
-        public static JobHandle WithAny<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponent
-                                                                                  where T1 : unmanaged, IComponent
-                                                                                  where T2 : unmanaged, IComponent
-                                                                                  where T3 : unmanaged, IComponent {
+        public static JobHandle WithAny<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponentBase
+                                                                                  where T1 : unmanaged, IComponentBase
+                                                                                  where T2 : unmanaged, IComponentBase
+                                                                                  where T3 : unmanaged, IComponentBase {
 
             return new WithAnyJob() {
                 state = builder.commandBuffer->state,
@@ -252,7 +250,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle With<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
+        public static JobHandle With<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
 
             return new WithJob() {
                 typeId = StaticTypes<T>.typeId,
@@ -280,21 +278,13 @@ namespace ME.BECS {
                 if (list.isCreated == true) {
                     this.queryData->archetypesBits.Remove(in this.state->allocator, list);
                 }
-                /*
-                if (this.typeId >= this.state->archetypes.archetypesWithTypeId.Length) return;
-
-                var list = this.state->archetypes.archetypesWithTypeId[this.state, this.typeId];
-                if (list.isCreated == true) {
-                    this.queryData->archetypes.Remove(ref this.state->allocator, list);
-                }
-                */
                 
             }
 
         }
         
         [INLINE(256)]
-        public static JobHandle Without<T>(ref QueryBuilder builder) where T : unmanaged, IComponent {
+        public static JobHandle Without<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
 
             return new WithoutJob() {
                 typeId = StaticTypes<T>.typeId,

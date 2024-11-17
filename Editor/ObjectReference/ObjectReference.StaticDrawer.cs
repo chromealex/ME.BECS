@@ -23,7 +23,7 @@ namespace ME.BECS.Editor {
             objectField.value = obj;
             objectField.RegisterValueChangedCallback((evt) => {
                 if (evt.newValue == evt.previousValue) return;
-                var pId = ObjectReferenceRegistry.Assign(evt.previousValue, evt.newValue);
+                var pId = ObjectReferenceRegistryUtils.Assign(evt.previousValue, evt.newValue);
                 var prop = property.serializedObject.FindProperty(id.propertyPath);
                 prop.serializedObject.Update();
                 id.uintValue = pId;

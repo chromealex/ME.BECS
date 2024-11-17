@@ -29,6 +29,7 @@ namespace ME.BECS.FogOfWar {
                 for (uint i = 0u; i < teams.Length; ++i) {
                     var team = teams[(int)i];
                     var copyEnt = ent.Clone(this.world.id, cloneHierarchy: true, in jobInfo);
+                    copyEnt.EditorName = ent.EditorName;
                     copyEnt.Remove<ParentComponent>();
                     var tr = copyEnt.GetAspect<TransformAspect>();
                     tr.position = pos;

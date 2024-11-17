@@ -10,7 +10,7 @@ namespace ME.BECS {
         
     }
 
-    public unsafe struct RefRW<T> : IAspectData, IIsCreated where T : unmanaged, IComponent {
+    public unsafe struct RefRW<T> : IAspectData, IIsCreated where T : unmanaged, IComponentBase {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;
@@ -53,7 +53,7 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct RefRO<T> : IAspectData where T : unmanaged, IComponent {
+    public unsafe struct RefRO<T> : IAspectData where T : unmanaged, IComponentBase {
 
         [NativeDisableUnsafePtrRestriction]
         public State* state;

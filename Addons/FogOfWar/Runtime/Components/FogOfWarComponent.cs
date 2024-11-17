@@ -62,7 +62,7 @@ namespace ME.BECS.FogOfWar {
 
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarRevealerComponent : IConfigComponent {
-        
+
         /// <summary>
         /// 0 - range, 1 - rect
         /// </summary>

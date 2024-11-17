@@ -20,8 +20,8 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static Ent CreateAttackSensor(int targetsMask, Config config, in JobInfo jobInfo) {
             
-            var attackSensor = Ent.New(jobInfo);
-            config.Apply(attackSensor);
+            var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
+            config.Apply(in attackSensor);
             attackSensor.Set<QuadTreeQueryAspect>();
             attackSensor.Set<AttackAspect>();
             attackSensor.Set<TransformAspect>();

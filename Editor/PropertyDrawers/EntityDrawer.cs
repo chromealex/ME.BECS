@@ -154,6 +154,7 @@ namespace ME.BECS.Editor {
             var idString = "-";
             var genString = "-";
             var worldString = "-";
+            var editorNameString = string.Empty;
             var versionString = string.Empty;
             var drawComponents = true;
 
@@ -163,7 +164,8 @@ namespace ME.BECS.Editor {
                 genString = this.entity.gen.ToString();
                 worldString = this.entity.worldId.ToString();
                 versionString = this.entity.Version.ToString();
-                
+                editorNameString = this.entity.EditorName.ToString();
+
             } else {
 
                 drawComponents = false;
@@ -176,6 +178,7 @@ namespace ME.BECS.Editor {
                 genString = "-";
                 worldString = "-";
                 versionString = "-";
+                editorNameString = string.Empty;
                 drawComponents = false;
 
             }
@@ -213,6 +216,21 @@ namespace ME.BECS.Editor {
                 entityIdLabel.AddToClassList("entity-name-label");
                 entityIdLabel.AddToClassList("label-header");
                 idContainer.Add(entityIdLabel);
+            }
+
+            {
+                var nameContainer = new VisualElement();
+                nameContainer.style.display = new StyleEnum<DisplayStyle>(string.IsNullOrEmpty(editorNameString) == true ? DisplayStyle.None : DisplayStyle.Flex);
+                nameContainer.AddToClassList("entity-name-container");
+                header.Add(nameContainer);
+                var entityNameLabel = new Label("Name");
+                entityNameLabel.AddToClassList("entity-name-label");
+                entityNameLabel.AddToClassList("label-header");
+                nameContainer.Add(entityNameLabel);
+                var entityName = new Label(editorNameString);
+                entityName.AddToClassList("entity-name");
+                entityName.AddToClassList("label-value");
+                nameContainer.Add(entityName);
             }
 
             {
@@ -432,34 +450,50 @@ namespace ME.BECS.Editor {
             var arch = world.state->archetypes.list[world.state->allocator, archId];
                     
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
+            var cnt = 0;
+            {
+                var e = arch.components.GetEnumerator(world);
+                while (e.MoveNext() == true) {
+                    var cId = e.Current;
+                    if (StaticTypesLoadedManaged.loadedTypes.ContainsKey(cId) == true) ++cnt;
+                }
+            }
 
             if (this.tempObject.data != null &&
-                this.tempObject.data.Length == arch.components.count) {
-                var i = 0;
-                var e = arch.components.GetEnumerator(world);
-                while (e.MoveNext() == true) {
-                    var cId = e.Current;
-                    var type = StaticTypesLoadedManaged.loadedTypes[cId];
-                    {
-                        var gMethod = methodRead.MakeGenericMethod(type);
-                        var val = gMethod.Invoke(null, new object[] { this.entity });
-                        this.tempObject.data[i] = val;
+                this.tempObject.data.Length == cnt) {
+                
+                {
+                    var i = 0;
+                    var e = arch.components.GetEnumerator(world);
+                    while (e.MoveNext() == true) {
+                        var cId = e.Current;
+                        if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
+                            {
+                                var gMethod = methodRead.MakeGenericMethod(type);
+                                var val = gMethod.Invoke(null, new object[] { this.entity });
+                                this.tempObject.data[i] = val;
+                            }
+                            ++i;
+                        }
                     }
-                    ++i;
                 }
             } else {
-                this.tempObject.data = new object[arch.components.Count];
-                var i = 0;
-                var e = arch.components.GetEnumerator(world);
-                while (e.MoveNext() == true) {
-                    var cId = e.Current;
-                    var type = StaticTypesLoadedManaged.loadedTypes[cId];
-                    {
-                        var gMethod = methodRead.MakeGenericMethod(type);
-                        var val = gMethod.Invoke(null, new object[] { this.entity });
-                        this.tempObject.data[i] = val;
+                
+                this.tempObject.data = new object[cnt];
+                {
+                    var i = 0;
+                    var e = arch.components.GetEnumerator(world);
+                    while (e.MoveNext() == true) {
+                        var cId = e.Current;
+                        if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
+                            {
+                                var gMethod = methodRead.MakeGenericMethod(type);
+                                var val = gMethod.Invoke(null, new object[] { this.entity });
+                                this.tempObject.data[i] = val;
+                            }
+                            ++i;
+                        }
                     }
-                    ++i;
                 }
             }
 

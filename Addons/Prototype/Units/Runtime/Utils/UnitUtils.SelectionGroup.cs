@@ -60,7 +60,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitSelectionGroupAspect CreateSelectionGroup(uint capacity = 10u, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "SelectionGroup");
             var aspect = ent.GetOrCreateAspect<UnitSelectionGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, capacity);
             return aspect;
@@ -70,7 +70,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitSelectionTempGroupAspect CreateSelectionTempGroup(uint capacity = 10u, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New(in jobInfo, editorName: "SelectionGroup");
             var aspect = ent.GetOrCreateAspect<UnitSelectionTempGroupAspect>();
             aspect.units = new ListAuto<Ent>(in ent, capacity);
             return aspect;

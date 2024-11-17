@@ -1,4 +1,4 @@
-using System.Linq;
+using Unity.Collections;
 
 namespace ME.BECS {
 
@@ -8,7 +8,7 @@ namespace ME.BECS {
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
     [StructLayout(LayoutKind.Explicit, Size = 8)]
-    public unsafe struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
+    public unsafe partial struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
 
         public static Ent Null => new Ent();
 
@@ -50,46 +50,46 @@ namespace ME.BECS {
         /// </summary>
         /// <returns></returns>
         [INLINE(256)]
-        public static Ent New() {
-            return Ent.New(Context.world.id, default);
+        public static Ent New(in FixedString32Bytes editorName = default) {
+            return Ent.New(Context.world.id, default, in editorName);
         }
         
         [INLINE(256)]
-        public static Ent New(in JobInfo jobInfo) {
-            return Ent.New(jobInfo.worldId, jobInfo);
+        public static Ent New(in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
+            return Ent.New(jobInfo.worldId, in jobInfo, in editorName);
         }
 
         [INLINE(256)]
-        public static Ent New(in World world, in JobInfo jobInfo = default) {
-            return Ent.New(world.id, jobInfo);
+        public static Ent New(in World world, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
+            return Ent.New(world.id, in jobInfo, in editorName);
         }
 
         [INLINE(256)]
-        public static Ent New(in SystemContext systemContext, in JobInfo jobInfo = default) {
-            return Ent.New(systemContext.world.id, in jobInfo);
+        public static Ent New(in SystemContext systemContext, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
+            return Ent.New(systemContext.world.id, in jobInfo, in editorName);
         }
 
         [INLINE(256)]
-        public static Ent New(ushort worldId, in JobInfo jobInfo = default) {
+        public static Ent New(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
 
             if (JobUtils.IsInParallelJob() == true) {
                 // Create entity with offset because we are in parallel mode
                 // so we need JobInfo struct to be provided
                 E.IS_CREATED(jobInfo);
                 throw new System.NotImplementedException();
-                //return New_INTERNAL(worldId, jobInfo);
+                //return New_INTERNAL(worldId, in jobInfo, in editorName);
             } else {
-                return New_INTERNAL(worldId, default);
+                return New_INTERNAL(worldId, default, in editorName);
             }
 
         }
         
         [INLINE(256)]
-        internal static Ent New_INTERNAL(ushort worldId, in JobInfo jobInfo) {
+        internal static Ent New_INTERNAL(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
             E.IS_IN_TICK(world.state);
-
+            
             Ent newEnt;
             {
                 newEnt = Ents.Add(world.state, worldId, out var reused, jobInfo);
@@ -107,6 +107,10 @@ namespace ME.BECS {
                 Archetypes.AddEntity(world.state, newEnt);
                 Ents.Unlock(world.state, in newEnt);
             }
+
+            #if UNITY_EDITOR
+            EntEditorName.SetEditorName(in newEnt, editorName);
+            #endif
 
             return newEnt;
 
@@ -174,21 +178,31 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public override readonly string ToString() {
+            var name = new FixedString32Bytes("Ent");
+            #if UNITY_EDITOR
+            var editorName = this.EditorName;
+            if (editorName.IsEmpty == false) name = editorName;
+            #endif
             if (this.IsAlive() == true) {
-                return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version}, World: {this.worldId})";
+                return $"{name} #{this.id} Gen: {this.gen} (Version: {this.Version}, World: {this.worldId})";
             } else {
-                return $"Ent #{this.id} Gen: {this.gen} (World: {this.worldId})";
+                return $"{name} #{this.id} Gen: {this.gen} (World: {this.worldId})";
             }
         }
 
         [INLINE(256)]
-        public readonly Unity.Collections.FixedString128Bytes ToString(bool withWorld, bool withVersion = true) {
+        public readonly Unity.Collections.FixedString128Bytes ToString(bool withWorld, bool withVersion = true, bool withGen = true) {
             if (withWorld == true) return this.ToString();
-            if (this.IsAlive() == true && withVersion == true) {
-                return $"Ent #{this.id} Gen: {this.gen} (Version: {this.Version})";
-            } else {
-                return $"Ent #{this.id} Gen: {this.gen}";
-            }
+            var name = new FixedString32Bytes("Ent");
+            #if UNITY_EDITOR
+            var editorName = this.EditorName;
+            if (editorName.IsEmpty == false) name = editorName;
+            #endif
+            var gen = new FixedString32Bytes();
+            if (withGen == true) gen = new FixedString32Bytes($" Gen: {this.gen}");
+            var version = new FixedString32Bytes();
+            if (this.IsAlive() == true && withVersion == true) version = new FixedString32Bytes($" (Version: {this.Version})");
+            return $"{name} #{this.id}{gen}{version}";
         }
 
         [INLINE(256)]

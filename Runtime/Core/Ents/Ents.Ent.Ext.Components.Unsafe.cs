@@ -50,6 +50,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void* ReadPtr(in this Ent ent, uint typeId) {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            return Components.ReadUnknownType(world.state, typeId, ent.id, ent.gen, out _);
+
+        }
+
+        [INLINE(256)]
         public static T* ReadPtr<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

@@ -569,14 +569,21 @@ namespace ME.BECS {
             }
 
             private readonly Ent staticDataEnt;
+            [NativeDisableUnsafePtrRestriction]
+            private readonly uint* typeIds;
+            private readonly uint count;
 
             public StaticData(in Ent ent, EntityConfig sourceConfig, UnsafeEntityConfig config) {
                 
                 this.staticDataEnt = ent;
+
+                this.count = (uint)sourceConfig.staticData.components.Length;
+                this.typeIds = _makeArray<uint>(this.count, false);
                 
                 for (int i = 0; i < sourceConfig.staticData.components.Length; ++i) {
                     var comp = sourceConfig.staticData.components[i];
                     StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
+                    this.typeIds[i] = typeId;
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     {
@@ -591,6 +598,17 @@ namespace ME.BECS {
 
             }
             
+            [INLINE(256)]
+            public void Apply(in UnsafeEntityConfig config, in Ent ent) {
+                
+                var state = ent.World.state;
+                for (uint i = 0u; i < this.count; ++i) {
+                    var typeId = this.typeIds[i];
+                    Batches.Set_INTERNAL(typeId, in ent, state);
+                }
+                
+            }
+
             [INLINE(256)]
             public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
@@ -704,6 +722,7 @@ namespace ME.BECS {
 
             this.aspects.Apply(in ent);
             this.data.Apply(in this, in ent);
+            this.staticData.Apply(in this, in ent);
             this.dataShared.Apply(in this, in ent);
             this.dataInitialize.Apply(in this, in ent);
             
