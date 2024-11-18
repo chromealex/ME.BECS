@@ -7,7 +7,7 @@ namespace ME.BECS {
         #if UNITY_2023_1_OR_NEWER
         public const Allocator ALLOCATOR_DOMAIN = Allocator.Domain;
         #else
-        public const Allocator ALLOCATOR_DOMAIN = Allocator.Persistent;
+        public static Allocator ALLOCATOR_DOMAIN => ALLOCATOR_PERSISTENT_ST.ToAllocator;
         #endif
         
         public const Allocator ALLOCATOR_PERSISTENT = Allocator.Persistent;

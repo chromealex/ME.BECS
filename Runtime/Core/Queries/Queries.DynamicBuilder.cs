@@ -368,7 +368,7 @@ namespace ME.BECS {
         /// [ QUERY END POINT ]
         /// </summary>
         /// <returns></returns>
-        public Unity.Collections.NativeArray<Ent> ToArray(Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {
+        public Unity.Collections.NativeArray<Ent> ToArray(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
             this.builderDependsOn.Complete();
@@ -376,8 +376,9 @@ namespace ME.BECS {
             var result = new Unity.Collections.NativeArray<Ent>(cnt, allocator);
             for (int i = 0; i < cnt; ++i) {
                 var entId = this.commandBuffer->entities[i];
-                result[i] = new Ent(entId, Worlds.GetWorld(this.commandBuffer->worldId));
+                result[i] = new Ent(entId, in Worlds.GetWorld(this.commandBuffer->worldId));
             }
+            this.Dispose();
             return result;
 
         }

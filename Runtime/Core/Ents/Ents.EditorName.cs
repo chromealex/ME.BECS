@@ -15,6 +15,7 @@ namespace ME.BECS {
             public Array<FixedString32Bytes> names;
             public LockSpinner spinner;
 
+            [INLINE(256)]
             public void Set(in Ent ent, in FixedString32Bytes name) {
                 
                 if (ent.id >= this.names.Length) {
@@ -28,11 +29,18 @@ namespace ME.BECS {
                 
             }
 
+            [INLINE(256)]
             public FixedString32Bytes Get(in Ent ent) {
                 if (ent.id >= this.names.Length) {
                     return default;
                 }
                 return this.names.Get(ent.id);
+            }
+
+            [INLINE(256)]
+            public void Dispose() {
+                this.names.Dispose();
+                this = default;
             }
 
         }
@@ -41,6 +49,14 @@ namespace ME.BECS {
         private static readonly SharedStatic<Array<World>> entToWorld = SharedStatic<Array<World>>.GetOrCreatePartiallyUnsafeWithHashCode<EntEditorName>(TAlign<Array<World>>.align, 1L);
         private static readonly SharedStatic<LockSpinner> spinner = SharedStatic<LockSpinner>.GetOrCreate<EntEditorName>();
 
+        [INLINE(256)]
+        public static void Dispose(ushort worldId) {
+            if (worldId >= entToWorld.Data.Length) {
+                return;
+            }
+            entToWorld.Data.Get(worldId).Dispose();
+        }
+        
         [INLINE(256)]
         public static void SetEditorName(in Ent ent, in FixedString32Bytes name) {
 

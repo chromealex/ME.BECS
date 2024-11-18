@@ -171,7 +171,7 @@ namespace ME.BECS.Pathfinding {
         public static Heights CreateDefault(Unity.Collections.Allocator allocator) {
             return new Heights() {
                 data = new GraphHeights() {
-                    heightMap = new Unity.Collections.NativeArray<float>(1, allocator),
+                    heightMap = Unity.Collections.CollectionHelper.CreateNativeArray<float>(1, allocator),
                 },
             };
         }
