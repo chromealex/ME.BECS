@@ -46,7 +46,7 @@ namespace ME.BECS {
 
             isNew = false;
             if (source == null) return 0u;
-            
+
             for (int i = 0; i < this.items.Length; ++i) {
                 if (this.items[i].source == source) {
                     ref var item = ref this.items[i];
@@ -62,7 +62,7 @@ namespace ME.BECS {
                 var item = new Item() {
                     sourceId = nextId,
                     source = source,
-                    references = 1,
+                    references = 1u,
                 };
                 System.Array.Resize(ref this.items, this.items.Length + 1);
                 this.items[this.items.Length - 1] = item;
@@ -79,6 +79,23 @@ namespace ME.BECS {
             for (int i = 0; i < guid.Length; ++i) {
                 hashId ^= (uint)(guid[i] + 31);
             }
+
+            while (true) {
+                // Set unique next id
+                var has = false;
+                for (int i = 0; i < this.items.Length; ++i) {
+                    if (this.items[i].source == source) {
+                        ref var item = ref this.items[i];
+                        if (item.sourceId == hashId) {
+                            ++hashId;
+                            has = true;
+                            break;
+                        }
+                    }
+                }
+                if (has == false) break;
+            }
+
             if (hashId > this.sourceId) this.sourceId = hashId;
             return hashId;
             #else
