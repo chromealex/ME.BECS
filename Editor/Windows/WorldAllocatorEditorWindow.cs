@@ -177,11 +177,11 @@ namespace ME.BECS.Editor {
             this.entitiesSize.text = EditorUtils.BytesToString((int)this.world.state->entities.GetReservedSizeInBytes(this.world.state));
             this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state->aspectsStorage.GetReservedSizeInBytes(this.world.state));
             this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)CollectionsRegistry.GetReservedSizeInBytes(this.world.state));
-            /*{
+            {
                 var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Allocator;
-                this.persistantAllocatorSize.text =
-                    $"{EditorUtils.BytesToString((int)allocatorInstance.BytesUsed)}/{EditorUtils.BytesToString((int)allocatorInstance.BytesAllocated)} (Blocks: {allocatorInstance.BlocksUsed}/{allocatorInstance.BlocksAllocated})";
-            }*/
+                this.persistentAllocatorSize.text =
+                    $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+            }
             {
                 var allocatorInstance = WorldsTempAllocator.allocatorTemp.Allocator;
                 this.tempAllocatorSize.text = 
@@ -199,7 +199,7 @@ namespace ME.BECS.Editor {
         private Label entitiesSize;
         private Label aspectsSize;
         private Label collectionsRegistrySize;
-        //private Label persistentAllocatorSize;
+        private Label persistentAllocatorSize;
         private Label tempAllocatorSize;
         private void DrawAllocator(VisualElement root, in MemoryAllocator allocator) {
 
@@ -214,7 +214,7 @@ namespace ME.BECS.Editor {
             this.entitiesSize = this.AddCounter(container, "Entities Size", className: "small-counter");
             this.aspectsSize = this.AddCounter(container, "Aspects Size", className: "small-counter");
             this.collectionsRegistrySize = this.AddCounter(container, "Collections Registry Size", className: "small-counter");
-            //this.persistentAllocatorSize = this.AddCounter(container, "Persistent Allocator Size", className: "small-counter", true);
+            this.persistentAllocatorSize = this.AddCounter(container, "Persistent Allocator Size", className: "small-counter", true);
             this.tempAllocatorSize = this.AddCounter(container, "Temp Allocator Size", className: "small-counter", true);
             
             this.scrollRoot = new ScrollView();

@@ -70,12 +70,14 @@ namespace ME.BECS.Editor {
                 var queriesCapacity = prop.FindPropertyRelative(nameof(WorldProperties.stateProperties.queriesCapacity));
                 var storageCapacity = prop.FindPropertyRelative(nameof(WorldProperties.stateProperties.storageCapacity));
                 var sharedComponentsCapacity = prop.FindPropertyRelative(nameof(WorldProperties.stateProperties.sharedComponentsCapacity));
+                var oneShotTasksCapacity = prop.FindPropertyRelative(nameof(WorldProperties.stateProperties.oneShotTasksCapacity));
                 var worldMode = prop.FindPropertyRelative(nameof(WorldProperties.stateProperties.mode));
                 EditorUIUtils.DrawUIntField(container, entitiesCapacity, 1);
                 EditorUIUtils.DrawUIntField(container, storageCapacity, 1);
                 EditorUIUtils.DrawUIntField(container, archetypesCapacity, 1);
                 EditorUIUtils.DrawUIntField(container, queriesCapacity);
                 EditorUIUtils.DrawUIntField(container, sharedComponentsCapacity);
+                EditorUIUtils.DrawUIntField(container, oneShotTasksCapacity);
                 EditorUIUtils.DrawEnumField<WorldMode>(container, worldMode);
             }
             { // Allocator properties

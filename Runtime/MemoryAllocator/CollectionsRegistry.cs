@@ -25,8 +25,10 @@ namespace ME.BECS {
             
             if (entId >= state->collectionsRegistry.list.Length) {
                 state->collectionsRegistry.readWriteSpinner.WriteBegin(state);
-                state->collectionsRegistry.list.Resize(ref state->allocator, entId + 1u, 2);
-                state->collectionsRegistry.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
+                if (entId >= state->collectionsRegistry.list.Length) {
+                    state->collectionsRegistry.list.Resize(ref state->allocator, entId + 1u, 2);
+                    state->collectionsRegistry.readWriteSpinnerPerEntity.Resize(ref state->allocator, entId + 1u, 2);
+                }
                 state->collectionsRegistry.readWriteSpinner.WriteEnd();
             }
             
@@ -84,7 +86,7 @@ namespace ME.BECS {
 
         public static uint GetReservedSizeInBytes(State* state) {
 
-            var size = 0u;
+            var size = TSize<CollectionsRegistry>.size;
             for (uint i = 0u; i < state->collectionsRegistry.list.Length; ++i) {
                 var item = state->collectionsRegistry.list[state, i];
                 size += item.GetReservedSizeInBytes();
