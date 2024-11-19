@@ -135,7 +135,6 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost, ObstacleChannel obstacleChannel, bool ignoreGraphRadius, MemArrayAuto<float> heights, uint heightsSizeX) {
 
-            var buildGraphSystem = ent.World.GetSystem<BuildGraphSystem>();
             var obstacle = new GraphMaskComponent() {
                 offset = float2.zero,
                 size = size,
@@ -146,7 +145,7 @@ namespace ME.BECS.Pathfinding {
             };
             var runtime = new GraphMaskRuntimeComponent() {
                 heights = heights,
-                nodes = new ListAuto<GraphNodeMemory>(in ent, (uint)(size.x * size.y * buildGraphSystem.graphs.Length)),
+                nodes = new ListAuto<GraphNodeMemory>(in ent, size.x * size.y),
             };
             var obstacleTr = ent.GetOrCreateAspect<TransformAspect>();
             obstacleTr.position = position;
