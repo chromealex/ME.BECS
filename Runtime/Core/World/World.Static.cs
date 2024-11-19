@@ -73,6 +73,11 @@ namespace ME.BECS {
                 this = default;
             }
 
+            [INLINE(256)]
+            public void* GetPtr() {
+                return this.ptr;
+            }
+
         }
 
         public unsafe struct ListUShort {

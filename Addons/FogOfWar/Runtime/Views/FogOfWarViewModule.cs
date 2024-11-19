@@ -113,7 +113,7 @@ namespace ME.BECS.FogOfWar {
             var activePlayer = PlayerUtils.GetActivePlayer();
             var isShadowCopy = ent.TryRead(out FogOfWarShadowCopyComponent shadowCopyComponent);
             if (isShadowCopy == true) {
-                if (ent.Has<FogOfWarShadowCopyWasVisible>() == false) return false;
+                if (ent.Has<FogOfWarShadowCopyWasVisibleAnytimeTag>() == false) return false;
                 if (shadowCopyComponent.forTeam != activePlayer.team) return false;
             }
             var state = false;

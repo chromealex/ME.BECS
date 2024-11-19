@@ -32,6 +32,20 @@ namespace ME.BECS.FogOfWar {
         
     }
 
+    public class FogOfWarData {
+        
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<byte>> fill255 = Unity.Burst.SharedStatic<Internal.Array<byte>>.GetOrCreate<FogOfWarData>();
+
+        [INLINE(256)]
+        public static void Initialize(uint sizeX) {
+            FogOfWarData.fill255.Data.Resize(sizeX);
+            for (uint i = 0u; i < sizeX * FogOfWarUtils.BYTES_PER_NODE; ++i) {
+                FogOfWarData.fill255.Data.Get(i) = 255;
+            }
+        }
+
+    }
+
     public static unsafe class FogOfWarUtils {
 
         public const int BYTES_PER_NODE = 1;
@@ -78,6 +92,23 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, float height, uint fowRange, uint fowRangeMin) {
+
+            var fowPos = WorldToFogMapPosition(in props, position);
+            var fowHeight = position.y + height;
+            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, default);
+
+        }
+
+        [INLINE(256)]
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, uint range, uint rangeMin) {
+
+            var worldPos = tr.GetWorldMatrixPosition();
+            WriteRange(in props, in fow, in worldPos, height, range, rangeMin);
+
+        }
+
+        [INLINE(256)]
         public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, float sizeX, float sizeY) {
 
             var worldPos = tr.GetWorldMatrixPosition();
@@ -86,6 +117,16 @@ namespace ME.BECS.FogOfWar {
             var fowRangeY = WorldToFogMapValue(in props, sizeY);
             var fowHeight = worldPos.y + height;
             SetVisibleRect(in props, in fow, (int)fowPos.x - (int)math.ceil(fowRangeX * 0.5f), (int)fowPos.y - (int)math.ceil(fowRangeY * 0.5f), fowRangeX, fowRangeY, fowHeight);
+
+        }
+
+        [INLINE(256)]
+        public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, uint fowRangeX, uint fowRangeY) {
+
+            var worldPos = tr.GetWorldMatrixPosition();
+            var fowPos = WorldToFogMapPosition(in props, worldPos);
+            var fowHeight = worldPos.y + height;
+            SetVisibleRect(in props, in fow, (int)fowPos.x - (int)math.ceil(fowRangeX * 0.5f), (int)fowPos.y - (int)math.ceil(fowRangeY * 0.5f), (int)fowRangeX, (int)fowRangeY, fowHeight);
 
         }
 
@@ -201,16 +242,60 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static uint WorldToFogMapUValue(in FogOfWarStaticComponent props, in float value) {
+            
+            var xf = value / props.worldSize.x * props.size.x;
+            var x = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
+            if (x >= props.size.x) x = props.size.x - 1u;
+            return x;
+            
+        }
+
+        [INLINE(256)]
         public static void SetVisibleRect(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int sizeX, int sizeY, float height) {
 
-            for (var x = x0; x < x0 + sizeX; ++x) {
-                if (x < 0 || x >= props.size.x) continue;
-                for (var y = y0; y < y0 + sizeY; ++y) {
-                    if (y < 0 || y >= props.size.y) continue;
-                    var index = y * (int)props.size.x + x;
-                    if (height < 0f || GetHeight(in props, (uint)x, (uint)y) > height) continue;
-                    map.nodes[index * BYTES_PER_NODE] = 255;
-                    map.explored[index * BYTES_PER_NODE] = 255;
+            if (sizeX == 1 && sizeY == 1 && FogOfWarUtils.BYTES_PER_NODE == 1) {
+                var idx = y0 * (int)props.size.x + x0;
+                if (height >= 0f && props.heights[idx] > height) return;
+                map.nodes[idx] = 255;
+                map.explored[idx] = 255;
+                return;
+            }
+            var rMin = (uint)math.max(0, x0);
+            var rMax = (uint)math.min(x0 + sizeX, props.size.x);
+            var yMin = (uint)math.max(0, y0);
+            var yMax = (uint)math.min(y0 + sizeY, props.size.y);
+            if (height > 0f) {
+                var src = FogOfWarData.fill255.Data.GetPtr();
+                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                for (var y = yMin; y < yMax; ++y) {
+                    var s = y * props.size.x;
+                    var fromIdx = s + rMin;
+                    var toIdx = s + rMax;
+                    var checkHeight = true;
+                    for (uint h = fromIdx; h < toIdx; ++h) {
+                        if (height > 0f && props.heights[toIdx - fromIdx] > height) {
+                            checkHeight = false;
+                            break;
+                        }
+                    }
+                    if (checkHeight == false) continue;
+                    var count = (toIdx - fromIdx) * BYTES_PER_NODE;
+                    _memcpy(src, nodesPtr + fromIdx, count);
+                    _memcpy(src, exploredPtr + fromIdx, count);
+                }
+            } else {
+                var src = FogOfWarData.fill255.Data.GetPtr();
+                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                for (var y = yMin; y < yMax; ++y) {
+                    var s = y * props.size.x;
+                    var fromIdx = s + rMin;
+                    var toIdx = s + rMax;
+                    var count = (toIdx - fromIdx) * BYTES_PER_NODE;
+                    _memcpy(src, nodesPtr + fromIdx, count);
+                    _memcpy(src, exploredPtr + fromIdx, count);
                 }
             }
             
@@ -218,6 +303,45 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, float height, in FowMathSector sector) {
+
+            var radiusMinSqr = minRadius * minRadius;
+            var radiusSqr = radius * radius;
+            var rMin = math.min(radius, x0);
+            var rMax = math.min(radius, props.size.x);
+            for (var r = -rMin; r < rMax; ++r) {
+
+                var x = x0 + r;
+                if (x < 0 || x >= props.size.x) continue;
+
+                var hh = (int)math.sqrt(radiusSqr - r * r);
+                var yMin = math.max(0, y0 - hh);
+                var yMax = math.min(props.size.y, (uint)(y0 + hh));
+                for (var y = yMin; y < yMax; ++y) {
+
+                    if (y < 0 || y >= props.size.y) continue;
+                    if (IsVisible(in props, in map, (uint)x, (uint)y) == true) {
+                        continue;
+                    }
+
+                    var localY = y - y0;
+                    if (radiusMinSqr > 0 && r * r <= radiusMinSqr && localY * localY <= radiusMinSqr) continue;
+
+                    if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
+
+                    if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
+                        var index = y * (int)props.size.x + x;
+                        map.nodes[index * BYTES_PER_NODE] = 255;
+                        map.explored[index * BYTES_PER_NODE] = 255;
+                    }
+
+                }
+
+            }
+            
+        }
+
+        [INLINE(256)]
+        public static void SetVisibleRangePartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, float height, in FowMathSector sector, byte part) {
 
             var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
@@ -310,7 +434,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public static Ent Reveal(in ME.BECS.Players.PlayerAspect owner, in float3 position, float range, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
+        public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, float range, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
@@ -318,7 +442,7 @@ namespace ME.BECS.FogOfWar {
             entTr.rotation = quaternion.identity;
             ent.Set(new FogOfWarRevealerComponent() {
                 type = (byte)RevealType.Range,
-                range = range,
+                range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
                 height = height,
             });
             if (lifetime >= 0f) ent.Destroy(lifetime);
@@ -326,7 +450,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public static Ent Reveal(in ME.BECS.Players.PlayerAspect owner, in float3 position, float sizeX, float sizeY, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
+        public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, float sizeX, float sizeY, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
@@ -334,8 +458,43 @@ namespace ME.BECS.FogOfWar {
             entTr.rotation = quaternion.identity;
             ent.Set(new FogOfWarRevealerComponent() {
                 type = (byte)RevealType.Rect,
-                range = sizeX,
-                rangeY = sizeY,
+                range = FogOfWarUtils.WorldToFogMapUValue(in props, in sizeX),
+                rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, in sizeY),
+                height = height,
+            });
+            if (lifetime >= 0f) ent.Destroy(lifetime);
+            return ent;
+        }
+
+        [INLINE(256)]
+        public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in UnityEngine.Rect rect, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
+            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.position = new float3(rect.center.x, 0f, rect.center.y);
+            entTr.rotation = quaternion.identity;
+            ent.Set(new FogOfWarRevealerComponent() {
+                type = (byte)RevealType.Rect,
+                range = FogOfWarUtils.WorldToFogMapUValue(in props, rect.width),
+                rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, rect.height),
+                height = height,
+            });
+            if (lifetime >= 0f) ent.Destroy(lifetime);
+            return ent;
+        }
+
+        [INLINE(256)]
+        public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in RectUInt rect, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
+            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            var pos = FogOfWarUtils.FogMapToWorldPosition(in props, rect.position);// + FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(rect.width, rect.height)) * 0.5f;
+            entTr.position = new float3(pos.x, 0f, pos.z);
+            entTr.rotation = quaternion.identity;
+            ent.Set(new FogOfWarRevealerComponent() {
+                type = (byte)RevealType.Rect,
+                range = rect.width,
+                rangeY = rect.height,
                 height = height,
             });
             if (lifetime >= 0f) ent.Destroy(lifetime);

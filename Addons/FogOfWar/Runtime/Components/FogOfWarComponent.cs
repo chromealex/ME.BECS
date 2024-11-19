@@ -56,7 +56,7 @@ namespace ME.BECS.FogOfWar {
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarShadowCopyPointsComponent : IComponent {
 
-        public MemArrayAuto<float3> points;
+        public MemArrayAuto<RectUInt> points;
 
     }
 
@@ -71,17 +71,20 @@ namespace ME.BECS.FogOfWar {
         /// Rect type: sizeX
         /// Range type: range
         /// </summary>
-        public float range;
+        public uint range;
         /// <summary>
         /// Rect type: sizeY
         /// Range type: minRange
         /// </summary>
-        public float rangeY;
+        public uint rangeY;
         public float height;
         
     }
     
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct FogOfWarShadowCopyWasVisible : IComponent {}
+    public struct FogOfWarShadowCopyWasVisibleAnytimeTag : IComponent {}
+
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct FogOfWarShadowCopyWasVisibleTag : IComponent {}
 
 }
