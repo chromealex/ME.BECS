@@ -19,6 +19,7 @@ namespace ME.BECS {
         public const string EXCEPTIONS_ASPECTS = "EXCEPTIONS_ASPECTS";
         
         public const string ARCHETYPES_INTERNAL_CHECKS = "ARCHETYPES_INTERNAL_CHECKS";
+        public const string LEAK_DETECTION = "LEAK_DETECTION";
 
     }
 

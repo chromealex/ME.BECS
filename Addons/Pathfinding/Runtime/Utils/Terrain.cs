@@ -98,7 +98,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static Unity.Collections.NativeArray<float> GetHeightMap(UnityEngine.TerrainData terrainData, Unity.Collections.Allocator alloc) {
             var resolution = terrainData.heightmapResolution;
-            var heightList = new Unity.Collections.NativeArray<float>(resolution * resolution, alloc);
+            var heightList = Unity.Collections.CollectionHelper.CreateNativeArray<float>(resolution * resolution, alloc);
             var map = terrainData.GetHeights(0, 0, resolution, resolution);
             for (var y = 0; y < resolution; y++) {
                 for (var x = 0; x < resolution; x++) {

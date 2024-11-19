@@ -45,9 +45,9 @@ namespace ME.BECS.Pathfinding {
 
             var config = this.agentTypesConfig.Value;
             var graphProperties = config.graphProperties;
-            this.graphs = new Unity.Collections.NativeArray<Ent>(config.agentTypes.Length, Constants.ALLOCATOR_DOMAIN);
+            this.graphs = Unity.Collections.CollectionHelper.CreateNativeArray<Ent>(config.agentTypes.Length, Constants.ALLOCATOR_DOMAIN);
             this.graphsPtr = (Ent*)this.graphs.GetUnsafePtr();
-            this.types = new Unity.Collections.NativeArray<ME.BECS.Units.AgentType>(config.agentTypes.Length, Constants.ALLOCATOR_DOMAIN);
+            this.types = Unity.Collections.CollectionHelper.CreateNativeArray<ME.BECS.Units.AgentType>(config.agentTypes.Length, Constants.ALLOCATOR_DOMAIN);
             var dependencies = new Unity.Collections.NativeArray<Unity.Jobs.JobHandle>(config.agentTypes.Length, Constants.ALLOCATOR_TEMP);
             for (int i = 0; i < config.agentTypes.Length; ++i) {
                 var agentConfig = config.agentTypes[i];

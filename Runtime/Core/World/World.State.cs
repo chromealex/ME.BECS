@@ -70,7 +70,7 @@ namespace ME.BECS {
             this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
             this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
             this.batches = Batches.Create(statePtr, stateProperties.entitiesCapacity);
-            this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.entitiesCapacity);
+            this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             this.random = RandomData.Create(statePtr);

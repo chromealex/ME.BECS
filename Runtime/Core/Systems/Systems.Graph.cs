@@ -206,6 +206,9 @@ namespace ME.BECS {
         [INLINE(256)]
         private JobHandle Run(ref World world, float dt, Method method, ushort subId, JobHandle dependsOn = default) {
             
+            return dependsOn;
+            /*
+            UnityEngine.Debug.LogWarning("You are trying to run obsolete method. Use graph code generator instead.");
             var list = new UnsafeList<NodeData>((int)this.index, Constants.ALLOCATOR_TEMP);
             ref var queue = ref this.runtimeQueue;
             queue.Clear();
@@ -276,6 +279,7 @@ namespace ME.BECS {
             JobUtils.RunScheduled();
 
             return resultDepends;
+            */
 
         }
 
@@ -300,6 +304,7 @@ namespace ME.BECS {
             this.rootNode->Dispose();
             _free(this.rootNode);
             _free(this.nodes);
+            _free(this.data);
             this.runtimeQueue.Dispose();
 
         }

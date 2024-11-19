@@ -38,7 +38,7 @@ namespace ME.BECS {
 
             if (this.generations.IsCreated == false) return 0u;
 
-            var size = 0u;
+            var size = TSize<Ents>.size;
             size += this.generations.GetReservedSizeInBytes();
             size += this.versions.GetReservedSizeInBytes();
             size += this.seeds.GetReservedSizeInBytes();

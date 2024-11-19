@@ -216,9 +216,9 @@ namespace ME.BECS {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_DOMAIN);
+            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
             allocatorPersistent.Allocator.Initialize(128 * 1024, true);
-            allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_DOMAIN);
+            allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 
             return allocatorPersistent;
@@ -227,9 +227,10 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
-            //if (allocatorPersistentValidBurst.Data.Value == false) return;
-            //allocatorPersistentValidBurst.Data.Value = false;
-            //allocatorPersistent.Dispose();
+            if (allocatorPersistentValidBurst.Data.IsCreated == false || allocatorPersistentValidBurst.Data.Value == false) return;
+            allocatorPersistentValidBurst.Data.Value = false;
+            allocatorPersistentValidBurst.Data.Dispose();
+            allocatorPersistent.Dispose();
             
         }
 
@@ -253,8 +254,9 @@ namespace ME.BECS {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_DOMAIN);
+            allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
             allocatorTemp.Allocator.Initialize(128 * 1024, false);
+            allocatorTempValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 
             return allocatorTemp;
@@ -263,8 +265,9 @@ namespace ME.BECS {
 
         public static void Dispose() {
             
-            if (allocatorTempValidBurst.Data.Value == false) return;
+            if (allocatorTempValidBurst.Data.IsCreated == false || allocatorTempValidBurst.Data.Value == false) return;
             allocatorTempValidBurst.Data.Value = false;
+            allocatorTempValidBurst.Data.Dispose();
             allocatorTemp.Dispose();
             
         }
@@ -404,6 +407,9 @@ namespace ME.BECS {
             ref var worldsStorage = ref WorldsStorage.worlds;
             worldsStorage.Get(world.id) = default;
             
+            #if UNITY_EDITOR
+            EntEditorName.Dispose(world.id);
+            #endif
             WorldsParent.Clear(world.id);
 
         }

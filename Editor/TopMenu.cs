@@ -23,6 +23,13 @@ namespace ME.BECS.Editor {
             CodeGenerator.GenerateComponentsParallelFor();
             
         }
+        
+        [UnityEditor.MenuItem("ME.BECS/Internal/Print Allocations")]
+        public static void PrintAllocations() {
+            
+            LeakDetector.PrintAllocated();
+            
+        }
         #endif
 
     }

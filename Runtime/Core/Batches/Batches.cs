@@ -58,17 +58,17 @@ namespace ME.BECS {
     
     public unsafe struct BatchItem {
 
-        public Ent ent;
         private BatchList addItems;
         private BatchList removeItems;
         public LockSpinner lockIndex;
+        public ushort entGen;
         public uint Count;
         public bool isCreated => this.addItems.isCreated == true || this.removeItems.isCreated == true;
 
         [INLINE(256)]
         public void Apply(State* state, uint entId, ref Archetypes archetypes) {
 
-            if (this.ent.IsAlive() == false) {
+            if (Ents.IsAlive(state, entId, out var gen) == false || gen != this.entGen) {
                 this.addItems.Dispose();
                 this.removeItems.Dispose();
                 return;
@@ -120,7 +120,7 @@ namespace ME.BECS {
         }
 
         public uint GetReservedSizeInBytes() {
-            var size = 0u;
+            var size = TSize<BatchItem>.size;
             size += this.addItems.list.GetReservedSizeInBytes();
             size += this.removeItems.list.GetReservedSizeInBytes();
             return size;
@@ -157,7 +157,7 @@ namespace ME.BECS {
 
             if (state->batches.items.IsCreated == false) return 0u;
 
-            var size = 0u;
+            var size = TSize<Batches>.size;
             for (uint i = 0u; i < state->batches.items.Length; ++i) {
                 ref var item = ref state->batches.items[in state->allocator, i];
                 size += item.GetReservedSizeInBytes();
@@ -414,7 +414,7 @@ namespace ME.BECS {
             {
                 ref var item = ref state->batches.arr[state, ent.id];
                 item.lockIndex.Lock();
-                item.ent = ent;
+                item.entGen = ent.gen;
                 {
                     var wasCount = item.Count;
                     {
@@ -446,7 +446,7 @@ namespace ME.BECS {
             {
                 ref var item = ref state->batches.arr[state, ent.id];
                 item.lockIndex.Lock();
-                item.ent = ent;
+                item.entGen = ent.gen;
                 {
                     var wasCount = item.Count;
                     {

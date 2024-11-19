@@ -84,7 +84,7 @@ namespace ME.BECS {
         public static T* _makeDefault<T>() where T : unmanaged {
 
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
+            LeakDetector.Track(ptr);
             return (T*)ptr;
 
         }
@@ -92,12 +92,12 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _resizeArray<T>(ref T** arr, uint length, uint newLength) where T : unmanaged {
 
-            var ptr = (T**)UnsafeUtility.Malloc(newLength * sizeof(T*), TAlign<byte>.alignInt, ALLOCATOR);
+            var ptr = (T**)_make((uint)(newLength * sizeof(T*)), TAlign<byte>.alignInt, ALLOCATOR);
             if (arr != null) {
                 for (int i = 0; i < length; ++i) {
                     ptr[i] = arr[i];
                 }
-                UnsafeUtility.Free(arr, ALLOCATOR);
+                _free(arr, ALLOCATOR);
             }
             arr = ptr;
 
@@ -110,6 +110,7 @@ namespace ME.BECS {
 
                 var size = newLength * TSize<T>.size;
                 var ptr = (T*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
+                LeakDetector.Track(ptr);
                 //var ptr = (T*)UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
                 UnsafeUtility.MemClear(ptr, size);
                 if (arr != null) {
@@ -148,11 +149,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static byte* _make(uint size) {
-            
+
             var ptr = (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
+            LeakDetector.Track(ptr);
             return ptr;
-            //var ptr = UnsafeUtility.Malloc(size, TAlign<byte>.alignInt, ALLOCATOR);
-            //return (byte*)ptr;
 
         }
 
@@ -160,7 +160,7 @@ namespace ME.BECS {
         public static T* _make<T>(T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
+            LeakDetector.Track(ptr);
             *(T*)ptr = obj;
             
             return (T*)ptr;
@@ -172,7 +172,7 @@ namespace ME.BECS {
             
             var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
-            //var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
+            LeakDetector.Track(ptr);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             var tPtr = (T*)ptr;
             *tPtr = firstElement;
@@ -185,7 +185,7 @@ namespace ME.BECS {
             
             var size = TSize<T>.sizeInt * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
-            //var ptr = UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
+            LeakDetector.Track(ptr);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             
             return (T*)ptr;
@@ -196,7 +196,7 @@ namespace ME.BECS {
         public static T* _make<T>(in T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            //var ptr = UnsafeUtility.Malloc(TSize<T>.sizeInt, TAlign<T>.alignInt, ALLOCATOR);
+            LeakDetector.Track(ptr);
             *(T*)ptr = obj;
             
             return (T*)ptr;
@@ -256,8 +256,8 @@ namespace ME.BECS {
         public static void _free<T>(ref T* obj) where T : unmanaged {
             
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
-            //UnsafeUtility.Free(obj, ALLOCATOR);
             obj = null;
 
         }
@@ -266,8 +266,8 @@ namespace ME.BECS {
         public static void _free<T>(T* obj) where T : unmanaged {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
-            //UnsafeUtility.Free(obj, ALLOCATOR);
 
         }
 
@@ -275,8 +275,8 @@ namespace ME.BECS {
         public static void _free(ref void* obj) {
             
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
-            //UnsafeUtility.Free(obj, ALLOCATOR);
             obj = null;
 
         }
@@ -287,6 +287,7 @@ namespace ME.BECS {
 
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
+                LeakDetector.Track(ptr);
                 return ptr;
             }
             return UnsafeUtility.Malloc(size, align, allocator);
@@ -298,6 +299,7 @@ namespace ME.BECS {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
+                LeakDetector.Track(ptr);
                 return ptr;
             }
             return UnsafeUtility.Malloc(size, align, allocator);
@@ -308,9 +310,11 @@ namespace ME.BECS {
         public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
+                LeakDetector.Free(obj);
                 Unity.Collections.AllocatorManager.Free(allocator, obj);
                 return;
             }
+            LeakDetector.Free(obj);
             UnsafeUtility.Free(obj, allocator);
 
         }
@@ -319,9 +323,11 @@ namespace ME.BECS {
         public static void _free(void* obj, Unity.Collections.Allocator allocator) {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
+                LeakDetector.Free(obj);
                 Unity.Collections.AllocatorManager.Free(allocator, obj);
                 return;
             }
+            LeakDetector.Free(obj);
             UnsafeUtility.Free(obj, allocator);
 
         }

@@ -71,7 +71,7 @@ namespace ME.BECS.Network {
 
         }
 
-        public void FixedUpdate() {
+        public virtual void FixedUpdate() {
             if (this.networkModule is null) {
                 // Use default initializer behaviour if network module not found as FIXED_UPDATE
                 this.previousFrameDependsOn.Complete();
@@ -80,7 +80,7 @@ namespace ME.BECS.Network {
             }
         }
 
-        public void Update() {
+        public virtual void Update() {
             
             //this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             

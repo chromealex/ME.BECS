@@ -278,12 +278,7 @@ namespace ME.BECS {
         public void Dispose() {
 
             E.IS_CREATED(this);
-            if (((Unity.Collections.AllocatorManager.AllocatorHandle)this.allocator).IsCustomAllocator == true) {
-                Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
-            } else {
-                _free(this.ptr, this.allocator);
-            }
-
+            _free(this.ptr, this.allocator);
             this = default;
 
         }
@@ -291,12 +286,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void DisposeReadonly() {
 
-            if (((Unity.Collections.AllocatorManager.AllocatorHandle)this.allocator).IsCustomAllocator == true) {
-                Unity.Collections.AllocatorManager.Free(this.allocator, this.ptr);
-            } else {
-                _free(this.ptr, this.allocator);
-            }
-
+            _free(this.ptr, this.allocator);
+            
         }
 
         [INLINE(256)]

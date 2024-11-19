@@ -186,6 +186,11 @@ namespace ME.BECS.Views {
                 this.info = _make(info);
             }
 
+            public void Dispose() {
+                _free(this.info);
+                this = default;
+            }
+
         }
         
     }
@@ -296,6 +301,8 @@ namespace ME.BECS.Views {
                 prefabId = 0u,
                 properties = properties,
                 beginFrameState = _make(new BeginFrameState()),
+                applyStateCounter = _make<uint>(0u),
+                updateCounter = _make<uint>(0u),
                 prefabIdToInfo = new UIntDictionary<SourceRegistry.InfoRef>(ref allocator, properties.instancesRegistryCapacity),
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
@@ -304,20 +311,18 @@ namespace ME.BECS.Views {
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
                 renderingOnSceneUpdateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: Constants.ALLOCATOR_DOMAIN),
+                renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST),
+                renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneRenderIndexToEnt = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneEntToPrefabId = new MemArray<uint>(ref allocator, entitiesCapacity),
-                applyStateCounter = _make<uint>(0u),
-                updateCounter = _make<uint>(0u),
-                toAssign = new UnsafeParallelHashMap<uint, uint>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                dirty = new UnsafeList<byte>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
-                toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_DOMAIN),
+                toAssign = new UnsafeParallelHashMap<uint, uint>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                dirty = new UnsafeList<byte>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
             };
 
         }
@@ -327,6 +332,12 @@ namespace ME.BECS.Views {
         }
 
         public void Dispose(State* state) {
+
+            var e = this.prefabIdToInfo.GetEnumerator(this.viewsWorld);
+            while (e.MoveNext() == true) {
+                var kv = e.Current;
+                kv.value.Dispose();
+            }
             
             _free(ref this.beginFrameState);
             _free(ref this.applyStateCounter);
@@ -338,7 +349,11 @@ namespace ME.BECS.Views {
             if (this.dirty.IsCreated == true) this.dirty.Dispose();
             if (this.toAssign.IsCreated == true) this.toAssign.Dispose();
             if (this.toChange.IsCreated == true) this.toChange.Dispose();
-            
+            if (this.toRemoveTemp.IsCreated == true) this.toChange.Dispose();
+            if (this.toAddTemp.IsCreated == true) this.toChange.Dispose();
+
+            this = default;
+
         }
 
     }
@@ -458,10 +473,11 @@ namespace ME.BECS.Views {
 
         public void Dispose() {
 
+            var world = this.data->viewsWorld;
             this.provider.Dispose(this.data->viewsWorld.state, this.data);
             this.data->Dispose(this.data->viewsWorld.state);
             _free(this.data);
-            this.data->viewsWorld.Dispose();
+            world.Dispose();
             this = default;
 
         }

@@ -42,8 +42,8 @@ namespace ME.BECS.Network {
         public struct StatesStorageProperties {
 
             public static StatesStorageProperties Default => new StatesStorageProperties() {
-                capacity = 20u,
-                copyPerTick = 10,
+                capacity = 10u,
+                copyPerTick = 30u,
             };
 
             [UnityEngine.Tooltip("How many states we need to store.")]

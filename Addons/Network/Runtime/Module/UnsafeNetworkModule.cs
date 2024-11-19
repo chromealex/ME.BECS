@@ -461,9 +461,14 @@ namespace ME.BECS.Network {
                 for (uint i = 0u; i < this.entries.Length; ++i) {
 
                     ref var entry = ref this.entries[i];
-                    if (entry.state != null) entry.state->Dispose();
+                    if (entry.state != null) {
+                        entry.state->Dispose();
+                        _free(entry.state);
+                    }
                     
                 }
+                
+                if (this.resetState != null) _free(this.resetState);
 
                 this = default;
 
@@ -476,6 +481,7 @@ namespace ME.BECS.Network {
                     ref var entry = ref this.entries[i];
                     if (tick > entry.tick && entry.state != null) {
                         entry.state->Dispose();
+                        _free(entry.state);
                         entry = default;
                     }
                     
@@ -734,6 +740,7 @@ namespace ME.BECS.Network {
         public void Dispose() {
             if (this.networkTransport != null) this.networkTransport.Dispose();
             this.data->Dispose();
+            _free(this.data);
             this = default;
         }
 
