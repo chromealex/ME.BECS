@@ -376,7 +376,7 @@ namespace ME.BECS.Network {
 
             private void Put(State* state) {
 
-                if (this.resetState == null) this.resetState = State.Clone(this.connectedWorldState);
+                if (this.resetState == null) this.SaveResetState();
                 
                 ref var item = ref this.entries[this.rover];
                 if (item.state != null) {
@@ -519,6 +519,14 @@ namespace ME.BECS.Network {
 
             }
 
+            public void SaveResetState() {
+                if (this.resetState == null) {
+                    this.resetState = State.Clone(this.connectedWorldState);
+                } else {
+                    this.resetState->CopyFrom(in *this.connectedWorldState);
+                }
+            }
+
         }
 
         public struct Data {
@@ -587,6 +595,11 @@ namespace ME.BECS.Network {
                 this.previousTimestamp = this.currentTimestamp;
                 this.currentTimestamp = timeFromStart;
                 Logger.Network.LogInfo($"SetServerTime: {timeFromStart} => tick: {this.GetTargetTick()}", true);
+            }
+
+            [INLINE(256)]
+            public void SaveResetState() {
+                this.statesStorage.SaveResetState();
             }
 
             [INLINE(256)]
@@ -768,10 +781,15 @@ namespace ME.BECS.Network {
         public void SetServerStartTime(double startTime, in World world) {
             this.data->SetServerStartTime(startTime, in world);
         }
-        
+
         [INLINE(256)]
         public void SetServerTime(double timeFromStart) {
             this.data->SetServerTime(timeFromStart);
+        }
+
+        [INLINE(256)]
+        public void SaveResetState() {
+            this.data->SaveResetState();
         }
 
         [INLINE(256)]

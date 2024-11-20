@@ -102,10 +102,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Set<T>(in this Ent ent) where T : unmanaged, IAspect {
+        public static T Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
             var world = ent.World;
             AspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
+            return ent.GetAspect<T>();
             
         }
 

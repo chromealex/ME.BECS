@@ -15,6 +15,7 @@ namespace ME.BECS.FogOfWar {
         private readonly float sector;
         private readonly bool checkSector;
         
+        [INLINE(256)]
         public FowMathSector(in FogOfWarStaticComponent props, in float3 position, in quaternion rotation, float sector) {
             this.position = position.xz;
             this.lookDirection = math.normalize(math.mul(rotation, math.forward())).xz;
@@ -22,6 +23,7 @@ namespace ME.BECS.FogOfWar {
             this.checkSector = sector > 0f && sector < 360f;
         }
 
+        [INLINE(256)]
         public bool IsValid(in FogOfWarStaticComponent props, uint x, uint y) {
             if (this.checkSector == false) return true;
             var dir = math.normalize(FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(x, y)).xz - this.position);
@@ -53,11 +55,12 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static void Write(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect unitTr, in UnitAspect unit) {
 
-            var pos = WorldToFogMapPosition(in props, unitTr.GetWorldMatrixPosition());
+            var worldPos = unitTr.GetWorldMatrixPosition();
+            var pos = WorldToFogMapPosition(in props, worldPos);
             var fowRange = WorldToFogMapValue(in props, math.sqrt(unit.readSightRangeSqr));
             var fowRangeMin = WorldToFogMapValue(in props, math.sqrt(unit.readMinSightRangeSqr));
-            var height = unitTr.GetWorldMatrixPosition().y + unit.readHeight;
-            var sector = new FowMathSector(in props, unitTr.GetWorldMatrixPosition(), unitTr.GetWorldMatrixRotation(), unit.readSector);
+            var height = worldPos.y + unit.readHeight;
+            var sector = new FowMathSector(in props, worldPos, unitTr.GetWorldMatrixRotation(), unit.readSector);
             SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, fowRangeMin, fowRange, height, in sector);
 
         }
@@ -92,19 +95,36 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, float height, uint fowRange, uint fowRangeMin) {
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, float height, uint fowRange, uint fowRangeMin, in FowMathSector sector = default) {
 
             var fowPos = WorldToFogMapPosition(in props, position);
             var fowHeight = position.y + height;
-            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, default);
+            SetVisibleRange(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector);
 
         }
 
         [INLINE(256)]
-        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, uint range, uint rangeMin) {
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, uint range, uint rangeMin, in FowMathSector sector = default) {
 
             var worldPos = tr.GetWorldMatrixPosition();
-            WriteRange(in props, in fow, in worldPos, height, range, rangeMin);
+            WriteRange(in props, in fow, in worldPos, height, range, rangeMin, in sector);
+
+        }
+
+        [INLINE(256)]
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in float3 position, float height, uint fowRange, uint fowRangeMin, byte part, in FowMathSector sector = default) {
+
+            var fowPos = WorldToFogMapPosition(in props, position);
+            var fowHeight = position.y + height;
+            SetVisibleRangePartial(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector, part);
+
+        }
+
+        [INLINE(256)]
+        public static void WriteRange(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, uint range, uint rangeMin, byte part, in FowMathSector sector = default) {
+
+            var worldPos = tr.GetWorldMatrixPosition();
+            WriteRange(in props, in fow, in worldPos, height, range, rangeMin, part, in sector);
 
         }
 
@@ -127,6 +147,16 @@ namespace ME.BECS.FogOfWar {
             var fowPos = WorldToFogMapPosition(in props, worldPos);
             var fowHeight = worldPos.y + height;
             SetVisibleRect(in props, in fow, (int)fowPos.x - (int)math.ceil(fowRangeX * 0.5f), (int)fowPos.y - (int)math.ceil(fowRangeY * 0.5f), (int)fowRangeX, (int)fowRangeY, fowHeight);
+
+        }
+
+        [INLINE(256)]
+        public static void WriteRect(in FogOfWarStaticComponent props, in FogOfWarComponent fow, in TransformAspect tr, float height, uint fowRangeX, uint fowRangeY, byte part) {
+
+            var worldPos = tr.GetWorldMatrixPosition();
+            var fowPos = WorldToFogMapPosition(in props, worldPos);
+            var fowHeight = worldPos.y + height;
+            SetVisibleRectPartial(in props, in fow, (int)fowPos.x - (int)math.ceil(fowRangeX * 0.5f), (int)fowPos.y - (int)math.ceil(fowRangeY * 0.5f), (int)fowRangeX, (int)fowRangeY, fowHeight, part);
 
         }
 
@@ -302,12 +332,85 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static void SetVisibleRectPartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int sizeX, int sizeY, float height, byte part) {
+
+            var rMin = (uint)math.max(0, x0);
+            var rMax = (uint)math.min(x0 + sizeX, props.size.x);
+            var yMin = (uint)math.max(0, y0);
+            var yMax = (uint)math.min(y0 + sizeY, props.size.y);
+            if (part == 0) {
+                /*
+                 * + -
+                 * - -
+                 */
+                rMax = (rMax - rMin) / 2 + rMin;
+                yMax = (yMax - yMin) / 2 + yMin;
+            } else if (part == 1) {
+                /*
+                 * - +
+                 * - -
+                 */
+                rMin = (rMax - rMin) / 2 + rMin;
+                yMax = (yMax - yMin) / 2 + yMin;
+            } else if (part == 2) {
+                /*
+                 * - -
+                 * + -
+                 */
+                rMax = (rMax - rMin) / 2 + rMin;
+                yMin = (yMax - yMin) / 2 + yMin;
+            } else if (part == 3) {
+                /*
+                 * - -
+                 * - +
+                 */
+                rMin = (rMax - rMin) / 2 + rMin;
+                yMin = (yMax - yMin) / 2 + yMin;
+            }
+            if (height > 0f) {
+                var src = FogOfWarData.fill255.Data.GetPtr();
+                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                for (var y = yMin; y < yMax; ++y) {
+                    var s = y * props.size.x;
+                    var fromIdx = s + rMin;
+                    var toIdx = s + rMax;
+                    var checkHeight = true;
+                    for (uint h = fromIdx; h < toIdx; ++h) {
+                        if (height > 0f && props.heights[toIdx - fromIdx] > height) {
+                            checkHeight = false;
+                            break;
+                        }
+                    }
+                    if (checkHeight == false) continue;
+                    var count = (toIdx - fromIdx) * BYTES_PER_NODE;
+                    _memcpy(src, nodesPtr + fromIdx, count);
+                    _memcpy(src, exploredPtr + fromIdx, count);
+                }
+            } else {
+                var src = FogOfWarData.fill255.Data.GetPtr();
+                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                for (var y = yMin; y < yMax; ++y) {
+                    var s = y * props.size.x;
+                    var fromIdx = s + rMin;
+                    var toIdx = s + rMax;
+                    var count = (toIdx - fromIdx) * BYTES_PER_NODE;
+                    _memcpy(src, nodesPtr + fromIdx, count);
+                    _memcpy(src, exploredPtr + fromIdx, count);
+                }
+            }
+            
+        }
+
+        [INLINE(256)]
         public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, float height, in FowMathSector sector) {
 
             var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
             var rMin = math.min(radius, x0);
-            var rMax = math.min(radius, props.size.x);
+            var rMax = math.min(radius, (int)props.size.x);
+            var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
             for (var r = -rMin; r < rMax; ++r) {
 
                 var x = x0 + r;
@@ -319,7 +422,9 @@ namespace ME.BECS.FogOfWar {
                 for (var y = yMin; y < yMax; ++y) {
 
                     if (y < 0 || y >= props.size.y) continue;
-                    if (IsVisible(in props, in map, (uint)x, (uint)y) == true) {
+                    // IsVisible
+                    var index = y * (int)props.size.x + x;
+                    if (nodesPtr[index] > 0) {
                         continue;
                     }
 
@@ -329,9 +434,8 @@ namespace ME.BECS.FogOfWar {
                     if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
 
                     if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
-                        var index = y * (int)props.size.x + x;
-                        map.nodes[index * BYTES_PER_NODE] = 255;
-                        map.explored[index * BYTES_PER_NODE] = 255;
+                        map.nodes[index] = 255;
+                        map.explored[index] = 255;
                     }
 
                 }
@@ -345,18 +449,64 @@ namespace ME.BECS.FogOfWar {
 
             var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
-            for (var r = -radius; r < radius; ++r) {
+            int rMin = 0;
+            int rMax = 0;
+            if (part == 0 || part == 2) {
+                /*
+                 * + -
+                 * + -
+                 */
+                rMin = math.min(radius, x0);
+                rMax = 0;
+            } else if (part == 1 || part == 3) {
+                /*
+                 * - +
+                 * - +
+                 */
+                rMin = 0;
+                rMax = math.min(radius, (int)props.size.x);
+            }
+
+            var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+            for (var r = -rMin; r < rMax; ++r) {
 
                 var x = x0 + r;
                 if (x < 0 || x >= props.size.x) continue;
 
                 var hh = (int)math.sqrt(radiusSqr - r * r);
-                var min = y0 - hh;//math.min(0, y0 - hh);
-                var max = y0 + hh;//math.min(props.size.y, (uint)(y0 + hh));
-                for (var y = min; y < max; ++y) {
+                var yMin = math.max(0, y0 - hh);
+                var yMax = (int)math.min(props.size.y, (uint)(y0 + hh));
+                if (part == 0) {
+                    /*
+                     * - -
+                     * + -
+                     */
+                    yMax = (yMax + yMin) / 2;
+                } else if (part == 2) {
+                    /*
+                     * + -
+                     * - -
+                     */
+                    yMin = (yMax + yMin) / 2;
+                } else if (part == 1) {
+                    /*
+                     * - -
+                     * - +
+                     */
+                    yMax = (yMax + yMin) / 2;
+                } else if (part == 3) {
+                    /*
+                     * - +
+                     * - -
+                     */
+                    yMin = (yMax + yMin) / 2;
+                }
+                for (var y = yMin; y < yMax; ++y) {
 
                     if (y < 0 || y >= props.size.y) continue;
-                    if (IsVisible(in props, in map, (uint)x, (uint)y) == true) {
+                    // IsVisible
+                    var index = y * (int)props.size.x + x;
+                    if (nodesPtr[index] > 0) {
                         continue;
                     }
 
@@ -366,9 +516,8 @@ namespace ME.BECS.FogOfWar {
                     if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
 
                     if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
-                        var index = y * (int)props.size.x + x;
-                        map.nodes[index * BYTES_PER_NODE] = 255;
-                        map.explored[index * BYTES_PER_NODE] = 255;
+                        map.nodes[index] = 255;
+                        map.explored[index] = 255;
                     }
 
                 }
@@ -436,15 +585,53 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, float range, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
-            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            var entTr = ent.GetOrCreateAspect<TransformAspect>();
-            entTr.position = position;
-            entTr.rotation = quaternion.identity;
+            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
-                type = (byte)RevealType.Range,
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
                 height = height,
             });
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.position = position;
+            entTr.rotation = quaternion.identity;
+            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+                var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
+                part.SetParent(ent);
+                part.Set<TransformAspect>();
+                ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
+                part.Set(new FogOfWarRevealerIsRangeTag());
+                part.Set(new FogOfWarRevealerPartialComponent() {
+                    part = partIndex,
+                });
+            }
+            if (lifetime >= 0f) ent.Destroy(lifetime);
+            return ent;
+        }
+
+        [INLINE(256)]
+        public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, float range, float height, Sector sector, float lifetime = -1f, in JobInfo jobInfo = default) {
+            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            ent.Set(new FogOfWarRevealerIsPartialTag());
+            ent.Set(new FogOfWarRevealerComponent() {
+                range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
+                height = height,
+            });
+            ent.Set(new FogOfWarSectorRevealerComponent() {
+                value = sector.sector,
+            });
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.position = position;
+            entTr.rotation = quaternion.identity;
+            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+                var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
+                part.SetParent(ent);
+                part.Set<TransformAspect>();
+                ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
+                part.Set(new FogOfWarRevealerIsRangeTag());
+                part.Set(new FogOfWarRevealerPartialComponent() {
+                    part = partIndex,
+                });
+                part.Set(new FogOfWarRevealerIsSectorTag());
+            }
             if (lifetime >= 0f) ent.Destroy(lifetime);
             return ent;
         }
@@ -452,16 +639,25 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, float sizeX, float sizeY, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
-            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            var entTr = ent.GetOrCreateAspect<TransformAspect>();
-            entTr.position = position;
-            entTr.rotation = quaternion.identity;
+            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
-                type = (byte)RevealType.Rect,
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, in sizeX),
                 rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, in sizeY),
                 height = height,
             });
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.position = position;
+            entTr.rotation = quaternion.identity;
+            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+                var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
+                part.SetParent(ent);
+                part.Set<TransformAspect>();
+                ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
+                part.Set(new FogOfWarRevealerIsRectTag());
+                part.Set(new FogOfWarRevealerPartialComponent() {
+                    part = partIndex,
+                });
+            }
             if (lifetime >= 0f) ent.Destroy(lifetime);
             return ent;
         }
@@ -469,16 +665,25 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in UnityEngine.Rect rect, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
-            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
+            ent.Set(new FogOfWarRevealerIsPartialTag());
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = new float3(rect.center.x, 0f, rect.center.y);
             entTr.rotation = quaternion.identity;
-            ent.Set(new FogOfWarRevealerComponent() {
-                type = (byte)RevealType.Rect,
-                range = FogOfWarUtils.WorldToFogMapUValue(in props, rect.width),
-                rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, rect.height),
-                height = height,
-            });
+            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+                var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
+                part.SetParent(ent);
+                part.Set<TransformAspect>();
+                ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
+                part.Set(new FogOfWarRevealerComponent() {
+                    range = FogOfWarUtils.WorldToFogMapUValue(in props, rect.width),
+                    rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, rect.height),
+                    height = height,
+                });
+                part.Set(new FogOfWarRevealerIsRectTag());
+                part.Set(new FogOfWarRevealerPartialComponent() {
+                    part = partIndex,
+                });
+            }
             if (lifetime >= 0f) ent.Destroy(lifetime);
             return ent;
         }
@@ -486,17 +691,26 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in RectUInt rect, float height, float lifetime = -1f, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
-            ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            var entTr = ent.GetOrCreateAspect<TransformAspect>();
-            var pos = FogOfWarUtils.FogMapToWorldPosition(in props, rect.position);// + FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(rect.width, rect.height)) * 0.5f;
-            entTr.position = new float3(pos.x, 0f, pos.z);
-            entTr.rotation = quaternion.identity;
+            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
-                type = (byte)RevealType.Rect,
                 range = rect.width,
                 rangeY = rect.height,
                 height = height,
             });
+            var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            var pos = FogOfWarUtils.FogMapToWorldPosition(in props, rect.position);
+            entTr.position = new float3(pos.x, 0f, pos.z);
+            entTr.rotation = quaternion.identity;
+            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+                var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
+                part.SetParent(ent);
+                part.Set<TransformAspect>();
+                ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
+                part.Set(new FogOfWarRevealerIsRectTag());
+                part.Set(new FogOfWarRevealerPartialComponent() {
+                    part = partIndex,
+                });
+            }
             if (lifetime >= 0f) ent.Destroy(lifetime);
             return ent;
         }
