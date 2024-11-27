@@ -17,6 +17,7 @@ namespace ME.BECS.Editor.CsvImporter {
 
         private Button loadingButton;
         private Label loadingIndicator;
+        private VisualElement loadingIndicatorContainer;
         private Label result;
         
         private void LoadStyle() {
@@ -67,19 +68,27 @@ namespace ME.BECS.Editor.CsvImporter {
                 }
 
                 this.loadingButton.SetEnabled(false);
-                this.loadingIndicator.style.display = DisplayStyle.Flex;
+                this.loadingIndicatorContainer.style.display = DisplayStyle.Flex;
                 this.Load(strings, AssetDatabase.GetAssetPath(targetDir.objectReferenceValue), () => {
                     this.loadingButton.SetEnabled(true);
-                    this.loadingIndicator.style.display = DisplayStyle.None;
+                    this.loadingIndicatorContainer.style.display = DisplayStyle.None;
                 });
             }) { text = "Load" };
             button.AddToClassList("load-button");
             this.loadingButton = button;
             root.Add(button);
 
+            this.loadingIndicatorContainer = new VisualElement();
+            this.loadingIndicatorContainer.AddToClassList("loader");
+            root.Add(this.loadingIndicatorContainer);
+            
+            this.completeLabel = new Label();
+            this.completeLabel.AddToClassList("complete-progress");
+            this.loadingIndicatorContainer.Add(this.completeLabel);
+
             this.loadingIndicator = new Label();
-            this.loadingIndicator.AddToClassList("loader");
-            root.Add(this.loadingIndicator);
+            this.loadingIndicator.AddToClassList("label-progress");
+            this.loadingIndicatorContainer.Add(this.loadingIndicator);
 
             this.result = new Label();
             this.result.AddToClassList("result");
@@ -110,20 +119,23 @@ namespace ME.BECS.Editor.CsvImporter {
             }
             return this.loaderText.ToString();
         }
-        
+
+        private Label completeLabel;
         public void Load(string[] urls, string targetDir, System.Action callback) {
 
             this.result.RemoveFromClassList("hide");
             this.result.RemoveFromClassList("success");
             this.result.RemoveFromClassList("failed");
-            
-            var list = new scg::List<UnityEngine.Networking.UnityWebRequest>();
-            foreach (var url in urls) {
 
+            this.completeLabel.text = $"0/{urls.Length} Completed";
+            var list = new scg::List<UnityEngine.Networking.UnityWebRequest>();
+            for (var index = 0; index < urls.Length; ++index) {
+                
+                var url = urls[index];
                 var www = UnityEngine.Networking.UnityWebRequest.Get(url);
                 www.SendWebRequest();
                 list.Add(www);
-
+                
             }
 
             UnityEditor.EditorApplication.delayCall += OnDelayCall;
@@ -131,14 +143,17 @@ namespace ME.BECS.Editor.CsvImporter {
 
             void OnDelayCall() {
                 var allDone = true;
+                var completed = 0;
                 foreach (var item in list) {
                     if (item.isDone == false) {
                         allDone = false;
-                        break;
+                    } else {
+                        ++completed;
                     }
                 }
 
                 this.loadingIndicator.text = this.GetLoaderText();
+                this.completeLabel.text = $"{completed}/{urls.Length} Completed";
                 if (allDone == false) {
                     UnityEditor.EditorApplication.delayCall += OnDelayCall;
                 } else {
@@ -169,11 +184,10 @@ namespace ME.BECS.Editor.CsvImporter {
                         Debug.Log($"Configs with version {ver} has been updated");
                     }
 
-                    {
-                        // add project configs
+                    { // add project configs
                         foreach (var item in ObjectReferenceRegistry.data.items) {
-                            if (item.source is EntityConfig) {
-                                configs.Add(new ConfigFile((EntityConfig)item.source));
+                            if (item.source is EntityConfig config) {
+                                configs.Add(new ConfigFile(config));
                             }
                         }
                     }
@@ -185,7 +199,13 @@ namespace ME.BECS.Editor.CsvImporter {
                     foreach (var config in configs) {
                         CreateConfig(config);
                     }
-
+                    
+                    { // assign configs to ObjectReferenceRegistry
+                        foreach (var config in configs) {
+                            ObjectReferenceRegistry.data.Add(config.instance, out _);
+                        }
+                    }
+                    
                     for (var index = 0; index < data.Count; ++index) {
                         Parse(configs, configsPerItem[index], csvs[index]);
                     }
@@ -305,7 +325,7 @@ namespace ME.BECS.Editor.CsvImporter {
 
         public static void Parse(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
-            var components = TypeCache.GetTypesDerivedFrom<IComponent>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
+            var components = TypeCache.GetTypesDerivedFrom<IComponentBase>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var aspects = TypeCache.GetTypesDerivedFrom<IAspect>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var componentName = string.Empty;
             System.Type componentType = null;
@@ -409,6 +429,9 @@ namespace ME.BECS.Editor.CsvImporter {
                         }
 
                         if (component == null) {
+                            if (string.IsNullOrEmpty(field.Key) == true && comp.type.GetFields().Length == 0) {
+                                continue;
+                            }
                             Debug.LogWarning($"Key not found {field.Key} in component {comp.type.FullName}");
                             continue;
                         }
