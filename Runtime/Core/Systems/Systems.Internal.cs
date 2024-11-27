@@ -79,6 +79,7 @@ namespace ME.BECS {
 
         Undefined = 0,
         Awake,
+        Start,
         Update,
         Destroy,
         DrawGizmos,

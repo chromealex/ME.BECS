@@ -29,6 +29,9 @@ namespace ME.BECS.Units {
         public readonly void RemoveAll() => UnitUtils.DestroySelectionGroup(in this);
 
         [INLINE(256)]
+        public readonly void Destroy() => UnitUtils.DestroySelectionGroup(in this);
+
+        [INLINE(256)]
         public void Replace(in UnitSelectionTempGroupAspect group) {
 
             // clean up

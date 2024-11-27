@@ -8,9 +8,7 @@ namespace ME.BECS.Network {
         public FeaturesGraph.SystemsGraph featuresGraph;
         protected NetworkModule networkModule;
         
-        protected override void Awake() {
-            
-            base.Awake();
+        protected override void DoWorldAwake() {
             
             if (this.featuresGraph == null) {
                 Logger.Features.Error("Graph is null");
@@ -26,8 +24,11 @@ namespace ME.BECS.Network {
             WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.ViewsLoad);
             WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.OnViewsUpdate, 1);
 
+            this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.Initialized, UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+            base.DoWorldAwake();
+            
         }
-        
+
         protected override void Start() {
 
             if (this.world.isCreated == true) {

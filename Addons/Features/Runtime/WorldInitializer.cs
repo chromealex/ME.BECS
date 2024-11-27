@@ -9,9 +9,7 @@ namespace ME.BECS {
         public FeaturesGraph.SystemsGraph featuresGraphFixedUpdate;
         public FeaturesGraph.SystemsGraph featuresGraphLateUpdate;
 
-        protected override void Awake() {
-            
-            base.Awake();
+        protected override void DoWorldAwake() {
             
             if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null) {
                 Logger.Features.Error("Graphs are null");
@@ -24,6 +22,8 @@ namespace ME.BECS {
             if (this.featuresGraphLateUpdate != null) group.Add(this.featuresGraphLateUpdate.DoAwake(ref this.world, UpdateType.LATE_UPDATE));
             this.world.AssignRootSystemGroup(group);
 
+            base.DoWorldAwake();
+            
         }
 
         public void Update() {

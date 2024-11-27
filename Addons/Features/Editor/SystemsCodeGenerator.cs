@@ -17,10 +17,12 @@ namespace ME.BECS.Editor.Systems {
             //content.Add("/*");
             {
                 content.Add("// " + graph.name);
+                var contentFill = new scg::List<string>();
                 var startNodeIndex = 0;
                 //UnityEngine.Debug.LogWarning("GRAPH: " + graph.name);
                 innerMethods = new System.Collections.Generic.List<string>();
-                innerMethods = AddGraph<T>(this, startNodeIndex, methodName, content, graph);
+                innerMethods = AddGraph<T>(this, startNodeIndex, methodName, contentFill, graph);
+                content.AddRange(contentFill);
             }
             //content.Add("*/");
             content.Add("}");
@@ -46,12 +48,18 @@ namespace ME.BECS.Editor.Systems {
                         {
                             content.Add($"// {graph.name}");
                             content.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
-                            InitializeGraph(this, content, graph);
+                            content.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
+                            InitializeGraph(this, content, graph, id, 0);
                         }
                         content.Add("}");
                     }
                     {
                         this.AddMethod<IAwake>(graph, "OnAwake", out var caller, out var innerMethods);
+                        content.AddRange(innerMethods);
+                        content.AddRange(caller);
+                    }
+                    {
+                        this.AddMethod<IStart>(graph, "OnStart", out var caller, out var innerMethods);
                         content.AddRange(innerMethods);
                         content.AddRange(caller);
                     }
@@ -96,6 +104,7 @@ namespace ME.BECS.Editor.Systems {
                     content.Add("{");
                     content.Add($"SystemsStatic.RegisterMethod(GraphInitialize_{id}_{this.GetType().Name}, {graphId}, false);");
                     content.Add($"SystemsStatic.RegisterAwakeMethod(GraphOnAwake_{id}_{this.GetType().Name}, {graphId}, false);");
+                    content.Add($"SystemsStatic.RegisterStartMethod(GraphOnStart_{id}_{this.GetType().Name}, {graphId}, false);");
                     content.Add($"SystemsStatic.RegisterUpdateMethod(GraphOnUpdate_{id}_{this.GetType().Name}, {graphId}, false);");
                     content.Add($"SystemsStatic.RegisterDrawGizmosMethod(GraphOnDrawGizmos_{id}_{this.GetType().Name}, {graphId}, false);");
                     content.Add($"SystemsStatic.RegisterDestroyMethod(GraphOnDestroy_{id}_{this.GetType().Name}, {graphId}, false);");
@@ -114,29 +123,31 @@ namespace ME.BECS.Editor.Systems {
 
             public ME.BECS.Extensions.GraphProcessor.BaseGraph graph;
             public int index;
+            public int globalIndex;
 
             public override string ToString() {
-                return $"{GetId(this.graph)}_{this.index}";
+                return $"{GetId(this.graph)}_{(this.index >= 0 ? this.index.ToString() : $"__{(-this.index)}")}";
             }
 
         }
 
         public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, int startNodeIndex, string method, scg::List<string> content, SystemsGraph graph) where T : class {
 
-            static void AddNodesArrDefinition(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph, scg::List<string> arrMethodDef) {
+            var graphRootId = GetId(graph);
+            static void AddNodesArrDefinition(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph, scg::List<string> arrMethodDef, int graphRootId) {
 
-                content.Add($"var localNodes_{GetId(graph)} = (System.IntPtr*)graphNodes{GetId(graph)}_{generator.GetType().Name}.GetUnsafePtr();");
-                arrMethodDef.Add($"localNodes_{GetId(graph)}");
+                content.Add($"var systems = (System.IntPtr*)graphNodes{graphRootId}_{generator.GetType().Name}.GetUnsafePtr();");
+                arrMethodDef.Add($"systems");
                 
-                foreach (var node in graph.nodes) {
+                /*foreach (var node in graph.nodes) {
                     if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                        AddNodesArrDefinition(generator, content, graphNode.graphValue, arrMethodDef);
+                        AddNodesArrDefinition(generator, content, graphNode.graphValue, arrMethodDef, graphRootId);
                     }
-                }
+                }*/
             }
 
             var arrMethodDef = new scg::List<string>();
-            AddNodesArrDefinition(generator, content, graph, arrMethodDef);
+            AddNodesArrDefinition(generator, content, graph, arrMethodDef, graphRootId);
 
             var insertIndex = content.Count;
 
@@ -197,6 +208,7 @@ namespace ME.BECS.Editor.Systems {
                             var index = new GraphLink() {
                                 graph = n.graph,
                                 index = n.graph.GetNodeIndex(n),
+                                globalIndex = GetNodeIndex(graph, n, out _),
                             };
 
                             var depNode = n;
@@ -333,7 +345,7 @@ namespace ME.BECS.Editor.Systems {
                                         methodContent.Add($"dep{index.ToString()} = input;");
                                         AddApply(systemNode, index, ref schemeDependsOn);
                                         methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, dep{index.ToString()});");
-                                        methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)(localNodes_{GetId(index.graph)}[{index.index}]))->{method}(ref localContext{index.ToString()});");
+                                        methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)(systems[{index.globalIndex}]))->{method}(ref localContext{index.ToString()});");
                                         methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
                                         methodContent.Add("}");
                                         collectedDeps.Add($"dep{index.ToString()}");
@@ -426,7 +438,11 @@ namespace ME.BECS.Editor.Systems {
 
                     content.AddRange(containers);
 
-                    content.Add($"dependsOn = {lastDependency};");
+                    if (string.IsNullOrEmpty(lastDependency) == true) {
+                        //content.Clear();
+                    } else {
+                        content.Add($"dependsOn = {lastDependency};");
+                    }
 
                     content.Add("// Dependencies scheme:");
                     foreach (var sch in scheme) {
@@ -591,11 +607,27 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
-        public static void InitializeGraph(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph) {
-            var id = GetId(graph);
-            content.Add($"// {graph.name}");
-            content.Add($"graphNodes{id}_{generator.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({graph.nodes.Count}, allocator);");
-            var k = 0;
+        private static int GetNodeIndex(SystemsGraph graph, ME.BECS.Extensions.GraphProcessor.BaseNode sysNode, out bool found, int index = -1) {
+            found = false;
+            foreach (var node in graph.nodes) {
+                if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
+                    if (systemNode.system != null) ++index;
+                }
+                if (node == sysNode) {
+                    found = true;
+                    return index;
+                } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
+                    index = GetNodeIndex(graphNode.graphValue, sysNode, out found, index);
+                    if (found == true) {
+                        return index;
+                    }
+                }
+            }
+
+            return index;
+        }
+
+        public static int InitializeGraph(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
             foreach (var node in graph.nodes) {
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                     var system = systemNode.system;
@@ -604,18 +636,38 @@ namespace ME.BECS.Editor.Systems {
                     } else {
                         var type = system.GetType().FullName;
                         var systemType = EditorUtils.GetTypeName(systemNode.system.GetType());
-                        content.Add($"var item{id}_{k} = allocator.Allocate(TSize<{type}>.sizeInt, TAlign<{type}>.alignInt);");
-                        //content.Add($"_memclear(item{name}_{k}, TSize<{type}>.size);");
-                        content.Add($"*({systemType}*)item{id}_{k} = {GetDefinition(systemNode.system)};");
-                        content.Add($"TSystem<{systemType}>.index.Data = {k};");
-                        content.Add($"TSystemGraph<{systemType}>.index.Data = {graph.GetId()};");
-                        content.Add($"graphNodes{id}_{generator.GetType().Name}[{k}] = (System.IntPtr)item{id}_{k};");
+                        content.Add("{");
+                        content.Add($"var item = allocator.Allocate(TSize<{type}>.sizeInt, TAlign<{type}>.alignInt);");
+                        content.Add($"*({systemType}*)item = {GetDefinition(systemNode.system)};");
+                        content.Add($"TSystemGraph.Register<{systemType}>({rootGraphId}, item);");
+                        content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
+                        content.Add("}");
+                        ++index;
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                    InitializeGraph(generator, content, graphNode.graphValue);
+                    index = InitializeGraph(generator, content, graphNode.graphValue, rootGraphId, index);
                 }
-                ++k;
             }
+
+            return index;
+        }
+
+        public static int GetSystemsCount(SystemsGraph graph) {
+            var cnt = 0;
+            foreach (var node in graph.nodes) {
+                if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
+                    var system = systemNode.system;
+                    if (system == null) {
+                        
+                    } else {
+                        ++cnt;
+                    }
+                } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
+                    cnt += GetSystemsCount(graphNode.graphValue);
+                }
+            }
+
+            return cnt;
         }
 
         private static string GetDefinition(object system) {

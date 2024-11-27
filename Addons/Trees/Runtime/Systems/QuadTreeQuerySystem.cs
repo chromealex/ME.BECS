@@ -30,7 +30,7 @@ namespace ME.BECS {
         /// <summary>
         /// Select X units for each tree
         /// </summary>
-        public uint nearestCount;
+        public ushort nearestCount;
         /// <summary>
         /// Reset pos.y to zero
         /// </summary>
@@ -152,7 +152,8 @@ namespace ME.BECS {
             if (this.sector.IsValid(bounds.Center) == true) {
                 this.results.Add(obj);
             }
-            
+
+            if (this.max == 0u) return true;
             return this.results.Count < this.max; // immediately stop iterating at first hit
             // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
         }
@@ -193,7 +194,7 @@ namespace ME.BECS {
     
     [BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(QuadTreeInsertSystem))]
-    public unsafe struct QuadTreeQuerySystem : IUpdate {
+    public struct QuadTreeQuerySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
         public struct Job : IJobParallelForAspect<QuadTreeQueryAspect, TransformAspect> {
@@ -206,7 +207,6 @@ namespace ME.BECS {
                 var data = query.query;
                 var worldPos = tr.GetWorldMatrixPosition();
                 var worldRot = tr.GetWorldMatrixRotation();
-                if (data.ignoreY == 1) worldPos.y = 0f;
                 var sector = new MathSector(worldPos, worldRot, query.query.sector);
                 var ent = tr.ent;
                 
@@ -215,10 +215,12 @@ namespace ME.BECS {
 
                 if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, data.nearestCount > 0u ? data.nearestCount : 1u);
 
+                var q = query.readQuery;
                 if (data.nearestCount == 1u) {
-                    this.system.GetNearestFirst(query.readQuery.treeMask, in ent, in worldPos, in sector, query.readQuery.minRangeSqr, query.readQuery.rangeSqr, query.readQuery.ignoreSelf == 1 ? true : false, query.readQuery.ignoreY == 1 ? true : false);
+                    var nearest = this.system.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false);
+                    if (nearest.IsAlive() == true) query.results.results.Add(nearest);
                 } else {
-                    this.system.GetNearest(query.readQuery.treeMask, data.nearestCount, ref query.results.results, in ent, in worldPos, in sector, query.readQuery.minRangeSqr, query.readQuery.rangeSqr, query.readQuery.ignoreSelf == 1 ? true : false, query.readQuery.ignoreY == 1 ? true : false);
+                    this.system.GetNearest(q.treeMask, data.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, query.readQuery.ignoreY == 1 ? true : false);
                 }
 
             }
@@ -228,7 +230,7 @@ namespace ME.BECS {
         public void OnUpdate(ref SystemContext context) {
 
             var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            var handle = API.Query(in context).Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
+            var handle = context.Query().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
                 system = querySystem,
             });
             context.SetDependency(handle);

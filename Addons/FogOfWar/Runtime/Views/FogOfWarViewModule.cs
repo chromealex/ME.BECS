@@ -88,7 +88,7 @@ namespace ME.BECS.FogOfWar {
 
         public virtual void OnInitialize(in EntRO ent) {
 
-            this.fow = ent.World.GetSystem<CreateSystem>();
+            this.fow = ent.World.parent.GetSystem<CreateSystem>();
             this.UpdateVisibility(in ent, true);
             
         }

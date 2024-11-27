@@ -51,7 +51,7 @@ namespace ME.BECS.Commands {
         public void OnUpdate(ref SystemContext context) {
 
             var handle = context.Query().With<UnitAttackCommandComponent>().Schedule<CleanUpJob, UnitAspect>();
-            handle = Batches.Apply(handle, in context.world);
+            handle = context.Apply(handle);
             handle = context.Query(handle).With<CommandAttack>().With<IsCommandGroupDirty>().Schedule<MoveJob, UnitCommandGroupAspect>();
             context.SetDependency(handle);
             

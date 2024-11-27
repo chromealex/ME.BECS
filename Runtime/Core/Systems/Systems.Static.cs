@@ -2,15 +2,32 @@ namespace ME.BECS {
     
     using Unity.Collections.LowLevel.Unsafe;
 
-    public class TSystem<T> where T : unmanaged, ISystem {
+    public class TSystemGraph<T> where T : unmanaged, ISystem {
 
-        public static readonly Unity.Burst.SharedStatic<int> index = Unity.Burst.SharedStatic<int>.GetOrCreate<TSystem<T>>();
+        public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> dic = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<TSystemGraph<T>>();
 
     }
 
-    public class TSystemGraph<T> where T : unmanaged, ISystem {
+    public unsafe class TSystemGraph {
+        
+        public static void Register<T>(int graphId, void* ptr) where T : unmanaged, ISystem {
+            ref var dic = ref TSystemGraph<T>.dic.Data;
+            if (dic.IsCreated == false) dic = new UnsafeHashMap<int, System.IntPtr>(100, Constants.ALLOCATOR_DOMAIN);
+            if (dic.TryGetValue(graphId, out var sysPtr) == false) {
+                dic.Add(graphId, (System.IntPtr)ptr);
+            } else {
+                dic[graphId] = (System.IntPtr)ptr;
+            }
+        }
 
-        public static readonly Unity.Burst.SharedStatic<int> index = Unity.Burst.SharedStatic<int>.GetOrCreate<TSystemGraph<T>>();
+        public static bool GetSystem<T>(int graphId, out T* system) where T : unmanaged, ISystem {
+            system = null;
+            if (TSystemGraph<T>.dic.Data.TryGetValue(graphId, out var ptr) == true) {
+                system = (T*)ptr;
+                return true;
+            }
+            return false;
+        }
 
     }
 
@@ -23,6 +40,12 @@ namespace ME.BECS {
     public class SystemsStaticOnAwake {
 
         public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> dic = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<SystemsStaticOnAwake>();
+
+    }
+
+    public class SystemsStaticOnStart {
+
+        public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> dic = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<SystemsStaticOnStart>();
 
     }
 
@@ -54,6 +77,7 @@ namespace ME.BECS {
 
         public delegate void InitializeGraph();
         public delegate void OnAwake(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
+        public delegate void OnStart(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
         public delegate void OnUpdate(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
         public delegate void OnDestroy(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
         public delegate void OnDrawGizmos(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn);
@@ -89,6 +113,7 @@ namespace ME.BECS {
             SystemsStaticInitialization.dic.Data.Dispose();
             SystemsStaticGetSystem.dic.Data.Dispose();
             SystemsStaticOnAwake.dic.Data.Dispose();
+            SystemsStaticOnStart.dic.Data.Dispose();
             SystemsStaticOnUpdate.dic.Data.Dispose();
             SystemsStaticOnDrawGizmos.dic.Data.Dispose();
             SystemsStaticOnDestroy.dic.Data.Dispose();
@@ -110,6 +135,12 @@ namespace ME.BECS {
         public static void RegisterAwakeMethod(OnAwake callback, int graphId, bool isBurst) {
             
             Register(ref SystemsStaticOnAwake.dic.Data, callback, graphId, isBurst);
+
+        }
+
+        public static void RegisterStartMethod(OnStart callback, int graphId, bool isBurst) {
+            
+            Register(ref SystemsStaticOnStart.dic.Data, callback, graphId, isBurst);
 
         }
 
@@ -158,6 +189,32 @@ namespace ME.BECS {
                             if (SystemsStaticOnAwake.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
 
                                 var func = new Unity.Burst.FunctionPointer<OnAwake>(ptr);
+                                func.Invoke(dt, ref world, ref dependsOn);
+                                result = true;
+
+                            }
+                            
+                        }
+                    }
+                }
+            }
+            
+            return result;
+
+        }
+
+        public static bool RaiseOnStart(in SystemGroup rootGroup, ushort updateType, float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {
+
+            var result = false;
+            if (rootGroup.rootNode != null) {
+                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode->children[i];
+                    if (child.data->graph != null) {
+                        if (updateType == 0 || child.data->graph->updateType == updateType) {
+                            
+                            if (SystemsStaticOnStart.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
+
+                                var func = new Unity.Burst.FunctionPointer<OnStart>(ptr);
                                 func.Invoke(dt, ref world, ref dependsOn);
                                 result = true;
 
@@ -251,20 +308,21 @@ namespace ME.BECS {
 
         }
 
-        public static bool TryGetSystem<T>(out T* system) where T : unmanaged, ISystem {
+        public static bool TryGetSystem<T>(in SystemGroup rootGroup, out T* system) where T : unmanaged, ISystem {
 
             system = null;
-            if (SystemsStaticGetSystem.dic.Data.TryGetValue(TSystemGraph<T>.index.Data, out var ptr) == true) {
-
-                var func = new Unity.Burst.FunctionPointer<GetSystem>(ptr);
-                func.Invoke(TSystem<T>.index.Data, out var sysPtr);
-                system = (T*)sysPtr;
-                return true;
-
+            if (rootGroup.rootNode != null) {
+                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode->children[i];
+                    if (child.data->graph != null) {
+                        if (TSystemGraph.GetSystem(child.data->graph->graphId, out system) == true) {
+                            return true;
+                        }
+                    }
+                }
             }
-
             return false;
-
+            
         }
 
     }

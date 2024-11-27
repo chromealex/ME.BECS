@@ -71,7 +71,7 @@ namespace ME.BECS.Attack {
                 return PositionToAttack.RotateToTarget;
             }
             
-            position = unitTr.GetWorldMatrixPosition() - dirNormalized * offset * 2f;
+            position = targetTr.GetWorldMatrixPosition() - dirNormalized * offset * 2f;
 
             return PositionToAttack.MoveToPoint;
 

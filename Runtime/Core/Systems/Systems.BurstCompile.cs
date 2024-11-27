@@ -28,6 +28,16 @@ namespace ME.BECS {
             }
         }
 
+        private static MethodInfo startMethodCache;
+        private static MethodInfo startMethod {
+            get {
+                if (startMethodCache == null) {
+                    startMethodCache = typeof(BurstCompileMethod).GetMethod(nameof(BurstCompileMethod.MakeStart)); 
+                }
+                return startMethodCache;
+            }
+        }
+
         private static MethodInfo updateMethodCache;
         private static MethodInfo updateMethod {
             get {
@@ -64,6 +74,13 @@ namespace ME.BECS {
         public static void MakeAwake<T>(System.IntPtr node) where T : unmanaged, IAwake {
             
             BurstCompileOnAwake<T>.MakeMethod((Node*)node);
+            
+        }
+
+        [Preserve]
+        public static void MakeStart<T>(System.IntPtr node) where T : unmanaged, IStart {
+            
+            BurstCompileOnStart<T>.MakeMethod((Node*)node);
             
         }
 
