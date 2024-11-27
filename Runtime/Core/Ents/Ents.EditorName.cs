@@ -1,5 +1,6 @@
-#if UNITY_EDITOR
 using Unity.Collections;
+
+#if UNITY_EDITOR
 using Unity.Burst;
 using Unity.Mathematics;
 
@@ -98,7 +99,7 @@ namespace ME.BECS {
         #else
         public readonly FixedString32Bytes EditorName {
             get => default;
-            set => {}
+            set {}
         }
         #endif
 
