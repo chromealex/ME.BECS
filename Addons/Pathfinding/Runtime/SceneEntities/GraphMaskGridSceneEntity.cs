@@ -10,9 +10,8 @@ namespace ME.BECS.Pathfinding {
         public byte cost;
         public bool ignoreGraphRadius;
         public ObstacleChannel obstacleChannel;
+        public int graphMask = -1;
         
-        public UnityEngine.Transform test;
-
         protected override void OnCreate(in Ent ent) {
 
             var bounds = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh.bounds;
@@ -20,7 +19,7 @@ namespace ME.BECS.Pathfinding {
 
             var heights = new MemArrayAuto<float>(in ent, (uint)this.heights.Length);
             NativeArrayUtils.Copy(this.heights, 0, heights, 0, (int)heights.Length);
-            GraphUtils.CreateGraphMask(in ent, this.transform.position, this.transform.rotation, size, this.cost, this.obstacleChannel, this.ignoreGraphRadius, heights, this.gridSize);
+            GraphUtils.CreateGraphMask(in ent, this.transform.position, this.transform.rotation, size, this.cost, this.obstacleChannel, this.ignoreGraphRadius, heights, this.gridSize, this.graphMask);
 
         }
 
@@ -128,7 +127,7 @@ namespace ME.BECS.Pathfinding {
             var bounds = renderer.bounds;
 
             this.DrawGrid(this.transform.position, this.transform.rotation);
-            if (this.test != null) {
+            /*if (this.test != null) {
                 var rotation = this.transform.rotation;
                 var testPos = this.test.transform.position;
                 var localPos = math.mul(math.inverse(rotation), testPos - this.transform.position);
@@ -136,7 +135,7 @@ namespace ME.BECS.Pathfinding {
                 localPos.x += size.x * 0.5f;
                 localPos.z += size.z * 0.5f;
                 UnityEngine.Debug.Log(GraphUtils.GetObstacleHeight(localPos, this.heights, new float2(size.x, size.z), this.gridSize));
-            }
+            }*/
 
             var oldMatrix = UnityEngine.Gizmos.matrix;
             UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS(this.transform.position, this.transform.rotation, UnityEngine.Vector3.one);

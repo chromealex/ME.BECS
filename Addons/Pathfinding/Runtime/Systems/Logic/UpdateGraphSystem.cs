@@ -57,6 +57,8 @@ namespace ME.BECS.Pathfinding {
                 var dirtyTick = world.state->tick;
                 for (uint g = 0u; g < this.graphSystem.graphs.Length; ++g) {
 
+                    if ((obstacle.graphMask & (1 << (int)g)) == 0) continue;
+                    
                     var graph = this.graphSystem.graphs[(int)g];
                     var root = graph.Read<RootGraphComponent>();
                     var agentRadius = root.agentRadius;
@@ -90,11 +92,10 @@ namespace ME.BECS.Pathfinding {
                             chunkBounds = UnityEngine.Rect.MinMaxRect(min.x, min.z, max.x, max.z);
                         }
 
-                        {
-                            
-                            // intersection check
-                            if (chunkBounds.Overlaps(obstacleBounds) == false) continue;
+                        // intersection check
+                        if (chunkBounds.Overlaps(obstacleBounds) == false) continue;
 
+                        {
                             for (float x = posMin.x; x <= posMax.x; x += root.nodeSize * 0.45f) {
                                 for (float y = posMin.z; y <= posMax.z; y += root.nodeSize * 0.45f) {
                                     var worldPos = new float3(x, 0f, y);
@@ -103,10 +104,7 @@ namespace ME.BECS.Pathfinding {
                                     if (nodeIndex == uint.MaxValue) continue;
                                     ref var node = ref chunkComponent.nodes[world.state, nodeIndex];
                                     if (obstacle.cost > node.cost) {
-                                        //if (x >= posMinHeight.x && x <= posMaxHeight.x &&
-                                        //    y >= posMinHeight.z && y <= posMaxHeight.z)
                                         {
-                                            //var localPos = math.mul(math.inverse(rotation), graphPos - position - obstacle.offset.x0y());
                                             var localPos = worldPos - position;
                                             localPos.x += obstacleSize.x * 0.5f;
                                             localPos.z += obstacleSize.y * 0.5f;

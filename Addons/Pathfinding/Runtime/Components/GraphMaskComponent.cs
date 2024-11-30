@@ -6,11 +6,12 @@ namespace ME.BECS.Pathfinding {
 
         public float2 offset;
         public uint2 size;
-        public byte ignoreGraphRadius;
-        public byte cost;
         public float height;
         public uint heightsSizeX;
         public ObstacleChannel obstacleChannel;
+        public byte ignoreGraphRadius;
+        public byte cost;
+        public int graphMask;
 
         public void OnInitialize(in Ent ent) {
 

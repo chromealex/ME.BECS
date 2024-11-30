@@ -18,11 +18,11 @@ namespace ME.BECS.Pathfinding {
             
             if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.O) == true) {
                 ++this.drawIndex;
-                if (this.drawIndex >= context.world.GetSystem<BuildGraphSystem>().graphs.Length) {
+                if (this.drawIndex >= context.world.parent.GetSystem<BuildGraphSystem>().graphs.Length) {
                     this.drawIndex = 0;
                 }
 
-                UnityEngine.Debug.Log("Draw: " + this.drawIndex + "/" + context.world.GetSystem<BuildGraphSystem>().graphs.Length);
+                UnityEngine.Debug.Log("Draw: " + this.drawIndex + "/" + context.world.parent.GetSystem<BuildGraphSystem>().graphs.Length);
             }
             
         }

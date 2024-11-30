@@ -43,6 +43,16 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
+        public static Ent CreateAttackSensor<T>(int targetsMask, Config config, in JobInfo jobInfo, in T subFilter) where T : unmanaged, IComponent {
+
+            var sensor = CreateAttackSensor(targetsMask, config, in jobInfo);
+            sensor.Set(new QuadTreeQueryHasCustomFilterTag());
+            sensor.Set(subFilter);
+            return sensor;
+
+        }
+
+        [INLINE(256)]
         public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, float nodeSize, out float3 position) {
 
             position = default;

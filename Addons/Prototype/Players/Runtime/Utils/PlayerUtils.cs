@@ -24,7 +24,7 @@ namespace ME.BECS.Players {
             var ent = Ent.New(in jobInfo, editorName: $"Player#{index}");
             var aspect = ent.GetOrCreateAspect<PlayerAspect>();
             aspect.index = index;
-            aspect.ent.Get<PlayerComponent>().team = team;
+            aspect.team = team;
             return ent;
         }
 

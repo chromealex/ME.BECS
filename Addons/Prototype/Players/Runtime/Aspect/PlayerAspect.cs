@@ -18,7 +18,7 @@ namespace ME.BECS.Players {
         public readonly ref readonly int readUnitsOthersTreeMask => ref this.playerDataPtr.Read(this.ent.id, this.ent.gen).unitsOthersTreeMask;
         public readonly int unitsTreeMask => 1 << this.readUnitsTreeIndex;
         
-        public readonly Ent team => this.playerDataPtr.Get(this.ent.id, this.ent.gen).team;
+        public readonly ref Ent team => ref this.playerDataPtr.Get(this.ent.id, this.ent.gen).team;
         public readonly Ent readTeam => this.playerDataPtr.Read(this.ent.id, this.ent.gen).team;
         
         public readonly ref Ent currentSelection => ref this.playerCurrentSelectionDataPtr.Get(this.ent.id, this.ent.gen).currentSelection;

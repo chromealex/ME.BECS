@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace ME.BECS.Editor.JSON {
 
     public abstract class ObjectReferenceSerializer<T, TValue> : SerializerBase<TValue> where T : UnityEngine.Object where TValue : unmanaged {
@@ -14,6 +16,7 @@ namespace ME.BECS.Editor.JSON {
 
             if (str.StartsWith(protocol) == true) {
                 var configObj = EditorUtils.GetAssetByPathPart<T>(str.Substring(protocol.Length));
+                ObjectReferenceRegistry.data.Add(configObj, out _);
                 return this.Deserialize(ObjectReferenceRegistry.GetId(configObj), configObj, customData);
             } else {
                 return null;
@@ -72,7 +75,24 @@ namespace ME.BECS.Editor.JSON {
     public class EnumSerializer : SerializerBase<System.Enum> {
         
         public override bool IsValid(System.Type type) => type.IsEnum;
-        public override object FromString(System.Type fieldType, string value) => System.Enum.Parse(fieldType, value);
+
+        public override object FromString(System.Type fieldType, string value) {
+            if (fieldType.GetCustomAttribute(typeof(System.FlagsAttribute)) != null) {
+                // bitmask
+                var splitter = ' ';
+                if (value.Contains("|") == true) splitter = '|';
+                if (value.Contains(",") == true) splitter = ',';
+                var values = value.Split(splitter, System.StringSplitOptions.RemoveEmptyEntries);
+                var mask = 0;
+                foreach (var item in values) {
+                    var e = (int)System.Enum.Parse(fieldType, item.Trim());
+                    mask |= e;
+                }
+                return mask;
+            }
+            return System.Enum.Parse(fieldType, value);
+        }
+
         public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
             builder.Append('"');
             builder.Append(obj.ToString());

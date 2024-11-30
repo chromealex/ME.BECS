@@ -140,12 +140,36 @@ namespace ME.BECS {
 
         }
 
+        public readonly void FillNearest<T>(ref QuadTreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISubFilter<Ent> {
+            
+            if (tr.IsCalculated == false) return;
+            var data = query.query;
+            var worldPos = tr.GetWorldMatrixPosition();
+            var worldRot = tr.GetWorldMatrixRotation();
+            var sector = new MathSector(worldPos, worldRot, query.query.sector);
+            var ent = tr.ent;
+                
+            // clean up results
+            if (query.results.results.IsCreated == true) query.results.results.Clear();
+
+            if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, data.nearestCount > 0u ? data.nearestCount : 1u);
+
+            var q = query.readQuery;
+            if (data.nearestCount == 1u) {
+                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false, in subFilter);
+                if (nearest.IsAlive() == true) query.results.results.Add(nearest);
+            } else {
+                this.GetNearest(q.treeMask, data.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false, in subFilter);
+            }
+
+        }
+        
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, float minRangeSqr = default,
                                       float rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default) {
             return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, new AlwaysTrueSubFilter());
         }
 
-        public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, float minRangeSqr = default, float rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, float minRangeSqr = default, float rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, in T subFilter = default) where T : struct, ISubFilter<Ent> {
 
             const uint nearestCount = 1u;
             var heap = new ME.BECS.NativeCollections.NativeMinHeapEnt((int)this.treesCount, Unity.Collections.Allocator.Temp);
@@ -182,7 +206,7 @@ namespace ME.BECS {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, new AlwaysTrueSubFilter());
         }
 
-        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, float minRangeSqr, float rangeSqr, bool ignoreSelf, bool ignoreY, T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, float minRangeSqr, float rangeSqr, bool ignoreSelf, bool ignoreY, in T subFilter = default) where T : struct, ISubFilter<Ent> {
 
             if (nearestCount > 0u) {
 
