@@ -32,7 +32,14 @@ namespace ME.BECS {
             //return Pools.Pop<T>(elementsCount);
             
         }
-        
+
+        [INLINE(256)]
+        public static T* _makeArray<T>(uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
+            
+            return Cuts._makeArray<T>(elementsCount, allocator);
+            
+        }
+
         [INLINE(256)]
         public static T* _make<T>() where T : unmanaged {
 
@@ -46,6 +53,13 @@ namespace ME.BECS {
 
             return Cuts._make(obj);
             //return Pools.Pop<T>(obj);
+            
+        }
+
+        [INLINE(256)]
+        public static T* _make<T>(T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+
+            return Cuts._make(obj, allocator);
             
         }
 
@@ -106,6 +120,13 @@ namespace ME.BECS {
             
             Cuts._free(obj);
             //Pools.Push(obj, elementsCount);
+
+        }
+
+        [INLINE(256)]
+        public static void _freeArray<T>(T* obj, uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
+            
+            Cuts._free(obj, allocator);
 
         }
 

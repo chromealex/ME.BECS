@@ -149,6 +149,7 @@ namespace ME.BECS {
                 ProfilerCounters.SampleWorldEndFrame(in this.world);
             }
 
+            this.previousFrameDependsOn.Complete();
             WorldsTempAllocator.Reset();
             
         }

@@ -209,11 +209,12 @@ namespace ME.BECS {
             if (typeId == 0u && typeof(T) != typeof(TNull)) {
                 StaticTypes<T>.typeId = ++StaticTypes.counter;
                 StaticTypes<T>.isTag = isTag;
-                StaticTypes.sizes.Resize(StaticTypes<T>.typeId + 1u);
+                var typeId = (StaticTypes<T>.typeId + 1u);// * 2u;
+                StaticTypes.sizes.Resize(typeId);
                 StaticTypes.sizes.Get(StaticTypes<T>.typeId) = isTag == true ? 0u : TSize<T>.size;
-                StaticTypes.groups.Resize(StaticTypes<T>.typeId + 1u);
+                StaticTypes.groups.Resize(typeId);
                 StaticTypes.groups.Get(StaticTypes<T>.typeId) = groupId;
-                StaticTypes.defaultValues.Resize(StaticTypes<T>.typeId + 1u);
+                StaticTypes.defaultValues.Resize(typeId);
                 StaticTypes<T>.AddTypeToCache();
             }
 

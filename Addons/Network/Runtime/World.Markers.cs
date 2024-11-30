@@ -17,7 +17,7 @@ namespace ME.BECS.Network.Markers {
 
     public struct WorldsNetworkDataStorage {
 
-        private static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<InternalNetworkHeader>> worldsArrBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<InternalNetworkHeader>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsStorage>(TAlign<ME.BECS.Internal.Array<InternalNetworkHeader>>.align, 10033);
+        private static readonly Unity.Burst.SharedStatic<Array<InternalNetworkHeader>> worldsArrBurst = Unity.Burst.SharedStatic<Array<InternalNetworkHeader>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsStorage>(TAlign<Array<InternalNetworkHeader>>.align, 10033);
         internal static ref ME.BECS.Internal.Array<InternalNetworkHeader> worlds => ref worldsArrBurst.Data;
 
         public static void CleanUp() {

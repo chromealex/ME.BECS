@@ -11,24 +11,18 @@ namespace ME.BECS {
     
     public unsafe partial struct OneShotTasks {
 
-        [StructLayout(LayoutKind.Explicit, Size = 48)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct ThreadItem {
 
-            [StructLayout(LayoutKind.Explicit, Size = TaskCollection.SIZE)]
+            [StructLayout(LayoutKind.Sequential)]
             public struct TaskCollection {
 
-                public const int SIZE = 20;
-
-                [FieldOffset(0)]
                 public List<Task> items;
-                [FieldOffset(List<Task>.SIZE)]
                 public LockSpinner lockIndex;
 
             }
 
-            [FieldOffset(0)]
             public TaskCollection currentTick;
-            [FieldOffset(TaskCollection.SIZE)]
             public TaskCollection nextTick;
 
         }

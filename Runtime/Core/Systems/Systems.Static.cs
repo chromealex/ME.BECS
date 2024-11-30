@@ -12,7 +12,7 @@ namespace ME.BECS {
         
         public static void Register<T>(int graphId, void* ptr) where T : unmanaged, ISystem {
             ref var dic = ref TSystemGraph<T>.dic.Data;
-            if (dic.IsCreated == false) dic = new UnsafeHashMap<int, System.IntPtr>(100, Constants.ALLOCATOR_DOMAIN);
+            if (dic.IsCreated == false) dic = new UnsafeHashMap<int, System.IntPtr>(4, Constants.ALLOCATOR_DOMAIN);
             if (dic.TryGetValue(graphId, out var sysPtr) == false) {
                 dic.Add(graphId, (System.IntPtr)ptr);
             } else {

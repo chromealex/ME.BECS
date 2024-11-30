@@ -193,9 +193,7 @@ namespace ME.BECS {
             
             {
                 var max = math.min(nearestCount, heap.Count);
-                for (uint i = 0u; i < max; ++i) {
-                    return heap[heap.Pop()].Position;
-                }
+                if (max > 0u) return heap[heap.Pop()].Position;
             }
 
             return default;

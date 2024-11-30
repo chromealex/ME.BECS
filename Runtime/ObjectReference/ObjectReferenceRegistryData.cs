@@ -98,7 +98,7 @@ namespace ME.BECS {
             return hashId;
             #else
             var nextId = ++this.sourceId;
-            return nextId.ToString();
+            return nextId;
             #endif
         }
 

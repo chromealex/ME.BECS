@@ -63,7 +63,7 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public void Dispose() {
-            this.heightMap.Dispose();
+            Unity.Collections.CollectionHelper.Dispose(this.heightMap);
         }
 
         [INLINE(256)]

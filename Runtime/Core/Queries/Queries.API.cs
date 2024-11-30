@@ -81,13 +81,14 @@ namespace ME.BECS {
             //dependsOn = Batches.Apply(dependsOn, queryContext.state);
             //dependsOn = Batches.Open(dependsOn, queryContext.state);
             
-            var builder = new QueryBuilder() {
-                queryData = _make(new QueryData()),
-                commandBuffer = _make(new CommandBuffer() {
+            var builder = new QueryBuilder {
+                queryData = _make(new QueryData(), Constants.ALLOCATOR_TEMP),
+                commandBuffer = _make(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
-                }),
+                }, Constants.ALLOCATOR_TEMP),
                 isCreated = true,
+                allocator = Constants.ALLOCATOR_TEMP,
             };
             
             var job = new BuilderArchetypesJob() {
@@ -108,13 +109,14 @@ namespace ME.BECS {
             //dependsOn = Batches.Open(dependsOn, queryContext.state);
 
             var builder = new QueryBuilder {
-                queryData = _make(new QueryData()),
-                commandBuffer = _make(new CommandBuffer() {
+                queryData = _make(new QueryData(), Constants.ALLOCATOR_PERSISTENT),
+                commandBuffer = _make(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
-                }),
+                }, Constants.ALLOCATOR_PERSISTENT),
                 isCreated = true,
                 builderDependsOn = dependsOn,//Batches.Close(dependsOn, queryContext.state),
+                allocator = Constants.ALLOCATOR_PERSISTENT,
             };
             builder.Without<IsInactive>();
             return builder;

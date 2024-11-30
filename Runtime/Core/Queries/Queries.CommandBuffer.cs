@@ -197,7 +197,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            if (this.entities != null) _freeArray(this.entities, this.count);
+            if (this.entities != null) _freeArray(this.entities, this.count, Constants.ALLOCATOR_TEMP_ST.ToAllocator);
             this = default;
             
         }
