@@ -9,12 +9,12 @@ namespace ME.BECS {
         private AllocatorManager.AllocatorHandle handle;
         #if MEMORY_ALLOCATOR_BOUNDS_CHECK
         private Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<System.IntPtr> pointers;
-        #endif
         private Spinner spinner;
+        #endif
 
         public void Initialize(int capacity) {
-            this.spinner = default;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            this.spinner = default;
             this.pointers = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<System.IntPtr>(capacity, Allocator.Persistent);
             #endif
             this.handle = Allocator.Persistent;
