@@ -35,6 +35,15 @@ PropertyField {
     -unity-text-align: middle-center;
     font-size: 50px;
     border-radius: 10px;
+    justify-content: center;
+}
+
+.complete-progress {
+    font-size: 14px;
+}
+
+.label-progress {
+    height: 30px;
 }
 
 .result {

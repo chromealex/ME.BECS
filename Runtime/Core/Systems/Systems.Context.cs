@@ -2,6 +2,15 @@ namespace ME.BECS {
 
     using Unity.Jobs;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+
+    public static class SystemContextExt {
+
+        public static JobHandle AddDependency(this in JobHandle jobHandle, ref SystemContext context) {
+            context.AddDependency(in jobHandle);
+            return context.dependsOn;
+        }
+
+    }
     
     public struct SystemContext {
 
@@ -19,11 +28,6 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public void SetDependency(JobHandle dependsOn) {
-            this.dependsOn = dependsOn;
-        }
-
-        [INLINE(256)]
         public static SystemContext Create(float dt, in World world, JobHandle dependsOn) {
             return new SystemContext(dt, in world, dependsOn);
         }
@@ -31,6 +35,59 @@ namespace ME.BECS {
         [INLINE(256)]
         public static SystemContext Create(in World world, JobHandle dependsOn) {
             return new SystemContext(0f, in world, dependsOn);
+        }
+
+        [INLINE(256)]
+        public void SetDependency(JobHandle dependsOn) {
+            this.dependsOn = dependsOn;
+        }
+
+        [INLINE(256)]
+        public void SetDependency(JobHandle handle1, JobHandle handle2) {
+            this.dependsOn = JobHandle.CombineDependencies(handle1, handle2);
+        }
+
+        [INLINE(256)]
+        public void SetDependency(JobHandle handle1, JobHandle handle2, JobHandle handle3) {
+            this.dependsOn = JobHandle.CombineDependencies(handle1, handle2, handle3);
+        }
+
+        [INLINE(256)]
+        public void SetDependency(JobHandle handle1, JobHandle handle2, JobHandle handle3, JobHandle handle4) {
+            var list = new Unity.Collections.NativeArray<JobHandle>(4, Constants.ALLOCATOR_TEMP);
+            list[0] = handle1;
+            list[1] = handle2;
+            list[2] = handle3;
+            list[3] = handle4;
+            this.dependsOn = JobHandle.CombineDependencies(list);
+        }
+
+        [INLINE(256)]
+        public void SetDependency(JobHandle handle1, JobHandle handle2, JobHandle handle3, JobHandle handle4, JobHandle handle5) {
+            var list = new Unity.Collections.NativeArray<JobHandle>(5, Constants.ALLOCATOR_TEMP);
+            list[0] = handle1;
+            list[1] = handle2;
+            list[2] = handle3;
+            list[3] = handle4;
+            list[4] = handle5;
+            this.dependsOn = JobHandle.CombineDependencies(list);
+        }
+
+        [INLINE(256)]
+        public void SetDependency(JobHandle handle1, JobHandle handle2, JobHandle handle3, JobHandle handle4, JobHandle handle5, JobHandle handle6) {
+            var list = new Unity.Collections.NativeArray<JobHandle>(6, Constants.ALLOCATOR_TEMP);
+            list[0] = handle1;
+            list[1] = handle2;
+            list[2] = handle3;
+            list[3] = handle4;
+            list[4] = handle5;
+            list[5] = handle6;
+            this.dependsOn = JobHandle.CombineDependencies(list);
+        }
+
+        [INLINE(256)]
+        public void AddDependency(in JobHandle handle) {
+            this.dependsOn = JobHandle.CombineDependencies(this.dependsOn, handle);
         }
 
     }

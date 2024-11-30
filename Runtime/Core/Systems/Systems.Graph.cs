@@ -165,6 +165,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public JobHandle Start(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
+
+            return this.Run(ref world, 0f, Method.Start, subId, dependsOn);
+
+        }
+
+        [INLINE(256)]
         public JobHandle Update(ref World world, float dt, ushort subId = 0, JobHandle dependsOn = default) {
 
             return this.Run(ref world, dt, Method.Update, subId, dependsOn);

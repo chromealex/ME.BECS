@@ -65,6 +65,24 @@ namespace ME.BECS {
 
             this.world = World.Create(this.properties);
             
+            this.DoWorldAwake();
+
+        }
+
+        protected virtual void DoWorldAwake() {
+            
+            Context.Switch(in this.world);
+            for (var i = 0; i < this.modules.list.Length; ++i) {
+                var module = this.modules.list[i];
+                if (module.IsEnabled() == false) continue;
+                module.obj.worldProperties = this.properties;
+                module.obj.OnAwake(ref this.world);
+            }
+
+            this.OnAwake();
+
+            this.previousFrameDependsOn = this.world.Awake(this.previousFrameDependsOn);
+            
         }
 
         protected virtual void Start() {
@@ -76,25 +94,23 @@ namespace ME.BECS {
                     var module = this.modules.list[i];
                     if (module.IsEnabled() == false) continue;
                     module.obj.worldProperties = this.properties;
-                    module.obj.OnAwake(ref this.world);
-                }
-
-                this.OnAwake();
-
-                this.previousFrameDependsOn = this.world.Awake(this.previousFrameDependsOn);
-                
-                for (var i = 0; i < this.modules.list.Length; ++i) {
-                    var module = this.modules.list[i];
-                    if (module.IsEnabled() == false) continue;
-                    module.obj.worldProperties = this.properties;
                     this.previousFrameDependsOn = module.obj.OnStart(ref this.world, this.previousFrameDependsOn);
                 }
                 
                 this.previousFrameDependsOn = this.OnStart(this.previousFrameDependsOn);
+
+                this.DoWorldStart();
+
                 this.previousFrameDependsOn.Complete();
 
             }
 
+        }
+
+        protected virtual void DoWorldStart() {
+            
+            this.previousFrameDependsOn = this.world.Start(this.previousFrameDependsOn);
+            
         }
 
         public virtual void OnAwake() {

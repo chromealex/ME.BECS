@@ -20,7 +20,7 @@ namespace ME.BECS.FogOfWar {
 
         protected override void OnInitialize(in EntRO ent) {
             
-            var fowSystem = ent.World.GetSystem<CreateSystem>();
+            var fowSystem = ent.World.parent.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
             var heightResolution = fowSystem.resolution;
             this.material.SetTexture(fogTex, system.GetTexture());
@@ -40,7 +40,7 @@ namespace ME.BECS.FogOfWar {
             var updateTextureSystem = ent.World.GetSystem<UpdateTextureSystem>();
             var logicWorld = ent.World.parent;
             var fowSystem = logicWorld.GetSystem<CreateSystem>();
-            var system = logicWorld.GetSystem<CreateTextureSystem>();
+            var system = ent.World.GetSystem<CreateTextureSystem>();
             this.material.SetTexture(fogTex, system.GetTexture());
 
             var camera = updateTextureSystem.GetCamera();

@@ -104,7 +104,9 @@ namespace ME.BECS.Players {
         public unsafe PlayerAspect SetActivePlayer(uint index) {
             E.IS_NOT_IN_TICK(Context.world.state);
             this.activePlayer = index;
-            return this.GetActivePlayer();
+            var player = this.GetActivePlayer();
+            PlayerUtils.SetActivePlayer(in player);
+            return player;
         }
 
         [INLINE(256)]

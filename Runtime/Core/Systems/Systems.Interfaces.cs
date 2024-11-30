@@ -12,6 +12,12 @@ namespace ME.BECS {
 
     }
 
+    public interface IStart : ISystem {
+
+        void OnStart(ref SystemContext context);
+
+    }
+
     public interface IDestroy : ISystem {
 
         void OnDestroy(ref SystemContext context);

@@ -43,4 +43,12 @@ namespace ME.BECS.Attack {
     
     public struct RotateToAttackWhileIdleComponent : IConfigComponent {}
 
+    public struct RotateAttackSensorComponent : IConfigComponent {
+
+        public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { speedFactor = 1f };
+        
+        public float speedFactor;
+
+    }
+
 }

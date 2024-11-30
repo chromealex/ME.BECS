@@ -67,7 +67,28 @@ namespace ME.BECS {
             return dependsOn;
 
         }
-        
+
+        public static JobHandle Start(this ref World world, JobHandle dependsOn, ushort subId = 0) {
+            
+            E.IS_CREATED(world);
+            dependsOn = Batches.Apply(dependsOn, world.state);
+            var address = world.id;
+            WorldSystemRegistry.Validate();
+            if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
+                
+                // if we have static data
+                if (SystemsStatic.RaiseOnStart(in rootGroup, subId, 0f, ref world, ref dependsOn) == false) {
+
+                    dependsOn = rootGroup.Start(ref world, subId, dependsOn);
+
+                }
+                
+            }
+
+            return dependsOn;
+
+        }
+
         public static void DrawGizmos(this ref World world) {
             world.DrawGizmos(default).Complete();
         }
@@ -184,7 +205,7 @@ namespace ME.BECS {
             var address = world.id;
             WorldSystemRegistry.Validate();
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
-                if (SystemsStatic.TryGetSystem<T>(out var system) == false) {
+                if (SystemsStatic.TryGetSystem<T>(in rootGroup, out var system) == false) {
                     var systemAddr = _addressT(ref rootGroup.GetSystem<T>(out var found));
                     if (throwIfNotFound == true && found == false) throw E.NOT_FOUND(typeof(T).Name);
                     if (throwIfNotFound == false) return null;

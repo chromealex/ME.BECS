@@ -4,8 +4,7 @@
     "references": [
         "Unity.Burst",
         "Unity.Collections",
-        "Unity.Mathematics",
-        "Unity.Profiling.Core"
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

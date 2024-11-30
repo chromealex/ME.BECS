@@ -54,6 +54,7 @@ namespace ME.BECS.Editor {
         
         public const string ECS = "ME.BECS";
         public const string AWAKE_METHOD = "BurstCompileOnAwake";
+        public const string START_METHOD = "BurstCompileOnStart";
         public const string UPDATE_METHOD = "BurstCompileOnUpdate";
         public const string DESTROY_METHOD = "BurstCompileOnDestroy";
         public const string DRAWGIZMOS_METHOD = "BurstCompileOnDrawGizmos";
@@ -236,6 +237,7 @@ namespace ME.BECS.Editor {
                 var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>().OrderBy(x => x.FullName).ToList();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
                 var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToArray();
+                var typesStart = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IStart)).OrderBy(x => x.FullName).ToArray();
                 var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate)).OrderBy(x => x.FullName).ToArray();
                 var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy)).OrderBy(x => x.FullName).ToArray();
                 var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToArray();
@@ -255,17 +257,23 @@ namespace ME.BECS.Editor {
 
                     var isBursted = (burstedTypes.Contains(type) == true);
                     var hasAwake = typesAwake.Contains(type);
+                    var hasStart = typesStart.Contains(type);
                     var hasUpdate = typesUpdate.Contains(type);
                     var hasDestroy = typesDestroy.Contains(type);
                     var hasDrawGizmos = typesDrawGizmos.Contains(type);
                     //if (burstedTypes.Contains(type) == false) continue;
                     
                     var awakeBurst = hasAwake == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IAwake.OnAwake))) == false;
+                    var startBurst = hasStart == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IStart.OnStart))) == false;
                     var updateBurst = hasUpdate == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IUpdate.OnUpdate))) == false;
                     var destroyBurst = hasDestroy == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDestroy.OnDestroy))) == false;
                     var drawGizmosBurst = hasDrawGizmos == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDrawGizmos.OnDrawGizmos))) == false;
                     if (awakeBurst == true) {
                         if (isBursted == true) content.Add($"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
+                    }
+
+                    if (startBurst == true) {
+                        if (isBursted == true) content.Add($"{START_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (updateBurst == true) {
@@ -281,11 +289,13 @@ namespace ME.BECS.Editor {
                     }
 
                     if (hasAwake == true) content.Add($"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasStart == true) content.Add($"{START_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
                     if (hasUpdate == true) content.Add($"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
                     if (hasDestroy == true) content.Add($"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
                     if (hasDrawGizmos == true) content.Add($"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
 
                     if (awakeBurst == true) content.Add($"BurstCompileMethod.MakeAwake<{systemType}>(default);");
+                    if (startBurst == true) content.Add($"BurstCompileMethod.MakeStart<{systemType}>(default);");
                     if (updateBurst == true) content.Add($"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
                     if (destroyBurst == true) content.Add($"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
                     if (drawGizmosBurst == true) content.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");

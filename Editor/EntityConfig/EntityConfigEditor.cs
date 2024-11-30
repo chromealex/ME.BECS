@@ -48,6 +48,36 @@ namespace ME.BECS.Editor {
             var container = root;
 
             var scrollView = new ScrollView(ScrollViewMode.Vertical);
+            scrollView.AddManipulator(new ContextualMenuManipulator((menu) => {
+                menu.menu.AppendAction("Copy CSV", (evt) => {
+                    var data = new System.Text.StringBuilder();
+                    {
+                        var components = serializedObject.FindProperty(nameof(EntityConfig.data)).FindPropertyRelative(nameof(EntityConfig.data.components));
+                        for (int i = 0; i < components.arraySize; ++i) {
+                            var component = components.GetArrayElementAtIndex(i);
+                            var csv = JSON.JsonUtils.ComponentToCSV(component);
+                            data.Append(csv);
+                        }
+                    }
+                    {
+                        var components = serializedObject.FindProperty(nameof(EntityConfig.sharedData)).FindPropertyRelative(nameof(EntityConfig.sharedData.components));
+                        for (int i = 0; i < components.arraySize; ++i) {
+                            var component = components.GetArrayElementAtIndex(i);
+                            var csv = JSON.JsonUtils.ComponentToCSV(component);
+                            data.Append(csv);
+                        }
+                    }
+                    {
+                        var components = serializedObject.FindProperty(nameof(EntityConfig.staticData)).FindPropertyRelative(nameof(EntityConfig.staticData.components));
+                        for (int i = 0; i < components.arraySize; ++i) {
+                            var component = components.GetArrayElementAtIndex(i);
+                            var csv = JSON.JsonUtils.ComponentToCSV(component);
+                            data.Append(csv);
+                        }
+                    }
+                    EditorUtils.Copy(data.ToString());
+                });
+            }));
             container.Add(scrollView);
             var componentsContainer = new VisualElement();
             scrollView.contentContainer.Add(componentsContainer);
@@ -57,7 +87,6 @@ namespace ME.BECS.Editor {
                 componentsContainer.Add(baseConfig);
             }
             {
-                
                 var components = new VisualElement();
                 components.AddToClassList("entity-components");
                 components.AddToClassList("entity-state-components");
@@ -350,6 +379,10 @@ namespace ME.BECS.Editor {
                             propertyField.Bind(serializedObject);
                             propertyField.BindProperty(copy);
                         }, pasteStatus);
+                        menu.menu.AppendAction("Copy CSV", (evt) => {
+                            var csv = JSON.JsonUtils.ComponentToCSV(copy);
+                            EditorUtils.Copy(csv);
+                        });
                     }));
 
                     propContainer.Add(propertyField);

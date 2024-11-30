@@ -94,6 +94,77 @@ namespace ME.BECS.Editor.JSON {
             }
         }
 
+        public static string ComponentToCSV(UnityEditor.SerializedProperty srcProperty) {
+
+            static System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>> GetFields(UnityEditor.SerializedProperty property) {
+                var fields = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>>();
+                var copy = property.Copy();
+                var enterChildren = true;
+                var valueBuilder = new StringBuilder();
+                var level = PropertyEditorUtils.GetLevel(copy, out var lookUpArrayIndex) + 1u;
+                while (copy.NextVisible(enterChildren)) {
+                    enterChildren = false;
+                    var curLevel = PropertyEditorUtils.GetLevel(copy, out var arrayIndex);
+                    if (arrayIndex != lookUpArrayIndex || curLevel != level) break;
+                    valueBuilder.Clear();
+                    var val = PropertyEditorUtils.GetTargetObjectOfProperty(copy, out var valType);
+                    var serializerPrimitive = GetSerializer(valType);
+                    if (serializerPrimitive != null) {
+                        serializerPrimitive.Serialize(valueBuilder, val, copy);
+                        fields.Add(new System.Collections.Generic.KeyValuePair<string, string>(copy.name, valueBuilder.ToString()));
+                    } else {
+                        var subFields = GetFields(copy);
+                        foreach (var kv in subFields) {
+                            fields.Add(new System.Collections.Generic.KeyValuePair<string, string>($"{copy.name}/{kv.Key}", kv.Value));
+                        }
+                    }
+                }
+                return fields;
+            }
+
+            var fields = GetFields(srcProperty);
+            var type = EditorUtils.GetTypeFromPropertyField(srcProperty.managedReferenceFullTypename);
+            var builder = new StringBuilder();
+            if (fields.Count == 0) {
+                // tag component
+                {
+                    builder.Append('"');
+                    builder.Append(type.Name);
+                    builder.Append('"');
+                    builder.Append(',');
+                    { // fields
+                        builder.Append('"');
+                        builder.Append('"');
+                    }
+                    builder.Append(',');
+                    { // values
+                        builder.Append("TRUE");
+                    }
+                    builder.Append('\n');
+                }
+            } else {
+                for (var index = 0; index < fields.Count; ++index) {
+                    var field = fields[index];
+                    builder.Append('"');
+                    if (index == 0) builder.Append(type.Name);
+                    builder.Append('"');
+                    builder.Append(',');
+                    { // fields
+                        builder.Append('"');
+                        builder.Append(field.Key);
+                        builder.Append('"');
+                    }
+                    builder.Append(',');
+                    { // values
+                        builder.Append(field.Value);
+                    }
+                    builder.Append('\n');
+                }
+            }
+
+            return builder.ToString();
+        }
+
         public static string ComponentToJSON(UnityEditor.SerializedProperty srcProperty) {
             return EditorUtils.ReFormatCode(ComponentToJSON_INTERNAL(srcProperty));
         }

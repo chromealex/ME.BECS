@@ -9,6 +9,20 @@ namespace ME.BECS {
     using static Cuts;
     using Jobs;
     using System.Runtime.InteropServices;
+
+    public static class BatchesExt {
+
+        [INLINE(256)]
+        public static JobHandle Apply(this in SystemContext context, JobHandle dependsOn) {
+            return Batches.Apply(dependsOn, in context.world);
+        }
+
+        [INLINE(256)]
+        public static JobHandle Apply(this in World world, JobHandle dependsOn) {
+            return Batches.Apply(dependsOn, in world);
+        }
+
+    }
     
     public struct BatchList {
 

@@ -166,7 +166,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void RegisterEvent(in Event evt, GlobalEventWithDataCallback callback) {
 
-            var handle = GCHandle.Alloc(callback, GCHandleType.Pinned);
+            var handle = GCHandle.Alloc(callback);
             RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), handle, withData: true);
 
         }
@@ -179,7 +179,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void RegisterEvent(in Event evt, GlobalEventCallback callback) {
 
-            var handle = GCHandle.Alloc(callback, GCHandleType.Pinned);
+            var handle = GCHandle.Alloc(callback);
             RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), handle, withData: false);
 
         }

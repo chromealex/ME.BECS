@@ -25,6 +25,11 @@ namespace ME.BECS {
             return result;
         }
 
+        [INLINE(256)]
+        public bool IsValid() {
+            return this.sector > 0f && this.sector < 360f;
+        }
+
     }
 
 }

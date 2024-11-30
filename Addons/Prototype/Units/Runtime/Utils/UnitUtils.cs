@@ -84,7 +84,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static void LookToTarget(ref ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 target, float dt) {
+        public static void LookToTarget(in ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 target, float dt) {
 
             var lookDir = target - tr.position;
             if (math.lengthsq(lookDir) >= math.EPSILON) {

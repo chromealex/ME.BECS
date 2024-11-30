@@ -143,6 +143,10 @@ namespace ME.BECS.Network {
             this.network.SetServerTime(timeFromStart);
         }
 
+        public void SaveResetState() {
+            this.network.SaveResetState();
+        }
+
         public void RegisterMethod(NetworkMethodDelegate method) {
             this.network.RegisterMethod(method);
         }

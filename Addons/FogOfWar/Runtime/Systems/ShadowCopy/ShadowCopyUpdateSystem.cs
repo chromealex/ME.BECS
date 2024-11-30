@@ -10,37 +10,30 @@ namespace ME.BECS.FogOfWar {
     [RequiredDependencies(typeof(ShadowCopySystem))]
     public struct ShadowCopyUpdateSystem : IUpdate {
 
-        private static void UpdateShadowCopy(in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy, bool isVisible) {
+        private static bool UpdateShadowCopy(in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
             
             // Update only visible objects
-            if (isVisible == true) {
-                
-                if (shadowCopy.original.IsAlive() == false) {
-                    // if object is already destroyed - just destroy the shadow copy
-                    ent.DestroyHierarchy();
-                    return;
-                }
-                
-                // if object is still alive - update properties
-                var origTr = shadowCopy.original.GetAspect<TransformAspect>();
-                var pos = origTr.position;
-                var rot = origTr.rotation;
-                var marker = new Unity.Profiling.ProfilerMarker("ent.CopyFrom");
-                marker.Begin();
-                ent.CopyFrom<ParentComponent, ChildrenComponent>(in shadowCopy.original);
-                marker.End();
-                var tr = ent.GetAspect<TransformAspect>();
-                tr.position = pos;
-                tr.rotation = rot;
-                ent.SetTag<IsViewRequested>(false);
-                ent.SetTag<FogOfWarShadowCopyWasVisible>(true);
-                //ent.Remove<FogOfWarHasShadowCopyComponent>();
-                
-            } else {
-                if (ent.Has<FogOfWarShadowCopyWasVisible>() == true) {
-                    ent.SetTag<IsViewRequested>(true);
-                }
+            if (shadowCopy.original.IsAlive() == false) {
+                // if object is already destroyed - just destroy the shadow copy
+                ent.DestroyHierarchy();
+                return false;
             }
+            
+            // if object is still alive - update properties
+            var origTr = shadowCopy.original.GetAspect<TransformAspect>();
+            var pos = origTr.position;
+            var rot = origTr.rotation;
+            var marker = new Unity.Profiling.ProfilerMarker("ent.CopyFrom");
+            marker.Begin();
+            ent.CopyFrom<ParentComponent, ChildrenComponent>(in shadowCopy.original);
+            marker.End();
+            var tr = ent.GetAspect<TransformAspect>();
+            tr.position = pos;
+            tr.rotation = rot;
+            ent.SetTag<IsViewRequested>(false);
+            ent.SetTag<FogOfWarShadowCopyWasVisibleAnytimeTag>(true);
+            //ent.Remove<FogOfWarHasShadowCopyComponent>();
+            return true;
 
         }
         
@@ -52,7 +45,16 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
 
                 var isVisible = this.fow.IsVisible(in shadowCopy.forTeam, ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
-                UpdateShadowCopy(in ent, ref shadowCopy, isVisible);
+                if (isVisible == true) {
+                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(true);
+                    return;
+                }
+                if (ent.Has<FogOfWarShadowCopyWasVisibleTag>() == true) {
+                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(false);
+                    if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
+                        ent.SetTag<IsViewRequested>(true);
+                    }
+                }
 
             }
 
@@ -66,7 +68,16 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy, ref FogOfWarShadowCopyPointsComponent points) {
 
                 var isVisible = this.fow.IsVisibleAny(in shadowCopy.forTeam, in points.points);
-                UpdateShadowCopy(in ent, ref shadowCopy, isVisible);
+                if (isVisible == true) {
+                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(true);
+                    return;
+                }
+                if (ent.Has<FogOfWarShadowCopyWasVisibleTag>() == true) {
+                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(false);
+                    if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
+                        ent.SetTag<IsViewRequested>(true);
+                    }
+                }
 
             }
 

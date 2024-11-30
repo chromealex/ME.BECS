@@ -1,5 +1,3 @@
-//[assembly: Unity.Jobs.RegisterGenericJobTypeAttribute(typeof(ME.BECS.FogOfWar.CreateSystem.UpdateHeightJob))] 
-
 namespace ME.BECS.FogOfWar {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -118,6 +116,8 @@ namespace ME.BECS.FogOfWar {
                 heights = this.heights,
             }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), dependsOn);
             context.SetDependency(updateHeightHandle);
+            
+            FogOfWarData.Initialize(fowSize.x);
 
         }
 
@@ -149,6 +149,22 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
+
+            var team = player.readTeam;
+            return this.IsVisibleAny(in team, in points);
+            
+        }
+
+        [INLINE(256)]
+        public bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
+
+            var team = player.readTeam;
+            return this.IsVisibleAny(in team, in points);
+            
+        }
+
+        [INLINE(256)]
         public bool IsVisibleAny(in Ent team, in MemArrayAuto<float3> points) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
@@ -163,7 +179,65 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public bool IsVisibleAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
+            
+            ref readonly var fow = ref team.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
+            for (uint i = 0u; i < points.Length; ++i) {
+                var rect = points[i];
+                var min = FogOfWarUtils.WorldToFogMapPosition(in props, new float3(rect.xMin, 0f, rect.yMin));
+                var max = FogOfWarUtils.WorldToFogMapPosition(in props, new float3(rect.xMax, 0f, rect.yMax));
+                for (uint x = min.x; x < max.x; ++x) {
+                    for (uint y = min.y; x < max.y; ++y) {
+                        if (FogOfWarUtils.IsVisible(in props, in fow, x, y) == true) return true;
+                    }
+                }
+            }
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public bool IsVisibleAny(in Ent team, in MemArrayAuto<RectUInt> points) {
+            
+            ref readonly var fow = ref team.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
+            for (uint i = 0u; i < points.Length; ++i) {
+                var rect = points[i];
+                var min = rect.min;
+                min.x = math.clamp(min.x, 0u, props.size.x);
+                min.y = math.clamp(min.y, 0u, props.size.y);
+                var max = rect.max;
+                max.x = math.clamp(max.x, 0u, props.size.x);
+                max.y = math.clamp(max.y, 0u, props.size.y);
+                for (uint x = min.x; x < max.x; ++x) {
+                    for (uint y = min.y; y < max.y; ++y) {
+                        if (FogOfWarUtils.IsVisible(in props, in fow, x, y) == true) return true;
+                    }
+                }
+            }
+            return false;
+
+        }
+
+        [INLINE(256)]
         public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
+
+            var team = player.readTeam;
+            return this.IsExploredAny(in team, in points);
+            
+        }
+
+        [INLINE(256)]
+        public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
+
+            var team = player.readTeam;
+            return this.IsExploredAny(in team, in points);
+            
+        }
+
+        [INLINE(256)]
+        public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
 
             var team = player.readTeam;
             return this.IsExploredAny(in team, in points);
@@ -179,6 +253,48 @@ namespace ME.BECS.FogOfWar {
                 var worldPos = points[i];
                 var pos = FogOfWarUtils.WorldToFogMapPosition(in props, in worldPos);
                 if (FogOfWarUtils.IsExplored(in props, in fow, pos.x, pos.y) == true) return true;
+            }
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public bool IsExploredAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
+            
+            ref readonly var fow = ref team.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
+            for (uint i = 0u; i < points.Length; ++i) {
+                var rect = points[i];
+                var min = FogOfWarUtils.WorldToFogMapPosition(in props, new float3(rect.xMin, 0f, rect.yMin));
+                var max = FogOfWarUtils.WorldToFogMapPosition(in props, new float3(rect.xMax, 0f, rect.yMax));
+                for (uint x = min.x; x < max.x; ++x) {
+                    for (uint y = min.y; x < max.y; ++y) {
+                        if (FogOfWarUtils.IsExplored(in props, in fow, x, y) == true) return true;
+                    }
+                }
+            }
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public bool IsExploredAny(in Ent team, in MemArrayAuto<RectUInt> points) {
+            
+            ref readonly var fow = ref team.Read<FogOfWarComponent>();
+            ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
+            for (uint i = 0u; i < points.Length; ++i) {
+                var rect = points[i];
+                var min = rect.min;
+                min.x = math.clamp(min.x, 0u, props.size.x);
+                min.y = math.clamp(min.y, 0u, props.size.y);
+                var max = rect.max;
+                max.x = math.clamp(max.x, 0u, props.size.x);
+                max.y = math.clamp(max.y, 0u, props.size.y);
+                for (uint x = min.x; x < max.x; ++x) {
+                    for (uint y = min.y; y < max.y; ++y) {
+                        if (FogOfWarUtils.IsExplored(in props, in fow, x, y) == true) return true;
+                    }
+                }
             }
             return false;
 

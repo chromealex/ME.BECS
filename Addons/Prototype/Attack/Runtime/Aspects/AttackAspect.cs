@@ -81,6 +81,18 @@ namespace ME.BECS.Attack {
             this.ent.SetOneShot(new OnFireEvent(), OneShotType.NextTick);
         }
 
+        [INLINE(256)]
+        public uint CalculateDPS() {
+            var config = this.readComponent.bulletConfig.AsUnsafeConfig();
+            if (config.IsValid() == true) {
+                if (config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent) == true) {
+                    return (uint)(bulletConfigComponent.damage / this.readComponent.fireTime);
+                }
+            }
+
+            return 0u;
+        }
+
     }
 
 }

@@ -84,13 +84,11 @@ namespace ME.BECS {
                 // Set unique next id
                 var has = false;
                 for (int i = 0; i < this.items.Length; ++i) {
-                    if (this.items[i].source == source) {
-                        ref var item = ref this.items[i];
-                        if (item.sourceId == hashId) {
-                            ++hashId;
-                            has = true;
-                            break;
-                        }
+                    ref var item = ref this.items[i];
+                    if (item.sourceId == hashId) {
+                        ++hashId;
+                        has = true;
+                        break;
                     }
                 }
                 if (has == false) break;
@@ -100,7 +98,7 @@ namespace ME.BECS {
             return hashId;
             #else
             var nextId = ++this.sourceId;
-            return nextId.ToString();
+            return nextId;
             #endif
         }
 
