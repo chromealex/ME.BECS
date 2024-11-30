@@ -12,35 +12,6 @@ namespace ME.BECS.Views {
     [BURST(CompileSynchronously = true)]
     public unsafe struct Jobs {
 
-        public struct Counter {
-
-            private byte* ptr;
-            private int count;
-
-            public void Increment() {
-                JobUtils.Increment(ref this.count);
-            }
-
-            public int* GetPtr() {
-
-                return (int*)(this.ptr + sizeof(void*));
-
-            }
-
-            public static Counter* Create() {
-
-                var ptr = _make(new Counter());
-                ptr->ptr = (byte*)ptr;
-                return ptr;
-
-            }
-
-            public void Dispose() {
-                _free(this.ptr);
-            }
-
-        }
-
         [BURST(CompileSynchronously = true)]
         public struct JobSpawnViews : IJob {
 

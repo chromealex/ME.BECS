@@ -5,22 +5,15 @@ namespace ME.BECS {
     using static Cuts;
     using Unity.Mathematics;
 
-    #if USE_CACHE_PTR
-    [StructLayout(LayoutKind.Explicit, Size = 56)]
-    #else
-    [StructLayout(LayoutKind.Explicit, Size = 48)]
-    #endif
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct DataDenseSet {
 
-        [StructLayout(LayoutKind.Explicit, Size = 16)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct Page {
 
             // [ushort-gen][byte-state][byte-align][data]
-            [FieldOffset(0)]
             public MemPtr entIdToData;
-            [FieldOffset(8)]
             public LockSpinner lockSpinner;
-            [FieldOffset(12)]
             public byte isCreated;
             public bool IsCreated => this.isCreated == 1;
 
@@ -55,11 +48,8 @@ namespace ME.BECS {
 
         private const uint ENTITIES_PER_PAGE = 64u;
 
-        [FieldOffset(0)]
         private ReadWriteSpinner readWriteSpinner;
-        [FieldOffset(24)]
         private readonly uint dataSize;
-        [FieldOffset(30)]
         private MemArray<Page> dataPages;
 
         [INLINE(256)]

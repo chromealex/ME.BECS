@@ -32,6 +32,8 @@ namespace ME.BECS {
         private bool asJob;
         internal JobHandle builderDependsOn;
         internal bool isCreated;
+        internal Unity.Collections.Allocator allocator;
+        
         public ushort WorldId => this.commandBuffer->worldId;
 
         [BURST(CompileSynchronously = true)]
@@ -41,14 +43,15 @@ namespace ME.BECS {
             public QueryData* queryData;
             [NativeDisableUnsafePtrRestriction]
             public CommandBuffer* commandBuffer;
+            public Unity.Collections.Allocator allocator;
 
             public void Execute() {
                 
                 this.queryData->Dispose();
-                _free(ref this.queryData);
+                _free(this.queryData, this.allocator);
                 
                 this.commandBuffer->Dispose();
-                _free(ref this.commandBuffer);
+                _free(this.commandBuffer, this.allocator);
 
             }
 
@@ -65,9 +68,9 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             this.builderDependsOn.Complete();
             this.queryData->Dispose();
-            _free(ref this.queryData);
+            _free(this.queryData, this.allocator);
             this.commandBuffer->Dispose();
-            _free(ref this.commandBuffer);
+            _free(this.commandBuffer, this.allocator);
             this = default;
         }
 
@@ -77,6 +80,7 @@ namespace ME.BECS {
             var job = new DisposeJob() {
                 queryData = this.queryData,
                 commandBuffer = this.commandBuffer,
+                allocator = this.allocator,
             };
             return job.Schedule(handle);
         }
@@ -585,7 +589,7 @@ namespace ME.BECS {
                             if (toIdx > count) toIdx = count;
                             // Add range fromIdx..toIdx
                             var size = toIdx - fromIdx;
-                            arrPtr = _makeArray<uint>(size);
+                            arrPtr = _makeArray<uint>(size, Constants.ALLOCATOR_TEMP_ST.ToAllocator);
                             _memcpy(temp.Ptr + fromIdx, arrPtr, TSize<uint>.sizeInt * (int)size);
                             elementsCount += size;
                         }
@@ -599,7 +603,7 @@ namespace ME.BECS {
                         }
 
                         if (elementsCount > 0u) {
-                            arrPtr = _makeArray<uint>(elementsCount);
+                            arrPtr = _makeArray<uint>(elementsCount, Constants.ALLOCATOR_TEMP_ST.ToAllocator);
                             var k = 0u;
                             for (uint i = 0u; i < archCount; ++i) {
                                 var archIdx = archs[i];

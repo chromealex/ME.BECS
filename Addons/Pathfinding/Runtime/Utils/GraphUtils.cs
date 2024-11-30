@@ -3,7 +3,7 @@ namespace ME.BECS.Pathfinding {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
     using ME.BECS.Transforms;
-    
+
     public static class GraphUtils {
 
         [INLINE(256)]

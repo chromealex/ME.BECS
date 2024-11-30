@@ -32,7 +32,7 @@ namespace ME.BECS {
 
     public static unsafe class Cuts {
 
-        public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator;
+        public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN;
         
         [INLINE(256)]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {
@@ -193,9 +193,32 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static T* _makeArray<T>(uint length, Unity.Collections.Allocator allocator, bool clearMemory = true) where T : unmanaged {
+            
+            var size = TSize<T>.sizeInt * length;
+            var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, TAlign<T>.alignInt);
+            LeakDetector.Track(ptr);
+            if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
+            
+            return (T*)ptr;
+
+        }
+
+        [INLINE(256)]
         public static T* _make<T>(in T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
+            LeakDetector.Track(ptr);
+            *(T*)ptr = obj;
+            
+            return (T*)ptr;
+
+        }
+
+        [INLINE(256)]
+        public static T* _make<T>(in T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+            
+            var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, TSize<T>.sizeInt, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
             *(T*)ptr = obj;
             
@@ -256,6 +279,7 @@ namespace ME.BECS {
         public static void _free<T>(ref T* obj) where T : unmanaged {
             
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
             obj = null;
@@ -266,6 +290,7 @@ namespace ME.BECS {
         public static void _free<T>(T* obj) where T : unmanaged {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
 
@@ -275,6 +300,7 @@ namespace ME.BECS {
         public static void _free(ref void* obj) {
             
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
+            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj);
             obj = null;

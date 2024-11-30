@@ -131,14 +131,11 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe partial struct Batches {
 
-        [StructLayout(LayoutKind.Explicit, Size = 24)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct ThreadItem {
 
-            [FieldOffset(0)]
             public List<uint> items;
-            [FieldOffset(List<uint>.SIZE)]
             public uint Count;
-            [FieldOffset(List<uint>.SIZE + sizeof(uint))]
             public LockSpinner lockSpinner;
 
             public uint GetReservedSizeInBytes() {

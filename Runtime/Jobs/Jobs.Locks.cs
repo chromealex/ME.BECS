@@ -127,24 +127,14 @@ namespace ME.BECS {
     }
     
     [BURST(CompileSynchronously = true)]
-    [StructLayout(LayoutKind.Explicit, Size = ReadWriteSpinner.SIZE)]
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
 
-        #if USE_CACHE_PTR
-        public const int SIZE = 24;
-        #else
-        public const int SIZE = 16;
-        #endif
-
         private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
-        [FieldOffset(0)]
         private MemPtr value;
-        [FieldOffset(MemPtr.SIZE)]
         private int readValue;
-        [FieldOffset(MemPtr.SIZE + sizeof(int))]
         private int writeValue;
         #if USE_CACHE_PTR
-        [FieldOffset(MemPtr.SIZE + sizeof(int) + sizeof(int))]
         private int* ptr;
         #endif
 

@@ -63,8 +63,8 @@ namespace ME.BECS.Pathfinding {
         
         public void OnDestroy(ref SystemContext context) {
 
-            this.graphs.Dispose();
-            this.types.Dispose();
+            Unity.Collections.CollectionHelper.Dispose(this.graphs);
+            Unity.Collections.CollectionHelper.Dispose(this.types);
             this.heights.Dispose();
 
         }

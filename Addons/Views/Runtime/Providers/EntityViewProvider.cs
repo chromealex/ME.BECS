@@ -406,7 +406,6 @@ namespace ME.BECS.Views {
                 while (e.MoveNext() == true) {
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(e.Current.value.info->prefabPtr);
                     handle.Free();
-                    _free(e.Current.value.info);
                 }
             }
 

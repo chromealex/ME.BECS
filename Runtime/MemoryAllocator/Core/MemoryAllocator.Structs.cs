@@ -201,47 +201,29 @@
 
     public unsafe partial struct MemoryAllocator {
         
-        [StructLayout(LayoutKind.Explicit, Size = MemZone.SIZE)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct MemZone {
 
-            public const int SIZE = 4 + MemBlock.SIZE + MemBlockOffset.SIZE + 4 /* align */;
-            
-            [FieldOffset(0)]
             public int size;           // total bytes malloced, including header
-            [FieldOffset(4)]
             public MemBlock blocklist; // start / end cap for linked list
-            [FieldOffset(4 + MemBlock.SIZE)]
             public MemBlockOffset rover;
 
         }
 
-        [StructLayout(LayoutKind.Explicit, Size = MemBlock.SIZE)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct MemBlock {
-                        
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            public const int SIZE = 4 + 4 + MemBlockOffset.SIZE + MemBlockOffset.SIZE + 4;
-            #else
-            public const int SIZE = 4 + 4 + MemBlockOffset.SIZE + MemBlockOffset.SIZE;
-            #endif
-
-            [FieldOffset(0)]
+            
             public int size;    // including the header and possibly tiny fragments
-            [FieldOffset(4)]
             public byte state;
-            [FieldOffset(4 + 4)]
             public MemBlockOffset next;
-            [FieldOffset(4 + 4 + MemBlockOffset.SIZE)]
             public MemBlockOffset prev;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            [FieldOffset(4 + 4 + MemBlockOffset.SIZE + MemBlockOffset.SIZE)]
             public int id;      // should be ZONE_ID
             #endif
 
         };
 
         public readonly struct MemBlockOffset {
-
-            public const int SIZE = 8;
 
             public readonly long value;
 

@@ -199,6 +199,38 @@ namespace ME.BECS {
 
     }
     
+    public struct WorldsDomainAllocator {
+
+        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<DomainAllocator>> allocatorDomainBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<DomainAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsDomainAllocator>(TAlign<Unity.Collections.AllocatorHelper<DomainAllocator>>.align, 10008);
+        internal static ref Unity.Collections.AllocatorHelper<DomainAllocator> allocatorDomain => ref allocatorDomainBurst.Data;
+
+        private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorDomainValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsDomainAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10009);
+        internal static bool allocatorDomainValid => allocatorDomainValidBurst.Data.IsCreated == true && allocatorDomainValidBurst.Data.Value;
+
+        public static Unity.Collections.AllocatorHelper<DomainAllocator> Initialize() {
+
+            var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
+            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
+            allocatorDomain = new Unity.Collections.AllocatorHelper<DomainAllocator>(Constants.ALLOCATOR_PERSISTENT);
+            allocatorDomain.Allocator.Initialize(100);
+            allocatorDomainValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
+            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
+
+            return allocatorDomain;
+
+        }
+
+        public static void Dispose() {
+
+            if (allocatorDomainValidBurst.Data.IsCreated == false || allocatorDomainValidBurst.Data.Value == false) return;
+            allocatorDomainValidBurst.Data.Value = false;
+            allocatorDomainValidBurst.Data.Dispose();
+            allocatorDomain.Dispose();
+            
+        }
+
+    }
+
     public struct WorldsPersistentAllocator {
 
         private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10006);
@@ -291,6 +323,7 @@ namespace ME.BECS {
             if (WorldsStorage.worlds.Length > 0u) Dispose();
             WorldsTempAllocator.Initialize();
             WorldsPersistentAllocator.Initialize();
+            WorldsDomainAllocator.Initialize();
 
             if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
             ResetWorldsCounter();
@@ -306,9 +339,11 @@ namespace ME.BECS {
         }
 
         public static void Dispose() {
-            
+
+            UnityEngine.Debug.Log("Do ApplicationQuit");
             WorldsTempAllocator.Dispose();
             WorldsPersistentAllocator.Dispose();
+            WorldsDomainAllocator.Dispose();
             
         }
 
