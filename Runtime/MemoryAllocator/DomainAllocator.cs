@@ -7,16 +7,21 @@ namespace ME.BECS {
     public unsafe struct DomainAllocator : AllocatorManager.IAllocator {
         
         private AllocatorManager.AllocatorHandle handle;
+        #if MEMORY_ALLOCATOR_BOUNDS_CHECK
         private Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<System.IntPtr> pointers;
+        #endif
         private Spinner spinner;
 
         public void Initialize(int capacity) {
             this.spinner = default;
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             this.pointers = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<System.IntPtr>(capacity, Allocator.Persistent);
+            #endif
             this.handle = Allocator.Persistent;
         }
         
         public void Dispose() {
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             this.spinner.Acquire();
             AllocatorManager.Block block = default;
             block.Range.Allocator = this.handle;
@@ -26,10 +31,12 @@ namespace ME.BECS {
             }
             this.pointers.Dispose();
             this.spinner.Release();
+            #endif
             this = default;
         }
 
         public int Try(ref AllocatorManager.Block block) {
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             var alloc = false;
             if (block.Range.Pointer == System.IntPtr.Zero) { // Allocate
                 alloc = true;
@@ -43,8 +50,10 @@ namespace ME.BECS {
                     return -1;
                 }
             }
+            #endif
             block.Range.Allocator = this.handle;
             var result = this.handle.Try(ref block);
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             if (alloc == true) {
                 this.spinner.Acquire();
                 this.pointers.Add(block.Range.Pointer);
@@ -54,6 +63,7 @@ namespace ME.BECS {
                 this.pointers.Remove(block.Range.Pointer);
                 this.spinner.Release();
             }
+            #endif
             return result;
         }
 
