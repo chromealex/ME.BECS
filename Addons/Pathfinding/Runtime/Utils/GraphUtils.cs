@@ -43,6 +43,11 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns half-size vector which snapped to grid
+        /// </summary>
+        /// <param name="size">Vector with half-width and half-height of a rect</param>
+        /// <returns></returns>
         [INLINE(256)]
         public static float2 SnapSize(uint2 size) {
 
