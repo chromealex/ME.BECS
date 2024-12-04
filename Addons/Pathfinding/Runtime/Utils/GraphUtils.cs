@@ -44,7 +44,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         /// <summary>
-        /// Returns half-size vector which snapped to grid
+        /// Returns half-size, snapped to a grid rect size vector
         /// </summary>
         /// <param name="size">Vector with half-width and half-height of a rect</param>
         /// <returns></returns>
