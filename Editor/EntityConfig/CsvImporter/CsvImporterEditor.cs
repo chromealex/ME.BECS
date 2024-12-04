@@ -192,14 +192,14 @@ namespace ME.BECS.Editor.CsvImporter {
                         }
                     }
                     
-                    for (var index = 0; index < data.Count; ++index) {
-                        ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
-                    }
-
                     foreach (var config in configs) {
                         CreateConfig(config);
                     }
                     
+                    for (var index = 0; index < data.Count; ++index) {
+                        ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
+                    }
+
                     { // assign configs to ObjectReferenceRegistry
                         foreach (var config in configs) {
                             ObjectReferenceRegistry.data.Add(config.instance, out _);
@@ -315,6 +315,13 @@ namespace ME.BECS.Editor.CsvImporter {
                     var configName = line[j];
                     if (string.IsNullOrEmpty(configName) == false) {
                         var idx = allConfigs.FindIndex(x => x.path.EndsWith(configName));
+                        if (idx == -1) {
+                            var configObj = EditorUtils.GetAssetByPathPart<EntityConfig>(configName);
+                            if (configObj != null) {
+                                allConfigs.Add(new ConfigFile(configObj));
+                                idx = allConfigs.Count - 1;
+                            }
+                        }
                         var configIdx = j - offset;
                         var config = configFiles[configIdx];
                         config.baseConfig = idx;
@@ -344,6 +351,8 @@ namespace ME.BECS.Editor.CsvImporter {
                         continue;
                     }
 
+                    var isTag = componentType.GetFields().Length == 0;
+                    
                     var isAspect = typeof(IAspect).IsAssignableFrom(componentType);
                     for (int j = offset; j < line.Length; ++j) {
                         var configIdx = j - offset;
@@ -352,6 +361,7 @@ namespace ME.BECS.Editor.CsvImporter {
                         if (string.IsNullOrEmpty(value) == true) continue;
                         var configFile = configFiles[configIdx];
                         if (isAspect == true) {
+                            if (value == "0" || value == "FALSE") continue;
                             var aspect = configFile.aspects.FirstOrDefault(x => x.type == componentType);
                             if (aspect == null) {
                                 aspect = new ConfigFile.Aspect() {
@@ -361,6 +371,9 @@ namespace ME.BECS.Editor.CsvImporter {
                                 configFile.aspects.Add(aspect);
                             }
                         } else {
+                            if (isTag == true) {
+                                if (value == "0" || value == "FALSE") continue;
+                            }
                             var component = configFile.components.FirstOrDefault(x => x.type == componentType);
                             if (component == null) {
                                 component = new ConfigFile.Component() {

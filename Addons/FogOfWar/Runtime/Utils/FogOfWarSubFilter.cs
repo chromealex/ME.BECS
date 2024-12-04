@@ -7,6 +7,8 @@ namespace ME.BECS.FogOfWar {
         
         public bool IsValid(in Ent ent, in NativeTrees.AABB bounds) {
 
+            if (ent.IsAlive() == false) return false;
+            
             var team = ME.BECS.Players.PlayerUtils.GetOwner(in ent).readTeam;
             if (team == this.forTeam) {
                 return true;

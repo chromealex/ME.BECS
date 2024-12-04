@@ -1062,6 +1062,19 @@ namespace ME.BECS.Editor {
                 var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(item.source));
                 if (path.EndsWith(pathPart) == true) return (T)item.source;
             }
+
+            var filter = $"t:{typeof(T).Name}";
+            if (typeof(UnityEngine.Component).IsAssignableFrom(typeof(T)) == true) {
+                filter = "t:prefab";
+            }
+            var guids = UnityEditor.AssetDatabase.FindAssets(filter);
+            foreach (var guid in guids) {
+                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                if (GetFullPathWithoutExtension(path).EndsWith(pathPart) == true) {
+                    var obj = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(path);
+                    if (obj != null) return obj;
+                }
+            }
             return null;
         }
 

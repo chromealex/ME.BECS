@@ -116,24 +116,24 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false, JobInfo jobInfo = default) {
+        public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false, int graphMask = -1, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(jobInfo);
-            return CreateGraphMask(in ent, in position, in rotation, size, cost, height, obstacleChannel, ignoreGraphRadius);
+            var ent = Ent.New(in jobInfo);
+            return CreateGraphMask(in ent, in position, in rotation, size, cost, height, obstacleChannel, ignoreGraphRadius, graphMask);
 
         }
 
         [INLINE(256)]
-        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false) {
+        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, float height = 1f, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false, int graphMask = -1) {
 
             var heights = new MemArrayAuto<float>(in ent, 1u);
             heights[0u] = height;
-            return CreateGraphMask(in ent, in position, in rotation, size, cost, obstacleChannel, ignoreGraphRadius, heights, 1u);
+            return CreateGraphMask(in ent, in position, in rotation, size, cost, obstacleChannel, ignoreGraphRadius, heights, 1u, graphMask);
 
         }
 
         [INLINE(256)]
-        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost, ObstacleChannel obstacleChannel, bool ignoreGraphRadius, MemArrayAuto<float> heights, uint heightsSizeX) {
+        public static Ent CreateGraphMask(in Ent ent, in float3 position, in quaternion rotation, uint2 size, byte cost, ObstacleChannel obstacleChannel, bool ignoreGraphRadius, MemArrayAuto<float> heights, uint heightsSizeX, int graphMask) {
 
             var obstacle = new GraphMaskComponent() {
                 offset = float2.zero,
@@ -142,6 +142,7 @@ namespace ME.BECS.Pathfinding {
                 ignoreGraphRadius = (byte)(ignoreGraphRadius == true ? 1 : 0),
                 cost = cost,
                 obstacleChannel = obstacleChannel,
+                graphMask = graphMask,
             };
             var runtime = new GraphMaskRuntimeComponent() {
                 heights = heights,

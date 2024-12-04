@@ -20,24 +20,22 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
-                var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
-                var player = unit.readOwner.GetAspect<Players.PlayerAspect>();
-                var team = player.team;
+                //var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
+                //var player = unit.readOwner.GetAspect<Players.PlayerAspect>();
                 UnitAspect nearestResult = default;
                 for (uint i = 0u; i < query.results.results.Count; ++i) {
                     var ent = query.results.results[this.world.state, i];
                     if (ent.IsAlive() == false) continue;
                     var result = ent.GetAspect<UnitAspect>();
-                    if (UnitUtils.GetTeam(in result) == team) continue;
-                    if (this.fogOfWar.IsCreated == true && this.fogOfWar.Value.IsVisible(in player, in ent) == false) continue;
-
-                    var distSq = math.lengthsq(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+                    nearestResult = result;
+                    break;
+                    //if (this.fogOfWar.IsCreated == true && this.fogOfWar.Value.IsVisible(in player, in ent) == false) continue;
+                    /*var distSq = math.lengthsq(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
                     var rangeSqr = aspect.readAttackRangeSqr;
                     if (distSq <= rangeSqr || math.sqrt(distSq) <= math.sqrt(rangeSqr) + result.readRadius) {
                         nearestResult = result;
                         break;
-                    }
-                    
+                    }*/
                 }
 
                 if (nearestResult.IsAlive() == true && nearestResult.readHealth > 0f) {

@@ -103,7 +103,9 @@ namespace ME.BECS.Views.Editor {
                         ClipSelection selectedClip = new ClipSelection();
                         ME.BECS.Extensions.GraphProcessor.GridBackground grid = null;
 
-                        var defaultMaterial = UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset.defaultMaterial;
+                        var defaultMaterial = UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline?.defaultMaterial;
+                        if (defaultMaterial == null) defaultMaterial = animatorViewModule.animator.GetComponentInChildren<Renderer>(true)?.sharedMaterial;
+
                         var pointMaterial = new Material(defaultMaterial);
                         pointMaterial.color = Color.green;
                         pointMaterial.SetColor("_EmissionColor", Color.Lerp(Color.yellow, Color.black, 0.7f));

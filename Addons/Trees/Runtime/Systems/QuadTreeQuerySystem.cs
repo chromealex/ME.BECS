@@ -41,6 +41,8 @@ namespace ME.BECS {
         public byte ignoreSelf;
 
     }
+    
+    public struct QuadTreeQueryHasCustomFilterTag : IComponent {}
 
     public struct QuadTreeResult : IComponent {
 
@@ -203,26 +205,8 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
-                if (tr.IsCalculated == false) return;
-                var data = query.query;
-                var worldPos = tr.GetWorldMatrixPosition();
-                var worldRot = tr.GetWorldMatrixRotation();
-                var sector = new MathSector(worldPos, worldRot, query.query.sector);
-                var ent = tr.ent;
+                this.system.FillNearest(ref query, in tr, new AlwaysTrueSubFilter());
                 
-                // clean up results
-                if (query.results.results.IsCreated == true) query.results.results.Clear();
-
-                if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, data.nearestCount > 0u ? data.nearestCount : 1u);
-
-                var q = query.readQuery;
-                if (data.nearestCount == 1u) {
-                    var nearest = this.system.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false);
-                    if (nearest.IsAlive() == true) query.results.results.Add(nearest);
-                } else {
-                    this.system.GetNearest(q.treeMask, data.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, query.readQuery.ignoreY == 1 ? true : false);
-                }
-
             }
 
         }
@@ -230,7 +214,7 @@ namespace ME.BECS {
         public void OnUpdate(ref SystemContext context) {
 
             var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            var handle = context.Query().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
+            var handle = context.Query().Without<QuadTreeQueryHasCustomFilterTag>().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
                 system = querySystem,
             });
             context.SetDependency(handle);
