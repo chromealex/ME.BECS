@@ -25,8 +25,8 @@ namespace ME.BECS.Attack {
                         rot = firePointTr.GetWorldMatrixRotation();
                     }
 
-                    BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.query.treeMask, aspect.target, default, aspect.component.bulletConfig, 
-                                             aspect.component.muzzleView, jobInfo: jobInfo);
+                    BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.readQuery.treeMask, aspect.target, default, aspect.readComponent.bulletConfig, 
+                                             aspect.readComponent.muzzleView, jobInfo: jobInfo);
 
                     aspect.UseFire();
                     
