@@ -30,7 +30,6 @@ namespace ME.BECS.Units {
 
         public AgentType properties;
 
-        public float speed;
         public int collideWithEnd;
         
         public float3 collisionDirection;
@@ -45,7 +44,15 @@ namespace ME.BECS.Units {
         public Ent attackSensor;
 
     }
-    
+
+    [EditorComment("Current unit agent speed values")]
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct NavAgentRuntimeSpeedComponent : IComponent {
+
+        public float speed;
+
+    }
+
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct IsUnitStaticComponent : IConfigComponent {}
 

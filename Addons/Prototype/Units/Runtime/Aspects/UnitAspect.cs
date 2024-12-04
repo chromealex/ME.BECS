@@ -11,6 +11,7 @@ namespace ME.BECS.Units {
         [QueryWith]
         public AspectDataPtr<NavAgentComponent> navAgentDataPtr;
         public AspectDataPtr<NavAgentRuntimeComponent> navAgentRuntimeDataPtr;
+        public AspectDataPtr<NavAgentRuntimeSpeedComponent> navAgentRuntimeSpeedDataPtr;
         [QueryWith]
         public AspectDataPtr<UnitCommandGroupComponent> unitCommandGroupDataPtr;
         [QueryWith]
@@ -62,8 +63,8 @@ namespace ME.BECS.Units {
         public readonly ref readonly float3 readVelocity => ref this.readComponentRuntime.velocity;
         public readonly ref float radius => ref this.componentRuntime.properties.radius;
         public readonly ref readonly float readRadius => ref this.readComponentRuntime.properties.radius;
-        public readonly ref float speed => ref this.componentRuntime.speed;
-        public readonly ref readonly float readSpeed => ref this.readComponentRuntime.speed;
+        public readonly ref float speed => ref this.componentRuntimeSpeed.speed;
+        public readonly ref readonly float readSpeed => ref this.readComponentRuntimeSpeed.speed;
         public readonly ref float maxSpeed => ref this.component.maxSpeed;
         public readonly ref readonly float readMaxSpeed => ref this.readComponent.maxSpeed;
         public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
@@ -83,6 +84,8 @@ namespace ME.BECS.Units {
         public readonly ref readonly NavAgentComponent readComponent => ref this.navAgentDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentRuntimeComponent readComponentRuntime => ref this.navAgentRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref NavAgentRuntimeSpeedComponent componentRuntimeSpeed => ref this.navAgentRuntimeSpeedDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly NavAgentRuntimeSpeedComponent readComponentRuntimeSpeed => ref this.navAgentRuntimeSpeedDataPtr.Read(this.ent.id, this.ent.gen);
 
         public readonly bool RemoveFromCommandGroup() => UnitUtils.RemoveFromCommandGroup(in this);
 

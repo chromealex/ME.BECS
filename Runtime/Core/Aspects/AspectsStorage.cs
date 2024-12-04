@@ -2,6 +2,7 @@ namespace ME.BECS {
     
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Collections.LowLevel.Unsafe;
 
     public class QueryWithAttribute : System.Attribute {}
     
@@ -10,9 +11,11 @@ namespace ME.BECS {
     public unsafe struct AspectDataPtr<T> : IAspectData where T : unmanaged, IComponent {
 
         public RefRW<T> value;
+        public RefRO<T> valueRO;
         
         public AspectDataPtr(in World world) {
             this.value = world.state->components.GetRW<T>(world.state, world.id);
+            this.valueRO = world.state->components.GetRO<T>(world.state, world.id);
         }
 
         [INLINE(256)]
@@ -22,7 +25,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly ref readonly T Read(uint entId, ushort gen) {
-            return ref this.value.Read(entId, gen);
+            return ref this.valueRO.Read(entId, gen);
         }
 
     }

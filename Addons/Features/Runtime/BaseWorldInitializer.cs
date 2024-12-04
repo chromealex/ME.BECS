@@ -72,10 +72,12 @@ namespace ME.BECS {
         protected virtual void DoWorldAwake() {
             
             Context.Switch(in this.world);
+            this.previousFrameDependsOn.Complete();
             for (var i = 0; i < this.modules.list.Length; ++i) {
                 var module = this.modules.list[i];
                 if (module.IsEnabled() == false) continue;
                 module.obj.worldProperties = this.properties;
+                this.previousFrameDependsOn.Complete();
                 module.obj.OnAwake(ref this.world);
             }
 
@@ -89,11 +91,13 @@ namespace ME.BECS {
 
             if (this.world.isCreated == true) {
                 
+                this.previousFrameDependsOn.Complete();
                 Context.Switch(in this.world);
                 for (var i = 0; i < this.modules.list.Length; ++i) {
                     var module = this.modules.list[i];
                     if (module.IsEnabled() == false) continue;
                     module.obj.worldProperties = this.properties;
+                    this.previousFrameDependsOn.Complete();
                     this.previousFrameDependsOn = module.obj.OnStart(ref this.world, this.previousFrameDependsOn);
                 }
                 

@@ -921,7 +921,7 @@ namespace ME.BECS.Pathfinding {
                 changedChunks = changedChunks,
             }.Schedule(dependsOn);
 
-            var results = new Unity.Collections.NativeList<ResultItem>((int)((root.chunkWidth + root.chunkHeight) * (changedChunks.IsCreated == true ? changedChunks.Length : root.chunks.Length)), Unity.Collections.Allocator.TempJob);
+            var results = new Unity.Collections.NativeList<ResultItem>((int)((root.chunkWidth + root.chunkHeight) * (changedChunks.IsCreated == true ? changedChunks.Length : root.chunks.Length)), Constants.ALLOCATOR_TEMPJOB);
             // calculate portal connections inside chunk
             var localJobHandle = new CalculateConnectionsJob() {
                 world = world,
@@ -941,9 +941,9 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static JobHandle Build(in World world, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default, JobInfo jobInfo = default) {
+        public static JobHandle Build(in World world, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default, in JobInfo jobInfo = default) {
 
-            graph = Ent.New(in world, jobInfo);
+            graph = Ent.New(in world, in jobInfo);
             graph.Set<TransformAspect>();
             return Build(in graph, in heights, in world, in properties, in agentConfig, dependsOn);
 
@@ -962,7 +962,7 @@ namespace ME.BECS.Pathfinding {
                 properties = properties,
             });
 
-            var results = new Unity.Collections.NativeList<ResultItem>((int)((properties.chunkWidth + properties.chunkHeight) * changedChunks.Length), Unity.Collections.Allocator.TempJob);
+            var results = new Unity.Collections.NativeList<ResultItem>((int)((properties.chunkWidth + properties.chunkHeight) * changedChunks.Length), Constants.ALLOCATOR_TEMPJOB);
             var buildChunks = new BuildChunksJob() {
                 graph = graph,
                 world = world,

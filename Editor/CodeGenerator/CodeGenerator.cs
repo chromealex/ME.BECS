@@ -458,6 +458,7 @@ namespace ME.BECS.Editor {
                 }
             }
             {
+                var csc = @$"{dir}/csc.rsp";
                 var path = @$"{dir}/{ECS}.BurstHelper.{postfix}.asmdef";
                 var template = string.Empty;
                 if (editorAssembly == true) {
@@ -512,6 +513,7 @@ namespace ME.BECS.Editor {
                 var newContent = template.Replace("{{CONTENT}}", string.Join(@""",""", content));
                 var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
                 if (prevContent != newContent) {
+                    System.IO.File.WriteAllText(csc, "@Assets/csc.rsp");
                     System.IO.File.WriteAllText(path, newContent);
                     UnityEditor.AssetDatabase.ImportAsset(path);
                 }

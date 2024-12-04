@@ -28,11 +28,12 @@ namespace ME.BECS {
         internal CommandBuffer* commandBuffer;
         internal QueryData* queryData;
         internal uint parallelForBatch;
+        internal JobHandle builderDependsOn;
+        internal Unity.Collections.Allocator allocator;
         private bool withBurst;
         private bool asJob;
-        internal JobHandle builderDependsOn;
+        internal bool isUnsafe;
         internal bool isCreated;
-        internal Unity.Collections.Allocator allocator;
         
         public ushort WorldId => this.commandBuffer->worldId;
 
@@ -90,6 +91,18 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             this.queryData->steps = steps;
             this.queryData->minElementsPerStep = minElementsPerStep;
+            return this;
+        }
+
+        /// <summary>
+        /// Disable components safety restriction
+        /// </summary>
+        /// <returns></returns>
+        [INLINE(256)]
+        public QueryBuilder AsUnsafe() {
+            E.IS_CREATED(this);
+            E.QUERY_BUILDER_IS_UNSAFE(this.isUnsafe);
+            this.isUnsafe = true;
             return this;
         }
         
@@ -456,6 +469,8 @@ namespace ME.BECS {
 
                 }
 
+                handle = this.Dispose(handle);
+
             } else {
 
                 this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
@@ -467,6 +482,7 @@ namespace ME.BECS {
                     };
                     var jobHandle = job.Schedule(this.commandBuffer, this.builderDependsOn);
                     handle = job.functionPointer.Dispose(jobHandle);
+                    handle = this.Dispose(handle);
 
                 } else if (this.asJob == true) {
                     
@@ -475,6 +491,7 @@ namespace ME.BECS {
                     };
                     var jobHandle = job.Schedule(this.commandBuffer, this.builderDependsOn);
                     handle = job.functionPointer.Dispose(jobHandle);
+                    handle = this.Dispose(handle);
 
                 } else {
                     
@@ -489,11 +506,11 @@ namespace ME.BECS {
 
                     }
 
+                    this.Dispose();
+
                 }
 
             }
-
-            handle = this.Dispose(handle);
 
             this.builderDependsOn = handle;
             return handle;

@@ -1,6 +1,3 @@
-using ME.BECS.Transforms;
-using ME.BECS.Views;
-
 namespace ME.BECS.Attack {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -18,8 +15,8 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect) {
 
-                aspect.componentRuntime.fireTimer += this.dt;
-                if (aspect.componentRuntime.fireTimer >= aspect.readComponent.fireTime) {
+                aspect.componentRuntimeFire.fireTimer += this.dt;
+                if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {
 
                     // time to attack is up
                     // fire - reset target and reload
@@ -31,7 +28,7 @@ namespace ME.BECS.Attack {
                 if (aspect.IsFireUsed() == false) {
 
                     // use default attack time
-                    if (aspect.componentRuntime.fireTimer >= aspect.readComponent.attackTime) {
+                    if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
                         // Fire
                         aspect.CanFire = true;
                     }

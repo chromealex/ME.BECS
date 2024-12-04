@@ -155,7 +155,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Ent Add(State* state, ushort worldId, out bool reused, JobInfo jobInfo) {
+        public static Ent Add(State* state, ushort worldId, out bool reused, in JobInfo jobInfo) {
 
             E.IS_IN_TICK(state);
             
@@ -167,7 +167,7 @@ namespace ME.BECS {
                 state->entities.popLock.Lock();
                 cnt = state->entities.free.Count;
                 if (cnt > jobInfo.Offset) {
-                    idx = state->entities.free.Pop(in state->allocator, jobInfo);
+                    idx = state->entities.free.Pop(in state->allocator, in jobInfo);
                 }
                 state->entities.popLock.Unlock();
             }

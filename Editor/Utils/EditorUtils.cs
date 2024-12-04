@@ -946,7 +946,7 @@ namespace ME.BECS.Editor {
         }
 
         public static string GetCodeName(string name) {
-            name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z]", "");
+            name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z0-9]", "_");
             return name;
         }
 
@@ -968,15 +968,18 @@ namespace ME.BECS.Editor {
             var indent = defaultIndent;
             for (int i = 0; i < content.Length; ++i) {
                 var line = content[i];
-                var open = line.Contains('{') || line.Contains('[');
-                var close = line.Contains('}') || line.Contains(']');
-                if (close == true) --indent;
+                var opensCount = line.Count(f => f == '{' || f == '[');
+                var closesCount = line.Count(f => f == '}' || f == ']');
+                var d = opensCount - closesCount;
+                //var open = line.Contains('{') || line.Contains('[');
+                //var close = line.Contains('}') || line.Contains(']');
+                if (d < 0) --indent;
                 for (int j = 0; j < indent; ++j) {
                     result.Append(' ', indentSize);
                 }
                 result.Append(line);
                 result.Append('\n');
-                if (open == true) ++indent;
+                if (d > 0) ++indent;
             }
             
             return result.ToString();

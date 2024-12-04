@@ -22,7 +22,7 @@ namespace ME.BECS {
                 if (ent.id >= this.names.Length) {
                     this.spinner.Lock();
                     if (ent.id >= this.names.Length) {
-                        this.names.Resize(math.max(MIN_CAPACITY, ent.id + 1u));
+                        this.names.Resize(math.max(MIN_CAPACITY, ent.id + 1u) * 2u);
                     }
                     this.spinner.Unlock();
                 }

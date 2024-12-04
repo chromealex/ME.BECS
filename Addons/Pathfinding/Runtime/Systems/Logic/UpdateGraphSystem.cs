@@ -135,11 +135,11 @@ namespace ME.BECS.Pathfinding {
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var graphMaskUpdate = API.Query(in context, context.dependsOn).With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().Schedule<UpdateGraphMaskJob, GraphMaskComponent, GraphMaskRuntimeComponent>(new UpdateGraphMaskJob() {
+            var graphMaskUpdate = context.Query().With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().Schedule<UpdateGraphMaskJob, GraphMaskComponent, GraphMaskRuntimeComponent>(new UpdateGraphMaskJob() {
                 graphSystem = graphSystem,
             });
             
-            var dependencies = new NativeArray<Unity.Jobs.JobHandle>(graphSystem.graphs.Length, Allocator.Temp);
+            var dependencies = new NativeArray<Unity.Jobs.JobHandle>(graphSystem.graphs.Length, Constants.ALLOCATOR_TEMP);
             for (var i = 0; i < graphSystem.graphs.Length; ++i) {
                 var graphEnt = graphSystem.graphs[i];
                 var changedChunks = graphEnt.Read<RootGraphComponent>().changedChunks;
@@ -147,7 +147,7 @@ namespace ME.BECS.Pathfinding {
                 _memcpy(changedChunks.GetUnsafePtr(), tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
-                dependsOn = context.Query(dependsOn).Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
+                dependsOn = context.Query(dependsOn).AsUnsafe().Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
                     graph = graphEnt,
                     world = context.world,
                     dirtyChunks = tempDirty,

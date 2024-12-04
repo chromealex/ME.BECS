@@ -1,5 +1,4 @@
 namespace ME.BECS.Editor {
-    
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;

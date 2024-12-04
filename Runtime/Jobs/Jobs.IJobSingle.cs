@@ -19,13 +19,6 @@ namespace ME.BECS.Jobs {
             System.IntPtr reflectionData = IJobSingleExtensions.JobProcess<T>.jobReflectionData.Data;
             return reflectionData;
         }
-        
-        public static JobHandle ScheduleSingleDeps<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
-            
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
-            return JobsUtility.Schedule(ref parameters);
-            
-        }
 
         public static JobHandle ScheduleSingle<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
@@ -48,7 +41,7 @@ namespace ME.BECS.Jobs {
             [Unity.Burst.BurstDiscardAttribute]
             public static void Initialize() {
                 if (jobReflectionData.Data == System.IntPtr.Zero) {
-                    jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(T), typeof(T), (ExecuteJobFunction)Execute);
+                    jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(T), (object)new ExecuteJobFunction(Execute));
                 }
             }
 

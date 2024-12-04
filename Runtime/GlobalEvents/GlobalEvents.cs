@@ -67,7 +67,7 @@ namespace ME.BECS {
             ref var items = ref WorldEvents.events.Data;
             for (uint i = 0u; i < items.Length; ++i) {
                 ref var item = ref items.Get(i);
-                if (item.events.IsCreated == false) {
+                if (item.events.IsCreated == true) {
                     item.Dispose();
                 }
             }

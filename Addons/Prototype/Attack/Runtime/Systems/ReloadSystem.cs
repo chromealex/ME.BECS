@@ -15,8 +15,8 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, ref AttackAspect aspect) {
 
-                aspect.componentRuntime.reloadTimer += this.dt;
-                if (aspect.componentRuntime.reloadTimer >= aspect.component.reloadTime) {
+                aspect.componentRuntimeReload.reloadTimer += this.dt;
+                if (aspect.readComponentRuntimeReload.reloadTimer >= aspect.component.reloadTime) {
 
                     aspect.IsReloaded = true;
 

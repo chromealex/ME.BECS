@@ -13,7 +13,7 @@ namespace ME.BECS.Attack {
 
             var sensor = ent.GetAspect<ME.BECS.Units.UnitAspect>().readComponentRuntime.attackSensor;
             if (sensor.IsAlive() == false) return;
-            var attack = sensor.Read<AttackRuntimeComponent>();
+            var attack = sensor.Read<AttackRuntimeFireComponent>();
             this.animator.SetFloat(attackHash, attack.fireTimer);
             
         }

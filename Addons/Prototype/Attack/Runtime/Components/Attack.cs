@@ -15,14 +15,20 @@ namespace ME.BECS.Attack {
         public ME.BECS.Views.View muzzleView;
 
         public void OnInitialize(in Ent ent) {
-            ent.Set(new AttackRuntimeComponent());
+            ent.Set(new AttackRuntimeReloadComponent());
+            ent.Set(new AttackRuntimeFireComponent());
         }
 
     }
 
-    public struct AttackRuntimeComponent : IComponent {
+    public struct AttackRuntimeReloadComponent : IComponent {
 
         public float reloadTimer;
+
+    }
+
+    public struct AttackRuntimeFireComponent : IComponent {
+
         public float fireTimer;
 
     }

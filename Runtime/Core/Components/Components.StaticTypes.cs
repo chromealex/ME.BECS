@@ -170,11 +170,18 @@ namespace ME.BECS {
         }
 
     }
-    
+
+    public struct StaticTypesNames<T> {
+
+        public static readonly Unity.Burst.SharedStatic<Unity.Collections.FixedString512Bytes> name = Unity.Burst.SharedStatic<Unity.Collections.FixedString512Bytes>.GetOrCreate<StaticTypesNames<T>>();
+
+    }
+
     public struct StaticTypes<T> where T : unmanaged, IComponentBase {
 
         private static readonly T defaultZero = default;
 
+        public static ref Unity.Collections.FixedString512Bytes name => ref StaticTypesNames<T>.name.Data;
         public static ref uint staticTypeId => ref StaticTypesStaticTypeId<T>.value.Data;
         public static ref uint sharedTypeId => ref StaticTypesSharedTypeId<T>.value.Data;
         public static ref bool hasSharedCustomHash => ref StaticTypesSharedCustomHash<T>.value.Data;
@@ -215,6 +222,7 @@ namespace ME.BECS {
                 StaticTypes.groups.Resize(typeId);
                 StaticTypes.groups.Get(StaticTypes<T>.typeId) = groupId;
                 StaticTypes.defaultValues.Resize(typeId);
+                StaticTypesNames<T>.name.Data = typeof(T).Name;
                 StaticTypes<T>.AddTypeToCache();
             }
 

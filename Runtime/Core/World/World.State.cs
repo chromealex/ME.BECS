@@ -1,3 +1,5 @@
+using Unity.Jobs;
+
 namespace ME.BECS {
 
     using static Cuts;
@@ -133,7 +135,7 @@ namespace ME.BECS {
                 world = world,
                 worldState = worldState,
                 updateType = updateType,
-            }.ScheduleSingleDeps(dependsOn);
+            }.ScheduleSingle(dependsOn);
             return dependsOn;
         }
 
@@ -141,7 +143,7 @@ namespace ME.BECS {
         public static Unity.Jobs.JobHandle NextTick(State* state, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new NextTickJob() {
                 state = state,
-            }.ScheduleSingleDeps(dependsOn);
+            }.ScheduleSingle(dependsOn);
             return dependsOn;
         }
 

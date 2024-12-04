@@ -11,7 +11,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4>(this QueryBuilder builder, in T job = default) where T : struct, IJobComponents<T0,T1,T2,T3,T4> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase {
             builder.With<T0>(); builder.With<T1>(); builder.With<T2>(); builder.With<T3>(); builder.With<T4>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4>(in builder.commandBuffer, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4>(in builder.commandBuffer, builder.isUnsafe, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -27,7 +27,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobComponents<T0,T1,T2,T3,T4> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase {
-            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4>(in staticQuery.commandBuffer, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -55,24 +55,41 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase
             where T : struct, IJobComponents<T0,T1,T2,T3,T4> {
             JobProcess<T, T0,T1,T2,T3,T4>.Initialize();
-            System.IntPtr reflectionData = JobProcess<T, T0,T1,T2,T3,T4>.jobReflectionData.Data;
+            System.IntPtr reflectionData = JobProcessData<T, T0,T1,T2,T3,T4>.jobReflectionData.Data;
             return reflectionData;
         }
 
-        public static JobHandle Schedule<T, T0,T1,T2,T3,T4>(this T jobData, in CommandBuffer* buffer, JobHandle dependsOn = default)
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        private static System.IntPtr GetReflectionUnsafeData<T, T0,T1,T2,T3,T4>()
+            where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase
+            where T : struct, IJobComponents<T0,T1,T2,T3,T4> {
+            JobProcess<T, T0,T1,T2,T3,T4>.Initialize();
+            System.IntPtr reflectionData = JobProcessUnsafeData<T, T0,T1,T2,T3,T4>.jobReflectionData.Data;
+            return reflectionData;
+        }
+        #endif
+
+        public static JobHandle Schedule<T, T0,T1,T2,T3,T4>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, JobHandle dependsOn = default)
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase
             where T : struct, IJobComponents<T0,T1,T2,T3,T4> {
             
             buffer->sync = false;
-            var data = new JobData<T, T0,T1,T2,T3,T4>() {
+            void* data = null;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            data = CompiledJobs<T>.Get(ref jobData, buffer, unsafeMode);
+            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, T0,T1,T2,T3,T4>() : GetReflectionData<T, T0,T1,T2,T3,T4>(), dependsOn, ScheduleMode.Single);
+            #else
+            var dataVal = new JobData<T, T0,T1,T2,T3,T4>() {
                 jobData = jobData,
                 buffer = buffer,
                 c0 = buffer->state->components.GetRW<T0>(buffer->state, buffer->worldId),c1 = buffer->state->components.GetRW<T1>(buffer->state, buffer->worldId),c2 = buffer->state->components.GetRW<T2>(buffer->state, buffer->worldId),c3 = buffer->state->components.GetRW<T3>(buffer->state, buffer->worldId),c4 = buffer->state->components.GetRW<T4>(buffer->state, buffer->worldId),
             };
+            data = _address(ref dataVal);
+            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, T0,T1,T2,T3,T4>(), dependsOn, ScheduleMode.Single);
+            #endif
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T, T0,T1,T2,T3,T4>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.Schedule(ref parameters);
-
+            
         }
 
         private struct JobData<T, T0,T1,T2,T3,T4>
@@ -85,16 +102,29 @@ namespace ME.BECS.Jobs {
             public RefRW<T0> c0;public RefRW<T1> c1;public RefRW<T2> c2;public RefRW<T3> c3;public RefRW<T4> c4;
         }
 
+        internal struct JobProcessData<T, T0,T1,T2,T3,T4> {
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessData<T, T0,T1,T2,T3,T4>>();
+        }
+
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        internal struct JobProcessUnsafeData<T, T0,T1,T2,T3,T4> {
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessUnsafeData<T, T0,T1,T2,T3,T4>>();
+        }
+        #endif
+
         internal struct JobProcess<T, T0,T1,T2,T3,T4>
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase
             where T : struct, IJobComponents<T0,T1,T2,T3,T4> {
 
-            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, T0,T1,T2,T3,T4>>();
-
             [BurstDiscard]
             public static void Initialize() {
-                if (jobReflectionData.Data == System.IntPtr.Zero) {
-                    jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1,T2,T3,T4>), typeof(T), (ExecuteJobFunction)Execute);
+                if (JobProcessData<T, T0,T1,T2,T3,T4>.jobReflectionData.Data == System.IntPtr.Zero) {
+                    #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+                    JobProcessData<T, T0,T1,T2,T3,T4>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(false), typeof(T), (ExecuteJobFunction)Execute);
+                    JobProcessUnsafeData<T, T0,T1,T2,T3,T4>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(true), typeof(T), (ExecuteJobFunction)Execute);
+                    #else
+                    JobProcessData<T, T0,T1,T2,T3,T4>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, T0,T1,T2,T3,T4>), typeof(T), (ExecuteJobFunction)Execute);
+                    #endif
                 }
             }
 

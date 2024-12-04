@@ -48,11 +48,11 @@ namespace ME.BECS.Pathfinding {
                     return;
                 }
 
-                if (unit.unitCommandGroup.IsAlive() == false) {
+                if (unit.readUnitCommandGroup.IsAlive() == false) {
                     return;
                 }
 
-                var group = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
+                var group = unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>();
                 var target = group.targets[unit.typeId];
                 if (target.IsAlive() == false) return;
                 
@@ -92,11 +92,11 @@ namespace ME.BECS.Pathfinding {
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
                 var desiredDirection = math.normalizesafe(movementDirection * this.followPathSystem.movementForce + 
-                                                          unit.componentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
-                                                          unit.componentRuntime.collisionDirection * this.followPathSystem.collisionForce +
-                                                          unit.componentRuntime.separationVector * this.followPathSystem.separationForce + 
-                                                          unit.componentRuntime.avoidanceVector * this.followPathSystem.avoidanceForce + 
-                                                          unit.componentRuntime.alignmentVector * this.followPathSystem.alignmentForce);
+                                                          unit.readComponentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
+                                                          unit.readComponentRuntime.collisionDirection * this.followPathSystem.collisionForce +
+                                                          unit.readComponentRuntime.separationVector * this.followPathSystem.separationForce + 
+                                                          unit.readComponentRuntime.avoidanceVector * this.followPathSystem.avoidanceForce + 
+                                                          unit.readComponentRuntime.alignmentVector * this.followPathSystem.alignmentForce);
 
                 /*{
                     var prevPos = tr.position;
@@ -127,17 +127,17 @@ namespace ME.BECS.Pathfinding {
                 }
 
                 if (isMoving == false && lengthSq <= math.EPSILON) {
-                    unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.decelerationSpeed);
+                    unit.speed = math.lerp(unit.readSpeed, 0f, this.dt * unit.decelerationSpeed);
                 } else {
                     var accSpeed = unit.accelerationSpeed;
-                    unit.speed = math.lerp(unit.speed, math.select(0f, math.select(unit.speed * 0.5f, unit.maxSpeed, force * 0.5f > 0.4f), force > 0.5f), this.dt * accSpeed);
+                    unit.speed = math.lerp(unit.readSpeed, math.select(0f, math.select(unit.readSpeed * 0.5f, unit.maxSpeed, force * 0.5f > 0.4f), force > 0.5f), this.dt * accSpeed);
                 }
 
                 {
                     var prevPos = tr.position;
                     prevPos.y = 0f;
                     var newPos = prevPos;
-                    newPos += tr.forward * unit.speed * this.dt;
+                    newPos += tr.forward * unit.readSpeed * this.dt;
                     newPos = GraphUtils.GetPositionWithMapBorders(graph, out var collisionDirection, in newPos, in prevPos, in agent.filter);
                     unit.velocity = newPos - prevPos;
                     var delta = collisionDirection * this.followPathSystem.collisionForce * this.dt;
@@ -160,7 +160,7 @@ namespace ME.BECS.Pathfinding {
             
             public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
                 
-                unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.decelerationSpeed);
+                unit.speed = math.lerp(unit.readSpeed, 0f, this.dt * unit.readDecelerationSpeed);
                 
             }
 
@@ -168,13 +168,13 @@ namespace ME.BECS.Pathfinding {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOnFollow = context.Query().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().Schedule<PathFollowJob, TransformAspect, UnitAspect>(new PathFollowJob() {
+            var dependsOnFollow = context.Query().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().AsUnsafe().Schedule<PathFollowJob, TransformAspect, UnitAspect>(new PathFollowJob() {
                 world = context.world,
                 dt = context.deltaTime,
                 buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
                 followPathSystem = this,
             });
-            var dependsOnStop = context.Query().Without<IsUnitStaticComponent>().With<UnitHoldComponent>().Schedule<SpeedDownOnHoldJob, UnitAspect>(new SpeedDownOnHoldJob() {
+            var dependsOnStop = context.Query().Without<IsUnitStaticComponent>().With<UnitHoldComponent>().AsUnsafe().Schedule<SpeedDownOnHoldJob, UnitAspect>(new SpeedDownOnHoldJob() {
                 dt = context.deltaTime,
             });
             context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(dependsOnFollow, dependsOnStop));

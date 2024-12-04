@@ -345,7 +345,6 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
-            UnityEngine.Debug.Log("Do ApplicationQuit");
             WorldsTempAllocator.Dispose();
             WorldsPersistentAllocator.Dispose();
             WorldsDomainAllocator.Dispose();

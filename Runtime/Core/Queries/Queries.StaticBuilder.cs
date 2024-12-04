@@ -25,6 +25,8 @@ namespace ME.BECS {
         internal QueryData* queryData;
         internal JobHandle builderDependsOn;
         internal uint parallelForBatch;
+        internal bool isUnsafe;
+        
         public ushort worldId => this.commandBuffer->worldId;
 
         [INLINE(256)]
@@ -33,6 +35,7 @@ namespace ME.BECS {
             this.queryData = builder.queryData;
             this.builderDependsOn = builder.builderDependsOn;
             this.parallelForBatch = builder.parallelForBatch;
+            this.isUnsafe = builder.isUnsafe;
         }
         
         [INLINE(256)]

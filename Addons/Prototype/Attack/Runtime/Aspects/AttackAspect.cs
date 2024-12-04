@@ -9,13 +9,16 @@ namespace ME.BECS.Attack {
         [QueryWith]
         public AspectDataPtr<AttackComponent> attackDataPtr;
         [QueryWith]
-        public AspectDataPtr<AttackRuntimeComponent> attackRuntimeDataPtr;
+        public AspectDataPtr<AttackRuntimeReloadComponent> attackRuntimeReloadDataPtr;
+        public AspectDataPtr<AttackRuntimeFireComponent> attackRuntimeFireDataPtr;
         public AspectDataPtr<AttackTargetComponent> targetDataPtr;
 
         public readonly ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
-        public readonly ref AttackRuntimeComponent componentRuntime => ref this.attackRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
-        public readonly ref readonly AttackRuntimeComponent readComponentRuntime => ref this.attackRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref AttackRuntimeReloadComponent componentRuntimeReload => ref this.attackRuntimeReloadDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly AttackRuntimeReloadComponent readComponentRuntimeReload => ref this.attackRuntimeReloadDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref AttackRuntimeFireComponent componentRuntimeFire => ref this.attackRuntimeFireDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly AttackRuntimeFireComponent readComponentRuntimeFire => ref this.attackRuntimeFireDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref float attackRangeSqr => ref this.component.sector.rangeSqr;
         public readonly ref readonly float readAttackRangeSqr => ref this.readComponent.sector.rangeSqr;
         public readonly ref readonly float readMinAttackRangeSqr => ref this.readComponent.sector.minRangeSqr;
@@ -40,8 +43,8 @@ namespace ME.BECS.Attack {
             }
         }
         
-        public float ReloadProgress => this.componentRuntime.reloadTimer / this.component.reloadTime;
-        public float FireProgress => this.componentRuntime.fireTimer / this.component.fireTime;
+        public float ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
+        public float FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
 
         public bool IsReloaded {
             [INLINE(256)]
@@ -51,7 +54,7 @@ namespace ME.BECS.Attack {
                 if (value == true) {
                     this.ent.Set(new ReloadedComponent());
                 } else {
-                    this.componentRuntime.reloadTimer = 0f;
+                    this.componentRuntimeReload.reloadTimer = 0f;
                     this.ent.Remove<ReloadedComponent>();
                 }
             }
@@ -65,7 +68,7 @@ namespace ME.BECS.Attack {
                 if (value == true) {
                     this.ent.Set(new CanFireComponent());
                 } else {
-                    this.componentRuntime.fireTimer = 0f;
+                    this.componentRuntimeFire.fireTimer = 0f;
                     this.ent.Remove<CanFireComponent>();
                     this.ent.SetTag<FireUsedComponent>(false);
                 }

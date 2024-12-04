@@ -663,6 +663,8 @@ namespace ME.BECS.Tests {
 
                 }
 
+                Batches.Apply(world.state);
+                
                 var result = new System.Collections.Generic.List<Ent>();
 
                 var handle = API.Query(world, Batches.Apply(default, world))
@@ -1033,18 +1035,18 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job1 : IJobParallelForComponents<TestComponent> {
+        public struct Job1 : IJobParallelForComponents {
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
+            public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test2Component());
             }
 
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job2 : IJobParallelForComponents<TestComponent> {
+        public struct Job2 : IJobParallelForComponents {
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
+            public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test3Component());
             }
 
@@ -1067,8 +1069,8 @@ namespace ME.BECS.Tests {
                 // sync point
                 Batches.Apply(world.state);
                 
-                var d1 = API.Query(world).Schedule<Job1, TestComponent>();
-                var d2 = API.Query(world).Schedule<Job2, TestComponent>();
+                var d1 = API.Query(world).With<TestComponent>().Schedule<Job1>();
+                var d2 = API.Query(world).With<TestComponent>().Schedule<Job2>();
 
                 var d3 = JobHandle.CombineDependencies(d1, d2);
                 d3.Complete();
@@ -1084,6 +1086,76 @@ namespace ME.BECS.Tests {
                 world.Dispose();
 
             }
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct Job1Unsafe : IJobParallelForComponents<TestComponent> {
+
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
+                ent.Set(new Test2Component());
+            }
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct Job2Unsafe : IJobParallelForComponents<TestComponent> {
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
+                ent.Set(new Test3Component());
+            }
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct TestA1Job : IJobParallelForAspect<TestAspect> {
+            
+            public void Execute(in JobInfo jobInfo, ref TestAspect asp) {
+                asp.data.data = asp.data5read.data;
+            }
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct TestA2Job : IJobParallelForAspect<TestAspect> {
+            
+            public void Execute(in JobInfo jobInfo, ref TestAspect asp) {
+                asp.data2.data = 123;
+            }
+
+        }
+
+        [Test]
+        public void ComponentsDisableSafetyCheck() {
+
+            var world = World.Create();
+
+            var amount = 1000;
+            for (int i = 0; i < amount; ++i) {
+                var ent = Ent.New();
+                ent.Set(new TestComponent() {
+                    data = 1,
+                });
+            }
+
+            // sync point
+            Batches.Apply(world.state);
+
+            {
+                var d1 = API.Query(world).Schedule<TestA1Job, TestAspect>();
+                var d2 = API.Query(world).Schedule<TestA2Job, TestAspect>();
+                var d3 = JobHandle.CombineDependencies(d1, d2);
+                d3.Complete();
+            }
+
+            {
+                var d1 = API.Query(world).AsUnsafe().Schedule<Job1Unsafe, TestComponent>();
+                var d2 = API.Query(world).AsUnsafe().Schedule<Job2Unsafe, TestComponent>();
+                var d3 = JobHandle.CombineDependencies(d1, d2);
+                d3.Complete();
+            }
+
+            world.Dispose();
+
         }
 
     }

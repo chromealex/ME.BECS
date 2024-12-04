@@ -13,7 +13,7 @@ namespace ME.BECS.Units {
         public void ApplyState(in EntRO ent) {
 
             var componentProperties = ent.Read<NavAgentComponent>();
-            var component = ent.Read<NavAgentRuntimeComponent>();
+            var component = ent.Read<NavAgentRuntimeSpeedComponent>();
             var speedFactor = component.speed / componentProperties.maxSpeed;
             if (math.abs(this.prevSpeed - speedFactor) > math.EPSILON) {
                 this.prevSpeed = speedFactor;

@@ -80,11 +80,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRO<T> GetRO<T>(State* state) where T : unmanaged, IComponentBase {
+        public RefRO<T> GetRO<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRO<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
             };
+        }
+
+        [INLINE(256)]
+        public RefRWSafe<T> GetRWSafe<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
+            return new RefRWSafe<T>(state, worldId);
+        }
+
+        [INLINE(256)]
+        public RefROSafe<T> GetROSafe<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
+            return new RefROSafe<T>(state, worldId);
         }
 
     }

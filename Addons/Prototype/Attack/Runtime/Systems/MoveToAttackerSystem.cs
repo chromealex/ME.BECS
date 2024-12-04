@@ -75,12 +75,12 @@ namespace ME.BECS.Attack {
                                                .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect>(new MoveToAttackerJob() {
                                                    buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
                                                });
-            var dependsOnStop = context.Query()
+            var dependsOnStop = context.Query(dependsOnMoveToTarget)
                             .With<UnitAttackCommandComponent>()
                             .Schedule<StopOnTargetJob, UnitAspect>(new StopOnTargetJob() {
                                 buildGraphSystem = buildGraphSystem,
                             });
-            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(dependsOnMoveToTarget, dependsOnStop));
+            context.SetDependency(dependsOnStop);
 
         }
 

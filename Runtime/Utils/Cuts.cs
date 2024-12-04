@@ -109,19 +109,21 @@ namespace ME.BECS {
             if (newLength > length) {
 
                 var size = newLength * TSize<T>.size;
-                var ptr = (T*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
+                var ptr = (T*)_make(size, TAlign<T>.alignInt, ALLOCATOR);
+                //var ptr = (T*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
                 LeakDetector.Track(ptr);
                 //var ptr = (T*)UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
-                UnsafeUtility.MemClear(ptr, size);
+                _memclear(ptr, size);
                 if (arr != null) {
-                    //_memcpy(arr, ptr, length * TSize<T>.size);
-                    for (int i = 0; i < length; ++i) {
+                    _memcpy(arr, ptr, length * TSize<T>.size);
+                    _memclear(ptr + length, (newLength - length) * TSize<T>.size);
+                    /*for (int i = 0; i < length; ++i) {
                         *(ptr + i) = *(arr + i);
                     }
 
                     for (int i = (int)length; i < newLength; ++i) {
                         *(ptr + i) = default;
-                    }
+                    }*/
 
                     if (free == true) _free(arr);
                 }
@@ -227,6 +229,27 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void* _malloc(int size) => _make(size);
+        [INLINE(256)]
+        public static void* _malloc(uint size) => _make(size);
+        [INLINE(256)]
+        public static void* _calloc(int size) => _calloc((uint)size);
+        [INLINE(256)]
+        public static void* _calloc(uint size) {
+            var ptr = _make(size);
+            _memclear(ptr, size);
+            return ptr;
+        }
+        [INLINE(256)]
+        public static T* _malloc<T>(in T obj) where T : unmanaged => _make(in obj);
+        [INLINE(256)]
+        public static T* _calloc<T>(in T obj) where T : unmanaged {
+            var ptr = _make(in obj);
+            _memclear(ptr, TSize<T>.size);
+            return ptr;
+        }
+
+        [INLINE(256)]
         public static void _memclear(void* ptr, long lengthInBytes) {
             
             UnsafeUtility.MemClear(ptr, lengthInBytes);
@@ -308,6 +331,15 @@ namespace ME.BECS {
         }
 
         #region MAKE/FREE unity allocator
+        [INLINE(256)]
+        public static void* _malloc(int size, int align, Unity.Collections.Allocator allocator) => _make(size, align, allocator);
+        [INLINE(256)]
+        public static void* _calloc(int size, int align, Unity.Collections.Allocator allocator) {
+            var ptr = _make(size, align, allocator);
+            _memclear(ptr, size);
+            return ptr;
+        }
+        
         [INLINE(256)]
         public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
 

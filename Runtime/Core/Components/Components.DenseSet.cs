@@ -4,6 +4,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using static Cuts;
     using Unity.Mathematics;
+    using Unity.Collections.LowLevel.Unsafe;
 
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct DataDenseSet {
@@ -100,12 +101,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public DataDenseSet(State* state, uint dataSize, uint entitiesCapacity) {
-
             this.dataSize = dataSize;
             this.dataPages = new MemArray<Page>(ref state->allocator, _sizeData(entitiesCapacity));
             this.readWriteSpinner = ReadWriteSpinner.Create(state);
             MemoryAllocator.ValidateConsistency(ref state->allocator);
-
         }
         
         [INLINE(256)]
@@ -114,18 +113,15 @@ namespace ME.BECS {
         }
         
         public uint GetReservedSizeInBytes(State* state) {
-
             var size = 0u;
             for (int i = 0; i < this.dataPages.Length; ++i) {
                 size += this.dataPages[state, i].GetReservedSizeInBytes(this.dataSize, ENTITIES_PER_PAGE);
             }
             return size;
-
         }
 
         [INLINE(256)]
-        public void Resize(State* state, uint entitiesCapacity) {
-
+        private void Resize(State* state, uint entitiesCapacity) {
             var newSize = _sizeData(entitiesCapacity);
             if (newSize > this.dataPages.Length) {
                 this.readWriteSpinner.WriteBegin(state);
@@ -134,7 +130,6 @@ namespace ME.BECS {
                 }
                 this.readWriteSpinner.WriteEnd();
             }
-            
         }
         
         [INLINE(256)]
@@ -144,7 +139,6 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public bool SetState(State* state, uint entityId, ushort entityGen, bool value) {
-
             var changed = false;
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
@@ -160,14 +154,11 @@ namespace ME.BECS {
                 *val = 1;
             }
             this.readWriteSpinner.ReadEnd(state);
-            
             return changed;
-
         }
 
         [INLINE(256)]
         public bool ReadState(State* state, uint entityId, ushort entityGen) {
-
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
@@ -175,12 +166,10 @@ namespace ME.BECS {
             var res = *val == 0 ? true : false;
             this.readWriteSpinner.ReadEnd(state);
             return res;
-
         }
 
         [INLINE(256)]
         public bool Set(State* state, uint entityId, ushort entityGen, void* data, out bool changed) {
-
             changed = false;
             var isNew = false;
             var pageIndex = _pageIndex(entityId);

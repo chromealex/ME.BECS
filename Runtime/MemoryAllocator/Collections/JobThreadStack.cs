@@ -51,7 +51,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public T Pop(in MemoryAllocator allocator, JobInfo jobInfo) {
+        public T Pop(in MemoryAllocator allocator, in JobInfo jobInfo) {
             /*var offset = jobInfo.Offset;
             while (true) {
                 E.RANGE(offset, 0u, this.size);

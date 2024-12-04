@@ -28,6 +28,12 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS_QUERY_BUILDER)]
         [HIDE_CALLSTACK]
+        public static void QUERY_BUILDER_IS_UNSAFE(bool isUnsafe) {
+            if (isUnsafe == true) QueryBuilderException.Throw("Query Builder can't use this method because it is in Unsafe mode");
+        }
+
+        [Conditional(COND.EXCEPTIONS_QUERY_BUILDER)]
+        [HIDE_CALLSTACK]
         public static void QUERY_BUILDER_AS_JOB(bool asJob) {
             if (asJob == true) QueryBuilderException.Throw("Query Builder can't use this method because it is in AsJob mode");
         }

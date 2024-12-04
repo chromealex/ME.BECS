@@ -11,7 +11,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             {count( )[builder.With<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -27,7 +27,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
-            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -55,30 +55,47 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {
             JobProcess<T, {count(,)[T#i#]}>.Initialize();
-            System.IntPtr reflectionData = JobProcess<T, {count(,)[T#i#]}>.jobReflectionData.Data;
+            System.IntPtr reflectionData = JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data;
             return reflectionData;
         }
 
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        private static System.IntPtr GetReflectionUnsafeData<T, {count(,)[T#i#]}>()
+            {count( )[where T#i# : unmanaged, IComponentBase]}
+            where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {
+            JobProcess<T, {count(,)[T#i#]}>.Initialize();
+            System.IntPtr reflectionData = JobProcessUnsafeData<T, {count(,)[T#i#]}>.jobReflectionData.Data;
+            return reflectionData;
+        }
+        #endif
+
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {
             
-            dependsOn = new StartParallelJob() {
-                            buffer = buffer,
-                        }.ScheduleSingle(dependsOn);
+            //dependsOn = new StartParallelJob() {
+            //                buffer = buffer,
+            //            }.ScheduleSingle(dependsOn);
                         
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             buffer->sync = false;
-            var data = new JobData<T, {count(,)[T#i#]}>() {
+            void* data = null;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            data = CompiledJobs<T>.Get(ref jobData, buffer, unsafeMode);
+            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {count(,)[T#i#]}>() : GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, ScheduleMode.Parallel);
+            #else
+            var dataVal = new JobData<T, {count(,)[T#i#]}>() {
                 jobData = jobData,
                 buffer = buffer,
                 {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state, buffer->worldId),]}
             };
+            data = _address(ref dataVal);
+            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, ScheduleMode.Parallel);
+            #endif
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
-
+            
         }
 
         private struct JobData<T, {count(,)[T#i#]}>
@@ -88,19 +105,32 @@ namespace ME.BECS.Jobs {
             public T jobData;
             [NativeDisableUnsafePtrRestriction]
             public CommandBuffer* buffer;
-            {count[public RefRW<T#i#> c#i#;]}
+            {count[public Ref{{RWRO}}<T#i#> c#i#;]}
         }
+
+        internal struct JobProcessData<T, {count(,)[T#i#]}> {
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessData<T, {count(,)[T#i#]}>>();
+        }
+
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        internal struct JobProcessUnsafeData<T, {count(,)[T#i#]}> {
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessUnsafeData<T, {count(,)[T#i#]}>>();
+        }
+        #endif
 
         internal struct JobProcess<T, {count(,)[T#i#]}>
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {
 
-            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcess<T, {count(,)[T#i#]}>>();
-
             [BurstDiscard]
             public static void Initialize() {
-                if (jobReflectionData.Data == System.IntPtr.Zero) {
-                    jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
+                if (JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data == System.IntPtr.Zero) {
+                    #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+                    JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(false), typeof(T), (ExecuteJobFunction)Execute);
+                    JobProcessUnsafeData<T, {count(,)[T#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(true), typeof(T), (ExecuteJobFunction)Execute);
+                    #else
+                    JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
+                    #endif
                 }
             }
 
