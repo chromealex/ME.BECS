@@ -71,7 +71,7 @@ namespace ME.BECS.Pathfinding {
                     var obstacleBounds = Graph.GetObstacleRect(pos, in rotation, obstacle.size + obstacleSizeOffset);
                     var size3d = new float3(obstacle.size.x + obstacleSizeOffset.x, 0f, obstacle.size.y + obstacleSizeOffset.y);
                     //var heightSize3d = new float3(obstacle.size.x + obstacleSizeOffsetHeight.x, 0f, obstacle.size.y + obstacleSizeOffsetHeight.y);
-                    var obstacleSize = GraphUtils.SnapSize(obstacle.size);
+                    var obstacleSize = GraphUtils.SnapSize(obstacle.size) * 2f;
                     obstacleSize += new float2(obstacleSizeOffset.x, obstacleSizeOffset.y);
                     var posMin = pos - size3d * 0.5f;
                     var posMax = pos + size3d * 0.5f;

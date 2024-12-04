@@ -43,6 +43,11 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        /// <summary>
+        /// Returns half-size, snapped to a grid rect size vector
+        /// </summary>
+        /// <param name="size">Vector with half-width and half-height of a rect</param>
+        /// <returns></returns>
         [INLINE(256)]
         public static float2 SnapSize(uint2 size) {
 
@@ -295,12 +300,13 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public static float GetObstacleHeight(in float3 localObstaclePosition, in MemArrayAuto<float> obstacleHeights, in float2 obstacleSize, uint obstacleHeightsSizeX) {
+            var obstacleHeightsSizeY = obstacleHeights.Length / obstacleHeightsSizeX;
             var x = (int)(localObstaclePosition.x / obstacleSize.x * obstacleHeightsSizeX);
             var y = (int)(localObstaclePosition.z / obstacleSize.y * obstacleHeightsSizeX);
             if (x < 0) x = 0;
             if (x >= obstacleHeightsSizeX) x = (int)obstacleHeightsSizeX - 1;
             if (y < 0) y = 0;
-            if (y >= obstacleHeightsSizeX) y = (int)obstacleHeightsSizeX - 1;
+            if (y >= obstacleHeightsSizeY) y = (int)obstacleHeightsSizeY - 1;
             return obstacleHeights[(uint)y * obstacleHeightsSizeX + (uint)x];
         }
 
