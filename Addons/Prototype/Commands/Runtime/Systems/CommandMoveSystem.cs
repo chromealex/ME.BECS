@@ -10,11 +10,11 @@ namespace ME.BECS.Commands {
     public struct CommandMoveSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobAspect<UnitCommandGroupAspect> {
+        public struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
-            public void Execute(in JobInfo jobInfo, ref UnitCommandGroupAspect commandGroup) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var move = commandGroup.ent.Read<CommandMove>();
                 PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in move.targetPosition, in jobInfo);

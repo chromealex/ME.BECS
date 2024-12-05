@@ -22,11 +22,11 @@ namespace ME.BECS.FogOfWar {
         public Ent GetHeights() => this.heights;
         
         [BURST(CompileSynchronously = true)]
-        public struct CreateJob : IJobParallelForAspect<TeamAspect> {
+        public struct CreateJob : IJobParallelForAspects<TeamAspect> {
 
             public uint2 fowSize;
             
-            public void Execute(in JobInfo jobInfo, ref TeamAspect aspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect aspect) {
 
                 var map = new FogOfWarComponent() {
                     nodes = new MemArrayAuto<byte>(aspect.ent, this.fowSize.x * this.fowSize.y * FogOfWarUtils.BYTES_PER_NODE),
@@ -39,9 +39,9 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct CleanUpJob : IJobParallelForAspect<TeamAspect> {
+        public struct CleanUpJob : IJobParallelForAspects<TeamAspect> {
             
-            public void Execute(in JobInfo jobInfo, ref TeamAspect player) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect player) {
                 
                 var fow = player.ent.Read<FogOfWarComponent>();
                 fow.nodes.Clear();

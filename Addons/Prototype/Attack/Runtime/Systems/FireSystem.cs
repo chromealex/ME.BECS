@@ -10,9 +10,9 @@ namespace ME.BECS.Attack {
     public struct FireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct FireJob : IJobAspect<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public struct FireJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
-            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
 
                 if (aspect.target.IsAlive() == true) {
 

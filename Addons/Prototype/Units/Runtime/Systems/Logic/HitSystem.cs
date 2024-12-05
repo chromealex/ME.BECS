@@ -11,7 +11,7 @@ namespace ME.BECS.Units {
     public struct HitSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobComponents<DamageTookComponent> {
+        public struct JobFor : IJobForComponents<DamageTookComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DamageTookComponent damageComponent) {
                 if (damageComponent.damage == 0u) return;
@@ -31,7 +31,7 @@ namespace ME.BECS.Units {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().Schedule<Job, DamageTookComponent>();
+            var dependsOn = context.Query().Schedule<JobFor, DamageTookComponent>();
             context.SetDependency(dependsOn);
 
         }

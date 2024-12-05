@@ -14,11 +14,11 @@ namespace ME.BECS.Attack {
     public struct MoveToAttackerSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct MoveToAttackerJob : IJobAspect<UnitAspect, TransformAspect> {
+        public struct MoveToAttackerJob : IJobForAspects<UnitAspect, TransformAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit, ref TransformAspect transform) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform) {
 
                 var component = unit.ent.Read<DamageTookEvent>();
                 if (component.source.IsAlive() == false) return;
@@ -40,11 +40,11 @@ namespace ME.BECS.Attack {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct StopOnTargetJob : IJobAspect<UnitAspect> {
+        public struct StopOnTargetJob : IJobForAspects<UnitAspect> {
 
             public BuildGraphSystem buildGraphSystem;
 
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
 
                 var target = unit.ent.Read<UnitAttackCommandComponent>();
                 if (target.target.IsAlive() == true) {

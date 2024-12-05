@@ -11,11 +11,11 @@ namespace ME.BECS.Bullets {
     public struct FlySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct FlyJob : ME.BECS.Jobs.IJobParallelForAspect<BulletAspect, TransformAspect> {
+        public struct FlyJob : IJobParallelForAspects<BulletAspect, TransformAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref BulletAspect aspect, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect aspect, ref TransformAspect tr) {
 
                 if (aspect.config.autoTarget == 1 && aspect.component.targetEnt.IsAlive() == true) {
                     aspect.component.targetWorldPos = aspect.component.targetEnt.GetAspect<TransformAspect>().GetWorldMatrixPosition();

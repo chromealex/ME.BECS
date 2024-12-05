@@ -30,13 +30,13 @@ namespace ME.BECS.Units {
         public bool drawGizmos;
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct Job : IJobParallelForAspect<TransformAspect, UnitAspect> {
+        public unsafe struct Job : IJobParallelForAspects<TransformAspect, UnitAspect> {
 
             public SteeringWithAvoidanceSystem system;
             public float dt;
             public World world;
             
-            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var facingCone = math.cos(math.radians(120f));
                 var collisionDir = float3.zero;
@@ -51,12 +51,12 @@ namespace ME.BECS.Units {
                 var srcPos = tr.position;
                 srcPos.y = 0f;
                 for (uint i = 0, size = query.results.results.Count; i < size; ++i) {
-                    var ent = query.results.results[this.world.state, i];
-                    if (ent.IsAlive() == false) continue;
-                    if (ent == unit.ent) continue;
+                    var queryEnt = query.results.results[this.world.state, i];
+                    if (queryEnt.IsAlive() == false) continue;
+                    if (queryEnt == unit.ent) continue;
 
-                    var entTr = ent.GetAspect<TransformAspect>();
-                    var entUnit = ent.GetAspect<UnitAspect>();
+                    var entTr = queryEnt.GetAspect<TransformAspect>();
+                    var entUnit = queryEnt.GetAspect<UnitAspect>();
                     
                     if (entUnit.IsPathFollow == false && 
                         entUnit.IsHold == false &&

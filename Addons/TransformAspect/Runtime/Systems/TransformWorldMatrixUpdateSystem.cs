@@ -9,9 +9,9 @@ namespace ME.BECS.Transforms {
     public struct TransformWorldMatrixUpdateSystem : IAwake, IUpdate {
         
         [BURST(CompileSynchronously = true)]
-        public struct CalculateRootsJob : IJobParallelForAspect<TransformAspect> {
+        public struct CalculateRootsJob : IJobParallelForAspects<TransformAspect> {
 
-            public void Execute(in JobInfo jobInfo, ref TransformAspect aspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateMatrix(in aspect);
 
@@ -20,9 +20,9 @@ namespace ME.BECS.Transforms {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct CalculateRootsWithChildrenJob : IJobParallelForAspect<TransformAspect> {
+        public struct CalculateRootsWithChildrenJob : IJobParallelForAspects<TransformAspect> {
 
-            public void Execute(in JobInfo jobInfo, ref TransformAspect aspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateMatrixHierarchy(aspect.parent, in aspect);
 

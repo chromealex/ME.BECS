@@ -199,11 +199,11 @@ namespace ME.BECS {
     public struct QuadTreeQuerySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<QuadTreeQueryAspect, TransformAspect> {
+        public struct Job : IJobParallelForAspects<QuadTreeQueryAspect, TransformAspect> {
 
             public QuadTreeInsertSystem system;
 
-            public void Execute(in JobInfo jobInfo, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 this.system.FillNearest(ref query, in tr, new AlwaysTrueSubFilter());
                 

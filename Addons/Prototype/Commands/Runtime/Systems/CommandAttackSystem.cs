@@ -10,9 +10,9 @@ namespace ME.BECS.Commands {
     public struct CommandAttackSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct CleanUpJob : IJobParallelForAspect<UnitAspect> {
+        public struct CleanUpJob : IJobParallelForAspects<UnitAspect> {
 
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
 
                 if (unit.readUnitCommandGroup.IsAlive() == false || unit.readUnitCommandGroup.Has<CommandAttack>() == false) {
                     unit.ent.Remove<UnitAttackCommandComponent>();
@@ -24,9 +24,9 @@ namespace ME.BECS.Commands {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct MoveJob : IJobAspect<UnitCommandGroupAspect> {
+        public struct MoveJob : IJobForAspects<UnitCommandGroupAspect> {
 
-            public void Execute(in JobInfo jobInfo, ref UnitCommandGroupAspect commandGroup) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var attack = commandGroup.ent.Read<CommandAttack>();
                 if (attack.target.IsAlive() == false) {

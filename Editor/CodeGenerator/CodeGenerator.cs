@@ -113,20 +113,49 @@ namespace ME.BECS.Editor {
                 var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                 var dir = System.IO.Path.GetDirectoryName(path);
 
+                var fileName = System.IO.Path.GetFileName(path);
+                dir = $"{dir}/{fileName.Replace(".Tpl.txt", string.Empty)}";
                 var text = System.IO.File.ReadAllText(path);
+                var hashes = new System.Collections.Generic.HashSet<long>();
                 foreach (var postfix in postfixes) {
                     foreach (var key in postfix.variables) {
                         variables[key.Key] = key.Value;
                     }
+
+                    if (System.IO.Directory.Exists(dir) == false) {
+                        System.IO.Directory.CreateDirectory(dir);
+                    }
+
                     const uint maxCount = 10u;
-                    for (int i = 1; i < maxCount; ++i) {
-                        var keys = new System.Collections.Generic.Dictionary<string, int>() {
-                            { "count", i },
-                        };
-                        var filePath = dir + System.IO.Path.DirectorySeparatorChar + System.IO.Path.GetFileName(path).Replace(".Tpl.txt", $"{i}{postfix.filenamePostfix}.cs");
-                        var tpl = new Tpl(text);
-                        System.IO.File.WriteAllText(filePath, tpl.GetString(keys, variables));
-                        UnityEditor.AssetDatabase.ImportAsset(filePath);
+                    uint variationsCount = 0u;
+                    if (path.EndsWith("_var.Tpl.txt") == true) {
+                        variationsCount = 5u;
+                        for (int i = 1; i < maxCount; ++i) {
+                            var keys = new System.Collections.Generic.Dictionary<string, int>() {
+                                { "countAspects", i },
+                            };
+                            for (int j = 1; j < variationsCount; ++j) {
+                                if (hashes.Add(i + j) == false) continue;
+                                keys["countComponents"] = j;
+                                keys["count"] = i + j;
+                                variables["PREFIX"] = $"{i}_{j}";
+                                var filePath = $"{dir}/{fileName.Replace(".Tpl.txt", $"{i}_{j}{postfix.filenamePostfix}.cs")}";
+                                var tpl = new Tpl(text);
+                                System.IO.File.WriteAllText(filePath, tpl.GetString(keys, variables));
+                                UnityEditor.AssetDatabase.ImportAsset(filePath);
+                            }
+                        }
+                    } else {
+                        for (int i = 1; i < maxCount; ++i) {
+                            var keys = new System.Collections.Generic.Dictionary<string, int>() {
+                                { "count", i },
+                            };
+                            variables["PREFIX"] = $"{i}";
+                            var filePath = $"{dir}/{fileName.Replace(".Tpl.txt", $"{i}{postfix.filenamePostfix}.cs")}";
+                            var tpl = new Tpl(text);
+                            System.IO.File.WriteAllText(filePath, tpl.GetString(keys, variables));
+                            UnityEditor.AssetDatabase.ImportAsset(filePath);
+                        }
                     }
                 }
 

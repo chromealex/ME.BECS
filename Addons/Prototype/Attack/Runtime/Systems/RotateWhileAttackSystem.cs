@@ -13,11 +13,11 @@ namespace ME.BECS.Attack {
     public struct RotateWhileAttackSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct IdleJob : IJobParallelForAspect<UnitAspect, TransformAspect> {
+        public struct IdleJob : IJobParallelForAspects<UnitAspect, TransformAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit, ref TransformAspect transformAspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transformAspect) {
 
                 var attack = unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>();
                 if (attack.target.IsAlive() == true) {
@@ -29,11 +29,11 @@ namespace ME.BECS.Attack {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RotateAttackSensorJob : IJobParallelForAspect<AttackAspect, TransformAspect> {
+        public struct RotateAttackSensorJob : IJobParallelForAspects<AttackAspect, TransformAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref AttackAspect attack, ref TransformAspect transformAspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect attack, ref TransformAspect transformAspect) {
 
                 var speedFactor = attack.ent.Read<RotateAttackSensorComponent>().speedFactor;
                 if (attack.target.IsAlive() == true) {

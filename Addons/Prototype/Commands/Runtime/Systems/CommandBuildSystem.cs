@@ -11,11 +11,11 @@ namespace ME.BECS.Commands {
     public struct CommandBuildSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<UnitCommandGroupAspect> {
+        public struct Job : IJobParallelForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
-            public void Execute(in JobInfo jobInfo, ref UnitCommandGroupAspect commandGroup) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var parameters = commandGroup.ent.Read<CommandBuild>();
                 if (parameters.building.Has<BuildingInProgress>() == false && parameters.building.IsActive() == false) {

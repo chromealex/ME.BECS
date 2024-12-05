@@ -11,12 +11,12 @@ namespace ME.BECS.Pathfinding {
     public struct LookAtSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<TransformAspect, UnitAspect> {
+        public struct Job : IJobParallelForAspects<TransformAspect, UnitAspect> {
 
             public float dt;
             public BuildGraphSystem buildGraphSystem;
 
-            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var lookAtComponent = unit.ent.Read<UnitLookAtComponent>();
                 var pos = tr.GetWorldMatrixPosition();

@@ -1,0 +1,173 @@
+namespace ME.BECS.Jobs {
+    
+    using static Cuts;
+    using Unity.Jobs;
+    using Unity.Jobs.LowLevel.Unsafe;
+    using Unity.Collections.LowLevel.Unsafe;
+    using Unity.Burst;
+
+    public static unsafe partial class QueryParallelAspectsComponentsScheduleExtensions {
+        
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
+            {countAspects( )[builder.WithAspect<A#i#>();]}
+            {countComponents( )[builder.With<C#i#>();]}
+            builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
+            builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
+            return builder.builderDependsOn;
+        }
+        
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
+            return staticQuery.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in job, in context.world, context.dependsOn);
+        }
+        
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
+            var state = world.state;
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            return query.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in job);
+        }
+
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
+            staticQuery.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
+            return staticQuery.builderDependsOn;
+        }
+        
+    }
+    
+    public static partial class EarlyInit {
+        public static void DoParallelForAspectsComponents<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>()
+                {countAspects( )[where A#i# : unmanaged, IAspect]}
+                {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+                where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> => JobParallelForAspectsComponentsExtensions.JobEarlyInitialize<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>();
+    }
+
+    [JobProducerType(typeof(JobParallelForAspectsComponentsExtensions.JobProcess<{count[,]}>))]
+    public interface IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> : IJobParallelForAspectsComponentsBase {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
+        void Execute(in JobInfo jobInfo, in Ent ent, {countAspects(,)[{{inref}} A#i# a#i#]}, {countComponents(,)[{{inref}} C#i# c#i#]});
+    }
+
+    public static unsafe partial class JobParallelForAspectsComponentsExtensions {
+        
+        public static void JobEarlyInitialize<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>()
+            {countAspects( )[where A#i# : unmanaged, IAspect]}
+            {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+            where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> => JobProcess<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.Initialize();
+
+        private static System.IntPtr GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>()
+            {countAspects( )[where A#i# : unmanaged, IAspect]}
+            {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+            where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+            JobProcess<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.Initialize();
+            System.IntPtr reflectionData = JobProcessData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.jobReflectionData.Data;
+            return reflectionData;
+        }
+
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        private static System.IntPtr GetReflectionUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>()
+            {countAspects( )[where A#i# : unmanaged, IAspect]}
+            {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+            where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+            JobProcess<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.Initialize();
+            System.IntPtr reflectionData = JobProcessUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.jobReflectionData.Data;
+            return reflectionData;
+        }
+        #endif
+
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
+            {countAspects( )[where A#i# : unmanaged, IAspect]}
+            {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+            where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+            
+            //dependsOn = new StartParallelJob() {
+            //                buffer = buffer,
+            //            }.ScheduleSingle(dependsOn);
+                        
+            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
+
+            buffer->sync = false;
+            void* data = null;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            data = CompiledJobs<T>.Get(ref jobData, buffer, unsafeMode);
+            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>() : GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(), dependsOn, ScheduleMode.Parallel);
+            #else
+            var dataVal = new JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>() {
+                jobData = jobData,
+                buffer = buffer,
+                {countAspects[c#i# = buffer->state->aspectsStorage.Initialize<A#i#>(buffer->state),]}
+                {countComponents[c#i# = buffer->state->components.Get{{RWRO}}<C#i#>(buffer->state, buffer->worldId),]}
+            };
+            data = _address(ref dataVal);
+            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(), dependsOn, ScheduleMode.Parallel);
+            #endif
+            
+            return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
+            
+        }
+
+        private struct JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>
+            {countAspects( )[where A#i# : unmanaged, IAspect]}
+            {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+            where T : struct {
+            [NativeDisableUnsafePtrRestriction]
+            public T jobData;
+            [NativeDisableUnsafePtrRestriction]
+            public CommandBuffer* buffer;
+            {countAspects[public A#i# a#i#;]}
+            {countComponents[public Ref{{RWRO}}<C#i#> c#i#;]}
+        }
+
+        internal struct JobProcessData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>>();
+        }
+
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        internal struct JobProcessUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>>();
+        }
+        #endif
+
+        internal struct JobProcess<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>
+            {countAspects( )[where A#i# : unmanaged, IAspect]}
+            {countComponents( )[where C#i# : unmanaged, IComponentBase]}
+            where T : struct, IJobParallelForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+
+            [BurstDiscard]
+            public static void Initialize() {
+                if (JobProcessData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.jobReflectionData.Data == System.IntPtr.Zero) {
+                    #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+                    JobProcessData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(false), typeof(T), (ExecuteJobFunction)Execute);
+                    JobProcessUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(true), typeof(T), (ExecuteJobFunction)Execute);
+                    #else
+                    JobProcessData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
+                    #endif
+                }
+            }
+
+            private delegate void ExecuteJobFunction(ref JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex);
+
+            private static void Execute(ref JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
+
+                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
+                jobInfo.count = jobData.buffer->count;
+                {countAspects[var aspect#i# = jobData.a#i#;]}
+                while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                    
+                    jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                    for (uint i = (uint)begin; i < end; ++i) {
+                        jobInfo.index = i;
+                        var entId = *(jobData.buffer->entities + i);
+                        var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                        var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                        {countAspects[aspect#i#.ent = ent;]}
+                        jobData.jobData.Execute(in jobInfo, in ent, {countAspects(,)[{{inref}} aspect#i#]}, {countComponents(,)[{{inref}} jobData.c#i#.{{GetRead}}(ent.id, ent.gen)]});
+                    }
+                    jobData.buffer->EndForEachRange();
+                    
+                }
+
+            }
+        }
+    }
+    
+}

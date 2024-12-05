@@ -41,12 +41,12 @@ namespace ME.BECS {
         public readonly uint treesCount => (uint)this.quadTrees.Length;
 
         [BURST(CompileSynchronously = true)]
-        public struct CollectJob : IJobParallelForAspect<QuadTreeAspect, TransformAspect> {
+        public struct CollectJob : IJobParallelForAspects<QuadTreeAspect, TransformAspect> {
             
             [NativeDisableUnsafePtrRestriction]
             public UnsafeList<System.IntPtr> quadTrees;
 
-            public void Execute(in JobInfo jobInfo, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
                 var tree = (NativeTrees.NativeOctree<Ent>*)this.quadTrees[quadTreeAspect.treeIndex];
                 if (tr.IsCalculated == false) return;

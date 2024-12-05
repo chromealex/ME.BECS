@@ -13,20 +13,20 @@ namespace ME.BECS.Attack {
     public struct SearchTargetSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct SearchTargetJob : ME.BECS.Jobs.IJobParallelForAspect<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
+        public unsafe struct SearchTargetJob : ME.BECS.Jobs.IJobParallelForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public World world;
             public SystemLink<FogOfWar.CreateSystem> fogOfWar;
             
-            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
                 //var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
                 //var player = unit.readOwner.GetAspect<Players.PlayerAspect>();
                 UnitAspect nearestResult = default;
                 for (uint i = 0u; i < query.results.results.Count; ++i) {
-                    var ent = query.results.results[this.world.state, i];
-                    if (ent.IsAlive() == false) continue;
-                    var result = ent.GetAspect<UnitAspect>();
+                    var queryEnt = query.results.results[this.world.state, i];
+                    if (queryEnt.IsAlive() == false) continue;
+                    var result = queryEnt.GetAspect<UnitAspect>();
                     nearestResult = result;
                     break;
                     //if (this.fogOfWar.IsCreated == true && this.fogOfWar.Value.IsVisible(in player, in ent) == false) continue;

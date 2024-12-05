@@ -6,7 +6,7 @@ namespace ME.BECS.Editor.Jobs {
     
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
 
-        private void Generate<TJobBase, TComponent>(System.Collections.Generic.List<string> dataList, string method) {
+        private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
             
             {
                 var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase));
@@ -24,7 +24,8 @@ namespace ME.BECS.Editor.Jobs {
                     foreach (var i in interfaces) {
                         if (i.IsGenericType == true) {
                             foreach (var type in i.GenericTypeArguments) {
-                                if (typeof(TComponent).IsAssignableFrom(type) == true) {
+                                if (typeof(T0).IsAssignableFrom(type) == true ||
+                                    typeof(T1).IsAssignableFrom(type) == true) {
                                     if (this.IsValidTypeForAssembly(type) == false) continue;
                                     components.Add(EditorUtils.GetDataTypeName(type));
                                 }
@@ -47,6 +48,12 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
+        public enum JobType {
+            Aspect,
+            Components,
+            Combined,
+        }
+        
         public override string AddPublicContent() {
 
             var funcBuilder = new System.Text.StringBuilder();
@@ -57,10 +64,12 @@ namespace ME.BECS.Editor.Jobs {
             structUnsafeBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             funcBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             funcBuilder.AppendLine($"public static void InitializeJobsDebug() {{");
-            this.AddJobs<IJobParallelForComponentsBase, IComponentBase>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, false);
-            this.AddJobs<IJobComponentsBase, IComponentBase>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, false);
-            this.AddJobs<IJobParallelForAspectBase, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, true);
-            this.AddJobs<IJobAspectBase, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, true);
+            this.AddJobs<IJobParallelForComponentsBase, IComponentBase, TNull>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForComponentsBase, IComponentBase, TNull>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Components);
+            this.AddJobs<IJobParallelForAspectsBase, TNull, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForAspectsBase, TNull, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
+            this.AddJobs<IJobParallelForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
             funcBuilder.AppendLine($"}}");
             funcBuilder.AppendLine($"#endif");
             structBuilder.AppendLine($"#endif");
@@ -88,7 +97,7 @@ namespace ME.BECS.Editor.Jobs {
 
         }
         
-        private void AddJobs<TJobBase, TComponent>(ref int uniqueId, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, bool isAspect) {
+        private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             {
                 var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase));
@@ -98,17 +107,25 @@ namespace ME.BECS.Editor.Jobs {
                     if (this.IsValidTypeForAssembly(jobType) == false) continue;
 
                     var jobTypeFullName = EditorUtils.GetTypeName(jobType);
+                    var aspects = new System.Collections.Generic.List<string>();
                     var components = new System.Collections.Generic.List<string>();
+                    var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
                     var componentsType = new System.Collections.Generic.HashSet<System.Type>();
                     var interfaces = jobType.GetInterfaces();
                     System.Type workInterface = null;
                     foreach (var i in interfaces) {
                         if (i.IsGenericType == true) {
                             foreach (var type in i.GenericTypeArguments) {
-                                if (typeof(TComponent).IsAssignableFrom(type) == true) {
+                                if (typeof(T0).IsAssignableFrom(type) == true) {
                                     if (this.IsValidTypeForAssembly(type) == false) continue;
                                     components.Add(EditorUtils.GetDataTypeName(type));
                                     componentsType.Add(type);
+                                }
+
+                                if (typeof(T1).IsAssignableFrom(type) == true) {
+                                    if (this.IsValidTypeForAssembly(type) == false) continue;
+                                    aspects.Add(EditorUtils.GetDataTypeName(type));
+                                    aspectsType.Add(type);
                                 }
                             }
 
@@ -150,7 +167,7 @@ namespace ME.BECS.Editor.Jobs {
                                 if (inst.Operand is FieldInfo field && typeof(IComponentBase).IsAssignableFrom(field.DeclaringType) == true) {
                                     uniqueTypes.Add(new TypeInfo() {
                                         type = field.DeclaringType,
-                                        op = componentsType.Contains(field.DeclaringType) == true && inst.OpCode == System.Reflection.Emit.OpCodes.Stfld ? RefOp.WriteOnly : RefOp.ReadOnly,
+                                        op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && inst.OpCode == System.Reflection.Emit.OpCodes.Stfld ? RefOp.WriteOnly : RefOp.ReadOnly,
                                     });
                                 }
                             }
@@ -196,22 +213,27 @@ namespace ME.BECS.Editor.Jobs {
                     structUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
                     structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                     structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                    if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
+                    if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
 
                         {
                             var i = 0u;
-                            foreach (var component in components) {
-                                if (isAspect == true) {
-                                    structBuilder.AppendLine($"public {component} c{i};");
-                                    structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} c{i};");
-                                    funcBuilder.AppendLine($"data->c{i} = buffer->state->aspectsStorage.Initialize<{component}>(buffer->state);");
-                                } else {
-                                    structBuilder.AppendLine($"public RefRW<{component}> c{i};");
-                                    structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
-                                    funcBuilder.AppendLine($"data->c{i} = buffer->state->components.GetRW<{component}>(buffer->state, buffer->worldId);");
-                                }
+                            
+                            i = 0u;
+                            foreach (var component in aspects) {
+                                structBuilder.AppendLine($"public {component} a{i};");
+                                structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
+                                funcBuilder.AppendLine($"data->a{i} = buffer->state->aspectsStorage.Initialize<{component}>(buffer->state);");
                                 ++i;
                             }
+                            
+                            i = 0u;
+                            foreach (var component in components) {
+                                structBuilder.AppendLine($"public RefRW<{component}> c{i};");
+                                structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
+                                funcBuilder.AppendLine($"data->c{i} = buffer->state->components.GetRW<{component}>(buffer->state, buffer->worldId);");
+                                ++i;
+                            }
+
                         }
 
                         {
@@ -277,10 +299,12 @@ namespace ME.BECS.Editor.Jobs {
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
             this.GenerateJobsDebug(dataList, references);
-            this.Generate<IJobParallelForComponentsBase, IComponentBase>(dataList, "DoParallelForComponents");
-            this.Generate<IJobComponentsBase, IComponentBase>(dataList, "DoComponents");
-            this.Generate<IJobParallelForAspectBase, IAspect>(dataList, "DoParallelForAspect");
-            this.Generate<IJobAspectBase, IAspect>(dataList, "DoAspect");
+            this.Generate<IJobParallelForComponentsBase, IComponentBase, TNull>(dataList, "DoParallelForComponents");
+            this.Generate<IJobForComponentsBase, IComponentBase, TNull>(dataList, "DoComponents");
+            this.Generate<IJobParallelForAspectsBase, IAspect, TNull>(dataList, "DoParallelForAspect");
+            this.Generate<IJobForAspectsBase, IAspect, TNull>(dataList, "DoAspect");
+            this.Generate<IJobForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoParallelForAspectsComponents");
+            this.Generate<IJobParallelForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoParallelForAspectsComponents");
             
         }
 

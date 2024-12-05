@@ -9,11 +9,11 @@ namespace ME.BECS.Attack {
     public struct CanFireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<AttackAspect> {
+        public struct Job : IJobParallelForAspects<AttackAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 aspect.componentRuntimeFire.fireTimer += this.dt;
                 if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {

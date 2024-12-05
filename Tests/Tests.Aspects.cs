@@ -75,9 +75,9 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestJob : ME.BECS.Jobs.IJobParallelForAspect<Test2Aspect> {
+        public struct TestJobFor : ME.BECS.Jobs.IJobParallelForAspects<Test2Aspect> {
             
-            public void Execute(in JobInfo jobInfo, ref Test2Aspect c0) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Aspect c0) {
 
                 var src = c0.t1.ent;
                 if (c0.t1.ent.IsAlive() == true) {
@@ -98,9 +98,9 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSetJob : ME.BECS.Jobs.IJobParallelForAspect<Test2Aspect> {
+        public struct TestSetJob : ME.BECS.Jobs.IJobParallelForAspects<Test2Aspect> {
             
-            public void Execute(in JobInfo jobInfo, ref Test2Aspect c0) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Aspect c0) {
 
                 if (c0.t1.data % 2 == 2) {
                     c0.ent.Set(new Test3Component() {
@@ -116,7 +116,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestDestroyJob : IJobComponents<TestTargetComponent> {
+        public struct TestDestroyJobFor : IJobForComponents<TestTargetComponent> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestTargetComponent c0) {
                 if (c0.parent.Read<T1>().data % 2 == 0) {
@@ -150,8 +150,8 @@ namespace ME.BECS.Tests {
             }
 
             var dep = API.Query(world).Schedule<TestSetJob, Test2Aspect>();
-            dep = API.Query(world, dep).Schedule<TestDestroyJob, TestTargetComponent>();
-            dep = API.Query(world, dep).Schedule<TestJob, Test2Aspect>();
+            dep = API.Query(world, dep).Schedule<TestDestroyJobFor, TestTargetComponent>();
+            dep = API.Query(world, dep).Schedule<TestJobFor, Test2Aspect>();
             JobUtils.RunScheduled();
             dep.Complete();
 

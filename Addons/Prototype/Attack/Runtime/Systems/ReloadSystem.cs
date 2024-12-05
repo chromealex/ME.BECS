@@ -9,11 +9,11 @@ namespace ME.BECS.Attack {
     public struct ReloadSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct ReloadJob : IJobParallelForAspect<AttackAspect> {
+        public struct ReloadJob : IJobParallelForAspects<AttackAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 aspect.componentRuntimeReload.reloadTimer += this.dt;
                 if (aspect.readComponentRuntimeReload.reloadTimer >= aspect.component.reloadTime) {

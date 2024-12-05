@@ -15,12 +15,12 @@ namespace ME.BECS.FogOfWar {
     public struct QuadTreeQueryFogOfWarSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<QuadTreeQueryAspect, TransformAspect> {
+        public struct Job : IJobParallelForAspects<QuadTreeQueryAspect, TransformAspect> {
 
             public QuadTreeInsertSystem system;
             public CreateSystem fow;
 
-            public void Execute(in JobInfo jobInfo, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 var subFilter = query.ent.Read<QuadTreeQueryFogOfWarFilter>().data;
                 subFilter.fow = this.fow;

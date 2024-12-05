@@ -57,7 +57,7 @@ namespace ME.BECS.UnitsHealthBars {
         private ClassPtr<UnityEngine.Camera> cameraObject;
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<UnitAspect> {
+        public struct Job : IJobParallelForAspects<UnitAspect> {
 
             public SystemLink<CreateSystem> fow;
             public PlayerAspect activePlayer;
@@ -65,7 +65,7 @@ namespace ME.BECS.UnitsHealthBars {
             public BarSettings barSettings;
             public CameraAspect camera;
             
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
 
                 if (unit.readHealth >= unit.readHealthMax) return;
                 if (this.fow.IsCreated == true && this.fow.Value.IsVisible(in this.activePlayer, unit.ent) == false) return;
@@ -78,14 +78,14 @@ namespace ME.BECS.UnitsHealthBars {
                 barInfo.health = unit.readHealthMax;
                 var healthPerSection = unit.readHealthMax / barInfo.Sections;
                 var percent = unit.readHealth / unit.readHealthMax;
-                var healthPercent = math.clamp(unit.readHealth / unit.readHealthMax - math.lerp(healthPerSection / unit.readHealthMax * 2f, 0f, percent), 0f, 1f);
+                var healthPercent = math.clamp(unit.readHealth / (float)unit.readHealthMax - math.lerp(healthPerSection / (float)unit.readHealthMax * 2f, 0f, percent), 0f, 1f);
                 var sectionIndex = (byte)math.floor(healthPercent * barInfo.Sections);
                 this.bars.Add(new BarItem() {
                     settings = barInfo,
                     position = screenPoint.xy,
                     heightPosition = healthBarHeightPos.xy,
                     barLerpIndex = sectionIndex,
-                    barLerpValue = (unit.readHealth - healthPerSection * sectionIndex) / healthPerSection,
+                    barLerpValue = (unit.readHealth - healthPerSection * sectionIndex) / (float)healthPerSection,
                     healthPercent = healthPercent,
                 });
 

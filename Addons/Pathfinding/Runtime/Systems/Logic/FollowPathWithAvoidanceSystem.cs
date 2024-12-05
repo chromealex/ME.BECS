@@ -31,14 +31,14 @@ namespace ME.BECS.Pathfinding {
         public float movementForce;
         
         [BURST(CompileSynchronously = true)]
-        public struct PathFollowJob : IJobParallelForAspect<TransformAspect, UnitAspect> {
+        public struct PathFollowJob : IJobParallelForAspects<TransformAspect, UnitAspect> {
 
             public World world;
             public float dt;
             public BuildGraphSystem buildGraphSystem;
             public FollowPathWithAvoidanceSystem followPathSystem;
             
-            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var pos = tr.position;
 
@@ -154,11 +154,11 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct SpeedDownOnHoldJob : IJobParallelForAspect<UnitAspect> {
+        public struct SpeedDownOnHoldJob : IJobParallelForAspects<UnitAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
                 
                 unit.speed = math.lerp(unit.readSpeed, 0f, this.dt * unit.readDecelerationSpeed);
                 

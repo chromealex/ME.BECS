@@ -4,6 +4,7 @@ namespace ME.BECS {
     using Unity.Burst;
     using AOT;
 
+    [BurstCompile]
     public unsafe struct DomainAllocator : AllocatorManager.IAllocator {
         
         private AllocatorManager.AllocatorHandle handle;

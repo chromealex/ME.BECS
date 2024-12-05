@@ -8,7 +8,7 @@ namespace ME.BECS.Jobs {
 
     public static unsafe partial class QueryAspectScheduleExtensions {
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             {count( )[builder.WithAspect<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.isUnsafe, builder.builderDependsOn);
@@ -16,17 +16,17 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             return staticQuery.Schedule<T, {count(,)[T#i#]}>(in job, in context.world, context.dependsOn);
         }
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             var state = world.state;
             var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, {count(,)[T#i#]}>(in job);
         }
 
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobAspect<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
@@ -37,28 +37,28 @@ namespace ME.BECS.Jobs {
     public static partial class EarlyInit {
         public static void DoAspect<T, {count(,)[T#i#]}>()
                 {count( )[where T#i# : unmanaged, IAspect]}
-                where T : struct, IJobAspect<{count(,)[T#i#]}> => JobAspectExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
+                where T : struct, IJobForAspects<{count(,)[T#i#]}> => JobAspectExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
     }
 
     [JobProducerType(typeof(JobAspectExtensions.JobProcess<{count[,]}>))]
-    public interface IJobAspect<{count(,)[T#i#]}> : IJobAspectBase {count( )[where T#i# : unmanaged, IAspect]} {
-        void Execute(in JobInfo jobInfo, {count(,)[{{inref}} T#i# c#i#]});
+    public interface IJobForAspects<{count(,)[T#i#]}> : IJobForAspectsBase {count( )[where T#i# : unmanaged, IAspect]} {
+        void Execute(in JobInfo jobInfo, in Ent ent, {count(,)[{{inref}} T#i# c#i#]});
     }
 
     public static unsafe partial class JobAspectExtensions {
         
         public static void JobEarlyInitialize<T, {count(,)[T#i#]}>()
             {count( )[where T#i# : unmanaged, IAspect]}
-            where T : struct, IJobAspect<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
+            where T : struct, IJobForAspects<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
 
-        private static System.IntPtr GetReflectionData<T, {count(,)[T#i#]}>() {count( )[where T#i# : unmanaged, IAspect]} where T : struct, IJobAspect<{count(,)[T#i#]}> {
+        private static System.IntPtr GetReflectionData<T, {count(,)[T#i#]}>() {count( )[where T#i# : unmanaged, IAspect]} where T : struct, IJobForAspects<{count(,)[T#i#]}> {
             JobProcess<T, {count(,)[T#i#]}>.Initialize();
             System.IntPtr reflectionData = JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data;
             return reflectionData;
         }
 
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-        private static System.IntPtr GetReflectionUnsafeData<T, {count(,)[T#i#]}>() {count( )[where T#i# : unmanaged, IAspect]} where T : struct, IJobAspect<{count(,)[T#i#]}> {
+        private static System.IntPtr GetReflectionUnsafeData<T, {count(,)[T#i#]}>() {count( )[where T#i# : unmanaged, IAspect]} where T : struct, IJobForAspects<{count(,)[T#i#]}> {
             JobProcess<T, {count(,)[T#i#]}>.Initialize();
             System.IntPtr reflectionData = JobProcessUnsafeData<T, {count(,)[T#i#]}>.jobReflectionData.Data;
             return reflectionData;
@@ -67,7 +67,7 @@ namespace ME.BECS.Jobs {
 
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IAspect]}
-            where T : struct, IJobAspect<{count(,)[T#i#]}> {
+            where T : struct, IJobForAspects<{count(,)[T#i#]}> {
             
             buffer->sync = false;
             void* data = null;
@@ -110,7 +110,7 @@ namespace ME.BECS.Jobs {
         
         internal struct JobProcess<T, {count(,)[T#i#]}>
             {count( )[where T#i# : unmanaged, IAspect]}
-            where T : struct, IJobAspect<{count(,)[T#i#]}> {
+            where T : struct, IJobForAspects<{count(,)[T#i#]}> {
 
             [BurstDiscard]
             public static void Initialize() {
@@ -139,8 +139,9 @@ namespace ME.BECS.Jobs {
                     jobInfo.index = i;
                     var entId = *(jobData.buffer->entities + i);
                     var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                    {count[aspect#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
-                    jobData.jobData.Execute(in jobInfo, {count(,)[{{inref}} aspect#i#]});
+                    var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                    {count[aspect#i#.ent = ent;]}
+                    jobData.jobData.Execute(in jobInfo, in ent, {count(,)[{{inref}} aspect#i#]});
                 }
                 jobData.buffer->EndForEachRange();
                 

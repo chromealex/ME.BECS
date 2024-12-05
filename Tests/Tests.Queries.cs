@@ -1107,18 +1107,18 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestA1Job : IJobParallelForAspect<TestAspect> {
+        public struct TestA1Job : IJobParallelForAspects<TestAspect> {
             
-            public void Execute(in JobInfo jobInfo, ref TestAspect asp) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestAspect asp) {
                 asp.data.data = asp.data5read.data;
             }
 
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestA2Job : IJobParallelForAspect<TestAspect> {
+        public struct TestA2Job : IJobParallelForAspects<TestAspect> {
             
-            public void Execute(in JobInfo jobInfo, ref TestAspect asp) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestAspect asp) {
                 asp.data2.data = 123;
             }
 

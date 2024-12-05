@@ -10,9 +10,9 @@ namespace ME.BECS.Attack {
     public struct ResetCanFireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspect<AttackAspect> {
+        public struct Job : IJobParallelForAspects<AttackAspect> {
             
-            public void Execute(in JobInfo jobInfo, ref AttackAspect aspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
                 aspect.CanFire = false;
 

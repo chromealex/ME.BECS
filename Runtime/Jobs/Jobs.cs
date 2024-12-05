@@ -9,10 +9,12 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Jobs;
 
+    public interface IJobParallelForAspectsComponentsBase { }
     public interface IJobParallelForComponentsBase { }
-    public interface IJobParallelForAspectBase { }
-    public interface IJobComponentsBase { }
-    public interface IJobAspectBase { }
+    public interface IJobParallelForAspectsBase { }
+    public interface IJobForAspectsComponentsBase { }
+    public interface IJobForComponentsBase { }
+    public interface IJobForAspectsBase { }
 
     public struct JobInfo : IIsCreated {
 

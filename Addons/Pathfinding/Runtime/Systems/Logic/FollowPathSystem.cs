@@ -29,14 +29,14 @@ namespace ME.BECS.Pathfinding {
         public float movementForce;
         
         [BURST(CompileSynchronously = true)]
-        public struct PathFollowJob : IJobParallelForAspect<TransformAspect, UnitAspect> {
+        public struct PathFollowJob : IJobParallelForAspects<TransformAspect, UnitAspect> {
 
             public World world;
             public float dt;
             public BuildGraphSystem buildGraphSystem;
             public FollowPathSystem followPathSystem;
             
-            public void Execute(in JobInfo jobInfo, ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
                 var pos = tr.position;
 
@@ -89,10 +89,10 @@ namespace ME.BECS.Pathfinding {
 
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
-                var vel = unit.componentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
-                          unit.componentRuntime.separationVector * this.followPathSystem.separationForce + 
-                          unit.componentRuntime.alignmentVector * this.followPathSystem.alignmentForce +
-                          unit.componentRuntime.collisionDirection * this.followPathSystem.collisionForce +
+                var vel = unit.readComponentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
+                          unit.readComponentRuntime.separationVector * this.followPathSystem.separationForce + 
+                          unit.readComponentRuntime.alignmentVector * this.followPathSystem.alignmentForce +
+                          unit.readComponentRuntime.collisionDirection * this.followPathSystem.collisionForce +
                           movementDirection * this.followPathSystem.movementForce;
                 var desiredDirection = math.normalizesafe(vel);
 
@@ -144,13 +144,13 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct SpeedDownOnHoldJob : IJobParallelForAspect<UnitAspect> {
+        public struct SpeedDownOnHoldJob : IJobParallelForAspects<UnitAspect> {
 
             public float dt;
             
-            public void Execute(in JobInfo jobInfo, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
                 
-                unit.speed = math.lerp(unit.speed, 0f, this.dt * unit.readDecelerationSpeed);
+                unit.speed = math.lerp(unit.readSpeed, 0f, this.dt * unit.readDecelerationSpeed);
                 
             }
 

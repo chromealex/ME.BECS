@@ -13,9 +13,9 @@ namespace ME.BECS.Bullets {
     public struct DestroySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct DestroyJob : IJobAspect<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
+        public struct DestroyJob : IJobForAspects<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
 
-            public void Execute(in JobInfo jobInfo, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
                 if (bullet.config.hitRangeSqr > 0f) {
 
