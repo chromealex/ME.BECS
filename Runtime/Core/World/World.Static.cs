@@ -42,11 +42,13 @@ namespace ME.BECS {
 
         }
 
-        public unsafe struct Array<T> where T : unmanaged {
+        public unsafe struct Array<T> : IIsCreated where T : unmanaged {
 
             public uint Length;
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
             internal T* ptr;
+            
+            public bool IsCreated => this.ptr != null;
 
             [INLINE(256)]
             public ref T Get(int index) {

@@ -163,6 +163,9 @@ namespace ME.BECS {
 
             var alloc = this.allocator;
             this = other;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            this.components.ResetSafetyHandlers();
+            #endif
             this.allocator = alloc;
             this.allocator.CopyFrom(other.allocator);
 
@@ -188,6 +191,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            this.components.DisposeSafetyHandlers();
+            #endif
             this.allocator.Dispose();
 
         }
