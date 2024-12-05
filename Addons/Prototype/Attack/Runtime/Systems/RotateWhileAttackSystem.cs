@@ -42,7 +42,7 @@ namespace ME.BECS.Attack {
                     tr.rotation = math.slerp(tr.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
                 } else {
                     var tr = attack.ent.GetAspect<TransformAspect>();
-                    tr.localRotation = math.slerp(tr.localRotation, quaternion.identity, this.dt * speedFactor);
+                    tr.localRotation = math.slerp(tr.readLocalRotation, quaternion.identity, this.dt * speedFactor);
                 }
 
             }
@@ -54,11 +54,13 @@ namespace ME.BECS.Attack {
             var dependsOn = context.Query()
                                    .With<RotateToAttackWhileIdleComponent>()
                                    .Without<PathFollowComponent>()
+                                   .AsUnsafe()
                                    .Schedule<IdleJob, UnitAspect, TransformAspect>(new IdleJob() {
                                        dt = context.deltaTime,
                                    });
             var dependsOnAttackSensor = context.Query()
                                    .With<RotateAttackSensorComponent>()
+                                   .AsUnsafe()
                                    .Schedule<RotateAttackSensorJob, AttackAspect, TransformAspect>(new RotateAttackSensorJob() {
                                        dt = context.deltaTime,
                                    });

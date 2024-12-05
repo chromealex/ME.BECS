@@ -22,6 +22,11 @@ namespace ME.BECS {
         RefOp Op { get; }
     }
 
+    [System.AttributeUsageAttribute(System.AttributeTargets.Field | System.AttributeTargets.Method)]
+    public class DisableContainerSafetyRestrictionAttribute : System.Attribute {
+
+    }
+
     public class SafetyCheckAttribute : System.Attribute {
 
         public RefOp Op { get; set; }

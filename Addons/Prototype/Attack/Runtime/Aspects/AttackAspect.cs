@@ -25,7 +25,7 @@ namespace ME.BECS.Attack {
         public readonly ref readonly float readAttackSector => ref this.readComponent.sector.sector;
         public readonly ref readonly byte readIgnoreSelf => ref this.readComponent.ignoreSelf;
         
-        public Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
+        public readonly Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 
         [INLINE(256)]
         public void SetTarget(Ent ent) {
@@ -43,8 +43,8 @@ namespace ME.BECS.Attack {
             }
         }
         
-        public float ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
-        public float FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
+        public readonly float ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
+        public readonly float FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
 
         public bool IsReloaded {
             [INLINE(256)]

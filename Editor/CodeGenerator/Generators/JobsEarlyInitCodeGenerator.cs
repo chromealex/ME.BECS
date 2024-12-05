@@ -127,6 +127,16 @@ namespace ME.BECS.Editor.Jobs {
                         var instructions = body.GetInstructions();
                         foreach (var inst in instructions) {
                             {
+                                if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
+                                    continue;
+                                }
+                            }
+                            {
+                                if (inst.Operand is FieldInfo fieldInfo && fieldInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
+                                    continue;
+                                }
+                            }
+                            {
                                 if (inst.Operand is System.Reflection.FieldInfo field && typeof(IRefOp).IsAssignableFrom(field.FieldType) == true) {
                                     var op = (IRefOp)System.Activator.CreateInstance(field.FieldType);
                                     //UnityEngine.Debug.Log(field.FieldType + " :: " + op.Op);
