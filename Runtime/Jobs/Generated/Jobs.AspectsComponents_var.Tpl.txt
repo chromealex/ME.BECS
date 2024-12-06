@@ -12,7 +12,7 @@ namespace ME.BECS.Jobs {
             {countAspects( )[builder.WithAspect<A#i#>();]}
             {countComponents( )[builder.With<C#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in builder.commandBuffer, builder.isUnsafe, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in builder.commandBuffer, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -74,16 +74,26 @@ namespace ME.BECS.Jobs {
         }
         #endif
 
-        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             {countAspects( )[where A#i# : unmanaged, IAspect]}
             {countComponents( )[where C#i# : unmanaged, IComponentBase]}
             where T : struct, IJobForAspectsComponents<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
+            
+            if (scheduleMode == ScheduleMode.Parallel) {
+                
+                //dependsOn = new StartParallelJob() {
+                //                buffer = buffer,
+                //            }.ScheduleSingle(dependsOn);
+                            
+                if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
+
+            }
             
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             data = CompiledJobs<T>.Get(ref jobData, buffer, unsafeMode);
-            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>() : GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(), dependsOn, ScheduleMode.Single);
+            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>() : GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(), dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>() {
                 jobData = jobData,
@@ -92,9 +102,12 @@ namespace ME.BECS.Jobs {
                 {countComponents[c#i# = buffer->state->components.Get{{RWRO}}<C#i#>(buffer->state, buffer->worldId),]}
             };
             data = _address(ref dataVal);
-            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(), dependsOn, ScheduleMode.Single);
+            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(), dependsOn, scheduleMode);
             #endif
             
+            if (scheduleMode == ScheduleMode.Parallel) {
+                return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
+            }
             return JobsUtility.Schedule(ref parameters);
             
         }

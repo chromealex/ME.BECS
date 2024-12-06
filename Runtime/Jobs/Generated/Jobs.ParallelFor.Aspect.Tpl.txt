@@ -67,12 +67,6 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {
             
-            //dependsOn = new StartParallelJob() {
-            //                buffer = buffer,
-            //            }.ScheduleSingle(dependsOn);
-                        
-            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
-
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS

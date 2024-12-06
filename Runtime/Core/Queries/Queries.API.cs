@@ -89,6 +89,7 @@ namespace ME.BECS {
                 }, Constants.ALLOCATOR_TEMP),
                 isCreated = true,
                 allocator = Constants.ALLOCATOR_TEMP,
+                mode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             
             var job = new BuilderArchetypesJob() {
@@ -117,6 +118,7 @@ namespace ME.BECS {
                 isCreated = true,
                 builderDependsOn = dependsOn,//Batches.Close(dependsOn, queryContext.state),
                 allocator = Constants.ALLOCATOR_PERSISTENT,
+                mode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             builder.Without<IsInactive>();
             return builder;

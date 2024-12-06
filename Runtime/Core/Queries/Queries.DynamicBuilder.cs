@@ -6,6 +6,8 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
+    using Unity.Jobs.LowLevel.Unsafe;
+    using Unity.Collections;
     
     public unsafe struct QueryData {
 
@@ -29,9 +31,10 @@ namespace ME.BECS {
         internal QueryData* queryData;
         internal uint parallelForBatch;
         internal JobHandle builderDependsOn;
-        internal Unity.Collections.Allocator allocator;
+        internal Allocator allocator;
         private bool withBurst;
         private bool asJob;
+        internal ScheduleMode mode;
         internal bool isUnsafe;
         internal bool isCreated;
         
@@ -44,7 +47,7 @@ namespace ME.BECS {
             public QueryData* queryData;
             [NativeDisableUnsafePtrRestriction]
             public CommandBuffer* commandBuffer;
-            public Unity.Collections.Allocator allocator;
+            public Allocator allocator;
 
             public void Execute() {
                 
@@ -105,7 +108,14 @@ namespace ME.BECS {
             this.isUnsafe = true;
             return this;
         }
-        
+
+        [INLINE(256)]
+        public QueryBuilder AsParallel() {
+            E.IS_CREATED(this);
+            this.mode = ScheduleMode.Parallel;
+            return this;
+        }
+
         [INLINE(256)]
         public QueryBuilder ParallelFor(uint batch) {
             E.IS_CREATED(this);

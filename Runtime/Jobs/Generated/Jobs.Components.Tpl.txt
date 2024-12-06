@@ -11,7 +11,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             {count( )[builder.With<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.isUnsafe, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -69,15 +69,25 @@ namespace ME.BECS.Jobs {
         }
         #endif
 
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobForComponents<{count(,)[T#i#]}> {
+            
+            if (scheduleMode == ScheduleMode.Parallel) {
+                
+                //dependsOn = new StartParallelJob() {
+                //                buffer = buffer,
+                //            }.ScheduleSingle(dependsOn);
+                            
+                if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
+
+            }
             
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             data = CompiledJobs<T>.Get(ref jobData, buffer, unsafeMode);
-            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {count(,)[T#i#]}>() : GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, ScheduleMode.Single);
+            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {count(,)[T#i#]}>() : GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, {count(,)[T#i#]}>() {
                 jobData = jobData,
@@ -85,9 +95,12 @@ namespace ME.BECS.Jobs {
                 {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state, buffer->worldId),]}
             };
             data = _address(ref dataVal);
-            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, ScheduleMode.Single);
+            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, scheduleMode);
             #endif
             
+            if (scheduleMode == ScheduleMode.Parallel) {
+                return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
+            }
             return JobsUtility.Schedule(ref parameters);
             
         }
