@@ -1,10 +1,11 @@
 namespace ME.BECS {
     
+    using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections;
     using Unity.Burst;
     using AOT;
 
-    [BurstCompile]
+    [BURST]
     public unsafe struct DomainAllocator : AllocatorManager.IAllocator {
         
         private AllocatorManager.AllocatorHandle handle;
@@ -77,7 +78,7 @@ namespace ME.BECS {
         public Allocator ToAllocator => this.handle.ToAllocator;
         public bool IsCustomAllocator => true;
 
-        [BurstCompile]
+        [BURST]
         [MonoPInvokeCallback(typeof(AllocatorManager.TryFunction))]
         internal static int Try(System.IntPtr state, ref AllocatorManager.Block block) {
             unsafe { return ((DomainAllocator*)state)->Try(ref block); }
