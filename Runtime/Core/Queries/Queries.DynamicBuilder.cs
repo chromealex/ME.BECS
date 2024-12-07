@@ -34,7 +34,7 @@ namespace ME.BECS {
         internal Allocator allocator;
         private bool withBurst;
         private bool asJob;
-        internal ScheduleMode mode;
+        internal ScheduleMode scheduleMode;
         internal bool isUnsafe;
         internal bool isCreated;
         
@@ -112,7 +112,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public QueryBuilder AsParallel() {
             E.IS_CREATED(this);
-            this.mode = ScheduleMode.Parallel;
+            this.scheduleMode = ScheduleMode.Parallel;
             return this;
         }
 

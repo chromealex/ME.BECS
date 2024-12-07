@@ -6,6 +6,11 @@ namespace ME.BECS.Jobs {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
 
+    [JobProducerType(typeof(JobComponentsExtensions.JobProcess<{count[,]}>))]
+    public interface IJobForComponents<{count(,)[T#i#]}> : IJobForComponentsBase {count( )[where T#i# : unmanaged, IComponentBase]} {
+        void Execute(in JobInfo jobInfo, in Ent ent, {count(,)[{{inref}} T#i# c#i#]});
+    }
+
     public static unsafe partial class QueryScheduleExtensions {
         
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
@@ -27,7 +32,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
-            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -40,34 +45,11 @@ namespace ME.BECS.Jobs {
                 where T : struct, IJobForComponents<{count(,)[T#i#]}> => JobComponentsExtensions.JobEarlyInitialize<T, {count(,)[T#i#]}>();
     }
 
-    [JobProducerType(typeof(JobComponentsExtensions.JobProcess<{count[,]}>))]
-    public interface IJobForComponents<{count(,)[T#i#]}> : IJobForComponentsBase {count( )[where T#i# : unmanaged, IComponentBase]} {
-        void Execute(in JobInfo jobInfo, in Ent ent, {count(,)[{{inref}} T#i# c#i#]});
-    }
-
     public static unsafe partial class JobComponentsExtensions {
         
         public static void JobEarlyInitialize<T, {count(,)[T#i#]}>()
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobForComponents<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
-
-        private static System.IntPtr GetReflectionData<T, {count(,)[T#i#]}>()
-            {count( )[where T#i# : unmanaged, IComponentBase]}
-            where T : struct, IJobForComponents<{count(,)[T#i#]}> {
-            JobProcess<T, {count(,)[T#i#]}>.Initialize();
-            System.IntPtr reflectionData = JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data;
-            return reflectionData;
-        }
-
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-        private static System.IntPtr GetReflectionUnsafeData<T, {count(,)[T#i#]}>()
-            {count( )[where T#i# : unmanaged, IComponentBase]}
-            where T : struct, IJobForComponents<{count(,)[T#i#]}> {
-            JobProcess<T, {count(,)[T#i#]}>.Initialize();
-            System.IntPtr reflectionData = JobProcessUnsafeData<T, {count(,)[T#i#]}>.jobReflectionData.Data;
-            return reflectionData;
-        }
-        #endif
 
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IComponentBase]}
@@ -86,16 +68,17 @@ namespace ME.BECS.Jobs {
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(ref jobData, buffer, unsafeMode);
-            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? GetReflectionUnsafeData<T, {count(,)[T#i#]}>() : GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, scheduleMode);
+            data = CompiledJobs<T>.Get(_address(ref jobData), buffer, unsafeMode, scheduleMode);
+            var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? JobReflectionUnsafeData<T>.data.Data : JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, {count(,)[T#i#]}>() {
+                scheduleMode = scheduleMode,
                 jobData = jobData,
                 buffer = buffer,
                 {count[c#i# = buffer->state->components.Get{{RWRO}}<T#i#>(buffer->state, buffer->worldId),]}
             };
             data = _address(ref dataVal);
-            var parameters = new JobsUtility.JobScheduleParameters(data, GetReflectionData<T, {count(,)[T#i#]}>(), dependsOn, scheduleMode);
+            var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #endif
             
             if (scheduleMode == ScheduleMode.Parallel) {
@@ -108,6 +91,7 @@ namespace ME.BECS.Jobs {
         private struct JobData<T, {count(,)[T#i#]}>
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct {
+            public ScheduleMode scheduleMode;
             [NativeDisableUnsafePtrRestriction]
             public T jobData;
             [NativeDisableUnsafePtrRestriction]
@@ -115,28 +99,18 @@ namespace ME.BECS.Jobs {
             {count[public Ref{{RWRO}}<T#i#> c#i#;]}
         }
 
-        internal struct JobProcessData<T, {count(,)[T#i#]}> {
-            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessData<T, {count(,)[T#i#]}>>();
-        }
-
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-        internal struct JobProcessUnsafeData<T, {count(,)[T#i#]}> {
-            internal static readonly Unity.Burst.SharedStatic<System.IntPtr> jobReflectionData = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobProcessUnsafeData<T, {count(,)[T#i#]}>>();
-        }
-        #endif
-
         internal struct JobProcess<T, {count(,)[T#i#]}>
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobForComponents<{count(,)[T#i#]}> {
 
             [BurstDiscard]
             public static void Initialize() {
-                if (JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data == System.IntPtr.Zero) {
+                if (JobReflectionData<T>.data.Data == System.IntPtr.Zero) {
                     #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-                    JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(false), typeof(T), (ExecuteJobFunction)Execute);
-                    JobProcessUnsafeData<T, {count(,)[T#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(true), typeof(T), (ExecuteJobFunction)Execute);
+                    JobReflectionData<T>.data.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(false), typeof(T), (ExecuteJobFunction)Execute);
+                    JobReflectionUnsafeData<T>.data.Data = JobsUtility.CreateJobReflectionData(CompiledJobs<T>.GetJobType(true), typeof(T), (ExecuteJobFunction)Execute);
                     #else
-                    JobProcessData<T, {count(,)[T#i#]}>.jobReflectionData.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
+                    JobReflectionData<T>.data.Data = JobsUtility.CreateJobReflectionData(typeof(JobData<T, {count(,)[T#i#]}>), typeof(T), (ExecuteJobFunction)Execute);
                     #endif
                 }
             }
@@ -145,22 +119,35 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, {count(,)[T#i#]}> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
             
-                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
-                jobInfo.count = jobData.buffer->count;
-                
-                JobUtils.SetCurrentThreadAsSingle(true);
-                
-                jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                for (uint i = 0u; i < jobData.buffer->count; ++i) {
-                    jobInfo.index = i;
-                    var entId = *(jobData.buffer->entities + i);
-                    var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                    var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                    jobData.jobData.Execute(in jobInfo, in ent, {count(,)[{{inref}} jobData.c#i#.Get(ent.id, ent.gen)]});
+                if (jobData.scheduleMode == ScheduleMode.Parallel) {
+                    var jobInfo = JobInfo.Create(jobData.buffer->worldId);
+                    jobInfo.count = jobData.buffer->count;
+                    while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                        jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                        for (uint i = (uint)begin; i < end; ++i) {
+                            jobInfo.index = i;
+                            var entId = *(jobData.buffer->entities + i);
+                            var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                            var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                            jobData.jobData.Execute(in jobInfo, in ent, {count(,)[{{inref}} jobData.c#i#.{{GetRead}}(ent.id, ent.gen)]});
+                        }
+                        jobData.buffer->EndForEachRange();
+                    }
+                } else {
+                    var jobInfo = JobInfo.Create(jobData.buffer->worldId);
+                    jobInfo.count = jobData.buffer->count;
+                    JobUtils.SetCurrentThreadAsSingle(true);
+                    jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
+                    for (uint i = 0u; i < jobData.buffer->count; ++i) {
+                        jobInfo.index = i;
+                        var entId = *(jobData.buffer->entities + i);
+                        var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                        var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                        jobData.jobData.Execute(in jobInfo, in ent, {count(,)[{{inref}} jobData.c#i#.Get(ent.id, ent.gen)]});
+                    }
+                    jobData.buffer->EndForEachRange();
+                    JobUtils.SetCurrentThreadAsSingle(false);
                 }
-                jobData.buffer->EndForEachRange();
-                
-                JobUtils.SetCurrentThreadAsSingle(false);
                 
             }
         }

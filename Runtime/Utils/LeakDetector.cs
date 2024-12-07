@@ -86,7 +86,7 @@ namespace ME.BECS {
             LeakDetectorData.Validate();
             foreach (var item in LeakDetectorData.tracked.Data) {
                 var str = item.stackTrace.ToString();
-                if (str.Contains("UnsafeEntityConfig") == true || str.Contains("ME.BECS.BurstHelper") == true) continue;
+                if (str.Contains("UnsafeEntityConfig") == true || str.Contains("ME.BECS.Gen") == true) continue;
                 UnityEngine.Debug.Log($"{item.ptr}\n{str}");
             }
             LeakDetectorData.spinner.Data.Unlock();

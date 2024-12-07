@@ -86,19 +86,8 @@ namespace ME.BECS.Transforms {
         }
 
         [INLINE(256)]
-        public static void CalculateMatrixHierarchy(in CommandBufferJobParallel buffer) {
-            var aspect = buffer.ent.GetAspect<TransformAspect>();
-            CalculateMatrixHierarchy(aspect.parent, aspect);
-        }
-
-        [INLINE(256)]
         public static void CalculateMatrixHierarchy(ref TransformAspect aspect) {
             CalculateMatrixHierarchy(aspect.parent, aspect);
-        }
-
-        [INLINE(256)]
-        public static void CalculateMatrixHierarchy(in CommandBufferJob buffer) {
-            CalculateMatrixHierarchy(buffer.Read<ParentComponent>().value, buffer.ent);
         }
 
         [INLINE(256)]

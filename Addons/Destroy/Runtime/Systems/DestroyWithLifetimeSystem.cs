@@ -10,7 +10,7 @@ namespace ME.BECS {
     public struct DestroyWithLifetimeSystem : IUpdate {
         
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForComponents<DestroyWithLifetime> {
+        public struct Job : IJobForComponents<DestroyWithLifetime> {
 
             public float deltaTime;
             
@@ -25,7 +25,7 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
             
-            var childHandle = API.Query(in context).Schedule<Job, DestroyWithLifetime>(new Job() {
+            var childHandle = context.Query().AsParallel().Schedule<Job, DestroyWithLifetime>(new Job() {
                 deltaTime = context.deltaTime,
             });
             context.SetDependency(childHandle);

@@ -9,7 +9,7 @@ namespace ME.BECS.Attack {
     public struct CanFireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<AttackAspect> {
+        public struct Job : IJobForAspects<AttackAspect> {
 
             public float dt;
             
@@ -41,7 +41,7 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().With<ReloadedComponent>().With<AttackTargetComponent>().Schedule<Job, AttackAspect>(new Job() {
+            var dependsOn = context.Query().AsParallel().With<ReloadedComponent>().With<AttackTargetComponent>().Schedule<Job, AttackAspect>(new Job() {
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);

@@ -10,7 +10,7 @@ namespace ME.BECS {
     public struct DestroyWithTicksSystem : IUpdate {
         
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForComponents<DestroyWithTicks> {
+        public struct Job : IJobForComponents<DestroyWithTicks> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithTicks component) {
                 if (component.ticks <= 0UL) {
@@ -24,7 +24,7 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
             
-            var childHandle = API.Query(in context).Schedule<Job, DestroyWithTicks>();
+            var childHandle = context.Query().AsParallel().Schedule<Job, DestroyWithTicks>();
             context.SetDependency(childHandle);
             
         }

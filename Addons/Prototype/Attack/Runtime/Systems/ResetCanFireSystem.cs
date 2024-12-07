@@ -10,7 +10,7 @@ namespace ME.BECS.Attack {
     public struct ResetCanFireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<AttackAspect> {
+        public struct Job : IJobForAspects<AttackAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
@@ -22,7 +22,7 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().With<IsUnitStaticComponent>().Without<CanFireWhileMovesTag>().Schedule<Job, AttackAspect>();
+            var dependsOn = context.Query().AsParallel().With<IsUnitStaticComponent>().Without<CanFireWhileMovesTag>().Schedule<Job, AttackAspect>();
             context.SetDependency(dependsOn);
 
         }

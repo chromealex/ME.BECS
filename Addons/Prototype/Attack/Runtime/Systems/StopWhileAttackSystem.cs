@@ -13,7 +13,7 @@ namespace ME.BECS.Attack {
     public struct StopWhileAttackSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct JobSet : IJobParallelForAspectsComponents<AttackAspect, ParentComponent> {
+        public struct JobSet2 : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parent) {
 
@@ -27,7 +27,7 @@ namespace ME.BECS.Attack {
         }
         
         [BURST(CompileSynchronously = true)]
-        public struct JobRotate : IJobParallelForAspects<AttackAspect, TransformAspect> {
+        public struct JobRotate : IJobForAspects<AttackAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref TransformAspect transformAspect) {
 
@@ -42,7 +42,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct JobRemove : IJobParallelForAspects<AttackAspect> {
+        public struct JobRemove : IJobForAspects<AttackAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor) {
 
@@ -56,14 +56,17 @@ namespace ME.BECS.Attack {
         public void OnUpdate(ref SystemContext context) {
 
             var dependsOn = context.Query()
+                                   .AsParallel()
                                    .With<AttackTargetComponent>()
                                    .Without<CanFireWhileMovesTag>()
-                                   .Schedule<JobSet, AttackAspect, ParentComponent>();
+                                   .Schedule<JobSet2, AttackAspect, ParentComponent>();
             dependsOn = context.Query(dependsOn)
+                                   .AsParallel()
                                    .With<AttackTargetComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobRotate, AttackAspect, TransformAspect>();
             dependsOn = context.Query(dependsOn)
+                                   .AsParallel()
                                    .Without<AttackTargetComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobRemove, AttackAspect>();

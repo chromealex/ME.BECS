@@ -11,7 +11,7 @@ namespace ME.BECS.Bullets {
     public struct FlySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct FlyJob : IJobParallelForAspects<BulletAspect, TransformAspect> {
+        public struct FlyJob : IJobForAspects<BulletAspect, TransformAspect> {
 
             public float dt;
             
@@ -34,7 +34,7 @@ namespace ME.BECS.Bullets {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().Without<TargetReachedComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
+            var dependsOn = context.Query().AsParallel().Without<TargetReachedComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
                 dt = context.deltaTime,
             });
             context.SetDependency(dependsOn);

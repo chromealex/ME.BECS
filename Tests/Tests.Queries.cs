@@ -60,7 +60,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        private struct JobComponents : IJobParallelForComponents<TestComponent> {
+        public struct JobComponents : IJobForComponents<TestComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
 
@@ -103,7 +103,7 @@ namespace ME.BECS.Tests {
                     ent3 = ent;
                 }
 
-                var job = API.Query(world, Batches.Apply(default, world)).Without<Test2Component>().Schedule<JobComponents, TestComponent>(new JobComponents());
+                var job = API.Query(world, Batches.Apply(default, world)).Without<Test2Component>().AsParallel().Schedule<JobComponents, TestComponent>(new JobComponents());
                 job.Complete();
                 
                 Assert.AreEqual(2, ent1.Read<TestComponent>().data);
@@ -1089,7 +1089,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job1Unsafe : IJobParallelForComponents<TestComponent> {
+        public struct Job1Unsafe : IJobForComponents<TestComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
                 ent.Set(new Test2Component());
@@ -1098,7 +1098,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job2Unsafe : IJobParallelForComponents<TestComponent> {
+        public struct Job2Unsafe : IJobForComponents<TestComponent> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent component) {
                 ent.Set(new Test3Component());
@@ -1107,7 +1107,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestA1Job : IJobParallelForAspects<TestAspect> {
+        public struct TestA1Job : IJobForAspects<TestAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestAspect asp) {
                 asp.data.data = asp.data5read.data;
@@ -1116,7 +1116,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct TestA2Job : IJobParallelForAspects<TestAspect> {
+        public struct TestA2Job : IJobForAspects<TestAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TestAspect asp) {
                 asp.data2.data = 123;
@@ -1141,15 +1141,15 @@ namespace ME.BECS.Tests {
             Batches.Apply(world.state);
 
             {
-                var d1 = API.Query(world).Schedule<TestA1Job, TestAspect>();
-                var d2 = API.Query(world).Schedule<TestA2Job, TestAspect>();
+                var d1 = API.Query(world).AsParallel().Schedule<TestA1Job, TestAspect>();
+                var d2 = API.Query(world).AsParallel().Schedule<TestA2Job, TestAspect>();
                 var d3 = JobHandle.CombineDependencies(d1, d2);
                 d3.Complete();
             }
 
             {
-                var d1 = API.Query(world).AsUnsafe().Schedule<Job1Unsafe, TestComponent>();
-                var d2 = API.Query(world).AsUnsafe().Schedule<Job2Unsafe, TestComponent>();
+                var d1 = API.Query(world).AsUnsafe().AsParallel().Schedule<Job1Unsafe, TestComponent>();
+                var d2 = API.Query(world).AsUnsafe().AsParallel().Schedule<Job2Unsafe, TestComponent>();
                 var d3 = JobHandle.CombineDependencies(d1, d2);
                 d3.Complete();
             }

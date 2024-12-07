@@ -16,6 +16,16 @@ namespace ME.BECS {
     public interface IJobForComponentsBase { }
     public interface IJobForAspectsBase { }
 
+    public struct JobReflectionData<T> {
+        internal static readonly Unity.Burst.SharedStatic<System.IntPtr> data = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobReflectionData<T>>();
+    }
+
+    #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+    public struct JobReflectionUnsafeData<T> {
+        internal static readonly Unity.Burst.SharedStatic<System.IntPtr> data = Unity.Burst.SharedStatic<System.IntPtr>.GetOrCreate<JobReflectionUnsafeData<T>>();
+    }
+    #endif
+
     public struct JobInfo : IIsCreated {
 
         public uint count;

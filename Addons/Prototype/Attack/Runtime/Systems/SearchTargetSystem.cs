@@ -13,7 +13,7 @@ namespace ME.BECS.Attack {
     public struct SearchTargetSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct SearchTargetJob : ME.BECS.Jobs.IJobParallelForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
+        public unsafe struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public World world;
             public SystemLink<FogOfWar.CreateSystem> fogOfWar;
@@ -54,7 +54,7 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
+            var dependsOn = context.Query().AsParallel().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
                 world = context.world,
                 fogOfWar = context.world.GetSystemLink<ME.BECS.FogOfWar.CreateSystem>(),
             });

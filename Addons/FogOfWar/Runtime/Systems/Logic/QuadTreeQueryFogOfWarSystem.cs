@@ -15,14 +15,14 @@ namespace ME.BECS.FogOfWar {
     public struct QuadTreeQueryFogOfWarSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<QuadTreeQueryAspect, TransformAspect> {
+        public struct Job : IJobFor2Aspects1Components<QuadTreeQueryAspect, TransformAspect, QuadTreeQueryFogOfWarFilter> {
 
             public QuadTreeInsertSystem system;
             public CreateSystem fow;
 
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeQueryAspect query, ref TransformAspect tr, ref QuadTreeQueryFogOfWarFilter filter) {
 
-                var subFilter = query.ent.Read<QuadTreeQueryFogOfWarFilter>().data;
+                var subFilter = filter.data;
                 subFilter.fow = this.fow;
                 this.system.FillNearest(ref query, in tr, in subFilter);
                 
@@ -34,7 +34,7 @@ namespace ME.BECS.FogOfWar {
 
             var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
             var fow = context.world.GetSystem<CreateSystem>();
-            var handle = context.Query().With<QuadTreeQueryFogOfWarFilter>().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
+            var handle = context.Query().AsParallel().Schedule<Job, QuadTreeQueryAspect, TransformAspect, QuadTreeQueryFogOfWarFilter>(new Job() {
                 system = querySystem,
                 fow = fow,
             });

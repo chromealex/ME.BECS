@@ -38,7 +38,7 @@ namespace ME.BECS.FogOfWar {
         }
         
         [BURST(CompileSynchronously = true)]
-        public struct UpdatePointsJob : IJobParallelForComponents<FogOfWarShadowCopyComponent> {
+        public struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
 
             public CreateSystem fow;
             
@@ -61,7 +61,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct UpdateRectJob : IJobParallelForComponents<FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent> {
+        public struct UpdateRectJob : IJobForComponents<FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent> {
 
             public CreateSystem fow;
             
@@ -89,10 +89,10 @@ namespace ME.BECS.FogOfWar {
             
             // Update all shadow copies
             var fow = logicWorld.GetSystem<CreateSystem>();
-            var dependsOnPoints = context.Query().Without<FogOfWarShadowCopyPointsComponent>().AsUnsafe().Schedule<UpdatePointsJob, FogOfWarShadowCopyComponent>(new UpdatePointsJob() {
+            var dependsOnPoints = context.Query().Without<FogOfWarShadowCopyPointsComponent>().AsUnsafe().AsParallel().Schedule<UpdatePointsJob, FogOfWarShadowCopyComponent>(new UpdatePointsJob() {
                 fow = fow,
             });
-            var dependsOnRect = context.Query().With<FogOfWarShadowCopyPointsComponent>().AsUnsafe().Schedule<UpdateRectJob, FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent>(new UpdateRectJob() {
+            var dependsOnRect = context.Query().With<FogOfWarShadowCopyPointsComponent>().AsUnsafe().AsParallel().Schedule<UpdateRectJob, FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent>(new UpdateRectJob() {
                 fow = fow,
             });
             context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(dependsOnPoints, dependsOnRect));

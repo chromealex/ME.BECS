@@ -7,11 +7,10 @@ namespace ME.BECS {
     public partial struct Components {
 
         #if ENABLE_UNITY_COLLECTIONS_CHECKS
-        private Internal.Array<AtomicSafetyHandle> handlers;
-        private LockSpinner handlersLock;
-        #endif
+        internal Internal.Array<AtomicSafetyHandle> handlers;
+        internal LockSpinner handlersLock;
         
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS
+        [INLINE(256)]
         public void DisposeSafetyHandlers() {
 
             this.handlersLock.Lock();
@@ -27,16 +26,13 @@ namespace ME.BECS {
             
         }
         
-        public void ResetSafetyHandlers() {
+        [INLINE(256)]
+        public void SafetyHandlersCopyFrom(in Components other) {
 
-            this.handlersLock.Lock();
-            if (this.handlers.IsCreated == true) this.handlers.Dispose();
-            this.handlersLock.Unlock();
+            this.DisposeSafetyHandlers();
             
         }
-        #endif
-
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS
+        
         [INLINE(256)]
         public AtomicSafetyHandle GetSafetyHandler<T>() where T : unmanaged, IComponentBase {
 
@@ -52,10 +48,15 @@ namespace ME.BECS {
             var typeId = StaticTypes<T>.typeId;
             var handler = this.handlers.Get(typeId);
             if (AtomicSafetyHandle.IsDefaultValue(in handler) == true) {
-                handler = AtomicSafetyHandle.Create();
-                var id = 0;
-                Unity.Collections.CollectionHelper.SetStaticSafetyId(ref handler, ref id, StaticTypes<T>.name);
-                this.handlers.Get(typeId) = handler;
+                this.handlersLock.Lock();
+                handler = this.handlers.Get(typeId);
+                if (AtomicSafetyHandle.IsDefaultValue(in handler) == true) {
+                    handler = AtomicSafetyHandle.Create();
+                    var id = 0;
+                    Unity.Collections.CollectionHelper.SetStaticSafetyId(ref handler, ref id, StaticTypes<T>.name);
+                    this.handlers.Get(typeId) = handler;
+                }
+                this.handlersLock.Unlock();
             }
             
             return this.handlers.Get(typeId);

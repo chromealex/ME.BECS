@@ -12,7 +12,7 @@ namespace ME.BECS.Pathfinding {
     public struct BuildPathSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct UpdatePathJob : IJobParallelForComponents<TargetComponent> {
+        public unsafe struct UpdatePathJob : IJobForComponents<TargetComponent> {
 
             public World world;
             public Filter filter;
@@ -51,7 +51,7 @@ namespace ME.BECS.Pathfinding {
         
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).With<TargetComponent>().Schedule<UpdatePathJob, TargetComponent>(new UpdatePathJob() {
+            var dependsOn = API.Query(in context).With<TargetComponent>().AsParallel().Schedule<UpdatePathJob, TargetComponent>(new UpdatePathJob() {
                 world = context.world,
                 filter = this.filter,
             });

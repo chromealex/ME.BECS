@@ -32,6 +32,21 @@ namespace ME.BECS.Editor {
         }
 
     }
+
+    public class CodeGeneratorImporter : UnityEditor.AssetPostprocessor {
+
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths, bool didDomainReload) {
+            foreach (var path in importedAssets) {
+                if (path.EndsWith(".cs") == true &&
+                    path.Contains("ME.BECS.Gen.cs") == false) {
+                    //UnityEngine.Debug.Log($"Destroy helper because of {path}");
+                    CodeGenerator.Destroy();
+                    break;
+                }
+            }
+        }
+        
+    }
     
     public static class CodeGenerator {
 
@@ -61,6 +76,8 @@ namespace ME.BECS.Editor {
 
         static CodeGenerator() {
             
+            UnityEngine.Application.logMessageReceived -= OnLogAdded;
+            UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
@@ -69,6 +86,8 @@ namespace ME.BECS.Editor {
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptsReload() {
             
+            UnityEngine.Application.logMessageReceived -= OnLogAdded;
+            UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
@@ -116,7 +135,6 @@ namespace ME.BECS.Editor {
                 var fileName = System.IO.Path.GetFileName(path);
                 dir = $"{dir}/{fileName.Replace(".Tpl.txt", string.Empty)}";
                 var text = System.IO.File.ReadAllText(path);
-                var hashes = new System.Collections.Generic.HashSet<long>();
                 foreach (var postfix in postfixes) {
                     foreach (var key in postfix.variables) {
                         variables[key.Key] = key.Value;
@@ -134,11 +152,12 @@ namespace ME.BECS.Editor {
                             var keys = new System.Collections.Generic.Dictionary<string, int>() {
                                 { "countAspects", i },
                             };
+                            variables["countAspects"] = i.ToString();
                             for (int j = 1; j < variationsCount; ++j) {
-                                if (hashes.Add(i + j) == false) continue;
                                 keys["countComponents"] = j;
                                 keys["count"] = i + j;
                                 variables["PREFIX"] = $"{i}_{j}";
+                                variables["countComponents"] = j.ToString();
                                 var filePath = $"{dir}/{fileName.Replace(".Tpl.txt", $"{i}_{j}{postfix.filenamePostfix}.cs")}";
                                 var tpl = new Tpl(text);
                                 System.IO.File.WriteAllText(filePath, tpl.GetString(keys, variables));
@@ -172,15 +191,30 @@ namespace ME.BECS.Editor {
 
         }
 
+        public static void Destroy() {
+            {
+                var dir = $"Assets/{ECS}.Gen/Runtime";
+                var path = @$"{dir}/{ECS}.Gen.cs";
+                UnityEditor.AssetDatabase.DeleteAsset(path);
+            }
+            {
+                var dir = $"Assets/{ECS}.Gen/Editor";
+                var path = @$"{dir}/{ECS}.Gen.cs";
+                UnityEditor.AssetDatabase.DeleteAsset(path);
+            }
+        }
+
         public static void RegenerateBurstAOT() {
 
+            UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
+            
             var list = EditorUtils.GetAssembliesInfo();
             {
-                var dir = $"Assets/{ECS}.BurstHelper/Runtime";
+                var dir = $"Assets/{ECS}.Gen/Runtime";
                 Build(list, dir);
             }
             {
-                var dir = $"Assets/{ECS}.BurstHelper/Editor";
+                var dir = $"Assets/{ECS}.Gen/Editor";
                 Build(list, dir, editorAssembly: true);
             }
             
@@ -210,25 +244,18 @@ namespace ME.BECS.Editor {
 
         private static void OnLogAdded(string condition, string stackTrace, UnityEngine.LogType type) {
 
-            if (type == UnityEngine.LogType.Exception ||
+            /*if (type == UnityEngine.LogType.Exception ||
                 type == UnityEngine.LogType.Error) {
-                if (condition.Contains($"{ECS}.BurstHelper.cs") == true ||
-                    stackTrace.Contains($"{ECS}.BurstHelper.cs") == true) {
-                    if (condition.Contains("does not exist in the namespace") == true) {
+                if (condition.Contains($"{ECS}.Gen.cs") == true ||
+                    stackTrace.Contains($"{ECS}.Gen.cs") == true) {
+                    if (condition.Contains("CS0426") == true) {
                         // Remove files
-                        /*{
-                            var dir = $"Assets/{ECS}.BurstHelper/Runtime";
-                            var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                            UnityEditor.AssetDatabase.DeleteAsset(path);
-                        }
-                        {
-                            var dir = $"Assets/{ECS}.BurstHelper/Editor";
-                            var path = @$"{dir}/{ECS}.BurstHelper.cs";
-                            UnityEditor.AssetDatabase.DeleteAsset(path);
-                        }*/
+                        UnityEngine.Debug.Log("Regenerating burst helper: " + UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0));
+                        if (UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) % 2 == 0) return;
+                        Destroy();
                     }
                 }
-            }
+            }*/
             
         }
 
@@ -250,7 +277,7 @@ namespace ME.BECS.Editor {
             
             var componentTypes = new System.Collections.Generic.List<System.Type>();
             {
-                var path = @$"{dir}/{ECS}.BurstHelper.cs";
+                var path = @$"{dir}/{ECS}.Gen.cs";
                 string template = null;
                 if (editorAssembly == true) {
                     template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Editor-Template.txt").text;
@@ -488,11 +515,11 @@ namespace ME.BECS.Editor {
             }
             {
                 var csc = @$"{dir}/csc.rsp";
-                var path = @$"{dir}/{ECS}.BurstHelper.{postfix}.asmdef";
+                var path = @$"{dir}/{ECS}.Gen.{postfix}.asmdef";
                 var template = string.Empty;
                 if (editorAssembly == true) {
                     template = @"{
-                        ""name"": """ + ECS + @".BurstHelper." + postfix + @""",
+                        ""name"": """ + ECS + @".Gen." + postfix + @""",
                         ""references"": [
                             ""{{CONTENT}}""
                             ],
@@ -503,7 +530,7 @@ namespace ME.BECS.Editor {
                     }";
                 } else {
                     template = @"{
-                        ""name"": """ + ECS + @".BurstHelper." + postfix + @""",
+                        ""name"": """ + ECS + @".Gen." + postfix + @""",
                         ""references"": [
                             ""{{CONTENT}}""
                             ],
@@ -542,6 +569,8 @@ namespace ME.BECS.Editor {
                 var newContent = template.Replace("{{CONTENT}}", string.Join(@""",""", content));
                 var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
                 if (prevContent != newContent) {
+                    var pathDummy = @$"{dir}/{ECS}.Dummy.cs";
+                    System.IO.File.WriteAllText(pathDummy, "// Code generator dummy script");
                     System.IO.File.WriteAllText(csc, "@Assets/csc.rsp");
                     System.IO.File.WriteAllText(path, newContent);
                     UnityEditor.AssetDatabase.ImportAsset(path);

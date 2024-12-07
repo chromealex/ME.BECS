@@ -19,15 +19,17 @@ namespace ME.BECS.Editor.Jobs {
 
                     var jobTypeFullName = EditorUtils.GetTypeName(jobType);
                     var components = new System.Collections.Generic.List<string>();
-                    var interfaces = jobType.GetInterfaces();
+                    var componentsTypes = new System.Collections.Generic.List<System.Type>();
+                    var jobInterfaces = jobType.GetInterfaces();
                     System.Type workInterface = null;
-                    foreach (var i in interfaces) {
+                    foreach (var i in jobInterfaces) {
                         if (i.IsGenericType == true) {
                             foreach (var type in i.GenericTypeArguments) {
                                 if (typeof(T0).IsAssignableFrom(type) == true ||
                                     typeof(T1).IsAssignableFrom(type) == true) {
                                     if (this.IsValidTypeForAssembly(type) == false) continue;
                                     components.Add(EditorUtils.GetDataTypeName(type));
+                                    componentsTypes.Add(type);
                                 }
                             }
 
@@ -38,7 +40,36 @@ namespace ME.BECS.Editor.Jobs {
 
                     if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
 
-                        var str = $"ME.BECS.Jobs.EarlyInit.{method}<{jobTypeFullName}, {string.Join(", ", components)}>();";
+                        var methods = typeof(ME.BECS.Jobs.EarlyInit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        MethodInfo methodInfoResult = null;
+                        foreach (var methodInfo in methods) {
+                            if (methodInfo.Name.StartsWith(method) == false) continue;
+                            if (methodInfo.GetGenericArguments().Length != components.Count + 1) continue;
+
+                            var type = methodInfo.GetGenericArguments()[0].GetInterfaces()[0];
+                            if (type.IsGenericType == true) {
+                                var types = type.GenericTypeArguments;
+                                var check = true;
+                                for (int i = 0; i < componentsTypes.Count; ++i) {
+                                    if (types[i].GetInterfaces()[0].IsAssignableFrom(componentsTypes[i]) == false) {
+                                        check = false;
+                                        break;
+                                    }
+                                }
+                                if (check == false) continue;
+                            } else {
+                                if (type.IsAssignableFrom(jobType) == false) continue;
+                            }
+
+                            methodInfoResult = methodInfo;
+                            break;
+                        }
+
+                        if (methodInfoResult == null) {
+                            UnityEngine.Debug.LogWarning($"[ CodeGenerator ] Failed to generate EarlyInit method for job type {jobTypeFullName}.");
+                            continue;
+                        }
+                        var str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}, {string.Join(", ", components)}>();";
                         dataList.Add(str);
 
                     }
@@ -56,25 +87,28 @@ namespace ME.BECS.Editor.Jobs {
         
         public override string AddPublicContent() {
 
+            var cacheBuilder = new System.Text.StringBuilder();
             var funcBuilder = new System.Text.StringBuilder();
             var structBuilder = new System.Text.StringBuilder();
             var structUnsafeBuilder = new System.Text.StringBuilder();
             var uniqueId = 0;
+            cacheBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             structBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             structUnsafeBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             funcBuilder.AppendLine($"#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
             funcBuilder.AppendLine($"public static void InitializeJobsDebug() {{");
-            this.AddJobs<IJobParallelForComponentsBase, IComponentBase, TNull>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForComponentsBase, IComponentBase, TNull>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Components);
-            this.AddJobs<IJobParallelForAspectsBase, TNull, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForAspectsBase, TNull, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
-            this.AddJobs<IJobForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
-            this.AddJobs<IJobParallelForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
+            this.AddJobs<IJobParallelForComponentsBase, IComponentBase, TNull>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForComponentsBase, IComponentBase, TNull>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Components);
+            this.AddJobs<IJobParallelForAspectsBase, TNull, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForAspectsBase, TNull, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Aspect);
+            this.AddJobs<IJobForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
+            this.AddJobs<IJobParallelForAspectsComponentsBase, IComponentBase, IAspect>(ref uniqueId, cacheBuilder, funcBuilder, structBuilder, structUnsafeBuilder, JobType.Combined);
             funcBuilder.AppendLine($"}}");
             funcBuilder.AppendLine($"#endif");
             structBuilder.AppendLine($"#endif");
             structUnsafeBuilder.AppendLine($"#endif");
-            return structBuilder.ToString() + "\n" + structUnsafeBuilder.ToString() + "\n" + funcBuilder.ToString();
+            cacheBuilder.AppendLine($"#endif");
+            return structBuilder.ToString() + "\n" + structUnsafeBuilder.ToString() + "\n" + cacheBuilder.ToString() + "\n" + funcBuilder.ToString();
 
         }
 
@@ -97,7 +131,7 @@ namespace ME.BECS.Editor.Jobs {
 
         }
         
-        private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
+        private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             {
                 var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase));
@@ -195,22 +229,33 @@ namespace ME.BECS.Editor.Jobs {
                     ++uniqueId;
                     var structName = $"JobDebugData{uniqueId}";
 
+                    cacheBuilder.AppendLine($"private struct Cache{structName} {{");
+                    cacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
+                    cacheBuilder.AppendLine($"}}");
+
                     funcBuilder.AppendLine($"{{ // {jobType.FullName}");
+                    funcBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
                     funcBuilder.AppendLine($"[BurstCompile]");
-                    funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode) {{");
-                    funcBuilder.AppendLine($"{structName}* data = null;");
+                    funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleMode scheduleMode) {{");
+                    funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
+                    funcBuilder.AppendLine($"if (data == null) {{");
                     funcBuilder.AppendLine($"if (unsafeMode == true) {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}Unsafe(), Constants.ALLOCATOR_TEMP);");
+                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN);");
                     funcBuilder.AppendLine($"}} else {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}(), Constants.ALLOCATOR_TEMP);");
+                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}(), Constants.ALLOCATOR_DOMAIN);");
                     funcBuilder.AppendLine($"}}");
+                    funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
+                    funcBuilder.AppendLine($"}}");
+                    funcBuilder.AppendLine($"data->scheduleMode = scheduleMode;");
                     funcBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
                     funcBuilder.AppendLine($"data->buffer = buffer;");
                     
                     structBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
+                    structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleMode scheduleMode;");
                     structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                     structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
                     structUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
+                    structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleMode scheduleMode;");
                     structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                     structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
                     if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
@@ -303,7 +348,7 @@ namespace ME.BECS.Editor.Jobs {
             this.Generate<IJobForComponentsBase, IComponentBase, TNull>(dataList, "DoComponents");
             this.Generate<IJobParallelForAspectsBase, IAspect, TNull>(dataList, "DoParallelForAspect");
             this.Generate<IJobForAspectsBase, IAspect, TNull>(dataList, "DoAspect");
-            this.Generate<IJobForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoParallelForAspectsComponents");
+            this.Generate<IJobForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoAspectsComponents");
             this.Generate<IJobParallelForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoParallelForAspectsComponents");
             
         }

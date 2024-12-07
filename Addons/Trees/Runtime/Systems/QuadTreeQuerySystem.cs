@@ -199,7 +199,7 @@ namespace ME.BECS {
     public struct QuadTreeQuerySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<QuadTreeQueryAspect, TransformAspect> {
+        public struct Job : IJobForAspects<QuadTreeQueryAspect, TransformAspect> {
 
             public QuadTreeInsertSystem system;
 
@@ -214,7 +214,7 @@ namespace ME.BECS {
         public void OnUpdate(ref SystemContext context) {
 
             var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            var handle = context.Query().Without<QuadTreeQueryHasCustomFilterTag>().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
+            var handle = context.Query().Without<QuadTreeQueryHasCustomFilterTag>().AsParallel().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
                 system = querySystem,
             });
             context.SetDependency(handle);

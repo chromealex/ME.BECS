@@ -14,7 +14,7 @@ namespace ME.BECS {
         private static UIntDictionary<UnsafeEntityConfig> registryFromId;
 
         public static void Initialize() {
-            UnityEngine.Debug.Log("Initialize static world for configs");
+            //UnityEngine.Debug.Log("Initialize static world for configs");
             var props = WorldProperties.Default;
             props.name = "EntityConfig Static World";
             staticWorld = World.Create(props, false);

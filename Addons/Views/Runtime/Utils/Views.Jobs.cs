@@ -183,7 +183,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct JobAssignViews : IJobParallelForCommandBuffer {
+        public struct JobAssignViews : IJobForComponents<AssignViewComponent> {
 
             public World viewsWorld;
             [NativeDisableUnsafePtrRestriction]
@@ -191,11 +191,10 @@ namespace ME.BECS.Views {
             public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
             public UnsafeParallelHashMap<uint, uint>.ParallelWriter toAssign;
             
-            public void Execute(in CommandBufferJobParallel commandBuffer) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AssignViewComponent component) {
 
-                var assignToEntId = commandBuffer.entId;
-                var assign = commandBuffer.ent.Read<AssignViewComponent>();
-                var sourceEntId = assign.sourceEnt.id;
+                var assignToEntId = ent.id;
+                var sourceEntId = component.sourceEnt.id;
                 if (this.viewsModuleData->renderingOnSceneBits.IsSet((int)sourceEntId) == true) {
                     
                     ref var allocator = ref this.viewsWorld.state->allocator;
@@ -208,8 +207,8 @@ namespace ME.BECS.Views {
                         this.viewsModuleData->renderingOnSceneBits.Set((int)assignToEntId, true);
                         this.viewsModuleData->renderingOnSceneEntToPrefabId[in allocator, assignToEntId] = this.viewsModuleData->renderingOnSceneEntToPrefabId[in allocator, sourceEntId];
                         ref var entData = ref this.viewsModuleData->renderingOnSceneEnts.Ptr[updateIdx];
-                        entData.element = commandBuffer.ent;
-                        entData.version = commandBuffer.ent.Version - 1;
+                        entData.element = ent;
+                        entData.version = ent.Version - 1;
                     }
 
                     {
@@ -218,15 +217,15 @@ namespace ME.BECS.Views {
                     }
                     
                     // Assign provider
-                    var providerId = assign.source.providerId;
-                    if (providerId > 0u && assign.source.providerId < this.registeredProviders.Length) {
-                        ref var item = ref *(this.registeredProviders.Ptr + assign.source.providerId);
+                    var providerId = component.source.providerId;
+                    if (providerId > 0u && component.source.providerId < this.registeredProviders.Length) {
+                        ref var item = ref *(this.registeredProviders.Ptr + component.source.providerId);
                         E.IS_CREATED(item);
-                        assign.sourceEnt.Remove(item.typeId);
-                        commandBuffer.ent.Set(item.typeId, null);
+                        component.sourceEnt.Remove(item.typeId);
+                        ent.Set(item.typeId, null);
                     }
 
-                    commandBuffer.ent.Remove<AssignViewComponent>();
+                    ent.Remove<AssignViewComponent>();
                     this.toAssign.TryAdd(sourceEntId, assignToEntId);
 
                 }
@@ -236,23 +235,22 @@ namespace ME.BECS.Views {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct JobRemoveFromScene : IJobParallelForCommandBuffer {
+        public struct JobRemoveFromScene : IJobForComponents<ViewComponent> {
 
             [NativeDisableUnsafePtrRestriction]
             public ViewsModuleData* viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
             public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
 
-            public void Execute(in CommandBufferJobParallel commandBuffer) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref ViewComponent component) {
 
-                var entId = commandBuffer.entId;
+                var entId = ent.id;
                 if (this.viewsModuleData->renderingOnSceneBits.IsSet((int)entId) == true) {
                     
                     // Remove
                     if (this.toRemove.TryAdd(entId, false) == true) {
                         
-                        var ent = commandBuffer.ent;
-                        var viewSource = ent.Read<ViewComponent>().source;
+                        var viewSource = component.source;
                         var providerId = viewSource.providerId;
                         if (providerId > 0u &&
                             viewSource.providerId < this.registeredProviders.Length) {
@@ -301,7 +299,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct JobAddToScene : IJobParallelForCommandBuffer {
+        public struct JobAddToScene : IJobForComponents<IsViewRequested> {
 
             [NativeDisableUnsafePtrRestriction]
             public State* state;
@@ -310,9 +308,9 @@ namespace ME.BECS.Views {
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toAdd;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
 
-            public void Execute(in CommandBufferJobParallel commandBuffer) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref IsViewRequested component) {
 
-                var entId = commandBuffer.entId;
+                var entId = ent.id;
                 if (this.viewsModuleData->renderingOnSceneBits.IsSet((int)entId) == false) {
                     
                     // Add
@@ -327,8 +325,8 @@ namespace ME.BECS.Views {
                         //   if prefab changed
                         //   if ent generation changed
                         var idx = this.viewsModuleData->renderingOnSceneEntToRenderIndex.ReadValue(in this.state->allocator, entId);
-                        if (commandBuffer.ent != this.viewsModuleData->renderingOnSceneEnts[(int)idx].element ||
-                            commandBuffer.ent.Read<ViewComponent>().source.prefabId != prefabId) {
+                        if (ent != this.viewsModuleData->renderingOnSceneEnts[(int)idx].element ||
+                            ent.Read<ViewComponent>().source.prefabId != prefabId) {
 
                             // We need to remove and spawn again for changed entities
                             if (this.toRemove.TryAdd(entId, false) == true) {

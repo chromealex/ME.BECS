@@ -24,13 +24,13 @@ namespace ME.BECS.Units {
         public bool drawGizmos;
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct Job : IJobParallelForAspects<TransformAspect, UnitAspect> {
+        public unsafe struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
 
             public SteeringSystem system;
             public float dt;
             public World world;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref QuadTreeQueryAspect query) {
 
                 var collisionDir = float3.zero;
                 var cohesionVector = float3.zero;
@@ -38,7 +38,6 @@ namespace ME.BECS.Units {
                 var alignmentVector = float3.zero;
                 var cohesionUnitsCount = 0u;
                 var alignmentUnitsCount = 0u;
-                var query = unit.ent.GetAspect<QuadTreeQueryAspect>();
                 var rangeSq = query.query.rangeSqr;
                 var srcPos = tr.position;
                 srcPos.y = 0f;
@@ -134,7 +133,7 @@ namespace ME.BECS.Units {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().Schedule<Job, TransformAspect, UnitAspect>(new Job() {
+            var dependsOn = context.Query().AsParallel().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().Schedule<Job, TransformAspect, UnitAspect, QuadTreeQueryAspect>(new Job() {
                 world = context.world,
                 system = this,
                 dt = context.deltaTime,
@@ -147,7 +146,7 @@ namespace ME.BECS.Units {
 
             if (this.drawGizmos == false) return;
             
-            var arr = API.Query(in context).Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<TransformAspect>().ToArray();
+            var arr = context.Query().AsParallel().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<TransformAspect>().ToArray();
             foreach (var unitEnt in arr) {
 
                 var tr = unitEnt.GetAspect<TransformAspect>();

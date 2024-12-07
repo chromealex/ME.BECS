@@ -7,7 +7,7 @@ namespace ME.BECS.Tests {
         public static void Start() {
             ObjectReferenceRegistry.ClearRuntimeObjects();
             {
-                var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.BurstHelper.Editor");
+                var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
                 type.GetMethod("Load").Invoke(null, null);
             }
         }

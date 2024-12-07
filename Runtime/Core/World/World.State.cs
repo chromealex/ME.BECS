@@ -162,12 +162,18 @@ namespace ME.BECS {
         public void CopyFrom(in State other) {
 
             var alloc = this.allocator;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            var safetyHandlers = this.components.handlers;
+            var safetyHandlersLock = this.components.handlersLock;
+            #endif
             this = other;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            this.components.ResetSafetyHandlers();
+            this.components.handlers = safetyHandlers;
+            this.components.handlersLock = safetyHandlersLock;
+            this.components.SafetyHandlersCopyFrom(in other.components);
             #endif
             this.allocator = alloc;
-            this.allocator.CopyFrom(other.allocator);
+            this.allocator.CopyFrom(in other.allocator);
 
         }
 
@@ -175,16 +181,25 @@ namespace ME.BECS {
         public void CopyFromPrepare(in State other) {
 
             var alloc = this.allocator;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            var safetyHandlers = this.components.handlers;
+            var safetyHandlersLock = this.components.handlersLock;
+            #endif
             this = other;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            this.components.handlers = safetyHandlers;
+            this.components.handlersLock = safetyHandlersLock;
+            this.components.SafetyHandlersCopyFrom(in other.components);
+            #endif
             this.allocator = alloc;
-            this.allocator.CopyFromPrepare(other.allocator);
+            this.allocator.CopyFromPrepare(in other.allocator);
 
         }
 
         [INLINE(256)]
         public void CopyFromComplete(in State other, int index) {
 
-            this.allocator.CopyFromComplete(other.allocator, index);
+            this.allocator.CopyFromComplete(in other.allocator, index);
 
         }
 

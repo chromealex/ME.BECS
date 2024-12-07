@@ -57,9 +57,9 @@ namespace ME.BECS {
 
     public static unsafe partial class Logger {
 
-        private static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN;
+        private static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN_REAL;
 
-        internal static void* logger = _make(new DummyLogger());
+        internal static void* logger = _make(new DummyLogger(), ALLOCATOR);
         
         public static void SetLogger<T>(T logger) where T : unmanaged, ILogger {
             Logger.logger = _make(TSize<T>.size, TAlign<T>.alignInt, ALLOCATOR);

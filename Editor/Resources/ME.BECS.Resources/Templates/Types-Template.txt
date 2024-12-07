@@ -4,6 +4,8 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using UnityEngine.Scripting;
     using Unity.Burst;
+    using Unity.Jobs.LowLevel.Unsafe;
+    using ME.BECS.Jobs;
     using static Cuts;
     
     [UnityEngine.Scripting.PreserveAttribute]
@@ -26,7 +28,6 @@ namespace ME.BECS {
     [UnityEngine.DefaultExecutionOrder(-100_000)]
     [BURST]
     public static unsafe class StaticMethods {
-        
         [UnityEngine.Scripting.PreserveAttribute] 
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Load() {

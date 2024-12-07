@@ -16,7 +16,7 @@ namespace ME.BECS.Pathfinding {
     public struct UpdateGraphSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct ResetPathJob : IJobParallelForComponents<TargetPathComponent> {
+        public unsafe struct ResetPathJob : IJobForComponents<TargetPathComponent> {
 
             public Ent graph;
             public Unity.Collections.NativeArray<ulong> dirtyChunks;
@@ -40,7 +40,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct UpdateGraphMaskJob : IJobParallelForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
+        public unsafe struct UpdateGraphMaskJob : IJobForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
 
             public BuildGraphSystem graphSystem;
             
@@ -133,7 +133,7 @@ namespace ME.BECS.Pathfinding {
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var graphMaskUpdate = context.Query().With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().Schedule<UpdateGraphMaskJob, GraphMaskComponent, GraphMaskRuntimeComponent>(new UpdateGraphMaskJob() {
+            var graphMaskUpdate = context.Query().With<GraphMaskComponent>().With<IsGraphMaskDirtyComponent>().AsParallel().Schedule<UpdateGraphMaskJob, GraphMaskComponent, GraphMaskRuntimeComponent>(new UpdateGraphMaskJob() {
                 graphSystem = graphSystem,
             });
             
@@ -145,7 +145,7 @@ namespace ME.BECS.Pathfinding {
                 _memcpy(changedChunks.GetUnsafePtr(), tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
-                dependsOn = context.Query(dependsOn).AsUnsafe().Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
+                dependsOn = context.Query(dependsOn).AsUnsafe().AsParallel().Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {
                     graph = graphEnt,
                     world = context.world,
                     dirtyChunks = tempDirty,

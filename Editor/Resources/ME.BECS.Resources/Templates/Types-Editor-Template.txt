@@ -3,8 +3,10 @@ namespace ME.BECS.Editor {
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using UnityEngine.Scripting;
-    using static Cuts;
     using Unity.Burst;
+    using Unity.Jobs.LowLevel.Unsafe;
+    using ME.BECS.Jobs;
+    using static Cuts;
     using UnityEditor;
     
     [UnityEngine.Scripting.PreserveAttribute]
@@ -27,7 +29,6 @@ namespace ME.BECS.Editor {
     [UnityEngine.DefaultExecutionOrder(-100_000)]
     [BURST]
     public static unsafe class StaticMethods {
-        
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void Load() {
             Worlds.Initialize();

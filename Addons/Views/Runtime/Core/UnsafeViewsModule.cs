@@ -5,8 +5,9 @@ namespace ME.BECS.Views {
     using g = System.Collections.Generic;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Jobs;
     using Unity.Collections.LowLevel.Unsafe;
+    using ME.BECS.Jobs;
+    using Unity.Jobs;
     using static Cuts;
 
     public unsafe interface IViewProvider<TEntityView> where TEntityView : IView {
@@ -523,9 +524,9 @@ namespace ME.BECS.Views {
                 // Update views
                 {
                     // Assign views first
-                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<AssignViewComponent>();
+                    var query = API.Query(in this.data->connectedWorld, dependsOn);
                     this.provider.Query(ref query);
-                    var toAssignJob = query.ScheduleParallelFor(new Jobs.JobAssignViews() {
+                    var toAssignJob = query.AsParallel().Schedule<Jobs.JobAssignViews, AssignViewComponent>(new Jobs.JobAssignViews() {
                         viewsWorld = this.data->viewsWorld,
                         viewsModuleData = this.data,
                         registeredProviders = UnsafeViewsModule.registeredProviders.Data,
@@ -536,9 +537,9 @@ namespace ME.BECS.Views {
                 JobHandle toRemoveJob;
                 {
                     // DestroyView() case: Remove views from the scene which don't have ViewComponent, but contained in renderingOnSceneBits (DestroyView called)
-                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<ViewComponent>().Without<IsViewRequested>();
+                    var query = API.Query(in this.data->connectedWorld, dependsOn).Without<IsViewRequested>();
                     this.provider.Query(ref query);
-                    toRemoveJob = query.ScheduleParallelFor(new Jobs.JobRemoveFromScene() {
+                    toRemoveJob = query.AsParallel().Schedule<Jobs.JobRemoveFromScene, ViewComponent>(new Jobs.JobRemoveFromScene() {
                         viewsModuleData = this.data,
                         toRemove = this.data->toRemove.AsParallelWriter(),
                         registeredProviders = UnsafeViewsModule.registeredProviders.Data,
@@ -547,9 +548,9 @@ namespace ME.BECS.Views {
                 JobHandle toAddJob;
                 {
                     // InstantiateView() case: Add views to the scene which have ViewComponent, but not contained in renderingOnSceneBits
-                    var query = API.Query(in this.data->connectedWorld, dependsOn).With<IsViewRequested>().WithAspect<Transforms.TransformAspect>();
+                    var query = API.Query(in this.data->connectedWorld, dependsOn).WithAspect<Transforms.TransformAspect>();
                     this.provider.Query(ref query);
-                    toAddJob = query.ScheduleParallelFor(new Jobs.JobAddToScene() {
+                    toAddJob = query.AsParallel().Schedule<Jobs.JobAddToScene, IsViewRequested>(new Jobs.JobAddToScene() {
                         state = this.data->viewsWorld.state,
                         viewsModuleData = this.data,
                         toAdd = this.data->toAdd.AsParallelWriter(),

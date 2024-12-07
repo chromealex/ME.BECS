@@ -22,7 +22,7 @@ namespace ME.BECS.FogOfWar {
         public Ent GetHeights() => this.heights;
         
         [BURST(CompileSynchronously = true)]
-        public struct CreateJob : IJobParallelForAspects<TeamAspect> {
+        public struct CreateJob : IJobForAspects<TeamAspect> {
 
             public uint2 fowSize;
             
@@ -39,7 +39,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct CleanUpJob : IJobParallelForAspects<TeamAspect> {
+        public struct CleanUpJob : IJobForAspects<TeamAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect player) {
                 
@@ -102,7 +102,7 @@ namespace ME.BECS.FogOfWar {
                 heights = new MemArrayAuto<float>(heights, fowSize.x * fowSize.y),
             });
             this.heights = heights;
-            var dependsOn = context.Query().Schedule<CreateJob, TeamAspect>(new CreateJob() {
+            var dependsOn = context.Query().AsParallel().Schedule<CreateJob, TeamAspect>(new CreateJob() {
                 fowSize = fowSize,
             });
             
@@ -127,7 +127,7 @@ namespace ME.BECS.FogOfWar {
             var firstGraph = pathfinding.GetGraphByTypeId(0u).Read<RootGraphComponent>();
             
             var fowSize = math.max(32u, (uint2)(this.mapSize * this.resolution));
-            var cleanUpHandle = context.Query().Schedule<CleanUpJob, TeamAspect>();
+            var cleanUpHandle = context.Query().AsParallel().Schedule<CleanUpJob, TeamAspect>();
             var updateHeightHandle = new UpdateHeightJob() {
                 dirtyChunks = firstGraph.changedChunks,
                 fowSize = fowSize,

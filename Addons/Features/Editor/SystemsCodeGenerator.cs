@@ -160,6 +160,7 @@ namespace ME.BECS.Editor.Systems {
                     var containers = new scg::List<string>();
                     var collectedDeps = new scg::HashSet<string>();
                     string lastDependency = string.Empty;
+                    var nodesCount = 0u;
                     {
                         var customInputDeps = new scg::Dictionary<ME.BECS.Extensions.GraphProcessor.BaseNode, ME.BECS.Extensions.GraphProcessor.BaseNode>();
                         var printedDependencies = new scg::HashSet<string>();
@@ -292,6 +293,7 @@ namespace ME.BECS.Editor.Systems {
 
                                     } else {
 
+                                        ++nodesCount;
                                         notUsedDescr = string.Empty;
 
                                         var isBursted = IsBursted(generator, n, method);
@@ -444,13 +446,17 @@ namespace ME.BECS.Editor.Systems {
                         content.Add($"dependsOn = {lastDependency};");
                     }
 
+                    if (nodesCount == 0u) {
+                        content.Clear();
+                        content.Add("// All graph's nodes were skipped");
+                    }
+
                     content.Add("// Dependencies scheme:");
                     foreach (var sch in scheme) {
                         content.Add("//" + sch);
                     }
 
                     content.Add($"// * {Align(lastDependency, 32)} => {Align("dependsOn", 16)}");
-                    content.Add("//");
 
                 }
             }

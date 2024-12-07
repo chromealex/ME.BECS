@@ -11,7 +11,7 @@ namespace ME.BECS.Commands {
     public struct CommandBuildUpdateSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct UpdateProgressJob : IJobParallelForComponents<BuildInProgress> {
+        public struct UpdateProgressJob : IJobForComponents<BuildInProgress> {
 
             public float dt;
             
@@ -49,7 +49,7 @@ namespace ME.BECS.Commands {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct CompleteJob : IJobParallelForComponents<BuildingInProgress> {
+        public struct CompleteJob : IJobForComponents<BuildingInProgress> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BuildingInProgress building) {
 
@@ -66,10 +66,10 @@ namespace ME.BECS.Commands {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var handle = context.Query().Schedule<UpdateProgressJob, BuildInProgress>(new UpdateProgressJob() {
+            var handle = context.Query().AsParallel().Schedule<UpdateProgressJob, BuildInProgress>(new UpdateProgressJob() {
                 dt = context.deltaTime,
             });
-            handle = context.Query(handle).Schedule<CompleteJob, BuildingInProgress>();
+            handle = context.Query(handle).AsParallel().Schedule<CompleteJob, BuildingInProgress>();
             context.SetDependency(handle);
             
         }

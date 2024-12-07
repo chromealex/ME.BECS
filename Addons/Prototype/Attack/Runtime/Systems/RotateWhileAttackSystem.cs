@@ -13,7 +13,7 @@ namespace ME.BECS.Attack {
     public struct RotateWhileAttackSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct IdleJob : IJobParallelForAspects<UnitAspect, TransformAspect> {
+        public struct IdleJob : IJobForAspects<UnitAspect, TransformAspect> {
 
             public float dt;
             
@@ -29,7 +29,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RotateAttackSensorJob : IJobParallelForAspects<AttackAspect, TransformAspect> {
+        public struct RotateAttackSensorJob : IJobForAspects<AttackAspect, TransformAspect> {
 
             public float dt;
             
@@ -37,12 +37,10 @@ namespace ME.BECS.Attack {
 
                 var speedFactor = attack.ent.Read<RotateAttackSensorComponent>().speedFactor;
                 if (attack.target.IsAlive() == true) {
-                    var tr = attack.ent.GetAspect<TransformAspect>();
                     var lookDir = attack.target.GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    tr.rotation = math.slerp(tr.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = math.slerp(transformAspect.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
                 } else {
-                    var tr = attack.ent.GetAspect<TransformAspect>();
-                    tr.localRotation = math.slerp(tr.readLocalRotation, quaternion.identity, this.dt * speedFactor);
+                    transformAspect.localRotation = math.slerp(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
                 }
 
             }
@@ -51,14 +49,14 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query()
+            var dependsOn = context.Query().AsParallel()
                                    .With<RotateToAttackWhileIdleComponent>()
                                    .Without<PathFollowComponent>()
                                    .AsUnsafe()
                                    .Schedule<IdleJob, UnitAspect, TransformAspect>(new IdleJob() {
                                        dt = context.deltaTime,
                                    });
-            var dependsOnAttackSensor = context.Query()
+            var dependsOnAttackSensor = context.Query().AsParallel()
                                    .With<RotateAttackSensorComponent>()
                                    .AsUnsafe()
                                    .Schedule<RotateAttackSensorJob, AttackAspect, TransformAspect>(new RotateAttackSensorJob() {

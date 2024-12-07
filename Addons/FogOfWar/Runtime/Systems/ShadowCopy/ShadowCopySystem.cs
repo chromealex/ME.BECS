@@ -11,7 +11,7 @@ namespace ME.BECS.FogOfWar {
     public struct ShadowCopySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct CreateJobFor : IJobForComponents<OwnerComponent> {
+        public struct CreateJob : IJobForComponents<OwnerComponent> {
 
             public Players.PlayersSystem playersSystem;
             public World world;
@@ -52,7 +52,7 @@ namespace ME.BECS.FogOfWar {
             var logicWorld = context.world.parent;
 
             // Collect all units which has not presented as shadow copy
-            var dependsOn = API.Query(in logicWorld, context.dependsOn).Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().Schedule<CreateJobFor, OwnerComponent>(new CreateJobFor() {
+            var dependsOn = API.Query(in logicWorld, context.dependsOn).Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().Schedule<CreateJob, OwnerComponent>(new CreateJob() {
                 playersSystem = logicWorld.GetSystem<PlayersSystem>(),
                 world = context.world,
             });

@@ -11,7 +11,7 @@ namespace ME.BECS.FogOfWar {
     public struct UpdateSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealRectJob : IJobParallelForComponents<FogOfWarRevealerComponent, OwnerComponent> {
+        public struct RevealRectJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -28,7 +28,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealRangeJob : IJobParallelForComponents<FogOfWarRevealerComponent, OwnerComponent> {
+        public struct RevealRangeJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -45,7 +45,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealRectPartialJob : IJobParallelForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
+        public struct RevealRectPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -63,7 +63,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealRangePartialJob : IJobParallelForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
+        public struct RevealRangePartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -81,7 +81,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealRangeSectorJob : IJobParallelForComponents<FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent> {
+        public struct RevealRangeSectorJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -99,7 +99,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RevealRangeSectorPartialJob : IJobParallelForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
+        public struct RevealRangeSectorPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
             
@@ -120,22 +120,22 @@ namespace ME.BECS.FogOfWar {
         public void OnUpdate(ref SystemContext context) {
 
             var fowStaticData = context.world.GetSystem<CreateSystem>().heights.Read<FogOfWarStaticComponent>();
-            var dependsOnRectFull = context.Query().With<FogOfWarRevealerIsRectTag>().Without<FogOfWarRevealerIsPartialTag>().WithAspect<TransformAspect>().Schedule<RevealRectJob, FogOfWarRevealerComponent, OwnerComponent>(new RevealRectJob() {
+            var dependsOnRectFull = context.Query().AsParallel().With<FogOfWarRevealerIsRectTag>().Without<FogOfWarRevealerIsPartialTag>().WithAspect<TransformAspect>().Schedule<RevealRectJob, FogOfWarRevealerComponent, OwnerComponent>(new RevealRectJob() {
                 props = fowStaticData,
             });
-            var dependsOnRangeFull = context.Query().Without<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().Without<FogOfWarRevealerIsPartialTag>().WithAspect<TransformAspect>().Schedule<RevealRangeJob, FogOfWarRevealerComponent, OwnerComponent>(new RevealRangeJob() {
+            var dependsOnRangeFull = context.Query().AsParallel().Without<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().Without<FogOfWarRevealerIsPartialTag>().WithAspect<TransformAspect>().Schedule<RevealRangeJob, FogOfWarRevealerComponent, OwnerComponent>(new RevealRangeJob() {
                 props = fowStaticData,
             });
-            var dependsOnRangeFullSector = context.Query().With<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().Without<FogOfWarRevealerIsPartialTag>().WithAspect<TransformAspect>().Schedule<RevealRangeSectorJob, FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent>(new RevealRangeSectorJob() {
+            var dependsOnRangeFullSector = context.Query().AsParallel().With<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().Without<FogOfWarRevealerIsPartialTag>().WithAspect<TransformAspect>().Schedule<RevealRangeSectorJob, FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent>(new RevealRangeSectorJob() {
                 props = fowStaticData,
             });
-            var dependsOnRectPartial = context.Query().With<FogOfWarRevealerIsRectTag>().WithAspect<TransformAspect>().Schedule<RevealRectPartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRectPartialJob() {
+            var dependsOnRectPartial = context.Query().AsParallel().With<FogOfWarRevealerIsRectTag>().WithAspect<TransformAspect>().Schedule<RevealRectPartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRectPartialJob() {
                 props = fowStaticData,
             });
-            var dependsOnRangePartial = context.Query().Without<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().WithAspect<TransformAspect>().Schedule<RevealRangePartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRangePartialJob() {
+            var dependsOnRangePartial = context.Query().AsParallel().Without<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().WithAspect<TransformAspect>().Schedule<RevealRangePartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRangePartialJob() {
                 props = fowStaticData,
             });
-            var dependsOnRangePartialSector = context.Query().With<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().WithAspect<TransformAspect>().Schedule<RevealRangeSectorPartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRangeSectorPartialJob() {
+            var dependsOnRangePartialSector = context.Query().AsParallel().With<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().WithAspect<TransformAspect>().Schedule<RevealRangeSectorPartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRangeSectorPartialJob() {
                 props = fowStaticData,
             });
             context.SetDependency(JobHandle.CombineDependencies(JobHandle.CombineDependencies(dependsOnRectFull, dependsOnRangeFull), JobHandle.CombineDependencies(dependsOnRectPartial, dependsOnRangePartial), JobHandle.CombineDependencies(dependsOnRangeFullSector, dependsOnRangePartialSector)));
