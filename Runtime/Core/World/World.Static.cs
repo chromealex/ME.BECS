@@ -44,9 +44,9 @@ namespace ME.BECS {
 
         public unsafe struct Array<T> : IIsCreated where T : unmanaged {
 
-            public uint Length;
+            public volatile uint Length;
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
-            internal T* ptr;
+            internal volatile T* ptr;
             
             public bool IsCreated => this.ptr != null;
 

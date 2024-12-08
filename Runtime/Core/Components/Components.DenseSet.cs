@@ -15,7 +15,7 @@ namespace ME.BECS {
             // [ushort-gen][byte-state][byte-align][data]
             public MemPtr entIdToData;
             public LockSpinner lockSpinner;
-            public byte isCreated;
+            public volatile byte isCreated;
             public bool IsCreated => this.isCreated == 1;
 
             [INLINE(256)]
@@ -176,9 +176,9 @@ namespace ME.BECS {
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
             { // create page if not exist
-                if (page.IsCreated == false) {
+                if (page.isCreated == 0) {
                     page.Lock();
-                    if (page.IsCreated == false) {
+                    if (page.isCreated == 0) {
                         Page.Create(ref page, state, this.dataSize, ENTITIES_PER_PAGE);
                     }
                     page.Unlock();
@@ -220,13 +220,13 @@ namespace ME.BECS {
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
             { // create page if not exist
-                if (page.IsCreated == false) {
+                if (page.isCreated == 0) {
                     if (isReadonly == true) {
                         this.readWriteSpinner.ReadEnd(state);
                         return null;
                     }
                     page.Lock();
-                    if (page.IsCreated == false) {
+                    if (page.isCreated == 0) {
                         Page.Create(ref page, state, this.dataSize, ENTITIES_PER_PAGE);
                     }
                     page.Unlock();

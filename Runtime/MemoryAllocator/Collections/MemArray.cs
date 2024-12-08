@@ -73,7 +73,7 @@ namespace ME.BECS {
         #endif
 
         public MemPtr arrPtr;
-        public uint Length;
+        public volatile uint Length;
         #if USE_CACHE_PTR
         public CachedPtr cachedPtr;
         #endif

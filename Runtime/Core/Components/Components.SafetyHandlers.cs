@@ -11,19 +11,21 @@ namespace ME.BECS {
         internal LockSpinner handlersLock;
         
         [INLINE(256)]
-        public void DisposeSafetyHandlers() {
+        public unsafe void DisposeSafetyHandlers() {
 
-            this.handlersLock.Lock();
-            if (this.handlers.IsCreated == true) {
-                for (uint i = 0u; i < this.handlers.Length; ++i) {
-                    ref var handler = ref this.handlers.Get(i);
-                    if (AtomicSafetyHandle.IsDefaultValue(handler) == false) AtomicSafetyHandle.Release(handler);
-                    handler = default;
+            if (this.handlers.ptr != null) {
+                this.handlersLock.Lock();
+                if (this.handlers.ptr != null) {
+                    for (uint i = 0u; i < this.handlers.Length; ++i) {
+                        ref var handler = ref this.handlers.Get(i);
+                        if (AtomicSafetyHandle.IsDefaultValue(handler) == false) AtomicSafetyHandle.Release(handler);
+                        handler = default;
+                    }
+                    this.handlers.Dispose();
                 }
-                this.handlers.Dispose();
+                this.handlersLock.Unlock();
             }
-            this.handlersLock.Unlock();
-            
+
         }
         
         [INLINE(256)]

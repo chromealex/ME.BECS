@@ -25,7 +25,7 @@ namespace ME.BECS.Commands {
     public struct BuildingInProgress : IComponent {
 
         public LockSpinner lockSpinner;
-        public float value;
+        public volatile float value;
         public float timeToBuild;
         public ListAuto<Ent> builders;
         

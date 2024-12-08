@@ -29,8 +29,8 @@ namespace ME.BECS {
     public struct JobInfo : IIsCreated {
 
         public uint count;
-        public uint index;
-        public uint itemsPerThread;
+        public volatile uint index;
+        public volatile uint itemsPerThread;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;

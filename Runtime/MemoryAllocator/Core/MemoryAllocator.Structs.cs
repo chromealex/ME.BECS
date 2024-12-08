@@ -44,7 +44,7 @@
         }
 
         [INLINE(256)]
-        public bool IsValid() => this.zoneId >= 0 && this.offset > 0;
+        public bool IsValid() => this.zoneId >= 0u && this.offset > 0u;
 
         [INLINE(256)]
         public static bool operator ==(in MemPtr m1, in MemPtr m2) {

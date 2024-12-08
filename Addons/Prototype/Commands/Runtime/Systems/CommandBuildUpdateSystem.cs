@@ -22,27 +22,31 @@ namespace ME.BECS.Commands {
                     return;
                 }
                 ref var progress = ref buildInProgress.building.Get<BuildingInProgress>();
-                progress.lockSpinner.Lock();
                 if (progress.value < 1f) {
-                    progress.value += this.dt / progress.timeToBuild;
-                    if (progress.value >= 1f) {
-                        // Building is complete
-                        //UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
-                        // Complete building
-                        buildInProgress.building.SetActiveHierarchy(true);
-                        // Move all builders to the next target
-                        for (uint i = 0u; i < progress.builders.Count; ++i) {
-                            var builderEnt = progress.builders[i];
-                            if (builderEnt.IsAlive() == false) continue;
-                            builderEnt.Remove<BuildInProgress>();
-                            var builder = builderEnt.GetAspect<UnitAspect>();
-                            //UnityEngine.Debug.Log("Builder move next: " + builder.ent);
-                            UnitUtils.SetNextTargetIfAvailable(in builder);
+                    progress.lockSpinner.Lock();
+                    if (progress.value < 1f) {
+                        JobUtils.Increment(ref progress.value, this.dt / progress.timeToBuild);
+                        if (progress.value >= 1f) {
+                            // Building is complete
+                            //UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
+                            // Complete building
+                            buildInProgress.building.SetActiveHierarchy(true);
+                            // Move all builders to the next target
+                            for (uint i = 0u; i < progress.builders.Count; ++i) {
+                                var builderEnt = progress.builders[i];
+                                if (builderEnt.IsAlive() == false) continue;
+                                builderEnt.Remove<BuildInProgress>();
+                                var builder = builderEnt.GetAspect<UnitAspect>();
+                                //UnityEngine.Debug.Log("Builder move next: " + builder.ent);
+                                UnitUtils.SetNextTargetIfAvailable(in builder);
+                            }
+
+                            progress.builders.Clear();
                         }
-                        progress.builders.Clear();
                     }
+
+                    progress.lockSpinner.Unlock();
                 }
-                progress.lockSpinner.Unlock();
                 
             }
 
