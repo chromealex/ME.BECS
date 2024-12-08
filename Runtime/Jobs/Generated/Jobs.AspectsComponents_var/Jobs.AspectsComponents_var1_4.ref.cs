@@ -138,7 +138,7 @@ namespace ME.BECS.Jobs {
                             var entId = *(jobData.buffer->entities + i);
                             var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                             var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                            aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);
+                            aspect0.ent = ent;
                             jobData.jobData.Execute(in jobInfo, in ent, ref aspect0, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen));
                         }
                         jobData.buffer->EndForEachRange();
@@ -154,7 +154,7 @@ namespace ME.BECS.Jobs {
                         var entId = *(jobData.buffer->entities + i);
                         var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                         var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                        aspect0.ent = new Ent(entId, gen, jobData.buffer->worldId);
+                        aspect0.ent = ent;
                         jobData.jobData.Execute(in jobInfo, in ent, ref aspect0, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen));
                     }
                     jobData.buffer->EndForEachRange();

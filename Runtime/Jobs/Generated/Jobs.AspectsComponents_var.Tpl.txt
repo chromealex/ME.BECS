@@ -138,7 +138,7 @@ namespace ME.BECS.Jobs {
                             var entId = *(jobData.buffer->entities + i);
                             var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                             var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                            {countAspects[aspect#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
+                            {countAspects[aspect#i#.ent = ent;]}
                             jobData.jobData.Execute(in jobInfo, in ent, {countAspects(,)[{{inref}} aspect#i#]}, {countComponents(,)[{{inref}} jobData.c#i#.{{GetRead}}(ent.id, ent.gen)]});
                         }
                         jobData.buffer->EndForEachRange();
@@ -154,7 +154,7 @@ namespace ME.BECS.Jobs {
                         var entId = *(jobData.buffer->entities + i);
                         var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                         var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                        {countAspects[aspect#i#.ent = new Ent(entId, gen, jobData.buffer->worldId);]}
+                        {countAspects[aspect#i#.ent = ent;]}
                         jobData.jobData.Execute(in jobInfo, in ent, {countAspects(,)[{{inref}} aspect#i#]}, {countComponents(,)[{{inref}} jobData.c#i#.{{GetRead}}(ent.id, ent.gen)]});
                     }
                     jobData.buffer->EndForEachRange();

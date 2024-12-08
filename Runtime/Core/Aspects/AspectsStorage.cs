@@ -122,8 +122,8 @@ namespace ME.BECS {
             if (item.constructedAspect.IsValid() == false) {
                 item.lockSpinner.Lock();
                 if (item.constructedAspect.IsValid() == false) {
-                    item.constructedAspect = state->allocator.Alloc(size);
                     item.version = state->allocator.version;
+                    item.constructedAspect = state->allocator.Alloc(size);
                 }
                 item.lockSpinner.Unlock();
             }

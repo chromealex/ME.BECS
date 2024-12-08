@@ -7,8 +7,13 @@ namespace ME.BECS.Transforms {
     public static unsafe class Transform3DExt {
 
         [INLINE(256)]
-        public static Ent GetParent(this in Ent ent) {
-            return ent.Read<ParentComponent>().value;
+        public static ref readonly Ent GetParent(this in Ent ent) {
+            return ref ent.Read<ParentComponent>().value;
+        }
+
+        [INLINE(256)]
+        public static ref readonly Ent ReadParent(this in Ent ent) {
+            return ref ent.Read<ParentComponent>().value;
         }
 
         [INLINE(256)]
