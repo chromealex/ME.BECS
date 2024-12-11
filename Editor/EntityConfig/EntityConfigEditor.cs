@@ -202,6 +202,26 @@ namespace ME.BECS.Editor {
             public System.Action redrawFields;
 
         }
+
+        private bool needSync = false;
+        public void Update() {
+
+            if (this.needSync == true) {
+                if (UnityEngine.Application.isPlaying == true) return;
+                this.needSync = false;
+                foreach (var target in this.serializedObject.targetObjects) {
+                    if (target is EntityConfig config) {
+                        try {
+                            config.Sync();
+                        } catch (System.Exception ex) {
+                            // ignored
+                            UnityEngine.Debug.LogException(ex);
+                        }
+                    }
+                }
+            }
+
+        }
         
         private Item DrawFields(System.Type type, SerializedProperty componentsArr, SerializedObject serializedObject) {
 
@@ -215,15 +235,8 @@ namespace ME.BECS.Editor {
                     if (selectedIndex >= 0) allProps[selectedIndex].AddToClassList("field-selected");
                 }
 
-                foreach (var target in serializedObject.targetObjects) {
-                    if (target is EntityConfig config) {
-                        try {
-                            config.Sync();
-                        } catch (System.Exception) {
-                            // ignored
-                        }
-                    }
-                }
+                this.needSync = true;
+                EditorApplication.delayCall += this.Update;
                 removeButton.SetEnabled(selectIndex >= 0);
             }
             

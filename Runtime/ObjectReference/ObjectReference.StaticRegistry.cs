@@ -83,7 +83,14 @@ namespace ME.BECS {
 
             if (ObjectReferenceRegistry.data == null) return null;
             
-            return ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId) as T;
+            var obj = ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId) as T;
+            if (obj == null) {
+                foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
+                    if (item.sourceId == sourceId) return item.source as T;
+                }
+            }
+
+            return obj;
 
         }
 

@@ -568,7 +568,7 @@ namespace ME.BECS {
 
             }
 
-            private readonly Ent staticDataEnt;
+            internal readonly Ent staticDataEnt;
             [NativeDisableUnsafePtrRestriction]
             private readonly uint* typeIds;
             private readonly uint count;
@@ -785,6 +785,10 @@ namespace ME.BECS {
 
             return this.staticData.TryReadStatic(out component);
 
+        }
+
+        internal Ent GetStaticEntity() {
+            return this.staticData.staticDataEnt;
         }
 
     }

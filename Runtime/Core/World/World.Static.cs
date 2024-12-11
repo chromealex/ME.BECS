@@ -65,8 +65,12 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Resize(uint length) {
 
-                _resizeArray(ref this.ptr, ref this.Length, length);
-                
+                var arr = this.ptr;
+                var u = this.Length;
+                _resizeArray(ref arr, ref u, length);
+                this.ptr = arr;
+                this.Length = u;
+
             }
 
             [INLINE(256)]
@@ -216,12 +220,14 @@ namespace ME.BECS {
 
         public static Unity.Collections.AllocatorHelper<DomainAllocator> Initialize() {
 
+            UnityEngine.Debug.Log("TEST: Initialize");
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
             allocatorDomain = new Unity.Collections.AllocatorHelper<DomainAllocator>(Constants.ALLOCATOR_PERSISTENT);
             allocatorDomain.Allocator.Initialize(100);
             allocatorDomainValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
+            UnityEngine.Debug.Log("TEST: Initialized");
 
             return allocatorDomain;
 
@@ -229,10 +235,12 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
+            UnityEngine.Debug.Log("TEST: Dispose");
             if (allocatorDomainValidBurst.Data.IsCreated == false || allocatorDomainValidBurst.Data.Value == false) return;
             allocatorDomainValidBurst.Data.Value = false;
             allocatorDomainValidBurst.Data.Dispose();
             allocatorDomain.Dispose();
+            UnityEngine.Debug.Log("TEST: Disposed");
             
         }
 

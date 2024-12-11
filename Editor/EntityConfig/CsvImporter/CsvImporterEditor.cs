@@ -177,11 +177,11 @@ namespace ME.BECS.Editor.CsvImporter {
                     foreach (var item in data) {
                         var csv = CSVParser.ReadCSV(item);
                         csvs.Add(csv);
-                        var configFiles = ParseConfigs(csv, targetDir, out var ver);
+                        var configFiles = ParseConfigs(csv, targetDir, out var ver, out var name);
                         configsPerItem.Add(configFiles);
                         configs.AddRange(configFiles);
                         versions.Add(ver);
-                        Debug.Log($"Configs with version {ver} has been updated");
+                        Debug.Log($"Configs from list {name} with version {ver} has been updated");
                     }
 
                     { // add project configs
@@ -291,8 +291,9 @@ namespace ME.BECS.Editor.CsvImporter {
 
         }
 
-        public static scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version) {
+        public static scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version, out string name) {
             version = csv[0][0];
+            name = csv[0][1];
             var configFiles = new scg::List<ConfigFile>();
             var offset = 2;
             var line = csv[0];
