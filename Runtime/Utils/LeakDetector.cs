@@ -31,7 +31,7 @@ namespace ME.BECS {
             }
 
             public bool Equals(Item other) {
-                return this.ptr.Equals(other.ptr);
+                return this.ptr == other.ptr;
             }
 
             public override bool Equals(object obj) {
