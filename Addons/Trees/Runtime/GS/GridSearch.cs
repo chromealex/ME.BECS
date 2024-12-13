@@ -278,7 +278,7 @@ namespace ME.BECS.Trees {
         [INLINE(256)]
         public static JobHandle Rebuild(GridSearch<T>* tree, JobHandle dependsOn) {
             
-            var entries = new NativeList<SortEntry>(100, Constants.ALLOCATOR_TEMP_ST);
+            var entries = new NativeList<SortEntry>(100, Constants.ALLOCATOR_TEMP);
             dependsOn = tree->GetMinMaxCoordsJob(tree, dependsOn);
             dependsOn = new InitializeJob() {
                 tree = tree,

@@ -55,10 +55,11 @@ namespace ME.BECS {
             public State* state;
             [NativeDisableUnsafePtrRestriction]
             public QueryData* queryData;
+            public Unity.Collections.Allocator allocator;
             
             public void Execute() {
 
-                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP_ST);
+                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, this.allocator);
 
             }
 
@@ -80,21 +81,23 @@ namespace ME.BECS {
 
             //dependsOn = Batches.Apply(dependsOn, queryContext.state);
             //dependsOn = Batches.Open(dependsOn, queryContext.state);
-            
+
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
             var builder = new QueryBuilder {
-                queryData = _make(new QueryData(), Constants.ALLOCATOR_TEMP),
+                queryData = _make(new QueryData(), allocator),
                 commandBuffer = _make(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
-                }, Constants.ALLOCATOR_TEMP),
+                }, allocator),
                 isCreated = true,
-                allocator = Constants.ALLOCATOR_TEMP,
+                allocator = allocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             
             var job = new BuilderArchetypesJob() {
                 state = queryContext.state,
                 queryData = builder.queryData,
+                allocator = allocator,
             };
             dependsOn = job.Schedule(dependsOn);
             builder.builderDependsOn = dependsOn;//Batches.Close(dependsOn, queryContext.state);

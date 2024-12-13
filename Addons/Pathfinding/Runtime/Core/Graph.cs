@@ -1390,8 +1390,8 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static UnsafeHashSet<uint> GetChunksByBounds(in RootGraphComponent root, in UnityEngine.Rect obstacleBounds) {
-            var list = new UnsafeHashSet<uint>(4, Constants.ALLOCATOR_TEMP);
+        public static UnsafeHashSet<uint> GetChunksByBounds(in RootGraphComponent root, in UnityEngine.Rect obstacleBounds, Unity.Collections.Allocator allocator) {
+            var list = new UnsafeHashSet<uint>(4, allocator);
             var bottomLeftPos = ((float2)obstacleBounds.min).x0y();
             var topRightPos = ((float2)obstacleBounds.max).x0y();
             var bottomRightPos = new float3(topRightPos.x, 0f, bottomLeftPos.z);

@@ -79,7 +79,7 @@ namespace ME.BECS.Pathfinding {
                     //var posMaxHeight = pos + heightSize3d * 0.5f;
 
                     // get chunks list by bounds
-                    var chunks = Graph.GetChunksByBounds(in root, in obstacleBounds);
+                    var chunks = Graph.GetChunksByBounds(in root, in obstacleBounds, Constants.ALLOCATOR_TEMP);
                     foreach (var chunkIndex in chunks) {
 
                         if (chunkIndex == uint.MaxValue) continue;
@@ -129,7 +129,7 @@ namespace ME.BECS.Pathfinding {
             }
 
         }
-
+        
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();

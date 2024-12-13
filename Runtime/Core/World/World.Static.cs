@@ -282,37 +282,43 @@ namespace ME.BECS {
 
     public struct WorldsTempAllocator {
 
-        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorTempBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10005);
-        internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorTemp => ref allocatorTempBurst.Data;
+        private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.align, 10005);
+        internal static ref Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
 
-        private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10007);
-        internal static bool allocatorTempValid => allocatorTempValidBurst.Data.Value;
+        private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<bool>>.align, 10007);
+        internal static ref Internal.Array<bool> allocatorTempValid => ref allocatorTempValidBurst.Data;
 
-        public static Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> Initialize() {
+        public static void Initialize(ushort worldId) {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorTemp = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
-            allocatorTemp.Allocator.Initialize(128 * 1024, false);
-            allocatorTempValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
+            {
+                {
+                    allocatorTemp.Resize(worldId + 1u);
+                    allocatorTempValid.Resize(worldId + 1u);
+                }
+                {
+                    var allocator = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
+                    allocator.Allocator.Initialize(128 * 1024, false);
+                    allocatorTemp.Get(worldId) = allocator;
+                    allocatorTempValidBurst.Data.Get(worldId) = true;
+                }
+            }
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 
-            return allocatorTemp;
-
         }
 
-        public static void Dispose() {
+        public static void Dispose(ushort worldId) {
             
-            if (allocatorTempValidBurst.Data.IsCreated == false || allocatorTempValidBurst.Data.Value == false) return;
-            allocatorTempValidBurst.Data.Value = false;
-            allocatorTempValidBurst.Data.Dispose();
-            allocatorTemp.Dispose();
+            if (worldId >= allocatorTempValidBurst.Data.Length || allocatorTempValidBurst.Data.Get(worldId) == false) return;
+            allocatorTempValidBurst.Data.Get(worldId) = false;
+            allocatorTemp.Get(worldId).Dispose();
             
         }
 
-        public static void Reset() {
+        public static void Reset(ushort worldId) {
             
-            allocatorTemp.Allocator.Rewind();
+            allocatorTemp.Get(worldId).Allocator.Rewind();
             
         }
 
@@ -328,11 +334,11 @@ namespace ME.BECS {
         public static void Initialize() {
 
             #if UNITY_EDITOR
-            UnityEngine.Application.quitting += OnQuit;
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeEditorChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeEditorChanged;
             #endif
             
             if (WorldsStorage.worlds.Length > 0u) Dispose();
-            WorldsTempAllocator.Initialize();
             WorldsPersistentAllocator.Initialize();
             WorldsDomainAllocator.Initialize();
 
@@ -341,17 +347,16 @@ namespace ME.BECS {
 
         }
 
-        private static void OnQuit() {
-            #if UNITY_EDITOR
-            UnityEngine.Application.quitting -= OnQuit;
-            #endif
-
-            Dispose();
+        #if UNITY_EDITOR
+        private static void OnPlayModeEditorChanged(UnityEditor.PlayModeStateChange state) {
+            if (state == UnityEditor.PlayModeStateChange.EnteredEditMode) {
+                Dispose();
+            }
         }
+        #endif
 
         public static void Dispose() {
 
-            WorldsTempAllocator.Dispose();
             WorldsPersistentAllocator.Dispose();
             WorldsDomainAllocator.Dispose();
             
@@ -398,6 +403,8 @@ namespace ME.BECS {
         [INLINE(256)]
         internal static void ReleaseWorldId(ushort worldId) {
 
+            WorldsTempAllocator.Dispose(worldId);
+            
             ref var worldIds = ref WorldsIdStorage.worldIds;
             worldIds.Add(worldId);
 
@@ -435,6 +442,8 @@ namespace ME.BECS {
                 world = world,
                 name = name,
             };
+            
+            WorldsTempAllocator.Initialize(worldId);
             
             if (raiseCallback == true) WorldStaticCallbacks.RaiseCallback(ref world);
 

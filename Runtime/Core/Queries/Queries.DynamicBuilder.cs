@@ -571,6 +571,7 @@ namespace ME.BECS {
             public CommandBuffer* buffer;
             [NativeDisableUnsafePtrRestriction]
             public QueryData* queryData;
+            public Allocator allocator;
 
             public void Execute() {
 
@@ -616,7 +617,7 @@ namespace ME.BECS {
                             if (toIdx > count) toIdx = count;
                             // Add range fromIdx..toIdx
                             var size = toIdx - fromIdx;
-                            arrPtr = _makeArray<uint>(size, Constants.ALLOCATOR_TEMP_ST.ToAllocator);
+                            arrPtr = _makeArray<uint>(size, this.allocator);
                             _memcpy(temp.Ptr + fromIdx, arrPtr, TSize<uint>.sizeInt * (int)size);
                             elementsCount += size;
                         }
@@ -630,7 +631,7 @@ namespace ME.BECS {
                         }
 
                         if (elementsCount > 0u) {
-                            arrPtr = _makeArray<uint>(elementsCount, Constants.ALLOCATOR_TEMP_ST.ToAllocator);
+                            arrPtr = _makeArray<uint>(elementsCount, this.allocator);
                             var k = 0u;
                             for (uint i = 0u; i < archCount; ++i) {
                                 var archIdx = archs[i];
@@ -654,10 +655,12 @@ namespace ME.BECS {
         [INLINE(256)]
         internal JobHandle SetEntities(CommandBuffer* buffer, JobHandle dependsOn) {
 
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
             var job = new SetEntitiesJob() {
                 buffer = buffer,
                 queryData = this.queryData,
                 state = buffer->state,
+                allocator = allocator,
             };
             return job.Schedule(dependsOn);
             

@@ -179,13 +179,11 @@ namespace ME.BECS.Editor {
             this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)CollectionsRegistry.GetReservedSizeInBytes(this.world.state));
             {
                 var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Allocator;
-                this.persistentAllocatorSize.text =
-                    $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+                this.persistentAllocatorSize.text = $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
             }
             {
-                var allocatorInstance = WorldsTempAllocator.allocatorTemp.Allocator;
-                this.tempAllocatorSize.text = 
-                    $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+                var allocatorInstance = WorldsTempAllocator.allocatorTemp.Get(this.world.id).Allocator;
+                this.tempAllocatorSize.text = $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
             }
 
         }

@@ -103,7 +103,7 @@ namespace ME.BECS.Transforms {
             var cnt = ent.children.Count;
             if (cnt > 0u) {
 
-                var queue = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>((int)cnt, Constants.ALLOCATOR_TEMP_ST);
+                var queue = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>((int)cnt, Constants.ALLOCATOR_TEMP);
                 queue.Add(ent);
                 while (queue.Length > 0) {
                     var entData = queue[0];
