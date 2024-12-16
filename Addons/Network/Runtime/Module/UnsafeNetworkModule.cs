@@ -42,7 +42,7 @@ namespace ME.BECS.Network {
         }
 
         internal void Dispose() {
-            _free(this.data);
+            _free((SafePtr)this.data);
         }
 
         public ulong GetKey() {
@@ -59,7 +59,7 @@ namespace ME.BECS.Network {
             reader.Read(ref result.localOrder);
             reader.Read(ref result.methodId);
             reader.Read(ref result.dataSize);
-            result.data = _make((uint)result.dataSize);
+            result.data = _make((uint)result.dataSize).ptr;
             reader.Read(ref result.data, result.dataSize);
             return result;
 
@@ -116,7 +116,7 @@ namespace ME.BECS.Network {
             //E.SIZE_EQUALS(TSize<T>.size, this.package.dataSize);
             var result = default(T);
             var packageData = this.package.data;
-            var readBuffer = new StreamBufferReader(packageData, this.package.dataSize);
+            var readBuffer = new StreamBufferReader((SafePtr)packageData, this.package.dataSize);
             result.Deserialize(ref readBuffer);
             return result;
 
@@ -149,7 +149,7 @@ namespace ME.BECS.Network {
             // methodPtr to methodId
             private EquatableDictionaryAuto<System.IntPtr, ushort> methodPtrs;
             private ushort index;
-            private readonly State* state;
+            private readonly SafePtr<State> state;
             public NetworkModuleProperties.MethodsStorageProperties properties;
 
             public MethodsStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.MethodsStorageProperties properties) {
@@ -239,7 +239,7 @@ namespace ME.BECS.Network {
             
             // tick => [sorted events list by playerId + localOrder]
             private ULongDictionaryAuto<SortedNetworkPackageList> eventsByTick;
-            private readonly State* state;
+            private readonly SafePtr<State> state;
             private ulong oldestTick;
             // playerId => localOrder
             private UIntDictionaryAuto<byte> localPlayersOrders;
@@ -274,7 +274,7 @@ namespace ME.BECS.Network {
                     var list = kv.value;
                     if (list.IsCreated == true) {
                         for (uint i = 0u; i < list.Count; ++i) {
-                            var item = list[in this.state->allocator, i];
+                            var item = list[in this.state.ptr->allocator, i];
                             item.Dispose();
                         }
                     }
@@ -285,8 +285,8 @@ namespace ME.BECS.Network {
             public void Add(NetworkPackage package, ulong currentTick) {
 
                 ref var list = ref this.eventsByTick.GetValue(package.tick);
-                if (list.IsCreated == false) list = new SortedNetworkPackageList(ref this.state->allocator, this.properties.capacityPerTick);
-                list.Add(ref this.state->allocator, package);
+                if (list.IsCreated == false) list = new SortedNetworkPackageList(ref this.state.ptr->allocator, this.properties.capacityPerTick);
+                list.Add(ref this.state.ptr->allocator, package);
                 
                 Logger.Network.Log($"Added package (now: {currentTick}): {package}");
 
@@ -324,17 +324,17 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Tick(ulong tick, float dt, in World world, Data* data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, float dt, in World world, SafePtr<Data> data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
                 if (events.IsCreated == true && events.Count > 0u) {
 
-                    ref var allocator = ref data->networkWorld.state->allocator;
+                    ref var allocator = ref data.ptr->networkWorld.state.ptr->allocator;
                     for (uint i = 0u; i < events.Count; ++i) {
 
                         var evt = events[in allocator, i];
                         Logger.Network.Log($"Play event for tick {tick}: {evt}");
-                        dependsOn = data->methodsStorage.Call(in evt, dt, in world, dependsOn);
+                        dependsOn = data.ptr->methodsStorage.Call(in evt, dt, in world, dependsOn);
 
                     }
                     
@@ -350,17 +350,17 @@ namespace ME.BECS.Network {
 
             private struct Entry {
 
-                public State* state;
+                public SafePtr<State> state;
                 public ulong tick;
 
             }
 
             public readonly NetworkModuleProperties.StatesStorageProperties properties;
             private readonly MemArrayAuto<Entry> entries;
-            private State* resetState;
+            private SafePtr<State> resetState;
             private uint rover;
-            private readonly State* networkState;
-            private readonly State* connectedWorldState;
+            private readonly SafePtr<State> networkState;
+            private readonly SafePtr<State> connectedWorldState;
 
             public StatesStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.StatesStorageProperties properties) {
 
@@ -370,22 +370,22 @@ namespace ME.BECS.Network {
                 var ent = Ent.New(in networkWorld);
                 this.entries = new MemArrayAuto<Entry>(in ent, this.properties.capacity);
                 this.rover = 0u;
-                this.resetState = null;
+                this.resetState = default;
 
             }
 
-            private void Put(State* state) {
+            private void Put(SafePtr<State> state) {
 
                 if (this.resetState == null) this.SaveResetState();
                 
                 ref var item = ref this.entries[this.rover];
                 if (item.state != null) {
-                    item.state->Dispose();
+                    item.state.ptr->Dispose();
                     _free(item.state);
                 }
                 item = new Entry() {
                     state = state,
-                    tick = state->tick,
+                    tick = state.ptr->tick,
                 };
                 ++this.rover;
                 if (this.rover >= this.entries.Length) {
@@ -394,23 +394,22 @@ namespace ME.BECS.Network {
 
             }
 
-            public State* GetResetState() {
+            public SafePtr<State> GetResetState() {
                 return this.resetState;
             }
 
             [BURST(CompileSynchronously = true)]
             private struct CopyStatePrepareJob : IJobSingle {
 
-                [NativeDisableUnsafePtrRestriction]
-                public Data* data;
+                public SafePtr<Data> data;
                 public Unity.Collections.NativeReference<System.IntPtr> tempData;
                 
                 public void Execute() {
                     
-                    var srcState = this.data->connectedWorld.state;
+                    var srcState = this.data.ptr->connectedWorld.state;
                     var state = State.ClonePrepare(srcState);
-                    this.tempData.Value = (System.IntPtr)state;
-                    this.data->statesStorage.Put(state);
+                    this.tempData.Value = (System.IntPtr)state.ptr;
+                    this.data.ptr->statesStorage.Put(state);
                     
                 }
 
@@ -420,25 +419,25 @@ namespace ME.BECS.Network {
             private struct CopyStateCompleteJob : IJobParallelFor {
 
                 [NativeDisableUnsafePtrRestriction]
-                public Data* data;
+                public SafePtr<Data> data;
                 [Unity.Collections.ReadOnly]
                 public Unity.Collections.NativeReference<System.IntPtr> tempData;
                 
                 public void Execute(int index) {
                     
-                    var srcState = this.data->connectedWorld.state;
-                    State.CloneComplete(srcState, (State*)this.tempData.Value, index);
+                    var srcState = this.data.ptr->connectedWorld.state;
+                    State.CloneComplete(srcState, new SafePtr<State>((State*)this.tempData.Value, TSize<State>.size), index);
                     
                 }
 
             }
 
-            public JobHandle Tick(ulong tick, in World world, Data* data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, in World world, SafePtr<Data> data, JobHandle dependsOn) {
 
                 if (tick % this.properties.copyPerTick == 0u) {
                     
                     var tempData = new Unity.Collections.NativeReference<System.IntPtr>(Constants.ALLOCATOR_TEMPJOB);
-                    var count = (int)data->connectedWorld.state->allocator.zonesListCount;
+                    var count = (int)data.ptr->connectedWorld.state.ptr->allocator.zonesListCount;
                     dependsOn = new CopyStatePrepareJob() {
                         data = data,
                         tempData = tempData,
@@ -462,7 +461,7 @@ namespace ME.BECS.Network {
 
                     ref var entry = ref this.entries[i];
                     if (entry.state != null) {
-                        entry.state->Dispose();
+                        entry.state.ptr->Dispose();
                         _free(entry.state);
                     }
                     
@@ -480,7 +479,7 @@ namespace ME.BECS.Network {
 
                     ref var entry = ref this.entries[i];
                     if (tick > entry.tick && entry.state != null) {
-                        entry.state->Dispose();
+                        entry.state.ptr->Dispose();
                         _free(entry.state);
                         entry = default;
                     }
@@ -489,9 +488,9 @@ namespace ME.BECS.Network {
                 
             }
 
-            public State* GetStateForRollback(ulong tickToRollback) {
+            public SafePtr<State> GetStateForRollback(ulong tickToRollback) {
 
-                State* nearestState = null;
+                SafePtr<State> nearestState = default;
                 var rover = this.rover;
                 var delta = ulong.MaxValue;
                 for (;;) {
@@ -523,7 +522,7 @@ namespace ME.BECS.Network {
                 if (this.resetState == null) {
                     this.resetState = State.Clone(this.connectedWorldState);
                 } else {
-                    this.resetState->CopyFrom(in *this.connectedWorldState);
+                    this.resetState.ptr->CopyFrom(in *this.connectedWorldState.ptr);
                 }
             }
 
@@ -544,10 +543,10 @@ namespace ME.BECS.Network {
             public EventsStorage eventsStorage;
             public StatesStorage statesStorage;
             public MethodsStorage methodsStorage;
-            public Data* selfPtr;
+            public SafePtr<Data> selfPtr;
             public ulong rollbackTargetTick;
 
-            public State* startFrameState;
+            public SafePtr<State> startFrameState;
             
             [INLINE(256)]
             public Data(in World connectedWorld, NetworkModuleProperties properties) {
@@ -586,7 +585,7 @@ namespace ME.BECS.Network {
             public void SetServerStartTime(double startTime, in World world) {
                 this.previousTimestamp = startTime;
                 this.currentTimestamp = startTime;
-                world.state->tick = this.GetTargetTick();
+                world.state.ptr->tick = this.GetTargetTick();
                 Logger.Network.LogInfo($"SetServerStartTime: {startTime} => tick: {this.GetTargetTick()}", true);
             }
 
@@ -633,14 +632,14 @@ namespace ME.BECS.Network {
                 }
                 
                 Logger.Network.Warning($"Rollback from {currentTick} to {tickToRollback}");
-                currentTick = rollbackState->tick;
-                var updateType = this.connectedWorld.state->updateType;
-                var tickCheck = this.connectedWorld.state->tickCheck;
-                var worldState = this.connectedWorld.state->worldState;
-                this.connectedWorld.state->CopyFrom(in *rollbackState);
-                this.connectedWorld.state->updateType = updateType;
-                this.connectedWorld.state->tickCheck = tickCheck;
-                this.connectedWorld.state->worldState = worldState;
+                currentTick = rollbackState.ptr->tick;
+                var updateType = this.connectedWorld.state.ptr->updateType;
+                var tickCheck = this.connectedWorld.state.ptr->tickCheck;
+                var worldState = this.connectedWorld.state.ptr->worldState;
+                this.connectedWorld.state.ptr->CopyFrom(in *rollbackState.ptr);
+                this.connectedWorld.state.ptr->updateType = updateType;
+                this.connectedWorld.state.ptr->tickCheck = tickCheck;
+                this.connectedWorld.state.ptr->worldState = worldState;
                 this.statesStorage.InvalidateStatesFromTick(currentTick);
                 this.rollbackTargetTick = targetTick;
                 Logger.Network.Warning($"Rollback State CopyFrom ended: {currentTick}..{targetTick}");
@@ -672,7 +671,7 @@ namespace ME.BECS.Network {
 
             [INLINE(256)]
             public bool IsInRollback() {
-                return this.IsInRollback(this.connectedWorld.state->tick);
+                return this.IsInRollback(this.connectedWorld.state.ptr->tick);
             }
 
             [INLINE(256)]
@@ -703,7 +702,7 @@ namespace ME.BECS.Network {
         }
         
         public readonly NetworkModuleProperties properties;
-        internal readonly Data* data;
+        internal readonly SafePtr<Data> data;
 
         private readonly System.Diagnostics.Stopwatch frameStopwatch;
         internal INetworkTransport networkTransport;
@@ -712,12 +711,12 @@ namespace ME.BECS.Network {
             this = default;
             this.properties = properties;
             this.data = _make(new Data(in connectedWorld, properties));
-            this.data->selfPtr = this.data;
+            this.data.ptr->selfPtr = this.data;
             this.frameStopwatch = System.Diagnostics.Stopwatch.StartNew();
             
             this.SetTransport(properties.transport);
             // Register all methods for this module instance
-            WorldStaticCallbacks.RaiseCallback(ref this.data->methodsStorage);
+            WorldStaticCallbacks.RaiseCallback(ref this.data.ptr->methodsStorage);
             ME.BECS.Network.Markers.WorldNetworkMarkers.Set(connectedWorld, in this);
         }
         
@@ -729,7 +728,7 @@ namespace ME.BECS.Network {
             this.networkTransport.OnAwake();
         }
 
-        public ULongDictionaryAuto<SortedNetworkPackageList> GetEvents() => this.data->eventsStorage.GetEvents();
+        public ULongDictionaryAuto<SortedNetworkPackageList> GetEvents() => this.data.ptr->eventsStorage.GetEvents();
 
         /*
         public struct TestData {
@@ -752,14 +751,14 @@ namespace ME.BECS.Network {
         [INLINE(256)]
         public void Dispose() {
             if (this.networkTransport != null) this.networkTransport.Dispose();
-            this.data->Dispose();
+            this.data.ptr->Dispose();
             _free(this.data);
             this = default;
         }
 
         [INLINE(256)]
         public bool IsInRollback() {
-            return this.data->IsInRollback();
+            return this.data.ptr->IsInRollback();
         }
 
         [INLINE(256)]
@@ -769,42 +768,42 @@ namespace ME.BECS.Network {
 
         [INLINE(256)]
         private ulong GetTargetTick() {
-            return this.data->GetTargetTick();
+            return this.data.ptr->GetTargetTick();
         }
 
         [INLINE(256)]
         public void SetLocalPlayerId(uint playerId) {
-            this.data->localPlayerId = playerId;
+            this.data.ptr->localPlayerId = playerId;
         }
 
         [INLINE(256)]
         public void SetServerStartTime(double startTime, in World world) {
-            this.data->SetServerStartTime(startTime, in world);
+            this.data.ptr->SetServerStartTime(startTime, in world);
         }
 
         [INLINE(256)]
         public void SetServerTime(double timeFromStart) {
-            this.data->SetServerTime(timeFromStart);
+            this.data.ptr->SetServerTime(timeFromStart);
         }
 
         [INLINE(256)]
         public void SaveResetState() {
-            this.data->SaveResetState();
+            this.data.ptr->SaveResetState();
         }
 
         [INLINE(256)]
-        public double GetCurrentTime() => this.data->currentTimestamp;
+        public double GetCurrentTime() => this.data.ptr->currentTimestamp;
 
         public bool RewindTo(ulong targetTick) {
 
-            if (targetTick > this.data->connectedWorld.state->tick) {
+            if (targetTick > this.data.ptr->connectedWorld.state.ptr->tick) {
                 // just set server time in the future
-                this.data->SetServerTime(this.properties.tickTime * targetTick);
+                this.data.ptr->SetServerTime(this.properties.tickTime * targetTick);
                 return true;
-            } else if (targetTick < this.data->connectedWorld.state->tick) {
+            } else if (targetTick < this.data.ptr->connectedWorld.state.ptr->tick) {
                 // rollback to targetTick
-                this.data->SetServerTime(this.properties.tickTime * targetTick);
-                return this.data->RollbackTo(targetTick, ref this.data->connectedWorld.state->tick, targetTick);
+                this.data.ptr->SetServerTime(this.properties.tickTime * targetTick);
+                return this.data.ptr->RollbackTo(targetTick, ref this.data.ptr->connectedWorld.state.ptr->tick, targetTick);
             }
 
             return false;
@@ -813,22 +812,22 @@ namespace ME.BECS.Network {
 
         [INLINE(256)]
         public uint RegisterMethod(NetworkMethodDelegate method) {
-            return this.data->methodsStorage.Add(method);
+            return this.data.ptr->methodsStorage.Add(method);
         }
 
         [INLINE(256)]
         public void AddEvent<T>(NetworkMethodDelegate method, in T data) where T : unmanaged, IPackageData {
-            AddEvent(this.networkTransport, this.data, this.data->localPlayerId, this.data->methodsStorage.GetMethodId(method), in data, 0UL);
+            AddEvent(this.networkTransport, this.data, this.data.ptr->localPlayerId, this.data.ptr->methodsStorage.GetMethodId(method), in data, 0UL);
         }
 
         [INLINE(256)]
         public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data) where T : unmanaged, IPackageData {
-            AddEvent(this.networkTransport, this.data, playerId, this.data->methodsStorage.GetMethodId(method), in data, 0UL);
+            AddEvent(this.networkTransport, this.data, playerId, this.data.ptr->methodsStorage.GetMethodId(method), in data, 0UL);
         }
 
         [INLINE(256)]
         public void AddEvent<T>(uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
-            AddEvent(this.networkTransport, this.data, playerId, this.data->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
+            AddEvent(this.networkTransport, this.data, playerId, this.data.ptr->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
         [INLINE(256)]
@@ -837,12 +836,12 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
-        public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
-            AddEvent(networkTransport, moduleData, playerId, moduleData->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
+        public static void AddEvent<T>(INetworkTransport networkTransport, SafePtr<Data> moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
+            AddEvent(networkTransport, moduleData, playerId, moduleData.ptr->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
         [INLINE(256)]
-        public static void AddEvent<T>(INetworkTransport networkTransport, Data* moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
+        public static void AddEvent<T>(INetworkTransport networkTransport, SafePtr<Data> moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
 
             if (networkTransport != null && networkTransport.Status != TransportStatus.Connected) {
                 
@@ -851,27 +850,27 @@ namespace ME.BECS.Network {
             }
 
             ushort dataLength = 0;
-            byte* dataPtr = null;
+            SafePtr<byte> dataPtr = default;
             { // Custom data serialization
-                moduleData->writeBuffer.Reset();
-                data.Serialize(ref moduleData->writeBuffer);
-                var dataBytes = moduleData->writeBuffer.ToArray();
+                moduleData.ptr->writeBuffer.Reset();
+                data.Serialize(ref moduleData.ptr->writeBuffer);
+                var dataBytes = moduleData.ptr->writeBuffer.ToArray();
                 dataPtr = _makeArray<byte>((uint)dataBytes.Length);
                 fixed (void* ptr = &dataBytes[0]) {
-                    _memcpy(ptr, dataPtr, dataBytes.Length);
+                    _memcpy((SafePtr)ptr, dataPtr, dataBytes.Length);
                 }
                 dataLength = (ushort)dataBytes.Length;
             }
 
             // Form the package
-            var tick = moduleData->GetTargetTick() - negativeDeltaTicks;
-            var localOrder = moduleData->eventsStorage.GetLocalOrder(playerId);
+            var tick = moduleData.ptr->GetTargetTick() - negativeDeltaTicks;
+            var localOrder = moduleData.ptr->eventsStorage.GetLocalOrder(playerId);
             var package = new NetworkPackage() {
-                tick = tick + moduleData->inputLag,
+                tick = tick + moduleData.ptr->inputLag,
                 playerId = playerId,
                 localOrder = localOrder,
                 methodId = methodId,
-                data = dataPtr,
+                data = dataPtr.ptr,
                 dataSize = dataLength,
             };
             
@@ -882,15 +881,15 @@ namespace ME.BECS.Network {
 
             if ((eventsBehaviour & EventsBehaviourState.RunLocal) != 0) {
                 // Store locally
-                moduleData->eventsStorage.Add(package, moduleData->GetTargetTick());
+                moduleData.ptr->eventsStorage.Add(package, moduleData.ptr->GetTargetTick());
             }
 
             if ((eventsBehaviour & EventsBehaviourState.SendToNetwork) != 0) {
                 // Send to network
                 if (networkTransport != null) {
-                    moduleData->writeBuffer.Reset();
-                    package.Serialize(ref moduleData->writeBuffer);
-                    var bytes = moduleData->writeBuffer.ToArray();
+                    moduleData.ptr->writeBuffer.Reset();
+                    package.Serialize(ref moduleData.ptr->writeBuffer);
+                    var bytes = moduleData.ptr->writeBuffer.ToArray();
                     networkTransport.Send(bytes);
                 }
             }
@@ -908,25 +907,25 @@ namespace ME.BECS.Network {
             dependsOn.Complete();
             {
                 var deltaTime = this.GetDeltaTime();
-                var currentTick = world.state->tick;
+                var currentTick = world.state.ptr->tick;
                 var targetTick = this.GetTargetTick();
                 {
                     var bytes = this.networkTransport.Receive();
                     if (bytes != null) {
                         var readBuffer = new StreamBufferReader(bytes);
                         var package = NetworkPackage.Create(ref readBuffer);
-                        this.data->eventsStorage.Add(package, currentTick);
+                        this.data.ptr->eventsStorage.Add(package, currentTick);
                         readBuffer.Dispose();
                     }
                 }
                 if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.LogInfo($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {unchecked(targetTick - currentTick)}");
                 {
                     // Do we need the rollback?
-                    dependsOn = this.data->Rollback(ref currentTick, targetTick, dependsOn);
+                    dependsOn = this.data.ptr->Rollback(ref currentTick, targetTick, dependsOn);
                 }
-                if (unchecked((targetTick - currentTick) > 0UL) && this.data->IsInRollback() == false) {
+                if (unchecked((targetTick - currentTick) > 0UL) && this.data.ptr->IsInRollback() == false) {
                     // Make a state copy for interpolation
-                    this.data->startFrameState->CopyFrom(in *world.state);
+                    this.data.ptr->startFrameState.ptr->CopyFrom(in *world.state.ptr);
                 }
                 //var completePerTick = this.properties.maxFrameTime / this.properties.tickTime;
                 this.frameStopwatch.Restart();
@@ -936,7 +935,7 @@ namespace ME.BECS.Network {
                     dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, dependsOn);
                     {
                         // Apply events for this tick
-                        dependsOn = this.data->Tick(tick, deltaTime, in world, dependsOn);
+                        dependsOn = this.data.ptr->Tick(tick, deltaTime, in world, dependsOn);
                     }
                     
                     dependsOn = world.TickWithoutWorldState(deltaTime, UpdateType.FIXED_UPDATE, dependsOn);
@@ -944,7 +943,7 @@ namespace ME.BECS.Network {
                     dependsOn.Complete();
                     // End tick
 
-                    if (this.data->IsRollbackRequired(tick) == true) {
+                    if (this.data.ptr->IsRollbackRequired(tick) == true) {
                         break;
                     }
                     

@@ -50,7 +50,7 @@ namespace ME.BECS {
     public unsafe struct DisposeJob : IJob {
         public MemPtr ptr;
         public ushort worldId;
-        public void Execute() => Worlds.GetWorld(this.worldId).state->allocator.Free(this.ptr);
+        public void Execute() => Worlds.GetWorld(this.worldId).state.ptr->allocator.Free(this.ptr);
     }
 
     [BURST(CompileSynchronously = true)]
@@ -62,7 +62,7 @@ namespace ME.BECS {
         public void Execute() {
             var state = Worlds.GetWorld(this.worldId).state;
             CollectionsRegistry.Remove(state, in this.ent, in this.ptr);
-            state->allocator.Free(this.ptr);
+            state.ptr->allocator.Free(this.ptr);
         }
 
     }
@@ -70,7 +70,7 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe struct DisposePtrJob : IJob {
         [NativeDisableUnsafePtrRestriction]
-        public void* ptr;
+        public SafePtr ptr;
         public void Execute() => _free(ref this.ptr);
     }
 
@@ -79,8 +79,8 @@ namespace ME.BECS {
 
         public AllocatorManager.AllocatorHandle allocator;
         [NativeDisableUnsafePtrRestriction]
-        public void* ptr;
-        public void Execute() => AllocatorManager.Free(this.allocator, this.ptr);
+        public SafePtr ptr;
+        public void Execute() => _free(this.ptr, this.allocator.ToAllocator);
 
     }
 

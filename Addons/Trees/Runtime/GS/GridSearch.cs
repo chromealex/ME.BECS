@@ -197,9 +197,9 @@ namespace ME.BECS.Trees {
 
         [INLINE(256)]
         public void Dispose() {
-            _free(this.rebuildCellsCounter);
-            _free(this.rebuildDataCounter);
-            _free(this.rebuildSegmentSortCounter);
+            _free((SafePtr)this.rebuildCellsCounter);
+            _free((SafePtr)this.rebuildDataCounter);
+            _free((SafePtr)this.rebuildSegmentSortCounter);
             if (this.positions.IsCreated) {
                 this.positions.Dispose();
             }
@@ -403,8 +403,8 @@ namespace ME.BECS.Trees {
                 if (this.tree->data.IsCreated == true) this.tree->data.Dispose();
                 this.tree->positions = CollectionHelper.CreateNativeArray<float3>(positions.Length, Constants.ALLOCATOR_PERSISTENT_ST);
                 this.tree->data = CollectionHelper.CreateNativeArray<T>(data.Length, Constants.ALLOCATOR_PERSISTENT_ST);
-                _memcpy(positions.Ptr, this.tree->positions.GetUnsafePtr(), positions.Length * TSize<float3>.sizeInt);
-                _memcpy(data.Ptr, this.tree->data.GetUnsafePtr(), data.Length * TSize<T>.sizeInt);
+                _memcpy((SafePtr)positions.Ptr, (SafePtr)this.tree->positions.GetUnsafePtr(), positions.Length * TSize<float3>.sizeInt);
+                _memcpy((SafePtr)data.Ptr, (SafePtr)this.tree->data.GetUnsafePtr(), data.Length * TSize<T>.sizeInt);
 
                 this.tree->rebuildDataCounter->count = this.tree->positions.Length;
 

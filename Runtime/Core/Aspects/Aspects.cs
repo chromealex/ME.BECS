@@ -39,7 +39,7 @@ namespace ME.BECS {
     
     public unsafe struct SafetyComponentContainerRO<T> where T : unmanaged, IComponentBase {
 
-        public SafetyComponentContainerRO(State* state, ushort worldId) {
+        public SafetyComponentContainerRO(SafePtr<State> state, ushort worldId) {
         }
 
     }
@@ -57,12 +57,12 @@ namespace ME.BECS {
         #pragma warning restore
         #endif
         
-        public SafetyComponentContainerWO(State* state, ushort worldId) {
+        public SafetyComponentContainerWO(SafePtr<State> state, ushort worldId) {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
             this.m_MaxIndex = int.MaxValue - 1;
             this.m_Length = int.MaxValue;
-            this.m_Safety = state->components.GetSafetyHandler<T>();
+            this.m_Safety = state.ptr->components.GetSafetyHandler<T>();
             #endif
         }
 
@@ -81,12 +81,12 @@ namespace ME.BECS {
         #pragma warning restore
         #endif
         
-        public SafetyComponentContainerRW(State* state, ushort worldId) {
+        public SafetyComponentContainerRW(SafePtr<State> state, ushort worldId) {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
             this.m_MaxIndex = int.MaxValue - 1;
             this.m_Length = int.MaxValue;
-            this.m_Safety = state->components.GetSafetyHandler<T>();
+            this.m_Safety = state.ptr->components.GetSafetyHandler<T>();
             #endif
         }
 
@@ -106,13 +106,13 @@ namespace ME.BECS {
         private int m_MaxIndex;
         #endif
 
-        public RefROSafe(State* state, ushort worldId) {
-            this.data = state->components.GetRO<T>(state, worldId);
+        public RefROSafe(SafePtr<State> state, ushort worldId) {
+            this.data = state.ptr->components.GetRO<T>(state, worldId);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
             this.m_MaxIndex = int.MaxValue - 1;
             this.m_Length = int.MaxValue;
-            this.m_Safety = state->components.GetSafetyHandler<T>();
+            this.m_Safety = state.ptr->components.GetSafetyHandler<T>();
             #endif
         }
 
@@ -156,13 +156,13 @@ namespace ME.BECS {
         private int m_MaxIndex;
         #endif
 
-        public RefRWSafe(State* state, ushort worldId) {
-            this.data = state->components.GetRW<T>(state, worldId);
+        public RefRWSafe(SafePtr<State> state, ushort worldId) {
+            this.data = state.ptr->components.GetRW<T>(state, worldId);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
             this.m_MaxIndex = int.MaxValue - 1;
             this.m_Length = int.MaxValue;
-            this.m_Safety = state->components.GetSafetyHandler<T>();
+            this.m_Safety = state.ptr->components.GetSafetyHandler<T>();
             #endif
         }
 
@@ -208,7 +208,7 @@ namespace ME.BECS {
         public RefOp Op => RefOp.ReadWrite;
 
         [NativeDisableUnsafePtrRestriction]
-        public State* state;
+        public SafePtr<State> state;
         public MemAllocatorPtr storage;
         public ushort worldId;
         
@@ -216,7 +216,7 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public RefRW(in World world) {
-            this = world.state->components.GetRW<T>(world.state, world.id);
+            this = world.state.ptr->components.GetRW<T>(world.state, world.id);
         }
 
         #if !NO_INLINE
@@ -257,12 +257,12 @@ namespace ME.BECS {
         public RefOp Op => RefOp.ReadOnly;
 
         [NativeDisableUnsafePtrRestriction]
-        public State* state;
+        public SafePtr<State> state;
         public MemAllocatorPtr storage;
 
         [INLINE(256)]
         public RefRO(in World world) {
-            this = world.state->components.GetRO<T>(world.state, world.id);
+            this = world.state.ptr->components.GetRO<T>(world.state, world.id);
         }
         
         #if !NO_INLINE
@@ -289,7 +289,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static unsafe ref T InitAspect(in World world) {
 
-            return ref world.state->aspectsStorage.Initialize<T>(world.state);
+            return ref world.state.ptr->aspectsStorage.Initialize<T>(world.state);
 
         }
 

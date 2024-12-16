@@ -10,7 +10,7 @@ namespace ME.BECS {
 
         public bool[] Bits {
             get {
-                var allocator = Context.world.state->allocator;
+                var allocator = Context.world.state.ptr->allocator;
                 var array = new bool[this.Data.Length];
                 for (var i = 0; i < this.Data.Length; ++i) {
                     array[i] = this.Data.IsSet(in allocator, i);
@@ -37,7 +37,7 @@ namespace ME.BECS {
                 var world = Context.world;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[world.state.ptr->allocator, i];
                 }
 
                 return arr;
@@ -84,7 +84,7 @@ namespace ME.BECS {
                 var world = Context.world;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[world.state.ptr->allocator, i];
                 }
 
                 return arr;
@@ -120,7 +120,7 @@ namespace ME.BECS {
                 var world = Context.world;
                 var arr = new T[this.arr.Count];
                 for (uint i = 0; i < this.arr.Count; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[world.state.ptr->allocator, i];
                 }
 
                 return arr;

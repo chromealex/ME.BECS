@@ -209,7 +209,7 @@ namespace ME.BECS {
                     var systemAddr = _addressT(ref rootGroup.GetSystem<T>(out var found));
                     if (throwIfNotFound == true && found == false) throw E.NOT_FOUND(typeof(T).Name);
                     if (throwIfNotFound == false) return null;
-                    return systemAddr;
+                    return systemAddr.ptr;
                 } else {
                     return system;
                 }

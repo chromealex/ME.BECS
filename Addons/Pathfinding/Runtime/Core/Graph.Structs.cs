@@ -145,9 +145,9 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe ChunkCache Create(State* state, uint capacity) {
+        public static unsafe ChunkCache Create(SafePtr<State> state, uint capacity) {
             return new ChunkCache() {
-                data = new EquatableDictionary<ulong, Path.Chunk>(ref state->allocator, capacity),
+                data = new EquatableDictionary<ulong, Path.Chunk>(ref state.ptr->allocator, capacity),
             };
         }
 
@@ -318,12 +318,12 @@ namespace ME.BECS.Pathfinding {
 
             for (uint i = 0; i < this.chunks.Length; ++i) {
                 var chunk = this.chunks[world.state, i];
-                chunk.flowField.Dispose(ref world.state->allocator);
+                chunk.flowField.Dispose(ref world.state.ptr->allocator);
             }
 
-            this.from.As(in world.state->allocator).Dispose(ref world.state->allocator);
-            this.from.Dispose(ref world.state->allocator);
-            this.chunks.Dispose(ref world.state->allocator);
+            this.from.As(in world.state.ptr->allocator).Dispose(ref world.state.ptr->allocator);
+            this.from.Dispose(ref world.state.ptr->allocator);
+            this.chunks.Dispose(ref world.state.ptr->allocator);
             this = default;
 
         }

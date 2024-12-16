@@ -12,31 +12,30 @@ namespace ME.BECS {
             public const uint CACHE_LINE_SIZE = JobUtils.CacheLineSize;
 
             public readonly uint Length => JobUtils.ThreadsCount;
-            [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
-            internal T* ptr;
+            internal SafePtr<T> ptr;
 
             [INLINE(256)]
             public void Initialize() {
                 var size = TSize<T>.size;
                 var length = JobUtils.ThreadsCount;
-                this.ptr = (T*)_make(size * CACHE_LINE_SIZE * length);
+                this.ptr = _make(size * CACHE_LINE_SIZE * length);
             }
 
             [INLINE(256)]
             public ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
-                return ref *(this.ptr + index * CACHE_LINE_SIZE);
+                return ref *(this.ptr + (uint)index * CACHE_LINE_SIZE).ptr;
             }
 
             [INLINE(256)]
             public ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
-                return ref *(this.ptr + index * CACHE_LINE_SIZE);
+                return ref *(this.ptr + index * CACHE_LINE_SIZE).ptr;
             }
 
             [INLINE(256)]
             public void Dispose() {
-                _free(this.ptr);
+                if (this.ptr != null) _free(this.ptr);
                 this = default;
             }
 
@@ -46,20 +45,20 @@ namespace ME.BECS {
 
             public volatile uint Length;
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
-            internal volatile T* ptr;
+            internal SafePtr<T> ptr;
             
             public bool IsCreated => this.ptr != null;
 
             [INLINE(256)]
             public ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
-                return ref *(this.ptr + index);
+                return ref *(this.ptr + index).ptr;
             }
 
             [INLINE(256)]
             public ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
-                return ref *(this.ptr + index);
+                return ref *(this.ptr + index).ptr;
             }
 
             [INLINE(256)]
@@ -75,12 +74,12 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Dispose() {
-                _free(this.ptr);
+                if (this.ptr != null) _free(this.ptr);
                 this = default;
             }
 
             [INLINE(256)]
-            public void* GetPtr() {
+            public SafePtr GetPtr() {
                 return this.ptr;
             }
 
@@ -91,11 +90,11 @@ namespace ME.BECS {
             public struct Node {
 
                 public ushort data;
-                public Node* next;
+                public SafePtr<Node> next;
 
             }
 
-            public Node* root;
+            public SafePtr<Node> root;
             public uint Count;
 
             public bool isCreated => this.root != null;
@@ -108,8 +107,8 @@ namespace ME.BECS {
                 var node = this.root;
                 while (node != null) {
                     var n = node;
-                    result[i++] = n->data;
-                    node = node->next;
+                    result[i++] = n.ptr->data;
+                    node = node.ptr->next;
                 }
 
                 return result;
@@ -120,7 +119,7 @@ namespace ME.BECS {
             public void Add(ushort value) {
 
                 var node = _make(new Node() { data = value });
-                node->next = this.root;
+                node.ptr->next = this.root;
                 this.root = node;
                 ++this.Count;
 
@@ -130,8 +129,8 @@ namespace ME.BECS {
             public ushort Pop() {
 
                 var root = this.root;
-                var val = this.root->data;
-                this.root = this.root->next;
+                var val = this.root.ptr->data;
+                this.root = this.root.ptr->next;
                 _free(root);
                 --this.Count;
                 return val;
@@ -144,11 +143,11 @@ namespace ME.BECS {
                 Node* prevNode = null;
                 var node = this.root;
                 while (node != null) {
-                    if (node->data == value) {
+                    if (node.ptr->data == value) {
                         if (prevNode == null) {
-                            this.root = node->next;
+                            this.root = node.ptr->next;
                         } else {
-                            prevNode->next = node->next;
+                            prevNode->next = node.ptr->next;
                         }
 
                         _free(node);
@@ -156,8 +155,8 @@ namespace ME.BECS {
                         return true;
                     }
 
-                    prevNode = node;
-                    node = node->next;
+                    prevNode = node.ptr;
+                    node = node.ptr->next;
                 }
 
                 return false;
@@ -170,11 +169,11 @@ namespace ME.BECS {
                 var node = this.root;
                 while (node != null) {
                     var n = node;
-                    node = node->next;
+                    node = node.ptr->next;
                     _free(n);
                 }
 
-                this.root = null;
+                this.root = default;
                 this.Count = 0u;
 
             }

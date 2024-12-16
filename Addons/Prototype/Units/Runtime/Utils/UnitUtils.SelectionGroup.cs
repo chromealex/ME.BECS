@@ -147,7 +147,7 @@ namespace ME.BECS.Units {
             var group = UnitUtils.CreateSelectionTempGroup(1u, jobInfo);
 
             var visitor = new OctreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
-            tree->Nearest(position, minRange, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+            tree.ptr->Nearest(position, minRange, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
             if (visitor.found == true) {
                 if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
             }
@@ -175,7 +175,7 @@ namespace ME.BECS.Units {
                 results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
                 rangeSqr = range * range,
             };
-            tree->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
+            tree.ptr->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
             //tree->QueryRange(position, range, ref results);
             
             var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count, jobInfo);
@@ -270,14 +270,14 @@ namespace ME.BECS.Units {
                     results = results,
                     rangeSqr = range * range,
                 };
-                tree->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
                 results = visitor.results;
             } else {
                 var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
                     results = results,
                     rangeSqr = range * range,
                 };
-                tree->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
                 results = visitor.results;
             }
             //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);

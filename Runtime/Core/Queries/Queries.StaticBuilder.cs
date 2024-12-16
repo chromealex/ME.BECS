@@ -20,15 +20,15 @@ namespace ME.BECS {
         }
 
         [NativeDisableUnsafePtrRestriction]
-        internal CommandBuffer* commandBuffer;
+        internal SafePtr<CommandBuffer> commandBuffer;
         [NativeDisableUnsafePtrRestriction]
-        internal QueryData* queryData;
+        internal SafePtr<QueryData> queryData;
         internal JobHandle builderDependsOn;
         internal uint parallelForBatch;
         internal bool isUnsafe;
         internal Unity.Jobs.LowLevel.Unsafe.ScheduleMode scheduleMode;
         
-        public ushort worldId => this.commandBuffer->worldId;
+        public ushort worldId => this.commandBuffer.ptr->worldId;
 
         [INLINE(256)]
         public QueryBuilderDisposable(QueryBuilder builder) {
@@ -46,19 +46,19 @@ namespace ME.BECS {
         }
 
         public JobHandle Schedule<T>(in T job) where T : struct, IJobCommandBuffer {
-            this.builderDependsOn = job.Schedule(in this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.builderDependsOn);
             this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
         }
 
         public JobHandle ScheduleParallelFor<T>(in T job) where T : struct, IJobParallelForCommandBuffer {
-            this.builderDependsOn = job.Schedule(in this.commandBuffer, this.parallelForBatch, this.builderDependsOn);
+            this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
             this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
         }
 
         public JobHandle ScheduleParallelForBatch<T>(in T job) where T : struct, IJobParallelForCommandBufferBatch {
-            this.builderDependsOn = job.Schedule(in this.commandBuffer, this.parallelForBatch, this.builderDependsOn);
+            this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
             this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
         }
@@ -72,9 +72,9 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Dispose() {
-            this.queryData->Dispose();
+            this.queryData.ptr->Dispose();
             _free(ref this.queryData);
-            this.commandBuffer->Dispose();
+            this.commandBuffer.ptr->Dispose();
             _free(ref this.commandBuffer);
             this = default;
         }
@@ -83,8 +83,8 @@ namespace ME.BECS {
 
     public unsafe struct QueryBuilderStatic {
 
-        internal readonly State* state;
-        internal readonly Queries.QueryDataStatic* queryDataStatic;
+        internal readonly SafePtr<State> state;
+        internal readonly SafePtr<Queries.QueryDataStatic> queryDataStatic;
         internal readonly bool isCreated;
         internal JobHandle dependsOn;
         
@@ -110,21 +110,21 @@ namespace ME.BECS {
         [INLINE(256)]
         public QueryBuilderStatic WithAny<T0, T1>() where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.queryDataStatic->withAny.Add(ref this.state->allocator, new UIntPair(StaticTypes<T0>.typeId, StaticTypes<T1>.typeId));
+            this.queryDataStatic.ptr->withAny.Add(ref this.state.ptr->allocator, new UIntPair(StaticTypes<T0>.typeId, StaticTypes<T1>.typeId));
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilderStatic With<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.queryDataStatic->with.Add(ref this.state->allocator, StaticTypes<T>.typeId);
+            this.queryDataStatic.ptr->with.Add(ref this.state.ptr->allocator, StaticTypes<T>.typeId);
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilderStatic Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.queryDataStatic->without.Add(ref this.state->allocator, StaticTypes<T>.typeId);
+            this.queryDataStatic.ptr->without.Add(ref this.state.ptr->allocator, StaticTypes<T>.typeId);
             return this;
         }
 
@@ -143,8 +143,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public QueryBuilderStatic Step(uint steps, uint minElementsPerStep) {
             E.IS_CREATED(this);
-            this.queryDataStatic->steps = steps;
-            this.queryDataStatic->minElementsPerStep = minElementsPerStep;
+            this.queryDataStatic.ptr->steps = steps;
+            this.queryDataStatic.ptr->minElementsPerStep = minElementsPerStep;
             return this;
         }
 
@@ -152,7 +152,7 @@ namespace ME.BECS {
         public void Dispose() {
 
             if (this.isCreated == true) {
-                this.queryDataStatic->Dispose(this.state);
+                this.queryDataStatic.ptr->Dispose(this.state);
                 _free(this.queryDataStatic);
                 this = default;
             }
@@ -163,7 +163,7 @@ namespace ME.BECS {
         public Query Build() {
             
             // Register query
-            return this.state->queries.Add(this.state, in this);
+            return this.state.ptr->queries.Add(this.state, in this);
 
         }
 
@@ -177,27 +177,27 @@ namespace ME.BECS {
             private uint index;
 
             public bool MoveNext() {
-                return this.index++ < this.queryBuilder.commandBuffer->count;
+                return this.index++ < this.queryBuilder.commandBuffer.ptr->count;
             }
 
             public void Reset() {
                 
             }
 
-            public Ent Current => new Ent(this.queryBuilder.commandBuffer->entities[this.index - 1u], this.queryBuilder.commandBuffer->state, this.queryBuilder.worldId);
+            public Ent Current => new Ent(this.queryBuilder.commandBuffer.ptr->entities[this.index - 1u], this.queryBuilder.commandBuffer.ptr->state, this.queryBuilder.worldId);
 
             public void Dispose() {
             }
 
         }
 
-        private readonly Queries.QueryDataStatic* queryData;
-        private readonly State* state;
+        private readonly SafePtr<Queries.QueryDataStatic> queryData;
+        private readonly SafePtr<State> state;
         private readonly JobHandle dependsOn;
         private readonly ushort worldId;
 
         public QueryForEach(in World world, JobHandle dependsOn, uint queryId) {
-            this.queryData = world.state->queries.GetPtr(world.state, queryId);
+            this.queryData = world.state.ptr->queries.GetPtr(world.state, queryId);
             this.state = world.state;
             this.worldId = world.id;
             this.dependsOn = dependsOn;
@@ -301,21 +301,21 @@ namespace ME.BECS {
         public JobHandle Schedule<T>(in T job, in World world, JobHandle dependsOn) where T : struct, IJobCommandBuffer {
             E.IS_CREATED(this);
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, this.id));
             return query.Schedule(in job);
         }
 
         public JobHandle ScheduleParallelFor<T>(in T job, uint parallelForBatch, in World world, JobHandle dependsOn) where T : struct, IJobParallelForCommandBuffer {
             E.IS_CREATED(this);
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).ParallelFor(parallelForBatch).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).ParallelFor(parallelForBatch).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, this.id));
             return query.ScheduleParallelFor(in job);
         }
 
         public JobHandle ScheduleParallelForBatch<T>(in T job, uint parallelForBatch, in World world, JobHandle dependsOn) where T : struct, IJobParallelForCommandBufferBatch {
             E.IS_CREATED(this);
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).ParallelFor(parallelForBatch).FromQueryData(state, world.id, state->queries.GetPtr(state, this.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).ParallelFor(parallelForBatch).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, this.id));
             return query.ScheduleParallelForBatch(in job);
         }
 
@@ -335,12 +335,12 @@ namespace ME.BECS {
             //internal CachedPtr<CommandBuffer> commandBuffer;
             
             [INLINE(256)]
-            public QueryDataStatic(State* state) {
+            public QueryDataStatic(SafePtr<State> state) {
                 
                 this = default;
-                this.with = new UIntHashSet(ref state->allocator, 1u);
-                this.without = new UIntHashSet(ref state->allocator, 1u);
-                this.withAny = new UIntPairHashSet(ref state->allocator, 1u);
+                this.with = new UIntHashSet(ref state.ptr->allocator, 1u);
+                this.without = new UIntHashSet(ref state.ptr->allocator, 1u);
+                this.withAny = new UIntPairHashSet(ref state.ptr->allocator, 1u);
                 //this.GetQueryData(state);
                 //this.GetCommandBuffer(state, 0);
                 
@@ -350,11 +350,11 @@ namespace ME.BECS {
             public QueryDataStatic(in QueryBuilderStatic builder) {
 
                 this = default;
-                this.steps = builder.queryDataStatic->steps;
-                this.minElementsPerStep = builder.queryDataStatic->minElementsPerStep;
-                this.with = new UIntHashSet(ref builder.state->allocator, builder.queryDataStatic->with);
-                this.without = new UIntHashSet(ref builder.state->allocator, builder.queryDataStatic->without);
-                this.withAny = new UIntPairHashSet(ref builder.state->allocator, builder.queryDataStatic->withAny);
+                this.steps = builder.queryDataStatic.ptr->steps;
+                this.minElementsPerStep = builder.queryDataStatic.ptr->minElementsPerStep;
+                this.with = new UIntHashSet(ref builder.state.ptr->allocator, builder.queryDataStatic.ptr->with);
+                this.without = new UIntHashSet(ref builder.state.ptr->allocator, builder.queryDataStatic.ptr->without);
+                this.withAny = new UIntPairHashSet(ref builder.state.ptr->allocator, builder.queryDataStatic.ptr->withAny);
                 //this.GetQueryData(builder.state);
                 //this.GetCommandBuffer(builder.state, 0);
 
@@ -362,27 +362,27 @@ namespace ME.BECS {
 
             /*
             [INLINE(256)]
-            public QueryData* GetQueryData(State* state) {
+            public QueryData* GetQueryData(SafePtr<State> state) {
 
-                var ptr = this.queryData.ReadPtr(in state->allocator);
+                var ptr = this.queryData.ReadPtr(in state.ptr->allocator);
                 if (ptr == null) {
                     ptr = _make(new QueryData());
-                    this.queryData = new CachedPtr<QueryData>(in state->allocator, ptr);
+                    this.queryData = new CachedPtr<QueryData>(in state.ptr->allocator, ptr);
                 }
                 return ptr;
 
             }
 
             [INLINE(256)]
-            public CommandBuffer* GetCommandBuffer(State* state, ushort worldId) {
+            public CommandBuffer* GetCommandBuffer(SafePtr<State> state, ushort worldId) {
                 
-                var ptr = this.commandBuffer.ReadPtr(in state->allocator);
+                var ptr = this.commandBuffer.ReadPtr(in state.ptr->allocator);
                 if (ptr == null) {
                     ptr = _make(new CommandBuffer() {
                         state = state,
                         worldId = worldId,
                     });
-                    this.commandBuffer = new CachedPtr<CommandBuffer>(in state->allocator, ptr);
+                    this.commandBuffer = new CachedPtr<CommandBuffer>(in state.ptr->allocator, ptr);
                 }
 
                 ptr->worldId = worldId;
@@ -392,18 +392,18 @@ namespace ME.BECS {
             */
             
             [INLINE(256)]
-            public bool Equals(State* state, in QueryBuilderStatic builder) {
+            public bool Equals(SafePtr<State> state, in QueryBuilderStatic builder) {
 
-                if (this.steps != builder.queryDataStatic->steps) return false;
-                if (this.minElementsPerStep != builder.queryDataStatic->minElementsPerStep) return false;
+                if (this.steps != builder.queryDataStatic.ptr->steps) return false;
+                if (this.minElementsPerStep != builder.queryDataStatic.ptr->minElementsPerStep) return false;
                 
-                if (builder.queryDataStatic->with.Equals(in state->allocator, this.with) == false) {
+                if (builder.queryDataStatic.ptr->with.Equals(in state.ptr->allocator, this.with) == false) {
                     return false;
                 }
-                if (builder.queryDataStatic->without.Equals(in state->allocator, this.without) == false) {
+                if (builder.queryDataStatic.ptr->without.Equals(in state.ptr->allocator, this.without) == false) {
                     return false;
                 }
-                if (builder.queryDataStatic->withAny.Equals(in state->allocator, this.withAny) == false) {
+                if (builder.queryDataStatic.ptr->withAny.Equals(in state.ptr->allocator, this.withAny) == false) {
                     return false;
                 }
 
@@ -412,23 +412,23 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Dispose(State* state) {
+            public void Dispose(SafePtr<State> state) {
                 
-                if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state->allocator);
-                this.with.Dispose(ref state->allocator);
-                this.without.Dispose(ref state->allocator);
-                this.withAny.Dispose(ref state->allocator);
-                //if (this.queryData.IsValid(in state->allocator) == true) _free(this.queryData.ReadPtr(in state->allocator));
-                //if (this.commandBuffer.IsValid(in state->allocator) == true) _free(this.commandBuffer.ReadPtr(in state->allocator));
+                if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state.ptr->allocator);
+                this.with.Dispose(ref state.ptr->allocator);
+                this.without.Dispose(ref state.ptr->allocator);
+                this.withAny.Dispose(ref state.ptr->allocator);
+                //if (this.queryData.IsValid(in state.ptr->allocator) == true) _free(this.queryData.ReadPtr(in state.ptr->allocator));
+                //if (this.commandBuffer.IsValid(in state.ptr->allocator) == true) _free(this.commandBuffer.ReadPtr(in state.ptr->allocator));
                 this = default;
 
             }
 
             [INLINE(256)]
-            public void Validate(State* state) {
+            public void Validate(SafePtr<State> state) {
 
                 var queryData = new QueryData() {
-                    archetypesBits = new TempBitArray(in state->allocator, state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP),
+                    archetypesBits = new TempBitArray(in state.ptr->allocator, state.ptr->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP),
                     minElementsPerStep = this.minElementsPerStep,
                     steps = this.steps,
                 };
@@ -453,9 +453,9 @@ namespace ME.BECS {
                     }
                 }
 
-                if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state->allocator);
-                this.archetypes = queryRef->archetypesBits.GetTrueBitsPersistent(ref state->allocator);
-                queryRef->Dispose();
+                if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state.ptr->allocator);
+                this.archetypes = queryRef.ptr->archetypesBits.GetTrueBitsPersistent(ref state.ptr->allocator);
+                queryRef.ptr->Dispose();
                 
             }
 
@@ -465,25 +465,25 @@ namespace ME.BECS {
         internal uint nextId;
 
         [INLINE(256)]
-        public static Queries Create(State* state, uint capacity) {
+        public static Queries Create(SafePtr<State> state, uint capacity) {
             return new Queries() {
-                queryData = new MemArray<QueryDataStatic>(ref state->allocator, capacity),
+                queryData = new MemArray<QueryDataStatic>(ref state.ptr->allocator, capacity),
             };
         }
 
         [INLINE(256)]
-        internal QueryDataStatic* GetPtr(State* state, uint id) {
+        internal SafePtr<QueryDataStatic> GetPtr(SafePtr<State> state, uint id) {
 
-            var ptr = ((QueryDataStatic*)this.queryData.GetUnsafePtr(in state->allocator)) + (id - 1u);
+            var ptr = ((SafePtr<QueryDataStatic>)this.queryData.GetUnsafePtr(in state.ptr->allocator)) + (id - 1u);
             return ptr;
 
         }
 
         [INLINE(256)]
-        public Query Add(State* state, in QueryBuilderStatic builder) {
+        public Query Add(SafePtr<State> state, in QueryBuilderStatic builder) {
 
             for (uint i = 0u; i < this.nextId; ++i) {
-                var queryData = this.queryData[in state->allocator, i];
+                var queryData = this.queryData[in state.ptr->allocator, i];
                 if (queryData.Equals(state, in builder) == true) {
                     return new Query() { id = i + 1u };
                 }
@@ -492,12 +492,12 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             {
-                this.queryData.Resize(ref state->allocator, this.nextId + 1u, 2);
+                this.queryData.Resize(ref state.ptr->allocator, this.nextId + 1u, 2);
             }
 
             var data = new QueryDataStatic(in builder);
             data.Validate(state);
-            this.queryData[in state->allocator, this.nextId] = data;
+            this.queryData[in state.ptr->allocator, this.nextId] = data;
             return new Query() { id = ++this.nextId };
             
         }

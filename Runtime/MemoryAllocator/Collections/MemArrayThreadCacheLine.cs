@@ -57,17 +57,17 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
 
             return allocator.GetUnsafePtr(this.arrPtr);
 
         }
 
-        public readonly ref T this[State* state, int index] {
+        public readonly ref T this[SafePtr<State> state, int index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *(T*)((byte*)this.GetUnsafePtr(in state->allocator) + index * CACHE_LINE_SIZE_IN_BYTES);
+                return ref *(T*)((SafePtr<byte>)this.GetUnsafePtr(in state.ptr->allocator) + (uint)index * CACHE_LINE_SIZE_IN_BYTES).ptr;
             }
         }
 
@@ -75,7 +75,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *(T*)((byte*)this.GetUnsafePtr(in allocator) + index * CACHE_LINE_SIZE_IN_BYTES);
+                return ref *(T*)((SafePtr<byte>)this.GetUnsafePtr(in allocator) + (uint)index * CACHE_LINE_SIZE_IN_BYTES).ptr;
             }
         }
 
@@ -83,15 +83,15 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *(T*)((byte*)this.GetUnsafePtr(in allocator) + index * CACHE_LINE_SIZE_IN_BYTES);
+                return ref *(T*)((SafePtr<byte>)this.GetUnsafePtr(in allocator) + index * CACHE_LINE_SIZE_IN_BYTES).ptr;
             }
         }
 
-        public readonly ref T this[State* state, uint index] {
+        public readonly ref T this[SafePtr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *(T*)((byte*)this.GetUnsafePtr(in state->allocator) + index * CACHE_LINE_SIZE_IN_BYTES);
+                return ref *(T*)((SafePtr<byte>)this.GetUnsafePtr(in state.ptr->allocator) + index * CACHE_LINE_SIZE_IN_BYTES).ptr;
             }
         }
 

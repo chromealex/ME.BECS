@@ -64,7 +64,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public ListAuto(in Ent ent, void* data, uint length) {
+        public ListAuto(in Ent ent, SafePtr data, uint length) {
 
             this = default;
             this.arr = new MemArrayAuto<T>(in ent, data, length);
@@ -125,7 +125,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly unsafe void* GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(allocator);
@@ -133,10 +133,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly unsafe void* GetUnsafePtr() {
+        public readonly SafePtr GetUnsafePtr() {
 
             E.IS_CREATED(this);
-            return this.arr.GetUnsafePtr(this.ent.World.state->allocator);
+            return this.arr.GetUnsafePtr(this.ent.World.state.ptr->allocator);
 
         }
 
@@ -190,7 +190,7 @@ namespace ME.BECS {
             }
         }
 
-        public ref T this[State* state, uint index] {
+        public ref T this[SafePtr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Count);
@@ -222,7 +222,7 @@ namespace ME.BECS {
             this.EnsureCapacity(this.ent, this.Count);
 
             var state = this.ent.World.state;
-            this.arr[in state->allocator, this.Count - 1u] = obj;
+            this.arr[in state.ptr->allocator, this.Count - 1u] = obj;
             return this.Count - 1u;
 
         }
@@ -252,9 +252,9 @@ namespace ME.BECS {
             var state = this.ent.World.state;
             for (uint i = 0, cnt = this.Count; i < cnt; ++i) {
 
-                if (obj.Equals(this.arr[in state->allocator, i]) == true) {
+                if (obj.Equals(this.arr[in state.ptr->allocator, i]) == true) {
 
-                    this.RemoveAt(ref state->allocator, i);
+                    this.RemoveAt(ref state.ptr->allocator, i);
                     return true;
 
                 }
@@ -272,9 +272,9 @@ namespace ME.BECS {
             var state = this.ent.World.state;
             for (uint i = 0, cnt = this.Count; i < cnt; ++i) {
 
-                if (obj.Equals(this.arr[in state->allocator, i]) == true) {
+                if (obj.Equals(this.arr[in state.ptr->allocator, i]) == true) {
 
-                    this.RemoveAtFast(in state->allocator, i);
+                    this.RemoveAtFast(in state.ptr->allocator, i);
                     return true;
 
                 }
@@ -346,12 +346,12 @@ namespace ME.BECS {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = sizeof(T);
                 if (index < this.Count) {
-                    state->allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
+                    state.ptr->allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
                 }
 
                 if (this.arr.arrPtr == collection.arr.arrPtr) {
-                    state->allocator.MemMove(this.arr.arrPtr, index * size, this.arr.arrPtr, 0, index * size);
-                    state->allocator.MemMove(this.arr.arrPtr, (index * 2) * size, this.arr.arrPtr, (index + count) * size, (this.Count - index) * size);
+                    state.ptr->allocator.MemMove(this.arr.arrPtr, index * size, this.arr.arrPtr, 0, index * size);
+                    state.ptr->allocator.MemMove(this.arr.arrPtr, (index * 2) * size, this.arr.arrPtr, (index + count) * size, (this.Count - index) * size);
                 } else {
                     collection.CopyTo(this.arr.arrPtr, srcOffset, index, count);
                 }
@@ -370,8 +370,8 @@ namespace ME.BECS {
             var count = (uint)collection.Length;
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                _memcpy(collection.Ptr, (byte*)this.arr.GetUnsafePtr(in this.ent.World.state->allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)collection.Ptr, (SafePtr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -385,8 +385,8 @@ namespace ME.BECS {
             var count = (uint)collection.Length;
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                _memcpy(collection.GetUnsafeReadOnlyPtr(), (byte*)this.arr.GetUnsafePtr(in this.ent.World.state->allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr(), (SafePtr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -400,8 +400,8 @@ namespace ME.BECS {
             var count = (uint)collectionLength;
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                _memcpy((byte*)collection.GetUnsafeReadOnlyPtr() + offset * TSize<T>.sizeInt, (byte*)this.arr.GetUnsafePtr(in this.ent.World.state->allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr() + offset * TSize<T>.sizeInt, this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
                 this.Count += count;
             }
         }
@@ -415,8 +415,8 @@ namespace ME.BECS {
             var count = (uint)collectionLength;
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                _memcpy((byte*)collection.Ptr + offset * TSize<T>.sizeInt, (byte*)this.arr.GetUnsafePtr(in this.ent.World.state->allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)((byte*)collection.Ptr + offset * TSize<T>.sizeInt), this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
                 this.Count += count;
             }
         }
@@ -430,8 +430,8 @@ namespace ME.BECS {
             var count = (uint)collection.Length;
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                _memcpy(collection.GetUnsafeReadOnlyPtr(), (byte*)this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr(), this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
                 this.Count += count;
             }
         }
@@ -445,8 +445,8 @@ namespace ME.BECS {
             var count = collection.Count;
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
-                var size = sizeof(T);
-                _memcpy(collection.GetUnsafePtr(), (byte*)this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy(collection.GetUnsafePtr(), this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
                 this.Count += count;
             }
         }
@@ -457,7 +457,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
 
             var size = TSize<T>.size;
-            this.ent.World.state->allocator.MemCopy(arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
+            this.ent.World.state.ptr->allocator.MemCopy(arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
             
         }
 

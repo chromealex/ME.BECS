@@ -28,7 +28,7 @@ namespace ME.BECS {
         public bool isCreated => Worlds.IsAlive(this.id);
         public ushort id;
         [NativeDisableUnsafePtrRestriction]
-        public State* state;
+        public SafePtr<State> state;
         public string Name => Worlds.GetWorldName(this.id).ToString();
 
         [INLINE(256)]
@@ -43,8 +43,8 @@ namespace ME.BECS {
             var world = new World() {
                 state = statePtr,
             };
-            statePtr->Initialize(statePtr, properties.stateProperties);
-            world.state->worldState = WorldState.Initialized;
+            statePtr.ptr->Initialize(statePtr, properties.stateProperties);
+            world.state.ptr->worldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name);
@@ -61,7 +61,7 @@ namespace ME.BECS {
             var world = new World() {
                 state = statePtr,
             };
-            world.state->worldState = WorldState.Initialized;
+            world.state.ptr->worldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name, raiseCallback: false);
@@ -129,7 +129,7 @@ namespace ME.BECS {
 
             dependsOn = this.UnassignRootSystemGroup(dependsOn);
             Worlds.ReleaseWorld(this);
-            this.state->Dispose();
+            this.state.ptr->Dispose();
             _free(ref this.state);
             this = default;
 

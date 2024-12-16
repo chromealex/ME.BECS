@@ -70,7 +70,7 @@ namespace ME.BECS.Tests {
                     
                 }
 
-                Assert.AreEqual(amount, world.state->entities.EntitiesCount);
+                Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             }
 
         }
@@ -109,7 +109,7 @@ namespace ME.BECS.Tests {
                 JobUtils.RunScheduled();
                 job.Complete();
 
-                Assert.AreEqual(amount, world.state->entities.EntitiesCount);
+                Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             }
 
         }
@@ -131,7 +131,7 @@ namespace ME.BECS.Tests {
                 JobUtils.RunScheduled();
                 job.Complete();
 
-                Assert.AreEqual(amount, world.state->entities.EntitiesCount);
+                Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             }
 
         }*/
@@ -162,7 +162,7 @@ namespace ME.BECS.Tests {
                 CreateHugeAmountBurstMethod(ref world, amount);
                 ME.BECS.Batches.Apply(world.state);
                 
-                Assert.AreEqual(amount, world.state->entities.EntitiesCount);
+                Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
                 
                 world.Dispose();
 
@@ -288,15 +288,15 @@ namespace ME.BECS.Tests {
                 CreateHugeAmountBurstMethod(ref world, amount);
                 ME.BECS.Batches.Apply(world.state);
             }
-            Assert.AreEqual(amount, world.state->entities.EntitiesCount);
-            Assert.AreEqual(0, world.state->archetypes.list[world.state->allocator, 0].entitiesList.Count);
+            Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
 
             {
                 DestroyHugeAmountBurstMethod(ref world, amount);
                 ME.BECS.Batches.Apply(world.state);
             }
-            Assert.AreEqual(0, world.state->entities.EntitiesCount);
-            Assert.AreEqual(amount, world.state->entities.FreeCount);
+            Assert.AreEqual(0, world.state.ptr->entities.EntitiesCount);
+            Assert.AreEqual(amount, world.state.ptr->entities.FreeCount);
             
             world.Dispose();
             
@@ -314,8 +314,8 @@ namespace ME.BECS.Tests {
                 CreateHugeAmountBurstMethod(ref world, amount);
                 ME.BECS.Batches.Apply(world.state);
             }
-            Assert.AreEqual(amount, world.state->entities.EntitiesCount);
-            Assert.AreEqual(0, world.state->archetypes.list[world.state->allocator, 0].entitiesList.Count);
+            Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
             
             {
                 var job = new DestroyEntitiesJob() {
@@ -325,8 +325,8 @@ namespace ME.BECS.Tests {
                 JobUtils.RunScheduled();
                 job.Complete();
             }
-            Assert.AreEqual(0, world.state->entities.EntitiesCount);
-            Assert.AreEqual(amount, world.state->entities.FreeCount);
+            Assert.AreEqual(0, world.state.ptr->entities.EntitiesCount);
+            Assert.AreEqual(amount, world.state.ptr->entities.FreeCount);
             
             world.Dispose();
             

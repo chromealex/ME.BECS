@@ -25,16 +25,14 @@
 
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = MemPtr.SIZE)]
+    [StructLayout(LayoutKind.Sequential)]
     public readonly struct MemPtr : System.IEquatable<MemPtr> {
 
         public const int SIZE = 8;
 
         public static readonly MemPtr Invalid = new MemPtr(0u, 0u);
         
-        [FieldOffset(0)]
         public readonly uint zoneId;
-        [FieldOffset(4)]
         public readonly uint offset;
 
         [INLINE(256)]
@@ -80,9 +78,9 @@
 
         public override string ToString() => $"zoneId: {this.zoneId}, offset: {this.offset}";
 
-        public unsafe uint GetSizeInBytes(State* state) {
+        public unsafe uint GetSizeInBytes(SafePtr<State> state) {
             if (this.IsValid() == false) return TSize<MemPtr>.size;
-            return state->allocator.GetSize(in this);
+            return state.ptr->allocator.GetSize(in this);
         }
 
     }
@@ -107,9 +105,9 @@
         }
 
         [INLINE(256)]
-        public readonly T* AsPtr<T>(in MemoryAllocator allocator, uint offset = 0u) where T : unmanaged {
+        public readonly SafePtr<T> AsPtr<T>(in MemoryAllocator allocator, uint offset = 0u) where T : unmanaged {
 
-            return (T*)allocator.GetUnsafePtr(this.ptr, offset);
+            return allocator.GetUnsafePtr(this.ptr, offset);
 
         }
 
@@ -122,7 +120,7 @@
         }
 
         [INLINE(256)]
-        public void Set(ref MemoryAllocator allocator, void* data, uint dataSize) {
+        public void Set(ref MemoryAllocator allocator, SafePtr data, uint dataSize) {
 
             this.ptr = allocator.Alloc(dataSize, out var ptr);
             if (data != null) {
@@ -163,9 +161,9 @@
         }
 
         [INLINE(256)]
-        public readonly T* AsPtr(in MemoryAllocator allocator, uint offset = 0u) {
+        public readonly SafePtr<T> AsPtr(in MemoryAllocator allocator, uint offset = 0u) {
 
-            return (T*)allocator.GetUnsafePtr(this.ptr, offset);
+            return allocator.GetUnsafePtr(this.ptr, offset);
 
         }
 
@@ -178,7 +176,7 @@
         }
 
         [INLINE(256)]
-        public void Set(ref MemoryAllocator allocator, void* data, uint dataSize) {
+        public void Set(ref MemoryAllocator allocator, SafePtr data, uint dataSize) {
 
             this.ptr = allocator.Alloc(dataSize, out var ptr);
             if (data != null) {

@@ -110,9 +110,9 @@ namespace ME.BECS.Transforms {
                     queue.RemoveAtSwapBack(0);
                     cnt = entData.children.Count;
                     if (cnt > 0u) {
-                        var children = (Ent*)entData.children.GetUnsafePtr(in entData.ent.World.state->allocator);
+                        var children = (SafePtr<Ent>)entData.children.GetUnsafePtr(in entData.ent.World.state.ptr->allocator);
                         for (uint i = 0; i < cnt; ++i) {
-                            var child = *(children + i);
+                            var child = *(children + i).ptr;
                             var tr = child.GetAspect<TransformAspect>();
                             CalculateMatrix(in entData, in tr);
                             queue.Add(tr);

@@ -16,7 +16,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents<T0,T1,T2,T3,T4,T5,T6,T7> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase where T6 : unmanaged, IComponentBase where T7 : unmanaged, IComponentBase {
             builder.With<T0>(); builder.With<T1>(); builder.With<T2>(); builder.With<T3>(); builder.With<T4>(); builder.With<T5>(); builder.With<T6>(); builder.With<T7>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in builder.commandBuffer, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -27,12 +27,12 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobForComponents<T0,T1,T2,T3,T4,T5,T6,T7> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase where T6 : unmanaged, IComponentBase where T7 : unmanaged, IComponentBase {
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in job);
         }
 
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobForComponents<T0,T1,T2,T3,T4,T5,T6,T7> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase where T6 : unmanaged, IComponentBase where T7 : unmanaged, IComponentBase {
-            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -68,16 +68,16 @@ namespace ME.BECS.Jobs {
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(_address(ref jobData), buffer, unsafeMode, scheduleMode);
+            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);
             var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? JobReflectionUnsafeData<T>.data.Data : JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, T0,T1,T2,T3,T4,T5,T6,T7>() {
                 scheduleMode = scheduleMode,
                 jobData = jobData,
                 buffer = buffer,
-                c0 = buffer->state->components.GetRW<T0>(buffer->state, buffer->worldId),c1 = buffer->state->components.GetRW<T1>(buffer->state, buffer->worldId),c2 = buffer->state->components.GetRW<T2>(buffer->state, buffer->worldId),c3 = buffer->state->components.GetRW<T3>(buffer->state, buffer->worldId),c4 = buffer->state->components.GetRW<T4>(buffer->state, buffer->worldId),c5 = buffer->state->components.GetRW<T5>(buffer->state, buffer->worldId),c6 = buffer->state->components.GetRW<T6>(buffer->state, buffer->worldId),c7 = buffer->state->components.GetRW<T7>(buffer->state, buffer->worldId),
+                c0 = buffer->state.ptr->components.GetRW<T0>(buffer->state, buffer->worldId),c1 = buffer->state.ptr->components.GetRW<T1>(buffer->state, buffer->worldId),c2 = buffer->state.ptr->components.GetRW<T2>(buffer->state, buffer->worldId),c3 = buffer->state.ptr->components.GetRW<T3>(buffer->state, buffer->worldId),c4 = buffer->state.ptr->components.GetRW<T4>(buffer->state, buffer->worldId),c5 = buffer->state.ptr->components.GetRW<T5>(buffer->state, buffer->worldId),c6 = buffer->state.ptr->components.GetRW<T6>(buffer->state, buffer->worldId),c7 = buffer->state.ptr->components.GetRW<T7>(buffer->state, buffer->worldId),
             };
-            data = _address(ref dataVal);
+            data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #endif
             

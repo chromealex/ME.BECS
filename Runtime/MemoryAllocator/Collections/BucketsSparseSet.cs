@@ -14,12 +14,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T GetValue(State* state, uint id) {
+        public ref T GetValue(SafePtr<State> state, uint id) {
             return ref this.storage->Get(state, id);
         }
 
         [INLINE(256)]
-        public ref readonly T ReadValue(State* state, uint id) {
+        public ref readonly T ReadValue(SafePtr<State> state, uint id) {
             return ref this.storage->Read(state, id);
         }
 
@@ -86,25 +86,25 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T Get(State* state, uint id, out bool isNew) {
+        public ref T Get(SafePtr<State> state, uint id, out bool isNew) {
             
-            ref var sparseSet = ref this.GetBucket(ref state->allocator, id, out uint offset);
+            ref var sparseSet = ref this.GetBucket(ref state.ptr->allocator, id, out uint offset);
             return ref sparseSet.Get(state, id - offset, out isNew);
 
         }
 
         [INLINE(256)]
-        public ref T Get(State* state, uint id) {
+        public ref T Get(SafePtr<State> state, uint id) {
             
-            ref var sparseSet = ref this.GetBucket(ref state->allocator, id, out uint offset);
+            ref var sparseSet = ref this.GetBucket(ref state.ptr->allocator, id, out uint offset);
             return ref sparseSet.Get(state, id - offset);
 
         }
 
         [INLINE(256)]
-        public ref readonly T Read(State* state, uint id) {
+        public ref readonly T Read(SafePtr<State> state, uint id) {
             
-            var sparseSet = this.GetBucketRead(in state->allocator, id, out uint offset);
+            var sparseSet = this.GetBucketRead(in state.ptr->allocator, id, out uint offset);
             if (sparseSet.isCreated == false) return ref StaticTypes<T>.defaultValue;
             return ref sparseSet.Read(state, id - offset);
 

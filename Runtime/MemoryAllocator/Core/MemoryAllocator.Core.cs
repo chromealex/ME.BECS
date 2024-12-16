@@ -14,9 +14,7 @@ namespace ME.BECS {
         /// Constructors
         /// 
         [INLINE(256)]
-        public MemoryAllocator Initialize(long initialSize, long maxSize = -1L) {
-
-            if (maxSize < initialSize) maxSize = initialSize;
+        public MemoryAllocator Initialize(long initialSize) {
 
             this.initialSize = (int)math.max(initialSize, MemoryAllocator.MIN_ZONE_SIZE);
             this.AddZone(MemoryAllocator.ZmCreateZone(this.initialSize));
@@ -31,7 +29,7 @@ namespace ME.BECS {
             this.FreeZones();
             
             if (this.zonesList != null) {
-                _free(this.zonesList, Constants.ALLOCATOR_PERSISTENT);
+                _free((SafePtr)this.zonesList, Constants.ALLOCATOR_PERSISTENT);
                 this.zonesList = null;
             }
 
@@ -86,11 +84,11 @@ namespace ME.BECS {
             if (this.zonesListCapacity <= this.zonesListCount) {
                 
                 var capacity = math.max(MemoryAllocator.MIN_ZONES_LIST_CAPACITY, this.zonesListCapacity * 2u);
-                var list = (MemZone**)_make(capacity * (uint)sizeof(MemZone*), TAlign<System.IntPtr>.alignInt, Constants.ALLOCATOR_PERSISTENT);
+                var list = (MemZone**)_make(capacity * (uint)sizeof(MemZone*), TAlign<System.IntPtr>.alignInt, Constants.ALLOCATOR_PERSISTENT).ptr;
 
                 if (this.zonesList != null) {
-                    _memcpy(this.zonesList, list, (uint)sizeof(MemZone*) * this.zonesListCount);
-                    _free(this.zonesList, Constants.ALLOCATOR_PERSISTENT);
+                    _memcpy((SafePtr)this.zonesList, (SafePtr)list, (uint)sizeof(MemZone*) * this.zonesListCount);
+                    _free((SafePtr)this.zonesList, Constants.ALLOCATOR_PERSISTENT);
                 }
                 
                 this.zonesList = list;
@@ -124,14 +122,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public static MemZone* ZmCreateZoneEmpty(int size) {
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = (MemZone*)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT);
+            var zone = ((SafePtr<MemZone>)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT)).ptr;
             return zone;
         }
 
         [INLINE(256)]
         public static MemZone* ZmCreateZone(int size) {
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = (MemZone*)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT);
+            var zone = ((SafePtr<MemZone>)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT)).ptr;
             zone->size = size;
             MemoryAllocator.ZmClearZone(zone);
             return zone;
@@ -144,7 +142,7 @@ namespace ME.BECS {
             var newZone = MemoryAllocator.ZmCreateZone(newSize);
             var extra = newZone->size - zone->size;
 
-            _memcpy(zone, newZone, zone->size);
+            _memcpy((SafePtr)zone, (SafePtr)newZone, zone->size);
 
             newZone->size = zone->size + extra;
 
@@ -182,7 +180,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void ZmFreeZone(MemZone* zone) {
-            _free(zone, Constants.ALLOCATOR_PERSISTENT);
+            _free((SafePtr)zone, Constants.ALLOCATOR_PERSISTENT);
         }
 
         [INLINE(256)]

@@ -8,12 +8,12 @@ namespace ME.BECS {
         public struct Enumerator {
 
             private uint count;
-            private readonly Entry* entries;
+            private readonly SafePtr<Entry> entries;
             private uint index;
 
             [INLINE(256)]
-            internal Enumerator(in EquatableDictionaryAuto<TKey, TValue> dictionary, State* state) {
-                this.entries = (Entry*)dictionary.entries.GetUnsafePtrCached(in state->allocator);
+            internal Enumerator(in EquatableDictionaryAuto<TKey, TValue> dictionary, SafePtr<State> state) {
+                this.entries = (SafePtr<Entry>)dictionary.entries.GetUnsafePtrCached(in state.ptr->allocator);
                 this.count = dictionary.count;
                 this.index = 0u;
             }
@@ -32,7 +32,7 @@ namespace ME.BECS {
                 return false;
             }
 
-            public ref Entry Current => ref *(this.entries + this.index - 1u);
+            public ref Entry Current => ref *(this.entries + this.index - 1u).ptr;
 
         }
 

@@ -392,7 +392,7 @@ namespace ME.BECS.Editor {
                 //this.DrawComponents(v.node, v.components, center, offset);
                 this.DrawBox(v.node, v.visualElement, center, offset);
                 //this.DrawConnections(v.node, v.nodes, center, offset);
-                var arch = world.state->archetypes.list[in world.state->allocator, v.node.id];
+                var arch = world.state.ptr->archetypes.list[in world.state.ptr->allocator, v.node.id];
                 v.visualElementEntitiesCount.text = arch.entitiesList.Count.ToString();
                 var wb = new StyleLength(v.node.radius);
                 v.visualElementEntitiesCount.style.borderBottomLeftRadius = wb;
@@ -580,7 +580,7 @@ namespace ME.BECS.Editor {
             
             queryBuilder.WaitForAllJobs();
 
-            var list = queryBuilder.queryData->archetypesBits.GetTrueBitsTemp();
+            var list = queryBuilder.queryData.ptr->archetypesBits.GetTrueBitsTemp();
             for (int i = 0; i < list.Length; ++i) {
                 var archIdx = list[i];
                 this.highlightedArchetypes.Add(archIdx);
@@ -599,13 +599,13 @@ namespace ME.BECS.Editor {
             var rect = container.parent.worldBound;
             var center = rect.center + this.offset;
 
-            var count = world.state->archetypes.allArchetypes.Count;
+            var count = world.state.ptr->archetypes.allArchetypes.Count;
             if (count != this.cacheNodes.Count) {
 
                 this.tmpList.Clear();
-                var e = world.state->archetypes.allArchetypes.GetEnumerator();
+                var e = world.state.ptr->archetypes.allArchetypes.GetEnumerator();
                 while (e.MoveNext() == true) {
-                    var archId = e.GetCurrent(in world.state->allocator);
+                    var archId = e.GetCurrent(in world.state.ptr->allocator);
                     if (this.cacheNodes.ContainsKey(archId) == false) {
 
                         this.tmpList.Add(archId);
@@ -663,7 +663,7 @@ namespace ME.BECS.Editor {
             this.graphElement.Add(box);
             box.AddToClassList("node");
             Button visualElementEntitiesCount = null;
-            var arch = world.state->archetypes.list[world.state->allocator, node.id];
+            var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, node.id];
             /*var components = new scg::List<Label>();
             {
                 foreach (var cId in arch.components) {
@@ -898,11 +898,11 @@ namespace ME.BECS.Editor {
             var world = this.world;
             if (world.isCreated == false) return;
             
-            this.entitiesCount.text = world.state->entities.EntitiesCount.ToString();
-            this.archetypesCount.text = world.state->archetypes.Count.ToString();
-            var usedBytes = world.state->allocator.GetUsedSize();
+            this.entitiesCount.text = world.state.ptr->entities.EntitiesCount.ToString();
+            this.archetypesCount.text = world.state.ptr->archetypes.Count.ToString();
+            var usedBytes = world.state.ptr->allocator.GetUsedSize();
             this.memoryUsed.text = EditorUtils.BytesToString(usedBytes);
-            var reservedBytes = world.state->allocator.GetReservedSize();
+            var reservedBytes = world.state.ptr->allocator.GetReservedSize();
             this.memoryReserved.text = EditorUtils.BytesToString(reservedBytes);
 
             if (this.graph.lastQueryStopwatch != null) this.stopwatchValue.text = (this.graph.lastQueryStopwatch.ElapsedTicks / 10_000d).ToString("0.00") + "ms";
@@ -911,7 +911,7 @@ namespace ME.BECS.Editor {
 
                 var entitiesCount = 0u;
                 foreach (var archIdx in this.graph.highlightedArchetypes) {
-                    ref var arch = ref world.state->archetypes.list[in world.state->allocator, archIdx];
+                    ref var arch = ref world.state.ptr->archetypes.list[in world.state.ptr->allocator, archIdx];
                     entitiesCount += arch.entitiesList.Count;
                 }
 
@@ -1188,9 +1188,9 @@ namespace ME.BECS.Editor {
             {
                 int maxEntities = 10;
                 this.tempEntitiesList.Clear();
-                if (world.state->archetypes.Count == 0u) return;
-                var arch = world.state->archetypes.list[world.state->allocator, node.id];
-                var items = arch.entitiesList.ToManagedArray(in world.state->allocator).Where(x => {
+                if (world.state.ptr->archetypes.Count == 0u) return;
+                var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, node.id];
+                var items = arch.entitiesList.ToManagedArray(in world.state.ptr->allocator).Where(x => {
                     if (this.searchItems.Length == 0) return true;
                     var s = x.ToString();
                     foreach (var item in this.searchItems) {
@@ -1263,7 +1263,7 @@ namespace ME.BECS.Editor {
                 */
                 
                 /*this.tempEntitiesList.Clear();
-                var arch = world.state->archetypes.list[world.state->allocator, node.id];
+                var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, node.id];
                 var e = arch.entities.GetEnumerator(world);
                 while (e.MoveNext() == true) {
                     this.tempEntitiesList.Add(e.Current);
@@ -1354,7 +1354,7 @@ namespace ME.BECS.Editor {
                 componentsList.AddToClassList("archetype-components-list");
                 components.Add(componentsList);
                 {
-                    var arch = world.state->archetypes.list[world.state->allocator, node.id];
+                    var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, node.id];
                     var e = arch.components.GetEnumerator(world);
                     while (e.MoveNext() == true) {
                         var cId = e.Current;
@@ -1374,7 +1374,7 @@ namespace ME.BECS.Editor {
                 entities.AddToClassList("sub-container");
                 componentsContainer.Add(entities);
 
-                var arch = world.state->archetypes.list[world.state->allocator, node.id];
+                var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, node.id];
                 var componentsLabel = new Label($"Entities ({arch.entitiesList.Count})");
                 componentsLabel.AddToClassList("archetype-entities-label");
                 entities.Add(componentsLabel);
@@ -1597,10 +1597,10 @@ namespace ME.BECS.Editor {
             if (this.world.isCreated == true) {
 
                 var world = this.world;
-                var e = world.state->archetypes.allArchetypes.GetEnumerator();
+                var e = world.state.ptr->archetypes.allArchetypes.GetEnumerator();
                 while (e.MoveNext() == true) {
-                    var archIdx = e.GetCurrent(in world.state->allocator);
-                    var arch = world.state->archetypes.list[world.state->allocator, archIdx];
+                    var archIdx = e.GetCurrent(in world.state.ptr->allocator);
+                    var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archIdx];
                     if (graph.idToNode.ContainsKey(archIdx) == true) {
                         continue;
                     }
@@ -1613,9 +1613,9 @@ namespace ME.BECS.Editor {
                     graph.AddNode(node);
                 }
                 
-                /*foreach (var archIdx in world.state->archetypes.allArchetypes) {
+                /*foreach (var archIdx in world.state.ptr->archetypes.allArchetypes) {
 
-                    var arch = world.state->archetypes.list[archIdx];
+                    var arch = world.state.ptr->archetypes.list[archIdx];
                     foreach (var edge in arch.addEdges) {
 
                         var toIdx = edge.Value;
@@ -1639,10 +1639,10 @@ namespace ME.BECS.Editor {
                 var world = this.world;
                 graph = new GGraph();
 
-                var e = world.state->archetypes.allArchetypes.GetEnumerator();
+                var e = world.state.ptr->archetypes.allArchetypes.GetEnumerator();
                 while (e.MoveNext() == true) {
-                    var archIdx = e.GetCurrent(in world.state->allocator);
-                    var arch = world.state->archetypes.list[world.state->allocator, archIdx];
+                    var archIdx = e.GetCurrent(in world.state.ptr->allocator);
+                    var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archIdx];
                     var node = new GNode() {
                         id = archIdx,
                         level = arch.componentsCount,
@@ -1651,11 +1651,11 @@ namespace ME.BECS.Editor {
                     graph.AddNode(node);
                 }
 
-                /*e = world.state->archetypes.allArchetypes.GetEnumerator();
+                /*e = world.state.ptr->archetypes.allArchetypes.GetEnumerator();
                 while (e.MoveNext() == true) {
                     
-                    var archIdx = e.GetCurrent(in world.state->allocator);
-                    var arch = world.state->archetypes.list[world.state, archIdx];
+                    var archIdx = e.GetCurrent(in world.state.ptr->allocator);
+                    var arch = world.state.ptr->archetypes.list[world.state, archIdx];
                     foreach (var edge in arch.addEdges) {
 
                         var toIdx = edge.Value;

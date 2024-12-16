@@ -87,7 +87,7 @@ namespace ME.BECS.Network {
 
         public TransportStatus Status => this.network.networkTransport.Status;
         
-        public uint LocalPlayerId  => this.network.data->localPlayerId;
+        public uint LocalPlayerId  => this.network.data.ptr->localPlayerId;
 
         public override void OnAwake(ref World world) {
             this.network = new UnsafeNetworkModule(in world, this.properties);
@@ -156,11 +156,11 @@ namespace ME.BECS.Network {
         }
 
         public JobHandle Connect(JobHandle dependsOn) {
-            return this.network.networkTransport.Connect(in this.network.data->connectedWorld, this, dependsOn);
+            return this.network.networkTransport.Connect(in this.network.data.ptr->connectedWorld, this, dependsOn);
         }
 
-        public State* GetStartFrameState() {
-            return this.network.data->startFrameState;
+        public SafePtr<State> GetStartFrameState() {
+            return this.network.data.ptr->startFrameState;
         }
 
         public INetworkTransport GetTransport() {
@@ -176,7 +176,7 @@ namespace ME.BECS.Network {
         }
 
         public ulong GetCurrentTick() {
-            return this.network.data->connectedWorld.state->tick;
+            return this.network.data.ptr->connectedWorld.state.ptr->tick;
         }
 
     }

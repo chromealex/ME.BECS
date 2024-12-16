@@ -7,12 +7,12 @@ namespace ME.BECS {
 
         public struct Enumerator : System.Collections.Generic.IEnumerator<T> {
 
-            private State* state;
+            private SafePtr<State> state;
             private Queue<T> q;
             private int index; // -1 = not started, -2 = ended/disposed
             private T currentElement;
 
-            internal Enumerator(Queue<T> q, State* state) {
+            internal Enumerator(Queue<T> q, SafePtr<State> state) {
                 this.q = q;
                 this.index = -1;
                 this.currentElement = default(T);
@@ -37,7 +37,7 @@ namespace ME.BECS {
                     return false;
                 }
 
-                this.currentElement = this.q.GetElement(in this.state->allocator, (uint)this.index);
+                this.currentElement = this.q.GetElement(in this.state.ptr->allocator, (uint)this.index);
                 return true;
             }
 
@@ -89,7 +89,7 @@ namespace ME.BECS {
             return new Enumerator(this, world.state);
         }
 
-        public readonly Enumerator GetEnumerator(State* state) {
+        public readonly Enumerator GetEnumerator(SafePtr<State> state) {
             return new Enumerator(this, state);
         }
 

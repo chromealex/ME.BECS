@@ -14,7 +14,7 @@ namespace ME.BECS.NativeCollections {
         private static readonly uint CACHE_LINE_SIZE = math.max(JobUtils.CacheLineSize / TSize<T>.size, 1u);
         
         [NativeDisableUnsafePtrRestriction]
-        public Unity.Collections.LowLevel.Unsafe.UnsafeList<T>* lists;
+        public SafePtr<Unity.Collections.LowLevel.Unsafe.UnsafeList<T>> lists;
         private AllocatorManager.AllocatorHandle allocator;
 
         public bool isCreated => this.lists != null;
@@ -26,8 +26,8 @@ namespace ME.BECS.NativeCollections {
 
             this.allocator = allocator;
             var size = TSize<Unity.Collections.LowLevel.Unsafe.UnsafeList<T>>.size;
-            this.lists = AllocatorManager.Allocate<Unity.Collections.LowLevel.Unsafe.UnsafeList<T>>(allocator, (int)(JobUtils.ThreadsCount * size * CACHE_LINE_SIZE));
-            for (int i = 0; i < this.Length; ++i) {
+            this.lists = _makeArray<Unity.Collections.LowLevel.Unsafe.UnsafeList<T>>(JobUtils.ThreadsCount * size * CACHE_LINE_SIZE, allocator.ToAllocator);
+            for (uint i = 0u; i < this.Length; ++i) {
                 this.lists[i * CACHE_LINE_SIZE] = new UnsafeList<T>(capacity, allocator);
             }
             
@@ -36,10 +36,10 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Dispose() {
             
-            for (int i = 0; i < this.Length; ++i) {
+            for (uint i = 0u; i < this.Length; ++i) {
                 this.lists[i * CACHE_LINE_SIZE].Dispose();
             }
-            AllocatorManager.Free(this.allocator, this.lists);
+            _free(this.lists, this.allocator.ToAllocator);
             
         }
 
@@ -47,9 +47,9 @@ namespace ME.BECS.NativeCollections {
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle jobHandle) {
 
             var tempDeps = new NativeArray<JobHandle>((int)this.Length, Allocator.Temp);
-            for (int i = 0; i < this.Length; ++i) {
+            for (uint i = 0u; i < this.Length; ++i) {
                 var copy = this.lists[i * CACHE_LINE_SIZE];
-                tempDeps[i] = copy.Dispose(jobHandle);
+                tempDeps[(int)i] = copy.Dispose(jobHandle);
             }
             jobHandle = new DisposeWithAllocatorPtrJob() {
                 allocator = this.allocator,
@@ -63,7 +63,7 @@ namespace ME.BECS.NativeCollections {
             [INLINE(256)]
             get {
                 var count = 0;
-                for (int i = 0; i < this.Length; ++i) {
+                for (uint i = 0u; i < this.Length; ++i) {
                     count += this.lists[i * CACHE_LINE_SIZE].Length;
                 }
 
@@ -74,7 +74,7 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Add(in T item) {
 
-            var threadItem = JobsUtility.ThreadIndex;
+            var threadItem = (uint)JobsUtility.ThreadIndex;
             ref var arr = ref this.lists[threadItem * CACHE_LINE_SIZE];
             arr.Add(item);
 
@@ -84,15 +84,15 @@ namespace ME.BECS.NativeCollections {
         public UnsafeList<T> ToList(Allocator allocator) {
 
             var count = 0;
-            for (int i = 0; i < this.Length; ++i) {
+            for (uint i = 0u; i < this.Length; ++i) {
                 count += this.lists[i * CACHE_LINE_SIZE].Length;
             }
             var targetList = new UnsafeList<T>(count, allocator);
             targetList.Length = count;
             var offset = 0;
-            for (int i = 0; i < this.Length; ++i) {
+            for (uint i = 0u; i < this.Length; ++i) {
                 var list = this.lists[i * CACHE_LINE_SIZE];
-                _memcpy(list.Ptr, targetList.Ptr + offset, TSize<T>.size * list.Length);
+                _memcpy((SafePtr)list.Ptr, (SafePtr)(targetList.Ptr + offset), TSize<T>.size * list.Length);
                 offset += list.Length;
             }
 
@@ -103,7 +103,7 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Clear() {
             
-            for (int i = 0; i < this.Length; ++i) {
+            for (uint i = 0u; i < this.Length; ++i) {
                 var item = this.lists[i * CACHE_LINE_SIZE];
                 item.Clear();
                 this.lists[i * CACHE_LINE_SIZE] = item;

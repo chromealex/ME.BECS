@@ -45,16 +45,16 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
-        public static Components Create(State* state, in StateProperties stateProperties) {
+        public static Components Create(SafePtr<State> state, in StateProperties stateProperties) {
 
             var components = new Components() {
-                items = new MemArray<MemAllocatorPtr>(ref state->allocator, StaticTypes.counter + 1u),
+                items = new MemArray<MemAllocatorPtr>(ref state.ptr->allocator, StaticTypes.counter + 1u),
             }.InitializeSharedComponents(state, stateProperties);
             
             for (uint i = 1u; i < components.items.Length; ++i) {
-                ref var ptr = ref components.items[in state->allocator, i];
+                ref var ptr = ref components.items[in state.ptr->allocator, i];
                 var dataSize = StaticTypes.sizes.Get(i);
-                ptr.Set(ref state->allocator, new DataDenseSet(state, dataSize, stateProperties.entitiesCapacity));
+                ptr.Set(ref state.ptr->allocator, new DataDenseSet(state, dataSize, stateProperties.entitiesCapacity));
             }
 
             return components;
@@ -66,12 +66,12 @@ namespace ME.BECS {
             this.items.BurstMode(in allocator, state);
             for (uint i = 1u; i < this.items.Length; ++i) {
                 ref var ptr = ref this.items[in allocator, i];
-                ptr.AsPtr<DataDenseSet>(in allocator)->BurstMode(in allocator, state);
+                ptr.AsPtr<DataDenseSet>(in allocator).ptr->BurstMode(in allocator, state);
             }
         }
 
         [INLINE(256)]
-        public RefRW<T> GetRW<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefRW<T> GetRW<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRW<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -80,7 +80,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRO<T> GetRO<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefRO<T> GetRO<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRO<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -88,12 +88,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRWSafe<T> GetRWSafe<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefRWSafe<T> GetRWSafe<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRWSafe<T>(state, worldId);
         }
 
         [INLINE(256)]
-        public RefROSafe<T> GetROSafe<T>(State* state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefROSafe<T> GetROSafe<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefROSafe<T>(state, worldId);
         }
 

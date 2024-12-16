@@ -41,7 +41,7 @@ namespace ME.BECS {
 
             builder.WaitForAllJobs();
             new WithAnyJob() {
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
                 typeId1 = typeId1,
                 typeId2 = typeId2,
                 typeId3 = typeId3,
@@ -58,7 +58,7 @@ namespace ME.BECS {
             new WithJob() {
                 typeId = typeId,
                 queryData = builder.queryData,
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
             }.Execute();
 
         }
@@ -69,7 +69,7 @@ namespace ME.BECS {
             return new WithArrJob() {
                 typeIdArr = typeIdArr,
                 queryData = builder.queryData,
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
             }.Schedule(builder.builderDependsOn);
 
         }
@@ -81,13 +81,13 @@ namespace ME.BECS {
             new WithoutJob() {
                 typeId = typeId,
                 queryData = builder.queryData,
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
             }.Execute();
 
         }
 
         [INLINE(256)]
-        public static void WithAny(State* state, QueryData* queryData, uint typeId1, uint typeId2) {
+        public static void WithAny(SafePtr<State> state, SafePtr<QueryData> queryData, uint typeId1, uint typeId2) {
 
             new WithAnyJob() {
                 state = state,
@@ -99,7 +99,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void With(State* state, QueryData* queryData, uint typeId) {
+        public static void With(SafePtr<State> state, SafePtr<QueryData> queryData, uint typeId) {
 
             new WithJob() {
                 typeId = typeId,
@@ -110,7 +110,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Without(State* state, QueryData* queryData, uint typeId) {
+        public static void Without(SafePtr<State> state, SafePtr<QueryData> queryData, uint typeId) {
 
             new WithoutJob() {
                 typeId = typeId,
@@ -128,43 +128,43 @@ namespace ME.BECS {
             public uint typeId3;
             public uint typeId4;
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public SafePtr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public QueryData* queryData;
+            public SafePtr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
 
-                var temp = new TempBitArray(this.state->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
-                if (this.typeId1 > 0u && this.typeId1 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
-                    var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
+                var temp = new TempBitArray(this.state.ptr->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
+                if (this.typeId1 > 0u && this.typeId1 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                    var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
                     if (list.isCreated == true) {
-                        temp.Union(in this.state->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
                 
-                if (this.typeId2 > 0u && this.typeId2 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
-                    var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId2];
+                if (this.typeId2 > 0u && this.typeId2 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                    var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId2];
                     if (list.isCreated == true) {
-                        temp.Union(in this.state->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
 
-                if (this.typeId3 > 0u && this.typeId3 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
-                    var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId3];
+                if (this.typeId3 > 0u && this.typeId3 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                    var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId3];
                     if (list.isCreated == true) {
-                        temp.Union(in this.state->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
 
-                if (this.typeId4 > 0u && this.typeId4 < this.state->archetypes.archetypesWithTypeIdBits.Length) {
-                    var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId4];
+                if (this.typeId4 > 0u && this.typeId4 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                    var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId4];
                     if (list.isCreated == true) {
-                        temp.Union(in this.state->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
 
-                this.queryData->archetypesBits.Intersect(temp);
+                this.queryData.ptr->archetypesBits.Intersect(temp);
                 
             }
 
@@ -177,7 +177,7 @@ namespace ME.BECS {
                                                                                   where T3 : unmanaged, IComponentBase {
 
             return new WithAnyJob() {
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
                 typeId1 = StaticTypes<T0>.typeId,
                 typeId2 = StaticTypes<T1>.typeId,
                 typeId3 = StaticTypes<T2>.typeId,
@@ -192,24 +192,24 @@ namespace ME.BECS {
 
             public uint typeId;
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public SafePtr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public QueryData* queryData;
+            public SafePtr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
 
-                ref var arch = ref this.state->archetypes;
+                ref var arch = ref this.state.ptr->archetypes;
                 if (this.typeId >= arch.archetypesWithTypeIdBits.Length) {
-                    this.queryData->archetypesBits.Clear();
+                    this.queryData.ptr->archetypesBits.Clear();
                     return;
                 }
                 
                 ref var bits = ref arch.archetypesWithTypeIdBits[this.state, this.typeId];
                 if (bits.isCreated == true) {
-                    this.queryData->archetypesBits.Intersect(in this.state->allocator, in bits);
+                    this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, in bits);
                 } else {
-                    this.queryData->archetypesBits.Clear();
+                    this.queryData.ptr->archetypesBits.Clear();
                 }
                 
             }
@@ -221,9 +221,9 @@ namespace ME.BECS {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public SafePtr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public QueryData* queryData;
+            public SafePtr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
@@ -231,16 +231,16 @@ namespace ME.BECS {
                 for (int i = 0; i < this.typeIdArr.Length; ++i) {
 
                     var typeId = this.typeIdArr.Get(i);
-                    if (typeId >= this.state->archetypes.archetypesWithTypeIdBits.Length) {
-                        this.queryData->archetypesBits.Clear();
+                    if (typeId >= this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                        this.queryData.ptr->archetypesBits.Clear();
                         return;
                     }
 
-                    var bits = this.state->archetypes.archetypesWithTypeIdBits[this.state, typeId];
+                    var bits = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeId];
                     if (bits.isCreated == true) {
-                        this.queryData->archetypesBits.Intersect(in this.state->allocator, bits);
+                        this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, bits);
                     } else {
-                        this.queryData->archetypesBits.Clear();
+                        this.queryData.ptr->archetypesBits.Clear();
                     }
 
                 }
@@ -255,7 +255,7 @@ namespace ME.BECS {
             return new WithJob() {
                 typeId = StaticTypes<T>.typeId,
                 queryData = builder.queryData,
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
             }.Schedule(builder.builderDependsOn);
             
         }
@@ -265,18 +265,18 @@ namespace ME.BECS {
 
             public uint typeId;
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public SafePtr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public QueryData* queryData;
+            public SafePtr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
                 
-                if (this.typeId >= this.state->archetypes.archetypesWithTypeIdBits.Length) return;
+                if (this.typeId >= this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) return;
 
-                var list = this.state->archetypes.archetypesWithTypeIdBits[this.state, this.typeId];
+                var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId];
                 if (list.isCreated == true) {
-                    this.queryData->archetypesBits.Remove(in this.state->allocator, list);
+                    this.queryData.ptr->archetypesBits.Remove(in this.state.ptr->allocator, list);
                 }
                 
             }
@@ -289,7 +289,7 @@ namespace ME.BECS {
             return new WithoutJob() {
                 typeId = StaticTypes<T>.typeId,
                 queryData = builder.queryData,
-                state = builder.commandBuffer->state,
+                state = builder.commandBuffer.ptr->state,
             }.Schedule(builder.builderDependsOn);
             
         }

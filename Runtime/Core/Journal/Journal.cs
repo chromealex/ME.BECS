@@ -54,14 +54,14 @@ namespace ME.BECS {
 
         public struct Item {
 
-            public Journal* journal;
+            public SafePtr<Journal> journal;
 
         }
 
         private static readonly Unity.Burst.SharedStatic<Array<Item>> journalsArrBurst = Unity.Burst.SharedStatic<Array<Item>>.GetOrCreatePartiallyUnsafeWithHashCode<JournalsStorage>(TAlign<Array<Item>>.align, 10101);
         internal static ref Array<Item> journals => ref journalsArrBurst.Data;
 
-        public static void Set(uint id, Journal* journal) {
+        public static void Set(uint id, SafePtr<Journal> journal) {
             if (id >= journals.Length) {
                 journals.Resize((id + 1u) * 2u);
             }
@@ -70,8 +70,8 @@ namespace ME.BECS {
             };
         }
 
-        public static Journal* Get(uint id) {
-            if (id >= journals.Length) return null;
+        public static SafePtr<Journal> Get(uint id) {
+            if (id >= journals.Length) return default;
             return journals.Get(id).journal;
         }
         
@@ -85,7 +85,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->SetOneShotComponent_INTERNAL(in ent, typeId, type);
+            journal.ptr->SetOneShotComponent_INTERNAL(in ent, typeId, type);
 
         }
 
@@ -95,7 +95,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->ResolveOneShotComponent_INTERNAL(in ent, typeId, type);
+            journal.ptr->ResolveOneShotComponent_INTERNAL(in ent, typeId, type);
 
         }
 
@@ -105,7 +105,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->EnableComponent_INTERNAL<T>(in ent);
+            journal.ptr->EnableComponent_INTERNAL<T>(in ent);
 
         }
 
@@ -115,7 +115,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->DisableComponent_INTERNAL<T>(in ent);
+            journal.ptr->DisableComponent_INTERNAL<T>(in ent);
 
         }
 
@@ -126,9 +126,9 @@ namespace ME.BECS {
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
             if (ent.Has<T>() == true) {
-                journal->UpdateComponent_INTERNAL<T>(in ent, in data);
+                journal.ptr->UpdateComponent_INTERNAL<T>(in ent, in data);
             } else {
-                journal->CreateComponent_INTERNAL<T>(in ent, in data);
+                journal.ptr->CreateComponent_INTERNAL<T>(in ent, in data);
             }
 
         }
@@ -139,7 +139,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->CreateComponent_INTERNAL<T>(in ent, in data);
+            journal.ptr->CreateComponent_INTERNAL<T>(in ent, in data);
             
         }
 
@@ -149,7 +149,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->UpdateComponent_INTERNAL<T>(in ent, in data);
+            journal.ptr->UpdateComponent_INTERNAL<T>(in ent, in data);
             
         }
 
@@ -159,7 +159,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->RemoveComponent_INTERNAL<T>(in ent);
+            journal.ptr->RemoveComponent_INTERNAL<T>(in ent);
 
         }
 
@@ -169,7 +169,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->AddSystem_INTERNAL(name);
+            journal.ptr->AddSystem_INTERNAL(name);
             
         }
 
@@ -179,7 +179,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->UpdateSystemStarted_INTERNAL(name);
+            journal.ptr->UpdateSystemStarted_INTERNAL(name);
             
         }
 
@@ -189,7 +189,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->UpdateSystemEnded_INTERNAL(name);
+            journal.ptr->UpdateSystemEnded_INTERNAL(name);
             
         }
 
@@ -199,7 +199,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->BeginFrame_INTERNAL();
+            journal.ptr->BeginFrame_INTERNAL();
             
         }
 
@@ -209,7 +209,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(worldId);
             if (journal == null) return;
-            journal->EndFrame_INTERNAL();
+            journal.ptr->EndFrame_INTERNAL();
             
         }
 
@@ -219,7 +219,7 @@ namespace ME.BECS {
             
             var journal = JournalsStorage.Get(ent.worldId);
             if (journal == null) return;
-            journal->VersionUp_INTERNAL(in ent);
+            journal.ptr->VersionUp_INTERNAL(in ent);
 
         }
 
@@ -227,12 +227,12 @@ namespace ME.BECS {
 
     public unsafe partial struct Journal : System.IDisposable {
 
-        private World* world;
-        private JournalData* data;
+        private SafePtr<World> world;
+        private SafePtr<JournalData> data;
         private bool isCreated;
 
-        public JournalData* GetData() => this.data;
-        public World* GetWorld() => this.world;
+        public SafePtr<JournalData> GetData() => this.data;
+        public SafePtr<World> GetWorld() => this.world;
 
         [INLINE(256)]
         public static Journal Create(in World connectedWorld, in JournalProperties properties) {
@@ -286,11 +286,11 @@ namespace ME.BECS {
         public EntityJournal GetEntityJournal(in Ent ent) {
 
             var entityJournal = new EntityJournal();
-            var items = this.data->GetData();
+            var items = this.data.ptr->GetData();
             entityJournal.eventsPerTick = new Unity.Collections.NativeHashMap<ulong, EntityJournal.Item>(10, Constants.ALLOCATOR_TEMP);
             ulong startTick = 0UL;
             for (uint i = 0; i < items.Length; ++i) {
-                var item = items[this.world->state, i];
+                var item = items[this.world.ptr->state, i];
                 var tick = item.historyStartTick;
                 if (tick > startTick) {
                     startTick = tick;
@@ -298,8 +298,8 @@ namespace ME.BECS {
             }
 
             for (uint i = 0; i < items.Length; ++i) {
-                var item = items[this.world->state, i];
-                var e = item.historyItems.GetEnumerator(this.world->state);
+                var item = items[this.world.ptr->state, i];
+                var e = item.historyItems.GetEnumerator(this.world.ptr->state);
                 while (e.MoveNext() == true) {
                     var journalItem = e.Current;
                     if (journalItem.tick >= startTick && journalItem.ent == ent) {
@@ -316,8 +316,8 @@ namespace ME.BECS {
         public void Dispose() {
 
             if (this.world == null) return;
-            if (this.data != null) this.data->Dispose(this.world->state);
-            this.world->Dispose();
+            if (this.data != null) this.data.ptr->Dispose(this.world.ptr->state);
+            this.world.ptr->Dispose();
             this = default;
 
         }
@@ -326,7 +326,7 @@ namespace ME.BECS {
         public void AddSystem_INTERNAL(Unity.Collections.FixedString64Bytes name) {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemAdded, name = name, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { action = JournalAction.SystemAdded, name = name, });
             
         }
 
@@ -334,7 +334,7 @@ namespace ME.BECS {
         public void UpdateSystemStarted_INTERNAL(Unity.Collections.FixedString64Bytes name) {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemUpdateStarted, name = name, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { action = JournalAction.SystemUpdateStarted, name = name, });
 
         }
         
@@ -342,7 +342,7 @@ namespace ME.BECS {
         public void UpdateSystemEnded_INTERNAL(Unity.Collections.FixedString64Bytes name) {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { action = JournalAction.SystemUpdateEnded, name = name, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { action = JournalAction.SystemUpdateEnded, name = name, });
             
         }
 
@@ -350,7 +350,7 @@ namespace ME.BECS {
         public void CreateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponentBase {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.CreateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
             
         }
 
@@ -358,7 +358,7 @@ namespace ME.BECS {
         public void UpdateComponent_INTERNAL<T>(in Ent ent, in T data) where T : unmanaged, IComponentBase {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.UpdateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.UpdateComponent, typeId = StaticTypes<T>.typeId/*, customData = _make(in data)*/, storeInHistory = true, });
             
         }
 
@@ -366,7 +366,7 @@ namespace ME.BECS {
         public void RemoveComponent_INTERNAL<T>(in Ent ent) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.RemoveComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.RemoveComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
 
         }
 
@@ -374,7 +374,7 @@ namespace ME.BECS {
         public void SetOneShotComponent_INTERNAL(in Ent ent, uint typeId, OneShotType type) {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.CreateOneShotComponent, typeId = typeId, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.CreateOneShotComponent, typeId = typeId, storeInHistory = true, });
 
         }
 
@@ -382,7 +382,7 @@ namespace ME.BECS {
         public void ResolveOneShotComponent_INTERNAL(in Ent ent, uint typeId, OneShotType type) {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.ResolveOneShotComponent, typeId = typeId, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.ResolveOneShotComponent, typeId = typeId, storeInHistory = true, });
 
         }
 
@@ -390,7 +390,7 @@ namespace ME.BECS {
         public void EnableComponent_INTERNAL<T>(in Ent ent) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.EnableComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.EnableComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
 
         }
 
@@ -398,7 +398,7 @@ namespace ME.BECS {
         public void DisableComponent_INTERNAL<T>(in Ent ent) where T : unmanaged, IComponent {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.DisableComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.DisableComponent, typeId = StaticTypes<T>.typeId, storeInHistory = true, });
 
         }
 
@@ -406,7 +406,7 @@ namespace ME.BECS {
         public void VersionUp_INTERNAL(in Ent ent) {
 
             if (this.isCreated == false) return;
-            this.data->Add(this.world->state, new JournalItem() { ent = ent, action = JournalAction.EntityUpVersion, data = ent.Version, storeInHistory = true, });
+            this.data.ptr->Add(this.world.ptr->state, new JournalItem() { ent = ent, action = JournalAction.EntityUpVersion, data = ent.Version, storeInHistory = true, });
 
         }
 
@@ -414,7 +414,7 @@ namespace ME.BECS {
         public void BeginFrame_INTERNAL() {
 
             if (this.isCreated == false) return;
-            this.data->Clear(this.world->state);
+            this.data.ptr->Clear(this.world.ptr->state);
 
         }
 
@@ -431,9 +431,9 @@ namespace ME.BECS {
         public static JournalItem Create(JournalItem source) {
             source.threadIndex = Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex;
             if (source.ent.IsAlive() == true) {
-                source.tick = source.ent.World.state->tick;
+                source.tick = source.ent.World.state.ptr->tick;
             } else {
-                source.tick = Context.world.state->tick;
+                source.tick = Context.world.state.ptr->tick;
             }
             return source;
         }
@@ -448,8 +448,8 @@ namespace ME.BECS {
         public uint typeId;
         public int threadIndex;
 
-        public void Dispose(State* state) {
-            if (this.customData != null) _free(ref this.customData);
+        public void Dispose(SafePtr<State> state) {
+            if (this.customData != null) _free((SafePtr)this.customData);
             this = default;
         }
 
@@ -461,7 +461,7 @@ namespace ME.BECS {
             return this.action.ToString();
         }
 
-        public string GetCustomDataString(State* state) {
+        public string GetCustomDataString(SafePtr<State> state) {
             if (this.customData == null) return string.Empty;
             if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(this.typeId, out var type) == true) {
                 var gMethod = this.GetType().GetMethod(nameof(GetStringFromType)).MakeGenericMethod(type);
@@ -489,48 +489,48 @@ namespace ME.BECS {
             public ulong historyStartTick;
             private readonly JournalProperties properties;
 
-            public ThreadItem(State* state, in JournalProperties properties) {
-                this.items = new Queue<JournalItem>(ref state->allocator, properties.capacity);
-                this.historyItems = new Queue<JournalItem>(ref state->allocator, properties.historyCapacity);
+            public ThreadItem(SafePtr<State> state, in JournalProperties properties) {
+                this.items = new Queue<JournalItem>(ref state.ptr->allocator, properties.capacity);
+                this.historyItems = new Queue<JournalItem>(ref state.ptr->allocator, properties.historyCapacity);
                 this.historyStartTick = 0UL;
                 this.properties = properties;
             }
 
             [INLINE(256)]
-            public void Add(State* state, JournalItem journalItem) {
+            public void Add(SafePtr<State> state, JournalItem journalItem) {
                 
                 journalItem = JournalItem.Create(journalItem);
                 this.TryAddToHistory(state, journalItem);
                 if (this.items.Count >= this.properties.capacity) {
-                    this.items.Dequeue(ref state->allocator);
+                    this.items.Dequeue(ref state.ptr->allocator);
                 }
-                this.items.Enqueue(ref state->allocator, journalItem);
+                this.items.Enqueue(ref state.ptr->allocator, journalItem);
                 
             }
 
             [INLINE(256)]
-            private void TryAddToHistory(State* state, JournalItem item) {
+            private void TryAddToHistory(SafePtr<State> state, JournalItem item) {
                 
                 if (item.storeInHistory == true) {
                     if (this.historyItems.Count >= this.properties.historyCapacity) {
-                        var historyItem = this.historyItems.Dequeue(ref state->allocator);
+                        var historyItem = this.historyItems.Dequeue(ref state.ptr->allocator);
                         this.historyStartTick = historyItem.tick + 1UL;
                         historyItem.Dispose(state);
                     }
-                    this.historyItems.Enqueue(ref state->allocator, item);
+                    this.historyItems.Enqueue(ref state.ptr->allocator, item);
                 }
                 
             }
 
             [INLINE(256)]
-            public void Clear(State* state) {
+            public void Clear(SafePtr<State> state) {
             
                 this.items.Clear();
             
             }
 
             [INLINE(256)]
-            public void Dispose(State* state) {
+            public void Dispose(SafePtr<State> state) {
 
                 {
                     var e = this.historyItems.GetEnumerator(state);
@@ -550,10 +550,10 @@ namespace ME.BECS {
         public MemArrayThreadCacheLine<ThreadItem> GetData() => this.threads;
 
         [INLINE(256)]
-        public static JournalData Create(State* state, in JournalProperties properties) {
+        public static JournalData Create(SafePtr<State> state, in JournalProperties properties) {
             
             var journal = new JournalData {
-                threads = new MemArrayThreadCacheLine<ThreadItem>(ref state->allocator),
+                threads = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
             };
             for (uint i = 0u; i < journal.threads.Length; ++i) {
                 journal.threads[state, i] = new ThreadItem(state, properties);
@@ -563,14 +563,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Add(State* state, JournalItem journalItem) {
+        public void Add(SafePtr<State> state, JournalItem journalItem) {
             
             this.threads[state, Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex].Add(state, journalItem);
 
         }
 
         [INLINE(256)]
-        public void Clear(State* state) {
+        public void Clear(SafePtr<State> state) {
 
             for (uint i = 0u; i < this.threads.Length; ++i) {
                 this.threads[state, i].Clear(state);
@@ -579,7 +579,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Dispose(State* state) {
+        public void Dispose(SafePtr<State> state) {
             
             for (uint i = 0u; i < this.threads.Length; ++i) {
                 this.threads[state, i].Dispose(state);

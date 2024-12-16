@@ -23,17 +23,17 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public static Archetype Create(State* state, uint componentsCount, uint entitiesCapacityPerArchetype) {
+            public static Archetype Create(SafePtr<State> state, uint componentsCount, uint entitiesCapacityPerArchetype) {
                 return new Archetype() {
                     componentsCount = componentsCount,
-                    components = new UIntHashSet(ref state->allocator, componentsCount),
-                    componentBits = new BitArray(ref state->allocator, StaticTypes.counter + 1u),
-                    entitiesList = new UIntListHash(ref state->allocator, entitiesCapacityPerArchetype),
+                    components = new UIntHashSet(ref state.ptr->allocator, componentsCount),
+                    componentBits = new BitArray(ref state.ptr->allocator, StaticTypes.counter + 1u),
+                    entitiesList = new UIntListHash(ref state.ptr->allocator, entitiesCapacityPerArchetype),
                 };
             }
 
             [INLINE(256)]
-            public uint GetNext(State* state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems, ref Archetypes archetypes) {
+            public uint GetNext(SafePtr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems, ref Archetypes archetypes) {
                 
                 // Migrate to archetype with addItems and removeItems
                 var removeItemsCount = removeItems.Count;
@@ -51,7 +51,7 @@ namespace ME.BECS {
 
                 if (targetCount == 0u) {
                     // Jump to zero archetype
-                    archetypes.list[in state->allocator, 0u].AddEntity(state, entId);
+                    archetypes.list[in state.ptr->allocator, 0u].AddEntity(state, entId);
                     return 0u;
                 }
 
@@ -60,16 +60,16 @@ namespace ME.BECS {
                     var hash = addItems.hash ^ (this.components.hash ^ removeItemsHash);
                     ref var dic = ref archetypes.componentsCountToArchetypeIds[state, targetCount];
                     if (dic.isCreated == true) {
-                        ref var list = ref dic.GetValue(ref state->allocator, hash, out var exist);
+                        ref var list = ref dic.GetValue(ref state.ptr->allocator, hash, out var exist);
                         if (exist == true) {
-                            var currentBits = new TempBitArray(in state->allocator, this.componentBits, Constants.ALLOCATOR_TEMP);
+                            var currentBits = new TempBitArray(in state.ptr->allocator, this.componentBits, Constants.ALLOCATOR_TEMP);
                             currentBits.Union(addItems.root);
                             if (removeItemsCount > 0u) currentBits.Remove(removeItems.root);
-                            //var fastComponentsRead = UIntHashSetRead.Create(in state->allocator, in this.components);
+                            //var fastComponentsRead = UIntHashSetRead.Create(in state.ptr->allocator, in this.components);
                             for (uint i = 0u; i < list.Count; ++i) {
-                                var archIdx = list[in state->allocator, i];
-                                ref var arch = ref archetypes.list[in state->allocator, archIdx];
-                                if (arch.ContainsComponents(in state->allocator, in currentBits, in addItems, in removeItems) == true) {
+                                var archIdx = list[in state.ptr->allocator, i];
+                                ref var arch = ref archetypes.list[in state.ptr->allocator, archIdx];
+                                if (arch.ContainsComponents(in state.ptr->allocator, in currentBits, in addItems, in removeItems) == true) {
                                     // Add entity to the found archetype
                                     arch.AddEntity(state, entId);
                                     return archIdx;
@@ -80,46 +80,46 @@ namespace ME.BECS {
                 }
                 
                 // Archetype not found - create the new one
-                MemoryAllocator.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                 var newArchetype = Archetype.Create(state, targetCount, 1u);
-                newArchetype.components.CopyFrom(ref state->allocator, this.components);
-                newArchetype.componentBits.Set(ref state->allocator, this.componentBits);
+                newArchetype.components.CopyFrom(ref state.ptr->allocator, this.components);
+                newArchetype.componentBits.Set(ref state.ptr->allocator, this.componentBits);
                 if (removeItems.Count > 0u) {
-                    newArchetype.components.Remove(ref state->allocator, removeItems);
-                    newArchetype.componentBits.Remove(in state->allocator, removeItems.root);
+                    newArchetype.components.Remove(ref state.ptr->allocator, removeItems);
+                    newArchetype.componentBits.Remove(in state.ptr->allocator, removeItems.root);
                 }
 
-                MemoryAllocator.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                 if (addItems.Count > 0u) {
-                    newArchetype.components.Add(ref state->allocator, addItems);
-                    newArchetype.componentBits.Union(ref state->allocator, addItems.root);
+                    newArchetype.components.Add(ref state.ptr->allocator, addItems);
+                    newArchetype.componentBits.Union(ref state.ptr->allocator, addItems.root);
                 }
 
-                MemoryAllocator.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                 newArchetype.AddEntity(state, entId);
-                MemoryAllocator.ValidateConsistency(ref state->allocator);
+                MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                 Add(state, in newArchetype, out var newIdx);
                 
                 return newIdx;
             }
 
             [INLINE(256)]
-            public void RemoveEntity(State* state, uint entId) {
+            public void RemoveEntity(SafePtr<State> state, uint entId) {
 
-                var idx = state->archetypes.entToIdxInArchetype[state, entId];
+                var idx = state.ptr->archetypes.entToIdxInArchetype[state, entId];
                 CheckExist(state, this);
-                var movedEntId = this.entitiesList[in state->allocator, this.entitiesList.Count - 1u];
-                state->archetypes.entToIdxInArchetype[state, movedEntId] = idx;
-                this.entitiesList.RemoveAtFast(in state->allocator, idx);
+                var movedEntId = this.entitiesList[in state.ptr->allocator, this.entitiesList.Count - 1u];
+                state.ptr->archetypes.entToIdxInArchetype[state, movedEntId] = idx;
+                this.entitiesList.RemoveAtFast(in state.ptr->allocator, idx);
                 
             }
 
             [INLINE(256)]
-            public uint AddEntity(State* state, uint entId) {
+            public uint AddEntity(SafePtr<State> state, uint entId) {
 
                 var idx = this.entitiesList.Count;
-                this.entitiesList.Add(ref state->allocator, entId);
-                state->archetypes.entToIdxInArchetype[state, entId] = idx;
+                this.entitiesList.Add(ref state.ptr->allocator, entId);
+                state.ptr->archetypes.entToIdxInArchetype[state, entId] = idx;
                 CheckExist(state, this);
                 
                 return idx;
@@ -140,7 +140,7 @@ namespace ME.BECS {
 
             }
 
-            public uint GetReservedSizeInBytes(State* state) {
+            public uint GetReservedSizeInBytes(SafePtr<State> state) {
                 
                 var size = 0u;
                 size += this.components.GetReservedSizeInBytes();
@@ -163,13 +163,13 @@ namespace ME.BECS {
         public MemArray<BitArray> archetypesWithTypeIdBits;
         public uint Count => this.allArchetypes.Count;
 
-        public uint GetReservedSizeInBytes(State* state) {
+        public uint GetReservedSizeInBytes(SafePtr<State> state) {
 
             if (this.list.IsCreated == false) return 0u;
 
             var size = 0u;
             for (uint i = 0u; i < this.list.Count; ++i) {
-                ref var arch = ref this.list[in state->allocator, i];
+                ref var arch = ref this.list[in state.ptr->allocator, i];
                 size += arch.GetReservedSizeInBytes(state);
             }
             size += this.list.GetReservedSizeInBytes();
@@ -180,7 +180,7 @@ namespace ME.BECS {
             size += this.componentsCountToArchetypeIds.GetReservedSizeInBytes();
             size += this.archetypesWithTypeIdBits.GetReservedSizeInBytes();
             for (uint i = 0u; i < this.componentsCountToArchetypeIds.Length; ++i) {
-                ref var dic = ref this.componentsCountToArchetypeIds[in state->allocator, i];
+                ref var dic = ref this.componentsCountToArchetypeIds[in state.ptr->allocator, i];
                 if (dic.isCreated == false) continue;
                 var e = dic.GetEnumerator(state);
                 while (e.MoveNext() == true) {
@@ -210,47 +210,47 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal static void Add(State* state, in Archetype archetype, out uint idx) {
+        internal static void Add(SafePtr<State> state, in Archetype archetype, out uint idx) {
             
-            MemoryAllocator.ValidateConsistency(ref state->allocator);
-            ref var allocator = ref state->allocator;
-            idx = state->archetypes.list.Add(ref allocator, archetype);
+            MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
+            ref var allocator = ref state.ptr->allocator;
+            idx = state.ptr->archetypes.list.Add(ref allocator, archetype);
             var idxLength = idx + 1u;
-            var len = math.max(idxLength, state->archetypes.allArchetypes.Capacity);
-            state->archetypes.allArchetypes.Add(ref allocator, idx);
+            var len = math.max(idxLength, state.ptr->archetypes.allArchetypes.Capacity);
+            state.ptr->archetypes.allArchetypes.Add(ref allocator, idx);
             // archetypesWithTypeIdBits[index] (bits) length must be less or equals than allArchetypesForQuery's length
             // because we use intersects method to find out bits overlapping, so we need to use len parameter in both
-            state->archetypes.allArchetypesForQuery.Resize(ref allocator, len);
-            state->archetypes.allArchetypesForQuery.Set(in allocator, (int)idx, true);
-            MemoryAllocator.ValidateConsistency(ref state->allocator);
+            state.ptr->archetypes.allArchetypesForQuery.Resize(ref allocator, len);
+            state.ptr->archetypes.allArchetypesForQuery.Set(in allocator, (int)idx, true);
+            MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
             { // collect with
                 var e = archetype.components.GetEnumerator(in allocator);
                 while (e.MoveNext() == true) {
                     var cId = e.Current;
                     {
-                        MemoryAllocator.ValidateConsistency(ref state->allocator);
-                        ref var list = ref state->archetypes.archetypesWithTypeIdBits[in allocator, cId];
-                        MemoryAllocator.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
+                        ref var list = ref state.ptr->archetypes.archetypesWithTypeIdBits[in allocator, cId];
+                        MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                         if (list.isCreated == false) list = new BitArray(ref allocator, len);
                         list.Resize(ref allocator, len);
-                        MemoryAllocator.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                         list.Set(in allocator, (int)idx, true);
-                        MemoryAllocator.ValidateConsistency(ref state->allocator);
+                        MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                     }
                 }
             }
-            MemoryAllocator.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
             { // update all static queries
-                ref var queries = ref state->queries.queryData;
-                for (uint i = 0u; i < state->queries.nextId; ++i) {
-                    ref var query = ref queries[in state->allocator, i];
+                ref var queries = ref state.ptr->queries.queryData;
+                for (uint i = 0u; i < state.ptr->queries.nextId; ++i) {
+                    ref var query = ref queries[in state.ptr->allocator, i];
                     query.Validate(state);
                 }
             }
-            MemoryAllocator.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
             {
-                state->archetypes.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u, 2);
-                ref var arr = ref state->archetypes.componentsCountToArchetypeIds[in allocator, archetype.componentsCount];
+                state.ptr->archetypes.componentsCountToArchetypeIds.Resize(ref allocator, archetype.componentsCount + 1u, 2);
+                ref var arr = ref state.ptr->archetypes.componentsCountToArchetypeIds[in allocator, archetype.componentsCount];
                 if (arr.isCreated == false) arr = new UIntDictionary<List<uint>>(ref allocator, 1u);
                 var hash = archetype.components.hash;
                 ref var list = ref arr.GetValue(ref allocator, hash, out var exist);
@@ -267,107 +267,107 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void AddEntity(State* state, UnsafeList<Ent>* list, uint maxId) {
+        public static void AddEntity(SafePtr<State> state, UnsafeList<Ent>* list, uint maxId) {
 
-            JobUtils.Lock(ref state->archetypes.lockIndex);
-            state->archetypes.entToArchetypeIdx.Resize(ref state->allocator, maxId + 1u, 2);
-            state->archetypes.entToIdxInArchetype.Resize(ref state->allocator, maxId + 1u, 2);
+            JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.entToArchetypeIdx.Resize(ref state.ptr->allocator, maxId + 1u, 2);
+            state.ptr->archetypes.entToIdxInArchetype.Resize(ref state.ptr->allocator, maxId + 1u, 2);
 
             for (int i = 0; i < list->Length; ++i) {
                 var ent = list->ElementAt(i);
-                state->archetypes.list[in state->allocator, 0].AddEntity(state, ent.id);
+                state.ptr->archetypes.list[in state.ptr->allocator, 0].AddEntity(state, ent.id);
             }
-            JobUtils.Unlock(ref state->archetypes.lockIndex);
+            JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
 
         }
 
         [INLINE(256)]
-        public static void AddEntity(State* state, in Ent ent) {
+        public static void AddEntity(SafePtr<State> state, in Ent ent) {
 
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref state->archetypes.lockIndex);
+            JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
             CheckEntityTimes(state, ent.id, 0);
             CheckNoEntity(state, ent.id, 0);
-            state->archetypes.entToArchetypeIdx.Resize(ref state->allocator, ent.id + 1u, 2);
-            state->archetypes.entToIdxInArchetype.Resize(ref state->allocator, ent.id + 1u, 2);
-            state->archetypes.list[in state->allocator, 0].AddEntity(state, ent.id);
-            state->archetypes.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
+            state.ptr->archetypes.entToArchetypeIdx.Resize(ref state.ptr->allocator, ent.id + 1u, 2);
+            state.ptr->archetypes.entToIdxInArchetype.Resize(ref state.ptr->allocator, ent.id + 1u, 2);
+            state.ptr->archetypes.list[in state.ptr->allocator, 0].AddEntity(state, ent.id);
+            state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, ent.id] = 0u;
             CheckEntityTimes(state, ent.id, 1);
             CheckEntity(state, ent.id, 0);
-            JobUtils.Unlock(ref state->archetypes.lockIndex);
+            JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
             
         }
 
         [INLINE(256)]
-        public static void RemoveEntity(State* state, in Ent ent) {
+        public static void RemoveEntity(SafePtr<State> state, in Ent ent) {
 
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref state->archetypes.lockIndex);
+            JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
             CheckEntityTimes(state, ent.id, 1);
-            var idx = state->archetypes.entToArchetypeIdx[in state->allocator, ent.id];
+            var idx = state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, ent.id];
             CheckEntity(state, ent.id, (int)idx);
-            state->archetypes.list[in state->allocator, idx].RemoveEntity(state, ent.id);
-            state->archetypes.entToArchetypeIdx[in state->allocator, ent.id] = 0u;
+            state.ptr->archetypes.list[in state.ptr->allocator, idx].RemoveEntity(state, ent.id);
+            state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, ent.id] = 0u;
             CheckNoEntity(state, ent.id, (int)idx);
             CheckNoEntity(state, ent.id, 0);
             CheckNoEntity((int)idx, state, ent.id);
             CheckEntityTimes(state, ent.id, 1);
-            JobUtils.Unlock(ref state->archetypes.lockIndex);
+            JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
             
         }
 
         [INLINE(256)]
-        public static void ApplyBatch(State* state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
+        public static void ApplyBatch(SafePtr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
 
             if (addItems.Count > 0 || removeItems.Count > 0) {
-                JobUtils.Lock(ref state->archetypes.lockIndex);
+                JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
                 CheckEntityTimes(state, entId, 1);
-                var idx = state->archetypes.entToArchetypeIdx[in state->allocator, entId];
-                ref var archetype = ref state->archetypes.list[in state->allocator, idx];
+                var idx = state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, entId];
+                ref var archetype = ref state.ptr->archetypes.list[in state.ptr->allocator, idx];
                 // Look up for new archetype
                 CheckEntity(state, entId, (int)idx);
                 CheckArch(state, archetype, (int)idx);
-                state->archetypes.entToArchetypeIdx[in state->allocator, entId] = archetype.GetNext(state, entId, in addItems, in removeItems, ref state->archetypes);
+                state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, entId] = archetype.GetNext(state, entId, in addItems, in removeItems, ref state.ptr->archetypes);
                 CheckArch(state, archetype, (int)idx);
-                CheckEntity(state, entId, (int)state->archetypes.entToArchetypeIdx[in state->allocator, entId]);
+                CheckEntity(state, entId, (int)state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, entId]);
                 CheckEntityTimes(state, entId, 1);
-                JobUtils.Unlock(ref state->archetypes.lockIndex);
+                JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
             }
 
         }
 
         [INLINE(256)]
-        public static Archetypes Create(State* state, uint capacity, uint entitiesCapacity) {
+        public static Archetypes Create(SafePtr<State> state, uint capacity, uint entitiesCapacity) {
             if (capacity == 0u) capacity = 1u;
             if (capacity < StaticTypes.counter + 1u) capacity = StaticTypes.counter + 1u;
             var archs = new Archetypes() {
-                list = new List<Archetype>(ref state->allocator, capacity),
-                entToArchetypeIdx = new MemArray<uint>(ref state->allocator, capacity),
-                entToIdxInArchetype = new MemArray<uint>(ref state->allocator, capacity),
-                componentsCountToArchetypeIds = new MemArray<UIntDictionary<List<uint>>>(ref state->allocator, capacity),
-                archetypesWithTypeIdBits = new MemArray<BitArray>(ref state->allocator, StaticTypes.counter + 1u),
-                allArchetypes = new List<uint>(ref state->allocator, capacity),
-                allArchetypesForQuery = new BitArray(ref state->allocator, capacity),
+                list = new List<Archetype>(ref state.ptr->allocator, capacity),
+                entToArchetypeIdx = new MemArray<uint>(ref state.ptr->allocator, capacity),
+                entToIdxInArchetype = new MemArray<uint>(ref state.ptr->allocator, capacity),
+                componentsCountToArchetypeIds = new MemArray<UIntDictionary<List<uint>>>(ref state.ptr->allocator, capacity),
+                archetypesWithTypeIdBits = new MemArray<BitArray>(ref state.ptr->allocator, StaticTypes.counter + 1u),
+                allArchetypes = new List<uint>(ref state.ptr->allocator, capacity),
+                allArchetypesForQuery = new BitArray(ref state.ptr->allocator, capacity),
             };
-            archs.list.Add(ref state->allocator, Archetype.Create(state, 0u, entitiesCapacity));
-            archs.allArchetypes.Add(ref state->allocator, 0u);
-            archs.allArchetypesForQuery.Set(in state->allocator, 0, true);
-            archs.componentsCountToArchetypeIds[in state->allocator, 0] = default;
+            archs.list.Add(ref state.ptr->allocator, Archetype.Create(state, 0u, entitiesCapacity));
+            archs.allArchetypes.Add(ref state.ptr->allocator, 0u);
+            archs.allArchetypesForQuery.Set(in state.ptr->allocator, 0, true);
+            archs.componentsCountToArchetypeIds[in state.ptr->allocator, 0] = default;
             return archs;
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckEntity(State* state, uint entId, int archIdx) {
+        private static void CheckEntity(SafePtr<State> state, uint entId, int archIdx) {
 
-            //var isListed = state->archetypes.list[state->allocator, (uint)archIdx].entitiesList.Contains(state->allocator, entId);
+            //var isListed = state.ptr->archetypes.list[state.ptr->allocator, (uint)archIdx].entitiesList.Contains(state.ptr->allocator, entId);
             //if (isListed == false) {
             var listedIdx = -1;
             var cnt = 0;
-            for (uint i = 0; i < state->archetypes.list.Count; ++i) {
-                var item = state->archetypes.list[state, i];
-                if (item.entitiesList.Contains(state->allocator, entId) == true) {
+            for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
+                var item = state.ptr->archetypes.list[state, i];
+                if (item.entitiesList.Contains(state.ptr->allocator, entId) == true) {
                     listedIdx = (int)i;
                     ++cnt;
                 }
@@ -378,13 +378,13 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckEntityTimes(State* state, uint entId, int times) {
+        private static void CheckEntityTimes(SafePtr<State> state, uint entId, int times) {
 
             var listedIdx = -1;
             var cnt = 0;
-            for (uint i = 0; i < state->archetypes.list.Count; ++i) {
-                var item = state->archetypes.list[state, i];
-                if (item.entitiesList.Contains(state->allocator, entId) == true) {
+            for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
+                var item = state.ptr->archetypes.list[state, i];
+                if (item.entitiesList.Contains(state.ptr->allocator, entId) == true) {
                     listedIdx = (int)i;
                     ++cnt;
                 }
@@ -394,20 +394,20 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckNoEntity(State* state, uint entId, int archIdx) {
+        private static void CheckNoEntity(SafePtr<State> state, uint entId, int archIdx) {
 
-            UnityEngine.Debug.Assert(state->archetypes.list[state->allocator, (uint)archIdx].entitiesList.Contains(state->allocator, entId) == false);
+            UnityEngine.Debug.Assert(state.ptr->archetypes.list[state.ptr->allocator, (uint)archIdx].entitiesList.Contains(state.ptr->allocator, entId) == false);
 
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckNoEntity(int listId, State* state, uint entId) {
+        private static void CheckNoEntity(int listId, SafePtr<State> state, uint entId) {
 
             var listedIdx = -1;
             var cnt = 0;
-            for (uint i = 0; i < state->archetypes.list.Count; ++i) {
-                var item = state->archetypes.list[state, i];
-                if (item.entitiesList.Contains(state->allocator, entId) == true) {
+            for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
+                var item = state.ptr->archetypes.list[state, i];
+                if (item.entitiesList.Contains(state.ptr->allocator, entId) == true) {
                     listedIdx = (int)i;
                     ++cnt;
                 }
@@ -417,24 +417,24 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckExist(State* state, Archetype archetype) {
+        private static void CheckExist(SafePtr<State> state, Archetype archetype) {
 
             var cnt = 0;
-            for (uint i = 0; i < state->archetypes.list.Count; ++i) {
-                var arch = state->archetypes.list[state, i];
-                if (arch.componentsCount == archetype.componentsCount && arch.componentBits.ContainsAll(state->allocator, archetype.componentBits) == true) {
+            for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
+                var arch = state.ptr->archetypes.list[state, i];
+                if (arch.componentsCount == archetype.componentsCount && arch.componentBits.ContainsAll(state.ptr->allocator, archetype.componentBits) == true) {
                     ++cnt;
                 }
             }
 
             if (cnt > 1) {
                 var str = new System.Collections.Generic.List<string>();
-                for (uint i = 0; i < state->archetypes.list.Count; ++i) {
-                    var arch = state->archetypes.list[state, i];
-                    if (arch.componentsCount == archetype.componentsCount && arch.componentBits.ContainsAll(state->allocator, archetype.componentBits) == true) {
+                for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
+                    var arch = state.ptr->archetypes.list[state, i];
+                    if (arch.componentsCount == archetype.componentsCount && arch.componentBits.ContainsAll(state.ptr->allocator, archetype.componentBits) == true) {
                         var array = new System.Collections.Generic.List<int>((int)arch.componentBits.Length);
                         for (var j = 0; j < arch.componentBits.Length; ++j) {
-                            if (arch.componentBits.IsSet(in state->allocator, j) == true) array.Add(j);
+                            if (arch.componentBits.IsSet(in state.ptr->allocator, j) == true) array.Add(j);
                         }
                         var comps = new System.Collections.Generic.List<int>((int)arch.components.Count);
                         var e = arch.components.GetEnumerator(state);
@@ -450,27 +450,27 @@ namespace ME.BECS {
         }
         
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckArch(State* state, Archetype archetype, int idx = -1) {
-            var archetypes = state->archetypes;
+        private static void CheckArch(SafePtr<State> state, Archetype archetype, int idx = -1) {
+            var archetypes = state.ptr->archetypes;
             for (uint i = 0; i < archetype.entitiesList.Count; ++i) {
-                var ent = archetype.entitiesList[state->allocator, i];
+                var ent = archetype.entitiesList[state.ptr->allocator, i];
                 if (archetypes.entToIdxInArchetype[state, ent] != i) {
                     throw new System.Exception("Arch test failed: index " + i + ", entId: " + ent + ":" + archetypes.entToIdxInArchetype[state, ent] + ", arch idx: " + idx + ", arch: " + ListStr(state, archetypes, archetype.entitiesList));
                 }
             }
         }
 
-        private static string ListStr(State* state, Archetypes archetypes, UIntListHash entitiesList) {
+        private static string ListStr(SafePtr<State> state, Archetypes archetypes, UIntListHash entitiesList) {
             var str = string.Empty;
             for (uint i = 0; i < entitiesList.Count; ++i) {
-                var ent = entitiesList[state->allocator, i];
+                var ent = entitiesList[state.ptr->allocator, i];
                 str += ", " + ent + ":" + archetypes.entToIdxInArchetype[state, ent];
             }
 
             return str;
         }
 
-        private static string ListStr(State* state, UIntHashSet componentsList) {
+        private static string ListStr(SafePtr<State> state, UIntHashSet componentsList) {
             var str = string.Empty;
             var e = componentsList.GetEnumerator(state);
             while (e.MoveNext() == true) {

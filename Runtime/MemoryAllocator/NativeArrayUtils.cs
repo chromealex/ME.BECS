@@ -17,7 +17,7 @@ namespace ME.BECS {
         public static void Copy<T>(T[] src, int srcIndex, MemArrayAuto<T> dst, int dstIndex, int length) where T : unmanaged {
             var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc((object) src, System.Runtime.InteropServices.GCHandleType.Pinned);
             var num = gcHandle.AddrOfPinnedObject();
-            UnsafeUtility.MemCpy((void*) ((System.IntPtr) dst.GetUnsafePtr() + dstIndex * UnsafeUtility.SizeOf<T>()), (void*) ((System.IntPtr) (void*) num + srcIndex * UnsafeUtility.SizeOf<T>()), (long) (length * UnsafeUtility.SizeOf<T>()));
+            UnsafeUtility.MemCpy((void*) ((System.IntPtr) dst.GetUnsafePtr().ptr + dstIndex * UnsafeUtility.SizeOf<T>()), (void*) ((System.IntPtr) (void*) num + srcIndex * UnsafeUtility.SizeOf<T>()), (long) (length * UnsafeUtility.SizeOf<T>()));
             gcHandle.Free();
         }
 
@@ -87,7 +87,7 @@ namespace ME.BECS {
             }
 
             var size = TSize<T>.size;
-            _memmove(fromArr.ent.World.state->allocator.GetUnsafePtr(fromArr.arrPtr, sourceIndex * size), arr.ent.World.state->allocator.GetUnsafePtr(arr.arrPtr, destIndex * size), length * size);
+            _memmove(fromArr.ent.World.state.ptr->allocator.GetUnsafePtr(fromArr.arrPtr, sourceIndex * size), arr.ent.World.state.ptr->allocator.GetUnsafePtr(arr.arrPtr, destIndex * size), length * size);
             
         }
 
@@ -109,7 +109,7 @@ namespace ME.BECS {
                                            uint destIndex,
                                            uint length) where T : unmanaged {
             var size = TSize<T>.size;
-            _memmove(fromArr.ent.World.state->allocator.GetUnsafePtr(fromArr.arrPtr, sourceIndex * size), arr.ent.World.state->allocator.GetUnsafePtr(arr.arrPtr, destIndex * size), length * size);
+            _memmove(fromArr.ent.World.state.ptr->allocator.GetUnsafePtr(fromArr.arrPtr, sourceIndex * size), arr.ent.World.state.ptr->allocator.GetUnsafePtr(arr.arrPtr, destIndex * size), length * size);
         }
 
     }

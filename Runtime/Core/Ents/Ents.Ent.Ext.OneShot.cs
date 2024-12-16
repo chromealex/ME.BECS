@@ -44,7 +44,7 @@ namespace ME.BECS {
             E.IS_IN_TICK(ent.World.state);
             var world = ent.World;
             var result = (type == OneShotType.CurrentTick && Batches.Set(in ent, in data, world.state));
-            OneShotTasks.Add(world.state, in ent, in data, world.state->updateType, type);
+            OneShotTasks.Add(world.state, in ent, in data, world.state.ptr->updateType, type);
             return result;
 
         }

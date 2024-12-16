@@ -36,7 +36,7 @@ namespace ME.BECS {
 
             var journal = JournalsStorage.Get(this.worldId);
             if (journal == null) return;
-            journal->Dispose();
+            journal.ptr->Dispose();
             
         }
 

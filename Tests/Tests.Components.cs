@@ -137,7 +137,7 @@ namespace ME.BECS.Tests {
                     entities = arr,
                 }.Schedule(amount, 10).Complete();
 
-                MemoryAllocator.CheckConsistency(ref world.state->allocator);
+                MemoryAllocator.CheckConsistency(ref world.state.ptr->allocator);
 
                 for (int i = 0; i < amount; ++i) {
                     var v = arr[i].Read<TestComponent>().data;
@@ -145,7 +145,7 @@ namespace ME.BECS.Tests {
                     Assert.IsTrue(v == i);
                 }
                 
-                MemoryAllocator.CheckConsistency(ref world.state->allocator);
+                MemoryAllocator.CheckConsistency(ref world.state.ptr->allocator);
 
                 arr.Dispose();
             }
@@ -432,7 +432,7 @@ namespace ME.BECS.Tests {
 
             Batches.Apply(world.state);
 
-            Assert.AreEqual(2, world.state->archetypes.allArchetypes.Count);
+            Assert.AreEqual(2, world.state.ptr->archetypes.allArchetypes.Count);
 
             var handle1 = new TestJobSetParallel() {
                 arr = list,
@@ -447,7 +447,7 @@ namespace ME.BECS.Tests {
             JobUtils.RunScheduled();
             dependsOn.Complete();
             
-            Assert.AreEqual(3, world.state->archetypes.allArchetypes.Count);
+            Assert.AreEqual(3, world.state.ptr->archetypes.allArchetypes.Count);
 
             list.Dispose();
 

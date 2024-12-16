@@ -96,7 +96,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(allocator);
@@ -144,7 +144,7 @@ namespace ME.BECS {
 
         }
 
-        public ref T this[State* state, uint index] {
+        public ref T this[SafePtr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Count);
@@ -366,8 +366,8 @@ namespace ME.BECS {
             var count = (uint)collection.Length;
             if (count > 0u) {
                 this.EnsureCapacity(ref allocator, this.Count + count);
-                var size = sizeof(T);
-                _memcpy(collection.GetUnsafeReadOnlyPtr(), (byte*)this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr(), (SafePtr)(this.arr.GetUnsafePtr(in allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -381,8 +381,8 @@ namespace ME.BECS {
             var count = (uint)collection.Length;
             if (count > 0u) {
                 this.EnsureCapacity(ref allocator, this.Count + count);
-                var size = sizeof(T);
-                _memcpy(collection.Ptr, (byte*)this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
+                var size = TSize<T>.size;
+                _memcpy((SafePtr)collection.Ptr, (SafePtr)(this.arr.GetUnsafePtr(in allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -420,8 +420,8 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Sort<U>(State* state) where U : unmanaged, System.IComparable<U> {
-            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr(in state->allocator), (int)this.Count);
+        public void Sort<U>(SafePtr<State> state) where U : unmanaged, System.IComparable<U> {
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr(in state.ptr->allocator).ptr, (int)this.Count);
         }
 
         public uint GetReservedSizeInBytes() {

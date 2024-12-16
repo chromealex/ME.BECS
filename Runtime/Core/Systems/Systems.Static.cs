@@ -181,12 +181,12 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode != null) {
-                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
-                    var child = rootGroup.rootNode->children[i];
-                    if (child.data->graph != null) {
-                        if (updateType == 0 || child.data->graph->updateType == updateType) {
+                for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode.ptr->children[i];
+                    if (child.data.ptr->graph != null) {
+                        if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
                             
-                            if (SystemsStaticOnAwake.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
+                            if (SystemsStaticOnAwake.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
                                 var func = new Unity.Burst.FunctionPointer<OnAwake>(ptr);
                                 func.Invoke(dt, ref world, ref dependsOn);
@@ -207,12 +207,12 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode != null) {
-                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
-                    var child = rootGroup.rootNode->children[i];
-                    if (child.data->graph != null) {
-                        if (updateType == 0 || child.data->graph->updateType == updateType) {
+                for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode.ptr->children[i];
+                    if (child.data.ptr->graph != null) {
+                        if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
                             
-                            if (SystemsStaticOnStart.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
+                            if (SystemsStaticOnStart.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
                                 var func = new Unity.Burst.FunctionPointer<OnStart>(ptr);
                                 func.Invoke(dt, ref world, ref dependsOn);
@@ -233,16 +233,16 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode != null) {
-                //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + rootGroup.rootNode->childrenIndex + ", updateType: " + updateType);
-                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
-                    var child = rootGroup.rootNode->children[i];
-                    if (child.data->graph != null) {
-                        if (updateType == 0 || child.data->graph->updateType == updateType) {
+                //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + rootGroup.rootNode.ptr->childrenIndex + ", updateType: " + updateType);
+                for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode.ptr->children[i];
+                    if (child.data.ptr->graph != null) {
+                        if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
 
-                            //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + SystemsStaticOnUpdate.dic.Data.Count + ", child.data->graph->graphId: " + child.data->graph->graphId + ", updateType: " + updateType);
-                            if (SystemsStaticOnUpdate.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
+                            //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + SystemsStaticOnUpdate.dic.Data.Count + ", child.data.ptr->graph.ptr->graphId: " + child.data.ptr->graph.ptr->graphId + ", updateType: " + updateType);
+                            if (SystemsStaticOnUpdate.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
-                                //UnityEngine.Debug.Log("static systems call RaiseOnUpdate: " + child.data->graph->graphId + ", updateType: " + updateType);
+                                //UnityEngine.Debug.Log("static systems call RaiseOnUpdate: " + child.data.ptr->graph.ptr->graphId + ", updateType: " + updateType);
                                 var func = new Unity.Burst.FunctionPointer<OnUpdate>(ptr);
                                 func.Invoke(dt, ref world, ref dependsOn);
                                 result = true;
@@ -262,11 +262,11 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode != null) {
-                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
-                    var child = rootGroup.rootNode->children[i];
-                    if (child.data->graph != null) {
+                for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode.ptr->children[i];
+                    if (child.data.ptr->graph != null) {
                         
-                        if (SystemsStaticOnDrawGizmos.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
+                        if (SystemsStaticOnDrawGizmos.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
                             var func = new Unity.Burst.FunctionPointer<OnDrawGizmos>(ptr);
                             func.Invoke(0f, ref world, ref dependsOn);
@@ -286,12 +286,12 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode != null) {
-                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
-                    var child = rootGroup.rootNode->children[i];
-                    if (child.data->graph != null) {
-                        if (updateType == 0 || child.data->graph->updateType == updateType) {
+                for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode.ptr->children[i];
+                    if (child.data.ptr->graph != null) {
+                        if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
 
-                            if (SystemsStaticOnDestroy.dic.Data.TryGetValue(child.data->graph->graphId, out var ptr) == true) {
+                            if (SystemsStaticOnDestroy.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
                                 var func = new Unity.Burst.FunctionPointer<OnDestroy>(ptr);
                                 func.Invoke(dt, ref world, ref dependsOn);
@@ -312,10 +312,10 @@ namespace ME.BECS {
 
             system = null;
             if (rootGroup.rootNode != null) {
-                for (uint i = 0u; i < rootGroup.rootNode->childrenIndex; ++i) {
-                    var child = rootGroup.rootNode->children[i];
-                    if (child.data->graph != null) {
-                        if (TSystemGraph.GetSystem(child.data->graph->graphId, out system) == true) {
+                for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
+                    var child = rootGroup.rootNode.ptr->children[i];
+                    if (child.data.ptr->graph != null) {
+                        if (TSystemGraph.GetSystem(child.data.ptr->graph.ptr->graphId, out system) == true) {
                             return true;
                         }
                     }

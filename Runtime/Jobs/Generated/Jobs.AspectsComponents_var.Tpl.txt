@@ -17,7 +17,7 @@ namespace ME.BECS.Jobs {
             {countAspects( )[builder.WithAspect<A#i#>();]}
             {countComponents( )[builder.With<C#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in builder.commandBuffer, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -28,12 +28,12 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobFor{{countAspects}}Aspects{{countComponents}}Components<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in job);
         }
 
         public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobFor{{countAspects}}Aspects{{countComponents}}Components<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
-            staticQuery.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -54,7 +54,7 @@ namespace ME.BECS.Jobs {
             {countComponents( )[where C#i# : unmanaged, IComponentBase]}
             where T : struct, IJobFor{{countAspects}}Aspects{{countComponents}}Components<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> => JobProcess<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.Initialize();
 
-        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this T jobData, CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             {countAspects( )[where A#i# : unmanaged, IAspect]}
             {countComponents( )[where C#i# : unmanaged, IComponentBase]}
             where T : struct, IJobFor{{countAspects}}Aspects{{countComponents}}Components<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {
@@ -72,17 +72,17 @@ namespace ME.BECS.Jobs {
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(_address(ref jobData), buffer, unsafeMode, scheduleMode);
+            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);
             var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? JobReflectionUnsafeData<T>.data.Data : JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>() {
                 scheduleMode = scheduleMode,
                 jobData = jobData,
                 buffer = buffer,
-                {countAspects[a#i# = buffer->state->aspectsStorage.Initialize<A#i#>(buffer->state),]}
-                {countComponents[c#i# = buffer->state->components.Get{{RWRO}}<C#i#>(buffer->state, buffer->worldId),]}
+                {countAspects[a#i# = buffer->state.ptr->aspectsStorage.Initialize<A#i#>(buffer->state),]}
+                {countComponents[c#i# = buffer->state.ptr->components.Get{{RWRO}}<C#i#>(buffer->state, buffer->worldId),]}
             };
-            data = _address(ref dataVal);
+            data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #endif
             

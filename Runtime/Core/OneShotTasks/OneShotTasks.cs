@@ -31,43 +31,43 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [NotThreadSafe]
-        public static OneShotTasks Create(State* state, uint capacity) {
+        public static OneShotTasks Create(SafePtr<State> state, uint capacity) {
             var tasks = new OneShotTasks() {
-                threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state->allocator),
+                threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
             };
             for (uint i = 0; i < tasks.threadItems.Length; ++i) {
                 ref var threadItem = ref tasks.threadItems[state, i];
-                threadItem.currentTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state->allocator, capacity) };
-                threadItem.nextTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state->allocator, capacity) };
+                threadItem.currentTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state.ptr->allocator, capacity) };
+                threadItem.nextTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state.ptr->allocator, capacity) };
             }
             return tasks;
         }
 
         [INLINE(256)]
-        public static void Add<T>(State* state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
+        public static void Add<T>(SafePtr<State> state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             var dataPtr = new MemAllocatorPtr();
-            if (type == OneShotType.NextTick) dataPtr.Set(ref state->allocator, in data);
+            if (type == OneShotType.NextTick) dataPtr.Set(ref state.ptr->allocator, in data);
             Add(state, in ent, StaticTypes<T>.typeId, StaticTypes<T>.groupId, updateType, dataPtr, type);
 
         }
 
         [INLINE(256)]
-        public static void Add(State* state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
+        public static void Add(SafePtr<State> state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
             var threadIndex = JobUtils.ThreadIndex;
             Journal.SetOneShotComponent(in ent, typeId, type);
-            ref var threadItem = ref state->oneShotTasks.threadItems[state, threadIndex];
+            ref var threadItem = ref state.ptr->oneShotTasks.threadItems[state, threadIndex];
             var collection = _addressT(ref threadItem.currentTick);
             if (type == OneShotType.NextTick) {
                 collection = _addressT(ref threadItem.nextTick);
             }
 
             {
-                collection->lockIndex.Lock();
-                collection->items.Add(ref state->allocator, new Task() {
+                collection.ptr->lockIndex.Lock();
+                collection.ptr->items.Add(ref state.ptr->allocator, new Task() {
                     typeId = typeId,
                     groupId = groupId,
                     ent = ent,
@@ -75,14 +75,14 @@ namespace ME.BECS {
                     data = data,
                     updateType = updateType,
                 });
-                collection->lockIndex.Unlock();
+                collection.ptr->lockIndex.Unlock();
             }
             
         }
 
         [INLINE(256)]
         [NotThreadSafe]
-        public static JobHandle Schedule(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
+        public static JobHandle Schedule(SafePtr<State> state, OneShotType type, ushort updateType, JobHandle dependsOn) {
 
             E.THREAD_CHECK(nameof(ScheduleJobs));
 
@@ -91,25 +91,25 @@ namespace ME.BECS {
                 type = type,
                 updateType = updateType,
             };
-            var handle = job.Schedule((int)state->oneShotTasks.threadItems.Length, 1, dependsOn);
+            var handle = job.Schedule((int)state.ptr->oneShotTasks.threadItems.Length, 1, dependsOn);
             
             return handle;
 
         }
         
         [INLINE(256)]
-        public static void ResolveThread(State* state, OneShotType type, ushort updateType, uint index) {
+        public static void ResolveThread(SafePtr<State> state, OneShotType type, ushort updateType, uint index) {
 
-            ref var threadItem = ref state->oneShotTasks.threadItems[state, index];
+            ref var threadItem = ref state.ptr->oneShotTasks.threadItems[state, index];
             var collection = _addressT(ref threadItem.currentTick);
             if (type == OneShotType.NextTick) {
                 collection = _addressT(ref threadItem.nextTick);
             }
-            collection->lockIndex.Lock();
-            for (uint j = collection->items.Count; j > 0u; --j) {
+            collection.ptr->lockIndex.Lock();
+            for (uint j = collection.ptr->items.Count; j > 0u; --j) {
 
                 var idx = j - 1u;
-                var item = collection->items[state, idx];
+                var item = collection.ptr->items[state, idx];
                 if (item.type == type && item.updateType == updateType) {
                     switch (type) {
                         case OneShotType.CurrentTick:
@@ -118,7 +118,7 @@ namespace ME.BECS {
                                 Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
                                 item.ent.Remove(item.typeId);
                             }
-                            item.Dispose(ref state->allocator);
+                            item.Dispose(ref state.ptr->allocator);
                             break;
 
                         case OneShotType.NextTick:
@@ -126,7 +126,7 @@ namespace ME.BECS {
                                 {
                                     Journal.ResolveOneShotComponent(in item.ent, item.typeId, type);
                                     // if we are processing begin of tick - add component
-                                    Batches.Set(in item.ent, item.typeId, item.GetData(state), state);
+                                    Batches.Set(in item.ent, item.typeId, item.GetData(state).ptr, state);
                                     // add new task to remove at the end of the tick
                                     var newTask = new Task() {
                                         typeId = item.typeId,
@@ -137,17 +137,17 @@ namespace ME.BECS {
                                         updateType = item.updateType,
                                     };
                                     Journal.SetOneShotComponent(in item.ent, item.typeId, OneShotType.CurrentTick);
-                                    _addressT(ref threadItem.currentTick)->items.Add(ref state->allocator, newTask);
+                                    _addressT(ref threadItem.currentTick).ptr->items.Add(ref state.ptr->allocator, newTask);
                                 }
-                                item.Dispose(ref state->allocator);
+                                item.Dispose(ref state.ptr->allocator);
                             }
                             break;
                     }
-                    collection->items.RemoveAtFast(in state->allocator, idx);
+                    collection.ptr->items.RemoveAtFast(in state.ptr->allocator, idx);
                 }
 
             }
-            collection->lockIndex.Unlock();
+            collection.ptr->lockIndex.Unlock();
 
         }
 

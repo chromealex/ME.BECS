@@ -18,7 +18,7 @@ namespace ME.BECS {
 
             [BURST_DISCARD]
             [HIDE_CALLSTACK]
-            private static void ThrowNotBurst(int index, int startIndex, int count) => throw new OutOfRangeException(Exception.Format($"index {index} out of range {startIndex}..{count}"));
+            private static void ThrowNotBurst(int index, int startIndex, int count) => throw new OutOfRangeException(Exception.Format($"index {index} out of range [{startIndex}..{count - 1}]"));
 
         }
 

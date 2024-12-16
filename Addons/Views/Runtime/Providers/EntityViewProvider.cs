@@ -24,7 +24,7 @@ namespace ME.BECS.Views {
     
     public struct EntityViewProviderTag : IComponent {}
 
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = 8)]
     public ref struct PrefabKey {
 
         [FieldOffset(0)]
@@ -43,7 +43,7 @@ namespace ME.BECS.Views {
         
         private struct Item {
 
-            public SourceRegistry.Info* info;
+            public SafePtr<SourceRegistry.Info> info;
             public EntityView obj;
             public System.IntPtr ptr;
 
@@ -80,7 +80,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Commit(ViewsModuleData* data, JobHandle dependsOn) {
+        public JobHandle Commit(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
 
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
@@ -96,43 +96,43 @@ namespace ME.BECS.Views {
                 marker.End();
             }
 
-            if (data->toAssign.Count() > 0) {
+            if (data.ptr->toAssign.Count() > 0) {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Processing assign entities");
                 marker.Begin();
-                foreach (var item in data->toAssign) {
+                foreach (var item in data.ptr->toAssign) {
                     var toEntId = item.Value;
-                    if (data->renderingOnSceneEntToRenderIndex.TryGetValue(in data->viewsWorld.state->allocator, toEntId, out var index) == true) {
-                        var instanceInfo = data->renderingOnScene[data->viewsWorld.state, index];
+                    if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(in data.ptr->viewsWorld.state.ptr->allocator, toEntId, out var index) == true) {
+                        var instanceInfo = data.ptr->renderingOnScene[data.ptr->viewsWorld.state, index];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         // Replace with the new ent
-                        instance.ent = new Ent(toEntId, data->connectedWorld);
+                        instance.ent = new Ent(toEntId, data.ptr->connectedWorld);
                     }
                 }
                 marker.End();
             }
             
-            if (data->toChange.Count() > 0) {
+            if (data.ptr->toChange.Count() > 0) {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Processing changed entities");
                 marker.Begin();
-                foreach (var item in data->toChange) {
+                foreach (var item in data.ptr->toChange) {
                     var entId = item.Key;
-                    if (data->renderingOnSceneEntToRenderIndex.TryGetValue(in data->viewsWorld.state->allocator, entId, out var index) == true) {
-                        var instanceInfo = data->renderingOnScene[data->viewsWorld.state, index];
+                    if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(in data.ptr->viewsWorld.state.ptr->allocator, entId, out var index) == true) {
+                        var instanceInfo = data.ptr->renderingOnScene[data.ptr->viewsWorld.state, index];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         {
                             // call despawn methods
                             {
-                                if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
-                                if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {
+                                if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
+                                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) {
                                     instance.DoDisableToPoolChildren();
                                 }
                             }
                         }
                         {
                             // call spawn methods
-                            instance.ent = data->renderingOnSceneEnts[(int)index].element;
-                            if (instanceInfo.prefabInfo->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
-                            if (instanceInfo.prefabInfo->HasEnableFromPoolModules == true) {
+                            instance.ent = data.ptr->renderingOnSceneEnts[(int)index].element;
+                            if (instanceInfo.prefabInfo.ptr->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
+                            if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) {
                                 instance.DoEnableFromPoolChildren(instance.ent);
                             }
                         }
@@ -145,17 +145,17 @@ namespace ME.BECS.Views {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Schedule JobUpdateTransforms");
                 marker.Begin();
                 // Update positions
-                if (data->properties.interpolateState == true && data->beginFrameState->state != null && data->beginFrameState->state->IsCreated == true) {
+                if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
                     dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
-                        renderingOnSceneEnts = data->renderingOnSceneEnts,
-                        beginFrameState = data->beginFrameState->state,
-                        currentTick = data->connectedWorld.state->tick,
-                        tickTime = data->beginFrameState->tickTime,
-                        currentTimeSinceStart = data->beginFrameState->timeSinceStart,
+                        renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                        beginFrameState = data.ptr->beginFrameState.ptr->state,
+                        currentTick = data.ptr->connectedWorld.state.ptr->tick,
+                        tickTime = data.ptr->beginFrameState.ptr->tickTime,
+                        currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);
                 } else {
                     dependsOn = new Jobs.JobUpdateTransforms() {
-                        renderingOnSceneEnts = data->renderingOnSceneEnts,
+                        renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);
                 }
 
@@ -202,13 +202,13 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Spawn(ViewsModuleData* data, JobHandle dependsOn) {
+        public JobHandle Spawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
             
             dependsOn.Complete();
-            for (int i = 0; i < data->toAddTemp.Length; ++i) {
-                var item = data->toAddTemp[i];
+            for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
+                var item = data.ptr->toAddTemp[i];
                 var instanceInfo = this.Spawn(item.prefabInfo.info, in item.ent, out var isNew);
-                data->renderingOnScene.Add(ref data->viewsWorld.state->allocator, instanceInfo);
+                data.ptr->renderingOnScene.Add(ref data.ptr->viewsWorld.state.ptr->allocator, instanceInfo);
             }
 
             return dependsOn;
@@ -216,11 +216,11 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Despawn(ViewsModuleData* data, JobHandle dependsOn) {
+        public JobHandle Despawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
             
             dependsOn.Complete();
-            for (int i = 0; i < data->toRemoveTemp.Length; ++i) {
-                var item = data->toRemoveTemp[i];
+            for (int i = 0; i < data.ptr->toRemoveTemp.Length; ++i) {
+                var item = data.ptr->toRemoveTemp[i];
                 this.Despawn(item);
             }
             
@@ -229,14 +229,14 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public SceneInstanceInfo Spawn(SourceRegistry.Info* prefabInfo, in Ent ent, out bool isNew) {
+        public SceneInstanceInfo Spawn(SafePtr<SourceRegistry.Info> prefabInfo, in Ent ent, out bool isNew) {
 
             var customViewId = ent.Read<ViewCustomIdComponent>().uniqueId;
             System.IntPtr objPtr;
             EntityView objInstance;
-            if (prefabInfo->sceneSource == false) {
+            if (prefabInfo.ptr->sceneSource == false) {
 
-                if (this.prefabIdToPool.TryGetValue(new PrefabKey() { prefabId = prefabInfo->prefabId, uniqueId = customViewId }.key, out var list) == true && list.Count > 0) {
+                if (this.prefabIdToPool.TryGetValue(new PrefabKey() { prefabId = prefabInfo.ptr->prefabId, uniqueId = customViewId }.key, out var list) == true && list.Count > 0) {
 
                     var instance = list.Pop();
                     if (this.tempViews.Contains(instance.obj) == true) {
@@ -254,7 +254,7 @@ namespace ME.BECS.Views {
                 } else {
 
                     var root = this.AssignToRoot(in ent);
-                    var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
+                    var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                     var prefab = (EntityView)handle.Target;
                     var instance = EntityView.Instantiate(prefab, root.tr);
                     instance.rootInfo = root;
@@ -267,7 +267,7 @@ namespace ME.BECS.Views {
             } else {
                 
                 var root = this.AssignToRoot(in ent);
-                var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo->prefabPtr);
+                var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                 var instance = (EntityView)handle.Target;
                 instance.transform.SetParent(root.tr);
                 instance.rootInfo = root;
@@ -288,14 +288,14 @@ namespace ME.BECS.Views {
             {
                 objInstance.ent = ent;
                 if (isNew == true) {
-                    if (prefabInfo->typeInfo.HasInitialize == true) objInstance.DoInitialize(ent);
-                    if (prefabInfo->HasInitializeModules == true) {
+                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(ent);
+                    if (prefabInfo.ptr->HasInitializeModules == true) {
                         objInstance.DoInitializeChildren(ent);
                     }
                 }
 
-                if (prefabInfo->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(ent);
-                if (prefabInfo->HasEnableFromPoolModules == true) {
+                if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(ent);
+                if (prefabInfo.ptr->HasEnableFromPoolModules == true) {
                     objInstance.DoEnableFromPoolChildren(ent);
                 }
             }
@@ -313,8 +313,8 @@ namespace ME.BECS.Views {
             var customViewId = instanceInfo.uniqueId;
 
             {
-                if (instanceInfo.prefabInfo->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
-                if (instanceInfo.prefabInfo->HasDisableToPoolModules == true) {
+                if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
+                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) {
                     instance.DoDisableToPoolChildren();
                 }
             }
@@ -322,7 +322,7 @@ namespace ME.BECS.Views {
             // Store despawn in temp (don't deactivate)
             this.tempViews.Add(instance);
             
-            if (this.prefabIdToPool.TryGetValue(new PrefabKey() { prefabId = instanceInfo.prefabInfo->prefabId, uniqueId = customViewId }.key, out var list) == true) {
+            if (this.prefabIdToPool.TryGetValue(new PrefabKey() { prefabId = instanceInfo.prefabInfo.ptr->prefabId, uniqueId = customViewId }.key, out var list) == true) {
 
                 list.Push(new Item() {
                     info = instanceInfo.prefabInfo,
@@ -338,7 +338,7 @@ namespace ME.BECS.Views {
                     obj = instance,
                     ptr = instanceInfo.obj,
                 });
-                this.prefabIdToPool.Add(new PrefabKey() { prefabId = instanceInfo.prefabInfo->prefabId, uniqueId = customViewId }.key, stack);
+                this.prefabIdToPool.Add(new PrefabKey() { prefabId = instanceInfo.prefabInfo.ptr->prefabId, uniqueId = customViewId }.key, stack);
                 
             }
             
@@ -353,7 +353,7 @@ namespace ME.BECS.Views {
             var hasChanged = instanceObj.groupChangedTracker.HasChanged(in ent);
             if (hasChanged == true) {
                 instanceObj.DoApplyState(ent);
-                if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(ent);
+                if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(ent);
             }
             
         }
@@ -363,18 +363,18 @@ namespace ME.BECS.Views {
             
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             instanceObj.DoOnUpdate(ent, dt);
-            if (instanceInfo.prefabInfo->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
+            if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
             
         }
 
         [INLINE(256)]
-        public void Dispose(State* state, ViewsModuleData* data) {
+        public void Dispose(SafePtr<State> state, SafePtr<ViewsModuleData> data) {
 
-            for (uint i = 0u; i < data->renderingOnScene.Count; ++i) {
-                var instance = data->renderingOnScene[in state->allocator, i];
+            for (uint i = 0u; i < data.ptr->renderingOnScene.Count; ++i) {
+                var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
-                if (instance.prefabInfo->typeInfo.HasDeInitialize == true) instanceObj.DoDeInitialize();
-                if (instance.prefabInfo->HasDeInitializeModules == true) instanceObj.DoDeInitializeChildren();
+                if (instance.prefabInfo.ptr->typeInfo.HasDeInitialize == true) instanceObj.DoDeInitialize();
+                if (instance.prefabInfo.ptr->HasDeInitializeModules == true) instanceObj.DoDeInitializeChildren();
             }
 
             foreach (var kv in this.prefabIdToPool) {
@@ -382,8 +382,8 @@ namespace ME.BECS.Views {
                 foreach (var comp in kv.Value) {
 
                     if (comp.obj != null) {
-                        if (comp.info->typeInfo.HasDeInitialize == true) comp.obj.DoDeInitialize();
-                        if (comp.info->HasDeInitializeModules == true) comp.obj.DoDeInitializeChildren();
+                        if (comp.info.ptr->typeInfo.HasDeInitialize == true) comp.obj.DoDeInitialize();
+                        if (comp.info.ptr->HasDeInitializeModules == true) comp.obj.DoDeInitializeChildren();
                         EntityView.DestroyImmediate(comp.obj.gameObject);
                     }
                     
@@ -402,9 +402,9 @@ namespace ME.BECS.Views {
             this.prefabIdToPool.Clear();
 
             {
-                var e = data->prefabIdToInfo.GetEnumerator(state);
+                var e = data.ptr->prefabIdToInfo.GetEnumerator(state);
                 while (e.MoveNext() == true) {
-                    var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(e.Current.value.info->prefabPtr);
+                    var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(e.Current.value.info.ptr->prefabPtr);
                     handle.Free();
                 }
             }
@@ -413,9 +413,9 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(ViewsModuleData* viewsModuleData, BECS.ObjectReferenceRegistryData data) {
+        public void Load(SafePtr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
 
-            viewsModuleData->prefabId = data.sourceId;
+            viewsModuleData.ptr->prefabId = data.sourceId;
             foreach (var item in data.items) {
                 if (item.IsValid() == false) continue;
                 if (item.source is EntityView entityView) {
@@ -425,7 +425,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public ViewSource Register(ViewsModuleData* viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
+        public ViewSource Register(SafePtr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
             if (prefab == null) {
@@ -438,14 +438,14 @@ namespace ME.BECS.Views {
             }
 
             var id = (uint)instanceId;
-            if (prefabId > 0u || viewsModuleData->instanceIdToPrefabId.TryGetValue(in viewsModuleData->viewsWorld.state->allocator, id, out prefabId) == false) {
+            if (prefabId > 0u || viewsModuleData.ptr->instanceIdToPrefabId.TryGetValue(in viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, out prefabId) == false) {
 
-                prefabId = prefabId > 0u ? prefabId : ++viewsModuleData->prefabId;
+                prefabId = prefabId > 0u ? prefabId : ++viewsModuleData.ptr->prefabId;
                 viewSource = new ViewSource() {
                     prefabId = prefabId,
                     providerId = ViewsModule.GAMEOBJECT_PROVIDER_ID,
                 };
-                viewsModuleData->instanceIdToPrefabId.Add(ref viewsModuleData->viewsWorld.state->allocator, id, prefabId);
+                viewsModuleData.ptr->instanceIdToPrefabId.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, prefabId);
                 ViewsTypeInfo.types.TryGetValue(prefab.GetType(), out var typeInfo);
                 typeInfo.cullingType = prefab.cullingType;
                 var info = new SourceRegistry.Info() {
@@ -461,7 +461,7 @@ namespace ME.BECS.Views {
                     HasDisableToPoolModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewDisableToPool).Any(),
                 };
                 
-                viewsModuleData->prefabIdToInfo.Add(ref viewsModuleData->viewsWorld.state->allocator, prefabId, new SourceRegistry.InfoRef(info));
+                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 
             } else {
 

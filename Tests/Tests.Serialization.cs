@@ -31,13 +31,13 @@ namespace ME.BECS.Tests {
                     ent.Set(new TestComponent() { data = 100200 });
                     entId = ent.id;
                 }
-                usedSize = world.state->allocator.GetReservedSize();
+                usedSize = world.state.ptr->allocator.GetReservedSize();
                 bytes = world.Serialize();
                 world.Dispose();
             }
             {
                 var world = World.Create(bytes);
-                Assert.AreEqual(usedSize, world.state->allocator.GetReservedSize());
+                Assert.AreEqual(usedSize, world.state.ptr->allocator.GetReservedSize());
                 var ent = new Ent(entId, world);
                 Assert.IsTrue(ent.Has<TestComponent>());
                 Assert.AreEqual(100200, ent.Read<TestComponent>().data);
@@ -59,13 +59,13 @@ namespace ME.BECS.Tests {
                     ent.Set(new TestComponent() { data = 100200 });
                     entId = ent.id;
                 }
-                usedSize = world.state->allocator.GetReservedSize();
+                usedSize = world.state.ptr->allocator.GetReservedSize();
                 bytes = world.Serialize();
                 world.Dispose();
             }
             {
                 var world = World.Create(bytes);
-                Assert.AreEqual(usedSize, world.state->allocator.GetReservedSize());
+                Assert.AreEqual(usedSize, world.state.ptr->allocator.GetReservedSize());
                 var entFailed = new Ent(1, world);
                 Assert.IsFalse(entFailed.IsAlive());
                 var ent = new Ent(entId, world);
@@ -154,7 +154,7 @@ namespace ME.BECS.Tests {
                 var packer = new StreamBufferWriter();
                 packer.Write(10L);
                 packer.Write(20L);
-                var arr = _makeArray<int>(10);
+                var arr = _makeArray<int>(10).ptr;
                 *(arr + 0) = 100;
                 *(arr + 1) = 200;
                 *(arr + 2) = 300;
@@ -166,7 +166,7 @@ namespace ME.BECS.Tests {
                 *(arr + 8) = 900;
                 *(arr + 9) = 1000;
                 packer.Write(arr, 10);
-                _free(arr);
+                _free((SafePtr)arr);
                 bytes = packer.ToArray();
                 packer.Dispose();
             }
@@ -178,7 +178,7 @@ namespace ME.BECS.Tests {
                 var i2 = 0L;
                 packer.Read(ref i2);
                 Assert.AreEqual(20L, i2);
-                var arr = _makeArray<int>(10);
+                var arr = _makeArray<int>(10).ptr;
                 packer.Read(ref arr, 10);
                 {
                     Assert.AreEqual(100, *(arr + 0));
@@ -192,7 +192,7 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(900, *(arr + 8));
                     Assert.AreEqual(1000, *(arr + 9));
                 }
-                _free(arr);
+                _free((SafePtr)arr);
                 packer.Dispose();
             }
 

@@ -29,13 +29,13 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public static void Create(ref Page page, State* state, uint dataSize, uint length) {
+            public static void Create(ref Page page, SafePtr<State> state, uint dataSize, uint length) {
                 var blockSize = _blockSize(dataSize);
                 page = new Page() {
                     lockSpinner = page.lockSpinner,
                 };
-                page.entIdToData = state->allocator.AllocArray(length, blockSize);
-                state->allocator.MemClear(page.entIdToData, 0L, length * blockSize);
+                page.entIdToData = state.ptr->allocator.AllocArray(length, blockSize);
+                state.ptr->allocator.MemClear(page.entIdToData, 0L, length * blockSize);
                 page.isCreated = 1;
             }
 
@@ -74,24 +74,24 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private static byte* _offsetData(byte* block) {
+        private static SafePtr _offsetData(SafePtr<byte> block) {
             return block + _headerSize();
         }
 
         [INLINE(256)]
-        private static byte* _offsetState(byte* block) {
+        private static SafePtr _offsetState(SafePtr<byte> block) {
             return block + TSize<ushort>.size;
         }
 
         [INLINE(256)]
-        private static ushort* _offsetGen(byte* block) {
-            return (ushort*)block;
+        private static SafePtr<ushort> _offsetGen(SafePtr<byte> block) {
+            return block.Cast<ushort>();
         }
 
         [INLINE(256)]
-        private static byte* _getBlock(State* state, in Page page, uint entityId, uint dataSize) {
+        private static SafePtr _getBlock(SafePtr<State> state, in Page page, uint entityId, uint dataSize) {
             var dataIndex = _dataIndex(entityId);
-            return state->allocator.GetUnsafePtr(in page.entIdToData, _blockSize(dataSize) * dataIndex);
+            return state.ptr->allocator.GetUnsafePtr(in page.entIdToData, _blockSize(dataSize) * dataIndex);
         }
 
         [INLINE(256)]
@@ -100,11 +100,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public DataDenseSet(State* state, uint dataSize, uint entitiesCapacity) {
+        public DataDenseSet(SafePtr<State> state, uint dataSize, uint entitiesCapacity) {
             this.dataSize = dataSize;
-            this.dataPages = new MemArray<Page>(ref state->allocator, _sizeData(entitiesCapacity));
+            this.dataPages = new MemArray<Page>(ref state.ptr->allocator, _sizeData(entitiesCapacity));
             this.readWriteSpinner = ReadWriteSpinner.Create(state);
-            MemoryAllocator.ValidateConsistency(ref state->allocator);
+            MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
         }
         
         [INLINE(256)]
@@ -112,7 +112,7 @@ namespace ME.BECS {
             this.dataPages.BurstMode(in allocator, state);
         }
         
-        public uint GetReservedSizeInBytes(State* state) {
+        public uint GetReservedSizeInBytes(SafePtr<State> state) {
             var size = 0u;
             for (int i = 0; i < this.dataPages.Length; ++i) {
                 size += this.dataPages[state, i].GetReservedSizeInBytes(this.dataSize, ENTITIES_PER_PAGE);
@@ -121,55 +121,55 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private void Resize(State* state, uint entitiesCapacity) {
+        private void Resize(SafePtr<State> state, uint entitiesCapacity) {
             var newSize = _sizeData(entitiesCapacity);
             if (newSize > this.dataPages.Length) {
                 this.readWriteSpinner.WriteBegin(state);
                 if (newSize > this.dataPages.Length) {
-                    this.dataPages.Resize(ref state->allocator, newSize, 2);
+                    this.dataPages.Resize(ref state.ptr->allocator, newSize, 2);
                 }
                 this.readWriteSpinner.WriteEnd();
             }
         }
         
         [INLINE(256)]
-        public void OnEntityAdd(State* state, uint entityId) {
+        public void OnEntityAdd(SafePtr<State> state, uint entityId) {
             this.Resize(state, entityId + 1u);
         }
 
         [INLINE(256)]
-        public bool SetState(State* state, uint entityId, ushort entityGen, bool value) {
+        public bool SetState(SafePtr<State> state, uint entityId, ushort entityGen, bool value) {
             var changed = false;
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
             var val = _offsetState(_getBlock(state, in page, entityId, this.dataSize));
-            if (value == true && *val == 1) {
+            if (value == true && *val.ptr == 1) {
                 // if we want to enable component and it was disabled
                 changed = true;
-                *val = 0;
-            } else if (value == false && *val == 0) {
+                *val.ptr = 0;
+            } else if (value == false && *val.ptr == 0) {
                 // if we want to disable component and it was enabled
                 changed = true;
-                *val = 1;
+                *val.ptr = 1;
             }
             this.readWriteSpinner.ReadEnd(state);
             return changed;
         }
 
         [INLINE(256)]
-        public bool ReadState(State* state, uint entityId, ushort entityGen) {
+        public bool ReadState(SafePtr<State> state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
             var val = _offsetState(_getBlock(state, in page, entityId, this.dataSize));
-            var res = *val == 0 ? true : false;
+            var res = *val.ptr == 0 ? true : false;
             this.readWriteSpinner.ReadEnd(state);
             return res;
         }
 
         [INLINE(256)]
-        public bool Set(State* state, uint entityId, ushort entityGen, void* data, out bool changed) {
+        public bool Set(SafePtr<State> state, uint entityId, ushort entityGen, void* data, out bool changed) {
             changed = false;
             var isNew = false;
             var pageIndex = _pageIndex(entityId);
@@ -191,15 +191,15 @@ namespace ME.BECS {
                     _memclear(_offsetData(ptr), this.dataSize);
                 } else {
                     changed = true;//_memcmp(data, ptr, this.dataSize) != 0;
-                    _memcpy(data, _offsetData(ptr), this.dataSize);
+                    _memcpy((SafePtr)data, _offsetData(ptr), this.dataSize);
                 }
             }
             { // update gen
                 var gen = _offsetGen(ptr);
-                if (*gen != entityGen) {
+                if (*gen.ptr != entityGen) {
                     page.Lock();
-                    if (*gen != entityGen) {
-                        *gen = entityGen;
+                    if (*gen.ptr != entityGen) {
+                        *gen.ptr = entityGen;
                         changed = true;
                         isNew = true;
                     }
@@ -213,7 +213,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public byte* Get(State* state, uint entityId, ushort entityGen, bool isReadonly, out bool isNew) {
+        public byte* Get(SafePtr<State> state, uint entityId, ushort entityGen, bool isReadonly, out bool isNew) {
             isNew = false;
             if (this.dataSize == 0u) return null;
             var pageIndex = _pageIndex(entityId);
@@ -235,14 +235,14 @@ namespace ME.BECS {
             var ptr = _getBlock(state, in page, entityId, this.dataSize);
             { // update gen
                 var gen = _offsetGen(ptr);
-                if (*gen != entityGen) {
+                if (*gen.ptr != entityGen) {
                     if (isReadonly == true) {
                         this.readWriteSpinner.ReadEnd(state);
                         return null;
                     }
                     page.Lock();
-                    if (*gen != entityGen) {
-                        *gen = entityGen;
+                    if (*gen.ptr != entityGen) {
+                        *gen.ptr = entityGen;
                         isNew = true;
                     }
                     page.Unlock();
@@ -254,11 +254,11 @@ namespace ME.BECS {
             }
             this.readWriteSpinner.ReadEnd(state);
 
-            return dataPtr;
+            return dataPtr.ptr;
         }
 
         [INLINE(256)]
-        public bool Remove(State* state, uint entityId, ushort entityGen) {
+        public bool Remove(SafePtr<State> state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
@@ -270,11 +270,11 @@ namespace ME.BECS {
             var ptr = _getBlock(state, in page, entityId, this.dataSize);
             { // update gen
                 var gen = _offsetGen(ptr);
-                if (*gen == entityGen) {
+                if (*gen.ptr == entityGen) {
                     var hasRemoved = false;
                     page.Lock();
-                    if (*gen == entityGen) {
-                        *gen = 0;
+                    if (*gen.ptr == entityGen) {
+                        *gen.ptr = 0;
                         hasRemoved = true;
                     }
                     page.Unlock();
@@ -287,7 +287,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Has(State* state, uint entityId, ushort entityGen, bool checkEnabled) {
+        public bool Has(SafePtr<State> state, uint entityId, ushort entityGen, bool checkEnabled) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
             var page = this.dataPages[state, pageIndex];
@@ -296,8 +296,8 @@ namespace ME.BECS {
                 return false;
             }
             var ptr = _getBlock(state, in page, entityId, this.dataSize);
-            var gen = *_offsetGen(ptr);
-            var disableState = checkEnabled == true ? *_offsetState(ptr) : 0;
+            var gen = *_offsetGen(ptr).ptr;
+            var disableState = checkEnabled == true ? *_offsetState(ptr).ptr : 0;
             this.readWriteSpinner.ReadEnd(state);
             return gen == entityGen && disableState == 0;
         }

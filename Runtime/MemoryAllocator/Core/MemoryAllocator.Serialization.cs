@@ -13,8 +13,8 @@
             stream.Read(ref allocator.zonesListCapacity);
             stream.Read(ref allocator.initialSize);
             
-            allocator.zonesList = (MemoryAllocator.MemZone**)_make(allocator.zonesListCapacity * (uint)sizeof(MemoryAllocator.MemZone*), TAlign<System.IntPtr>.alignInt, Constants.ALLOCATOR_PERSISTENT);
-            _memclear(allocator.zonesList, sizeof(MemoryAllocator.MemZone*) * allocator.zonesListCapacity);
+            allocator.zonesList = (MemoryAllocator.MemZone**)_make(allocator.zonesListCapacity * (uint)sizeof(MemoryAllocator.MemZone*), TAlign<System.IntPtr>.alignInt, Constants.ALLOCATOR_PERSISTENT).ptr;
+            _memclear((SafePtr)allocator.zonesList, sizeof(MemoryAllocator.MemZone*) * allocator.zonesListCapacity);
 
             for (int i = 0; i < allocator.zonesListCount; ++i) {
                 var length = 0;

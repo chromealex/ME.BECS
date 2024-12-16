@@ -516,7 +516,7 @@ namespace ME.BECS.Editor {
                 var changed = true;
                 var state = this.value.World.state;
                 if (force == false) {
-                    var componentsCount = state->archetypes.list[state, state->archetypes.entToArchetypeIdx[state, this.value.id]].componentsCount;
+                    var componentsCount = state.ptr->archetypes.list[state, state.ptr->archetypes.entToArchetypeIdx[state, this.value.id]].componentsCount;
                     if (this.window.entToComponentsCount.TryGetValue(this.value, out var count) == true) {
                         if (count == componentsCount) {
                             changed = false;
@@ -780,10 +780,10 @@ namespace ME.BECS.Editor {
         private void DrawEntities(VisualElement root) {
             
             this.cache.Clear();
-            for (uint i = 0u; i < this.selectedWorld.state->archetypes.list.Count; ++i) {
-                var arch = this.selectedWorld.state->archetypes.list[this.selectedWorld.state, i];
+            for (uint i = 0u; i < this.selectedWorld.state.ptr->archetypes.list.Count; ++i) {
+                var arch = this.selectedWorld.state.ptr->archetypes.list[this.selectedWorld.state, i];
                 for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
-                    var entId = arch.entitiesList[this.selectedWorld.state->allocator, j];
+                    var entId = arch.entitiesList[this.selectedWorld.state.ptr->allocator, j];
                     var ent = new Ent(entId, this.selectedWorld);
                     if (ent.Read<ParentComponent>().value == default) {
                         this.cache.Add(ent);

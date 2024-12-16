@@ -98,7 +98,7 @@ namespace ME.BECS.Pathfinding {
             
             for (uint idx = 0u; idx < root.chunks.Length; ++idx) {
                 ref var chunk = ref this.chunks[this.world.state, idx];
-                if (this.changedChunks.IsCreated == true && this.changedChunks[(int)idx] != this.world.state->tick) continue;
+                if (this.changedChunks.IsCreated == true && this.changedChunks[(int)idx] != this.world.state.ptr->tick) continue;
                 Graph.BuildPortals(in this.graph, idx, ref chunk, in this.world);
             }
 
@@ -120,7 +120,7 @@ namespace ME.BECS.Pathfinding {
         public void Execute(int index) {
 
             var chunkIndex = (uint)index;
-            if (this.changedChunks.IsCreated == false || this.changedChunks[index] == this.world.state->tick) {
+            if (this.changedChunks.IsCreated == false || this.changedChunks[index] == this.world.state.ptr->tick) {
                 // calculate portals connections
                 var root = this.graph.Read<RootGraphComponent>();
                 var chunk = this.chunks[this.world.state, chunkIndex];
@@ -319,7 +319,7 @@ namespace ME.BECS.Pathfinding {
             var to = this.path.to;
             var highLevelPath = new Unity.Profiling.ProfilerMarker("HierarchyPath");
             highLevelPath.Begin();
-            var list = this.path.from.As(in this.world.state->allocator);
+            var list = this.path.from.As(in this.world.state.ptr->allocator);
             var nodesCount = 0;
             var hierarchyPathList = new Unity.Collections.LowLevel.Unsafe.UnsafeList<PathInfo>((int)list.Count, Unity.Collections.Allocator.Temp);
             for (uint i = 0; i < list.Count; ++i) {
@@ -357,11 +357,11 @@ namespace ME.BECS.Pathfinding {
                             /*if (k < nodes.Length - 1) {
                                 var nextPortal = nodes[k + 1];
                                 if (nextPortal.chunkIndex == portalInfo.chunkIndex) {
-                                    if (chunk.cache.TryGetCache(in this.world.state->allocator, portalInfo, nextPortal, out var cacheChunk) == true) {
+                                    if (chunk.cache.TryGetCache(in this.world.state.ptr->allocator, portalInfo, nextPortal, out var cacheChunk) == true) {
                                         //UnityEngine.Debug.Log("USE CACHE: " + portalInfo.chunkIndex);
                                         // use cache
                                         data.index = portalInfo.chunkIndex;
-                                        data.flowField.CopyFrom(ref this.world.state->allocator, in cacheChunk.flowField);
+                                        data.flowField.CopyFrom(ref this.world.state.ptr->allocator, in cacheChunk.flowField);
                                         this.path.chunks[this.world.state, portalInfo.chunkIndex] = data;
                                         continue;
                                     }
@@ -371,7 +371,7 @@ namespace ME.BECS.Pathfinding {
                             var createMarker = new Unity.Profiling.ProfilerMarker("Create");
                             createMarker.Begin();
                             data.index = portalInfo.chunkIndex;
-                            data.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state->allocator, chunk.nodes.Length);
+                            data.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state.ptr->allocator, chunk.nodes.Length);
                             chunksToUpdate.Add(portalInfo);
                             createMarker.End();
                             var setDefaultMarker = new Unity.Profiling.ProfilerMarker("Set Default");
@@ -556,7 +556,7 @@ namespace ME.BECS.Pathfinding {
                                         if (srcPortalInfo.chunkIndex == nextPortalInfo.chunkIndex) {
                                             // need to add local portals only
                                             //UnityEngine.Debug.Log("UPDATE CACHE: " + srcPortalInfo.chunkIndex);
-                                            chunkData.cache.UpdateCache(ref this.world.state->allocator, srcPortalInfo, nextPortalInfo,
+                                            chunkData.cache.UpdateCache(ref this.world.state.ptr->allocator, srcPortalInfo, nextPortalInfo,
                                                                         in this.path.chunks[this.world.state, srcPortalInfo.chunkIndex]);
                                         }
                                     }
@@ -583,7 +583,7 @@ namespace ME.BECS.Pathfinding {
         private byte CalculateLOS(in RootGraphComponent root, ref Path.Chunk chunk, in Graph.TempNode node, in Graph.TempNode targetNode) {
 
             [INLINE(256)]
-            static byte GetState(State* state, in Path path, in Graph.TempNode node) {
+            static byte GetState(SafePtr<State> state, in Path path, in Graph.TempNode node) {
                 var chunk = path.chunks[state, node.chunkIndex];
                 if (chunk.flowField.IsCreated == false) return 0;
                 return chunk.flowField[state, node.nodeIndex].hasLineOfSight;

@@ -43,11 +43,11 @@ namespace ME.BECS.Tests {
                 }
                 {
                     views.Update(dt).Complete();
-                    Assert.AreEqual(1, views.data->renderingOnScene.Count);
-                    Assert.AreEqual(1, views.data->renderingOnSceneEntToRenderIndex.Count);
-                    Assert.AreEqual(1, views.data->renderingOnSceneRenderIndexToEnt.Count);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnScene.Count);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneEntToRenderIndex.Count);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneRenderIndexToEnt.Count);
                     views.Update(dt).Complete();
-                    Assert.AreEqual(1, views.data->renderingOnScene.Count);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnScene.Count);
                     {
                         var ent = world.NewEnt();
                         ent.Set<ME.BECS.Transforms.TransformAspect>();
@@ -55,13 +55,13 @@ namespace ME.BECS.Tests {
                         Batches.Apply(world.state);
                     }
                     views.Update(dt).Complete();
-                    Assert.AreEqual(2, views.data->renderingOnSceneEntToRenderIndex.Count);
-                    Assert.AreEqual(2, views.data->renderingOnSceneRenderIndexToEnt.Count);
-                    Assert.AreEqual(0, views.data->renderingOnSceneEntToRenderIndex[views.data->viewsWorld.state->allocator, 0]);
-                    Assert.AreEqual(0, views.data->renderingOnSceneRenderIndexToEnt[views.data->viewsWorld.state->allocator, 0]);
-                    Assert.AreEqual(1, views.data->renderingOnSceneEntToRenderIndex[views.data->viewsWorld.state->allocator, 1]);
-                    Assert.AreEqual(1, views.data->renderingOnSceneRenderIndexToEnt[views.data->viewsWorld.state->allocator, 1]);
-                    Assert.AreEqual(2, views.data->renderingOnScene.Count);
+                    Assert.AreEqual(2, views.data.ptr->renderingOnSceneEntToRenderIndex.Count);
+                    Assert.AreEqual(2, views.data.ptr->renderingOnSceneRenderIndexToEnt.Count);
+                    Assert.AreEqual(0, views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, 0]);
+                    Assert.AreEqual(0, views.data.ptr->renderingOnSceneRenderIndexToEnt[views.data.ptr->viewsWorld.state.ptr->allocator, 0]);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, 1]);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneRenderIndexToEnt[views.data.ptr->viewsWorld.state.ptr->allocator, 1]);
+                    Assert.AreEqual(2, views.data.ptr->renderingOnScene.Count);
                     {
                         ME.BECS.Views.UnsafeViewsModule.DestroyView(firstEnt);
                         Batches.Apply(world.state);
@@ -70,11 +70,11 @@ namespace ME.BECS.Tests {
                     Assert.IsFalse(firstEnt.Has<ViewComponent>());
                     Assert.IsFalse(firstEnt.Has<IsViewRequested>());
                     Assert.IsFalse(firstEnt.Has<EntityViewProviderTag>());
-                    Assert.AreEqual(1, views.data->renderingOnSceneEntToRenderIndex.Count);
-                    Assert.AreEqual(1, views.data->renderingOnSceneRenderIndexToEnt.Count);
-                    Assert.AreEqual(1, views.data->renderingOnScene.Count);
-                    Assert.AreEqual(0, views.data->renderingOnSceneEntToRenderIndex[views.data->viewsWorld.state->allocator, 1]);
-                    Assert.AreEqual(1, views.data->renderingOnSceneRenderIndexToEnt[views.data->viewsWorld.state->allocator, 0]);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneEntToRenderIndex.Count);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneRenderIndexToEnt.Count);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnScene.Count);
+                    Assert.AreEqual(0, views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, 1]);
+                    Assert.AreEqual(1, views.data.ptr->renderingOnSceneRenderIndexToEnt[views.data.ptr->viewsWorld.state.ptr->allocator, 0]);
                 }
                 views.Dispose();
                 world.Dispose();
@@ -112,9 +112,9 @@ namespace ME.BECS.Tests {
                         Assert.IsTrue(firstEnt.Has<ViewComponent>());
                         Assert.IsTrue(firstEnt.Has<IsViewRequested>());
                         Assert.IsTrue(firstEnt.Has<EntityViewProviderTag>());
-                        Assert.IsTrue(views.data->renderingOnSceneEntToRenderIndex.ContainsKey(views.data->viewsWorld.state->allocator, firstEnt.id));
-                        var idx = views.data->renderingOnSceneEntToRenderIndex[views.data->viewsWorld.state->allocator, firstEnt.id];
-                        var instanceInfo = views.data->renderingOnScene[views.data->viewsWorld.state, idx];
+                        Assert.IsTrue(views.data.ptr->renderingOnSceneEntToRenderIndex.ContainsKey(views.data.ptr->viewsWorld.state.ptr->allocator, firstEnt.id));
+                        var idx = views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, firstEnt.id];
+                        var instanceInfo = views.data.ptr->renderingOnScene[views.data.ptr->viewsWorld.state, idx];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         Assert.IsTrue(instance.ent == firstEnt);
                     }
@@ -132,9 +132,9 @@ namespace ME.BECS.Tests {
                         Assert.IsTrue(newEnt.Has<IsViewRequested>());
                         Assert.IsTrue(newEnt.Has<EntityViewProviderTag>());
                         Assert.IsFalse(newEnt.Has<AssignViewComponent>());
-                        Assert.IsTrue(views.data->renderingOnSceneEntToRenderIndex.ContainsKey(views.data->viewsWorld.state->allocator, newEnt.id));
-                        var idx = views.data->renderingOnSceneEntToRenderIndex[views.data->viewsWorld.state->allocator, newEnt.id];
-                        var instanceInfo = views.data->renderingOnScene[views.data->viewsWorld.state, idx];
+                        Assert.IsTrue(views.data.ptr->renderingOnSceneEntToRenderIndex.ContainsKey(views.data.ptr->viewsWorld.state.ptr->allocator, newEnt.id));
+                        var idx = views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, newEnt.id];
+                        var instanceInfo = views.data.ptr->renderingOnScene[views.data.ptr->viewsWorld.state, idx];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         Assert.IsTrue(instance.ent == newEnt);
                     }

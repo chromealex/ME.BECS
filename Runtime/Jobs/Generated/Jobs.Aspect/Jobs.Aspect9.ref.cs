@@ -16,7 +16,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(this QueryBuilder builder, in T job = default) where T : struct, IJobForAspects<T0,T1,T2,T3,T4,T5,T6,T7,T8> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect {
             builder.WithAspect<T0>(); builder.WithAspect<T1>(); builder.WithAspect<T2>(); builder.WithAspect<T3>(); builder.WithAspect<T4>(); builder.WithAspect<T5>(); builder.WithAspect<T6>(); builder.WithAspect<T7>(); builder.WithAspect<T8>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(in builder.commandBuffer, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(in builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -27,12 +27,12 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobForAspects<T0,T1,T2,T3,T4,T5,T6,T7,T8> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect {
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(in job);
         }
 
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobForAspects<T0,T1,T2,T3,T4,T5,T6,T7,T8> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect {
-            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(in staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -68,16 +68,16 @@ namespace ME.BECS.Jobs {
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(_address(ref jobData), buffer, unsafeMode, scheduleMode);
+            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);
             var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? JobReflectionUnsafeData<T>.data.Data : JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>() {
                 scheduleMode = scheduleMode,
                 jobData = jobData,
                 buffer = buffer,
-                a0 = buffer->state->aspectsStorage.Initialize<T0>(buffer->state),a1 = buffer->state->aspectsStorage.Initialize<T1>(buffer->state),a2 = buffer->state->aspectsStorage.Initialize<T2>(buffer->state),a3 = buffer->state->aspectsStorage.Initialize<T3>(buffer->state),a4 = buffer->state->aspectsStorage.Initialize<T4>(buffer->state),a5 = buffer->state->aspectsStorage.Initialize<T5>(buffer->state),a6 = buffer->state->aspectsStorage.Initialize<T6>(buffer->state),a7 = buffer->state->aspectsStorage.Initialize<T7>(buffer->state),a8 = buffer->state->aspectsStorage.Initialize<T8>(buffer->state),
+                a0 = buffer->state.ptr->aspectsStorage.Initialize<T0>(buffer->state),a1 = buffer->state.ptr->aspectsStorage.Initialize<T1>(buffer->state),a2 = buffer->state.ptr->aspectsStorage.Initialize<T2>(buffer->state),a3 = buffer->state.ptr->aspectsStorage.Initialize<T3>(buffer->state),a4 = buffer->state.ptr->aspectsStorage.Initialize<T4>(buffer->state),a5 = buffer->state.ptr->aspectsStorage.Initialize<T5>(buffer->state),a6 = buffer->state.ptr->aspectsStorage.Initialize<T6>(buffer->state),a7 = buffer->state.ptr->aspectsStorage.Initialize<T7>(buffer->state),a8 = buffer->state.ptr->aspectsStorage.Initialize<T8>(buffer->state),
             };
-            data = _address(ref dataVal);
+            data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #endif
             

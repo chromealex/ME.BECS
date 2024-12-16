@@ -7,12 +7,12 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
-    public unsafe ref struct QueryContext {
+    public ref struct QueryContext {
 
-        internal State* state;
+        internal SafePtr<State> state;
         internal ushort worldId;
 
-        public static QueryContext Create(State* state, ushort worldId) {
+        public static QueryContext Create(SafePtr<State> state, ushort worldId) {
             return new QueryContext() { state = state, worldId = worldId, };
         }
 
@@ -52,14 +52,14 @@ namespace ME.BECS {
         private struct BuilderArchetypesJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public SafePtr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public QueryData* queryData;
+            public SafePtr<QueryData> queryData;
             public Unity.Collections.Allocator allocator;
             
             public void Execute() {
 
-                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, this.allocator);
+                this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
 
             }
 

@@ -20,7 +20,7 @@ namespace ME.BECS {
             var props = WorldProperties.Default;
             props.name = "EntityConfig Static World";
             staticWorld = World.Create(props, false);
-            registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state->allocator, 10u);
+            registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state.ptr->allocator, 10u);
             registryToId.Clear();
             lockSpinner.Unlock();
         }
@@ -32,7 +32,7 @@ namespace ME.BECS {
             }
             
             if (registryToId.TryGetValue(config, out var id) == true) {
-                unsafeConfig = registryFromId[in staticWorld.state->allocator, id];
+                unsafeConfig = registryFromId[in staticWorld.state.ptr->allocator, id];
                 return id;
             }
 
@@ -47,7 +47,7 @@ namespace ME.BECS {
             lockSpinner.Lock();
             registryToId.Add(config, nextId);
             unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
-            registryFromId.Add(ref staticWorld.state->allocator, nextId, unsafeConfig);
+            registryFromId.Add(ref staticWorld.state.ptr->allocator, nextId, unsafeConfig);
             EntityConfigsRegistry.TryAdd(nextId, unsafeConfig);
             Batches.Apply(staticWorld.state);
             lockSpinner.Unlock();
@@ -59,13 +59,13 @@ namespace ME.BECS {
             
             lockSpinner.Lock();
             if (registryToId.TryGetValue(config, out var id) == true) {
-                if (registryFromId.TryGetValue(in staticWorld.state->allocator, id, out var unsafeEntityConfig) == true) {
+                if (registryFromId.TryGetValue(in staticWorld.state.ptr->allocator, id, out var unsafeEntityConfig) == true) {
                     lockSpinner.Unlock();
                     var staticEntity = unsafeEntityConfig.GetStaticEntity();
                     unsafeEntityConfig.Dispose();
                     unsafeEntityConfig = new UnsafeEntityConfig(config, id, staticEntity);
                     lockSpinner.Lock();
-                    registryFromId[in staticWorld.state->allocator, id] = unsafeEntityConfig;
+                    registryFromId[in staticWorld.state.ptr->allocator, id] = unsafeEntityConfig;
                 }
             }
             lockSpinner.Unlock();
