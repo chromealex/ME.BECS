@@ -376,10 +376,10 @@ namespace ME.BECS.Network {
 
             private void Put(SafePtr<State> state) {
 
-                if (this.resetState == null) this.SaveResetState();
+                if (this.resetState.ptr == null) this.SaveResetState();
                 
                 ref var item = ref this.entries[this.rover];
-                if (item.state != null) {
+                if (item.state.ptr != null) {
                     item.state.ptr->Dispose();
                     _free(item.state);
                 }
@@ -460,14 +460,14 @@ namespace ME.BECS.Network {
                 for (uint i = 0u; i < this.entries.Length; ++i) {
 
                     ref var entry = ref this.entries[i];
-                    if (entry.state != null) {
+                    if (entry.state.ptr != null) {
                         entry.state.ptr->Dispose();
                         _free(entry.state);
                     }
                     
                 }
                 
-                if (this.resetState != null) _free(this.resetState);
+                if (this.resetState.ptr != null) _free(this.resetState);
 
                 this = default;
 
@@ -478,7 +478,7 @@ namespace ME.BECS.Network {
                 for (uint i = 0u; i < this.entries.Length; ++i) {
 
                     ref var entry = ref this.entries[i];
-                    if (tick > entry.tick && entry.state != null) {
+                    if (tick > entry.tick && entry.state.ptr != null) {
                         entry.state.ptr->Dispose();
                         _free(entry.state);
                         entry = default;
@@ -519,7 +519,7 @@ namespace ME.BECS.Network {
             }
 
             public void SaveResetState() {
-                if (this.resetState == null) {
+                if (this.resetState.ptr == null) {
                     this.resetState = State.Clone(this.connectedWorldState);
                 } else {
                     this.resetState.ptr->CopyFrom(in *this.connectedWorldState.ptr);
@@ -619,7 +619,7 @@ namespace ME.BECS.Network {
             public bool RollbackTo(ulong tickToRollback, ref ulong currentTick, ulong targetTick) {
                 
                 var rollbackState = this.statesStorage.GetStateForRollback(tickToRollback);
-                if (rollbackState == null) {
+                if (rollbackState.ptr == null) {
                     // can't find state to roll back
                     // that means that requested tick had never seen before (player connected in the middle of the game)
                     // or it was reset by statesStorageProperties.capacity (event is out of history storage)
@@ -627,7 +627,7 @@ namespace ME.BECS.Network {
                     rollbackState = this.statesStorage.GetResetState();
                 }
 
-                if (rollbackState == null) {
+                if (rollbackState.ptr == null) {
                     return false;
                 }
                 

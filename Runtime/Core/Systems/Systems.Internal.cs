@@ -69,7 +69,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            if (this.arr != null) _free(this.arr);
+            if (this.arr.ptr != null) _free(this.arr);
 
         }
 
@@ -146,7 +146,7 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public bool HasMethod(Method method) {
-            return this.GetMethod(method) != null;
+            return this.GetMethod(method).ptr != null;
         }
         
         [INLINE(256)]
@@ -272,44 +272,44 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            if (this.graph != null) {
+            if (this.graph.ptr != null) {
                 this.graph.ptr->Dispose();
                 _free(this.graph);
             }
 
-            if (this.dataAwake != null) {
+            if (this.dataAwake.ptr != null) {
                 this.dataAwake.ptr->Dispose();
                 _free(this.dataAwake);
             }
 
-            if (this.dataUpdate != null) {
+            if (this.dataUpdate.ptr != null) {
                 this.dataUpdate.ptr->Dispose();
                 _free(this.dataUpdate);
             }
 
-            if (this.dataDestroy != null) {
+            if (this.dataDestroy.ptr != null) {
                 this.dataDestroy.ptr->Dispose();
                 _free(this.dataDestroy);
             }
 
-            if (this.dataDrawGizmos != null) {
+            if (this.dataDrawGizmos.ptr != null) {
                 this.dataDrawGizmos.ptr->Dispose();
                 _free(this.dataDrawGizmos);
             }
 
-            if (this.systemData != null) {
+            if (this.systemData.ptr != null) {
                 _free(ref this.systemData);
             }
             
-            if (this.children != null) {
+            if (this.children.ptr != null) {
                 _free(this.children);
             }
 
-            if (this.parents != null) {
+            if (this.parents.ptr != null) {
                 _free(this.parents);
             }
 
-            if (this.deps != null) {
+            if (this.deps.ptr != null) {
                 _free(this.deps);
             }
 

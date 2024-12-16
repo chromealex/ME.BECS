@@ -27,7 +27,7 @@ namespace ME.BECS.Tests {
                         entitiesCapacity = capacity,
                     },
                 });
-                Assert.IsTrue(world.state != null);
+                Assert.IsTrue(world.state.ptr != null);
                 Assert.AreEqual(capacity, world.state.ptr->entities.Capacity);
                 Assert.AreEqual(capacity, world.state.ptr->entities.FreeCount);
                 Assert.AreEqual(1, world.id);
@@ -62,7 +62,7 @@ namespace ME.BECS.Tests {
                         entitiesCapacity = capacity,
                     },
                 });
-                Assert.IsTrue(world.state != null);
+                Assert.IsTrue(world.state.ptr != null);
                 Assert.AreEqual(capacity, world.state.ptr->entities.Capacity);
                 Assert.AreEqual(capacity, world.state.ptr->entities.FreeCount);
             }

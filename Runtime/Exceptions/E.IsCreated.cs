@@ -60,7 +60,7 @@ namespace ME.BECS {
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(in World world) {
-            if (world.state != null) return;
+            if (world.state.ptr != null) return;
             NotCreatedException.Throw(world);
         }
 

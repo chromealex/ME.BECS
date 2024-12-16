@@ -679,7 +679,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool TryRead<T>(out T data) where T : unmanaged, IComponent {
             if (this.data.TryRead<T>(out data) == false) {
-                if (this.baseConfig != null) {
+                if (this.baseConfig.ptr != null) {
                     return this.baseConfig.ptr->TryRead<T>(out data);
                 }
                 return false;
@@ -690,7 +690,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Has<T>() where T : unmanaged, IComponent {
             if (this.data.Has<T>() == false) {
-                if (this.baseConfig != null) {
+                if (this.baseConfig.ptr != null) {
                     return this.baseConfig.ptr->Has<T>();
                 }
                 return false;
@@ -712,7 +712,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private void Apply_INTERNAL(in Ent ent) {
 
-            if (this.baseConfig != null) {
+            if (this.baseConfig.ptr != null) {
                 this.baseConfig.ptr->Apply_INTERNAL(in ent);
             }
             
@@ -754,7 +754,7 @@ namespace ME.BECS {
             this.dataShared.Dispose();
             this.dataInitialize.Dispose();
             this.collectionsData.Dispose();
-            if (this.baseConfig != null) {
+            if (this.baseConfig.ptr != null) {
                 this.baseConfig.ptr->Dispose();
                 _free(this.baseConfig);
             }

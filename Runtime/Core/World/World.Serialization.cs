@@ -98,7 +98,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Dispose() {
-            if (this.arr != null) _free(this.arr);
+            if (this.arr.ptr != null) _free(this.arr);
         }
 
         [INLINE(256)]
@@ -186,7 +186,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Dispose() {
-            if (this.arr != null) _free(this.arr);
+            if (this.arr.ptr != null) _free(this.arr);
             this = default;
         }
         

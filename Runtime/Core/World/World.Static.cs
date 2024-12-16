@@ -35,7 +35,7 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Dispose() {
-                if (this.ptr != null) _free(this.ptr);
+                if (this.ptr.ptr != null) _free(this.ptr);
                 this = default;
             }
 
@@ -47,7 +47,7 @@ namespace ME.BECS {
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
             internal SafePtr<T> ptr;
             
-            public bool IsCreated => this.ptr != null;
+            public bool IsCreated => this.ptr.ptr != null;
 
             [INLINE(256)]
             public ref T Get(int index) {
@@ -74,7 +74,7 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Dispose() {
-                if (this.ptr != null) _free(this.ptr);
+                if (this.ptr.ptr != null) _free(this.ptr);
                 this = default;
             }
 
@@ -97,7 +97,7 @@ namespace ME.BECS {
             public SafePtr<Node> root;
             public uint Count;
 
-            public bool isCreated => this.root != null;
+            public bool isCreated => this.root.ptr != null;
 
             [INLINE(256)]
             public ushort[] ToArray() {
@@ -105,7 +105,7 @@ namespace ME.BECS {
                 var result = new ushort[this.Count];
                 var i = 0;
                 var node = this.root;
-                while (node != null) {
+                while (node.ptr != null) {
                     var n = node;
                     result[i++] = n.ptr->data;
                     node = node.ptr->next;
@@ -142,7 +142,7 @@ namespace ME.BECS {
 
                 Node* prevNode = null;
                 var node = this.root;
-                while (node != null) {
+                while (node.ptr != null) {
                     if (node.ptr->data == value) {
                         if (prevNode == null) {
                             this.root = node.ptr->next;
@@ -167,7 +167,7 @@ namespace ME.BECS {
             public void Clear() {
 
                 var node = this.root;
-                while (node != null) {
+                while (node.ptr != null) {
                     var n = node;
                     node = node.ptr->next;
                     _free(n);
@@ -370,7 +370,7 @@ namespace ME.BECS {
         public static bool IsAlive(uint id) {
 
             if (id >= WorldsStorage.worlds.Length) return false;
-            return WorldsStorage.worlds.Get(id).world.state != null;
+            return WorldsStorage.worlds.Get(id).world.state.ptr != null;
 
         }
         

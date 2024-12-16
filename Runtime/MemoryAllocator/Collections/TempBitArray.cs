@@ -14,7 +14,7 @@ namespace ME.BECS {
         public uint Length;
         internal readonly Unity.Collections.Allocator allocator;
 
-        public bool IsCreated => this.ptr != null;
+        public bool IsCreated => this.ptr.ptr != null;
 
         [INLINE(256)]
         public TempBitArray(uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {

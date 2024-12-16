@@ -13,9 +13,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public unsafe void DisposeSafetyHandlers() {
 
-            if (this.handlers.ptr != null) {
+            if (this.handlers.ptr.ptr != null) {
                 this.handlersLock.Lock();
-                if (this.handlers.ptr != null) {
+                if (this.handlers.ptr.ptr != null) {
                     for (uint i = 0u; i < this.handlers.Length; ++i) {
                         ref var handler = ref this.handlers.Get(i);
                         if (AtomicSafetyHandle.IsDefaultValue(handler) == false) AtomicSafetyHandle.Release(handler);
