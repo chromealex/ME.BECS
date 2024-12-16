@@ -46,19 +46,16 @@ namespace ME.BECS.Editor.Jobs {
                             if (methodInfo.Name.StartsWith(method) == false) continue;
                             if (methodInfo.GetGenericArguments().Length != components.Count + 1) continue;
 
-                            var type = methodInfo.GetGenericArguments()[0].GetInterfaces()[0];
-                            if (type.IsGenericType == true) {
-                                var types = type.GenericTypeArguments;
+                            {
+                                var types = methodInfo.GetGenericArguments();
                                 var check = true;
                                 for (int i = 0; i < componentsTypes.Count; ++i) {
-                                    if (types[i].GetInterfaces()[0].IsAssignableFrom(componentsTypes[i]) == false) {
+                                    if (types[i + 1].GetInterfaces()[0].IsAssignableFrom(componentsTypes[i]) == false) {
                                         check = false;
                                         break;
                                     }
                                 }
                                 if (check == false) continue;
-                            } else {
-                                if (type.IsAssignableFrom(jobType) == false) continue;
                             }
 
                             methodInfoResult = methodInfo;
@@ -240,9 +237,9 @@ namespace ME.BECS.Editor.Jobs {
                     funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
                     funcBuilder.AppendLine($"if (data == null) {{");
                     funcBuilder.AppendLine($"if (unsafeMode == true) {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN);");
+                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
                     funcBuilder.AppendLine($"}} else {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}(), Constants.ALLOCATOR_DOMAIN);");
+                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
                     funcBuilder.AppendLine($"}}");
                     funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
                     funcBuilder.AppendLine($"}}");
@@ -267,7 +264,7 @@ namespace ME.BECS.Editor.Jobs {
                             foreach (var component in aspects) {
                                 structBuilder.AppendLine($"public {component} a{i};");
                                 structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
-                                funcBuilder.AppendLine($"data->a{i} = buffer->state->aspectsStorage.Initialize<{component}>(buffer->state);");
+                                funcBuilder.AppendLine($"data->a{i} = buffer->state.ptr->aspectsStorage.Initialize<{component}>(buffer->state);");
                                 ++i;
                             }
                             
@@ -275,7 +272,7 @@ namespace ME.BECS.Editor.Jobs {
                             foreach (var component in components) {
                                 structBuilder.AppendLine($"public RefRW<{component}> c{i};");
                                 structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
-                                funcBuilder.AppendLine($"data->c{i} = buffer->state->components.GetRW<{component}>(buffer->state, buffer->worldId);");
+                                funcBuilder.AppendLine($"data->c{i} = buffer->state.ptr->components.GetRW<{component}>(buffer->state, buffer->worldId);");
                                 ++i;
                             }
 

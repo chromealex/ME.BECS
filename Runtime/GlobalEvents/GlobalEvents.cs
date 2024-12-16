@@ -6,6 +6,7 @@ namespace ME.BECS {
     using Unity.Collections;
     using System.Runtime.InteropServices;
     using Unity.Jobs;
+    using static Cuts;
 
     public unsafe struct GlobalEventsData {
 
@@ -127,8 +128,8 @@ namespace ME.BECS {
 
             var world = Worlds.GetWorld(evt.worldId);
             //var logicWorld = Worlds.GetWorld(logicWorldId);
-            E.IS_VISUAL_MODE(world.state->mode);
-            //E.IS_LOGIC_MODE(logicWorld.state->mode);
+            E.IS_VISUAL_MODE(world.state.ptr->mode);
+            //E.IS_LOGIC_MODE(logicWorld.state.ptr->mode);
             //E.IS_IN_TICK(logicWorld.state);
             
             ValidateCapacity();
@@ -188,7 +189,7 @@ namespace ME.BECS {
         private static void RegisterEvent(in Event evt, System.IntPtr callback, GCHandle handle, bool withData) {
 
             var world = Worlds.GetWorld(evt.worldId);
-            E.IS_VISUAL_MODE(world.state->mode);
+            E.IS_VISUAL_MODE(world.state.ptr->mode);
             
             ValidateCapacity();
             
@@ -264,6 +265,7 @@ namespace ME.BECS {
                             } catch (System.Exception ex) {
                                 UnityEngine.Debug.LogException(ex);
                             }
+                            _free((SafePtr)val.data);
                         } else {
                             var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
                             try {

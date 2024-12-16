@@ -1,17 +1,19 @@
 namespace ME.BECS.NativeCollections {
 
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Mathematics;
+    using static Cuts;
 
     public unsafe struct NativeMinHeapEnt : IDisposable {
 
         public uint Count => (uint)this.mLength;
 
         [NativeDisableUnsafePtrRestriction]
-        private void* mBuffer;
-        private int mCapacity;
+        private SafePtr<MinHeapNodeEnt> mBuffer;
+        private uint mCapacity;
         private Allocator mAllocatorLabel;
 
         private int mHead;
@@ -19,21 +21,19 @@ namespace ME.BECS.NativeCollections {
         //private int mMinIndex;
         //private int mMaxIndex;
 
-        public NativeMinHeapEnt(int capacity, Allocator allocator /*, NativeArrayOptions options = NativeArrayOptions.ClearMemory*/) {
+        [INLINE(256)]
+        public NativeMinHeapEnt(uint capacity, Allocator allocator /*, NativeArrayOptions options = NativeArrayOptions.ClearMemory*/) {
             Allocate(capacity, allocator, out this);
             /*if ((options & NativeArrayOptions.ClearMemory) != NativeArrayOptions.ClearMemory)
                 return;
             UnsafeUtility.MemClear(m_Buffer, (long) m_capacity * UnsafeUtility.SizeOf<MinHeapNode>());*/
         }
 
-        private static void Allocate(int capacity, Allocator allocator, out NativeMinHeapEnt nativeMinHeap) {
-            var size = (long)UnsafeUtility.SizeOf<MinHeapNodeEnt>() * capacity;
+        [INLINE(256)]
+        private static void Allocate(uint capacity, Allocator allocator, out NativeMinHeapEnt nativeMinHeap) {
+            var size = TSize<MinHeapNodeEnt>.size * capacity;
             if (allocator <= Allocator.None) {
                 throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
-            }
-
-            if (capacity < 0) {
-                throw new ArgumentOutOfRangeException(nameof(capacity), "Length must be >= 0");
             }
 
             if (size > int.MaxValue) {
@@ -41,7 +41,7 @@ namespace ME.BECS.NativeCollections {
                                                       $"Length * sizeof(T) cannot exceed {(object)int.MaxValue} bytes");
             }
 
-            nativeMinHeap.mBuffer = UnsafeUtility.Malloc(size, UnsafeUtility.AlignOf<MinHeapNodeEnt>(), allocator);
+            nativeMinHeap.mBuffer = _make(size, TAlign<MinHeapNodeEnt>.alignInt, allocator);
             nativeMinHeap.mCapacity = capacity;
             nativeMinHeap.mAllocatorLabel = allocator;
             //nativeMinHeap.mMinIndex = 0;
@@ -51,56 +51,71 @@ namespace ME.BECS.NativeCollections {
 
         }
 
+        [INLINE(256)]
         public bool HasNext() {
             return this.mHead >= 0;
         }
 
+        [INLINE(256)]
+        public void EnsureCapacity(uint capacity) {
+
+            var free = this.mCapacity - (uint)this.mLength;
+            if (free < capacity) {
+                _resizeArray(ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mLength);
+            }
+
+        }
+
+        [INLINE(256)]
         public void Push(MinHeapNodeEnt node) {
 
             if (this.mHead < 0) {
                 this.mHead = this.mLength;
-            } else if (node.ExpectedCost < this[this.mHead].ExpectedCost) {
-                node.Next = this.mHead;
+            } else if (node.expectedCost < this[this.mHead].expectedCost) {
+                node.next = this.mHead;
                 this.mHead = this.mLength;
             } else {
                 var currentPtr = this.mHead;
                 var current = this[currentPtr];
 
-                while (current.Next >= 0 && this[current.Next].ExpectedCost <= node.ExpectedCost) {
-                    currentPtr = current.Next;
-                    current = this[current.Next];
+                while (current.next >= 0 && this[current.next].expectedCost <= node.expectedCost) {
+                    currentPtr = current.next;
+                    current = this[current.next];
                 }
 
-                node.Next = current.Next;
-                current.Next = this.mLength;
+                node.next = current.next;
+                current.next = this.mLength;
 
-                UnsafeUtility.WriteArrayElement(this.mBuffer, currentPtr, current);
+                this.mBuffer[currentPtr] = current;
             }
 
-            UnsafeUtility.WriteArrayElement(this.mBuffer, this.mLength, node);
-            this.mLength += 1;
+            this.mBuffer[this.mLength] = node;
+            ++this.mLength;
         }
 
+        [INLINE(256)]
         public int Pop() {
             var result = this.mHead;
-            this.mHead = this[this.mHead].Next;
+            this.mHead = this[this.mHead].next;
             return result;
         }
 
-        public MinHeapNodeEnt this[int index] => UnsafeUtility.ReadArrayElement<MinHeapNodeEnt>(this.mBuffer, index);
+        public MinHeapNodeEnt this[int index] => this.mBuffer[index];
 
+        [INLINE(256)]
         public void Clear() {
             this.mHead = -1;
             this.mLength = 0;
         }
 
+        [INLINE(256)]
         public void Dispose() {
             if (!UnsafeUtility.IsValidAllocator(this.mAllocatorLabel)) {
                 throw new InvalidOperationException("The NativeArray can not be Disposed because it was not allocated with a valid allocator.");
             }
 
-            UnsafeUtility.Free(this.mBuffer, this.mAllocatorLabel);
-            this.mBuffer = null;
+            _free(this.mBuffer, this.mAllocatorLabel);
+            this.mBuffer = default;
             this.mCapacity = 0;
         }
 
@@ -108,15 +123,16 @@ namespace ME.BECS.NativeCollections {
 
     public struct MinHeapNodeEnt {
 
-        public MinHeapNodeEnt(Ent position, float expectedCost) {
-            this.Position = position;
-            this.ExpectedCost = expectedCost;
-            this.Next = -1;
+        [INLINE(256)]
+        public MinHeapNodeEnt(Ent data, float expectedCost) {
+            this.data = data;
+            this.expectedCost = expectedCost;
+            this.next = -1;
         }
 
-        public Ent Position { get; }
-        public float ExpectedCost { get; }
-        public int Next { get; set; }
+        public readonly Ent data;
+        public readonly float expectedCost;
+        public int next;
 
     }
 
