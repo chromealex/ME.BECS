@@ -5,7 +5,7 @@ namespace ME.BECS {
     
     public unsafe partial struct Components {
 
-        public static uint GetReservedSizeInBytes(SafePtr<State> state) {
+        public static uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (state.ptr->components.items.IsCreated == false) return 0u;
             
@@ -22,7 +22,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static void OnEntityAdd(SafePtr<State> state, uint entityId) {
+        public static void OnEntityAdd(safe_ptr<State> state, uint entityId) {
 
             var c = StaticTypes.counter;
             for (uint i = 1u; i <= c; ++i) {
@@ -34,7 +34,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static bool SetUnknownType(SafePtr<State> state, uint typeId, uint groupId, in Ent ent, void* data) {
+        public static bool SetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, void* data) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
@@ -47,7 +47,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool SetUnknownType<T>(SafePtr<State> state, uint typeId, uint groupId, in Ent ent, in T data) where T : unmanaged, IComponent {
+        public static bool SetUnknownType<T>(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, in T data) where T : unmanaged, IComponent {
 
             fixed (T* dataPtr = &data) {
                 return Components.SetUnknownType(state, typeId, groupId, in ent, dataPtr);
@@ -56,7 +56,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool SetState(SafePtr<State> state, uint typeId, uint groupId, in Ent ent, bool value) {
+        public static bool SetState(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, bool value) {
 
             E.IS_VALID_TYPE_ID(typeId);
             
@@ -69,7 +69,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool ReadState(SafePtr<State> state, uint typeId, in Ent ent) {
+        public static bool ReadState(safe_ptr<State> state, uint typeId, in Ent ent) {
 
             E.IS_VALID_TYPE_ID(typeId);
             
@@ -80,7 +80,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static byte* GetUnknownType(SafePtr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew) {
+        public static byte* GetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
@@ -91,7 +91,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static byte* GetUnknownType(SafePtr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew) {
+        public static byte* GetUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
@@ -102,7 +102,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool RemoveUnknownType(SafePtr<State> state, uint typeId, uint groupId, in Ent ent) {
+        public static bool RemoveUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
@@ -118,7 +118,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static byte* ReadUnknownType(SafePtr<State> state, uint typeId, uint entId, ushort gen, out bool exists) {
+        public static byte* ReadUnknownType(safe_ptr<State> state, uint typeId, uint entId, ushort gen, out bool exists) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
@@ -129,7 +129,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static byte* ReadUnknownType(SafePtr<State> state, MemAllocatorPtr storage, uint typeId, uint entId, ushort gen, out bool exists) {
+        public static byte* ReadUnknownType(safe_ptr<State> state, MemAllocatorPtr storage, uint typeId, uint entId, ushort gen, out bool exists) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
@@ -141,7 +141,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool HasUnknownType(SafePtr<State> state, uint typeId, uint entId, ushort gen, bool checkEnabled) {
+        public static bool HasUnknownType(safe_ptr<State> state, uint typeId, uint entId, ushort gen, bool checkEnabled) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
@@ -152,7 +152,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static ref MemAllocatorPtr GetUnsafeSparseSetPtr(SafePtr<State> state, uint typeId) {
+        public static ref MemAllocatorPtr GetUnsafeSparseSetPtr(safe_ptr<State> state, uint typeId) {
 
             E.IS_VALID_TYPE_ID(typeId);
 

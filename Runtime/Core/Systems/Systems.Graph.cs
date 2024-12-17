@@ -44,8 +44,8 @@ namespace ME.BECS {
 
         internal struct GroupData {
 
-            public SafePtr<Node> rootNode;
-            public SafePtr<NodeData> nodes;
+            public safe_ptr<Node> rootNode;
+            public safe_ptr<NodeData> nodes;
             public uint index;
             public uint count;
             
@@ -53,15 +53,15 @@ namespace ME.BECS {
         
         internal struct NodeData {
 
-            public SafePtr<Node> data;
+            public safe_ptr<Node> data;
 
         }
 
         public ushort updateType;
         public int graphId;
-        private SafePtr<GroupData> data;
-        internal ref SafePtr<Node> rootNode => ref this.data.ptr->rootNode;
-        internal ref SafePtr<NodeData> nodes => ref this.data.ptr->nodes;
+        private safe_ptr<GroupData> data;
+        internal ref safe_ptr<Node> rootNode => ref this.data.ptr->rootNode;
+        internal ref safe_ptr<NodeData> nodes => ref this.data.ptr->nodes;
         internal ref uint index => ref this.data.ptr->index;
         internal ref uint count => ref this.data.ptr->count;
         private Queue runtimeQueue;
@@ -78,7 +78,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal void RegisterNode(SafePtr<Node> node) {
+        internal void RegisterNode(safe_ptr<Node> node) {
             
             if (this.index >= this.count) {
                 var newLength = (this.index + 1u) * 2u;
@@ -91,14 +91,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal ref SafePtr<Node> GetNode(in SystemHandle dependsOn) {
+        internal ref safe_ptr<Node> GetNode(in SystemHandle dependsOn) {
 
             return ref this.GetNode(dependsOn.id);
 
         }
 
         [INLINE(256)]
-        internal ref SafePtr<Node> GetNode(uint id) {
+        internal ref safe_ptr<Node> GetNode(uint id) {
             
             var idx = id - 1u;
             E.RANGE(idx, 0u, this.index);
@@ -185,7 +185,7 @@ namespace ME.BECS {
             
         }
 
-        internal static string DebugParent(SafePtr<Node> node) {
+        internal static string DebugParent(safe_ptr<Node> node) {
             var str = string.Empty;
             if (node.ptr->parentIndex == 1u) {
                 str += node.ptr->parents[0].data.ptr->name;

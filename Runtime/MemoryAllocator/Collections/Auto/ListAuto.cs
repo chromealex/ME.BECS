@@ -64,7 +64,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public ListAuto(in Ent ent, SafePtr data, uint length) {
+        public ListAuto(in Ent ent, safe_ptr data, uint length) {
 
             this = default;
             this.arr = new MemArrayAuto<T>(in ent, data, length);
@@ -125,7 +125,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(allocator);
@@ -133,7 +133,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr() {
+        public readonly safe_ptr GetUnsafePtr() {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(this.ent.World.state.ptr->allocator);
@@ -190,7 +190,7 @@ namespace ME.BECS {
             }
         }
 
-        public ref T this[SafePtr<State> state, uint index] {
+        public ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Count);
@@ -371,7 +371,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)collection.Ptr, (SafePtr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
+                _memcpy((safe_ptr)collection.Ptr, (safe_ptr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -386,7 +386,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr(), (SafePtr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
+                _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr(), (safe_ptr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -401,7 +401,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr() + offset * TSize<T>.sizeInt, this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
+                _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr() + offset * TSize<T>.sizeInt, this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
                 this.Count += count;
             }
         }
@@ -416,7 +416,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)((byte*)collection.Ptr + offset * TSize<T>.sizeInt), this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
+                _memcpy((safe_ptr)((byte*)collection.Ptr + offset * TSize<T>.sizeInt), this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
                 this.Count += count;
             }
         }
@@ -431,7 +431,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(this.ent, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr(), this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
+                _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr(), this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
                 this.Count += count;
             }
         }

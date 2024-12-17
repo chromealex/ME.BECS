@@ -13,18 +13,18 @@ namespace ME.BECS.Views {
     public unsafe interface IViewProvider<TEntityView> where TEntityView : IView {
 
         void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties);
-        JobHandle Spawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn);
-        JobHandle Despawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn);
+        JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
+        JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
         /// <summary>
         /// Apply Spawn/Despawn commands
         /// </summary>
-        JobHandle Commit(SafePtr<ViewsModuleData> data, JobHandle dependsOn);
-        void Dispose(SafePtr<State> state, SafePtr<ViewsModuleData> data);
+        JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
+        void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data);
         void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent);
         void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
 
-        public void Load(SafePtr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data);
-        public ViewSource Register(SafePtr<ViewsModuleData> viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
+        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data);
+        public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
 
         void Query(ref QueryBuilder queryBuilder);
 
@@ -181,7 +181,7 @@ namespace ME.BECS.Views {
 
         public struct InfoRef {
 
-            public SafePtr<Info> info;
+            public safe_ptr<Info> info;
 
             public InfoRef(Info info) {
                 this.info = _make(info);
@@ -229,11 +229,11 @@ namespace ME.BECS.Views {
     public unsafe struct SceneInstanceInfo {
 
         public System.IntPtr obj;
-        public readonly SafePtr<SourceRegistry.Info> prefabInfo;
+        public readonly safe_ptr<SourceRegistry.Info> prefabInfo;
         public uint uniqueId;
         public uint index;
 
-        public SceneInstanceInfo(System.IntPtr obj, SafePtr<SourceRegistry.Info> prefabInfo, uint uniqueId) {
+        public SceneInstanceInfo(System.IntPtr obj, safe_ptr<SourceRegistry.Info> prefabInfo, uint uniqueId) {
             this = default;
             this.obj = obj;
             this.prefabInfo = prefabInfo;
@@ -245,7 +245,7 @@ namespace ME.BECS.Views {
 
     public unsafe struct BeginFrameState {
 
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
         public float tickTime;
         public double timeSinceStart;
 
@@ -278,8 +278,8 @@ namespace ME.BECS.Views {
         
         public RenderingSparseList renderingOnSceneApplyState;
         public RenderingSparseList renderingOnSceneUpdate;
-        public SafePtr<uint> applyStateCounter;
-        public SafePtr<uint> updateCounter;
+        public safe_ptr<uint> applyStateCounter;
+        public safe_ptr<uint> updateCounter;
 
         public MemArray<bool> renderingOnSceneApplyStateCulling;
         public MemArray<bool> renderingOnSceneUpdateCulling;
@@ -292,7 +292,7 @@ namespace ME.BECS.Views {
         
         public World connectedWorld;
         public World viewsWorld;
-        public SafePtr<BeginFrameState> beginFrameState;
+        public safe_ptr<BeginFrameState> beginFrameState;
 
         public Ent camera;
         
@@ -332,7 +332,7 @@ namespace ME.BECS.Views {
             this.camera = camera.ent;
         }
 
-        public void Dispose(SafePtr<State> state) {
+        public void Dispose(safe_ptr<State> state) {
 
             var e = this.prefabIdToInfo.GetEnumerator(this.viewsWorld);
             while (e.MoveNext() == true) {
@@ -444,7 +444,7 @@ namespace ME.BECS.Views {
     [BURST(CompileSynchronously = true)]
     public unsafe struct UnsafeViewsModule<TEntityView> where TEntityView : IView {
 
-        public SafePtr<ViewsModuleData> data;
+        public safe_ptr<ViewsModuleData> data;
         private IViewProvider<TEntityView> provider;
         
         public static UnsafeViewsModule<TEntityView> Create<T>(uint providerId, ref World connectedWorld, T provider, uint entitiesCapacity, ViewsModuleProperties properties) where T : IViewProvider<TEntityView> {

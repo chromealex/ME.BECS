@@ -673,9 +673,9 @@ namespace ME.BECS.Editor {
         }
 
         public static bool StructCopy<T>(T data, T data2) where T : unmanaged {
-            var size = sizeof(T);
-            var addr1 = _addressPtr(ref data);
-            var addr2 = _addressPtr(ref data2);
+            var size = TSize<T>.size;
+            var addr1 = _address(ref data);
+            var addr2 = _address(ref data2);
             return _memcmp(addr1, addr2, size) == 0;
         }
 

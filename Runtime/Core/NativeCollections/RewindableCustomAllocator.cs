@@ -79,7 +79,7 @@ namespace ME.BECS.NativeCollections {
 
     internal unsafe struct UnmanagedArray<T> : IDisposable where T : unmanaged {
 
-        private SafePtr pointer;
+        private safe_ptr pointer;
         private int length;
         public int Length => this.length;
         private AllocatorManager.AllocatorHandle allocator;
@@ -94,15 +94,15 @@ namespace ME.BECS.NativeCollections {
             _free(this.pointer, this.allocator.ToAllocator);
         }
 
-        public SafePtr<T> GetUnsafePointer() {
-            return (SafePtr<T>)this.pointer;
+        public safe_ptr<T> GetUnsafePointer() {
+            return (safe_ptr<T>)this.pointer;
         }
 
         public ref T this[int index] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 unsafe {
-                    return ref ((SafePtr<T>)this.pointer)[index];
+                    return ref ((safe_ptr<T>)this.pointer)[index];
                 }
             }
         }
@@ -176,7 +176,7 @@ namespace ME.BECS.NativeCollections {
             // can't align any coarser than this many bytes
             public const int kMaximumAlignment = 16384;
             // pointer to contiguous memory
-            public SafePtr m_pointer;
+            public safe_ptr m_pointer;
             // how many bytes of contiguous memory it points to
             public long m_bytes;
             // Union of current position to give out memory and allocation counts

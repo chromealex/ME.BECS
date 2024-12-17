@@ -9,10 +9,10 @@ namespace ME.BECS {
             private uint lastIndex;
             private uint index;
             private T current;
-            private SafePtr<Slot> slotsPtr;
+            private safe_ptr<Slot> slotsPtr;
 
             [INLINE(256)]
-            internal Enumerator(in HashSet<T> set, SafePtr<State> state) {
+            internal Enumerator(in HashSet<T> set, safe_ptr<State> state) {
                 this.lastIndex = set.lastIndex;
                 this.index = 0;
                 this.slotsPtr = set.slots.GetUnsafePtrCached(in state.ptr->allocator);
@@ -104,9 +104,9 @@ namespace ME.BECS {
             if (this.hash != other.hash) return false;
             if (this.count == 0u && other.count == 0u) return true;
 
-            var slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
-            var otherSlotsPtr = (SafePtr<Slot>)other.slots.GetUnsafePtrCached(in allocator);
-            var otherBucketsPtr = (SafePtr<int>)other.buckets.GetUnsafePtrCached(in allocator);
+            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+            var otherSlotsPtr = (safe_ptr<Slot>)other.slots.GetUnsafePtrCached(in allocator);
+            var otherBucketsPtr = (safe_ptr<int>)other.buckets.GetUnsafePtrCached(in allocator);
             uint idx = 0u;
             while (idx < this.lastIndex) {
                 var v = slotsPtr + idx;
@@ -174,7 +174,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly Enumerator GetEnumerator(SafePtr<State> state) {
+        public readonly Enumerator GetEnumerator(safe_ptr<State> state) {
             
             return new Enumerator(this, state);
             
@@ -218,7 +218,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             uint hashCode = GetHashCode(item) & HashSet<T>.LOWER31_BIT_MASK;
             // see note at "HashSet" level describing why "- 1" appears in for loop
-            var slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
             for (int i = (int)this.buckets[in allocator, hashCode % this.buckets.Length] - 1; i >= 0; i = (slotsPtr + i).ptr->next) {
                 if ((slotsPtr + i).ptr->hashCode == hashCode &&
                     Equal((slotsPtr + i).ptr->value, item) == true) {
@@ -230,7 +230,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public readonly bool Contains(T item, SafePtr<Slot> slotsPtr, SafePtr<int> bucketsPtr) {
+        public readonly bool Contains(T item, safe_ptr<Slot> slotsPtr, safe_ptr<int> bucketsPtr) {
             uint hashCode = GetHashCode(item) & HashSet<T>.LOWER31_BIT_MASK;
             for (int i = bucketsPtr[hashCode % this.buckets.Length] - 1; i >= 0; i = (slotsPtr + i).ptr->next) {
                 if ((slotsPtr + i).ptr->hashCode == hashCode &&
@@ -242,7 +242,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly bool Contains(T item, uint hashCode, SafePtr<Slot> slotsPtr, SafePtr<int> bucketsPtr) {
+        public readonly bool Contains(T item, uint hashCode, safe_ptr<Slot> slotsPtr, safe_ptr<int> bucketsPtr) {
             for (int i = bucketsPtr[hashCode % this.buckets.Length] - 1; i >= 0; i = (slotsPtr + i).ptr->next) {
                 if ((slotsPtr + i).ptr->hashCode == hashCode &&
                     Equal((slotsPtr + i).ptr->value, item) == true) {
@@ -254,7 +254,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void RemoveExcept(ref MemoryAllocator allocator, in HashSet<T> other) {
-            var slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
             for (int i = 0; i < this.lastIndex; i++) {
                 var slot = (slotsPtr + i);
                 if (slot.ptr->hashCode >= 0) {
@@ -269,7 +269,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Remove(ref MemoryAllocator allocator, in HashSet<T> other) {
-            var slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
             for (int i = 0; i < this.lastIndex; i++) {
                 var slot = (slotsPtr + i);
                 if (slot.ptr->hashCode >= 0) {
@@ -284,7 +284,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Add(ref MemoryAllocator allocator, in HashSet<T> other) {
-            var slotsPtr = (SafePtr<Slot>)other.slots.GetUnsafePtrCached(in allocator);
+            var slotsPtr = (safe_ptr<Slot>)other.slots.GetUnsafePtrCached(in allocator);
             for (int i = 0; i < other.lastIndex; i++) {
                 var slot = (slotsPtr + i);
                 if (slot.ptr->hashCode >= 0) {
@@ -305,8 +305,8 @@ namespace ME.BECS {
                 uint hashCode = GetHashCode(item) & HashSet<T>.LOWER31_BIT_MASK;
                 uint bucket = hashCode % this.buckets.Length;
                 int last = -1;
-                var bucketsPtr = (SafePtr<int>)this.buckets.GetUnsafePtrCached(in allocator);
-                var slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+                var bucketsPtr = (safe_ptr<int>)this.buckets.GetUnsafePtrCached(in allocator);
+                var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
                 for (int i = *(bucketsPtr + bucket).ptr - 1; i >= 0; last = i, i = (slotsPtr + i).ptr->next) {
                     var slot = slotsPtr + i;
                     if (slot.ptr->hashCode == hashCode &&
@@ -351,7 +351,7 @@ namespace ME.BECS {
             uint size = HashHelpers.GetPrime(capacity);
             this.buckets = new MemArray<uint>(ref allocator, size);
             this.slots = new MemArray<Slot>(ref allocator, size);
-            var slots = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+            var slots = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
             for (int i = 0; i < this.slots.Length; ++i) {
                 (*(slots + i).ptr).hashCode = -1;
             }
@@ -423,8 +423,8 @@ namespace ME.BECS {
                 this.Initialize(ref allocator, 0);
             }
 
-            var bucketsPtr = (SafePtr<int>)this.buckets.GetUnsafePtrCached(in allocator);
-            var slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+            var bucketsPtr = (safe_ptr<int>)this.buckets.GetUnsafePtrCached(in allocator);
+            var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
             
             uint hashCode = GetHashCode(value) & HashSet<T>.LOWER31_BIT_MASK;
             uint bucket = hashCode % this.buckets.Length;
@@ -446,8 +446,8 @@ namespace ME.BECS {
                 if (this.lastIndex == this.slots.Length) {
                     this.IncreaseCapacity(ref allocator);
                     // this will change during resize
-                    bucketsPtr = (SafePtr<int>)this.buckets.GetUnsafePtrCached(in allocator);
-                    slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+                    bucketsPtr = (safe_ptr<int>)this.buckets.GetUnsafePtrCached(in allocator);
+                    slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
                     bucket = hashCode % this.buckets.Length;
                 }
                 index = this.lastIndex;
@@ -468,7 +468,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public bool Add(ref MemoryAllocator allocator, T value, ref SafePtr<int> bucketsPtr, ref SafePtr<Slot> slotsPtr) {
+        public bool Add(ref MemoryAllocator allocator, T value, ref safe_ptr<int> bucketsPtr, ref safe_ptr<Slot> slotsPtr) {
             
             if (this.buckets.IsCreated == false) {
                 this.Initialize(ref allocator, 0);
@@ -494,8 +494,8 @@ namespace ME.BECS {
                 if (this.lastIndex == this.slots.Length) {
                     this.IncreaseCapacity(ref allocator);
                     // this will change during resize
-                    bucketsPtr = (SafePtr<int>)this.buckets.GetUnsafePtrCached(in allocator);
-                    slotsPtr = (SafePtr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
+                    bucketsPtr = (safe_ptr<int>)this.buckets.GetUnsafePtrCached(in allocator);
+                    slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
                     bucket = hashCode % this.buckets.Length;
                 }
                 index = this.lastIndex;

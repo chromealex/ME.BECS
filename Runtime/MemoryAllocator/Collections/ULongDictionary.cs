@@ -8,11 +8,11 @@ namespace ME.BECS {
         public struct Enumerator {
 
             private uint count;
-            private readonly SafePtr<Entry> entries;
+            private readonly safe_ptr<Entry> entries;
             private uint index;
 
-            internal Enumerator(in ULongDictionary<TValue> dictionary, SafePtr<State> state) {
-                this.entries = (SafePtr<Entry>)dictionary.entries.GetUnsafePtrCached(in state.ptr->allocator);
+            internal Enumerator(in ULongDictionary<TValue> dictionary, safe_ptr<State> state) {
+                this.entries = (safe_ptr<Entry>)dictionary.entries.GetUnsafePtrCached(in state.ptr->allocator);
                 this.count = dictionary.count;
                 this.index = 0u;
             }
@@ -138,7 +138,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly Enumerator GetEnumerator(SafePtr<State> state) {
+        public readonly Enumerator GetEnumerator(safe_ptr<State> state) {
 
             E.IS_CREATED(this);
 
@@ -268,7 +268,7 @@ namespace ME.BECS {
             if (this.buckets.Length > 0u) {
                 var num2 = key.GetHashCode() & int.MaxValue;
                 index = (int)this.buckets[in allocator, (uint)(num2 % this.buckets.Length)] - 1;
-                var entries = (SafePtr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
+                var entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
                 while ((uint)index < this.entries.Length &&
                        (entries[index].hashCode != num2 || !entries[index].key.Equals(key))) {
                     index = entries[index].next;
@@ -299,7 +299,7 @@ namespace ME.BECS {
                 this.Initialize(ref allocator, 0);
             }
 
-            var entries = (SafePtr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
+            var entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
             var num1 = key.GetHashCode() & int.MaxValue;
             var num2 = 0u;
             ref var local1 = ref this.buckets[in allocator, (uint)(num1 % this.buckets.Length)];
@@ -345,7 +345,7 @@ namespace ME.BECS {
 
                 index2 = count;
                 this.count = count + 1;
-                entries = (SafePtr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
+                entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
             }
 
             ref var local2 = ref (flag1 ? ref this.buckets[in allocator, (uint)(num1 % this.buckets.Length)] : ref local1);
@@ -369,7 +369,7 @@ namespace ME.BECS {
                 this.Initialize(ref allocator, 0);
             }
 
-            var entries = (SafePtr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
+            var entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
             var num1 = key.GetHashCode() & int.MaxValue;
             ref var local1 = ref this.buckets[in allocator, (uint)(num1 % this.buckets.Length)];
             var flag1 = false;
@@ -388,7 +388,7 @@ namespace ME.BECS {
 
                 index2 = count;
                 this.count = count + 1;
-                entries = (SafePtr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
+                entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in allocator);
             }
 
             ref var local2 = ref (flag1 ? ref this.buckets[in allocator, (uint)(num1 % this.buckets.Length)] : ref local1);

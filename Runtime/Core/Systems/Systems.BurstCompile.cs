@@ -105,13 +105,13 @@ namespace ME.BECS {
             
         }
 
-        private static void MakeMethod_INTERNAL<T>(SafePtr<Node> node, MethodInfo methodInfo) where T : unmanaged, ISystem {
+        private static void MakeMethod_INTERNAL<T>(safe_ptr<Node> node, MethodInfo methodInfo) where T : unmanaged, ISystem {
             var gMethod = methodInfo.MakeGenericMethod(typeof(T));
             parameters[0] = (System.IntPtr)node.ptr;
             gMethod.Invoke(null, parameters);
         }
 
-        public static Method MakeMethod<T>(SafePtr<Node> node) where T : unmanaged, ISystem {
+        public static Method MakeMethod<T>(safe_ptr<Node> node) where T : unmanaged, ISystem {
             
             var method = Method.Undefined;
             

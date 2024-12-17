@@ -145,7 +145,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe ChunkCache Create(SafePtr<State> state, uint capacity) {
+        public static unsafe ChunkCache Create(safe_ptr<State> state, uint capacity) {
             return new ChunkCache() {
                 data = new EquatableDictionary<ulong, Path.Chunk>(ref state.ptr->allocator, capacity),
             };

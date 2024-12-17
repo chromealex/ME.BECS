@@ -29,7 +29,7 @@ namespace ME.BECS {
             this.FreeZones();
             
             if (this.zonesList != null) {
-                _free((SafePtr)this.zonesList, Constants.ALLOCATOR_PERSISTENT);
+                _free((safe_ptr)this.zonesList, Constants.ALLOCATOR_PERSISTENT);
                 this.zonesList = null;
             }
 
@@ -87,8 +87,8 @@ namespace ME.BECS {
                 var list = (MemZone**)_make(capacity * (uint)sizeof(MemZone*), TAlign<System.IntPtr>.alignInt, Constants.ALLOCATOR_PERSISTENT).ptr;
 
                 if (this.zonesList != null) {
-                    _memcpy((SafePtr)this.zonesList, (SafePtr)list, (uint)sizeof(MemZone*) * this.zonesListCount);
-                    _free((SafePtr)this.zonesList, Constants.ALLOCATOR_PERSISTENT);
+                    _memcpy((safe_ptr)this.zonesList, (safe_ptr)list, (uint)sizeof(MemZone*) * this.zonesListCount);
+                    _free((safe_ptr)this.zonesList, Constants.ALLOCATOR_PERSISTENT);
                 }
                 
                 this.zonesList = list;
@@ -122,14 +122,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public static MemZone* ZmCreateZoneEmpty(int size) {
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = ((SafePtr<MemZone>)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT)).ptr;
+            var zone = ((safe_ptr<MemZone>)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT)).ptr;
             return zone;
         }
 
         [INLINE(256)]
         public static MemZone* ZmCreateZone(int size) {
             size = MemoryAllocator.ZmGetMemBlockSize(size) + TSize<MemZone>.sizeInt;
-            var zone = ((SafePtr<MemZone>)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT)).ptr;
+            var zone = ((safe_ptr<MemZone>)_make(size, TAlign<uint>.alignInt, Constants.ALLOCATOR_PERSISTENT)).ptr;
             zone->size = size;
             MemoryAllocator.ZmClearZone(zone);
             return zone;
@@ -142,7 +142,7 @@ namespace ME.BECS {
             var newZone = MemoryAllocator.ZmCreateZone(newSize);
             var extra = newZone->size - zone->size;
 
-            _memcpy((SafePtr)zone, (SafePtr)newZone, zone->size);
+            _memcpy((safe_ptr)zone, (safe_ptr)newZone, zone->size);
 
             newZone->size = zone->size + extra;
 
@@ -180,7 +180,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void ZmFreeZone(MemZone* zone) {
-            _free((SafePtr)zone, Constants.ALLOCATOR_PERSISTENT);
+            _free((safe_ptr)zone, Constants.ALLOCATOR_PERSISTENT);
         }
 
         [INLINE(256)]

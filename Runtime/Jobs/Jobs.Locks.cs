@@ -11,7 +11,7 @@ namespace ME.BECS {
 
         private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
         private Unity.Collections.Allocator allocator;
-        private SafePtr value;
+        private safe_ptr value;
         private int readValue;
         private int writeValue;
 
@@ -32,7 +32,7 @@ namespace ME.BECS {
         private int ReadCount() {
             var cnt = 0;
             for (uint i = 0u; i < JobsUtility.MaxJobThreadCount; ++i) {
-                cnt += *((SafePtr<int>)this.value + i * INTS_PER_CACHE_LINE).ptr;
+                cnt += *((safe_ptr<int>)this.value + i * INTS_PER_CACHE_LINE).ptr;
             }
             return cnt;
         }
@@ -55,14 +55,14 @@ namespace ME.BECS {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // acquire read op
-            ++*((SafePtr<int>)this.value + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            ++*((safe_ptr<int>)this.value + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
         public void ReadEnd() {
             E.IS_CREATED(this);
             // release read op
-            --*((SafePtr<int>)this.value + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            --*((safe_ptr<int>)this.value + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
@@ -141,7 +141,7 @@ namespace ME.BECS {
         public bool IsCreated => this.value.IsValid();
 
         [INLINE(256)]
-        public static ReadWriteSpinner Create(SafePtr<State> state) {
+        public static ReadWriteSpinner Create(safe_ptr<State> state) {
             var size = TSize<int>.size * INTS_PER_CACHE_LINE * JobsUtility.MaxJobThreadCount;
             var arr = state.ptr->allocator.Alloc(size, out var ptr);
             state.ptr->allocator.MemClear(arr, 0L, size);
@@ -154,20 +154,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private int ReadCount(SafePtr<State> state) {
+        private int ReadCount(safe_ptr<State> state) {
             var cnt = 0;
             for (uint i = 0u; i < JobsUtility.MaxJobThreadCount; ++i) {
                 #if USE_CACHE_PTR
                 cnt += this.ptr[i * INTS_PER_CACHE_LINE];
                 #else
-                cnt += *((SafePtr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + i * INTS_PER_CACHE_LINE).ptr;
+                cnt += *((safe_ptr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + i * INTS_PER_CACHE_LINE).ptr;
                 #endif
             }
             return cnt;
         }
         
         [INLINE(256)]
-        public void ReadBegin(SafePtr<State> state) {
+        public void ReadBegin(safe_ptr<State> state) {
             E.IS_CREATED(this);
             // wait if we have to write op running
             #if EXCEPTIONS_INTERNAL
@@ -187,23 +187,23 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             ++this.ptr[INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex];
             #else
-            ++*((SafePtr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            ++*((safe_ptr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
             #endif
         }
 
         [INLINE(256)]
-        public void ReadEnd(SafePtr<State> state) {
+        public void ReadEnd(safe_ptr<State> state) {
             E.IS_CREATED(this);
             // release read op
             #if USE_CACHE_PTR
             --this.ptr[INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex];
             #else
-            --*((SafePtr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            --*((safe_ptr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
             #endif
         }
 
         [INLINE(256)]
-        public void WriteBegin(SafePtr<State> state) {
+        public void WriteBegin(safe_ptr<State> state) {
             E.IS_CREATED(this);
             // acquire write op
             #if EXCEPTIONS_INTERNAL

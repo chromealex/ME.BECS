@@ -45,7 +45,7 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
-        public static Components Create(SafePtr<State> state, in StateProperties stateProperties) {
+        public static Components Create(safe_ptr<State> state, in StateProperties stateProperties) {
 
             var components = new Components() {
                 items = new MemArray<MemAllocatorPtr>(ref state.ptr->allocator, StaticTypes.counter + 1u),
@@ -71,7 +71,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRW<T> GetRW<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefRW<T> GetRW<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRW<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -80,7 +80,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRO<T> GetRO<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefRO<T> GetRO<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRO<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -88,12 +88,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public RefRWSafe<T> GetRWSafe<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefRWSafe<T> GetRWSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRWSafe<T>(state, worldId);
         }
 
         [INLINE(256)]
-        public RefROSafe<T> GetROSafe<T>(SafePtr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+        public RefROSafe<T> GetROSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefROSafe<T>(state, worldId);
         }
 

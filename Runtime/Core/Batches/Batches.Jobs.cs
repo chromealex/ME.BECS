@@ -9,7 +9,7 @@ namespace ME.BECS {
     public unsafe struct ApplyJob : IJobSingle {
 
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
             
         [INLINE(256)]
         public void Execute() {
@@ -41,7 +41,7 @@ namespace ME.BECS {
     public unsafe struct OpenJob : IJobSingle {
 
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
             
         [INLINE(256)]
         public void Execute() {
@@ -56,7 +56,7 @@ namespace ME.BECS {
     public unsafe struct CloseJob : IJobSingle {
 
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
             
         [INLINE(256)]
         public void Execute() {

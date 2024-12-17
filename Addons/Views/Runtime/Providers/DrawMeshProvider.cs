@@ -83,7 +83,7 @@ namespace ME.BECS.Views {
             public NativeList<Ent> entities;
             public NativeList<Unity.Mathematics.float4x4> prefabWorldMatrices;
 
-            public void Dispose(SafePtr<State> state) {
+            public void Dispose(safe_ptr<State> state) {
 
                 this.matrices.Dispose();
                 this.entities.Dispose();
@@ -127,7 +127,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Commit(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
@@ -176,7 +176,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Spawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
@@ -195,7 +195,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        private void SpawnInstanceHierarchy(SafePtr<ViewsModuleData> data, in World world, in Ent worldEnt, in Ent prefabEnt) {
+        private void SpawnInstanceHierarchy(safe_ptr<ViewsModuleData> data, in World world, in Ent worldEnt, in Ent prefabEnt) {
             
             if (prefabEnt.Has<MeshRendererComponent>() == true &&
                 prefabEnt.Has<MeshFilterComponent>() == true) {
@@ -247,7 +247,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Despawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toRemoveTemp.Length; ++i) {
@@ -262,7 +262,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        private void DespawnInstanceHierarchy(SafePtr<ViewsModuleData> data, in Ent worldEnt, in Ent prefabEnt) {
+        private void DespawnInstanceHierarchy(safe_ptr<ViewsModuleData> data, in Ent worldEnt, in Ent prefabEnt) {
             
             if (prefabEnt.Has<MeshRendererComponent>() == true &&
                 prefabEnt.Has<MeshFilterComponent>() == true) {
@@ -304,7 +304,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void Dispose(SafePtr<State> state, SafePtr<ViewsModuleData> data) {
+        public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
 
             foreach (var kv in this.objectsPerMeshAndMaterial) {
 
@@ -314,7 +314,7 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(SafePtr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
+        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
 
             viewsModuleData.ptr->prefabId = data.sourceId;
             foreach (var item in data.items) {
@@ -326,7 +326,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public ViewSource Register(SafePtr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
+        public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
             if (prefab == null) {

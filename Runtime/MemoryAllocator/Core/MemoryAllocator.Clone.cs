@@ -41,14 +41,14 @@ namespace ME.BECS {
                             
                             if (curZone == null) {
                                 curZone = MemoryAllocator.ZmCreateZone(otherZone->size);
-                                _memcpy((SafePtr)otherZone, (SafePtr)curZone, otherZone->size);
+                                _memcpy((safe_ptr)otherZone, (safe_ptr)curZone, otherZone->size);
                             } else if (otherZone == null) {
                                 MemoryAllocator.ZmFreeZone(curZone);
                                 curZone = null;
                             } else {
                                 // resize zone
                                 curZone = MemoryAllocator.ZmReallocZone(curZone, otherZone->size);
-                                _memcpy((SafePtr)otherZone, (SafePtr)curZone, otherZone->size);
+                                _memcpy((safe_ptr)otherZone, (safe_ptr)curZone, otherZone->size);
                             }
                         }
                     }
@@ -68,7 +68,7 @@ namespace ME.BECS {
 
                         if (otherZone != null) {
                             var zone = MemoryAllocator.ZmCreateZone(otherZone->size);
-                            _memcpy((SafePtr)otherZone, (SafePtr)zone, otherZone->size);
+                            _memcpy((safe_ptr)otherZone, (safe_ptr)zone, otherZone->size);
                             this.AddZone(zone, false);
                         } else {
                             this.AddZone(null, false);
@@ -96,7 +96,7 @@ namespace ME.BECS {
             {
                 if (curZone == null && otherZone == null) return;
                 {
-                    _memcpy((SafePtr)otherZone, (SafePtr)curZone, otherZone->size);
+                    _memcpy((safe_ptr)otherZone, (safe_ptr)curZone, otherZone->size);
                 }
             }
             

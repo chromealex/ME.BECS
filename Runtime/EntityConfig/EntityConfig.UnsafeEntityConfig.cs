@@ -18,7 +18,7 @@ namespace ME.BECS {
 
                 public bool IsValid() => this.pointer != System.IntPtr.Zero;
 
-                public void Call(in UnsafeEntityConfig config, SafePtr<byte> comp, in Ent ent) {
+                public void Call(in UnsafeEntityConfig config, safe_ptr<byte> comp, in Ent ent) {
                     var del = new Unity.Burst.FunctionPointer<MethodCallerDelegate>(this.pointer);
                     del.Invoke(in config, comp.ptr, in ent);
                 }
@@ -34,16 +34,16 @@ namespace ME.BECS {
             }
 
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<byte> data;
+            private readonly safe_ptr<byte> data;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> offsets;
+            private readonly safe_ptr<uint> offsets;
             private readonly uint count;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> typeIds;
+            private readonly safe_ptr<uint> typeIds;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> hashes;
+            private readonly safe_ptr<uint> hashes;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<Func> functionPointers;
+            private readonly safe_ptr<Func> functionPointers;
 
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
@@ -89,13 +89,13 @@ namespace ME.BECS {
                     this.hashes[i] = hasCustomHash == true ? comp.GetHash() : Components.COMPONENT_SHARED_DEFAULT_HASH;
                     offset += elemSize;
                 }
-                this.data = (SafePtr<byte>)_make(size, 4, Constants.ALLOCATOR_PERSISTENT);
+                this.data = (safe_ptr<byte>)_make(size, 4, Constants.ALLOCATOR_PERSISTENT);
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = new SafePtr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
+                    var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
                     if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
@@ -156,7 +156,7 @@ namespace ME.BECS {
 
                 public bool IsValid() => this.pointer != System.IntPtr.Zero;
 
-                public void Call(in UnsafeEntityConfig config, SafePtr<byte> comp, in Ent ent) {
+                public void Call(in UnsafeEntityConfig config, safe_ptr<byte> comp, in Ent ent) {
                     var del = new Unity.Burst.FunctionPointer<MethodCallerDelegate>(this.pointer);
                     del.Invoke(in config, comp.ptr, in ent);
                 }
@@ -172,14 +172,14 @@ namespace ME.BECS {
             }
             
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<byte> data;
+            private readonly safe_ptr<byte> data;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> offsets;
+            private readonly safe_ptr<uint> offsets;
             private readonly uint count;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> typeIds;
+            private readonly safe_ptr<uint> typeIds;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<Func> functionPointers;
+            private readonly safe_ptr<Func> functionPointers;
 
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
@@ -221,13 +221,13 @@ namespace ME.BECS {
                     this.typeIds[i] = typeId;
                     offset += elemSize;
                 }
-                this.data = (SafePtr<byte>)_make(size);
+                this.data = (safe_ptr<byte>)_make(size);
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = new SafePtr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
+                    var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
                     if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
@@ -327,14 +327,14 @@ namespace ME.BECS {
             }
 
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<byte> data;
+            private readonly safe_ptr<byte> data;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> offsets;
+            private readonly safe_ptr<uint> offsets;
             private readonly uint count;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> typeIds;
+            private readonly safe_ptr<uint> typeIds;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<Func> functionPointers;
+            private readonly safe_ptr<Func> functionPointers;
             
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
@@ -379,13 +379,13 @@ namespace ME.BECS {
                     this.typeIds[i] = typeId;
                     offset += elemSize;
                 }
-                this.data = (SafePtr<byte>)_make(size);
+                this.data = (safe_ptr<byte>)_make(size);
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = new SafePtr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
+                    var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
                     if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
                     {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
@@ -431,10 +431,10 @@ namespace ME.BECS {
         private readonly struct Aspect {
 
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> sizes;
+            private readonly safe_ptr<uint> sizes;
             private readonly uint count;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> typeIds;
+            private readonly safe_ptr<uint> typeIds;
             
             public Aspect(ComponentsStorage<IAspect> configAspects) {
 
@@ -486,7 +486,7 @@ namespace ME.BECS {
 
                 public uint id;
                 public uint length;
-                public SafePtr<byte> array;
+                public safe_ptr<byte> array;
 
                 public void Dispose() {
                     _free(this.array);
@@ -495,7 +495,7 @@ namespace ME.BECS {
 
             }
 
-            private readonly SafePtr<Collection> items;
+            private readonly safe_ptr<Collection> items;
             private readonly uint length;
 
             public CollectionsData(EntityConfig.CollectionsData data) {
@@ -513,12 +513,12 @@ namespace ME.BECS {
                     var collection = new Collection {
                         id = item.id,
                         length = (uint)item.array.Count,
-                        array = (SafePtr<byte>)_make(sizeOfElement * (uint)item.array.Count),
+                        array = (safe_ptr<byte>)_make(sizeOfElement * (uint)item.array.Count),
                     };
                     var offset = 0u;
                     foreach (var obj in item.array) {
                         var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
-                        var ptr = new SafePtr((void*)gcHandle.AddrOfPinnedObject(), sizeOfElement);
+                        var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), sizeOfElement);
                         _memcpy(ptr, collection.array + offset, sizeOfElement);
                         gcHandle.Free();
                         offset += sizeOfElement;
@@ -528,7 +528,7 @@ namespace ME.BECS {
                 }
             }
 
-            public bool GetById(uint id, out SafePtr<byte> array, out uint length) {
+            public bool GetById(uint id, out safe_ptr<byte> array, out uint length) {
                 array = default;
                 length = 0u;
                 for (uint i = 0u; i < this.length; ++i) {
@@ -570,7 +570,7 @@ namespace ME.BECS {
 
             internal readonly Ent staticDataEnt;
             [NativeDisableUnsafePtrRestriction]
-            private readonly SafePtr<uint> typeIds;
+            private readonly safe_ptr<uint> typeIds;
             private readonly uint count;
 
             public StaticData(in Ent ent, EntityConfig sourceConfig, UnsafeEntityConfig config) {
@@ -641,7 +641,7 @@ namespace ME.BECS {
         
         public readonly uint id;
         [NativeDisableUnsafePtrRestriction]
-        private readonly SafePtr<UnsafeEntityConfig> baseConfig;
+        private readonly safe_ptr<UnsafeEntityConfig> baseConfig;
         private readonly Data data;
         private readonly SharedData dataShared;
         private readonly DataInitialize dataInitialize;
@@ -672,7 +672,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool GetCollectionById(uint id, out SafePtr<byte> data, out uint length) {
+        public bool GetCollectionById(uint id, out safe_ptr<byte> data, out uint length) {
             return this.collectionsData.GetById(id, out data, out length);
         }
 

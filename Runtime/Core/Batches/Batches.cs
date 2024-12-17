@@ -80,7 +80,7 @@ namespace ME.BECS {
         public bool isCreated => this.addItems.isCreated == true || this.removeItems.isCreated == true;
 
         [INLINE(256)]
-        public void Apply(SafePtr<State> state, uint entId, ref Archetypes archetypes) {
+        public void Apply(safe_ptr<State> state, uint entId, ref Archetypes archetypes) {
 
             if (Ents.IsAlive(state, entId, out var gen) == false || gen != this.entGen) {
                 this.addItems.Dispose();
@@ -164,7 +164,7 @@ namespace ME.BECS {
         public ReadWriteSpinner workingLock;
         internal ReadWriteSpinner lockReadWrite;
 
-        public static uint GetReservedSizeInBytes(SafePtr<State> state) {
+        public static uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (state.ptr->batches.items.IsCreated == false) return 0u;
 
@@ -183,7 +183,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Batches Create(SafePtr<State> state, uint entitiesCapacity) {
+        public static Batches Create(safe_ptr<State> state, uint entitiesCapacity) {
             var batches = new Batches() {
                 items = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
                 arr = new MemArray<BatchItem>(ref state.ptr->allocator, entitiesCapacity),
@@ -200,7 +200,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void OnEntityAddThreadItem(SafePtr<State> state, uint entId) {
+        public static void OnEntityAddThreadItem(safe_ptr<State> state, uint entId) {
             
             for (uint i = 0u; i < state.ptr->batches.items.Length; ++i) {
                 ref var threadItem = ref state.ptr->batches.items[state, i];
@@ -216,7 +216,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Clear(SafePtr<State> state, in Ent ent) {
+        public static void Clear(safe_ptr<State> state, in Ent ent) {
 
             state.ptr->batches.lockReadWrite.ReadBegin(state);
             if (ent.id >= state.ptr->batches.arr.Length) {
@@ -233,21 +233,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal static void OpenFromJob(SafePtr<State> state) {
+        internal static void OpenFromJob(safe_ptr<State> state) {
             state.ptr->batches.workingLock.ReadBegin(state);
             JobUtils.Increment(ref state.ptr->batches.openIndex);
             state.ptr->batches.workingLock.ReadEnd(state);
         }
 
         [INLINE(256)]
-        internal static void CloseFromJob(SafePtr<State> state) {
+        internal static void CloseFromJob(safe_ptr<State> state) {
             state.ptr->batches.workingLock.ReadBegin(state);
             JobUtils.Decrement(ref state.ptr->batches.openIndex);
             state.ptr->batches.workingLock.ReadEnd(state);
         }
 
         [INLINE(256)]
-        internal static void ApplyFromJob(SafePtr<State> state) {
+        internal static void ApplyFromJob(safe_ptr<State> state) {
 
             if (state.ptr->batches.openIndex > 0u) {
                 return;
@@ -291,7 +291,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        private static void ApplyFromJobThread(SafePtr<State> state, uint threadIndex, ref UnsafeList<uint> list) {
+        private static void ApplyFromJobThread(safe_ptr<State> state, uint threadIndex, ref UnsafeList<uint> list) {
 
             ref var threadItem = ref state.ptr->batches.items[state, threadIndex];
             if (threadItem.Count == 0u) {
@@ -333,14 +333,14 @@ namespace ME.BECS {
         
         [BURST(CompileSynchronously = true)]
         [INLINE(256)]
-        public static void Apply(SafePtr<State> state) {
+        public static void Apply(safe_ptr<State> state) {
             new ApplyJob() {
                 state = state,
             }.Execute();
         }
 
         [INLINE(256)]
-        public static JobHandle Apply(JobHandle jobHandle, SafePtr<State> state) {
+        public static JobHandle Apply(JobHandle jobHandle, safe_ptr<State> state) {
             var job = new ApplyJob() {
                 state = state,
             };
@@ -356,7 +356,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle Open(JobHandle jobHandle, SafePtr<State> state) {
+        public static JobHandle Open(JobHandle jobHandle, safe_ptr<State> state) {
             var job = new OpenJob() {
                 state = state,
             };
@@ -364,7 +364,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle Close(JobHandle jobHandle, SafePtr<State> state) {
+        public static JobHandle Close(JobHandle jobHandle, safe_ptr<State> state) {
             var job = new CloseJob() {
                 state = state,
             };
@@ -399,7 +399,7 @@ namespace ME.BECS {
     public unsafe partial struct Batches {
 
         [INLINE(256)]
-        public static void OnEntityAdd(SafePtr<State> state, uint entId) {
+        public static void OnEntityAdd(safe_ptr<State> state, uint entId) {
 
             if (entId >= state.ptr->batches.arr.Length) {
                 state.ptr->batches.lockReadWrite.WriteBegin(state);
@@ -413,7 +413,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal static void Set_INTERNAL(uint typeId, in Ent ent, SafePtr<State> state) {
+        internal static void Set_INTERNAL(uint typeId, in Ent ent, safe_ptr<State> state) {
             
             E.IS_IN_TICK(state);
 
@@ -445,7 +445,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal static void Remove_INTERNAL(uint typeId, in Ent ent, SafePtr<State> state) {
+        internal static void Remove_INTERNAL(uint typeId, in Ent ent, safe_ptr<State> state) {
             
             E.IS_IN_TICK(state);
             

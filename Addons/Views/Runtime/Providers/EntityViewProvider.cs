@@ -43,7 +43,7 @@ namespace ME.BECS.Views {
         
         private struct Item {
 
-            public SafePtr<SourceRegistry.Info> info;
+            public safe_ptr<SourceRegistry.Info> info;
             public EntityView obj;
             public System.IntPtr ptr;
 
@@ -80,7 +80,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Commit(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
@@ -202,7 +202,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Spawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
@@ -216,7 +216,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Despawn(SafePtr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toRemoveTemp.Length; ++i) {
@@ -229,7 +229,7 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public SceneInstanceInfo Spawn(SafePtr<SourceRegistry.Info> prefabInfo, in Ent ent, out bool isNew) {
+        public SceneInstanceInfo Spawn(safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, out bool isNew) {
 
             var customViewId = ent.Read<ViewCustomIdComponent>().uniqueId;
             System.IntPtr objPtr;
@@ -368,7 +368,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void Dispose(SafePtr<State> state, SafePtr<ViewsModuleData> data) {
+        public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
 
             for (uint i = 0u; i < data.ptr->renderingOnScene.Count; ++i) {
                 var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
@@ -413,7 +413,7 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(SafePtr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
+        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
 
             viewsModuleData.ptr->prefabId = data.sourceId;
             foreach (var item in data.items) {
@@ -425,7 +425,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public ViewSource Register(SafePtr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
+        public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
             if (prefab == null) {

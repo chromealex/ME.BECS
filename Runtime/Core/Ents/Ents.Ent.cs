@@ -131,7 +131,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Ent(uint id, SafePtr<State> state, ushort worldId) {
+        public Ent(uint id, safe_ptr<State> state, ushort worldId) {
             this.pack = default;
             this.id = id;
             this.gen = Ents.GetGeneration(state, id);

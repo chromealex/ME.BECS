@@ -7,7 +7,7 @@ namespace ME.BECS.Network.Markers {
     public struct InternalNetworkHeader {
 
         public ClassPtr<INetworkTransport> transport;
-        public SafePtr<UnsafeNetworkModule.Data> moduleData;
+        public safe_ptr<UnsafeNetworkModule.Data> moduleData;
 
         public void Dispose() {
             this.transport.Dispose();

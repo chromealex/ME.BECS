@@ -8,7 +8,7 @@ namespace ME.BECS.NativeCollections {
 
     public unsafe struct NativeMinHeap : IDisposable {
 
-        private SafePtr<MinHeapNode> mBuffer;
+        private safe_ptr<MinHeapNode> mBuffer;
         private uint mCapacity;
         private Allocator mAllocatorLabel;
 

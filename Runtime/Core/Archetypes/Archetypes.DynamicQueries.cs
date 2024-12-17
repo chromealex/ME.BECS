@@ -87,7 +87,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void WithAny(SafePtr<State> state, SafePtr<QueryData> queryData, uint typeId1, uint typeId2) {
+        public static void WithAny(safe_ptr<State> state, safe_ptr<QueryData> queryData, uint typeId1, uint typeId2) {
 
             new WithAnyJob() {
                 state = state,
@@ -99,7 +99,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void With(SafePtr<State> state, SafePtr<QueryData> queryData, uint typeId) {
+        public static void With(safe_ptr<State> state, safe_ptr<QueryData> queryData, uint typeId) {
 
             new WithJob() {
                 typeId = typeId,
@@ -110,7 +110,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Without(SafePtr<State> state, SafePtr<QueryData> queryData, uint typeId) {
+        public static void Without(safe_ptr<State> state, safe_ptr<QueryData> queryData, uint typeId) {
 
             new WithoutJob() {
                 typeId = typeId,
@@ -128,9 +128,9 @@ namespace ME.BECS {
             public uint typeId3;
             public uint typeId4;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
@@ -192,9 +192,9 @@ namespace ME.BECS {
 
             public uint typeId;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
@@ -221,9 +221,9 @@ namespace ME.BECS {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {
@@ -265,9 +265,9 @@ namespace ME.BECS {
 
             public uint typeId;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
             public void Execute() {

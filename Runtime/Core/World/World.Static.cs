@@ -12,7 +12,7 @@ namespace ME.BECS {
             public const uint CACHE_LINE_SIZE = JobUtils.CacheLineSize;
 
             public readonly uint Length => JobUtils.ThreadsCount;
-            internal SafePtr<T> ptr;
+            internal safe_ptr<T> ptr;
 
             [INLINE(256)]
             public void Initialize() {
@@ -45,7 +45,7 @@ namespace ME.BECS {
 
             public volatile uint Length;
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
-            internal SafePtr<T> ptr;
+            internal safe_ptr<T> ptr;
             
             public bool IsCreated => this.ptr.ptr != null;
 
@@ -79,7 +79,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public SafePtr GetPtr() {
+            public safe_ptr GetPtr() {
                 return this.ptr;
             }
 
@@ -90,11 +90,11 @@ namespace ME.BECS {
             public struct Node {
 
                 public ushort data;
-                public SafePtr<Node> next;
+                public safe_ptr<Node> next;
 
             }
 
-            public SafePtr<Node> root;
+            public safe_ptr<Node> root;
             public uint Count;
 
             public bool isCreated => this.root.ptr != null;

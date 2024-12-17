@@ -62,10 +62,10 @@ namespace ME.BECS.NativeCollections {
     public unsafe struct MinMaxHeap<T> : IDisposable where T : unmanaged {
 
         [NativeDisableContainerSafetyRestriction]
-        private SafePtr<T> keys; //objects
+        private safe_ptr<T> keys; //objects
 
         [NativeDisableContainerSafetyRestriction]
-        private SafePtr<float> values;
+        private safe_ptr<float> values;
 
         public uint Count;
         private uint m_capacity;

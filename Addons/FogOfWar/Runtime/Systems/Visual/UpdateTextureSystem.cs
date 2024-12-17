@@ -79,7 +79,7 @@ namespace ME.BECS.FogOfWar {
             
             public void Execute() {
 
-                _memcpy(this.fow.nodes.GetUnsafePtr(), (SafePtr)this.currentBuffer, this.fow.nodes.Length);
+                _memcpy(this.fow.nodes.GetUnsafePtr(), (safe_ptr)this.currentBuffer, this.fow.nodes.Length);
 
             }
 

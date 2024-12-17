@@ -232,7 +232,7 @@ namespace ME.BECS {
         public static unsafe void SetDefaultValue(T data) {
 
             StaticTypesHasDefaultValue<T>.value.Data = true; 
-            var defaultValuePtr = (SafePtr<T>)_make(TSize<T>.sizeInt, TAlign<T>.alignInt, Constants.ALLOCATOR_DOMAIN);
+            var defaultValuePtr = (safe_ptr<T>)_make(TSize<T>.sizeInt, TAlign<T>.alignInt, Constants.ALLOCATOR_DOMAIN);
             *defaultValuePtr.ptr = data;
             StaticTypes.defaultValues.Get(StaticTypes<T>.typeId) = (System.IntPtr)defaultValuePtr.ptr;
             

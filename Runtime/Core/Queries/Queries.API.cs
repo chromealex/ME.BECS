@@ -9,10 +9,10 @@ namespace ME.BECS {
 
     public ref struct QueryContext {
 
-        internal SafePtr<State> state;
+        internal safe_ptr<State> state;
         internal ushort worldId;
 
-        public static QueryContext Create(SafePtr<State> state, ushort worldId) {
+        public static QueryContext Create(safe_ptr<State> state, ushort worldId) {
             return new QueryContext() { state = state, worldId = worldId, };
         }
 
@@ -52,9 +52,9 @@ namespace ME.BECS {
         private struct BuilderArchetypesJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             public Unity.Collections.Allocator allocator;
             
             public void Execute() {

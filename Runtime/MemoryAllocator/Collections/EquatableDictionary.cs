@@ -8,10 +8,10 @@ namespace ME.BECS {
         public struct Enumerator {
 
             private uint count;
-            private readonly SafePtr<Entry> entries;
+            private readonly safe_ptr<Entry> entries;
             private uint index;
 
-            internal Enumerator(in EquatableDictionary<TKey, TValue> dictionary, SafePtr<State> state) {
+            internal Enumerator(in EquatableDictionary<TKey, TValue> dictionary, safe_ptr<State> state) {
                 this.entries = dictionary.entries.GetUnsafePtrCached(in state.ptr->allocator);
                 this.count = dictionary.count;
                 this.index = 0u;

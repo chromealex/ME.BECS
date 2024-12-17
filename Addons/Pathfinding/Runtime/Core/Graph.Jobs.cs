@@ -583,7 +583,7 @@ namespace ME.BECS.Pathfinding {
         private byte CalculateLOS(in RootGraphComponent root, ref Path.Chunk chunk, in Graph.TempNode node, in Graph.TempNode targetNode) {
 
             [INLINE(256)]
-            static byte GetState(SafePtr<State> state, in Path path, in Graph.TempNode node) {
+            static byte GetState(safe_ptr<State> state, in Path path, in Graph.TempNode node) {
                 var chunk = path.chunks[state, node.chunkIndex];
                 if (chunk.flowField.IsCreated == false) return 0;
                 return chunk.flowField[state, node.nodeIndex].hasLineOfSight;

@@ -96,7 +96,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(allocator);
@@ -144,7 +144,7 @@ namespace ME.BECS {
 
         }
 
-        public ref T this[SafePtr<State> state, uint index] {
+        public ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Count);
@@ -367,7 +367,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(ref allocator, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)collection.GetUnsafeReadOnlyPtr(), (SafePtr)(this.arr.GetUnsafePtr(in allocator) + index * size), count * size);
+                _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr(), (safe_ptr)(this.arr.GetUnsafePtr(in allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -382,7 +382,7 @@ namespace ME.BECS {
             if (count > 0u) {
                 this.EnsureCapacity(ref allocator, this.Count + count);
                 var size = TSize<T>.size;
-                _memcpy((SafePtr)collection.Ptr, (SafePtr)(this.arr.GetUnsafePtr(in allocator) + index * size), count * size);
+                _memcpy((safe_ptr)collection.Ptr, (safe_ptr)(this.arr.GetUnsafePtr(in allocator) + index * size), count * size);
                 this.Count += count;
             }
         }
@@ -420,7 +420,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Sort<U>(SafePtr<State> state) where U : unmanaged, System.IComparable<U> {
+        public void Sort<U>(safe_ptr<State> state) where U : unmanaged, System.IComparable<U> {
             Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr(in state.ptr->allocator).ptr, (int)this.Count);
         }
 

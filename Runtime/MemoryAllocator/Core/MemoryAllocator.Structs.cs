@@ -78,7 +78,7 @@
 
         public override string ToString() => $"zoneId: {this.zoneId}, offset: {this.offset}";
 
-        public unsafe uint GetSizeInBytes(SafePtr<State> state) {
+        public unsafe uint GetSizeInBytes(safe_ptr<State> state) {
             if (this.IsValid() == false) return TSize<MemPtr>.size;
             return state.ptr->allocator.GetSize(in this);
         }
@@ -105,7 +105,7 @@
         }
 
         [INLINE(256)]
-        public readonly SafePtr<T> AsPtr<T>(in MemoryAllocator allocator, uint offset = 0u) where T : unmanaged {
+        public readonly safe_ptr<T> AsPtr<T>(in MemoryAllocator allocator, uint offset = 0u) where T : unmanaged {
 
             return allocator.GetUnsafePtr(this.ptr, offset);
 
@@ -120,7 +120,7 @@
         }
 
         [INLINE(256)]
-        public void Set(ref MemoryAllocator allocator, SafePtr data, uint dataSize) {
+        public void Set(ref MemoryAllocator allocator, safe_ptr data, uint dataSize) {
 
             this.ptr = allocator.Alloc(dataSize, out var ptr);
             if (data.ptr != null) {
@@ -161,7 +161,7 @@
         }
 
         [INLINE(256)]
-        public readonly SafePtr<T> AsPtr(in MemoryAllocator allocator, uint offset = 0u) {
+        public readonly safe_ptr<T> AsPtr(in MemoryAllocator allocator, uint offset = 0u) {
 
             return allocator.GetUnsafePtr(this.ptr, offset);
 
@@ -176,7 +176,7 @@
         }
 
         [INLINE(256)]
-        public void Set(ref MemoryAllocator allocator, SafePtr data, uint dataSize) {
+        public void Set(ref MemoryAllocator allocator, safe_ptr data, uint dataSize) {
 
             this.ptr = allocator.Alloc(dataSize, out var ptr);
             if (data.ptr != null) {

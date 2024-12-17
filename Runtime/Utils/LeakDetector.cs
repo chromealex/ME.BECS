@@ -70,7 +70,7 @@ namespace ME.BECS {
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
-        public static void Track(SafePtr ptr) {
+        public static void Track(safe_ptr ptr) {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
@@ -97,7 +97,7 @@ namespace ME.BECS {
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
-        public static void Free(SafePtr ptr) {
+        public static void Free(safe_ptr ptr) {
             
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();

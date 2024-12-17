@@ -10,7 +10,7 @@ namespace ME.BECS {
         private MemArray<LockSpinner> readWriteSpinnerPerEntity;
 
         [INLINE(256)]
-        public static CollectionsRegistry Create(SafePtr<State> state, uint capacity) {
+        public static CollectionsRegistry Create(safe_ptr<State> state, uint capacity) {
 
             return new CollectionsRegistry() {
                 list = new MemArray<List<MemPtr>>(ref state.ptr->allocator, capacity),
@@ -21,7 +21,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void OnEntityAdd(SafePtr<State> state, uint entId) {
+        public static void OnEntityAdd(safe_ptr<State> state, uint entId) {
             
             if (entId >= state.ptr->collectionsRegistry.list.Length) {
                 state.ptr->collectionsRegistry.readWriteSpinner.WriteBegin(state);
@@ -35,7 +35,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Destroy(SafePtr<State> state, in Ent ent) {
+        public static void Destroy(safe_ptr<State> state, in Ent ent) {
 
             state.ptr->collectionsRegistry.readWriteSpinner.ReadBegin(state);
             ref var list = ref state.ptr->collectionsRegistry.list[in state.ptr->allocator, ent.id];
@@ -56,7 +56,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static void Add(SafePtr<State> state, in Ent ent, in MemPtr ptr) {
+        public static void Add(safe_ptr<State> state, in Ent ent, in MemPtr ptr) {
             
             state.ptr->collectionsRegistry.readWriteSpinner.ReadBegin(state);
             ref var entitySpinner = ref state.ptr->collectionsRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
@@ -70,7 +70,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Remove(SafePtr<State> state, in Ent ent, in MemPtr ptr) {
+        public static void Remove(safe_ptr<State> state, in Ent ent, in MemPtr ptr) {
             
             state.ptr->collectionsRegistry.readWriteSpinner.ReadBegin(state);
             ref var list = ref state.ptr->collectionsRegistry.list[in state.ptr->allocator, ent.id];
@@ -84,7 +84,7 @@ namespace ME.BECS {
             
         }
 
-        public static uint GetReservedSizeInBytes(SafePtr<State> state) {
+        public static uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             var size = TSize<CollectionsRegistry>.size;
             for (uint i = 0u; i < state.ptr->collectionsRegistry.list.Length; ++i) {

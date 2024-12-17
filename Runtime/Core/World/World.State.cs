@@ -32,14 +32,14 @@ namespace ME.BECS {
         public bool IsCreated => this.tick != 0UL;
 
         [INLINE(256)]
-        public static SafePtr<State> Create(byte[] bytes) {
+        public static safe_ptr<State> Create(byte[] bytes) {
             State st = default;
             var state = st.Deserialize(bytes);
             return _make(state);
         }
 
         [INLINE(256)]
-        public static SafePtr<State> CreateDefault(AllocatorProperties allocatorProperties) {
+        public static safe_ptr<State> CreateDefault(AllocatorProperties allocatorProperties) {
             var state = new State() {
                 allocator = new MemoryAllocator().Initialize(allocatorProperties.sizeInBytesCapacity),
             };
@@ -47,26 +47,26 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static SafePtr<State> Clone(SafePtr<State> srcState) {
+        public static safe_ptr<State> Clone(safe_ptr<State> srcState) {
             var state = _make(new State());
             state.ptr->CopyFrom(in *srcState.ptr);
             return state;
         }
 
         [INLINE(256)]
-        public static SafePtr<State> ClonePrepare(SafePtr<State> srcState) {
+        public static safe_ptr<State> ClonePrepare(safe_ptr<State> srcState) {
             var state = _make(new State());
             state.ptr->CopyFromPrepare(in *srcState.ptr);
             return state;
         }
 
         [INLINE(256)]
-        public static void CloneComplete(SafePtr<State> srcState, SafePtr<State> dstState, int index) {
+        public static void CloneComplete(safe_ptr<State> srcState, safe_ptr<State> dstState, int index) {
             dstState.ptr->CopyFromComplete(in *srcState.ptr, index);
         }
 
         [INLINE(256)]
-        public State Initialize(SafePtr<State> statePtr, in StateProperties stateProperties) {
+        public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
             this.aspectsStorage = AspectsStorage.Create(statePtr);
             this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
@@ -103,7 +103,7 @@ namespace ME.BECS {
         private struct NextTickJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             
             public void Execute() {
                 ++this.state.ptr->tick;
@@ -115,7 +115,7 @@ namespace ME.BECS {
         private struct BurstModeJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             public bool mode;
             
             public void Execute() {
@@ -140,7 +140,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Unity.Jobs.JobHandle NextTick(SafePtr<State> state, Unity.Jobs.JobHandle dependsOn) {
+        public static Unity.Jobs.JobHandle NextTick(safe_ptr<State> state, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new NextTickJob() {
                 state = state,
             }.ScheduleSingle(dependsOn);
@@ -148,7 +148,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Unity.Jobs.JobHandle BurstMode(SafePtr<State> state, bool mode, Unity.Jobs.JobHandle dependsOn) {
+        public static Unity.Jobs.JobHandle BurstMode(safe_ptr<State> state, bool mode, Unity.Jobs.JobHandle dependsOn) {
             #if USE_CACHE_PTR
             dependsOn = new BurstModeJob() {
                 state = state,

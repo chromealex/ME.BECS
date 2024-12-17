@@ -33,7 +33,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
             return this.array.GetUnsafePtr(in allocator);
         }
 
@@ -92,7 +92,7 @@ namespace ME.BECS {
                 this.array.Resize(ref allocator, this.array.Length + delta, growFactor: 1);
             }
 
-            _memcpy(list.GetUnsafePtr(in allocator), (SafePtr<byte>)this.array.GetUnsafePtr(in allocator) + TSize<uint>.size * this.size, TSize<uint>.size * list.Count);
+            _memcpy(list.GetUnsafePtr(in allocator), (safe_ptr<byte>)this.array.GetUnsafePtr(in allocator) + TSize<T>.size * this.size, TSize<T>.size * list.Count);
             this.size += list.Count;
             /*for (uint i = 0; i < list.Count; ++i) {
                 this.Push(ref allocator, list[allocator, i]);

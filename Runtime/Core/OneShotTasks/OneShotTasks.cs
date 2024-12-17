@@ -31,7 +31,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [NotThreadSafe]
-        public static OneShotTasks Create(SafePtr<State> state, uint capacity) {
+        public static OneShotTasks Create(safe_ptr<State> state, uint capacity) {
             var tasks = new OneShotTasks() {
                 threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
             };
@@ -44,7 +44,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Add<T>(SafePtr<State> state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
+        public static void Add<T>(safe_ptr<State> state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
             var dataPtr = new MemAllocatorPtr();
@@ -54,7 +54,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Add(SafePtr<State> state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
+        public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
             var threadIndex = JobUtils.ThreadIndex;
@@ -82,7 +82,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [NotThreadSafe]
-        public static JobHandle Schedule(SafePtr<State> state, OneShotType type, ushort updateType, JobHandle dependsOn) {
+        public static JobHandle Schedule(safe_ptr<State> state, OneShotType type, ushort updateType, JobHandle dependsOn) {
 
             E.THREAD_CHECK(nameof(ScheduleJobs));
 
@@ -98,7 +98,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static void ResolveThread(SafePtr<State> state, OneShotType type, ushort updateType, uint index) {
+        public static void ResolveThread(safe_ptr<State> state, OneShotType type, ushort updateType, uint index) {
 
             ref var threadItem = ref state.ptr->oneShotTasks.threadItems[state, index];
             var collection = _addressT(ref threadItem.currentTick);

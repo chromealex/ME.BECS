@@ -166,7 +166,7 @@ namespace ME.BECS.Tests {
                 *(arr + 8) = 900;
                 *(arr + 9) = 1000;
                 packer.Write(arr, 10);
-                _free((SafePtr)arr);
+                _free((safe_ptr)arr);
                 bytes = packer.ToArray();
                 packer.Dispose();
             }
@@ -192,7 +192,7 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(900, *(arr + 8));
                     Assert.AreEqual(1000, *(arr + 9));
                 }
-                _free((SafePtr)arr);
+                _free((safe_ptr)arr);
                 packer.Dispose();
             }
 

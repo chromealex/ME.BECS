@@ -89,7 +89,7 @@ namespace ME.BECS {
 
         public MemArray<Aspect> list;
         
-        public uint GetReservedSizeInBytes(SafePtr<State> state) {
+        public uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (this.list.IsCreated == false) return 0u;
 
@@ -98,7 +98,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static AspectsStorage Create(SafePtr<State> state) {
+        public static AspectsStorage Create(safe_ptr<State> state) {
             var aspectsCount = AspectTypeInfo.counter + 1u;
             var storage = new AspectsStorage() {
                 list = new MemArray<Aspect>(ref state.ptr->allocator, aspectsCount),
@@ -108,7 +108,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public ref T Initialize<T>(SafePtr<State> state) where T : unmanaged, IAspect {
+        public ref T Initialize<T>(safe_ptr<State> state) where T : unmanaged, IAspect {
             
             var typeId = AspectTypeInfo<T>.typeId;
             return ref *(T*)this.Initialize(state, typeId, TSize<T>.size).ptr;
@@ -116,7 +116,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public SafePtr Initialize(SafePtr<State> state, uint typeId, uint size) {
+        public safe_ptr Initialize(safe_ptr<State> state, uint typeId, uint size) {
             
             ref var item = ref this.list[state, typeId];
             if (item.constructedAspect.IsValid() == false) {
@@ -133,7 +133,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void SetAspect(SafePtr<State> state, in Ent ent, uint aspectTypeId) {
+        public static void SetAspect(safe_ptr<State> state, in Ent ent, uint aspectTypeId) {
 
             for (uint i = 0u; i < AspectTypeInfo.with.Get(aspectTypeId).Length; ++i) {
 

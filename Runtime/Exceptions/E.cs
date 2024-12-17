@@ -20,6 +20,7 @@ namespace ME.BECS {
         
         public const string ARCHETYPES_INTERNAL_CHECKS = "ARCHETYPES_INTERNAL_CHECKS";
         public const string LEAK_DETECTION = "LEAK_DETECTION";
+        public const string MEMORY_ALLOCATOR_BOUNDS_CHECK = "MEMORY_ALLOCATOR_BOUNDS_CHECK";
 
     }
 

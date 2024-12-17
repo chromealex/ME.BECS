@@ -48,7 +48,7 @@ namespace ME.BECS.Pathfinding {
             public Unity.Collections.NativeArray<UnityEngine.Color32> buffer;
             
             public void Execute() {
-                _memclear((SafePtr)this.buffer.GetUnsafePtr(), (uint)this.buffer.Length * TSize<UnityEngine.Color32>.size);
+                _memclear((safe_ptr)this.buffer.GetUnsafePtr(), (uint)this.buffer.Length * TSize<UnityEngine.Color32>.size);
             }
 
         }

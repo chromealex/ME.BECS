@@ -20,9 +20,9 @@ namespace ME.BECS {
         }
 
         [NativeDisableUnsafePtrRestriction]
-        internal SafePtr<CommandBuffer> commandBuffer;
+        internal safe_ptr<CommandBuffer> commandBuffer;
         [NativeDisableUnsafePtrRestriction]
-        internal SafePtr<QueryData> queryData;
+        internal safe_ptr<QueryData> queryData;
         internal JobHandle builderDependsOn;
         internal uint parallelForBatch;
         internal bool isUnsafe;
@@ -83,8 +83,8 @@ namespace ME.BECS {
 
     public unsafe struct QueryBuilderStatic {
 
-        internal readonly SafePtr<State> state;
-        internal readonly SafePtr<Queries.QueryDataStatic> queryDataStatic;
+        internal readonly safe_ptr<State> state;
+        internal readonly safe_ptr<Queries.QueryDataStatic> queryDataStatic;
         internal readonly bool isCreated;
         internal JobHandle dependsOn;
         
@@ -191,8 +191,8 @@ namespace ME.BECS {
 
         }
 
-        private readonly SafePtr<Queries.QueryDataStatic> queryData;
-        private readonly SafePtr<State> state;
+        private readonly safe_ptr<Queries.QueryDataStatic> queryData;
+        private readonly safe_ptr<State> state;
         private readonly JobHandle dependsOn;
         private readonly ushort worldId;
 
@@ -335,7 +335,7 @@ namespace ME.BECS {
             //internal CachedPtr<CommandBuffer> commandBuffer;
             
             [INLINE(256)]
-            public QueryDataStatic(SafePtr<State> state) {
+            public QueryDataStatic(safe_ptr<State> state) {
                 
                 this = default;
                 this.with = new UIntHashSet(ref state.ptr->allocator, 1u);
@@ -392,7 +392,7 @@ namespace ME.BECS {
             */
             
             [INLINE(256)]
-            public bool Equals(SafePtr<State> state, in QueryBuilderStatic builder) {
+            public bool Equals(safe_ptr<State> state, in QueryBuilderStatic builder) {
 
                 if (this.steps != builder.queryDataStatic.ptr->steps) return false;
                 if (this.minElementsPerStep != builder.queryDataStatic.ptr->minElementsPerStep) return false;
@@ -412,7 +412,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Dispose(SafePtr<State> state) {
+            public void Dispose(safe_ptr<State> state) {
                 
                 if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state.ptr->allocator);
                 this.with.Dispose(ref state.ptr->allocator);
@@ -425,7 +425,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Validate(SafePtr<State> state) {
+            public void Validate(safe_ptr<State> state) {
 
                 var queryData = new QueryData() {
                     archetypesBits = new TempBitArray(in state.ptr->allocator, state.ptr->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP),
@@ -465,22 +465,22 @@ namespace ME.BECS {
         internal uint nextId;
 
         [INLINE(256)]
-        public static Queries Create(SafePtr<State> state, uint capacity) {
+        public static Queries Create(safe_ptr<State> state, uint capacity) {
             return new Queries() {
                 queryData = new MemArray<QueryDataStatic>(ref state.ptr->allocator, capacity),
             };
         }
 
         [INLINE(256)]
-        internal SafePtr<QueryDataStatic> GetPtr(SafePtr<State> state, uint id) {
+        internal safe_ptr<QueryDataStatic> GetPtr(safe_ptr<State> state, uint id) {
 
-            var ptr = ((SafePtr<QueryDataStatic>)this.queryData.GetUnsafePtr(in state.ptr->allocator)) + (id - 1u);
+            var ptr = ((safe_ptr<QueryDataStatic>)this.queryData.GetUnsafePtr(in state.ptr->allocator)) + (id - 1u);
             return ptr;
 
         }
 
         [INLINE(256)]
-        public Query Add(SafePtr<State> state, in QueryBuilderStatic builder) {
+        public Query Add(safe_ptr<State> state, in QueryBuilderStatic builder) {
 
             for (uint i = 0u; i < this.nextId; ++i) {
                 var queryData = this.queryData[in state.ptr->allocator, i];

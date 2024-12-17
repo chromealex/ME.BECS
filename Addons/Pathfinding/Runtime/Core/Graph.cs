@@ -235,7 +235,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static PathInfo HierarchyPath(SafePtr<State> state, in Ent graph, float3 from, float3 to, in Filter filter, float nodeSize) {
+        public static PathInfo HierarchyPath(safe_ptr<State> state, in Ent graph, float3 from, float3 to, in Filter filter, float nodeSize) {
 
             [INLINE(256)]
             static void TraverseNeighbours(ref Unity.Collections.NativeArray<TempNodeData> temp, 
@@ -247,7 +247,7 @@ namespace ME.BECS.Pathfinding {
                                            float nodeSize,
                                            float currentNodeCost, 
                                            uint parentIdx,
-                                           SafePtr<State> state) {
+                                           safe_ptr<State> state) {
                 
                 for (uint i = 0; i < list.Count; ++i) {
                     var n = list[state, i];
@@ -374,7 +374,7 @@ namespace ME.BECS.Pathfinding {
 
         }
 
-        private static float3 GetPortalPosition(SafePtr<State> state, in RootGraphComponent root, uint chunkIndex, uint portalIndex) {
+        private static float3 GetPortalPosition(safe_ptr<State> state, in RootGraphComponent root, uint chunkIndex, uint portalIndex) {
 
             var portal = root.chunks[state, chunkIndex].portals.list[state, portalIndex];
             return portal.position;
@@ -382,7 +382,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static PortalInfo GetNearestPortal(SafePtr<State> state, in RootGraphComponent root, float3 position, float3 target) {
+        private static PortalInfo GetNearestPortal(safe_ptr<State> state, in RootGraphComponent root, float3 position, float3 target) {
 
             var chunkIndex = GetChunkIndex(in root, position);
             if (chunkIndex == uint.MaxValue) return PortalInfo.Invalid;
@@ -409,7 +409,7 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        public static ChunkPathInfo ChunkPath(SafePtr<State> state, in Ent graph, uint chunkIndex, float3 from, float3 to, in Filter filter = default) {
+        public static ChunkPathInfo ChunkPath(safe_ptr<State> state, in Ent graph, uint chunkIndex, float3 from, float3 to, in Filter filter = default) {
 
             var root = graph.Read<RootGraphComponent>();
             var chunk = root.chunks[state, chunkIndex];
@@ -798,7 +798,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static float3 GetPosition(SafePtr<State> state, in Ent graphEnt, uint chunkIndex, uint nodeIndex) {
+        public static float3 GetPosition(safe_ptr<State> state, in Ent graphEnt, uint chunkIndex, uint nodeIndex) {
 
             var root = graphEnt.Read<RootGraphComponent>();
             var chunk = root.chunks[state, chunkIndex];
@@ -1317,7 +1317,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static void DrawGizmosLevel(SafePtr<State> state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
+        private static void DrawGizmosLevel(safe_ptr<State> state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
             
             var cellSize = new float3(rootGraph.nodeSize, 0f, rootGraph.nodeSize);
             for (uint i = 0; i < rootGraph.chunkWidth; ++i) {

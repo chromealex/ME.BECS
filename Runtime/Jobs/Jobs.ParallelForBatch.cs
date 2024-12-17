@@ -74,7 +74,7 @@ namespace ME.BECS.Jobs {
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                    var buffer = new CommandBufferJobBatch((SafePtr)jobData.buffer, (uint)begin, (uint)end);
+                    var buffer = new CommandBufferJobBatch((safe_ptr)jobData.buffer, (uint)begin, (uint)end);
                     jobData.jobData.Execute(in buffer);
                     jobData.buffer->EndForEachRange();
                     

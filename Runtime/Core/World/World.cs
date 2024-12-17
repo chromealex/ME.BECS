@@ -28,7 +28,7 @@ namespace ME.BECS {
         public bool isCreated => Worlds.IsAlive(this.id);
         public ushort id;
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
         public string Name => Worlds.GetWorldName(this.id).ToString();
 
         [INLINE(256)]

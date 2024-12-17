@@ -63,7 +63,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemArrayAuto(in Ent ent, SafePtr data, uint length) : this(in ent, length, ClearOptions.UninitializedMemory) {
+        public MemArrayAuto(in Ent ent, safe_ptr data, uint length) : this(in ent, length, ClearOptions.UninitializedMemory) {
 
             if (this.IsCreated == true) {
 
@@ -86,7 +86,7 @@ namespace ME.BECS {
             var state = ent.World.state;
             this = default;
             this.data.ent = ent;
-            var memPtr = state.ptr->allocator.AllocArray(length, out SafePtr<T> ptr);
+            var memPtr = state.ptr->allocator.AllocArray(length, out safe_ptr<T> ptr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
             #endif
@@ -226,21 +226,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr() {
+        public readonly safe_ptr GetUnsafePtr() {
 
             return this.data.ent.World.state.ptr->allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             return allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtrCached(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
             #if USE_CACHE_PTR
             return CachedPtr.ReadPtr(in this.data.cachedPtr, in allocator, this.data.arrPtr);
@@ -251,7 +251,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtrCached() {
+        public readonly safe_ptr GetUnsafePtrCached() {
 
             #if USE_CACHE_PTR
             return CachedPtr.ReadPtr(in this.data.cachedPtr, in this.data.ent.World.state.ptr->allocator, this.data.arrPtr);
@@ -275,7 +275,7 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             return ref CachedPtr.Read<T>(this.data.cachedPtr, in allocator, this.data.arrPtr, index);
             #else
-            return ref *((SafePtr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
+            return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
             #endif
             
         }
@@ -284,7 +284,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -292,15 +292,15 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
             }
         }
 
-        public readonly ref T this[SafePtr<State> state, int index] {
+        public readonly ref T this[safe_ptr<State> state, int index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -308,7 +308,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             }
         }
 
@@ -316,15 +316,15 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             }
         }
 
-        public readonly ref T this[SafePtr<State> state, uint index] {
+        public readonly ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -344,7 +344,7 @@ namespace ME.BECS {
             var state = this.data.ent.World.state;
             CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             var prevLength = this.Length;
-            this.data.arrPtr = state.ptr->allocator.ReAllocArray(this.data.arrPtr, newLength, out SafePtr<T> ptr);
+            this.data.arrPtr = state.ptr->allocator.ReAllocArray(this.data.arrPtr, newLength, out safe_ptr<T> ptr);
             CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
@@ -407,7 +407,7 @@ namespace ME.BECS {
         public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
             E.IS_CREATED(this);
-            var ptr = (SafePtr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator);
+            var ptr = (safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator);
             for (uint i = 0, cnt = this.Length; i < cnt; ++i) {
 
                 if (obj.Equals(*(ptr + i).ptr) == true) {

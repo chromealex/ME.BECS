@@ -22,11 +22,11 @@ namespace ME.BECS {
         public LockSpinner lockIndex;
 
         [INLINE(256)]
-        public void SetSeed(SafePtr<State> statePtr, uint seed) {
+        public void SetSeed(safe_ptr<State> statePtr, uint seed) {
             this.data = seed;
         }
 
-        public static RandomData Create(SafePtr<State> statePtr) {
+        public static RandomData Create(safe_ptr<State> statePtr) {
             return new RandomData() { data = 1u };
         }
 
@@ -34,11 +34,11 @@ namespace ME.BECS {
     
     internal unsafe struct RandomState : System.IDisposable {
 
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
         public Random random;
         
         [INLINE(256)]
-        public RandomState(SafePtr<State> state) {
+        public RandomState(safe_ptr<State> state) {
             this.state = state;
             this.state.ptr->random.lockIndex.Lock();
             this.random = new Random(this.state.ptr->random.data);

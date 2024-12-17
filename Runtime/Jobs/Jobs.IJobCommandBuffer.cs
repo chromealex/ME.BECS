@@ -75,7 +75,7 @@ namespace ME.BECS.Jobs {
                 for (int i = 0; i < jobData.buffer->count; ++i) {
                     var entId = jobData.buffer->entities[i];
                     var entGen = Ents.GetGeneration(jobData.buffer->state, entId);
-                    var commandBuffer = new CommandBufferJob(entId, entGen, (SafePtr)jobData.buffer);
+                    var commandBuffer = new CommandBufferJob(entId, entGen, (safe_ptr)jobData.buffer);
                     jobData.jobData.Execute(in commandBuffer);
                 }
                 jobData.buffer->EndForEachRange();

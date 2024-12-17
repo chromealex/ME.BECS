@@ -42,7 +42,7 @@ namespace ME.BECS.Network {
         }
 
         internal void Dispose() {
-            _free((SafePtr)this.data);
+            _free((safe_ptr)this.data);
         }
 
         public ulong GetKey() {
@@ -116,7 +116,7 @@ namespace ME.BECS.Network {
             //E.SIZE_EQUALS(TSize<T>.size, this.package.dataSize);
             var result = default(T);
             var packageData = this.package.data;
-            var readBuffer = new StreamBufferReader((SafePtr)packageData, this.package.dataSize);
+            var readBuffer = new StreamBufferReader((safe_ptr)packageData, this.package.dataSize);
             result.Deserialize(ref readBuffer);
             return result;
 
@@ -149,7 +149,7 @@ namespace ME.BECS.Network {
             // methodPtr to methodId
             private EquatableDictionaryAuto<System.IntPtr, ushort> methodPtrs;
             private ushort index;
-            private readonly SafePtr<State> state;
+            private readonly safe_ptr<State> state;
             public NetworkModuleProperties.MethodsStorageProperties properties;
 
             public MethodsStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.MethodsStorageProperties properties) {
@@ -239,7 +239,7 @@ namespace ME.BECS.Network {
             
             // tick => [sorted events list by playerId + localOrder]
             private ULongDictionaryAuto<SortedNetworkPackageList> eventsByTick;
-            private readonly SafePtr<State> state;
+            private readonly safe_ptr<State> state;
             private ulong oldestTick;
             // playerId => localOrder
             private UIntDictionaryAuto<byte> localPlayersOrders;
@@ -324,7 +324,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Tick(ulong tick, float dt, in World world, SafePtr<Data> data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, float dt, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
                 if (events.IsCreated == true && events.Count > 0u) {
@@ -350,17 +350,17 @@ namespace ME.BECS.Network {
 
             private struct Entry {
 
-                public SafePtr<State> state;
+                public safe_ptr<State> state;
                 public ulong tick;
 
             }
 
             public readonly NetworkModuleProperties.StatesStorageProperties properties;
             private readonly MemArrayAuto<Entry> entries;
-            private SafePtr<State> resetState;
+            private safe_ptr<State> resetState;
             private uint rover;
-            private readonly SafePtr<State> networkState;
-            private readonly SafePtr<State> connectedWorldState;
+            private readonly safe_ptr<State> networkState;
+            private readonly safe_ptr<State> connectedWorldState;
 
             public StatesStorage(in World networkWorld, in World connectedWorld, NetworkModuleProperties.StatesStorageProperties properties) {
 
@@ -374,7 +374,7 @@ namespace ME.BECS.Network {
 
             }
 
-            private void Put(SafePtr<State> state) {
+            private void Put(safe_ptr<State> state) {
 
                 if (this.resetState.ptr == null) this.SaveResetState();
                 
@@ -394,14 +394,14 @@ namespace ME.BECS.Network {
 
             }
 
-            public SafePtr<State> GetResetState() {
+            public safe_ptr<State> GetResetState() {
                 return this.resetState;
             }
 
             [BURST(CompileSynchronously = true)]
             private struct CopyStatePrepareJob : IJobSingle {
 
-                public SafePtr<Data> data;
+                public safe_ptr<Data> data;
                 public Unity.Collections.NativeReference<System.IntPtr> tempData;
                 
                 public void Execute() {
@@ -419,20 +419,20 @@ namespace ME.BECS.Network {
             private struct CopyStateCompleteJob : IJobParallelFor {
 
                 [NativeDisableUnsafePtrRestriction]
-                public SafePtr<Data> data;
+                public safe_ptr<Data> data;
                 [Unity.Collections.ReadOnly]
                 public Unity.Collections.NativeReference<System.IntPtr> tempData;
                 
                 public void Execute(int index) {
                     
                     var srcState = this.data.ptr->connectedWorld.state;
-                    State.CloneComplete(srcState, new SafePtr<State>((State*)this.tempData.Value, TSize<State>.size), index);
+                    State.CloneComplete(srcState, new safe_ptr<State>((State*)this.tempData.Value, TSize<State>.size), index);
                     
                 }
 
             }
 
-            public JobHandle Tick(ulong tick, in World world, SafePtr<Data> data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
 
                 if (tick % this.properties.copyPerTick == 0u) {
                     
@@ -488,9 +488,9 @@ namespace ME.BECS.Network {
                 
             }
 
-            public SafePtr<State> GetStateForRollback(ulong tickToRollback) {
+            public safe_ptr<State> GetStateForRollback(ulong tickToRollback) {
 
-                SafePtr<State> nearestState = default;
+                safe_ptr<State> nearestState = default;
                 var rover = this.rover;
                 var delta = ulong.MaxValue;
                 for (;;) {
@@ -543,10 +543,10 @@ namespace ME.BECS.Network {
             public EventsStorage eventsStorage;
             public StatesStorage statesStorage;
             public MethodsStorage methodsStorage;
-            public SafePtr<Data> selfPtr;
+            public safe_ptr<Data> selfPtr;
             public ulong rollbackTargetTick;
 
-            public SafePtr<State> startFrameState;
+            public safe_ptr<State> startFrameState;
             
             [INLINE(256)]
             public Data(in World connectedWorld, NetworkModuleProperties properties) {
@@ -702,7 +702,7 @@ namespace ME.BECS.Network {
         }
         
         public readonly NetworkModuleProperties properties;
-        internal readonly SafePtr<Data> data;
+        internal readonly safe_ptr<Data> data;
 
         private readonly System.Diagnostics.Stopwatch frameStopwatch;
         internal INetworkTransport networkTransport;
@@ -836,12 +836,12 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
-        public static void AddEvent<T>(INetworkTransport networkTransport, SafePtr<Data> moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
+        public static void AddEvent<T>(INetworkTransport networkTransport, safe_ptr<Data> moduleData, uint playerId, NetworkMethodDelegate method, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
             AddEvent(networkTransport, moduleData, playerId, moduleData.ptr->methodsStorage.GetMethodId(method), in data, negativeDeltaTicks);
         }
 
         [INLINE(256)]
-        public static void AddEvent<T>(INetworkTransport networkTransport, SafePtr<Data> moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
+        public static void AddEvent<T>(INetworkTransport networkTransport, safe_ptr<Data> moduleData, uint playerId, ushort methodId, in T data, ulong negativeDeltaTicks) where T : unmanaged, IPackageData {
 
             if (networkTransport != null && networkTransport.Status != TransportStatus.Connected) {
                 
@@ -850,14 +850,14 @@ namespace ME.BECS.Network {
             }
 
             ushort dataLength = 0;
-            SafePtr<byte> dataPtr = default;
+            safe_ptr<byte> dataPtr = default;
             { // Custom data serialization
                 moduleData.ptr->writeBuffer.Reset();
                 data.Serialize(ref moduleData.ptr->writeBuffer);
                 var dataBytes = moduleData.ptr->writeBuffer.ToArray();
                 dataPtr = _makeArray<byte>((uint)dataBytes.Length);
                 fixed (void* ptr = &dataBytes[0]) {
-                    _memcpy((SafePtr)ptr, dataPtr, dataBytes.Length);
+                    _memcpy((safe_ptr)ptr, dataPtr, dataBytes.Length);
                 }
                 dataLength = (ushort)dataBytes.Length;
             }

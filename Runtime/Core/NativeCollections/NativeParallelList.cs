@@ -14,7 +14,7 @@ namespace ME.BECS.NativeCollections {
         private static readonly uint CACHE_LINE_SIZE = math.max(JobUtils.CacheLineSize / TSize<T>.size, 1u);
         
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<Unity.Collections.LowLevel.Unsafe.UnsafeList<T>> lists;
+        public safe_ptr<Unity.Collections.LowLevel.Unsafe.UnsafeList<T>> lists;
         private AllocatorManager.AllocatorHandle allocator;
 
         public bool isCreated => this.lists.ptr != null;
@@ -92,7 +92,7 @@ namespace ME.BECS.NativeCollections {
             var offset = 0;
             for (uint i = 0u; i < this.Length; ++i) {
                 var list = this.lists[i * CACHE_LINE_SIZE];
-                _memcpy((SafePtr)list.Ptr, (SafePtr)(targetList.Ptr + offset), TSize<T>.size * list.Length);
+                _memcpy((safe_ptr)list.Ptr, (safe_ptr)(targetList.Ptr + offset), TSize<T>.size * list.Length);
                 offset += list.Length;
             }
 

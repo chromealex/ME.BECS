@@ -76,7 +76,7 @@ namespace ME.BECS.Jobs {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                     for (uint i = (uint)begin; i < end; ++i) {
-                        var buffer = new CommandBufferJobParallel((SafePtr)jobData.buffer, i);
+                        var buffer = new CommandBufferJobParallel((safe_ptr)jobData.buffer, i);
                         jobData.jobData.Execute(in buffer);
                     }
                     jobData.buffer->EndForEachRange();

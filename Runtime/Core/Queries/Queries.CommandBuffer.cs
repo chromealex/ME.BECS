@@ -8,7 +8,7 @@ namespace ME.BECS {
 
     public readonly unsafe struct CommandBufferJobParallel {
 
-        public readonly SafePtr<CommandBuffer> buffer;
+        public readonly safe_ptr<CommandBuffer> buffer;
         public readonly uint index;
         public uint Count => this.buffer.ptr->count;
         public readonly uint entId;
@@ -16,7 +16,7 @@ namespace ME.BECS {
         public Ent ent => new Ent(this.entId, this.entGen, this.buffer.ptr->worldId);
 
         [INLINE(256)]
-        public CommandBufferJobParallel(SafePtr<CommandBuffer> buffer, uint index) {
+        public CommandBufferJobParallel(safe_ptr<CommandBuffer> buffer, uint index) {
             this.buffer = buffer;
             this.index = index;
             this.entId = this.buffer.ptr->entities[index];
@@ -62,13 +62,13 @@ namespace ME.BECS {
 
     public readonly unsafe struct CommandBufferJobBatch {
 
-        private readonly SafePtr<CommandBuffer> buffer;
+        private readonly safe_ptr<CommandBuffer> buffer;
         public readonly uint fromIndex;
         public readonly uint toIndex;
         public uint Count => this.buffer.ptr->count;
 
         [INLINE(256)]
-        public CommandBufferJobBatch(SafePtr<CommandBuffer> buffer, uint fromIndex, uint toIndex) {
+        public CommandBufferJobBatch(safe_ptr<CommandBuffer> buffer, uint fromIndex, uint toIndex) {
             this.buffer = buffer;
             this.fromIndex = fromIndex;
             this.toIndex = toIndex;
@@ -120,12 +120,12 @@ namespace ME.BECS {
 
         private readonly uint entId;
         private readonly ushort entGen;
-        public readonly SafePtr<CommandBuffer> buffer;
+        public readonly safe_ptr<CommandBuffer> buffer;
         public uint Count => this.buffer.ptr->count;
         public Ent ent => new Ent(this.entId, this.entGen, this.buffer.ptr->worldId);
         
         [INLINE(256)]
-        public CommandBufferJob(in uint entId, ushort gen, SafePtr<CommandBuffer> buffer) {
+        public CommandBufferJob(in uint entId, ushort gen, safe_ptr<CommandBuffer> buffer) {
             this.entId = entId;
             this.entGen = gen;
             this.buffer = buffer;
@@ -178,7 +178,7 @@ namespace ME.BECS {
         public uint* entities;
         public uint count;
         
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
         public ushort worldId;
 
         public bool sync;

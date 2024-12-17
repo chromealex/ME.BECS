@@ -265,7 +265,7 @@ namespace ME.BECS {
                             } catch (System.Exception ex) {
                                 UnityEngine.Debug.LogException(ex);
                             }
-                            _free((SafePtr)val.data);
+                            _free((safe_ptr)val.data);
                         } else {
                             var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
                             try {

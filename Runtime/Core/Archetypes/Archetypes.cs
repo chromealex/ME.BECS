@@ -23,7 +23,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public static Archetype Create(SafePtr<State> state, uint componentsCount, uint entitiesCapacityPerArchetype) {
+            public static Archetype Create(safe_ptr<State> state, uint componentsCount, uint entitiesCapacityPerArchetype) {
                 return new Archetype() {
                     componentsCount = componentsCount,
                     components = new UIntHashSet(ref state.ptr->allocator, componentsCount),
@@ -33,7 +33,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public uint GetNext(SafePtr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems, ref Archetypes archetypes) {
+            public uint GetNext(safe_ptr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems, ref Archetypes archetypes) {
                 
                 // Migrate to archetype with addItems and removeItems
                 var removeItemsCount = removeItems.Count;
@@ -104,7 +104,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void RemoveEntity(SafePtr<State> state, uint entId) {
+            public void RemoveEntity(safe_ptr<State> state, uint entId) {
 
                 var idx = state.ptr->archetypes.entToIdxInArchetype[state, entId];
                 CheckExist(state, this);
@@ -115,7 +115,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public uint AddEntity(SafePtr<State> state, uint entId) {
+            public uint AddEntity(safe_ptr<State> state, uint entId) {
 
                 var idx = this.entitiesList.Count;
                 this.entitiesList.Add(ref state.ptr->allocator, entId);
@@ -140,7 +140,7 @@ namespace ME.BECS {
 
             }
 
-            public uint GetReservedSizeInBytes(SafePtr<State> state) {
+            public uint GetReservedSizeInBytes(safe_ptr<State> state) {
                 
                 var size = 0u;
                 size += this.components.GetReservedSizeInBytes();
@@ -163,7 +163,7 @@ namespace ME.BECS {
         public MemArray<BitArray> archetypesWithTypeIdBits;
         public uint Count => this.allArchetypes.Count;
 
-        public uint GetReservedSizeInBytes(SafePtr<State> state) {
+        public uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (this.list.IsCreated == false) return 0u;
 
@@ -210,7 +210,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        internal static void Add(SafePtr<State> state, in Archetype archetype, out uint idx) {
+        internal static void Add(safe_ptr<State> state, in Archetype archetype, out uint idx) {
             
             MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
             ref var allocator = ref state.ptr->allocator;
@@ -267,7 +267,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void AddEntity(SafePtr<State> state, UnsafeList<Ent>* list, uint maxId) {
+        public static void AddEntity(safe_ptr<State> state, UnsafeList<Ent>* list, uint maxId) {
 
             JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
             state.ptr->archetypes.entToArchetypeIdx.Resize(ref state.ptr->allocator, maxId + 1u, 2);
@@ -282,7 +282,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void AddEntity(SafePtr<State> state, in Ent ent) {
+        public static void AddEntity(safe_ptr<State> state, in Ent ent) {
 
             E.IS_IN_TICK(state);
             
@@ -300,7 +300,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void RemoveEntity(SafePtr<State> state, in Ent ent) {
+        public static void RemoveEntity(safe_ptr<State> state, in Ent ent) {
 
             E.IS_IN_TICK(state);
             
@@ -319,7 +319,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void ApplyBatch(SafePtr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
+        public static void ApplyBatch(safe_ptr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
 
             if (addItems.Count > 0 || removeItems.Count > 0) {
                 JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
@@ -339,7 +339,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Archetypes Create(SafePtr<State> state, uint capacity, uint entitiesCapacity) {
+        public static Archetypes Create(safe_ptr<State> state, uint capacity, uint entitiesCapacity) {
             if (capacity == 0u) capacity = 1u;
             if (capacity < StaticTypes.counter + 1u) capacity = StaticTypes.counter + 1u;
             var archs = new Archetypes() {
@@ -359,7 +359,7 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckEntity(SafePtr<State> state, uint entId, int archIdx) {
+        private static void CheckEntity(safe_ptr<State> state, uint entId, int archIdx) {
 
             //var isListed = state.ptr->archetypes.list[state.ptr->allocator, (uint)archIdx].entitiesList.Contains(state.ptr->allocator, entId);
             //if (isListed == false) {
@@ -378,7 +378,7 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckEntityTimes(SafePtr<State> state, uint entId, int times) {
+        private static void CheckEntityTimes(safe_ptr<State> state, uint entId, int times) {
 
             var listedIdx = -1;
             var cnt = 0;
@@ -394,14 +394,14 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckNoEntity(SafePtr<State> state, uint entId, int archIdx) {
+        private static void CheckNoEntity(safe_ptr<State> state, uint entId, int archIdx) {
 
             UnityEngine.Debug.Assert(state.ptr->archetypes.list[state.ptr->allocator, (uint)archIdx].entitiesList.Contains(state.ptr->allocator, entId) == false);
 
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckNoEntity(int listId, SafePtr<State> state, uint entId) {
+        private static void CheckNoEntity(int listId, safe_ptr<State> state, uint entId) {
 
             var listedIdx = -1;
             var cnt = 0;
@@ -417,7 +417,7 @@ namespace ME.BECS {
         }
 
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckExist(SafePtr<State> state, Archetype archetype) {
+        private static void CheckExist(safe_ptr<State> state, Archetype archetype) {
 
             var cnt = 0;
             for (uint i = 0; i < state.ptr->archetypes.list.Count; ++i) {
@@ -450,7 +450,7 @@ namespace ME.BECS {
         }
         
         [CND(COND.ARCHETYPES_INTERNAL_CHECKS)]
-        private static void CheckArch(SafePtr<State> state, Archetype archetype, int idx = -1) {
+        private static void CheckArch(safe_ptr<State> state, Archetype archetype, int idx = -1) {
             var archetypes = state.ptr->archetypes;
             for (uint i = 0; i < archetype.entitiesList.Count; ++i) {
                 var ent = archetype.entitiesList[state.ptr->allocator, i];
@@ -460,7 +460,7 @@ namespace ME.BECS {
             }
         }
 
-        private static string ListStr(SafePtr<State> state, Archetypes archetypes, UIntListHash entitiesList) {
+        private static string ListStr(safe_ptr<State> state, Archetypes archetypes, UIntListHash entitiesList) {
             var str = string.Empty;
             for (uint i = 0; i < entitiesList.Count; ++i) {
                 var ent = entitiesList[state.ptr->allocator, i];
@@ -470,7 +470,7 @@ namespace ME.BECS {
             return str;
         }
 
-        private static string ListStr(SafePtr<State> state, UIntHashSet componentsList) {
+        private static string ListStr(safe_ptr<State> state, UIntHashSet componentsList) {
             var str = string.Empty;
             var e = componentsList.GetEnumerator(state);
             while (e.MoveNext() == true) {

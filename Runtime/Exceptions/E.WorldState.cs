@@ -11,14 +11,14 @@ namespace ME.BECS {
             public WorldStateException(string str) : base(str) { }
 
             [HIDE_CALLSTACK]
-            public static void Throw(WorldState required, WorldState worldState, SafePtr<State> state) {
+            public static void Throw(WorldState required, WorldState worldState, safe_ptr<State> state) {
                 ThrowNotBurst(required, worldState, state);
                 throw new OutOfRangeException($"Out of state. Required world state {required}.");
             }
 
             [BURST_DISCARD]
             [HIDE_CALLSTACK]
-            private static void ThrowNotBurst(WorldState required, WorldState worldState, SafePtr<State> state) => throw new WorldStateException(Exception.Format($"Out of state. Required world state {required}, current state {worldState}. Update type: {state.ptr->updateType}"));
+            private static void ThrowNotBurst(WorldState required, WorldState worldState, safe_ptr<State> state) => throw new WorldStateException(Exception.Format($"Out of state. Required world state {required}, current state {worldState}. Update type: {state.ptr->updateType}"));
 
         }
 
@@ -28,7 +28,7 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
-        public static void IS_IN_TICK(SafePtr<State> state) {
+        public static void IS_IN_TICK(safe_ptr<State> state) {
 
             if (state.ptr->mode == WorldMode.Visual ||
                 state.ptr->tickCheck == 0 ||
@@ -44,7 +44,7 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
-        public static void IS_NOT_IN_TICK(SafePtr<State> state) {
+        public static void IS_NOT_IN_TICK(safe_ptr<State> state) {
 
             if (state.ptr->mode == WorldMode.Visual ||
                 state.ptr->tickCheck == 0 ||

@@ -54,14 +54,14 @@ namespace ME.BECS {
 
         public struct Item {
 
-            public SafePtr<Journal> journal;
+            public safe_ptr<Journal> journal;
 
         }
 
         private static readonly Unity.Burst.SharedStatic<Array<Item>> journalsArrBurst = Unity.Burst.SharedStatic<Array<Item>>.GetOrCreatePartiallyUnsafeWithHashCode<JournalsStorage>(TAlign<Array<Item>>.align, 10101);
         internal static ref Array<Item> journals => ref journalsArrBurst.Data;
 
-        public static void Set(uint id, SafePtr<Journal> journal) {
+        public static void Set(uint id, safe_ptr<Journal> journal) {
             if (id >= journals.Length) {
                 journals.Resize((id + 1u) * 2u);
             }
@@ -70,7 +70,7 @@ namespace ME.BECS {
             };
         }
 
-        public static SafePtr<Journal> Get(uint id) {
+        public static safe_ptr<Journal> Get(uint id) {
             if (id >= journals.Length) return default;
             return journals.Get(id).journal;
         }
@@ -227,12 +227,12 @@ namespace ME.BECS {
 
     public unsafe partial struct Journal : System.IDisposable {
 
-        private SafePtr<World> world;
-        private SafePtr<JournalData> data;
+        private safe_ptr<World> world;
+        private safe_ptr<JournalData> data;
         private bool isCreated;
 
-        public SafePtr<JournalData> GetData() => this.data;
-        public SafePtr<World> GetWorld() => this.world;
+        public safe_ptr<JournalData> GetData() => this.data;
+        public safe_ptr<World> GetWorld() => this.world;
 
         [INLINE(256)]
         public static Journal Create(in World connectedWorld, in JournalProperties properties) {
@@ -448,8 +448,8 @@ namespace ME.BECS {
         public uint typeId;
         public int threadIndex;
 
-        public void Dispose(SafePtr<State> state) {
-            if (this.customData != null) _free((SafePtr)this.customData);
+        public void Dispose(safe_ptr<State> state) {
+            if (this.customData != null) _free((safe_ptr)this.customData);
             this = default;
         }
 
@@ -461,7 +461,7 @@ namespace ME.BECS {
             return this.action.ToString();
         }
 
-        public string GetCustomDataString(SafePtr<State> state) {
+        public string GetCustomDataString(safe_ptr<State> state) {
             if (this.customData == null) return string.Empty;
             if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(this.typeId, out var type) == true) {
                 var gMethod = this.GetType().GetMethod(nameof(GetStringFromType)).MakeGenericMethod(type);
@@ -489,7 +489,7 @@ namespace ME.BECS {
             public ulong historyStartTick;
             private readonly JournalProperties properties;
 
-            public ThreadItem(SafePtr<State> state, in JournalProperties properties) {
+            public ThreadItem(safe_ptr<State> state, in JournalProperties properties) {
                 this.items = new Queue<JournalItem>(ref state.ptr->allocator, properties.capacity);
                 this.historyItems = new Queue<JournalItem>(ref state.ptr->allocator, properties.historyCapacity);
                 this.historyStartTick = 0UL;
@@ -497,7 +497,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Add(SafePtr<State> state, JournalItem journalItem) {
+            public void Add(safe_ptr<State> state, JournalItem journalItem) {
                 
                 journalItem = JournalItem.Create(journalItem);
                 this.TryAddToHistory(state, journalItem);
@@ -509,7 +509,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            private void TryAddToHistory(SafePtr<State> state, JournalItem item) {
+            private void TryAddToHistory(safe_ptr<State> state, JournalItem item) {
                 
                 if (item.storeInHistory == true) {
                     if (this.historyItems.Count >= this.properties.historyCapacity) {
@@ -523,14 +523,14 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Clear(SafePtr<State> state) {
+            public void Clear(safe_ptr<State> state) {
             
                 this.items.Clear();
             
             }
 
             [INLINE(256)]
-            public void Dispose(SafePtr<State> state) {
+            public void Dispose(safe_ptr<State> state) {
 
                 {
                     var e = this.historyItems.GetEnumerator(state);
@@ -550,7 +550,7 @@ namespace ME.BECS {
         public MemArrayThreadCacheLine<ThreadItem> GetData() => this.threads;
 
         [INLINE(256)]
-        public static JournalData Create(SafePtr<State> state, in JournalProperties properties) {
+        public static JournalData Create(safe_ptr<State> state, in JournalProperties properties) {
             
             var journal = new JournalData {
                 threads = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
@@ -563,14 +563,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Add(SafePtr<State> state, JournalItem journalItem) {
+        public void Add(safe_ptr<State> state, JournalItem journalItem) {
             
             this.threads[state, Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex].Add(state, journalItem);
 
         }
 
         [INLINE(256)]
-        public void Clear(SafePtr<State> state) {
+        public void Clear(safe_ptr<State> state) {
 
             for (uint i = 0u; i < this.threads.Length; ++i) {
                 this.threads[state, i].Clear(state);
@@ -579,7 +579,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Dispose(SafePtr<State> state) {
+        public void Dispose(safe_ptr<State> state) {
             
             for (uint i = 0u; i < this.threads.Length; ++i) {
                 this.threads[state, i].Dispose(state);

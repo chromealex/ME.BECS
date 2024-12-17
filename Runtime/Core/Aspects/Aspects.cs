@@ -39,7 +39,7 @@ namespace ME.BECS {
     
     public unsafe struct SafetyComponentContainerRO<T> where T : unmanaged, IComponentBase {
 
-        public SafetyComponentContainerRO(SafePtr<State> state, ushort worldId) {
+        public SafetyComponentContainerRO(safe_ptr<State> state, ushort worldId) {
         }
 
     }
@@ -57,7 +57,7 @@ namespace ME.BECS {
         #pragma warning restore
         #endif
         
-        public SafetyComponentContainerWO(SafePtr<State> state, ushort worldId) {
+        public SafetyComponentContainerWO(safe_ptr<State> state, ushort worldId) {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
             this.m_MaxIndex = int.MaxValue - 1;
@@ -81,7 +81,7 @@ namespace ME.BECS {
         #pragma warning restore
         #endif
         
-        public SafetyComponentContainerRW(SafePtr<State> state, ushort worldId) {
+        public SafetyComponentContainerRW(safe_ptr<State> state, ushort worldId) {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
             this.m_MaxIndex = int.MaxValue - 1;
@@ -106,7 +106,7 @@ namespace ME.BECS {
         private int m_MaxIndex;
         #endif
 
-        public RefROSafe(SafePtr<State> state, ushort worldId) {
+        public RefROSafe(safe_ptr<State> state, ushort worldId) {
             this.data = state.ptr->components.GetRO<T>(state, worldId);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
@@ -156,7 +156,7 @@ namespace ME.BECS {
         private int m_MaxIndex;
         #endif
 
-        public RefRWSafe(SafePtr<State> state, ushort worldId) {
+        public RefRWSafe(safe_ptr<State> state, ushort worldId) {
             this.data = state.ptr->components.GetRW<T>(state, worldId);
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_MinIndex = 0;
@@ -208,7 +208,7 @@ namespace ME.BECS {
         public RefOp Op => RefOp.ReadWrite;
 
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
         public MemAllocatorPtr storage;
         public ushort worldId;
         
@@ -257,7 +257,7 @@ namespace ME.BECS {
         public RefOp Op => RefOp.ReadOnly;
 
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr<State> state;
+        public safe_ptr<State> state;
         public MemAllocatorPtr storage;
 
         [INLINE(256)]

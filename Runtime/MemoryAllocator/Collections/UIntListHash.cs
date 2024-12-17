@@ -47,7 +47,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(in allocator);
@@ -235,7 +235,7 @@ namespace ME.BECS {
             int dstIndex,
             uint length) {
             System.Runtime.InteropServices.GCHandle gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(dst, System.Runtime.InteropServices.GCHandleType.Pinned);
-            var dstPtr = new SafePtr((void*)gcHandle.AddrOfPinnedObject(), length * TSize<uint>.size);
+            var dstPtr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), length * TSize<uint>.size);
             _memcpy(src.GetUnsafePtr(in allocator) + srcIndex * TSize<uint>.sizeInt, dstPtr + dstIndex * TSize<uint>.sizeInt, length * TSize<uint>.size);
             gcHandle.Free();
         }

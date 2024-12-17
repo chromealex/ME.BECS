@@ -10,11 +10,11 @@ namespace ME.BECS {
         public struct Enumerator : System.Collections.Generic.IEnumerator<T> {
 
             private readonly Stack<T> stack;
-            private readonly SafePtr<State> state;
+            private readonly safe_ptr<State> state;
             private int index;
             private T currentElement;
 
-            internal Enumerator(Stack<T> stack, SafePtr<State> state) {
+            internal Enumerator(Stack<T> stack, safe_ptr<State> state) {
                 this.stack = stack;
                 this.state = state;
                 this.index = -2;
@@ -89,7 +89,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
             return this.array.GetUnsafePtr(in allocator);
         }
 
@@ -172,7 +172,7 @@ namespace ME.BECS {
                 this.array.Resize(ref allocator, this.array.Length + delta, growFactor: 1);
             }
 
-            _memcpy(list.GetUnsafePtr(in allocator), (SafePtr<byte>)this.array.GetUnsafePtr(in allocator) + TSize<uint>.size * this.size, TSize<uint>.size * list.Count);
+            _memcpy(list.GetUnsafePtr(in allocator), (safe_ptr<byte>)this.array.GetUnsafePtr(in allocator) + TSize<uint>.size * this.size, TSize<uint>.size * list.Count);
             this.size += list.Count;
 
         }

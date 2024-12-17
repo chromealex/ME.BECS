@@ -50,9 +50,9 @@ namespace ME.BECS.Trees {
         private float invresoGrid;
         private int targetGridSize;
 
-        private DeferJobCounter* rebuildCellsCounter;
-        private DeferJobCounter* rebuildDataCounter;
-        private DeferJobCounter* rebuildSegmentSortCounter;
+        private safe_ptr<DeferJobCounter> rebuildCellsCounter;
+        private safe_ptr<DeferJobCounter> rebuildDataCounter;
+        private safe_ptr<DeferJobCounter> rebuildSegmentSortCounter;
 
         public int Length => this.data.Length;
 
@@ -197,9 +197,9 @@ namespace ME.BECS.Trees {
 
         [INLINE(256)]
         public void Dispose() {
-            _free((SafePtr)this.rebuildCellsCounter);
-            _free((SafePtr)this.rebuildDataCounter);
-            _free((SafePtr)this.rebuildSegmentSortCounter);
+            _free((safe_ptr)this.rebuildCellsCounter);
+            _free((safe_ptr)this.rebuildDataCounter);
+            _free((safe_ptr)this.rebuildSegmentSortCounter);
             if (this.positions.IsCreated) {
                 this.positions.Dispose();
             }
@@ -240,7 +240,7 @@ namespace ME.BECS.Trees {
             public void Execute() {
 
                 this.entries.Length = this.tree->positions.Length;
-                SortJobExt.CalculateSegmentCount(this.tree->positions.Length, this.tree->rebuildSegmentSortCounter);
+                SortJobExt.CalculateSegmentCount(this.tree->positions.Length, this.tree->rebuildSegmentSortCounter.ptr);
                 
                 var sidelen = this.tree->maxValue - this.tree->minValue;
                 var maxDist = math.max(sidelen.x, math.max(sidelen.y, sidelen.z));
@@ -269,7 +269,7 @@ namespace ME.BECS.Trees {
                     this.tree->cellStartEnd = CollectionHelper.CreateNativeArray<int2>(nCells, Constants.ALLOCATOR_PERSISTENT_ST);
                 }
 
-                this.tree->rebuildCellsCounter->count = nCells;
+                this.tree->rebuildCellsCounter.ptr->count = nCells;
 
             }
 
@@ -288,13 +288,13 @@ namespace ME.BECS.Trees {
             var assignHashJob = new AssignHashJob() {
                 tree = tree,
             };
-            dependsOn = assignHashJob.Schedule(&tree->rebuildDataCounter->count, 128, dependsOn);
+            dependsOn = assignHashJob.Schedule(&tree->rebuildDataCounter.ptr->count, 128, dependsOn);
             
             var populateJob = new PopulateEntryJob() {
                 tree = tree,
                 entries = entries,
             };
-            dependsOn = populateJob.Schedule(&tree->rebuildDataCounter->count, 128, dependsOn);
+            dependsOn = populateJob.Schedule(&tree->rebuildDataCounter.ptr->count, 128, dependsOn);
             //dependsOn = entries.SortJobDefer(new NativeSortExtension.DefaultComparer<SortEntry>()).Schedule(tree->rebuildDataCounter, tree->rebuildSegmentSortCounter, dependsOn);
             dependsOn.Complete();
             dependsOn = entries.SortJob().Schedule(dependsOn);
@@ -302,12 +302,12 @@ namespace ME.BECS.Trees {
             dependsOn = new DePopulateEntryJob() {
                 tree = tree,
                 entries = entries,
-            }.Schedule(&tree->rebuildDataCounter->count, 128, dependsOn);
+            }.Schedule(&tree->rebuildDataCounter.ptr->count, 128, dependsOn);
             dependsOn = entries.Dispose(dependsOn);
 
             dependsOn = new MemsetCellStartJob() {
                 tree = tree,
-            }.Schedule(&tree->rebuildCellsCounter->count, 256, dependsOn);
+            }.Schedule(&tree->rebuildCellsCounter.ptr->count, 256, dependsOn);
             
             dependsOn = new SortCellJob() {
                 tree = tree,
@@ -403,10 +403,10 @@ namespace ME.BECS.Trees {
                 if (this.tree->data.IsCreated == true) this.tree->data.Dispose();
                 this.tree->positions = CollectionHelper.CreateNativeArray<float3>(positions.Length, Constants.ALLOCATOR_PERSISTENT_ST);
                 this.tree->data = CollectionHelper.CreateNativeArray<T>(data.Length, Constants.ALLOCATOR_PERSISTENT_ST);
-                _memcpy((SafePtr)positions.Ptr, (SafePtr)this.tree->positions.GetUnsafePtr(), positions.Length * TSize<float3>.sizeInt);
-                _memcpy((SafePtr)data.Ptr, (SafePtr)this.tree->data.GetUnsafePtr(), data.Length * TSize<T>.sizeInt);
+                _memcpy((safe_ptr)positions.Ptr, (safe_ptr)this.tree->positions.GetUnsafePtr(), positions.Length * TSize<float3>.sizeInt);
+                _memcpy((safe_ptr)data.Ptr, (safe_ptr)this.tree->data.GetUnsafePtr(), data.Length * TSize<T>.sizeInt);
 
-                this.tree->rebuildDataCounter->count = this.tree->positions.Length;
+                this.tree->rebuildDataCounter.ptr->count = this.tree->positions.Length;
 
                 for (int i = 0; i < this.tree->positions.Length; ++i) {
 

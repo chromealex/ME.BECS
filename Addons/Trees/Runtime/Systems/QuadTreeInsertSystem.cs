@@ -38,18 +38,18 @@ namespace ME.BECS {
         public float3 mapSize;
         
         [NativeDisableUnsafePtrRestriction]
-        private UnsafeList<SafePtr> quadTrees;
+        private UnsafeList<safe_ptr> quadTrees;
         public readonly uint treesCount => (uint)this.quadTrees.Length;
 
         [BURST(CompileSynchronously = true)]
         public struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
             [NativeDisableUnsafePtrRestriction]
-            public UnsafeList<SafePtr> quadTrees;
+            public UnsafeList<safe_ptr> quadTrees;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
-                var tree = (SafePtr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[quadTreeAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[quadTreeAspect.treeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (quadTreeAspect.readQuadTreeElement.ignoreY == true) pos.y = 0f;
@@ -63,11 +63,11 @@ namespace ME.BECS {
         public struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
             [NativeDisableUnsafePtrRestriction]
-            public UnsafeList<SafePtr> quadTrees;
+            public UnsafeList<safe_ptr> quadTrees;
 
             public void Execute(int index) {
 
-                var tree = (SafePtr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[index];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[index];
                 tree.ptr->Rebuild();
                 
             }
@@ -78,34 +78,34 @@ namespace ME.BECS {
         public struct ClearJob : Unity.Jobs.IJobParallelFor {
 
             [NativeDisableUnsafePtrRestriction]
-            public UnsafeList<SafePtr> quadTrees;
+            public UnsafeList<safe_ptr> quadTrees;
 
             public void Execute(int index) {
 
-                var item = (SafePtr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[index];
+                var item = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[index];
                 item.ptr->Clear();
                 
             }
 
         }
 
-        public readonly SafePtr<NativeTrees.NativeOctree<Ent>> GetTree(int treeIndex) {
+        public readonly safe_ptr<NativeTrees.NativeOctree<Ent>> GetTree(int treeIndex) {
 
-            return (SafePtr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[treeIndex];
+            return (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[treeIndex];
 
         }
 
         public int AddTree() {
 
             var size = new NativeTrees.AABB(this.mapPosition, this.mapPosition + this.mapSize);
-            this.quadTrees.Add((SafePtr)_make(new NativeTrees.NativeOctree<Ent>(size, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator)));
+            this.quadTrees.Add((safe_ptr)_make(new NativeTrees.NativeOctree<Ent>(size, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator)));
             return this.quadTrees.Length - 1;
 
         }
 
         public void OnAwake(ref SystemContext context) {
 
-            this.quadTrees = new UnsafeList<SafePtr>(10, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+            this.quadTrees = new UnsafeList<safe_ptr>(10, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
             
         }
 
@@ -132,7 +132,7 @@ namespace ME.BECS {
         public void OnDestroy(ref SystemContext context) {
 
             for (int i = 0; i < this.quadTrees.Length; ++i) {
-                var item = (SafePtr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[i];
+                var item = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[i];
                 item.ptr->Dispose();
                 _free(item);
             }

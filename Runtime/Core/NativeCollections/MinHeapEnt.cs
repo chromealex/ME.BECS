@@ -12,7 +12,7 @@ namespace ME.BECS.NativeCollections {
         public uint Count => (uint)this.mLength;
 
         [NativeDisableUnsafePtrRestriction]
-        private SafePtr<MinHeapNodeEnt> mBuffer;
+        private safe_ptr<MinHeapNodeEnt> mBuffer;
         private uint mCapacity;
         private Allocator mAllocatorLabel;
 
@@ -61,7 +61,7 @@ namespace ME.BECS.NativeCollections {
 
             var free = this.mCapacity - (uint)this.mLength;
             if (free < capacity) {
-                _resizeArray(ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mLength);
+                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mLength);
             }
 
         }

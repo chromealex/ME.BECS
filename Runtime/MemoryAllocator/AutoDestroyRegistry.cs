@@ -27,7 +27,7 @@ namespace ME.BECS {
         private ReadWriteSpinner readWriteSpinner;
 
         [INLINE(256)]
-        public static AutoDestroyRegistry Create(SafePtr<State> state, uint capacity) {
+        public static AutoDestroyRegistry Create(safe_ptr<State> state, uint capacity) {
 
             return new AutoDestroyRegistry() {
                 list = new MemArray<List<uint>>(ref state.ptr->allocator, capacity),
@@ -38,7 +38,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void OnEntityAdd(SafePtr<State> state, uint entId) {
+        public static void OnEntityAdd(safe_ptr<State> state, uint entId) {
             
             if (entId >= state.ptr->autoDestroyRegistry.list.Length) {
                 state.ptr->autoDestroyRegistry.readWriteSpinner.WriteBegin(state);
@@ -50,7 +50,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Destroy(SafePtr<State> state, in Ent ent) {
+        public static void Destroy(safe_ptr<State> state, in Ent ent) {
 
             state.ptr->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
             ref var list = ref state.ptr->autoDestroyRegistry.list[in state.ptr->allocator, ent.id];
@@ -77,7 +77,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static void Add(SafePtr<State> state, in Ent ent, uint typeId) {
+        public static void Add(safe_ptr<State> state, in Ent ent, uint typeId) {
             
             state.ptr->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
             ref var entitySpinner = ref state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
@@ -91,7 +91,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Remove(SafePtr<State> state, in Ent ent, uint typeId) {
+        public static void Remove(safe_ptr<State> state, in Ent ent, uint typeId) {
             
             state.ptr->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
             ref var entitySpinner = ref state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];

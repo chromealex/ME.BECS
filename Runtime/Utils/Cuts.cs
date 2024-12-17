@@ -1,182 +1,238 @@
+#define MEMORY_ALLOCATOR_BOUNDS_CHECK
 namespace ME.BECS {
 
+    using System.Diagnostics;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
-    public unsafe struct SafePtr {
+    public readonly unsafe struct safe_ptr {
 
         [NativeDisableUnsafePtrRestriction]
-        public volatile byte* ptr;
+        public readonly byte* ptr;
         #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-        public uint size;
+        [NativeDisableUnsafePtrRestriction]
+        public readonly byte* lowBound;
+        [NativeDisableUnsafePtrRestriction]
+        public readonly byte* hiBound;
         #endif
-        
+
         [INLINE(256)]
-        public SafePtr(void* ptr, uint size) {
+        public safe_ptr(void* ptr) {
             this.ptr = (byte*)ptr;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            this.size = size;
+            this.lowBound = null;
+            this.hiBound = null;
             #endif
         }
 
         [INLINE(256)]
-        public SafePtr(void* ptr, int size) {
+        public safe_ptr(void* ptr, uint size) {
             this.ptr = (byte*)ptr;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            this.size = (uint)size;
+            this.lowBound = this.ptr;
+            this.hiBound = this.ptr + size;
             #endif
         }
 
         [INLINE(256)]
-        public static explicit operator SafePtr(void* ptr) {
-            return new SafePtr(ptr, 0u);
-        }
-
-        [INLINE(256)]
-        public static SafePtr operator +(SafePtr safePtr, uint index) {
+        internal safe_ptr(void* ptr, byte* lowBound, byte* hiBound) {
+            this.ptr = (byte*)ptr;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (safePtr.size > 0u) E.RANGE(index, 0u, safePtr.size);
-            return new SafePtr(safePtr.ptr + index, safePtr.size - index);
-            #else
-            return new SafePtr(safePtr.ptr + index, 0u);
+            this.lowBound = lowBound;
+            this.hiBound = hiBound;
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr operator -(SafePtr safePtr, uint index) {
+        public safe_ptr(void* ptr, int size) : this(ptr, (uint)size) { }
+
+        [INLINE(256)]
+        public static explicit operator safe_ptr(void* ptr) {
+            return new safe_ptr(ptr, 0u);
+        }
+
+        [INLINE(256)]
+        public static safe_ptr operator +(safe_ptr safePtr, uint index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr(safePtr.ptr - index, safePtr.size + index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr - index, 0u);
+            return new SafePtr(safePtr.ptr + index);
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr operator +(SafePtr safePtr, int index) {
+        public static safe_ptr operator -(safe_ptr safePtr, uint index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (safePtr.size > 0u) E.RANGE(index, 0u, safePtr.size);
-            return new SafePtr(safePtr.ptr + index, safePtr.size - (uint)index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr + index, 0u);
+            return new SafePtr(safePtr.ptr - index);
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr operator -(SafePtr safePtr, int index) {
+        public static safe_ptr operator +(safe_ptr safePtr, int index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr(safePtr.ptr - index, safePtr.size + (uint)index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr - index, 0u);
+            return new SafePtr(safePtr.ptr + index);
             #endif
         }
+
+        [INLINE(256)]
+        public static safe_ptr operator -(safe_ptr safePtr, int index) {
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
+            #else
+            return new SafePtr(safePtr.ptr - index);
+            #endif
+        }
+
+        #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+        [INLINE(256)]
+        public void CheckRange(uint index, uint lowBoundOffset, uint hiBoundOffset) {
+            if (this.hiBound != this.lowBound) E.RANGE(this.ptr + index, this.lowBound + lowBoundOffset, this.hiBound + hiBoundOffset);
+        }
+
+        [INLINE(256)]
+        public static bool CheckOverlaps(safe_ptr srcPtr, safe_ptr dstPtr) {
+            if (srcPtr.lowBound != srcPtr.hiBound &&
+                dstPtr.lowBound != dstPtr.hiBound) {
+                if ((dstPtr.lowBound > srcPtr.lowBound && dstPtr.lowBound < srcPtr.hiBound) ||
+                    (dstPtr.hiBound > srcPtr.lowBound && dstPtr.hiBound < srcPtr.hiBound) ||
+                    (srcPtr.lowBound > dstPtr.lowBound && srcPtr.lowBound < dstPtr.hiBound) ||
+                    (srcPtr.hiBound > dstPtr.lowBound && srcPtr.hiBound < dstPtr.hiBound)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        #endif
 
     }
 
-    public readonly unsafe struct SafePtr<T> where T : unmanaged {
+    public readonly unsafe struct safe_ptr<T> where T : unmanaged {
 
         [NativeDisableUnsafePtrRestriction]
         public readonly T* ptr;
         #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-        public readonly uint size;
+        [NativeDisableUnsafePtrRestriction]
+        public readonly byte* lowBound;
+        [NativeDisableUnsafePtrRestriction]
+        public readonly byte* hiBound;
         #endif
 
         [INLINE(256)]
-        public SafePtr<U> Cast<U>() where U : unmanaged {
+        public safe_ptr(T* ptr) {
+            this.ptr = ptr;
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr<U>((U*)this.ptr, this.size);
+            this.lowBound = null;
+            this.hiBound = null;
+            #endif
+        }
+
+        [INLINE(256)]
+        public safe_ptr(T* ptr, uint size) {
+            this.ptr = ptr;
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            this.lowBound = (byte*)ptr;
+            this.hiBound = (byte*)ptr + size;
+            #endif
+        }
+
+        [INLINE(256)]
+        public safe_ptr(T* ptr, int size) : this(ptr, (uint)size) { }
+
+        [INLINE(256)]
+        internal safe_ptr(T* ptr, byte* lowBound, byte* hiBound) {
+            this.ptr = ptr;
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            this.lowBound = lowBound;
+            this.hiBound = hiBound;
+            #endif
+        }
+
+        [INLINE(256)]
+        public safe_ptr<U> Cast<U>() where U : unmanaged {
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            return new safe_ptr<U>((U*)this.ptr, this.lowBound, this.hiBound);
             #else
-            return new SafePtr<U>((U*)this.ptr, 0u);
-            #endif
-        }
-
-        [INLINE(256)]
-        public SafePtr(T* ptr, uint size) {
-            this.ptr = ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            this.size = size;
-            #endif
-        }
-
-        [INLINE(256)]
-        public SafePtr(T* ptr, int size) {
-            this.ptr = ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            this.size = (uint)size;
+            return new SafePtr<U>((U*)this.ptr);
             #endif
         }
 
         public ref T this[int index] {
             [INLINE(256)]
-            get {
-                #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-                if (this.size > 0u) E.RANGE(index, 0u, this.size / TSize<T>.size);
-                #endif
-                return ref this.ptr[index];
-            }
+            get => ref this[(uint)index];
         }
         public ref T this[uint index] {
             [INLINE(256)]
             get {
                 #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-                if (this.size > 0u) E.RANGE(index, 0u, this.size / TSize<T>.size);
+                if (this.hiBound != this.lowBound) E.RANGE((byte*)(this.ptr + index), this.lowBound, this.hiBound);
                 #endif
                 return ref this.ptr[index];
             }
         }
 
         [INLINE(256)]
-        public static implicit operator SafePtr(SafePtr<T> safePtr) {
+        public static implicit operator safe_ptr(safe_ptr<T> safePtr) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr(safePtr.ptr, safePtr.size);
+            return new safe_ptr(safePtr.ptr, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr, 0u);
+            return new SafePtr(safePtr.ptr);
             #endif
         }
 
         [INLINE(256)]
-        public static implicit operator SafePtr<T>(SafePtr safePtr) {
+        public static implicit operator safe_ptr<T>(safe_ptr safePtr) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr<T>((T*)safePtr.ptr, safePtr.size);
+            return new safe_ptr<T>((T*)safePtr.ptr, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>((T*)safePtr.ptr, 0u);
+            return new SafePtr<T>((T*)safePtr.ptr);
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr<T> operator +(SafePtr<T> safePtr, uint index) {
+        public static safe_ptr<T> operator +(safe_ptr<T> safePtr, uint index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (safePtr.size > 0u) E.RANGE(index, 0u, safePtr.size / TSize<T>.size);
-            return new SafePtr<T>(safePtr.ptr + index, safePtr.size - index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr + index), safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr<T>(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr + index, 0u);
+            return new SafePtr<T>(safePtr.ptr + index);
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr<T> operator -(SafePtr<T> safePtr, uint index) {
+        public static safe_ptr<T> operator -(safe_ptr<T> safePtr, uint index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr<T>(safePtr.ptr - index, safePtr.size + index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr - index), safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr<T>(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr - index, 0u);
+            return new SafePtr<T>(safePtr.ptr - index);
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr<T> operator +(SafePtr<T> safePtr, int index) {
+        public static safe_ptr<T> operator +(safe_ptr<T> safePtr, int index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (safePtr.size > 0u) E.RANGE(index, 0u, safePtr.size / TSize<T>.size);
-            return new SafePtr<T>(safePtr.ptr + index, safePtr.size - (uint)index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr + index), safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr<T>(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr + index, 0u);
+            return new SafePtr<T>(safePtr.ptr + index);
             #endif
         }
 
         [INLINE(256)]
-        public static SafePtr<T> operator -(SafePtr<T> safePtr, int index) {
+        public static safe_ptr<T> operator -(safe_ptr<T> safePtr, int index) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            return new SafePtr<T>(safePtr.ptr - index, safePtr.size + (uint)index);
+            if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr - index), safePtr.lowBound, safePtr.hiBound);
+            return new safe_ptr<T>(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr - index, 0u);
+            return new SafePtr<T>(safePtr.ptr - index);
             #endif
         }
 
@@ -205,16 +261,16 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static SafePtr _address<T>(ref T val) where T : unmanaged {
+        public static safe_ptr _address<T>(ref T val) where T : unmanaged {
 
-            return new SafePtr<T>((T*)UnsafeUtility.AddressOf(ref val), TSize<T>.size);
+            return new safe_ptr<T>((T*)UnsafeUtility.AddressOf(ref val), TSize<T>.size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr<T> _addressT<T>(ref T val) where T : unmanaged {
+        public static safe_ptr<T> _addressT<T>(ref T val) where T : unmanaged {
 
-            return new SafePtr<T>((T*)UnsafeUtility.AddressOf(ref val), TSize<T>.size);
+            return new safe_ptr<T>((T*)UnsafeUtility.AddressOf(ref val), TSize<T>.size);
 
         }
 
@@ -240,37 +296,33 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _makeDefault<T>() where T : unmanaged {
+        public static safe_ptr<T> _makeDefault<T>() where T : unmanaged {
 
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
-            return (T*)ptr;
+            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
 
         }
 
         [INLINE(256)]
-        public static void _resizeArray<T>(ref SafePtr<T> arr, ref uint length, uint newLength, bool free = true) where T : unmanaged {
+        public static void _resizeArray<T>(ref safe_ptr<T> arr, ref uint length, uint newLength, bool free = true) where T : unmanaged {
+
+            _resizeArray(ALLOCATOR, ref arr, ref length, newLength, free);
+
+        }
+
+        [INLINE(256)]
+        public static void _resizeArray<T>(Unity.Collections.Allocator allocator, ref safe_ptr<T> arr, ref uint length, uint newLength, bool free = true) where T : unmanaged {
 
             if (newLength > length) {
 
                 var size = newLength * TSize<T>.size;
-                var ptr = (SafePtr<T>)_make(size, TAlign<T>.alignInt, ALLOCATOR);
-                //var ptr = (T*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
-                LeakDetector.Track(ptr);
-                //var ptr = (T*)UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
+                var ptr = (safe_ptr<T>)_make(size, TAlign<T>.alignInt, allocator);
                 _memclear(ptr, size);
                 if (arr.ptr != null) {
                     _memcpy(arr, ptr, length * TSize<T>.size);
-                    _memclear((SafePtr)(ptr + length), (newLength - length) * TSize<T>.size);
-                    /*for (int i = 0; i < length; ++i) {
-                        *(ptr + i) = *(arr + i);
-                    }
-
-                    for (int i = (int)length; i < newLength; ++i) {
-                        *(ptr + i) = default;
-                    }*/
-
-                    if (free == true) _free(arr);
+                    _memclear((safe_ptr)(ptr + length), (newLength - length) * TSize<T>.size);
+                    if (free == true) _free(arr, allocator);
                 }
 
                 arr = ptr;
@@ -279,7 +331,7 @@ namespace ME.BECS {
             }
 
         }
-        
+
         [INLINE(256)]
         public static ref T2 _as<T1, T2>(ref T1 val) where T1 : unmanaged {
             
@@ -288,29 +340,29 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static int _memcmp(void* ptr1, void* ptr2, long size) {
+        public static int _memcmp(safe_ptr ptr1, safe_ptr ptr2, long size) {
             
-            return UnsafeUtility.MemCmp(ptr1, ptr2, size);
+            return UnsafeUtility.MemCmp(ptr1.ptr, ptr2.ptr, size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr _make(uint size) {
+        public static safe_ptr _make(uint size) {
 
             var ptr = (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
             LeakDetector.Track(ptr);
-            return new SafePtr<byte>(ptr, size);
+            return new safe_ptr<byte>(ptr, size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr<T> _make<T>(T obj) where T : unmanaged {
+        public static safe_ptr<T> _make<T>(T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
             *(T*)ptr = obj;
             
-            return new SafePtr<T>((T*)ptr, TSize<T>.size);
+            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
 
         }
 
@@ -328,149 +380,158 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static SafePtr<T> _makeArray<T>(uint length, bool clearMemory = true) where T : unmanaged {
+        public static safe_ptr<T> _makeArray<T>(uint length, bool clearMemory = true) where T : unmanaged {
             
             var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             
-            return new SafePtr<T>((T*)ptr, size);
+            return new safe_ptr<T>((T*)ptr, size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr<T> _makeArray<T>(uint length, Unity.Collections.Allocator allocator, bool clearMemory = true) where T : unmanaged {
+        public static safe_ptr<T> _makeArray<T>(uint length, Unity.Collections.Allocator allocator, bool clearMemory = true) where T : unmanaged {
             
             var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             
-            return new SafePtr<T>((T*)ptr, size);
+            return new safe_ptr<T>((T*)ptr, size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr<T> _make<T>(in T obj) where T : unmanaged {
+        public static safe_ptr<T> _make<T>(in T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
             *(T*)ptr = obj;
             
-            return new SafePtr<T>((T*)ptr, TSize<T>.size);
+            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr<T> _make<T>(in T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static safe_ptr<T> _make<T>(in T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, TSize<T>.sizeInt, TAlign<T>.alignInt);
             LeakDetector.Track(ptr);
             *(T*)ptr = obj;
             
-            return new SafePtr<T>((T*)ptr, TSize<T>.size);
+            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
 
         }
 
         [INLINE(256)]
-        public static SafePtr _malloc(int size) => _make(size);
+        public static safe_ptr _malloc(int size) => _make(size);
         [INLINE(256)]
-        public static SafePtr _malloc(uint size) => _make(size);
+        public static safe_ptr _malloc(uint size) => _make(size);
         [INLINE(256)]
-        public static SafePtr _calloc(int size) => _calloc((uint)size);
+        public static safe_ptr _calloc(int size) => _calloc((uint)size);
         [INLINE(256)]
-        public static SafePtr _calloc(uint size) {
+        public static safe_ptr _calloc(uint size) {
             var ptr = _make(size);
             _memclear(ptr, size);
             return ptr;
         }
         [INLINE(256)]
-        public static SafePtr<T> _malloc<T>(in T obj) where T : unmanaged => _make(in obj);
+        public static safe_ptr<T> _malloc<T>(in T obj) where T : unmanaged => _make(in obj);
         [INLINE(256)]
-        public static SafePtr<T> _calloc<T>(in T obj) where T : unmanaged {
+        public static safe_ptr<T> _calloc<T>(in T obj) where T : unmanaged {
             var ptr = _make(in obj);
             _memclear(ptr, TSize<T>.size);
             return ptr;
         }
 
         [INLINE(256)]
-        public static void _memclear(SafePtr ptr, long lengthInBytes) {
+        public static void _memclear(safe_ptr ptr, long lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (ptr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, ptr.size + 1u);
+            ptr.CheckRange((uint)lengthInBytes, 0u, 1u);
             #endif
             UnsafeUtility.MemClear(ptr.ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memclear(SafePtr ptr, uint lengthInBytes) {
+        public static void _memclear(safe_ptr ptr, uint lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (ptr.size > 0u) E.RANGE(lengthInBytes, 0u, ptr.size + 1u);
+            ptr.CheckRange(lengthInBytes, 0u, 1u);
             #endif
             UnsafeUtility.MemClear(ptr.ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memcpy(SafePtr srcPtr, SafePtr dstPtr, int lengthInBytes) {
+        public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, int lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (srcPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, srcPtr.size + 1u);
-            if (dstPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, dstPtr.size + 1u);
+            srcPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            dstPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            if (safe_ptr.CheckOverlaps(srcPtr, dstPtr) == true) {
+                throw new E.OutOfRangeException($"_memcpy doesnt support overlapped ranges. Use _memmove instead.");
+            }
             #endif
             UnsafeUtility.MemCpy(dstPtr.ptr, srcPtr.ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memcpy(SafePtr srcPtr, SafePtr dstPtr, uint lengthInBytes) {
+        public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, uint lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (srcPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, srcPtr.size + 1u);
-            if (dstPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, dstPtr.size + 1u);
+            srcPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            dstPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            if (safe_ptr.CheckOverlaps(srcPtr, dstPtr) == true) {
+                throw new E.OutOfRangeException("_memcpy doesnt support overlapped ranges. Use _memmove instead.");
+            }
             #endif
             UnsafeUtility.MemCpy(dstPtr.ptr, srcPtr.ptr, lengthInBytes);
             
         }
         
         [INLINE(256)]
-        public static void _memcpy(SafePtr srcPtr, SafePtr dstPtr, long lengthInBytes) {
+        public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, long lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (srcPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, srcPtr.size + 1u);
-            if (dstPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, dstPtr.size + 1u);
+            srcPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            dstPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            if (safe_ptr.CheckOverlaps(srcPtr, dstPtr) == true) {
+                throw new E.OutOfRangeException("_memcpy doesnt support overlapped ranges. Use _memmove instead.");
+            }
             #endif
             UnsafeUtility.MemCpy(dstPtr.ptr, srcPtr.ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memmove(SafePtr srcPtr, SafePtr dstPtr, uint lengthInBytes) {
+        public static void _memmove(safe_ptr srcPtr, safe_ptr dstPtr, uint lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (srcPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, srcPtr.size + 1u);
-            if (dstPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, dstPtr.size + 1u);
+            srcPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            dstPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
             #endif
             UnsafeUtility.MemMove(dstPtr.ptr, srcPtr.ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memmove(SafePtr srcPtr, SafePtr dstPtr, long lengthInBytes) {
+        public static void _memmove(safe_ptr srcPtr, safe_ptr dstPtr, long lengthInBytes) {
             
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            if (srcPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, srcPtr.size + 1u);
-            if (dstPtr.size > 0u) E.RANGE((uint)lengthInBytes, 0u, dstPtr.size + 1u);
+            srcPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
+            dstPtr.CheckRange((uint)lengthInBytes, 0u, 1u);
             #endif
             UnsafeUtility.MemMove(dstPtr.ptr, srcPtr.ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _free(SafePtr obj) {
+        public static void _free(safe_ptr obj) {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (WorldsDomainAllocator.allocatorDomainValid == false) return;
@@ -480,7 +541,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _free<T>(SafePtr<T> obj) where T : unmanaged {
+        public static void _free<T>(safe_ptr<T> obj) where T : unmanaged {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (WorldsDomainAllocator.allocatorDomainValid == false) return;
@@ -490,7 +551,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _free<T>(ref SafePtr<T> obj) where T : unmanaged {
+        public static void _free<T>(ref safe_ptr<T> obj) where T : unmanaged {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (WorldsDomainAllocator.allocatorDomainValid == false) return;
@@ -501,7 +562,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _free(ref SafePtr obj) {
+        public static void _free(ref safe_ptr obj) {
             
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (WorldsDomainAllocator.allocatorDomainValid == false) return;
@@ -513,48 +574,48 @@ namespace ME.BECS {
 
         #region MAKE/FREE unity allocator
         [INLINE(256)]
-        public static SafePtr _malloc(int size, int align, Unity.Collections.Allocator allocator) => _make(size, align, allocator);
+        public static safe_ptr _malloc(int size, int align, Unity.Collections.Allocator allocator) => _make(size, align, allocator);
         [INLINE(256)]
-        public static SafePtr _calloc(int size, int align, Unity.Collections.Allocator allocator) {
+        public static safe_ptr _calloc(int size, int align, Unity.Collections.Allocator allocator) {
             var ptr = _make(size, align, allocator);
             _memclear(ptr, size);
             return ptr;
         }
         
         [INLINE(256)]
-        public static SafePtr _make(int size, int align, Unity.Collections.Allocator allocator) {
+        public static safe_ptr _make(int size, int align, Unity.Collections.Allocator allocator) {
 
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
                 LeakDetector.Track(ptr);
-                return new SafePtr(ptr, size);
+                return new safe_ptr(ptr, size);
             }
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
                 LeakDetector.Track(ptr);
-                return new SafePtr(ptr, size);
+                return new safe_ptr(ptr, size);
             }
             
         }
 
         [INLINE(256)]
-        public static SafePtr _make(uint size, int align, Unity.Collections.Allocator allocator) {
+        public static safe_ptr _make(uint size, int align, Unity.Collections.Allocator allocator) {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
                 LeakDetector.Track(ptr);
-                return new SafePtr(ptr, size);
+                return new safe_ptr(ptr, size);
             }
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
                 LeakDetector.Track(ptr);
-                return new SafePtr(ptr, size);
+                return new safe_ptr(ptr, size);
             }
 
         }
 
         [INLINE(256)]
-        public static void _free<T>(SafePtr<T> obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static void _free<T>(safe_ptr<T> obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 LeakDetector.Free(obj);
@@ -567,7 +628,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _free(SafePtr obj, Unity.Collections.Allocator allocator) {
+        public static void _free(safe_ptr obj, Unity.Collections.Allocator allocator) {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 LeakDetector.Free(obj);

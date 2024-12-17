@@ -142,7 +142,7 @@ namespace ME.BECS.Pathfinding {
                 var graphEnt = graphSystem.graphs[i];
                 var changedChunks = graphEnt.Read<RootGraphComponent>().changedChunks;
                 var tempDirty = new NativeArray<ulong>((int)changedChunks.Length, Constants.ALLOCATOR_TEMPJOB);
-                _memcpy(changedChunks.GetUnsafePtr(), (SafePtr)tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
+                _memcpy(changedChunks.GetUnsafePtr(), (safe_ptr)tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
                 dependsOn = context.Query(dependsOn).AsUnsafe().AsParallel().Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {

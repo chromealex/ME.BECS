@@ -159,7 +159,7 @@ namespace ME.BECS.Network {
             return this.network.networkTransport.Connect(in this.network.data.ptr->connectedWorld, this, dependsOn);
         }
 
-        public SafePtr<State> GetStartFrameState() {
+        public safe_ptr<State> GetStartFrameState() {
             return this.network.data.ptr->startFrameState;
         }
 

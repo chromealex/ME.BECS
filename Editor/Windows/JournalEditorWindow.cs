@@ -66,7 +66,7 @@ namespace ME.BECS.Editor {
                 };
             }
 
-            public void Redraw(SafePtr<Journal> journal, SearchData search, in JournalData.ThreadItem item, VisualElement tooltip) {
+            public void Redraw(safe_ptr<Journal> journal, SearchData search, in JournalData.ThreadItem item, VisualElement tooltip) {
                 
                 if (this.elements == null || this.elements.Length < item.items.Count) System.Array.Resize(ref this.elements, (int)item.items.Count);
                 var world = journal.ptr->GetWorld();
@@ -152,7 +152,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private void Redraw(VisualElement root, SafePtr<Journal> journal) {
+        private void Redraw(VisualElement root, safe_ptr<Journal> journal) {
 
             if (journal.ptr == null) {
                 root.Clear();
@@ -197,7 +197,7 @@ namespace ME.BECS.Editor {
         }
         private string search = null;
         private JournalAction searchActions = JournalAction.All;
-        private void Draw(VisualElement root, SafePtr<Journal> journal) {
+        private void Draw(VisualElement root, safe_ptr<Journal> journal) {
 
             var container = new VisualElement();
             root.Add(container);
@@ -300,7 +300,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static VisualElement CreateEntityJournalItem(SafePtr<Journal> journal, in Journal.EntityJournal.Item item, int index) {
+        private static VisualElement CreateEntityJournalItem(safe_ptr<Journal> journal, in Journal.EntityJournal.Item item, int index) {
 
             if (item.events.IsCreated == true) {
 

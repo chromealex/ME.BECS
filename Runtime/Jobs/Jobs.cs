@@ -70,7 +70,7 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe struct DisposePtrJob : IJob {
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr ptr;
+        public safe_ptr ptr;
         public void Execute() => _free(ref this.ptr);
     }
 
@@ -79,7 +79,7 @@ namespace ME.BECS {
 
         public AllocatorManager.AllocatorHandle allocator;
         [NativeDisableUnsafePtrRestriction]
-        public SafePtr ptr;
+        public safe_ptr ptr;
         public void Execute() => _free(this.ptr, this.allocator.ToAllocator);
 
     }

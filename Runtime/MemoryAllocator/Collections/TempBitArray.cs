@@ -10,7 +10,7 @@ namespace ME.BECS {
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;
 
         [NativeDisableUnsafePtrRestriction]
-        public readonly SafePtr<ulong> ptr;
+        public readonly safe_ptr<ulong> ptr;
         public uint Length;
         internal readonly Unity.Collections.Allocator allocator;
 
@@ -46,7 +46,7 @@ namespace ME.BECS {
         public TempBitArray(in MemoryAllocator allocator, in BitArray bitmap, Unity.Collections.Allocator unityAllocator) {
 
             var newArr = new TempBitArray(bitmap.Length, ClearOptions.UninitializedMemory, unityAllocator);
-            var ptr = (SafePtr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             _memcpy(ptr, newArr.ptr, Bitwise.AlignULongBits(bitmap.Length));
             this = newArr;
             
@@ -56,7 +56,7 @@ namespace ME.BECS {
         public TempBitArray(in MemoryAllocator allocator, in BitArray bitmap, Unity.Collections.AllocatorManager.AllocatorHandle unityAllocator) {
 
             var newArr = new TempBitArray(bitmap.Length, ClearOptions.UninitializedMemory, unityAllocator);
-            var ptr = (SafePtr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             _memcpy(ptr, newArr.ptr, Bitwise.AlignULongBits(bitmap.Length));
             this = newArr;
             
@@ -143,7 +143,7 @@ namespace ME.BECS {
             if (bitmap.Length == 0) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
-            var ptr = (SafePtr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {
                 this.ptr[index] |= ptr[index];
@@ -182,7 +182,7 @@ namespace ME.BECS {
                 return;
             }
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
-            var ptr = (SafePtr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             var len = Bitwise.GetLength(this.Length);
             var bLen = Bitwise.GetLength(bitmap.Length);
             for (var index = 0; index < len; ++index) {
@@ -209,7 +209,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
-            var ptr = (SafePtr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {
                 this.ptr[index] &= ~ptr[index];

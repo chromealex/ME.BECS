@@ -10,7 +10,7 @@ namespace ME.BECS {
         private const uint MIN_GROW = 4;
         private const uint GROW_FACTOR = 200;
 
-        private SafePtr<SystemGroup.NodeData> arr;
+        private safe_ptr<SystemGroup.NodeData> arr;
         private uint arrLength;
 
         private uint head;
@@ -27,7 +27,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Enqueue(SafePtr<Node> node) {
+        public void Enqueue(safe_ptr<Node> node) {
 
             if (this.Count == this.arrLength) {
                 var newCapacity = (this.arrLength * GROW_FACTOR / 100u);
@@ -53,10 +53,10 @@ namespace ME.BECS {
         }
             
         [INLINE(256)]
-        public SafePtr<Node> Peek() => this.arr[this.head].data;
+        public safe_ptr<Node> Peek() => this.arr[this.head].data;
             
         [INLINE(256)]
-        public SafePtr<Node> Dequeue() {
+        public safe_ptr<Node> Dequeue() {
 
             --this.Count;
             var removed = this.arr[this.head].data;
@@ -107,29 +107,29 @@ namespace ME.BECS {
         internal bool isStarted;
         internal bool isPointer;
         
-        internal SafePtr<SystemGroup> graph;
+        internal safe_ptr<SystemGroup> graph;
 
-        internal SafePtr<SystemGroup.NodeData> parents;
+        internal safe_ptr<SystemGroup.NodeData> parents;
         private uint parentCount;
         internal uint parentIndex;
         
-        internal SafePtr<SystemGroup.NodeData> children;
+        internal safe_ptr<SystemGroup.NodeData> children;
         private uint childrenCount;
         internal uint childrenIndex;
 
-        internal SafePtr<SystemGroup.NodeData> deps;
+        internal safe_ptr<SystemGroup.NodeData> deps;
         private uint depsCount;
         internal uint depsIndex;
 
         public JobHandle dependsOn;
 
         public Unity.Collections.FixedString64Bytes name;
-        public SafePtr systemData;
+        public safe_ptr systemData;
         public uint systemTypeId;
-        internal SafePtr<Data> dataAwake;
-        internal SafePtr<Data> dataUpdate;
-        internal SafePtr<Data> dataDestroy;
-        internal SafePtr<Data> dataDrawGizmos;
+        internal safe_ptr<Data> dataAwake;
+        internal safe_ptr<Data> dataUpdate;
+        internal safe_ptr<Data> dataDestroy;
+        internal safe_ptr<Data> dataDrawGizmos;
 
         [INLINE(256)]
         public bool AllParentsStarted(Method method) {
@@ -150,8 +150,8 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public SafePtr<Data> GetMethod(Method method) {
-            SafePtr<Data> ptr = default;
+        public safe_ptr<Data> GetMethod(Method method) {
+            safe_ptr<Data> ptr = default;
             switch (method) {
                 case Method.Awake:
                     ptr = this.dataAwake;
@@ -171,7 +171,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void SetMethod(Method method, SafePtr<Data> ptr) {
+        public void SetMethod(Method method, safe_ptr<Data> ptr) {
             switch (method) {
                 case Method.Awake:
                     this.dataAwake = ptr;
@@ -189,7 +189,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static SafePtr<Node> CreateMethods<T>(in T system) where T : unmanaged, ISystem {
+        public static safe_ptr<Node> CreateMethods<T>(in T system) where T : unmanaged, ISystem {
 
             var node = Node.Create();
             node.ptr->systemData = _make(system);
@@ -227,13 +227,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static SafePtr<Node> Create(bool isPointer = false) => _make(new Node() { isPointer = isPointer });
+        public static safe_ptr<Node> Create(bool isPointer = false) => _make(new Node() { isPointer = isPointer });
 
         [INLINE(256)]
-        public static SafePtr<Node> Create(SystemGroup graph) => _make(new Node() { graph = _make(graph) });
+        public static safe_ptr<Node> Create(SystemGroup graph) => _make(new Node() { graph = _make(graph) });
 
         [INLINE(256)]
-        public void AddDependency(SafePtr<Node> node) {
+        public void AddDependency(safe_ptr<Node> node) {
             
             if (this.depsIndex >= this.depsCount) {
                 var newLength = (this.depsIndex + 1u) * 2u;
@@ -245,7 +245,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void AddChild(SafePtr<Node> node, SafePtr<Node> parent) {
+        public void AddChild(safe_ptr<Node> node, safe_ptr<Node> parent) {
 
             if (this.childrenIndex >= this.childrenCount) {
                 var newLength = (this.childrenIndex + 1u) * 2u;
@@ -258,7 +258,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void AddParent(SafePtr<Node> node) {
+        public void AddParent(safe_ptr<Node> node) {
             
             if (this.parentIndex >= this.parentCount) {
                 var newLength = (this.parentIndex + 1u) * 2u;

@@ -98,7 +98,7 @@ namespace ME.BECS {
                                            ref MemArray<T> arr,
                                            uint destIndex,
                                            uint length) where T : unmanaged {
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             allocator.MemCopy(arr.arrPtr, destIndex * size, fromArr.arrPtr, sourceIndex * size, length * size);
         }
 

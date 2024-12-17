@@ -12,7 +12,7 @@ namespace ME.BECS {
     public unsafe struct QueryData {
 
         internal TempBitArray archetypesBits;
-        internal SafePtr<uint> archetypes;
+        internal safe_ptr<uint> archetypes;
         internal uint archetypesCount;
         internal uint steps;
         internal uint minElementsPerStep;
@@ -27,8 +27,8 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe ref struct QueryBuilder {
         
-        internal SafePtr<CommandBuffer> commandBuffer;
-        internal SafePtr<QueryData> queryData;
+        internal safe_ptr<CommandBuffer> commandBuffer;
+        internal safe_ptr<QueryData> queryData;
         internal uint parallelForBatch;
         internal JobHandle builderDependsOn;
         internal Allocator allocator;
@@ -44,9 +44,9 @@ namespace ME.BECS {
         private struct DisposeJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<CommandBuffer> commandBuffer;
+            public safe_ptr<CommandBuffer> commandBuffer;
             public Allocator allocator;
 
             public void Execute() {
@@ -530,15 +530,15 @@ namespace ME.BECS {
         private struct FromQueryDataJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<Queries.QueryDataStatic> queryDataStatic;
+            public safe_ptr<Queries.QueryDataStatic> queryDataStatic;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             
             public void Execute() {
                 
-                this.queryData.ptr->archetypes = (SafePtr<uint>)this.queryDataStatic.ptr->archetypes.GetUnsafePtr(in this.state.ptr->allocator);
+                this.queryData.ptr->archetypes = (safe_ptr<uint>)this.queryDataStatic.ptr->archetypes.GetUnsafePtr(in this.state.ptr->allocator);
                 this.queryData.ptr->archetypesCount = this.queryDataStatic.ptr->archetypes.Count;
                 
             }
@@ -546,7 +546,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal QueryBuilderDisposable FromQueryData(SafePtr<State> state, ushort worldId, SafePtr<Queries.QueryDataStatic> queryDataStatic) {
+        internal QueryBuilderDisposable FromQueryData(safe_ptr<State> state, ushort worldId, safe_ptr<Queries.QueryDataStatic> queryDataStatic) {
 
             //this.queryData = queryDataStatic->GetQueryData(state);
             //this.commandBuffer = queryDataStatic->GetCommandBuffer(state, worldId);
@@ -566,11 +566,11 @@ namespace ME.BECS {
         private struct SetEntitiesJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<State> state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<CommandBuffer> buffer;
+            public safe_ptr<CommandBuffer> buffer;
             [NativeDisableUnsafePtrRestriction]
-            public SafePtr<QueryData> queryData;
+            public safe_ptr<QueryData> queryData;
             public Allocator allocator;
 
             public void Execute() {
@@ -582,7 +582,7 @@ namespace ME.BECS {
                     // build archetypes
                     if (this.queryData.ptr->archetypes.ptr == null) {
                         var tempListBits = this.queryData.ptr->archetypesBits.GetTrueBitsTemp();
-                        this.queryData.ptr->archetypes = (SafePtr)tempListBits.Ptr;
+                        this.queryData.ptr->archetypes = (safe_ptr)tempListBits.Ptr;
                         archCount = (uint)tempListBits.Length;
                     }
 
@@ -593,7 +593,7 @@ namespace ME.BECS {
                     }
 
                     var archs = this.queryData.ptr->archetypes;
-                    SafePtr<uint> arrPtr = default;
+                    safe_ptr<uint> arrPtr = default;
                     var elementsCount = 0u;
                     if (this.queryData.ptr->steps > 0u) {
 
@@ -618,7 +618,7 @@ namespace ME.BECS {
                             // Add range fromIdx..toIdx
                             var size = toIdx - fromIdx;
                             arrPtr = _makeArray<uint>(size, this.allocator);
-                            if (size > 0u) _memcpy((SafePtr)(temp.Ptr + fromIdx), (SafePtr)arrPtr, TSize<uint>.size * size);
+                            if (size > 0u) _memcpy((safe_ptr)(temp.Ptr + fromIdx), (safe_ptr)arrPtr, TSize<uint>.size * size);
                             elementsCount += size;
                         }
 
@@ -653,7 +653,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal JobHandle SetEntities(SafePtr<CommandBuffer> buffer, JobHandle dependsOn) {
+        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
             var job = new SetEntitiesJob() {
@@ -669,7 +669,7 @@ namespace ME.BECS {
         public struct Enumerator : System.Collections.Generic.IEnumerator<Ent> {
 
             public QueryBuilderDispose queryBuilder;
-            public SafePtr<CommandBuffer> commandBuffer;
+            public safe_ptr<CommandBuffer> commandBuffer;
             public uint index;
             public ushort worldId;
             
@@ -693,8 +693,8 @@ namespace ME.BECS {
 
     public unsafe struct QueryBuilderDispose {
 
-        private SafePtr<CommandBuffer> commandBuffer;
-        private SafePtr<QueryData> queryData;
+        private safe_ptr<CommandBuffer> commandBuffer;
+        private safe_ptr<QueryData> queryData;
         private JobHandle builderDependsOn;
         internal readonly bool isCreated;
 

@@ -14,11 +14,11 @@ namespace ME.BECS {
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public readonly unsafe struct CachedPtr {
         
-        internal readonly SafePtr cachedPtr;
+        internal readonly safe_ptr cachedPtr;
         internal readonly ushort version;
         
         [INLINE(256)]
-        public CachedPtr(in MemoryAllocator allocator, SafePtr ptr) {
+        public CachedPtr(in MemoryAllocator allocator, safe_ptr ptr) {
             this.version = allocator.version;
             this.cachedPtr = ptr;
         }
@@ -29,7 +29,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static SafePtr<T> ReadPtr<T>(in CachedPtr cache, in MemoryAllocator allocator) where T : unmanaged {
+        public static safe_ptr<T> ReadPtr<T>(in CachedPtr cache, in MemoryAllocator allocator) where T : unmanaged {
             if (allocator.version == cache.version) {
                 return cache.cachedPtr;
             }
@@ -37,7 +37,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static SafePtr ReadPtr(in CachedPtr cache, in MemoryAllocator allocator, in MemPtr arrPtr) {
+        public static safe_ptr ReadPtr(in CachedPtr cache, in MemoryAllocator allocator, in MemPtr arrPtr) {
             if (allocator.version == cache.version) {
                 return cache.cachedPtr;
             }
@@ -47,7 +47,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static ref T Read<T>(CachedPtr cache, in MemoryAllocator allocator, MemPtr arrPtr, int index) where T : unmanaged {
             if (allocator.version == cache.version) {
-                return ref *((SafePtr<T>)cache.cachedPtr + index).ptr;
+                return ref *((safe_ptr<T>)cache.cachedPtr + index).ptr;
             }
             return ref allocator.RefArray<T>(arrPtr, index);
         }
@@ -55,7 +55,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static ref T Read<T>(CachedPtr cache, in MemoryAllocator allocator, MemPtr arrPtr, uint index) where T : unmanaged {
             if (allocator.version == cache.version) {
-                return ref *((SafePtr<T>)cache.cachedPtr + index).ptr;
+                return ref *((safe_ptr<T>)cache.cachedPtr + index).ptr;
             }
             return ref allocator.RefArray<T>(arrPtr, index);
         }
@@ -109,7 +109,7 @@ namespace ME.BECS {
             }
 
             this = default;
-            var memPtr = allocator.AllocArray(length, out SafePtr<T> ptr);
+            var memPtr = allocator.AllocArray(length, out safe_ptr<T> ptr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in allocator, ptr);
             #endif
@@ -264,7 +264,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return allocator.GetUnsafePtr(this.data.arrPtr);
@@ -272,7 +272,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly SafePtr GetUnsafePtrCached(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             #if USE_CACHE_PTR
@@ -299,17 +299,17 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             return ref CachedPtr.Read<T>(this.data.cachedPtr, in allocator, this.data.arrPtr, index);
             #else
-            return ref *((SafePtr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
+            return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             #endif
 
         }
 
-        public readonly ref T this[SafePtr<State> state, int index] {
+        public readonly ref T this[safe_ptr<State> state, int index] {
             [INLINE(256)]
             get {
                 E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -318,7 +318,7 @@ namespace ME.BECS {
             get {
                 E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             }
         }
 
@@ -327,16 +327,16 @@ namespace ME.BECS {
             get {
                 E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             }
         }
 
-        public readonly ref T this[SafePtr<State> state, uint index] {
+        public readonly ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.IS_CREATED(this);
                 E.RANGE(index, 0, this.Length);
-                return ref *((SafePtr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -359,7 +359,7 @@ namespace ME.BECS {
             newLength *= growFactor;
 
             var prevLength = this.Length;
-            this.data.arrPtr = allocator.ReAllocArray(this.data.arrPtr, newLength, out SafePtr<T> ptr);
+            this.data.arrPtr = allocator.ReAllocArray(this.data.arrPtr, newLength, out safe_ptr<T> ptr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in allocator, ptr);
             #endif
@@ -423,7 +423,7 @@ namespace ME.BECS {
         public readonly bool Contains<U>(in MemoryAllocator allocator, U obj) where U : unmanaged, System.IEquatable<T> {
             
             E.IS_CREATED(this);
-            var ptr = (SafePtr<T>)this.GetUnsafePtrCached(in allocator);
+            var ptr = (safe_ptr<T>)this.GetUnsafePtrCached(in allocator);
             for (uint i = 0, cnt = this.Length; i < cnt; ++i) {
 
                 if (obj.Equals(*(ptr + i).ptr) == true) {
