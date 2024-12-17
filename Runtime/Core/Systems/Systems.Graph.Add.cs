@@ -50,7 +50,7 @@ namespace ME.BECS {
                 if (node.data.ptr->graph.ptr != null) {
                     ref var sys = ref (*node.data.ptr->graph.ptr).GetSystem<T>(out found);
                     if (found == true) return ref sys;
-                } else if (node.data.ptr->systemData != null) {
+                } else if (node.data.ptr->systemData.ptr != null) {
                     if (node.data.ptr->systemTypeId == typeId) {
                         found = true;
                         return ref *(T*)node.data.ptr->systemData.ptr;

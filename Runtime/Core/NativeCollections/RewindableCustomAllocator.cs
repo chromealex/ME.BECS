@@ -185,7 +185,7 @@ namespace ME.BECS.NativeCollections {
             public MemoryBlock(long bytes)
             {
                 m_pointer = _make((uint)bytes, kMaximumAlignment, Allocator.Persistent);
-                Assert.IsTrue(m_pointer != null, "Memory block allocation failed, system out of memory");
+                Assert.IsTrue(m_pointer.ptr != null, "Memory block allocation failed, system out of memory");
                 m_bytes = bytes;
                 m_union = default;
             }

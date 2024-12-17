@@ -125,7 +125,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             if (this.state.ptr == null) return dependsOn;
 
-            if (Context.world.state == this.state) Context.world = default;
+            if (Context.world.state.ptr == this.state.ptr) Context.world = default;
 
             dependsOn = this.UnassignRootSystemGroup(dependsOn);
             Worlds.ReleaseWorld(this);

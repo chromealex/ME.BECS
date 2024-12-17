@@ -123,7 +123,7 @@
         public void Set(ref MemoryAllocator allocator, SafePtr data, uint dataSize) {
 
             this.ptr = allocator.Alloc(dataSize, out var ptr);
-            if (data != null) {
+            if (data.ptr != null) {
                 _memcpy(data, ptr, dataSize);
             } else {
                 _memclear(ptr, dataSize);
@@ -179,7 +179,7 @@
         public void Set(ref MemoryAllocator allocator, SafePtr data, uint dataSize) {
 
             this.ptr = allocator.Alloc(dataSize, out var ptr);
-            if (data != null) {
+            if (data.ptr != null) {
                 _memcpy(data, ptr, dataSize);
             } else {
                 _memclear(ptr, dataSize);

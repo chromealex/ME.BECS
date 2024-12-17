@@ -137,7 +137,7 @@ namespace ME.BECS {
                 if (zone == null) continue;
 
                 ptr = new SafePtr(MemoryAllocator.ZmMalloc(zone, (int)size), (uint)size);
-                if (ptr != null) {
+                if (ptr.ptr != null) {
                     var memPtr = this.GetSafePtr(ptr.ptr, i);
                     #if LOGS_ENABLED
                     MemoryAllocator.LogAdd(memPtr, size);

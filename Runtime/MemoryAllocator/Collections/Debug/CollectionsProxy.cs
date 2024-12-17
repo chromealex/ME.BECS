@@ -270,10 +270,19 @@ namespace ME.BECS {
     public class UIntDictionaryProxy<V> where V : unmanaged {
 
         private UIntDictionary<V> arr;
+        private World world;
         
         public UIntDictionaryProxy(UIntDictionary<V> arr) {
 
             this.arr = arr;
+            this.world = Context.world;
+
+        }
+
+        public UIntDictionaryProxy(UIntDictionary<V> arr, World world) {
+
+            this.arr = arr;
+            this.world = world;
 
         }
 
@@ -294,7 +303,7 @@ namespace ME.BECS {
             get {
                 var arr = new System.Collections.Generic.KeyValuePair<uint, V>[this.arr.Count];
                 var i = 0;
-                var e = this.arr.GetEnumerator(Context.world);
+                var e = this.arr.GetEnumerator(this.world);
                 while (e.MoveNext() == true) {
                     arr[i++] = new System.Collections.Generic.KeyValuePair<uint, V>(e.Current.key, e.Current.value);
                 }

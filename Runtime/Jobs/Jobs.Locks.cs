@@ -15,7 +15,7 @@ namespace ME.BECS {
         private int readValue;
         private int writeValue;
 
-        public bool IsCreated => this.value != null;
+        public bool IsCreated => this.value.ptr != null;
 
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {

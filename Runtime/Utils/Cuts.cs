@@ -70,16 +70,6 @@ namespace ME.BECS {
             #endif
         }
 
-        [INLINE(256)]
-        public static bool operator !=(SafePtr safePtr, SafePtr other) {
-            return safePtr.ptr != other.ptr;
-        }
-
-        [INLINE(256)]
-        public static bool operator ==(SafePtr safePtr, SafePtr other) {
-            return safePtr.ptr == other.ptr;
-        }
-
     }
 
     public readonly unsafe struct SafePtr<T> where T : unmanaged {
@@ -167,7 +157,7 @@ namespace ME.BECS {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             return new SafePtr<T>(safePtr.ptr - index, safePtr.size + index);
             #else
-            return new SafePtr<T>(safePtr.ptr + index, 0u);
+            return new SafePtr<T>(safePtr.ptr - index, 0u);
             #endif
         }
 
@@ -186,18 +176,8 @@ namespace ME.BECS {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             return new SafePtr<T>(safePtr.ptr - index, safePtr.size + (uint)index);
             #else
-            return new SafePtr<T>(safePtr.ptr + index, 0u);
+            return new SafePtr<T>(safePtr.ptr - index, 0u);
             #endif
-        }
-
-        [INLINE(256)]
-        public static bool operator !=(SafePtr<T> safePtr, SafePtr<T> other) {
-            return safePtr.ptr != other.ptr;
-        }
-
-        [INLINE(256)]
-        public static bool operator ==(SafePtr<T> safePtr, SafePtr<T> other) {
-            return safePtr.ptr == other.ptr;
         }
 
     }
