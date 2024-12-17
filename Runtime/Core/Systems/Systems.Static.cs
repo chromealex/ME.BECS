@@ -180,10 +180,10 @@ namespace ME.BECS {
         public static bool RaiseOnAwake(in SystemGroup rootGroup, ushort updateType, float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {
 
             var result = false;
-            if (rootGroup.rootNode != null) {
+            if (rootGroup.rootNode.ptr != null) {
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
-                    if (child.data.ptr->graph != null) {
+                    if (child.data.ptr->graph.ptr != null) {
                         if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
                             
                             if (SystemsStaticOnAwake.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
@@ -206,10 +206,10 @@ namespace ME.BECS {
         public static bool RaiseOnStart(in SystemGroup rootGroup, ushort updateType, float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {
 
             var result = false;
-            if (rootGroup.rootNode != null) {
+            if (rootGroup.rootNode.ptr != null) {
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
-                    if (child.data.ptr->graph != null) {
+                    if (child.data.ptr->graph.ptr != null) {
                         if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
                             
                             if (SystemsStaticOnStart.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
@@ -232,11 +232,11 @@ namespace ME.BECS {
         public static bool RaiseOnUpdate(in SystemGroup rootGroup, ushort updateType, float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {
 
             var result = false;
-            if (rootGroup.rootNode != null) {
+            if (rootGroup.rootNode.ptr != null) {
                 //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + rootGroup.rootNode.ptr->childrenIndex + ", updateType: " + updateType);
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
-                    if (child.data.ptr->graph != null) {
+                    if (child.data.ptr->graph.ptr != null) {
                         if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
 
                             //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + SystemsStaticOnUpdate.dic.Data.Count + ", child.data.ptr->graph.ptr->graphId: " + child.data.ptr->graph.ptr->graphId + ", updateType: " + updateType);
@@ -261,10 +261,10 @@ namespace ME.BECS {
         public static bool RaiseOnDrawGizmos(in SystemGroup rootGroup, ref World world, ref Unity.Jobs.JobHandle dependsOn) {
 
             var result = false;
-            if (rootGroup.rootNode != null) {
+            if (rootGroup.rootNode.ptr != null) {
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
-                    if (child.data.ptr->graph != null) {
+                    if (child.data.ptr->graph.ptr != null) {
                         
                         if (SystemsStaticOnDrawGizmos.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
@@ -285,10 +285,10 @@ namespace ME.BECS {
         public static bool RaiseOnDestroy(in SystemGroup rootGroup, ushort updateType, float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {
 
             var result = false;
-            if (rootGroup.rootNode != null) {
+            if (rootGroup.rootNode.ptr != null) {
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
-                    if (child.data.ptr->graph != null) {
+                    if (child.data.ptr->graph.ptr != null) {
                         if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
 
                             if (SystemsStaticOnDestroy.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
@@ -311,10 +311,10 @@ namespace ME.BECS {
         public static bool TryGetSystem<T>(in SystemGroup rootGroup, out T* system) where T : unmanaged, ISystem {
 
             system = null;
-            if (rootGroup.rootNode != null) {
+            if (rootGroup.rootNode.ptr != null) {
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
-                    if (child.data.ptr->graph != null) {
+                    if (child.data.ptr->graph.ptr != null) {
                         if (TSystemGraph.GetSystem(child.data.ptr->graph.ptr->graphId, out system) == true) {
                             return true;
                         }

@@ -47,7 +47,7 @@ namespace ME.BECS {
             var typeId = StaticSystemTypes<T>.typeId;
             for (int i = 0; i < graph.index; ++i) {
                 var node = graph.nodes[i];
-                if (node.data.ptr->graph != null) {
+                if (node.data.ptr->graph.ptr != null) {
                     ref var sys = ref (*node.data.ptr->graph.ptr).GetSystem<T>(out found);
                     if (found == true) return ref sys;
                 } else if (node.data.ptr->systemData != null) {
@@ -86,7 +86,7 @@ namespace ME.BECS {
                 
                 // Has dependencies
                 var depNode = graph.GetNode(dependsOn);
-                if (depNode.ptr->deps != null) {
+                if (depNode.ptr->deps.ptr != null) {
                     // Combined dependencies
                     for (int i = 0; i < depNode.ptr->depsIndex; ++i) {
                         var dep = depNode.ptr->deps[i];
@@ -128,7 +128,7 @@ namespace ME.BECS {
                 
                 // Has dependencies
                 var depNode = graph.GetNode(dependsOn);
-                if (depNode.ptr->deps != null) {
+                if (depNode.ptr->deps.ptr != null) {
                     // Combined dependencies
                     for (int i = 0; i < depNode.ptr->depsIndex; ++i) {
                         var dep = depNode.ptr->deps[i];

@@ -580,7 +580,7 @@ namespace ME.BECS {
                     // queryData.ptr->archetypes are set with static queries only
                     // so we need to check if it is null - we have a dynamic query
                     // build archetypes
-                    if (this.queryData.ptr->archetypes == null) {
+                    if (this.queryData.ptr->archetypes.ptr == null) {
                         var tempListBits = this.queryData.ptr->archetypesBits.GetTrueBitsTemp();
                         this.queryData.ptr->archetypes = (SafePtr)tempListBits.Ptr;
                         archCount = (uint)tempListBits.Length;

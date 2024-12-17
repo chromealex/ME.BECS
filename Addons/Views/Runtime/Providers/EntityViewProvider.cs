@@ -145,7 +145,7 @@ namespace ME.BECS.Views {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Schedule JobUpdateTransforms");
                 marker.Begin();
                 // Update positions
-                if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
+                if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
                     dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
                         renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
                         beginFrameState = data.ptr->beginFrameState.ptr->state,

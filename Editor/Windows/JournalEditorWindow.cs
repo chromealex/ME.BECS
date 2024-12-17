@@ -154,7 +154,7 @@ namespace ME.BECS.Editor {
 
         private void Redraw(VisualElement root, SafePtr<Journal> journal) {
 
-            if (journal == null) {
+            if (journal.ptr == null) {
                 root.Clear();
                 return;
             }
@@ -243,7 +243,7 @@ namespace ME.BECS.Editor {
                 var headers = new VisualElement();
                 headers.AddToClassList("threads-headers");
                 threadsContainer.Add(headers);
-                if (journal != null) {
+                if (journal.ptr != null) {
                     var threads = journal.ptr->GetData().ptr->GetData();
                     for (int i = 0; i < threads.Length; ++i) {
                         var thread = new Label($"Thread #{(i + 1)}");
@@ -266,7 +266,7 @@ namespace ME.BECS.Editor {
         public static VisualElement DrawEntityJournal(VisualElement root, ref VisualElementData[] children, in Ent ent) {
 
             var journal = JournalsStorage.Get(ent.worldId);
-            if (journal == null) {
+            if (journal.ptr == null) {
 
                 var str = "Journal is disabled. Reason: ";
                 #if JOURNAL
@@ -375,7 +375,7 @@ namespace ME.BECS.Editor {
         public static void UpdateEntityJournal(VisualElement journalHistory, ref VisualElementData[] children, in Ent ent) {
 
             var journal = JournalsStorage.Get(ent.worldId);
-            if (journal == null) return;
+            if (journal.ptr == null) return;
 
             journalHistory.Clear();
 

@@ -21,7 +21,7 @@ namespace ME.BECS {
             Batches.Apply(srcWorld.state);
 
             // Dispose current state
-            if (this.state != null) {
+            if (this.state.ptr != null) {
                 Worlds.ReleaseWorld(this);
                 this.state.ptr->Dispose();
                 _free(this.state);

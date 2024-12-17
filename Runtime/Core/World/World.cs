@@ -123,7 +123,7 @@ namespace ME.BECS {
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle dependsOn) {
 
             E.IS_CREATED(this);
-            if (this.state == null) return dependsOn;
+            if (this.state.ptr == null) return dependsOn;
 
             if (Context.world.state == this.state) Context.world = default;
 

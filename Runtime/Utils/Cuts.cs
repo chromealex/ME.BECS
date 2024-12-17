@@ -71,13 +71,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool operator !=(SafePtr safePtr, object obj) {
-            return safePtr.ptr != null;
+        public static bool operator !=(SafePtr safePtr, SafePtr other) {
+            return safePtr.ptr != other.ptr;
         }
 
         [INLINE(256)]
-        public static bool operator ==(SafePtr safePtr, object obj) {
-            return !(safePtr != obj);
+        public static bool operator ==(SafePtr safePtr, SafePtr other) {
+            return safePtr.ptr == other.ptr;
         }
 
     }
@@ -191,13 +191,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool operator !=(SafePtr<T> safePtr, object obj) {
-            return safePtr.ptr != null;
+        public static bool operator !=(SafePtr<T> safePtr, SafePtr<T> other) {
+            return safePtr.ptr != other.ptr;
         }
 
         [INLINE(256)]
-        public static bool operator ==(SafePtr<T> safePtr, object obj) {
-            return !(safePtr != obj);
+        public static bool operator ==(SafePtr<T> safePtr, SafePtr<T> other) {
+            return safePtr.ptr == other.ptr;
         }
 
     }
@@ -279,7 +279,7 @@ namespace ME.BECS {
                 LeakDetector.Track(ptr);
                 //var ptr = (T*)UnsafeUtility.Malloc(size, TAlign<T>.alignInt, ALLOCATOR);
                 _memclear(ptr, size);
-                if (arr != null) {
+                if (arr.ptr != null) {
                     _memcpy(arr, ptr, length * TSize<T>.size);
                     _memclear((SafePtr)(ptr + length), (newLength - length) * TSize<T>.size);
                     /*for (int i = 0; i < length; ++i) {

@@ -243,7 +243,7 @@ namespace ME.BECS {
                                 queue.Enqueue(node);
                             }
                         }
-                    } else if (node.ptr->graph != null) {
+                    } else if (node.ptr->graph.ptr != null) {
                         // Check if subId is valid for this graph
                         if (subId > 0 && node.ptr->graph.ptr->updateType > 0 && node.ptr->graph.ptr->updateType != subId) continue;
                         if (node.ptr->isStarted == false) {
@@ -307,8 +307,8 @@ namespace ME.BECS {
 
             this.rootNode.ptr->Dispose();
             _free(this.rootNode);
-            if (this.nodes != null) _free(this.nodes);
-            if (this.data != null) _free(this.data);
+            if (this.nodes.ptr != null) _free(this.nodes);
+            if (this.data.ptr != null) _free(this.data);
             this.runtimeQueue.Dispose();
 
         }
