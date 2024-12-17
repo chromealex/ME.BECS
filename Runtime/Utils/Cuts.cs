@@ -1,4 +1,3 @@
-#define MEMORY_ALLOCATOR_BOUNDS_CHECK
 namespace ME.BECS {
 
     using System.Diagnostics;
@@ -57,7 +56,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr + index);
+            return new safe_ptr(safePtr.ptr + index);
             #endif
         }
 
@@ -67,7 +66,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr - index);
+            return new safe_ptr(safePtr.ptr - index);
             #endif
         }
 
@@ -77,7 +76,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr + index);
+            return new safe_ptr(safePtr.ptr + index);
             #endif
         }
 
@@ -87,7 +86,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr - index);
+            return new safe_ptr(safePtr.ptr - index);
             #endif
         }
 
@@ -160,7 +159,7 @@ namespace ME.BECS {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             return new safe_ptr<U>((U*)this.ptr, this.lowBound, this.hiBound);
             #else
-            return new SafePtr<U>((U*)this.ptr);
+            return new safe_ptr<U>((U*)this.ptr);
             #endif
         }
 
@@ -183,7 +182,7 @@ namespace ME.BECS {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             return new safe_ptr(safePtr.ptr, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr(safePtr.ptr);
+            return new safe_ptr(safePtr.ptr);
             #endif
         }
 
@@ -192,7 +191,7 @@ namespace ME.BECS {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             return new safe_ptr<T>((T*)safePtr.ptr, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>((T*)safePtr.ptr);
+            return new safe_ptr<T>((T*)safePtr.ptr);
             #endif
         }
 
@@ -202,7 +201,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr + index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr + index);
+            return new safe_ptr<T>(safePtr.ptr + index);
             #endif
         }
 
@@ -212,7 +211,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr - index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr - index);
+            return new safe_ptr<T>(safePtr.ptr - index);
             #endif
         }
 
@@ -222,7 +221,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr + index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr + index);
+            return new safe_ptr<T>(safePtr.ptr + index);
             #endif
         }
 
@@ -232,7 +231,7 @@ namespace ME.BECS {
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr - index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
-            return new SafePtr<T>(safePtr.ptr - index);
+            return new safe_ptr<T>(safePtr.ptr - index);
             #endif
         }
 

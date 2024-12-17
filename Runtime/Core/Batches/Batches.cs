@@ -333,7 +333,7 @@ namespace ME.BECS {
         
         [BURST(CompileSynchronously = true)]
         [INLINE(256)]
-        public static void Apply(safe_ptr<State> state) {
+        public static void Apply(in safe_ptr<State> state) {
             new ApplyJob() {
                 state = state,
             }.Execute();
