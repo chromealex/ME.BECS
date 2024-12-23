@@ -196,12 +196,12 @@ namespace ME.BECS.Views {
                 var assignToEntId = ent.id;
                 var sourceEntId = component.sourceEnt.id;
                 if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)sourceEntId) == true) {
-                    
+
                     ref var allocator = ref this.viewsWorld.state.ptr->allocator;
 
                     {
                         // Assign data
-                        var updateIdx = this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, sourceEntId);
+                        var updateIdx = this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, sourceEntId);
                         this.viewsModuleData.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, assignToEntId) = updateIdx;
                         this.viewsModuleData.ptr->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = assignToEntId;
                         this.viewsModuleData.ptr->renderingOnSceneBits.Set((int)assignToEntId, true);
@@ -211,9 +211,22 @@ namespace ME.BECS.Views {
                         entData.version = ent.Version - 1;
                     }
 
-                    {
-                        // Remove
+                    var srcHasViewComponent = false;
+                    var srcIsAlive = false;
+                    if (component.sourceEnt.IsAlive() == true) {
+                        // Check if we have created new view
+                        srcHasViewComponent = component.sourceEnt.Has<ViewComponent>();
+                        srcIsAlive = true;
+                    }
+                    if (srcHasViewComponent == false) {
+                        // If source entity has no view component - Clean up
                         this.viewsModuleData.ptr->renderingOnSceneBits.Set((int)sourceEntId, false);
+                        if (this.viewsModuleData.ptr->renderingOnSceneApplyState.Remove(in allocator, sourceEntId) == true) {
+                            this.viewsModuleData.ptr->renderingOnSceneApplyState.Add(ref allocator, assignToEntId);
+                        }
+                        if (this.viewsModuleData.ptr->renderingOnSceneUpdate.Remove(in allocator, sourceEntId) == true) {
+                            this.viewsModuleData.ptr->renderingOnSceneUpdate.Add(ref allocator, assignToEntId);
+                        }
                     }
                     
                     // Assign provider
@@ -221,7 +234,7 @@ namespace ME.BECS.Views {
                     if (providerId > 0u && component.source.providerId < this.registeredProviders.Length) {
                         ref var item = ref *(this.registeredProviders.Ptr + component.source.providerId);
                         E.IS_CREATED(item);
-                        component.sourceEnt.Remove(item.typeId);
+                        if (srcIsAlive == true) component.sourceEnt.Remove(item.typeId);
                         ent.Set(item.typeId, null);
                     }
 
