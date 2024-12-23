@@ -211,10 +211,13 @@ namespace ME.BECS.Views {
             ++this.Count;
         }
 
-        public void Remove(in MemoryAllocator allocator, uint idx) {
+        public bool Remove(in MemoryAllocator allocator, uint idx) {
             if (this.sparseSet.Remove(in allocator, idx, out var fromIndex, out var toIndex) == true) {
                 --this.Count;
+                return true;
             }
+
+            return false;
         }
 
     }
@@ -526,7 +529,7 @@ namespace ME.BECS.Views {
                     // Assign views first
                     var query = API.Query(in this.data.ptr->connectedWorld, dependsOn);
                     this.provider.Query(ref query);
-                    var toAssignJob = query.AsParallel().Schedule<Jobs.JobAssignViews, AssignViewComponent>(new Jobs.JobAssignViews() {
+                    var toAssignJob = query.Schedule<Jobs.JobAssignViews, AssignViewComponent>(new Jobs.JobAssignViews() {
                         viewsWorld = this.data.ptr->viewsWorld,
                         viewsModuleData = this.data,
                         registeredProviders = UnsafeViewsModule.registeredProviders.Data,
