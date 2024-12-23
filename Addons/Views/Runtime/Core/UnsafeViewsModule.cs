@@ -680,16 +680,10 @@ namespace ME.BECS.Views {
                 }
             }
             
-            {
-                // Clean up
-                this.data.ptr->toRemoveTemp.Clear();
-                this.data.ptr->toAddTemp.Clear();
-                this.data.ptr->toAssign.Clear();
-                this.data.ptr->toChange.Clear();
-                this.data.ptr->toAdd.Clear();
-                this.data.ptr->toRemove.Clear();
-                this.data.ptr->dirty.Clear();
-            }
+            dependsOn = new Jobs.CompleteJob() {
+                viewsModuleData = this.data,
+            }.Schedule(dependsOn);
+            
             return dependsOn;
 
         }

@@ -32,7 +32,7 @@ namespace ME.BECS {
 
             if (state.ptr->mode == WorldMode.Visual ||
                 state.ptr->tickCheck == 0 ||
-                state.ptr->updateType == UpdateType.FIXED_UPDATE ||
+                state.ptr->updateType != UpdateType.FIXED_UPDATE ||
                 state.ptr->worldState == WorldState.Initialized ||
                 state.ptr->worldState == WorldState.BeginTick) {
                 return;

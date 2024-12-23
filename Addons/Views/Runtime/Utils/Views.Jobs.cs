@@ -361,6 +361,30 @@ namespace ME.BECS.Views {
         }
 
         [BURST(CompileSynchronously = true)]
+        public struct CompleteJob : IJob {
+
+            [NativeDisableUnsafePtrRestriction]
+            public safe_ptr<ViewsModuleData> viewsModuleData;
+
+            public void Execute() {
+
+                // Clean up
+                this.viewsModuleData.ptr->toRemoveTemp.Clear();
+                this.viewsModuleData.ptr->toAddTemp.Clear();
+                this.viewsModuleData.ptr->toAssign.Clear();
+                this.viewsModuleData.ptr->toChange.Clear();
+                this.viewsModuleData.ptr->toAdd.Clear();
+                this.viewsModuleData.ptr->toRemove.Clear();
+                this.viewsModuleData.ptr->dirty.Clear();
+
+                // Set logic mode
+                this.viewsModuleData.ptr->connectedWorld.state.ptr->mode = WorldMode.Logic;
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
         public struct PrepareJob : IJob {
 
             public World connectedWorld;
@@ -370,6 +394,9 @@ namespace ME.BECS.Views {
             public safe_ptr<ViewsModuleData> viewsModuleData;
 
             public void Execute() {
+
+                // Set visual mode
+                this.viewsModuleData.ptr->connectedWorld.state.ptr->mode = WorldMode.Visual;
 
                 var entitiesCapacity = this.connectedWorld.state.ptr->entities.Capacity;
                 this.viewsModuleData.ptr->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
