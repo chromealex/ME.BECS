@@ -1,3 +1,5 @@
+using ME.BECS.Jobs;
+using Unity.Jobs;
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
@@ -123,6 +125,38 @@ namespace ME.BECS.Tests {
                 newWorld.Dispose();
             }
 
+            world.Dispose();
+            
+        }
+
+        [Test, Unity.PerformanceTesting.Performance]
+        public void CloneBigWorldPerformance() {
+
+            var props = WorldProperties.Default;
+            props.stateProperties.entitiesCapacity = 10000u;
+            var world = World.Create(props);
+            TestAspect.TestInitialize(in world);
+            for (int i = 0; i < 10000; ++i) {
+                var ent = Ent.New(world);
+                var aspect = ent.GetOrCreateAspect<TestAspect>();
+                aspect.data.data = 100200;
+                aspect.data2.data = 100200;
+                aspect.data3.data = 100200;
+                aspect.data4.data = 100200;
+                aspect.data5.data = 100200;
+            }
+            ME.BECS.Batches.Apply(world.state);
+
+            var srcState = world.state;
+            var destState = _make(new State());
+
+            Unity.PerformanceTesting.Measure.Method(() => {
+                
+                destState.ptr->CopyFromPrepare(*srcState.ptr);
+                
+            }).MeasurementCount(50).IterationsPerMeasurement(60).WarmupCount(10).Run();
+            
+            destState.ptr->Dispose();
             world.Dispose();
             
         }

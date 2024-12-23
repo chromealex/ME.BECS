@@ -344,8 +344,8 @@ namespace ME.BECS {
             if (capacity < StaticTypes.counter + 1u) capacity = StaticTypes.counter + 1u;
             var archs = new Archetypes() {
                 list = new List<Archetype>(ref state.ptr->allocator, capacity),
-                entToArchetypeIdx = new MemArray<uint>(ref state.ptr->allocator, capacity),
-                entToIdxInArchetype = new MemArray<uint>(ref state.ptr->allocator, capacity),
+                entToArchetypeIdx = new MemArray<uint>(ref state.ptr->allocator, entitiesCapacity),
+                entToIdxInArchetype = new MemArray<uint>(ref state.ptr->allocator, entitiesCapacity),
                 componentsCountToArchetypeIds = new MemArray<UIntDictionary<List<uint>>>(ref state.ptr->allocator, capacity),
                 archetypesWithTypeIdBits = new MemArray<BitArray>(ref state.ptr->allocator, StaticTypes.counter + 1u),
                 allArchetypes = new List<uint>(ref state.ptr->allocator, capacity),

@@ -75,7 +75,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestJobFor : ME.BECS.Jobs.IJobParallelForAspects<Test2Aspect> {
+        public struct TestJobFor : ME.BECS.Jobs.IJobForAspects<Test2Aspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Aspect c0) {
 
@@ -98,7 +98,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct TestSetJob : ME.BECS.Jobs.IJobParallelForAspects<Test2Aspect> {
+        public struct TestSetJob : ME.BECS.Jobs.IJobForAspects<Test2Aspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref Test2Aspect c0) {
 
@@ -149,9 +149,9 @@ namespace ME.BECS.Tests {
                 });
             }
 
-            var dep = API.Query(world).Schedule<TestSetJob, Test2Aspect>();
+            var dep = API.Query(world).AsParallel().Schedule<TestSetJob, Test2Aspect>();
             dep = API.Query(world, dep).Schedule<TestDestroyJobFor, TestTargetComponent>();
-            dep = API.Query(world, dep).Schedule<TestJobFor, Test2Aspect>();
+            dep = API.Query(world, dep).AsParallel().Schedule<TestJobFor, Test2Aspect>();
             JobUtils.RunScheduled();
             dep.Complete();
 
