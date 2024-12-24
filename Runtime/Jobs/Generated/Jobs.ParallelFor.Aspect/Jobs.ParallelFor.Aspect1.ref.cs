@@ -18,7 +18,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, T0>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspects<T0> where T0 : unmanaged, IAspect {
             builder.WithAspect<T0>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, T0>(in builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, T0>(builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -34,7 +34,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, T0>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForAspects<T0> where T0 : unmanaged, IAspect {
-            staticQuery.builderDependsOn = job.Schedule<T, T0>(in staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, T0>(staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -53,7 +53,7 @@ namespace ME.BECS.Jobs {
         
         public static void JobEarlyInitialize<T, T0>() where T0 : unmanaged, IAspect where T : struct, IJobParallelForAspects<T0> => JobProcess<T, T0>.Initialize();
         
-        public static JobHandle Schedule<T, T0>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, T0>(this T jobData, CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             where T0 : unmanaged, IAspect
             where T : struct, IJobParallelForAspects<T0> {
             

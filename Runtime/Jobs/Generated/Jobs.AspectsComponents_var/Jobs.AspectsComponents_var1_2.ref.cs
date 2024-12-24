@@ -17,7 +17,7 @@ namespace ME.BECS.Jobs {
             builder.WithAspect<A0>();
             builder.With<C0>(); builder.With<C1>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, A0, C0,C1>(in builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, A0, C0,C1>(builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -33,7 +33,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, A0, C0,C1>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobFor1Aspects2Components<A0, C0,C1> where A0 : unmanaged, IAspect where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase {
-            staticQuery.builderDependsOn = job.Schedule<T, A0, C0,C1>(in staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, A0, C0,C1>(staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -54,13 +54,15 @@ namespace ME.BECS.Jobs {
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase
             where T : struct, IJobFor1Aspects2Components<A0, C0,C1> => JobProcess<T, A0, C0,C1>.Initialize();
 
-        public static JobHandle Schedule<T, A0, C0,C1>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, A0, C0,C1>(this T jobData, CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             where A0 : unmanaged, IAspect
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase
             where T : struct, IJobFor1Aspects2Components<A0, C0,C1> {
             
+            buffer->sync = true;
             if (scheduleMode == ScheduleMode.Parallel) {
                 
+                buffer->sync = false;
                 //dependsOn = new StartParallelJob() {
                 //                buffer = buffer,
                 //            }.ScheduleSingle(dependsOn);
@@ -69,7 +71,6 @@ namespace ME.BECS.Jobs {
 
             }
             
-            buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);

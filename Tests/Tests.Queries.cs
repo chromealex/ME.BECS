@@ -1035,7 +1035,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job1 : IJobParallelForComponents {
+        public struct Job1 : IJobForComponents {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test2Component());
@@ -1044,7 +1044,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job2 : IJobParallelForComponents {
+        public struct Job2 : IJobForComponents {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test3Component());
@@ -1069,8 +1069,8 @@ namespace ME.BECS.Tests {
                 // sync point
                 Batches.Apply(world.state);
                 
-                var d1 = API.Query(world).With<TestComponent>().Schedule<Job1>();
-                var d2 = API.Query(world).With<TestComponent>().Schedule<Job2>();
+                var d1 = API.Query(world).With<TestComponent>().AsParallel().Schedule<Job1>();
+                var d2 = API.Query(world).With<TestComponent>().AsParallel().Schedule<Job2>();
 
                 var d3 = JobHandle.CombineDependencies(d1, d2);
                 d3.Complete();

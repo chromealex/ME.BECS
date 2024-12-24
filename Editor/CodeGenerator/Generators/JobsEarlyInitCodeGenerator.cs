@@ -35,6 +35,9 @@ namespace ME.BECS.Editor.Jobs {
 
                             workInterface = i;
                             break;
+                        } else if (typeof(T0) == typeof(TNull) && typeof(T1) == typeof(TNull) && i.Name.EndsWith("Base") == false) {
+                            workInterface = i;
+                            break;
                         }
                     }
 
@@ -67,6 +70,7 @@ namespace ME.BECS.Editor.Jobs {
                             continue;
                         }
                         var str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}, {string.Join(", ", components)}>();";
+                        if (components.Count == 0) str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}>();";
                         dataList.Add(str);
 
                     }
@@ -341,6 +345,7 @@ namespace ME.BECS.Editor.Jobs {
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
             this.GenerateJobsDebug(dataList, references);
+            this.Generate<IJobForComponentsBase, TNull, TNull>(dataList, "DoComponents");
             this.Generate<IJobParallelForComponentsBase, IComponentBase, TNull>(dataList, "DoParallelForComponents");
             this.Generate<IJobForComponentsBase, IComponentBase, TNull>(dataList, "DoComponents");
             this.Generate<IJobParallelForAspectsBase, IAspect, TNull>(dataList, "DoParallelForAspect");

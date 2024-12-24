@@ -55,8 +55,10 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobForAspects<{count(,)[T#i#]}> {
             
+            buffer->sync = true;
             if (scheduleMode == ScheduleMode.Parallel) {
                 
+                buffer->sync = false;
                 //dependsOn = new StartParallelJob() {
                 //                buffer = buffer,
                 //            }.ScheduleSingle(dependsOn);
@@ -65,7 +67,6 @@ namespace ME.BECS.Jobs {
 
             }
             
-            buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);

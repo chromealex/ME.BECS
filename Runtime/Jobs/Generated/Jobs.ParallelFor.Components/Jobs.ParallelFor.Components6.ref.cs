@@ -18,7 +18,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents<T0,T1,T2,T3,T4,T5> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase {
             builder.With<T0>(); builder.With<T1>(); builder.With<T2>(); builder.With<T3>(); builder.With<T4>(); builder.With<T5>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5>(in builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5>(builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -34,7 +34,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForComponents<T0,T1,T2,T3,T4,T5> where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase {
-            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5>(in staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, T0,T1,T2,T3,T4,T5>(staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -55,7 +55,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3,T4,T5> => JobProcess<T, T0,T1,T2,T3,T4,T5>.Initialize();
 
-        public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5>(this T jobData, CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase where T5 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3,T4,T5> {
             

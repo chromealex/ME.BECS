@@ -91,7 +91,7 @@ namespace ME.BECS.Transforms {
                         worldRot = quaternion.identity;
                     }
                     position = math.mul(worldRot, GetScale_INTERNAL(in container) * position);
-                    position += parentTr.localPosition;
+                    position += parentTr.readLocalPosition;
                     container = ref parentTr.parent;
                 }
                 return position;

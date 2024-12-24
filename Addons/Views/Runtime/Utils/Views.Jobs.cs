@@ -365,6 +365,7 @@ namespace ME.BECS.Views {
 
             [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            public WorldMode mode;
 
             public void Execute() {
 
@@ -378,7 +379,7 @@ namespace ME.BECS.Views {
                 this.viewsModuleData.ptr->dirty.Clear();
 
                 // Set logic mode
-                this.viewsModuleData.ptr->connectedWorld.state.ptr->mode = WorldMode.Logic;
+                this.viewsModuleData.ptr->connectedWorld.state.ptr->mode = this.mode;
 
             }
 

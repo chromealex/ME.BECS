@@ -17,7 +17,7 @@ namespace ME.BECS.Jobs {
             builder.WithAspect<A0>(); builder.WithAspect<A1>(); builder.WithAspect<A2>(); builder.WithAspect<A3>();
             builder.With<C0>(); builder.With<C1>(); builder.With<C2>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, A0,A1,A2,A3, C0,C1,C2>(in builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, A0,A1,A2,A3, C0,C1,C2>(builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -33,7 +33,7 @@ namespace ME.BECS.Jobs {
         }
 
         public static JobHandle Schedule<T, A0,A1,A2,A3, C0,C1,C2>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobFor4Aspects3Components<A0,A1,A2,A3, C0,C1,C2> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase {
-            staticQuery.builderDependsOn = job.Schedule<T, A0,A1,A2,A3, C0,C1,C2>(in staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, A0,A1,A2,A3, C0,C1,C2>(staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -54,13 +54,15 @@ namespace ME.BECS.Jobs {
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase
             where T : struct, IJobFor4Aspects3Components<A0,A1,A2,A3, C0,C1,C2> => JobProcess<T, A0,A1,A2,A3, C0,C1,C2>.Initialize();
 
-        public static JobHandle Schedule<T, A0,A1,A2,A3, C0,C1,C2>(this T jobData, in CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, A0,A1,A2,A3, C0,C1,C2>(this T jobData, CommandBuffer* buffer, bool unsafeMode, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase
             where T : struct, IJobFor4Aspects3Components<A0,A1,A2,A3, C0,C1,C2> {
             
+            buffer->sync = true;
             if (scheduleMode == ScheduleMode.Parallel) {
                 
+                buffer->sync = false;
                 //dependsOn = new StartParallelJob() {
                 //                buffer = buffer,
                 //            }.ScheduleSingle(dependsOn);
@@ -69,7 +71,6 @@ namespace ME.BECS.Jobs {
 
             }
             
-            buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);
