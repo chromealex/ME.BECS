@@ -12,7 +12,7 @@ namespace ME.BECS {
 
         public struct Item {
 
-            public void* data;
+            public safe_ptr data;
             public System.IntPtr callback;
             public bool callbackSet;
             public GCHandle handle;
@@ -54,7 +54,7 @@ namespace ME.BECS {
 
     }
 
-    public unsafe delegate void GlobalEventWithDataCallback(void* data);
+    public unsafe delegate void GlobalEventWithDataCallback(safe_ptr data);
     public delegate void GlobalEventCallback();
 
     public static unsafe class GlobalEvents {
@@ -82,7 +82,7 @@ namespace ME.BECS {
         /// <param name="context"></param>
         [INLINE(256)]
         public static void RaiseEvent(in Event evt, in SystemContext context) {
-            RaiseEvent(in evt, null, in context);
+            RaiseEvent(in evt, default, in context);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace ME.BECS {
         /// <param name="jobInfo"></param>
         [INLINE(256)]
         public static void RaiseEvent(in Event evt, in JobInfo jobInfo) {
-            RaiseEvent(in evt, null, jobInfo.worldId);
+            RaiseEvent(in evt, default, jobInfo.worldId);
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace ME.BECS {
         /// <param name="data"></param>
         /// <param name="jobInfo"></param>
         [INLINE(256)]
-        public static void RaiseEvent(in Event evt, void* data, in JobInfo jobInfo) {
+        public static void RaiseEvent(in Event evt, safe_ptr data, in JobInfo jobInfo) {
             RaiseEvent(in evt, data, jobInfo.worldId);
         }
 
@@ -113,7 +113,7 @@ namespace ME.BECS {
         /// <param name="data"></param>
         /// <param name="context"></param>
         [INLINE(256)]
-        public static void RaiseEvent(in Event evt, void* data, in SystemContext context) {
+        public static void RaiseEvent(in Event evt, safe_ptr data, in SystemContext context) {
             RaiseEvent(in evt, data, context.world.id);
         }
         
@@ -124,7 +124,7 @@ namespace ME.BECS {
         /// <param name="data"></param>
         /// <param name="logicWorldId"></param>
         [INLINE(256)]
-        public static void RaiseEvent(in Event evt, void* data, ushort logicWorldId) {
+        public static void RaiseEvent(in Event evt, safe_ptr data, ushort logicWorldId) {
 
             var world = Worlds.GetWorld(evt.worldId);
             //var logicWorld = Worlds.GetWorld(logicWorldId);
@@ -265,7 +265,7 @@ namespace ME.BECS {
                             } catch (System.Exception ex) {
                                 UnityEngine.Debug.LogException(ex);
                             }
-                            _free((safe_ptr)val.data);
+                            _free(val.data);
                         } else {
                             var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
                             try {
