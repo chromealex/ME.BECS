@@ -27,7 +27,8 @@ namespace ME.BECS {
 
         public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.value.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.value.Read(this.ent.id, this.ent.gen);
-        public readonly int treeIndex => this.readQuadTreeElement.treeIndex;
+        public readonly ref int treeIndex => ref this.quadTreeElement.treeIndex;
+        public readonly ref readonly int readTreeIndex => ref this.readQuadTreeElement.treeIndex;
 
     }
     
@@ -49,7 +50,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
-                var tree = (NativeTrees.NativeOctree<Ent>*)this.quadTrees[quadTreeAspect.treeIndex];
+                var tree = (NativeTrees.NativeOctree<Ent>*)this.quadTrees[quadTreeAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (quadTreeAspect.readQuadTreeElement.ignoreY == true) pos.y = 0f;
