@@ -25,7 +25,7 @@ namespace ME.BECS.Editor {
 
             if (this.world.isCreated == true) {
                 
-                this.DrawAllocator(root, in this.world.state->allocator);
+                this.DrawAllocator(root, in this.world.state.ptr->allocator);
                 
             }
 
@@ -35,7 +35,7 @@ namespace ME.BECS.Editor {
 
             if (this.world.isCreated == true) {
                 
-                this.RedrawAllocator(this.scrollRoot.contentContainer, in this.world.state->allocator);
+                this.RedrawAllocator(this.scrollRoot.contentContainer, in this.world.state.ptr->allocator);
                 
             }
             
@@ -172,20 +172,18 @@ namespace ME.BECS.Editor {
             this.reservedSize.text = EditorUtils.BytesToString(allocator.GetReservedSize());
             this.usedSize.text = EditorUtils.BytesToString(allocator.GetUsedSize());
             this.componentsSize.text = EditorUtils.BytesToString((int)Components.GetReservedSizeInBytes(this.world.state));
-            this.archetypesSize.text = EditorUtils.BytesToString((int)this.world.state->archetypes.GetReservedSizeInBytes(this.world.state));
+            this.archetypesSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->archetypes.GetReservedSizeInBytes(this.world.state));
             this.batchesSize.text = EditorUtils.BytesToString((int)Batches.GetReservedSizeInBytes(this.world.state));
-            this.entitiesSize.text = EditorUtils.BytesToString((int)this.world.state->entities.GetReservedSizeInBytes(this.world.state));
-            this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state->aspectsStorage.GetReservedSizeInBytes(this.world.state));
+            this.entitiesSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->entities.GetReservedSizeInBytes(this.world.state));
+            this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->aspectsStorage.GetReservedSizeInBytes(this.world.state));
             this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)CollectionsRegistry.GetReservedSizeInBytes(this.world.state));
             {
                 var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Allocator;
-                this.persistentAllocatorSize.text =
-                    $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+                this.persistentAllocatorSize.text = $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
             }
             {
-                var allocatorInstance = WorldsTempAllocator.allocatorTemp.Allocator;
-                this.tempAllocatorSize.text = 
-                    $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+                var allocatorInstance = WorldsTempAllocator.allocatorTemp.Get(this.world.id).Allocator;
+                this.tempAllocatorSize.text = $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
             }
 
         }

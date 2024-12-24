@@ -47,13 +47,13 @@ namespace ME.BECS.Jobs {
                 if (instanceGo == null) throw new System.Exception("Dispatcher instanceGo is required");
                 //using (var waitHandle = new ManualResetEvent(false)) {
                 var spinLock = _make(new LockSpinner());
-                spinLock->LockWhile();
+                spinLock.ptr->LockWhile();
                 lock (this.mAsyncWorkQueue) {
-                    this.mAsyncWorkQueue.Add(new WorkRequest(callback, state, spinLock));
+                    this.mAsyncWorkQueue.Add(new WorkRequest(callback, state, spinLock.ptr));
                 }
 
                 var max = 100_000;
-                while (spinLock->IsLocked == true) {
+                while (spinLock.ptr->IsLocked == true) {
                     // wait for unlock
                     if (--max == 0) {
                         UnityEngine.Debug.LogError("max iter");
@@ -61,8 +61,8 @@ namespace ME.BECS.Jobs {
                     }
                 }
 
-                if (spinLock->IsLocked == true) {
-                    spinLock->UnlockWhile();
+                if (spinLock.ptr->IsLocked == true) {
+                    spinLock.ptr->UnlockWhile();
                 }
                 _free(spinLock);
 
@@ -122,7 +122,7 @@ namespace ME.BECS.Jobs {
                 try {
                     this.mDelegateCallback(this.mDelegateState);
                 } finally {
-                    if (spinLock->IsLocked == true) {
+                    if (this.spinLock->IsLocked == true) {
                         this.spinLock->UnlockWhile();
                     }
                 }

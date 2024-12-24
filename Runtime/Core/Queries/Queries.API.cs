@@ -7,12 +7,12 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
-    public unsafe ref struct QueryContext {
+    public ref struct QueryContext {
 
-        internal State* state;
+        internal safe_ptr<State> state;
         internal ushort worldId;
 
-        public static QueryContext Create(State* state, ushort worldId) {
+        public static QueryContext Create(safe_ptr<State> state, ushort worldId) {
             return new QueryContext() { state = state, worldId = worldId, };
         }
 
@@ -52,13 +52,14 @@ namespace ME.BECS {
         private struct BuilderArchetypesJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public safe_ptr<State> state;
             [NativeDisableUnsafePtrRestriction]
-            public QueryData* queryData;
+            public safe_ptr<QueryData> queryData;
+            public Unity.Collections.Allocator allocator;
             
             public void Execute() {
 
-                this.queryData->archetypesBits = new TempBitArray(in this.state->allocator, this.state->archetypes.allArchetypesForQuery, Constants.ALLOCATOR_TEMP_ST);
+                this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
 
             }
 
@@ -80,21 +81,23 @@ namespace ME.BECS {
 
             //dependsOn = Batches.Apply(dependsOn, queryContext.state);
             //dependsOn = Batches.Open(dependsOn, queryContext.state);
-            
+
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
             var builder = new QueryBuilder {
-                queryData = _make(new QueryData(), Constants.ALLOCATOR_TEMP),
+                queryData = _make(new QueryData(), allocator),
                 commandBuffer = _make(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
-                }, Constants.ALLOCATOR_TEMP),
+                }, allocator),
                 isCreated = true,
-                allocator = Constants.ALLOCATOR_TEMP,
+                allocator = allocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             
             var job = new BuilderArchetypesJob() {
                 state = queryContext.state,
                 queryData = builder.queryData,
+                allocator = allocator,
             };
             dependsOn = job.Schedule(dependsOn);
             builder.builderDependsOn = dependsOn;//Batches.Close(dependsOn, queryContext.state);

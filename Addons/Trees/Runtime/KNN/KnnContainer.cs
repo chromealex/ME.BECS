@@ -74,7 +74,7 @@ namespace KNN {
 			public MinMaxHeap<int> MaxHeap;
 			public MinMaxHeap<QueryNode> MinHeap;
 
-			public static KnnQueryTemp Create(int kCapacity) {
+			public static KnnQueryTemp Create(uint kCapacity) {
 				KnnQueryTemp temp;
 				temp.MaxHeap = new MinMaxHeap<int>(kCapacity, Allocator.Temp);
 				
@@ -558,7 +558,7 @@ namespace KNN {
 							// Unlike the k-query we want to keep _all_ objects in range
 							// So resize the heap when pushing this node
 							if (temp.MaxHeap.IsFull) {
-								temp.MaxHeap.Resize(temp.MaxHeap.Count * 2);
+								temp.MaxHeap.Resize(temp.MaxHeap.Count * 2u);
 							}
 	
 							temp.MaxHeap.PushObjMax(index, sqrDist);
@@ -654,16 +654,16 @@ namespace KNN {
 			temp.Dispose();
 		}
 
-		public int QueryKNearest(float3 queryPosition, NativeSlice<T> result) {
+		public uint QueryKNearest(float3 queryPosition, NativeSlice<T> result) {
 			return QueryKNearest(queryPosition, float.PositiveInfinity, result);
 		}
 
-		public int QueryKNearest(float3 queryPosition, float range, NativeSlice<T> result) {
+		public uint QueryKNearest(float3 queryPosition, float range, NativeSlice<T> result) {
 
 			if (this.m_rootNodeIndex.Value == -1) return 0;
 
-			var temp = KnnQueryTemp.Create(result.Length);
-			int k = result.Length;
+			var temp = KnnQueryTemp.Create((uint)result.Length);
+			uint k = (uint)result.Length;
 			
 			// Biggest Smallest Squared Radius
 			float bssr = range * range;

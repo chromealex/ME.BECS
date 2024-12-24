@@ -17,7 +17,7 @@ namespace ME.BECS.Jobs {
             builder.WithAspect<A0>(); builder.WithAspect<A1>(); builder.WithAspect<A2>(); builder.WithAspect<A3>(); builder.WithAspect<A4>(); builder.WithAspect<A5>(); builder.WithAspect<A6>(); builder.WithAspect<A7>(); builder.WithAspect<A8>();
             builder.With<C0>();
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(in builder.commandBuffer, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(in builder.commandBuffer.ptr, builder.isUnsafe, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -28,12 +28,12 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobFor9Aspects1Components<A0,A1,A2,A3,A4,A5,A6,A7,A8, C0> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where A4 : unmanaged, IAspect where A5 : unmanaged, IAspect where A6 : unmanaged, IAspect where A7 : unmanaged, IAspect where A8 : unmanaged, IAspect where C0 : unmanaged, IComponentBase {
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(in job);
         }
 
         public static JobHandle Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobFor9Aspects1Components<A0,A1,A2,A3,A4,A5,A6,A7,A8, C0> where A0 : unmanaged, IAspect where A1 : unmanaged, IAspect where A2 : unmanaged, IAspect where A3 : unmanaged, IAspect where A4 : unmanaged, IAspect where A5 : unmanaged, IAspect where A6 : unmanaged, IAspect where A7 : unmanaged, IAspect where A8 : unmanaged, IAspect where C0 : unmanaged, IComponentBase {
-            staticQuery.builderDependsOn = job.Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(in staticQuery.commandBuffer, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>(in staticQuery.commandBuffer.ptr, staticQuery.isUnsafe, staticQuery.parallelForBatch, staticQuery.scheduleMode, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -72,17 +72,17 @@ namespace ME.BECS.Jobs {
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(_address(ref jobData), buffer, unsafeMode, scheduleMode);
+            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);
             var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? JobReflectionUnsafeData<T>.data.Data : JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, A0,A1,A2,A3,A4,A5,A6,A7,A8, C0>() {
                 scheduleMode = scheduleMode,
                 jobData = jobData,
                 buffer = buffer,
-                a0 = buffer->state->aspectsStorage.Initialize<A0>(buffer->state),a1 = buffer->state->aspectsStorage.Initialize<A1>(buffer->state),a2 = buffer->state->aspectsStorage.Initialize<A2>(buffer->state),a3 = buffer->state->aspectsStorage.Initialize<A3>(buffer->state),a4 = buffer->state->aspectsStorage.Initialize<A4>(buffer->state),a5 = buffer->state->aspectsStorage.Initialize<A5>(buffer->state),a6 = buffer->state->aspectsStorage.Initialize<A6>(buffer->state),a7 = buffer->state->aspectsStorage.Initialize<A7>(buffer->state),a8 = buffer->state->aspectsStorage.Initialize<A8>(buffer->state),
-                c0 = buffer->state->components.GetRW<C0>(buffer->state, buffer->worldId),
+                a0 = buffer->state.ptr->aspectsStorage.Initialize<A0>(buffer->state),a1 = buffer->state.ptr->aspectsStorage.Initialize<A1>(buffer->state),a2 = buffer->state.ptr->aspectsStorage.Initialize<A2>(buffer->state),a3 = buffer->state.ptr->aspectsStorage.Initialize<A3>(buffer->state),a4 = buffer->state.ptr->aspectsStorage.Initialize<A4>(buffer->state),a5 = buffer->state.ptr->aspectsStorage.Initialize<A5>(buffer->state),a6 = buffer->state.ptr->aspectsStorage.Initialize<A6>(buffer->state),a7 = buffer->state.ptr->aspectsStorage.Initialize<A7>(buffer->state),a8 = buffer->state.ptr->aspectsStorage.Initialize<A8>(buffer->state),
+                c0 = buffer->state.ptr->components.GetRW<C0>(buffer->state, buffer->worldId),
             };
-            data = _address(ref dataVal);
+            data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             #endif
             

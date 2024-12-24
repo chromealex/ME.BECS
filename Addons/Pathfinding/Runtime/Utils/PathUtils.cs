@@ -64,7 +64,7 @@ namespace ME.BECS.Pathfinding {
                         var chunkIndex = Graph.GetChunkIndex(in root, position);
                         ref var prevPath = ref target.Get<TargetPathComponent>().path;
                         var prevRoot = prevPath.graph.Read<RootGraphComponent>();
-                        prevPath.chunks[state, chunkIndex].flowField.Dispose(ref state->allocator);
+                        prevPath.chunks[state, chunkIndex].flowField.Dispose(ref state.ptr->allocator);
                         var prevChunkIndex = Graph.GetChunkIndex(in prevRoot, prevPath.to);
                         if (chunkIndex != prevChunkIndex) {
                             // chunk changed - repath

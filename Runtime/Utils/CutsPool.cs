@@ -12,9 +12,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _address<T>(ref T val) where T : unmanaged {
+        public static safe_ptr<T> _address<T>(ref T val) where T : unmanaged {
 
-            return (T*)UnsafeUtility.AddressOf(ref val);
+            return new safe_ptr<T>((T*)UnsafeUtility.AddressOf(ref val), TSize<T>.size);
 
         }
 
@@ -26,7 +26,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _makeArray<T>(uint elementsCount) where T : unmanaged {
+        public static safe_ptr<T> _makeArray<T>(uint elementsCount) where T : unmanaged {
             
             return Cuts._makeArray<T>(elementsCount);
             //return Pools.Pop<T>(elementsCount);
@@ -34,14 +34,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _makeArray<T>(uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static safe_ptr<T> _makeArray<T>(uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             return Cuts._makeArray<T>(elementsCount, allocator);
             
         }
 
         [INLINE(256)]
-        public static T* _make<T>() where T : unmanaged {
+        public static safe_ptr<T> _make<T>() where T : unmanaged {
 
             return Cuts._makeDefault<T>();
             //return Pools.Pop<T>();
@@ -49,7 +49,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _make<T>(T obj) where T : unmanaged {
+        public static safe_ptr<T> _make<T>(T obj) where T : unmanaged {
 
             return Cuts._make(obj);
             //return Pools.Pop<T>(obj);
@@ -57,50 +57,45 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static T* _make<T>(T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static safe_ptr<T> _make<T>(T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
 
             return Cuts._make(obj, allocator);
             
         }
 
         [INLINE(256)]
-        public static T* _make<T>(in T obj) where T : unmanaged {
-
-            return Cuts._make(in obj);
-            //return Pools.Pop<T>(obj);
-
-        }
-
+        public static safe_ptr<T> _make<T>(in T obj) where T : unmanaged => Cuts._make(in obj);
+        
         [INLINE(256)]
-        public static void _memclear(void* ptr, uint lengthInBytes) {
+        public static void _memclear(safe_ptr ptr, uint lengthInBytes) {
             
-            UnsafeUtility.MemClear(ptr, lengthInBytes);
+            Cuts._memclear(ptr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memcpy(void* srcPtr, void* dstPtr, int lengthInBytes) {
+        public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, int lengthInBytes) {
             
-            UnsafeUtility.MemCpy(dstPtr, srcPtr, lengthInBytes);
-            
-        }
-
-        [INLINE(256)]
-        public static void _memcpy(void* srcPtr, void* dstPtr, uint lengthInBytes) {
-            
-            UnsafeUtility.MemCpy(dstPtr, srcPtr, lengthInBytes);
+            Cuts._memcpy(srcPtr, dstPtr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _memmove(void* srcPtr, void* dstPtr, uint lengthInBytes) {
+        public static void _memcpy(safe_ptr srcPtr, safe_ptr dstPtr, uint lengthInBytes) {
             
-            UnsafeUtility.MemMove(dstPtr, srcPtr, lengthInBytes);
+            Cuts._memcpy(srcPtr, dstPtr, lengthInBytes);
             
         }
 
         [INLINE(256)]
-        public static void _free<T>(ref T* obj) where T : unmanaged {
+        public static void _memmove(safe_ptr srcPtr, safe_ptr dstPtr, uint lengthInBytes) {
+            
+            Cuts._memmove(srcPtr, dstPtr, lengthInBytes);
+            
+        }
+
+        [INLINE(256)]
+        public static void _free<T>(ref safe_ptr<T> obj) where T : unmanaged {
             
             Cuts._free(ref obj);
             //Pools.Push(ref obj);
@@ -108,7 +103,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _free<T>(T* obj) where T : unmanaged {
+        public static void _free<T>(safe_ptr<T> obj) where T : unmanaged {
             
             Cuts._free(obj);
             //Pools.Push(obj);
@@ -116,7 +111,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _freeArray<T>(T* obj, uint elementsCount) where T : unmanaged {
+        public static void _freeArray<T>(safe_ptr<T> obj, uint elementsCount) where T : unmanaged {
             
             Cuts._free(obj);
             //Pools.Push(obj, elementsCount);
@@ -124,7 +119,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void _freeArray<T>(T* obj, uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static void _freeArray<T>(safe_ptr<T> obj, uint elementsCount, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             Cuts._free(obj, allocator);
 
@@ -132,28 +127,28 @@ namespace ME.BECS {
 
         #region MAKE/FREE unity allocator
         [INLINE(256)]
-        public static void* _make(int size, int align, Unity.Collections.Allocator allocator) {
+        public static safe_ptr _make(int size, int align, Unity.Collections.Allocator allocator) {
             
             return Cuts._make(size, align, allocator);
 
         }
         
         [INLINE(256)]
-        public static void* _make(uint size, int align, Unity.Collections.Allocator allocator) {
+        public static safe_ptr _make(uint size, int align, Unity.Collections.Allocator allocator) {
 
             return Cuts._make(size, align, allocator);
 
         }
 
         [INLINE(256)]
-        public static void _free<T>(T* obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static void _free<T>(safe_ptr<T> obj, Unity.Collections.Allocator allocator) where T : unmanaged {
 
             Cuts._free(obj, allocator);
 
         }
 
         [INLINE(256)]
-        public static void _free(void* obj, Unity.Collections.Allocator allocator) {
+        public static void _free(safe_ptr obj, Unity.Collections.Allocator allocator) {
             
             Cuts._free(obj, allocator);
 

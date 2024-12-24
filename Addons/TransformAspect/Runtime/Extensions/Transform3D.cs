@@ -103,16 +103,16 @@ namespace ME.BECS.Transforms {
             var cnt = ent.children.Count;
             if (cnt > 0u) {
 
-                var queue = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>((int)cnt, Constants.ALLOCATOR_TEMP_ST);
+                var queue = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>((int)cnt, Constants.ALLOCATOR_TEMP);
                 queue.Add(ent);
                 while (queue.Length > 0) {
                     var entData = queue[0];
                     queue.RemoveAtSwapBack(0);
                     cnt = entData.children.Count;
                     if (cnt > 0u) {
-                        var children = (Ent*)entData.children.GetUnsafePtr(in entData.ent.World.state->allocator);
+                        var children = (safe_ptr<Ent>)entData.children.GetUnsafePtr(in entData.ent.World.state.ptr->allocator);
                         for (uint i = 0; i < cnt; ++i) {
-                            var child = *(children + i);
+                            var child = *(children + i).ptr;
                             var tr = child.GetAspect<TransformAspect>();
                             CalculateMatrix(in entData, in tr);
                             queue.Add(tr);

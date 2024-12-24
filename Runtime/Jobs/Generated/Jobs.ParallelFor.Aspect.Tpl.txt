@@ -18,7 +18,7 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             {count( )[builder.WithAspect<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in builder.commandBuffer, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -29,12 +29,12 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T, {count(,)[T#i#]}>(in job);
         }
 
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IAspect]} {
-            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.isUnsafe, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -53,23 +53,23 @@ namespace ME.BECS.Jobs {
         
         public static void JobEarlyInitialize<T, {count(,)[T#i#]}>() {count( )[where T#i# : unmanaged, IAspect]} where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
         
-        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
+        public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {
             
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(_address(ref jobData), buffer, unsafeMode, ScheduleMode.Parallel);
+            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, ScheduleMode.Parallel);
             var parameters = new JobsUtility.JobScheduleParameters(data, unsafeMode == true ? JobReflectionUnsafeData<T>.data.Data : JobReflectionData<T>.data.Data, dependsOn, ScheduleMode.Parallel);
             #else
             var dataVal = new JobData<T, {count(,)[T#i#]}>() {
                 scheduleMode = ScheduleMode.Parallel,
                 jobData = jobData,
                 buffer = buffer,
-                {count[a#i# = buffer->state->aspectsStorage.Initialize<T#i#>(buffer->state),]}
+                {count[a#i# = buffer->state.ptr->aspectsStorage.Initialize<T#i#>(buffer->state),]}
             };
-            data = _address(ref dataVal);
+            data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, ScheduleMode.Parallel);
             #endif
             

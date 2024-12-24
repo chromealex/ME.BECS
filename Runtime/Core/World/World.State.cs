@@ -32,14 +32,14 @@ namespace ME.BECS {
         public bool IsCreated => this.tick != 0UL;
 
         [INLINE(256)]
-        public static State* Create(byte[] bytes) {
+        public static safe_ptr<State> Create(byte[] bytes) {
             State st = default;
             var state = st.Deserialize(bytes);
             return _make(state);
         }
 
         [INLINE(256)]
-        public static State* CreateDefault(AllocatorProperties allocatorProperties) {
+        public static safe_ptr<State> CreateDefault(AllocatorProperties allocatorProperties) {
             var state = new State() {
                 allocator = new MemoryAllocator().Initialize(allocatorProperties.sizeInBytesCapacity),
             };
@@ -47,26 +47,26 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static State* Clone(State* srcState) {
+        public static safe_ptr<State> Clone(safe_ptr<State> srcState) {
             var state = _make(new State());
-            state->CopyFrom(in *srcState);
+            state.ptr->CopyFrom(in *srcState.ptr);
             return state;
         }
 
         [INLINE(256)]
-        public static State* ClonePrepare(State* srcState) {
+        public static safe_ptr<State> ClonePrepare(safe_ptr<State> srcState) {
             var state = _make(new State());
-            state->CopyFromPrepare(in *srcState);
+            state.ptr->CopyFromPrepare(in *srcState.ptr);
             return state;
         }
 
         [INLINE(256)]
-        public static void CloneComplete(State* srcState, State* dstState, int index) {
-            dstState->CopyFromComplete(in *srcState, index);
+        public static void CloneComplete(safe_ptr<State> srcState, safe_ptr<State> dstState, int index) {
+            dstState.ptr->CopyFromComplete(in *srcState.ptr, index);
         }
 
         [INLINE(256)]
-        public State Initialize(State* statePtr, in StateProperties stateProperties) {
+        public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
             this.aspectsStorage = AspectsStorage.Create(statePtr);
             this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
@@ -92,9 +92,9 @@ namespace ME.BECS {
             
             public void Execute() {
                 if (this.worldState == WorldState.BeginTick) Context.Switch(in this.world);
-                this.world.state->worldState = this.worldState;
-                this.world.state->tickCheck = 1;
-                this.world.state->updateType = this.updateType;
+                this.world.state.ptr->worldState = this.worldState;
+                this.world.state.ptr->tickCheck = 1;
+                this.world.state.ptr->updateType = this.updateType;
             }
 
         }
@@ -103,10 +103,10 @@ namespace ME.BECS {
         private struct NextTickJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public safe_ptr<State> state;
             
             public void Execute() {
-                ++this.state->tick;
+                ++this.state.ptr->tick;
             }
 
         }
@@ -115,15 +115,15 @@ namespace ME.BECS {
         private struct BurstModeJob : IJobSingle {
 
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public safe_ptr<State> state;
             public bool mode;
             
             public void Execute() {
 
-                this.state->entities.BurstMode(this.state->allocator, this.mode);
-                this.state->batches.BurstMode(this.state->allocator, this.mode);
-                this.state->components.BurstMode(this.state->allocator, this.mode);
-                this.state->archetypes.BurstMode(this.state->allocator, this.mode);
+                this.state.ptr->entities.BurstMode(this.state.ptr->allocator, this.mode);
+                this.state.ptr->batches.BurstMode(this.state.ptr->allocator, this.mode);
+                this.state.ptr->components.BurstMode(this.state.ptr->allocator, this.mode);
+                this.state.ptr->archetypes.BurstMode(this.state.ptr->allocator, this.mode);
 
             }
 
@@ -140,7 +140,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Unity.Jobs.JobHandle NextTick(State* state, Unity.Jobs.JobHandle dependsOn) {
+        public static Unity.Jobs.JobHandle NextTick(safe_ptr<State> state, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new NextTickJob() {
                 state = state,
             }.ScheduleSingle(dependsOn);
@@ -148,7 +148,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Unity.Jobs.JobHandle BurstMode(State* state, bool mode, Unity.Jobs.JobHandle dependsOn) {
+        public static Unity.Jobs.JobHandle BurstMode(safe_ptr<State> state, bool mode, Unity.Jobs.JobHandle dependsOn) {
             #if USE_CACHE_PTR
             dependsOn = new BurstModeJob() {
                 state = state,

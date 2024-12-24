@@ -154,7 +154,7 @@ namespace ME.BECS {
             }
 
             this.previousFrameDependsOn.Complete();
-            WorldsTempAllocator.Reset();
+            WorldsTempAllocator.Reset(this.world.id);
             
         }
 

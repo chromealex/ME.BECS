@@ -22,14 +22,14 @@ namespace ME.BECS.Jobs {
 
         public static JobHandle ScheduleSingle<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
             return JobsUtility.Schedule(ref parameters);
             
         }
 
         public static JobHandle ScheduleSingleByRef<T>(ref this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
             return JobsUtility.Schedule(ref parameters);
             
         }

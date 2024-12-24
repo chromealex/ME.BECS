@@ -71,7 +71,7 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
-        public readonly unsafe void* GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);
             return this.arr.GetUnsafePtr(allocator);

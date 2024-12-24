@@ -297,8 +297,8 @@ namespace ME.BECS.FogOfWar {
             var yMax = (uint)math.min(y0 + sizeY, props.size.y);
             if (height > 0f) {
                 var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
-                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
                     var s = y * props.size.x;
                     var fromIdx = s + rMin;
@@ -317,8 +317,8 @@ namespace ME.BECS.FogOfWar {
                 }
             } else {
                 var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
-                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
                     var s = y * props.size.x;
                     var fromIdx = s + rMin;
@@ -369,8 +369,8 @@ namespace ME.BECS.FogOfWar {
             }
             if (height > 0f) {
                 var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
-                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
                     var s = y * props.size.x;
                     var fromIdx = s + rMin;
@@ -389,8 +389,8 @@ namespace ME.BECS.FogOfWar {
                 }
             } else {
                 var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
-                var exploredPtr = (byte*)map.explored.GetUnsafePtr();
+                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
                     var s = y * props.size.x;
                     var fromIdx = s + rMin;
@@ -410,7 +410,7 @@ namespace ME.BECS.FogOfWar {
             var radiusSqr = radius * radius;
             var rMin = math.min(radius, x0);
             var rMax = math.min(radius, (int)props.size.x);
-            var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+            var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
             for (var r = -rMin; r < rMax; ++r) {
 
                 var x = x0 + r;
@@ -467,7 +467,7 @@ namespace ME.BECS.FogOfWar {
                 rMax = math.min(radius, (int)props.size.x);
             }
 
-            var nodesPtr = (byte*)map.nodes.GetUnsafePtr();
+            var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
             for (var r = -rMin; r < rMax; ++r) {
 
                 var x = x0 + r;
@@ -579,7 +579,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static void CleanUpTexture(Unity.Collections.NativeArray<byte> data) {
-            _memclear(data.GetUnsafePtr(), TSize<byte>.sizeInt * data.Length);
+            _memclear((safe_ptr)data.GetUnsafePtr(), TSize<byte>.sizeInt * data.Length);
         }
 
         [INLINE(256)]

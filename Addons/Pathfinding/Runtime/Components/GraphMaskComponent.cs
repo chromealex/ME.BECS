@@ -30,7 +30,7 @@ namespace ME.BECS.Pathfinding {
         
         public unsafe void Destroy() {
 
-            var nextTick = this.nodes.ent.World.state->tick + 1UL;
+            var nextTick = this.nodes.ent.World.state.ptr->tick + 1UL;
             this.nodesLock.Lock();
             for (uint i = 0u; i < this.nodes.Count; ++i) {
                 var node = this.nodes[i];

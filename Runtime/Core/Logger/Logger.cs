@@ -31,26 +31,26 @@ namespace ME.BECS {
 
     public abstract unsafe class BaseLogger<T> where T : unmanaged, ILogger {
 
-        private static T* logger => (T*)Logger.logger;
+        private static safe_ptr<T> logger => (safe_ptr<T>)Logger.logger;
 
         [HIC]
         public static void Log(str text, bool showCallstack = false) {
-            logger->Log(text, showCallstack);
+            logger.ptr->Log(text, showCallstack);
         }
 
         [HIC]
         public static void Warning(str text, bool showCallstack = false) {
-            logger->Warning(text, showCallstack);
+            logger.ptr->Warning(text, showCallstack);
         }
 
         [HIC]
         public static void Error(str text, bool showCallstack = true) {
-            logger->Error(text, showCallstack);
+            logger.ptr->Error(text, showCallstack);
         }
 
         [HIC]
         public static void Exception(System.Exception ex, bool showCallstack = true) {
-            logger->Exception(ex, showCallstack);
+            logger.ptr->Exception(ex, showCallstack);
         }
 
     }
@@ -59,11 +59,11 @@ namespace ME.BECS {
 
         private static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN_REAL;
 
-        internal static void* logger = _make(new DummyLogger(), ALLOCATOR);
+        internal static safe_ptr logger = (safe_ptr)_make(new DummyLogger(), ALLOCATOR);
         
         public static void SetLogger<T>(T logger) where T : unmanaged, ILogger {
             Logger.logger = _make(TSize<T>.size, TAlign<T>.alignInt, ALLOCATOR);
-            _memcpy(&logger, Logger.logger, TSize<T>.size);
+            _memcpy((safe_ptr)(&logger), Logger.logger, TSize<T>.size);
         }
 
     }

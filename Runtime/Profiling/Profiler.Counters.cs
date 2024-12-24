@@ -130,27 +130,27 @@ namespace ME.BECS {
             marker.Begin();
             
             using (new ProfilerMarker("EntitiesCount").Auto()) {
-                ProfilerCountersDefinition.entitiesCount.Data.Sample(world.state->entities.EntitiesCount);
+                ProfilerCountersDefinition.entitiesCount.Data.Sample(world.state.ptr->entities.EntitiesCount);
             }
 
             using (new ProfilerMarker("Components").Auto()) {
                 ProfilerCountersDefinition.componentsSize.Data.Sample(Components.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("Archetypes").Auto()) {
-                ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state->archetypes.GetReservedSizeInBytes(world.state));
+                ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state.ptr->archetypes.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("EntitiesCount").Auto()) {
                 ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("Entities").Auto()) {
-                ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state->entities.GetReservedSizeInBytes(world.state));
+                ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state.ptr->entities.GetReservedSizeInBytes(world.state));
             }
             using (new ProfilerMarker("AspectsStorage").Auto()) {
-                ProfilerCountersDefinition.aspectStorageSize.Data.Sample(world.state->aspectsStorage.GetReservedSizeInBytes(world.state));
+                ProfilerCountersDefinition.aspectStorageSize.Data.Sample(world.state.ptr->aspectsStorage.GetReservedSizeInBytes(world.state));
             }
             
             using (new ProfilerMarker("Allocator").Auto()) {
-                world.state->allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);
+                world.state.ptr->allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);
                 ProfilerCountersDefinition.memoryAllocatorReserved.Data.Sample(reservedSize);
                 ProfilerCountersDefinition.memoryAllocatorUsed.Data.Sample(usedSize);
                 ProfilerCountersDefinition.memoryAllocatorFree.Data.Sample(freeSize);

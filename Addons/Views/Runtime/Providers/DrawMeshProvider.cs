@@ -83,7 +83,7 @@ namespace ME.BECS.Views {
             public NativeList<Ent> entities;
             public NativeList<Unity.Mathematics.float4x4> prefabWorldMatrices;
 
-            public void Dispose(State* state) {
+            public void Dispose(safe_ptr<State> state) {
 
                 this.matrices.Dispose();
                 this.entities.Dispose();
@@ -127,7 +127,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Commit(ViewsModuleData* data, JobHandle dependsOn) {
+        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
@@ -176,26 +176,26 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Spawn(ViewsModuleData* data, JobHandle dependsOn) {
+        public JobHandle Spawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
 
             dependsOn.Complete();
-            for (int i = 0; i < data->toAddTemp.Length; ++i) {
-                var entId = (uint)data->toAddTemp[i].prefabInfo.info->prefabPtr;
-                var ent = new Ent(entId, data->viewsWorld);
-                var worldEnt = data->toAddTemp[i].ent;
-                this.SpawnInstanceHierarchy(data, in data->viewsWorld, in worldEnt, in ent);
+            for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
+                var entId = (uint)data.ptr->toAddTemp[i].prefabInfo.info.ptr->prefabPtr;
+                var ent = new Ent(entId, data.ptr->viewsWorld);
+                var worldEnt = data.ptr->toAddTemp[i].ent;
+                this.SpawnInstanceHierarchy(data, in data.ptr->viewsWorld, in worldEnt, in ent);
                 
-                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), data->toAddTemp[i].prefabInfo.info, 0u);
-                data->renderingOnScene.Add(ref data->viewsWorld.state->allocator, instanceInfo);
+                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), data.ptr->toAddTemp[i].prefabInfo.info, 0u);
+                data.ptr->renderingOnScene.Add(ref data.ptr->viewsWorld.state.ptr->allocator, instanceInfo);
             }
-            dependsOn = Batches.Apply(dependsOn, in data->viewsWorld);
+            dependsOn = Batches.Apply(dependsOn, in data.ptr->viewsWorld);
 
             return dependsOn;
 
         }
 
         [INLINE(256)]
-        private void SpawnInstanceHierarchy(ViewsModuleData* data, in World world, in Ent worldEnt, in Ent prefabEnt) {
+        private void SpawnInstanceHierarchy(safe_ptr<ViewsModuleData> data, in World world, in Ent worldEnt, in Ent prefabEnt) {
             
             if (prefabEnt.Has<MeshRendererComponent>() == true &&
                 prefabEnt.Has<MeshFilterComponent>() == true) {
@@ -225,7 +225,7 @@ namespace ME.BECS.Views {
             
             ref readonly var children = ref prefabEnt.Read<ME.BECS.Transforms.ChildrenComponent>();
             for (uint i = 0u; i < children.list.Count; ++i) {
-                this.SpawnInstanceHierarchy(data, in world, in worldEnt, in children.list[in data->viewsWorld.state->allocator, i]);
+                this.SpawnInstanceHierarchy(data, in world, in worldEnt, in children.list[in data.ptr->viewsWorld.state.ptr->allocator, i]);
             }
 
         }
@@ -247,13 +247,13 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Despawn(ViewsModuleData* data, JobHandle dependsOn) {
+        public JobHandle Despawn(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
             
             dependsOn.Complete();
-            for (int i = 0; i < data->toRemoveTemp.Length; ++i) {
-                var entId = (uint)data->toRemoveTemp[i].prefabInfo->prefabPtr;
-                var ent = new Ent(entId, data->viewsWorld);
-                var worldEnt = new Ent((ulong)data->toRemoveTemp[i].obj);
+            for (int i = 0; i < data.ptr->toRemoveTemp.Length; ++i) {
+                var entId = (uint)data.ptr->toRemoveTemp[i].prefabInfo.ptr->prefabPtr;
+                var ent = new Ent(entId, data.ptr->viewsWorld);
+                var worldEnt = new Ent((ulong)data.ptr->toRemoveTemp[i].obj);
                 this.DespawnInstanceHierarchy(data, in worldEnt, in ent);
             }
             
@@ -262,7 +262,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        private void DespawnInstanceHierarchy(ViewsModuleData* data, in Ent worldEnt, in Ent prefabEnt) {
+        private void DespawnInstanceHierarchy(safe_ptr<ViewsModuleData> data, in Ent worldEnt, in Ent prefabEnt) {
             
             if (prefabEnt.Has<MeshRendererComponent>() == true &&
                 prefabEnt.Has<MeshFilterComponent>() == true) {
@@ -288,7 +288,7 @@ namespace ME.BECS.Views {
             
             ref readonly var children = ref prefabEnt.Read<ME.BECS.Transforms.ChildrenComponent>();
             for (uint i = 0u; i < children.list.Count; ++i) {
-                this.DespawnInstanceHierarchy(data, in worldEnt, in children.list[in data->viewsWorld.state->allocator, i]);
+                this.DespawnInstanceHierarchy(data, in worldEnt, in children.list[in data.ptr->viewsWorld.state.ptr->allocator, i]);
             }
             
         }
@@ -304,7 +304,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void Dispose(State* state, ViewsModuleData* data) {
+        public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
 
             foreach (var kv in this.objectsPerMeshAndMaterial) {
 
@@ -314,9 +314,9 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(ViewsModuleData* viewsModuleData, BECS.ObjectReferenceRegistryData data) {
+        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
 
-            viewsModuleData->prefabId = data.sourceId;
+            viewsModuleData.ptr->prefabId = data.sourceId;
             foreach (var item in data.items) {
                 if (item.IsValid() == false) continue;
                 if (item.source is EntityView entityView) {
@@ -326,7 +326,7 @@ namespace ME.BECS.Views {
 
         }
 
-        public ViewSource Register(ViewsModuleData* viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
+        public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
 
             ViewSource viewSource;
             if (prefab == null) {
@@ -343,18 +343,18 @@ namespace ME.BECS.Views {
             }
 
             var id = (uint)instanceId;
-            if (prefabId > 0u || viewsModuleData->instanceIdToPrefabId.TryGetValue(in viewsModuleData->viewsWorld.state->allocator, id, out prefabId) == false) {
+            if (prefabId > 0u || viewsModuleData.ptr->instanceIdToPrefabId.TryGetValue(in viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, out prefabId) == false) {
 
-                prefabId = prefabId > 0u ? prefabId : ++viewsModuleData->prefabId;
+                prefabId = prefabId > 0u ? prefabId : ++viewsModuleData.ptr->prefabId;
                 viewSource = new ViewSource() {
                     prefabId = prefabId,
                     providerId = ViewsModule.DRAW_MESH_PROVIDER_ID,
                 };
-                viewsModuleData->instanceIdToPrefabId.Add(ref viewsModuleData->viewsWorld.state->allocator, id, prefabId);
+                viewsModuleData.ptr->instanceIdToPrefabId.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, prefabId);
                 ViewsTypeInfo.types.TryGetValue(prefab.GetType(), out var typeInfo);
                 typeInfo.cullingType = prefab.cullingType;
                 var info = new SourceRegistry.Info() {
-                    prefabPtr = (System.IntPtr)ProvidersHelper.ConstructEntFromPrefab(prefab.transform, Ent.Null, in viewsModuleData->viewsWorld).id,
+                    prefabPtr = (System.IntPtr)ProvidersHelper.ConstructEntFromPrefab(prefab.transform, Ent.Null, in viewsModuleData.ptr->viewsWorld).id,
                     prefabId = prefabId,
                     typeInfo = typeInfo,
                     sceneSource = sceneSource,
@@ -366,7 +366,7 @@ namespace ME.BECS.Views {
                     HasDisableToPoolModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewDisableToPool).Any(),
                 };
                 
-                viewsModuleData->prefabIdToInfo.Add(ref viewsModuleData->viewsWorld.state->allocator, prefabId, new SourceRegistry.InfoRef(info));
+                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 
             } else {
 

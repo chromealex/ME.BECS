@@ -25,16 +25,16 @@ namespace ME.BECS {
         private uint aliveCount;
 
         [INLINE(256)]
-        public static void Lock(State* state, in Ent ent) {
-            state->entities.locksPerEntity[state, ent.id].Lock();
+        public static void Lock(safe_ptr<State> state, in Ent ent) {
+            state.ptr->entities.locksPerEntity[state, ent.id].Lock();
         }
 
         [INLINE(256)]
-        public static void Unlock(State* state, in Ent ent) {
-            state->entities.locksPerEntity[state, ent.id].Unlock();
+        public static void Unlock(safe_ptr<State> state, in Ent ent) {
+            state.ptr->entities.locksPerEntity[state, ent.id].Unlock();
         }
 
-        public uint GetReservedSizeInBytes(State* state) {
+        public uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (this.generations.IsCreated == false) return 0u;
 
@@ -63,25 +63,25 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Ents Create(State* state, uint entityCapacity) {
+        public static Ents Create(safe_ptr<State> state, uint entityCapacity) {
 
             if (entityCapacity == 0u) entityCapacity = 1u;
             
             var ents = new Ents() {
-                generations = new MemArray<ushort>(ref state->allocator, entityCapacity),
-                versions = new MemArray<uint>(ref state->allocator, entityCapacity),
-                seeds = new MemArray<uint>(ref state->allocator, entityCapacity),
-                versionsGroup = new MemArray<uint>(ref state->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u)),
-                aliveBits = new MemArray<bool>(ref state->allocator, entityCapacity),
-                free = new JobThreadStack<uint>(ref state->allocator, entityCapacity),
-                destroyed = new List<uint>(ref state->allocator, entityCapacity),
-                locksPerEntity = new MemArray<LockSpinner>(ref state->allocator, entityCapacity),
+                generations = new MemArray<ushort>(ref state.ptr->allocator, entityCapacity),
+                versions = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
+                seeds = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
+                versionsGroup = new MemArray<uint>(ref state.ptr->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u)),
+                aliveBits = new MemArray<bool>(ref state.ptr->allocator, entityCapacity),
+                free = new JobThreadStack<uint>(ref state.ptr->allocator, entityCapacity),
+                destroyed = new List<uint>(ref state.ptr->allocator, entityCapacity),
+                locksPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, entityCapacity),
                 readWriteSpinner = ReadWriteSpinner.Create(state),
             };
-            //var ptr = (uint*)ents.free.GetUnsafePtr(in state->allocator);
+            //var ptr = (uint*)ents.free.GetUnsafePtr(in state.ptr->allocator);
             for (uint i = ents.generations.Length, k = 0u; i > 0u; --i, ++k) {
                 //ents.free.PushNoChecks(i - 1u, ptr + k);
-                ents.free.Push(ref state->allocator, i - 1u);
+                ents.free.Push(ref state.ptr->allocator, i - 1u);
                 ++ents.entitiesCount;
             }
             return ents;
@@ -89,61 +89,61 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static bool IsAlive(State* state, in Ent ent) {
+        public static bool IsAlive(safe_ptr<State> state, in Ent ent) {
 
-            if (ent.id > state->entities.entitiesCount) return false;
-            state->entities.readWriteSpinner.ReadBegin(state);
-            var gen = state->entities.generations[in state->allocator, ent.id];
-            state->entities.readWriteSpinner.ReadEnd(state);
+            if (ent.id > state.ptr->entities.entitiesCount) return false;
+            state.ptr->entities.readWriteSpinner.ReadBegin(state);
+            var gen = state.ptr->entities.generations[in state.ptr->allocator, ent.id];
+            state.ptr->entities.readWriteSpinner.ReadEnd(state);
             return gen > 0 && ent.gen == gen;
 
         }
 
         [INLINE(256)]
-        public static bool IsAlive(State* state, uint entId, out ushort gen) {
+        public static bool IsAlive(safe_ptr<State> state, uint entId, out ushort gen) {
 
             gen = 0;
-            if (entId > state->entities.entitiesCount) return false;
-            if (entId >= state->entities.aliveBits.Length || state->entities.aliveBits[in state->allocator, (int)entId] == false) return false;
-            state->entities.readWriteSpinner.ReadBegin(state);
-            gen = state->entities.generations[in state->allocator, entId];
-            state->entities.readWriteSpinner.ReadEnd(state);
+            if (entId > state.ptr->entities.entitiesCount) return false;
+            if (entId >= state.ptr->entities.aliveBits.Length || state.ptr->entities.aliveBits[in state.ptr->allocator, (int)entId] == false) return false;
+            state.ptr->entities.readWriteSpinner.ReadBegin(state);
+            gen = state.ptr->entities.generations[in state.ptr->allocator, entId];
+            state.ptr->entities.readWriteSpinner.ReadEnd(state);
             return true;
 
         }
 
         [INLINE(256)]
-        public static void Initialize(State* state, UnsafeList<Ent>* list, uint maxId) {
+        public static void Initialize(safe_ptr<State> state, UnsafeList<Ent>* list, uint maxId) {
             
             const ushort version = 1;
             
-            state->entities.readWriteSpinner.WriteBegin(state);
+            state.ptr->entities.readWriteSpinner.WriteBegin(state);
             
             // Resize by maxId
-            state->entities.generations.Resize(ref state->allocator, maxId + 1u, 2);
-            state->entities.versionsGroup.Resize(ref state->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
-            state->entities.versions.Resize(ref state->allocator, maxId + 1u, 2);
-            state->entities.seeds.Resize(ref state->allocator, maxId + 1u, 2);
-            state->entities.aliveBits.Resize(ref state->allocator, maxId + 1u, 1);
+            state.ptr->entities.generations.Resize(ref state.ptr->allocator, maxId + 1u, 2);
+            state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
+            state.ptr->entities.versions.Resize(ref state.ptr->allocator, maxId + 1u, 2);
+            state.ptr->entities.seeds.Resize(ref state.ptr->allocator, maxId + 1u, 2);
+            state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u, 1);
             
             // Apply list
             for (int i = 0; i < list->Length; ++i) {
                 var ent = list->ElementAt(i);
-                state->entities.generations[in state->allocator, ent.id] = ent.gen;
-                state->entities.versions[in state->allocator, ent.id] = version;
-                state->entities.aliveBits[in state->allocator, (int)ent.id] = true;
+                state.ptr->entities.generations[in state.ptr->allocator, ent.id] = ent.gen;
+                state.ptr->entities.versions[in state.ptr->allocator, ent.id] = version;
+                state.ptr->entities.aliveBits[in state.ptr->allocator, (int)ent.id] = true;
             }
 
-            state->entities.readWriteSpinner.WriteEnd();
+            state.ptr->entities.readWriteSpinner.WriteEnd();
 
         }
 
         [INLINE(256)]
-        public static void EnsureFree(State* state, ushort worldId, uint count) {
+        public static void EnsureFree(safe_ptr<State> state, ushort worldId, uint count) {
             
             E.IS_IN_TICK(state);
 
-            var delta = (int)count - (int)state->entities.free.Count;
+            var delta = (int)count - (int)state.ptr->entities.free.Count;
             if (delta > 0) {
                 for (int i = 0; i < delta; ++i) {
                     var ent = Ent.New_INTERNAL(worldId, default);
@@ -155,35 +155,35 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Ent Add(State* state, ushort worldId, out bool reused, in JobInfo jobInfo) {
+        public static Ent Add(safe_ptr<State> state, ushort worldId, out bool reused, in JobInfo jobInfo) {
 
             E.IS_IN_TICK(state);
             
             const ushort version = 1;
             
             var idx = 0u;
-            var cnt = state->entities.free.Count;
+            var cnt = state.ptr->entities.free.Count;
             if (cnt > jobInfo.Offset) {
-                state->entities.popLock.Lock();
-                cnt = state->entities.free.Count;
+                state.ptr->entities.popLock.Lock();
+                cnt = state.ptr->entities.free.Count;
                 if (cnt > jobInfo.Offset) {
-                    idx = state->entities.free.Pop(in state->allocator, in jobInfo);
+                    idx = state.ptr->entities.free.Pop(in state.ptr->allocator, in jobInfo);
                 }
-                state->entities.popLock.Unlock();
+                state.ptr->entities.popLock.Unlock();
             }
             
             if (cnt > 0u) {
 
                 reused = true;
-                JobUtils.Increment(ref state->entities.aliveCount);
-                state->entities.readWriteSpinner.ReadBegin(state);
-                var nextGen = ++state->entities.generations[in state->allocator, idx];
-                state->entities.versions[in state->allocator, idx] = version;
-                state->entities.seeds[in state->allocator, idx] = idx;
+                JobUtils.Increment(ref state.ptr->entities.aliveCount);
+                state.ptr->entities.readWriteSpinner.ReadBegin(state);
+                var nextGen = ++state.ptr->entities.generations[in state.ptr->allocator, idx];
+                state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
+                state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx;
                 var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * idx;
-                _memclear((byte*)state->entities.versionsGroup.GetUnsafePtr(in state->allocator) + groupsIndex * TSize<uint>.size, (StaticTypesGroupsBurst.maxId + 1u) * TSize<uint>.size);
-                state->entities.aliveBits[in state->allocator, idx] = true;
-                state->entities.readWriteSpinner.ReadEnd(state);
+                _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<uint>.size, (StaticTypesGroupsBurst.maxId + 1u) * TSize<uint>.size);
+                state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
+                state.ptr->entities.readWriteSpinner.ReadEnd(state);
                 return new Ent(idx, nextGen, worldId);
 
             } else {
@@ -192,22 +192,22 @@ namespace ME.BECS {
                 
                 reused = false;
                 const ushort gen = 1;
-                JobUtils.Increment(ref state->entities.aliveCount);
-                idx = JobUtils.Increment(ref state->entities.entitiesCount);
+                JobUtils.Increment(ref state.ptr->entities.aliveCount);
+                idx = JobUtils.Increment(ref state.ptr->entities.entitiesCount);
                 var ent = new Ent(idx - 1u, gen, worldId);
                 idx = ent.id;
-                state->entities.readWriteSpinner.WriteBegin(state);
-                state->entities.locksPerEntity.Resize(ref state->allocator, idx + 1u, 2);
-                state->entities.generations.Resize(ref state->allocator, idx + 1u, 2);
-                state->entities.generations[in state->allocator, idx] = gen;
-                state->entities.versionsGroup.Resize(ref state->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
-                state->entities.versions.Resize(ref state->allocator, idx + 1u, 2);
-                state->entities.versions[in state->allocator, idx] = version;
-                state->entities.seeds.Resize(ref state->allocator, idx + 1u, 2);
-                state->entities.seeds[in state->allocator, idx] = idx;
-                state->entities.aliveBits.Resize(ref state->allocator, idx + 1u, 1);
-                state->entities.aliveBits[in state->allocator, idx] = true;
-                state->entities.readWriteSpinner.WriteEnd();
+                state.ptr->entities.readWriteSpinner.WriteBegin(state);
+                state.ptr->entities.locksPerEntity.Resize(ref state.ptr->allocator, idx + 1u, 2);
+                state.ptr->entities.generations.Resize(ref state.ptr->allocator, idx + 1u, 2);
+                state.ptr->entities.generations[in state.ptr->allocator, idx] = gen;
+                state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
+                state.ptr->entities.versions.Resize(ref state.ptr->allocator, idx + 1u, 2);
+                state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
+                state.ptr->entities.seeds.Resize(ref state.ptr->allocator, idx + 1u, 2);
+                state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx;
+                state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, idx + 1u, 1);
+                state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
+                state.ptr->entities.readWriteSpinner.WriteEnd();
                 return ent;
 
             }
@@ -215,89 +215,89 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void RemoveThreaded(State* state, uint entId) {
+        public static void RemoveThreaded(safe_ptr<State> state, uint entId) {
             
-            JobUtils.Decrement(ref state->entities.aliveCount);
-            state->entities.readWriteSpinner.ReadBegin(state);
-            ++state->entities.generations[in state->allocator, entId];
-            state->entities.aliveBits[in state->allocator, entId] = false;
-            state->entities.readWriteSpinner.ReadEnd(state);
+            JobUtils.Decrement(ref state.ptr->entities.aliveCount);
+            state.ptr->entities.readWriteSpinner.ReadBegin(state);
+            ++state.ptr->entities.generations[in state.ptr->allocator, entId];
+            state.ptr->entities.aliveBits[in state.ptr->allocator, entId] = false;
+            state.ptr->entities.readWriteSpinner.ReadEnd(state);
 
         }
 
         [INLINE(256)]
-        public static void Remove(State* state, in Ent ent) {
+        public static void Remove(safe_ptr<State> state, in Ent ent) {
             
             E.IS_IN_TICK(state);
             
             Ents.RemoveThreaded(state, ent.id);
 
-            state->entities.destroyedLock.Lock();
-            state->entities.destroyed.Add(ref state->allocator, ent.id);
-            state->entities.destroyedLock.Unlock();
+            state.ptr->entities.destroyedLock.Lock();
+            state.ptr->entities.destroyed.Add(ref state.ptr->allocator, ent.id);
+            state.ptr->entities.destroyedLock.Unlock();
             
         }
 
         [INLINE(256)]
-        public static void ApplyDestroyed(State* state) {
+        public static void ApplyDestroyed(safe_ptr<State> state) {
 
-            state->entities.destroyedLock.Lock();
-            if (state->entities.destroyed.Count == 0u) {
-                state->entities.destroyedLock.Unlock();
+            state.ptr->entities.destroyedLock.Lock();
+            if (state.ptr->entities.destroyed.Count == 0u) {
+                state.ptr->entities.destroyedLock.Unlock();
                 return;
             }
             {
-                state->entities.destroyed.Sort<uint>(state);
-                state->entities.popLock.Lock();
-                state->entities.free.PushRange(ref state->allocator, state->entities.destroyed);
-                state->entities.popLock.Unlock();
-                state->entities.destroyed.Clear();
+                state.ptr->entities.destroyed.Sort<uint>(state);
+                state.ptr->entities.popLock.Lock();
+                state.ptr->entities.free.PushRange(ref state.ptr->allocator, state.ptr->entities.destroyed);
+                state.ptr->entities.popLock.Unlock();
+                state.ptr->entities.destroyed.Clear();
             }
-            state->entities.destroyedLock.Unlock();
+            state.ptr->entities.destroyedLock.Unlock();
 
         }
 
         [INLINE(256)]
-        public static ushort GetGeneration(State* state, uint id) {
+        public static ushort GetGeneration(safe_ptr<State> state, uint id) {
 
-            if (id >= state->entities.generations.Length) return 0;
-            state->entities.readWriteSpinner.ReadBegin(state);
-            var gen = state->entities.generations[in state->allocator, id];
-            state->entities.readWriteSpinner.ReadEnd(state);
+            if (id >= state.ptr->entities.generations.Length) return 0;
+            state.ptr->entities.readWriteSpinner.ReadBegin(state);
+            var gen = state.ptr->entities.generations[in state.ptr->allocator, id];
+            state.ptr->entities.readWriteSpinner.ReadEnd(state);
             return gen;
 
         }
 
         [INLINE(256)]
-        public static uint GetVersion(State* state, in Ent ent) {
+        public static uint GetVersion(safe_ptr<State> state, in Ent ent) {
 
-            if (ent.id >= state->entities.versions.Length) return 0u;
-            state->entities.readWriteSpinner.ReadBegin(state);
-            var version = state->entities.versions[in state->allocator, ent.id];
-            state->entities.readWriteSpinner.ReadEnd(state);
+            if (ent.id >= state.ptr->entities.versions.Length) return 0u;
+            state.ptr->entities.readWriteSpinner.ReadBegin(state);
+            var version = state.ptr->entities.versions[in state.ptr->allocator, ent.id];
+            state.ptr->entities.readWriteSpinner.ReadEnd(state);
             return version;
 
         }
 
         [INLINE(256)]
-        public static uint GetVersion(State* state, in Ent ent, uint groupId) {
+        public static uint GetVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
 
             var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * ent.id;
             var idx = groupsIndex + groupId;
-            if (idx >= state->entities.versionsGroup.Length) return 0u;
-            return state->entities.versionsGroup[in state->allocator, idx];
+            if (idx >= state.ptr->entities.versionsGroup.Length) return 0u;
+            return state.ptr->entities.versionsGroup[in state.ptr->allocator, idx];
 
         }
 
         [INLINE(256)]
-        public static void UpVersion<T>(State* state, in Ent ent) where T : unmanaged, IComponent {
+        public static void UpVersion<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
             Ents.UpVersion(state, in ent, StaticTypes<T>.groupId);
             
         }
 
         [INLINE(256)]
-        public static void UpVersion(State* state, in Ent ent, uint groupId) {
+        public static void UpVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
 
             Ents.UpVersion(state, in ent);
 
@@ -308,24 +308,24 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void UpVersion(State* state, in Ent ent) {
+        public static void UpVersion(safe_ptr<State> state, in Ent ent) {
             
-            JobUtils.Increment(ref state->entities.versions[in state->allocator, ent.id]);
+            JobUtils.Increment(ref state.ptr->entities.versions[in state.ptr->allocator, ent.id]);
             Journal.VersionUp(in ent);
 
         }
 
         [INLINE(256)]
-        public static void UpVersionGroup(State* state, uint id, uint groupId) {
+        public static void UpVersionGroup(safe_ptr<State> state, uint id, uint groupId) {
 
             var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * id;
-            JobUtils.Increment(ref state->entities.versionsGroup[in state->allocator, groupsIndex + groupId]);
+            JobUtils.Increment(ref state.ptr->entities.versionsGroup[in state.ptr->allocator, groupsIndex + groupId]);
             
         }
 
         [INLINE(256)]
-        public static uint GetNextSeed(State* state, in Ent ent) {
-            return JobUtils.Increment(ref state->entities.seeds[in state->allocator, ent.id]);
+        public static uint GetNextSeed(safe_ptr<State> state, in Ent ent) {
+            return JobUtils.Increment(ref state.ptr->entities.seeds[in state.ptr->allocator, ent.id]);
         }
 
     }

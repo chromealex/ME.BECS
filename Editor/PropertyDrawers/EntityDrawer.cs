@@ -132,7 +132,7 @@ namespace ME.BECS.Editor {
 
         private uint GetArchId() {
             var world = this.entity.World;
-            return world.state->archetypes.entToArchetypeIdx[world.state->allocator, this.entity.id];
+            return world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
         }
 
         private void UpdateData() {
@@ -446,8 +446,8 @@ namespace ME.BECS.Editor {
         
         private void FetchComponentsFromEntity(World world) {
             
-            var archId = world.state->archetypes.entToArchetypeIdx[world.state->allocator, this.entity.id];
-            var arch = world.state->archetypes.list[world.state->allocator, archId];
+            var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
+            var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
                     
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
             var cnt = 0;
@@ -507,7 +507,7 @@ namespace ME.BECS.Editor {
                 var type = kv.Value;
                 {
                     var gHas = methodHas.MakeGenericMethod(type);
-                    var has = (bool)gHas.Invoke(world.state->components, new object[] { this.entity });
+                    var has = (bool)gHas.Invoke(world.state.ptr->components, new object[] { this.entity });
                     if (has == true) {
                         ++count;
                     }
@@ -522,10 +522,10 @@ namespace ME.BECS.Editor {
                     var type = kv.Value;
                     {
                         var gHas = methodHas.MakeGenericMethod(type);
-                        var has = (bool)gHas.Invoke(world.state->components, new object[] { this.entity });
+                        var has = (bool)gHas.Invoke(world.state.ptr->components, new object[] { this.entity });
                         if (has == true) {
                             var gMethod = methodRead.MakeGenericMethod(type);
-                            var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                            var val = gMethod.Invoke(world.state.ptr->components, new object[] { this.entity });
                             this.tempObject.dataShared[i++] = val;
                         }
                     }
@@ -536,10 +536,10 @@ namespace ME.BECS.Editor {
                     var type = kv.Value;
                     {
                         var gHas = methodHas.MakeGenericMethod(type);
-                        var has = (bool)gHas.Invoke(world.state->components, new object[] { this.entity });
+                        var has = (bool)gHas.Invoke(world.state.ptr->components, new object[] { this.entity });
                         if (has == true) {
                             var gMethod = methodRead.MakeGenericMethod(type);
-                            var val = gMethod.Invoke(world.state->components, new object[] { this.entity });
+                            var val = gMethod.Invoke(world.state.ptr->components, new object[] { this.entity });
                             list.Add(val);
                         }
                     }
@@ -599,12 +599,12 @@ namespace ME.BECS.Editor {
                                         object prevData;
                                         {
                                             var gMethod = methodRead.MakeGenericMethod(value.GetType());
-                                            prevData = gMethod.Invoke(world.state->components, new object[] { entity });
+                                            prevData = gMethod.Invoke(world.state.ptr->components, new object[] { entity });
                                         }
                                         var hasChanged = StructsAreEqual(prevData, newValue) == false;
                                         if (hasChanged == true) {
                                             var gMethod = methodSet.MakeGenericMethod(value.GetType());
-                                            gMethod.Invoke(world.state->components, new object[] { entity, value });
+                                            gMethod.Invoke(world.state.ptr->components, new object[] { entity, value });
                                         }
                                     }*/
 
@@ -673,7 +673,7 @@ namespace ME.BECS.Editor {
         }
 
         public static bool StructCopy<T>(T data, T data2) where T : unmanaged {
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             var addr1 = _address(ref data);
             var addr2 = _address(ref data2);
             return _memcmp(addr1, addr2, size) == 0;

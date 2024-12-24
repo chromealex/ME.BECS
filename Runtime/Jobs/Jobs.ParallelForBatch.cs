@@ -30,7 +30,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
 
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
             
         }
@@ -45,7 +45,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
 
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref data), GetReflectionData<T>(), inputDeps, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
             
         }
@@ -74,7 +74,7 @@ namespace ME.BECS.Jobs {
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                    var buffer = new CommandBufferJobBatch(jobData.buffer, (uint)begin, (uint)end);
+                    var buffer = new CommandBufferJobBatch((safe_ptr)jobData.buffer, (uint)begin, (uint)end);
                     jobData.jobData.Execute(in buffer);
                     jobData.buffer->EndForEachRange();
                     

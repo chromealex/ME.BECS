@@ -66,11 +66,11 @@ namespace ME.BECS.Editor {
                 };
             }
 
-            public void Redraw(Journal* journal, SearchData search, in JournalData.ThreadItem item, VisualElement tooltip) {
+            public void Redraw(safe_ptr<Journal> journal, SearchData search, in JournalData.ThreadItem item, VisualElement tooltip) {
                 
                 if (this.elements == null || this.elements.Length < item.items.Count) System.Array.Resize(ref this.elements, (int)item.items.Count);
-                var world = journal->GetWorld();
-                var e = item.items.GetEnumerator(world->state);
+                var world = journal.ptr->GetWorld();
+                var e = item.items.GetEnumerator(world.ptr->state);
                 var i = 0;
                 for (uint j = item.items.Count; j < this.elements.Length; ++j) {
                     if (this.elements[j].root != null) this.elements[j].root.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
@@ -152,9 +152,9 @@ namespace ME.BECS.Editor {
 
         }
 
-        private void Redraw(VisualElement root, Journal* journal) {
+        private void Redraw(VisualElement root, safe_ptr<Journal> journal) {
 
-            if (journal == null) {
+            if (journal.ptr == null) {
                 root.Clear();
                 return;
             }
@@ -168,12 +168,12 @@ namespace ME.BECS.Editor {
                 tooltipCreated = true;
             }
 
-            var data = journal->GetData();
-            var world = journal->GetWorld();
-            var threads = data->GetData();
+            var data = journal.ptr->GetData();
+            var world = journal.ptr->GetWorld();
+            var threads = data.ptr->GetData();
             if (this.threads == null || this.threads.Length < threads.Length) System.Array.Resize(ref this.threads, (int)threads.Length);
             for (int i = 0; i < threads.Length; ++i) {
-                var item = threads[world->state, i];
+                var item = threads[world.ptr->state, i];
                 ref var visualItem = ref this.threads[i];
                 if (visualItem.root == null) {
                     visualItem = Item.Create(root);
@@ -197,7 +197,7 @@ namespace ME.BECS.Editor {
         }
         private string search = null;
         private JournalAction searchActions = JournalAction.All;
-        private void Draw(VisualElement root, Journal* journal) {
+        private void Draw(VisualElement root, safe_ptr<Journal> journal) {
 
             var container = new VisualElement();
             root.Add(container);
@@ -243,8 +243,8 @@ namespace ME.BECS.Editor {
                 var headers = new VisualElement();
                 headers.AddToClassList("threads-headers");
                 threadsContainer.Add(headers);
-                if (journal != null) {
-                    var threads = journal->GetData()->GetData();
+                if (journal.ptr != null) {
+                    var threads = journal.ptr->GetData().ptr->GetData();
                     for (int i = 0; i < threads.Length; ++i) {
                         var thread = new Label($"Thread #{(i + 1)}");
                         headers.Add(thread);
@@ -266,7 +266,7 @@ namespace ME.BECS.Editor {
         public static VisualElement DrawEntityJournal(VisualElement root, ref VisualElementData[] children, in Ent ent) {
 
             var journal = JournalsStorage.Get(ent.worldId);
-            if (journal == null) {
+            if (journal.ptr == null) {
 
                 var str = "Journal is disabled. Reason: ";
                 #if JOURNAL
@@ -286,7 +286,7 @@ namespace ME.BECS.Editor {
             container.AddToClassList("journal-history");
             root.Add(container);
 
-            var list = journal->GetEntityJournal(in ent);
+            var list = journal.ptr->GetEntityJournal(in ent);
             var i = 0;
             foreach (var kv in list.eventsPerTick) {
                 
@@ -300,7 +300,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static VisualElement CreateEntityJournalItem(Journal* journal, in Journal.EntityJournal.Item item, int index) {
+        private static VisualElement CreateEntityJournalItem(safe_ptr<Journal> journal, in Journal.EntityJournal.Item item, int index) {
 
             if (item.events.IsCreated == true) {
 
@@ -340,7 +340,7 @@ namespace ME.BECS.Editor {
                         element.Add(action);
                     }
                     {
-                        var str = evt.GetCustomDataString(journal->GetWorld()->state);
+                        var str = evt.GetCustomDataString(journal.ptr->GetWorld().ptr->state);
                         if (string.IsNullOrEmpty(str) == false) {
                             var customData = new Label(str);
                             customData.AddToClassList("customData");
@@ -375,11 +375,11 @@ namespace ME.BECS.Editor {
         public static void UpdateEntityJournal(VisualElement journalHistory, ref VisualElementData[] children, in Ent ent) {
 
             var journal = JournalsStorage.Get(ent.worldId);
-            if (journal == null) return;
+            if (journal.ptr == null) return;
 
             journalHistory.Clear();
 
-            var list = journal->GetEntityJournal(in ent);
+            var list = journal.ptr->GetEntityJournal(in ent);
             var i = 0;
             foreach (var kv in list.eventsPerTick) {
                 

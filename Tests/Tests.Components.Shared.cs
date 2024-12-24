@@ -63,13 +63,13 @@ namespace ME.BECS.Tests {
                 }
                 Assert.IsTrue(ent1.HasShared<TestSharedComponent>());
                 Assert.AreEqual(2, ent1.ReadShared<TestSharedComponent>().data);
-                Assert.AreEqual(1, world.state->components.sharedData.Count);
+                Assert.AreEqual(1, world.state.ptr->components.sharedData.Count);
                 Assert.IsTrue(ent1.RemoveShared<TestSharedComponent>());
-                Assert.AreEqual(1, world.state->components.sharedData.Count);
+                Assert.AreEqual(1, world.state.ptr->components.sharedData.Count);
                 Assert.IsFalse(ent1.RemoveShared<TestSharedComponent>());
-                Assert.AreEqual(1, world.state->components.sharedData.Count);
+                Assert.AreEqual(1, world.state.ptr->components.sharedData.Count);
                 Assert.IsTrue(ent2.RemoveShared<TestSharedComponent>());
-                Assert.AreEqual(0, world.state->components.sharedData.Count);
+                Assert.AreEqual(0, world.state.ptr->components.sharedData.Count);
             }
 
             {
@@ -78,7 +78,7 @@ namespace ME.BECS.Tests {
                     var ent = Ent.New();
                     Assert.IsFalse(ent.RemoveShared<TestSharedComponent>());
                 }
-                Assert.AreEqual(0, world.state->components.sharedData.Count);
+                Assert.AreEqual(0, world.state.ptr->components.sharedData.Count);
             }
 
         }
@@ -141,7 +141,7 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(2, ent2.ReadShared<TestCustom1SharedComponent>().data);
                 Assert.AreEqual(5, ent3.ReadShared<TestCustom1SharedComponent>().data);
                 
-                Assert.AreEqual(2, world.state->components.sharedData.Count);
+                Assert.AreEqual(2, world.state.ptr->components.sharedData.Count);
                 
             }
 
@@ -168,7 +168,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(ent2.HasShared<TestSharedComponent>());
                 Assert.AreEqual(2, ent1.ReadShared<TestSharedComponent>().data);
                 Assert.AreEqual(2, ent2.ReadShared<TestSharedComponent>().data);
-                Assert.AreEqual(1, world.state->components.sharedData.Count);
+                Assert.AreEqual(1, world.state.ptr->components.sharedData.Count);
             }
             {
                 using var world = World.Create();
@@ -191,7 +191,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(ent2.HasShared<TestCustom1SharedComponent>());
                 Assert.AreEqual(1, ent1.ReadShared<TestCustom1SharedComponent>().data);
                 Assert.AreEqual(1, ent2.ReadShared<TestCustom1SharedComponent>().data);
-                Assert.AreEqual(2, world.state->components.sharedData.Count);
+                Assert.AreEqual(2, world.state.ptr->components.sharedData.Count);
             }
 
         }
@@ -218,7 +218,7 @@ namespace ME.BECS.Tests {
                 Assert.IsFalse(ent2.HasShared<TestSharedComponent>());
                 Assert.AreEqual(1, ent1.ReadShared<TestSharedComponent>().data);
                 Assert.AreEqual(0, ent2.ReadShared<TestSharedComponent>().data);
-                Assert.AreEqual(1, world.state->components.sharedData.Count);
+                Assert.AreEqual(1, world.state.ptr->components.sharedData.Count);
             }
 
         }

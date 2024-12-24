@@ -10,7 +10,7 @@ namespace ME.BECS {
         private const uint MIN_GROW = 4;
         private const uint GROW_FACTOR = 200;
 
-        private SystemGroup.NodeData* arr;
+        private safe_ptr<SystemGroup.NodeData> arr;
         private uint arrLength;
 
         private uint head;
@@ -27,7 +27,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Enqueue(Node* node) {
+        public void Enqueue(safe_ptr<Node> node) {
 
             if (this.Count == this.arrLength) {
                 var newCapacity = (this.arrLength * GROW_FACTOR / 100u);
@@ -53,10 +53,10 @@ namespace ME.BECS {
         }
             
         [INLINE(256)]
-        public Node* Peek() => this.arr[this.head].data;
+        public safe_ptr<Node> Peek() => this.arr[this.head].data;
             
         [INLINE(256)]
-        public Node* Dequeue() {
+        public safe_ptr<Node> Dequeue() {
 
             --this.Count;
             var removed = this.arr[this.head].data;
@@ -69,7 +69,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            if (this.arr != null) _free(this.arr);
+            if (this.arr.ptr != null) _free(this.arr);
 
         }
 
@@ -107,36 +107,36 @@ namespace ME.BECS {
         internal bool isStarted;
         internal bool isPointer;
         
-        internal SystemGroup* graph;
+        internal safe_ptr<SystemGroup> graph;
 
-        internal SystemGroup.NodeData* parents;
+        internal safe_ptr<SystemGroup.NodeData> parents;
         private uint parentCount;
         internal uint parentIndex;
         
-        internal SystemGroup.NodeData* children;
+        internal safe_ptr<SystemGroup.NodeData> children;
         private uint childrenCount;
         internal uint childrenIndex;
 
-        internal SystemGroup.NodeData* deps;
+        internal safe_ptr<SystemGroup.NodeData> deps;
         private uint depsCount;
         internal uint depsIndex;
 
         public JobHandle dependsOn;
 
         public Unity.Collections.FixedString64Bytes name;
-        public void* systemData;
+        public safe_ptr systemData;
         public uint systemTypeId;
-        internal Data* dataAwake;
-        internal Data* dataUpdate;
-        internal Data* dataDestroy;
-        internal Data* dataDrawGizmos;
+        internal safe_ptr<Data> dataAwake;
+        internal safe_ptr<Data> dataUpdate;
+        internal safe_ptr<Data> dataDestroy;
+        internal safe_ptr<Data> dataDrawGizmos;
 
         [INLINE(256)]
         public bool AllParentsStarted(Method method) {
 
             for (uint i = 0; i < this.parentIndex; ++i) {
 
-                if (this.parents[i].data->HasMethod(method) == true && this.parents[i].data->isStarted == false) return false;
+                if (this.parents[i].data.ptr->HasMethod(method) == true && this.parents[i].data.ptr->isStarted == false) return false;
 
             }
 
@@ -146,12 +146,12 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public bool HasMethod(Method method) {
-            return this.GetMethod(method) != null;
+            return this.GetMethod(method).ptr != null;
         }
         
         [INLINE(256)]
-        public Data* GetMethod(Method method) {
-            Data* ptr = null;
+        public safe_ptr<Data> GetMethod(Method method) {
+            safe_ptr<Data> ptr = default;
             switch (method) {
                 case Method.Awake:
                     ptr = this.dataAwake;
@@ -171,7 +171,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void SetMethod(Method method, Data* ptr) {
+        public void SetMethod(Method method, safe_ptr<Data> ptr) {
             switch (method) {
                 case Method.Awake:
                     this.dataAwake = ptr;
@@ -189,11 +189,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Node* CreateMethods<T>(in T system) where T : unmanaged, ISystem {
+        public static safe_ptr<Node> CreateMethods<T>(in T system) where T : unmanaged, ISystem {
 
             var node = Node.Create();
-            node->systemData = _make(system);
-            node->systemTypeId = StaticSystemTypes<T>.typeId;
+            node.ptr->systemData = _make(system);
+            node.ptr->systemTypeId = StaticSystemTypes<T>.typeId;
             BurstCompileMethod.MakeMethod<T>(node);
             return node;
 
@@ -204,18 +204,18 @@ namespace ME.BECS {
 
             JobHandle handle = default;
             if (this.parentIndex == 1u) {
-                handle = this.parents[0].data->dependsOn;
+                handle = this.parents[0].data.ptr->dependsOn;
                 //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle));
             } else if (this.parentIndex == 2u) {
-                handle = JobHandle.CombineDependencies(this.parents[0].data->dependsOn, this.parents[1].data->dependsOn);
+                handle = JobHandle.CombineDependencies(this.parents[0].data.ptr->dependsOn, this.parents[1].data.ptr->dependsOn);
                 //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle) + " parent1: " + SystemGroup.DebugHandle(this.parents[0].data->dependsOn) + " parent2: " + SystemGroup.DebugHandle(this.parents[1].data->dependsOn));
             } else if (this.parentIndex == 3u) {
-                handle = JobHandle.CombineDependencies(this.parents[0].data->dependsOn, this.parents[1].data->dependsOn, this.parents[2].data->dependsOn);
+                handle = JobHandle.CombineDependencies(this.parents[0].data.ptr->dependsOn, this.parents[1].data.ptr->dependsOn, this.parents[2].data.ptr->dependsOn);
                 //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle) + " parent1: " + SystemGroup.DebugHandle(this.parents[0].data->dependsOn) + " parent2: " + SystemGroup.DebugHandle(this.parents[1].data->dependsOn) + " parent3: " + SystemGroup.DebugHandle(this.parents[2].data->dependsOn));
             } else if (this.parentIndex > 3u) {
                 using var list = new Unity.Collections.NativeList<JobHandle>((int)this.parentIndex, Constants.ALLOCATOR_TEMP);
                 for (uint i = 0; i < this.parentIndex; ++i) {
-                    list.Add(this.parents[i].data->dependsOn);
+                    list.Add(this.parents[i].data.ptr->dependsOn);
                 }
                 handle = JobHandle.CombineDependencies(list.AsArray());
                 //UnityEngine.Debug.Log(SystemGroup.DebugHandle(handle));
@@ -227,13 +227,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Node* Create(bool isPointer = false) => _make(new Node() { isPointer = isPointer });
+        public static safe_ptr<Node> Create(bool isPointer = false) => _make(new Node() { isPointer = isPointer });
 
         [INLINE(256)]
-        public static Node* Create(SystemGroup graph) => _make(new Node() { graph = _make(graph) });
+        public static safe_ptr<Node> Create(SystemGroup graph) => _make(new Node() { graph = _make(graph) });
 
         [INLINE(256)]
-        public void AddDependency(Node* node) {
+        public void AddDependency(safe_ptr<Node> node) {
             
             if (this.depsIndex >= this.depsCount) {
                 var newLength = (this.depsIndex + 1u) * 2u;
@@ -245,7 +245,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void AddChild(Node* node, Node* parent) {
+        public void AddChild(safe_ptr<Node> node, safe_ptr<Node> parent) {
 
             if (this.childrenIndex >= this.childrenCount) {
                 var newLength = (this.childrenIndex + 1u) * 2u;
@@ -253,12 +253,12 @@ namespace ME.BECS {
             }
 
             this.children[this.childrenIndex++] = new SystemGroup.NodeData() { data = node };
-            node->AddParent(parent);
+            node.ptr->AddParent(parent);
 
         }
 
         [INLINE(256)]
-        public void AddParent(Node* node) {
+        public void AddParent(safe_ptr<Node> node) {
             
             if (this.parentIndex >= this.parentCount) {
                 var newLength = (this.parentIndex + 1u) * 2u;
@@ -272,44 +272,44 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            if (this.graph != null) {
-                this.graph->Dispose();
+            if (this.graph.ptr != null) {
+                this.graph.ptr->Dispose();
                 _free(this.graph);
             }
 
-            if (this.dataAwake != null) {
-                this.dataAwake->Dispose();
+            if (this.dataAwake.ptr != null) {
+                this.dataAwake.ptr->Dispose();
                 _free(this.dataAwake);
             }
 
-            if (this.dataUpdate != null) {
-                this.dataUpdate->Dispose();
+            if (this.dataUpdate.ptr != null) {
+                this.dataUpdate.ptr->Dispose();
                 _free(this.dataUpdate);
             }
 
-            if (this.dataDestroy != null) {
-                this.dataDestroy->Dispose();
+            if (this.dataDestroy.ptr != null) {
+                this.dataDestroy.ptr->Dispose();
                 _free(this.dataDestroy);
             }
 
-            if (this.dataDrawGizmos != null) {
-                this.dataDrawGizmos->Dispose();
+            if (this.dataDrawGizmos.ptr != null) {
+                this.dataDrawGizmos.ptr->Dispose();
                 _free(this.dataDrawGizmos);
             }
 
-            if (this.systemData != null) {
+            if (this.systemData.ptr != null) {
                 _free(ref this.systemData);
             }
             
-            if (this.children != null) {
+            if (this.children.ptr != null) {
                 _free(this.children);
             }
 
-            if (this.parents != null) {
+            if (this.parents.ptr != null) {
                 _free(this.parents);
             }
 
-            if (this.deps != null) {
+            if (this.deps.ptr != null) {
                 _free(this.deps);
             }
 

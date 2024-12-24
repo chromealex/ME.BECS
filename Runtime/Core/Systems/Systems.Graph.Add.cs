@@ -47,13 +47,13 @@ namespace ME.BECS {
             var typeId = StaticSystemTypes<T>.typeId;
             for (int i = 0; i < graph.index; ++i) {
                 var node = graph.nodes[i];
-                if (node.data->graph != null) {
-                    ref var sys = ref (*node.data->graph).GetSystem<T>(out found);
+                if (node.data.ptr->graph.ptr != null) {
+                    ref var sys = ref (*node.data.ptr->graph.ptr).GetSystem<T>(out found);
                     if (found == true) return ref sys;
-                } else if (node.data->systemData != null) {
-                    if (node.data->systemTypeId == typeId) {
+                } else if (node.data.ptr->systemData.ptr != null) {
+                    if (node.data.ptr->systemTypeId == typeId) {
                         found = true;
-                        return ref *(T*)node.data->systemData;
+                        return ref *(T*)node.data.ptr->systemData.ptr;
                     }
                 }
             }
@@ -80,28 +80,28 @@ namespace ME.BECS {
             if (dependsOn.IsValid() == false) {
 
                 // No dependencies
-                graph.rootNode->AddChild(node, graph.rootNode);
+                graph.rootNode.ptr->AddChild(node, graph.rootNode);
 
             } else {
                 
                 // Has dependencies
                 var depNode = graph.GetNode(dependsOn);
-                if (depNode->deps != null) {
+                if (depNode.ptr->deps.ptr != null) {
                     // Combined dependencies
-                    for (int i = 0; i < depNode->depsIndex; ++i) {
-                        var dep = depNode->deps[i];
-                        dep.data->AddChild(node, dep.data);
+                    for (int i = 0; i < depNode.ptr->depsIndex; ++i) {
+                        var dep = depNode.ptr->deps[i];
+                        dep.data.ptr->AddChild(node, dep.data);
                     }
                 } else {
                     // Single dependency
-                    depNode->AddChild(node, depNode);
+                    depNode.ptr->AddChild(node, depNode);
                 }
                 
             }
             
-            Journal.AddSystem(Context.world.id, node->name);
+            Journal.AddSystem(Context.world.id, node.ptr->name);
             
-            return SystemHandle.Create(node->id);
+            return SystemHandle.Create(node.ptr->id);
 
         }
 
@@ -117,33 +117,33 @@ namespace ME.BECS {
             
             var node = Node.CreateMethods(system);
             graph.RegisterNode(node);
-            node->name = typeof(T).Name;
+            node.ptr->name = typeof(T).Name;
             
             if (dependsOn.IsValid() == false) {
 
                 // No dependencies
-                graph.rootNode->AddChild(node, graph.rootNode);
+                graph.rootNode.ptr->AddChild(node, graph.rootNode);
 
             } else {
                 
                 // Has dependencies
                 var depNode = graph.GetNode(dependsOn);
-                if (depNode->deps != null) {
+                if (depNode.ptr->deps.ptr != null) {
                     // Combined dependencies
-                    for (int i = 0; i < depNode->depsIndex; ++i) {
-                        var dep = depNode->deps[i];
-                        dep.data->AddChild(node, dep.data);
+                    for (int i = 0; i < depNode.ptr->depsIndex; ++i) {
+                        var dep = depNode.ptr->deps[i];
+                        dep.data.ptr->AddChild(node, dep.data);
                     }
                 } else {
                     // Single dependency
-                    depNode->AddChild(node, depNode);
+                    depNode.ptr->AddChild(node, depNode);
                 }
                 
             }
             
-            Journal.AddSystem(Context.world.id, node->name);
+            Journal.AddSystem(Context.world.id, node.ptr->name);
 
-            return SystemHandle.Create(node->id);
+            return SystemHandle.Create(node.ptr->id);
 
         }
 

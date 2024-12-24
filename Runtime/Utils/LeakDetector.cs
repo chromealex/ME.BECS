@@ -31,7 +31,7 @@ namespace ME.BECS {
             }
 
             public bool Equals(Item other) {
-                return this.ptr.Equals(other.ptr);
+                return this.ptr == other.ptr;
             }
 
             public override bool Equals(object obj) {
@@ -66,7 +66,19 @@ namespace ME.BECS {
             LeakDetectorData.spinner.Data.Unlock();
 
         }
-        
+
+        [Conditional(COND.LEAK_DETECTION)]
+        [HIDE_CALLSTACK]
+        [INLINE(256)]
+        public static void Track(safe_ptr ptr) {
+
+            LeakDetectorData.spinner.Data.Lock();
+            LeakDetectorData.Validate();
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr));
+            LeakDetectorData.spinner.Data.Unlock();
+
+        }
+
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
@@ -74,8 +86,26 @@ namespace ME.BECS {
             
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr));
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr));
             LeakDetectorData.spinner.Data.Unlock();
+            if (result == false) {
+                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} which has been already freed or was never instantiated.");
+            }
+            
+        }
+
+        [Conditional(COND.LEAK_DETECTION)]
+        [HIDE_CALLSTACK]
+        [INLINE(256)]
+        public static void Free(safe_ptr ptr) {
+            
+            LeakDetectorData.spinner.Data.Lock();
+            LeakDetectorData.Validate();
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr));
+            LeakDetectorData.spinner.Data.Unlock();
+            if (result == false) {
+                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
+            }
             
         }
 

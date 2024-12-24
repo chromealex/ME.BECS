@@ -8,12 +8,12 @@ namespace ME.BECS {
         public struct Enumerator {
 
             private uint count;
-            private readonly Entry* entries;
+            private readonly safe_ptr<Entry> entries;
             private uint index;
 
             [INLINE(256)]
-            internal Enumerator(in UIntDictionaryAuto<TValue> dictionary, State* state) {
-                this.entries = (Entry*)dictionary.entries.GetUnsafePtrCached(in state->allocator);
+            internal Enumerator(in UIntDictionaryAuto<TValue> dictionary, safe_ptr<State> state) {
+                this.entries = (safe_ptr<Entry>)dictionary.entries.GetUnsafePtrCached(in state.ptr->allocator);
                 this.count = dictionary.count;
                 this.index = 0u;
             }
@@ -32,7 +32,7 @@ namespace ME.BECS {
                 return false;
             }
 
-            public ref Entry Current => ref *(this.entries + this.index - 1u);
+            public ref Entry Current => ref *(this.entries + this.index - 1u).ptr;
 
         }
 
@@ -152,7 +152,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly Enumerator GetEnumerator(State* state) {
+        public readonly Enumerator GetEnumerator(safe_ptr<State> state) {
 
             E.IS_CREATED(this);
 
@@ -279,7 +279,7 @@ namespace ME.BECS {
             if (this.buckets.Length > 0u) {
                 var num2 = key.GetHashCode() & int.MaxValue;
                 index = (int)this.buckets[(uint)(num2 % this.buckets.Length)] - 1;
-                var entries = (Entry*)this.entries.GetUnsafePtrCached();
+                var entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached();
                 while ((uint)index < this.entries.Length &&
                        (entries[index].hashCode != num2 || !entries[index].key.Equals(key))) {
                     index = entries[index].next;
@@ -308,10 +308,10 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             ++this.version;
             var state = ent.World.state;
-            var entries = (Entry*)this.entries.GetUnsafePtrCached(in state->allocator);
+            var entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in state.ptr->allocator);
             var num1 = key.GetHashCode() & int.MaxValue;
             var num2 = 0u;
-            ref var local1 = ref this.buckets[in state->allocator, (uint)(num1 % this.buckets.Length)];
+            ref var local1 = ref this.buckets[in state.ptr->allocator, (uint)(num1 % this.buckets.Length)];
             var index1 = (int)local1 - 1;
             {
                 while ((uint)index1 < this.entries.Length) {
@@ -354,10 +354,10 @@ namespace ME.BECS {
 
                 index2 = count;
                 this.count = count + 1;
-                entries = (Entry*)this.entries.GetUnsafePtrCached(in state->allocator);
+                entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in state.ptr->allocator);
             }
 
-            ref var local2 = ref (flag1 ? ref this.buckets[in state->allocator, (uint)(num1 % this.buckets.Length)] : ref local1);
+            ref var local2 = ref (flag1 ? ref this.buckets[in state.ptr->allocator, (uint)(num1 % this.buckets.Length)] : ref local1);
             ref var local3 = ref entries[index2];
             if (flag2) {
                 this.freeList = local3.next;
@@ -376,9 +376,9 @@ namespace ME.BECS {
             ++this.version;
             E.IS_CREATED(this);
             var state = this.ent.World.state;
-            var entries = (Entry*)this.entries.GetUnsafePtrCached(in state->allocator);
+            var entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in state.ptr->allocator);
             var num1 = key.GetHashCode() & int.MaxValue;
-            ref var local1 = ref this.buckets[in state->allocator, (uint)(num1 % this.buckets.Length)];
+            ref var local1 = ref this.buckets[in state.ptr->allocator, (uint)(num1 % this.buckets.Length)];
             var flag1 = false;
             var flag2 = false;
             uint index2;
@@ -395,10 +395,10 @@ namespace ME.BECS {
 
                 index2 = count;
                 this.count = count + 1;
-                entries = (Entry*)this.entries.GetUnsafePtrCached(in state->allocator);
+                entries = (safe_ptr<Entry>)this.entries.GetUnsafePtrCached(in state.ptr->allocator);
             }
 
-            ref var local2 = ref (flag1 ? ref this.buckets[in state->allocator, (uint)(num1 % this.buckets.Length)] : ref local1);
+            ref var local2 = ref (flag1 ? ref this.buckets[in state.ptr->allocator, (uint)(num1 % this.buckets.Length)] : ref local1);
             ref var local3 = ref entries[index2];
             if (flag2) {
                 this.freeList = local3.next;
@@ -426,7 +426,7 @@ namespace ME.BECS {
             NativeArrayUtils.CopyNoChecks(this.entries, 0, ref entryArray, 0, count);
             for (uint index1 = 0u; index1 < count;  ++index1) {
                 if (entryArray[state, index1].hashCode >= 0) {
-                    uint index2 = (uint)(entryArray[in state->allocator, index1].hashCode % newSize);
+                    uint index2 = (uint)(entryArray[in state.ptr->allocator, index1].hashCode % newSize);
                     entryArray[state, index1].next = (int)numArray[state, index2] - 1;
                     numArray[state, index2] = index1 + 1u;
                 }
@@ -458,15 +458,15 @@ namespace ME.BECS {
                 var index2 = -1;
                 // ISSUE: variable of a reference type
                 var next = 0;
-                for (var index3 = (int)this.buckets[in state->allocator, index1] - 1; index3 >= 0; index3 = next) {
-                    ref var local = ref this.entries[in state->allocator, index3];
+                for (var index3 = (int)this.buckets[in state.ptr->allocator, index1] - 1; index3 >= 0; index3 = next) {
+                    ref var local = ref this.entries[in state.ptr->allocator, index3];
                     next = local.next;
                     if (local.hashCode == num) {
                         if ((local.key.Equals(key) ? 1 : 0) != 0) {
                             if (index2 < 0) {
-                                this.buckets[in state->allocator, index1] = (uint)(local.next + 1);
+                                this.buckets[in state.ptr->allocator, index1] = (uint)(local.next + 1);
                             } else {
-                                this.entries[in state->allocator, index2].next = local.next;
+                                this.entries[in state.ptr->allocator, index2].next = local.next;
                             }
 
                             local.hashCode = -1;
@@ -501,15 +501,15 @@ namespace ME.BECS {
                 var index2 = -1;
                 // ISSUE: variable of a reference type
                 var next = 0;
-                for (var index3 = (int)this.buckets[in state->allocator, index1] - 1; index3 >= 0; index3 = next) {
-                    ref var local = ref this.entries[in state->allocator, index3];
+                for (var index3 = (int)this.buckets[in state.ptr->allocator, index1] - 1; index3 >= 0; index3 = next) {
+                    ref var local = ref this.entries[in state.ptr->allocator, index3];
                     next = local.next;
                     if (local.hashCode == num) {
                         if ((local.key.Equals(key) ? 1 : 0) != 0) {
                             if (index2 < 0) {
-                                this.buckets[in state->allocator, index1] = (uint)(local.next + 1);
+                                this.buckets[in state.ptr->allocator, index1] = (uint)(local.next + 1);
                             } else {
-                                this.entries[in state->allocator, index2].next = local.next;
+                                this.entries[in state.ptr->allocator, index2].next = local.next;
                             }
 
                             value = local.value;
@@ -542,7 +542,7 @@ namespace ME.BECS {
             var state = this.ent.World.state;
             var entry = this.FindEntry(key);
             if (entry >= 0) {
-                value = this.entries[in state->allocator, entry].value;
+                value = this.entries[in state.ptr->allocator, entry].value;
                 return true;
             }
 

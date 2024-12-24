@@ -25,6 +25,7 @@
 using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using static ME.BECS.Cuts;
 
 namespace ME.BECS.NativeCollections {
 
@@ -42,15 +43,15 @@ namespace ME.BECS.NativeCollections {
 
     public static class HeapUtils {
 
-        public static int Parent(int index) {
+        public static uint Parent(uint index) {
             return index / 2;
         }
 
-        public static int Left(int index) {
+        public static uint Left(uint index) {
             return index * 2;
         }
 
-        public static int Right(int index) {
+        public static uint Right(uint index) {
             return index * 2 + 1;
         }
 
@@ -61,13 +62,13 @@ namespace ME.BECS.NativeCollections {
     public unsafe struct MinMaxHeap<T> : IDisposable where T : unmanaged {
 
         [NativeDisableContainerSafetyRestriction]
-        private T* keys; //objects
+        private safe_ptr<T> keys; //objects
 
         [NativeDisableContainerSafetyRestriction]
-        private float* values;
+        private safe_ptr<float> values;
 
-        public int Count;
-        private int m_capacity;
+        public uint Count;
+        private uint m_capacity;
 
         public float HeadValue => this.values[1];
         private T HeadKey => this.keys[1];
@@ -76,17 +77,17 @@ namespace ME.BECS.NativeCollections {
 
         private Allocator m_allocator;
 
-        public MinMaxHeap(int startCapacity, Allocator allocator) {
+        public MinMaxHeap(uint startCapacity, Allocator allocator) {
             this.Count = 0;
             this.m_allocator = allocator;
 
             // Now alloc starting arrays
             this.m_capacity = startCapacity;
-            this.values = UnsafeUtilityEx.AllocArray<float>(startCapacity + 1, this.m_allocator);
-            this.keys = UnsafeUtilityEx.AllocArray<T>(startCapacity + 1, this.m_allocator);
+            this.values = _makeArray<float>(startCapacity + 1u, this.m_allocator);
+            this.keys = _makeArray<T>(startCapacity + 1, this.m_allocator);
         }
 
-        private void Swap(int indexA, int indexB) {
+        private void Swap(uint indexA, uint indexB) {
             var tempVal = this.values[indexA];
             this.values[indexA] = this.values[indexB];
             this.values[indexB] = tempVal;
@@ -97,20 +98,20 @@ namespace ME.BECS.NativeCollections {
         }
 
         public void Dispose() {
-            UnsafeUtility.Free(this.values, this.m_allocator);
-            UnsafeUtility.Free(this.keys, this.m_allocator);
-            this.values = null;
-            this.keys = null;
+            _free(this.values, this.m_allocator);
+            _free(this.keys, this.m_allocator);
+            this.values = default;
+            this.keys = default;
         }
 
-        public void Resize(int newSize) {
+        public void Resize(uint newSize) {
             // Allocate more space
-            var newValues = UnsafeUtilityEx.AllocArray<float>(newSize + 1, this.m_allocator);
-            var newKeys = UnsafeUtilityEx.AllocArray<T>(newSize + 1, this.m_allocator);
+            var newValues = _makeArray<float>(newSize + 1, this.m_allocator);
+            var newKeys = _makeArray<T>(newSize + 1, this.m_allocator);
 
             // Copy over old arrays
-            UnsafeUtility.MemCpy(newValues, this.values, (this.m_capacity + 1) * sizeof(int));
-            UnsafeUtility.MemCpy(newKeys, this.keys, (this.m_capacity + 1) * sizeof(int));
+            UnsafeUtility.MemCpy(newValues.ptr, this.values.ptr, (this.m_capacity + 1) * sizeof(int));
+            UnsafeUtility.MemCpy(newKeys.ptr, this.keys.ptr, (this.m_capacity + 1) * sizeof(int));
 
             // Get rid of old arrays
             this.Dispose();
@@ -122,7 +123,7 @@ namespace ME.BECS.NativeCollections {
         }
 
         // bubble down, MaxHeap version
-        private void BubbleDownMax(int index) {
+        private void BubbleDownMax(uint index) {
             var l = HeapUtils.Left(index);
             var r = HeapUtils.Right(index);
 
@@ -159,7 +160,7 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
-        private void BubbleDownMin(int index) {
+        private void BubbleDownMin(uint index) {
             var l = HeapUtils.Left(index);
             var r = HeapUtils.Right(index);
 
@@ -196,7 +197,7 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
-        private void BubbleUpMax(int index) {
+        private void BubbleUpMax(uint index) {
             var p = HeapUtils.Parent(index);
 
             //swap, until Heap property isn't violated anymore
@@ -207,7 +208,7 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
-        private void BubbleUpMin(int index) {
+        private void BubbleUpMin(uint index) {
             var p = HeapUtils.Parent(index);
 
             //swap, until Heap property isn't violated anymore

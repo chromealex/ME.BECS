@@ -95,7 +95,7 @@ namespace ME.BECS.Pathfinding {
             var toPoint = path.to;
 
             // collect all different unique areas in this chunk
-            path.from.As(in world.state->allocator).Clear();
+            path.from.As(in world.state.ptr->allocator).Clear();
             var pointsAreas = new Unity.Collections.NativeHashMap<uint2, Portal>(4, Unity.Collections.Allocator.Temp);
             for (int i = 0; i < chunksToUpdate.Length; ++i) {
                 if (chunksToUpdate[i] == 1) {
@@ -115,7 +115,7 @@ namespace ME.BECS.Pathfinding {
             }
 
             foreach (var kv in pointsAreas) {
-                path.from.As(in world.state->allocator).Add(ref world.state->allocator, kv.Value.position);
+                path.from.As(in world.state.ptr->allocator).Add(ref world.state.ptr->allocator, kv.Value.position);
             }
 
         }
@@ -152,9 +152,9 @@ namespace ME.BECS.Pathfinding {
                 graph = graph,
                 to = Graph.ClampPosition(in graph, to),
                 filter = filter,
-                chunks = new MemArray<Path.Chunk>(ref world.state->allocator, root.width * root.height),
+                chunks = new MemArray<Path.Chunk>(ref world.state.ptr->allocator, root.width * root.height),
             };
-            path.from.Set(ref world.state->allocator, new List<float3>(ref world.state->allocator, 100u));
+            path.from.Set(ref world.state.ptr->allocator, new List<float3>(ref world.state.ptr->allocator, 100u));
 
         }
 
@@ -235,7 +235,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static PathInfo HierarchyPath(State* state, in Ent graph, float3 from, float3 to, in Filter filter, float nodeSize) {
+        public static PathInfo HierarchyPath(safe_ptr<State> state, in Ent graph, float3 from, float3 to, in Filter filter, float nodeSize) {
 
             [INLINE(256)]
             static void TraverseNeighbours(ref Unity.Collections.NativeArray<TempNodeData> temp, 
@@ -247,7 +247,7 @@ namespace ME.BECS.Pathfinding {
                                            float nodeSize,
                                            float currentNodeCost, 
                                            uint parentIdx,
-                                           State* state) {
+                                           safe_ptr<State> state) {
                 
                 for (uint i = 0; i < list.Count; ++i) {
                     var n = list[state, i];
@@ -279,7 +279,7 @@ namespace ME.BECS.Pathfinding {
             var count = 0u;
             for (uint i = 0; i < root.chunks.Length; ++i) {
                 var chunk = root.chunks[state, i];
-                graphNodes.AddRange(chunk.portals.list.GetUnsafePtr(in state->allocator), (int)chunk.portals.list.Count);
+                graphNodes.AddRange(chunk.portals.list.GetUnsafePtr(in state.ptr->allocator).ptr, (int)chunk.portals.list.Count);
                 chunkPortalsCount[(int)i] = count;
                 count += chunk.portals.list.Count;
             }
@@ -304,7 +304,7 @@ namespace ME.BECS.Pathfinding {
                 temp = new Unity.Collections.NativeArray<TempNodeData>(graphNodes.Length, Unity.Collections.Allocator.Temp);
                 {
                     // recursive find path
-                    var heap = new ME.BECS.NativeCollections.NativeMinHeap(graphNodes.Length, Unity.Collections.Allocator.Temp);
+                    var heap = new ME.BECS.NativeCollections.NativeMinHeap((uint)graphNodes.Length, Unity.Collections.Allocator.Temp);
                     heap.Push(new ME.BECS.NativeCollections.MinHeapNode(portalInfoIndex, 0f));
                     pathState = PathState.Failed;
                     var tmp = new TempNodeData {
@@ -374,7 +374,7 @@ namespace ME.BECS.Pathfinding {
 
         }
 
-        private static float3 GetPortalPosition(State* state, in RootGraphComponent root, uint chunkIndex, uint portalIndex) {
+        private static float3 GetPortalPosition(safe_ptr<State> state, in RootGraphComponent root, uint chunkIndex, uint portalIndex) {
 
             var portal = root.chunks[state, chunkIndex].portals.list[state, portalIndex];
             return portal.position;
@@ -382,7 +382,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static PortalInfo GetNearestPortal(State* state, in RootGraphComponent root, float3 position, float3 target) {
+        private static PortalInfo GetNearestPortal(safe_ptr<State> state, in RootGraphComponent root, float3 position, float3 target) {
 
             var chunkIndex = GetChunkIndex(in root, position);
             if (chunkIndex == uint.MaxValue) return PortalInfo.Invalid;
@@ -409,7 +409,7 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        public static ChunkPathInfo ChunkPath(State* state, in Ent graph, uint chunkIndex, float3 from, float3 to, in Filter filter = default) {
+        public static ChunkPathInfo ChunkPath(safe_ptr<State> state, in Ent graph, uint chunkIndex, float3 from, float3 to, in Filter filter = default) {
 
             var root = graph.Read<RootGraphComponent>();
             var chunk = root.chunks[state, chunkIndex];
@@ -423,7 +423,7 @@ namespace ME.BECS.Pathfinding {
                 {
                     var targetPos = GetPosition(in root, in chunk, toNodeIndex);
                     // recursive find path
-                    var heap = new ME.BECS.NativeCollections.NativeMinHeap((int)chunk.nodes.Length, Unity.Collections.Allocator.Temp);
+                    var heap = new ME.BECS.NativeCollections.NativeMinHeap(chunk.nodes.Length, Unity.Collections.Allocator.Temp);
                     heap.Push(new ME.BECS.NativeCollections.MinHeapNode(fromNodeIndex, 0f));
                     pathState = PathState.Failed;
                     var tmp = temp[(int)fromNodeIndex];
@@ -798,7 +798,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static float3 GetPosition(State* state, in Ent graphEnt, uint chunkIndex, uint nodeIndex) {
+        public static float3 GetPosition(safe_ptr<State> state, in Ent graphEnt, uint chunkIndex, uint nodeIndex) {
 
             var root = graphEnt.Read<RootGraphComponent>();
             var chunk = root.chunks[state, chunkIndex];
@@ -1011,7 +1011,7 @@ namespace ME.BECS.Pathfinding {
         public static ChunkComponent CreateChunk(in World world, in Heights heights, in Ent graph, uint chunkIndex, float3 center) {
 
             var root = graph.Read<RootGraphComponent>();
-            var nodes = new MemArray<Node>(ref world.state->allocator, root.chunkWidth * root.chunkHeight);
+            var nodes = new MemArray<Node>(ref world.state.ptr->allocator, root.chunkWidth * root.chunkHeight);
             {
                 // initialize nodes
                 for (uint i = 0; i < nodes.Length; ++i) {
@@ -1064,18 +1064,18 @@ namespace ME.BECS.Pathfinding {
         public static bool UpdateChunk(in World world, in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, Unity.Collections.NativeArray<ulong> changedChunks, bool forced = false) {
 
             var root = graph.Read<RootGraphComponent>();
-            var changed = root.changedChunks[(int)chunkIndex] == world.state->tick;
+            var changed = root.changedChunks[(int)chunkIndex] == world.state.ptr->tick;
             if (forced == true || changed == true) {
                 // calculate portals
                 var marker = new Unity.Profiling.ProfilerMarker("Calculate Portals");
                 marker.Begin();
-                chunkComponent.cache.InvalidateCache(ref world.state->allocator, in chunkComponent);
+                chunkComponent.cache.InvalidateCache(ref world.state.ptr->allocator, in chunkComponent);
                 CalculatePortals(in graph, chunkIndex, ref chunkComponent, in world, changedChunks);
                 marker.End();
             }
             
             if (changedChunks.IsCreated == true && changed == true) {
-                changedChunks[(int)chunkIndex] = world.state->tick;
+                changedChunks[(int)chunkIndex] = world.state.ptr->tick;
             }
             
             return changed;
@@ -1134,7 +1134,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static void CalculatePortals(in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, in World world, Unity.Collections.NativeArray<ulong> changedChunks) {
 
-            if (chunkComponent.portals.list.IsCreated == false) chunkComponent.portals.list = new List<Portal>(ref world.state->allocator, 10u);
+            if (chunkComponent.portals.list.IsCreated == false) chunkComponent.portals.list = new List<Portal>(ref world.state.ptr->allocator, 10u);
             // clean up neighbours for each portal of this chunk
             var root = graph.Read<RootGraphComponent>();
             for (uint i = 0; i < chunkComponent.portals.list.Count; ++i) {
@@ -1146,14 +1146,14 @@ namespace ME.BECS.Pathfinding {
                     ref var remotePortal = ref root.chunks[world.state, sourceInfo.chunkIndex].portals.list[world.state, sourceInfo.portalIndex];
                     if (remotePortal.remoteNeighbours.IsCreated == true) remotePortal.remoteNeighbours.Clear();
                     if (changedChunks.IsCreated == true) {
-                        changedChunks[(int)remotePortal.portalInfo.chunkIndex] = world.state->tick;
-                        changedChunks[(int)sourceInfo.chunkIndex] = world.state->tick;
+                        changedChunks[(int)remotePortal.portalInfo.chunkIndex] = world.state.ptr->tick;
+                        changedChunks[(int)sourceInfo.chunkIndex] = world.state.ptr->tick;
                     }
                 }
                 portal.remoteNeighbours.Dispose();
                 portal.localNeighbours.Dispose();
             }
-            if (changedChunks.IsCreated == true) changedChunks[(int)chunkIndex] = world.state->tick;
+            if (changedChunks.IsCreated == true) changedChunks[(int)chunkIndex] = world.state.ptr->tick;
 
         }
 
@@ -1192,7 +1192,7 @@ namespace ME.BECS.Pathfinding {
                     var size = x - rangeStart + 1u;
                     var rangeIdx = GetNodeIndex(in root, xMultiplier * middlePoint + yMultiplier * axisOffset, yMultiplier * middlePoint + xMultiplier * axisOffset);
                     var pos = GetPosition(in root, in chunkComponent, rangeIdx);
-                    chunkComponent.portals.list.Add(ref world.state->allocator, new Portal() {
+                    chunkComponent.portals.list.Add(ref world.state.ptr->allocator, new Portal() {
                         area = ++area,
                         portalInfo = new PortalInfo() { chunkIndex = chunkIndex, portalIndex = chunkComponent.portals.list.Count },
                         position = pos,
@@ -1317,7 +1317,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static void DrawGizmosLevel(State* state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
+        private static void DrawGizmosLevel(safe_ptr<State> state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
             
             var cellSize = new float3(rootGraph.nodeSize, 0f, rootGraph.nodeSize);
             for (uint i = 0; i < rootGraph.chunkWidth; ++i) {
@@ -1390,8 +1390,8 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static UnsafeHashSet<uint> GetChunksByBounds(in RootGraphComponent root, in UnityEngine.Rect obstacleBounds) {
-            var list = new UnsafeHashSet<uint>(4, Constants.ALLOCATOR_TEMP);
+        public static UnsafeHashSet<uint> GetChunksByBounds(in RootGraphComponent root, in UnityEngine.Rect obstacleBounds, Unity.Collections.Allocator allocator) {
+            var list = new UnsafeHashSet<uint>(4, allocator);
             var bottomLeftPos = ((float2)obstacleBounds.min).x0y();
             var topRightPos = ((float2)obstacleBounds.max).x0y();
             var bottomRightPos = new float3(topRightPos.x, 0f, bottomLeftPos.z);

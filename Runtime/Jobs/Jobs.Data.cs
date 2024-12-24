@@ -11,7 +11,7 @@ namespace ME.BECS {
         private static System.Func<bool, System.Type> getTypeFunction;
         
         public static void SetFunction(FunctionPointer<CompiledJobCallback> callback, System.Func<bool, System.Type> getType) {
-            if (jobDataFunction.Data.IsCreated == true) throw new System.Exception($"Function is already set for job type {typeof(TJob)}");
+            //if (jobDataFunction.Data.IsCreated == true) throw new System.Exception($"Function is already set for job type {typeof(TJob)}");
             jobDataFunction.Data = callback;
             getTypeFunction = getType;
         }

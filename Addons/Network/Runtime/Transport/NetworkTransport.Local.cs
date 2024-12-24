@@ -85,7 +85,7 @@ namespace ME.BECS.Network {
                             new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)
                         ).TotalMilliseconds;
                         this.networkModule.Value.SetServerStartTime(currentTime, in this.world);
-                        this.transport.Value.StartTick = this.world.state->tick;
+                        this.transport.Value.StartTick = this.world.state.ptr->tick;
 
                     }
 
@@ -99,7 +99,7 @@ namespace ME.BECS.Network {
                         var tr = this.transport.Value;
                         tr.replayFile = System.IO.File.Create($"{REPLAYS_DIRECTORY}/replay_{ts}.bytes");
                         {
-                            var header = new PackageHeader() { tick = this.world.state->tick };
+                            var header = new PackageHeader() { tick = this.world.state.ptr->tick };
                             tr.replayFile.WriteByte(header.b1);
                             tr.replayFile.WriteByte(header.b2);
                             tr.replayFile.WriteByte(header.b3);

@@ -23,7 +23,7 @@ namespace ME.BECS {
         [Preserve]
         public static void MakeMethod(Node* node) {
 
-            BurstCompileMethods.MakeMethodNoBurst<T, FunctionPointerDelegate>(nameof(IDrawGizmos.OnDrawGizmos), node->dataDrawGizmos, CallNoBurst);
+            BurstCompileMethods.MakeMethodNoBurst<T, FunctionPointerDelegate>(nameof(IDrawGizmos.OnDrawGizmos), node->dataDrawGizmos.ptr, CallNoBurst);
             
         }
 
@@ -47,7 +47,7 @@ namespace ME.BECS {
         [Preserve]
         public static void MakeMethod(Node* node) {
 
-            BurstCompileMethods.MakeMethod<T, FunctionPointerDelegate>(nameof(IDrawGizmos.OnDrawGizmos), node->dataDrawGizmos, Call, BurstCompileOnDrawGizmosNoBurst<T>.CallNoBurst);
+            BurstCompileMethods.MakeMethod<T, FunctionPointerDelegate>(nameof(IDrawGizmos.OnDrawGizmos), node->dataDrawGizmos.ptr, Call, BurstCompileOnDrawGizmosNoBurst<T>.CallNoBurst);
             
         }
 

@@ -10,7 +10,7 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents {
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
-            builder.builderDependsOn = job.Schedule<T>(in builder.commandBuffer, builder.parallelForBatch, builder.builderDependsOn);
+            builder.builderDependsOn = job.Schedule<T>(in builder.commandBuffer.ptr, builder.parallelForBatch, builder.builderDependsOn);
             builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -21,12 +21,12 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T>(this Query staticQuery, in T job, in World world, JobHandle dependsOn = default) where T : struct, IJobParallelForComponents {
             var state = world.state;
-            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state->queries.GetPtr(state, staticQuery.id));
+            var query = API.MakeStaticQuery(QueryContext.Create(state, world.id), dependsOn).FromQueryData(state, world.id, state.ptr->queries.GetPtr(state, staticQuery.id));
             return query.Schedule<T>(in job);
         }
 
         public static JobHandle Schedule<T>(this QueryBuilderDisposable staticQuery, in T job) where T : struct, IJobParallelForComponents {
-            staticQuery.builderDependsOn = job.Schedule<T>(in staticQuery.commandBuffer, staticQuery.parallelForBatch, staticQuery.builderDependsOn);
+            staticQuery.builderDependsOn = job.Schedule<T>(in staticQuery.commandBuffer.ptr, staticQuery.parallelForBatch, staticQuery.builderDependsOn);
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
@@ -53,9 +53,9 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T>(this T jobData, in CommandBuffer* buffer, uint innerLoopBatchCount, JobHandle dependsOn = default)
             where T : struct, IJobParallelForComponents {
             
-            dependsOn = new StartParallelJob() {
-                            buffer = buffer,
-                        }.ScheduleSingle(dependsOn);
+            //dependsOn = new StartParallelJob() {
+            //                buffer = buffer,
+            //            }.ScheduleSingle(dependsOn);
                         
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
@@ -65,7 +65,7 @@ namespace ME.BECS.Jobs {
                 buffer = buffer,
             };
             
-            var parameters = new JobsUtility.JobScheduleParameters(_address(ref data), GetReflectionData<T>(), dependsOn, ScheduleMode.Parallel);
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref data), GetReflectionData<T>(), dependsOn, ScheduleMode.Parallel);
             return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
 
         }

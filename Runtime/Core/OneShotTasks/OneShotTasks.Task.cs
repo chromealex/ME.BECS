@@ -12,7 +12,7 @@ namespace ME.BECS {
         public MemAllocatorPtr data;
 
         [INLINE(256)]
-        public void* GetData(State* state) => state->allocator.GetUnsafePtr(in this.data.ptr);
+        public safe_ptr GetData(safe_ptr<State> state) => state.ptr->allocator.GetUnsafePtr(in this.data.ptr);
 
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {

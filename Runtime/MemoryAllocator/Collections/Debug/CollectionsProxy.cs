@@ -10,7 +10,7 @@ namespace ME.BECS {
 
         public bool[] Bits {
             get {
-                var allocator = Context.world.state->allocator;
+                var allocator = Context.world.state.ptr->allocator;
                 var array = new bool[this.Data.Length];
                 for (var i = 0; i < this.Data.Length; ++i) {
                     array[i] = this.Data.IsSet(in allocator, i);
@@ -37,7 +37,7 @@ namespace ME.BECS {
                 var world = Context.world;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[world.state.ptr->allocator, i];
                 }
 
                 return arr;
@@ -84,7 +84,7 @@ namespace ME.BECS {
                 var world = Context.world;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[world.state.ptr->allocator, i];
                 }
 
                 return arr;
@@ -120,7 +120,7 @@ namespace ME.BECS {
                 var world = Context.world;
                 var arr = new T[this.arr.Count];
                 for (uint i = 0; i < this.arr.Count; ++i) {
-                    arr[i] = this.arr[world.state->allocator, i];
+                    arr[i] = this.arr[world.state.ptr->allocator, i];
                 }
 
                 return arr;
@@ -270,10 +270,19 @@ namespace ME.BECS {
     public class UIntDictionaryProxy<V> where V : unmanaged {
 
         private UIntDictionary<V> arr;
+        private World world;
         
         public UIntDictionaryProxy(UIntDictionary<V> arr) {
 
             this.arr = arr;
+            this.world = Context.world;
+
+        }
+
+        public UIntDictionaryProxy(UIntDictionary<V> arr, World world) {
+
+            this.arr = arr;
+            this.world = world;
 
         }
 
@@ -294,7 +303,7 @@ namespace ME.BECS {
             get {
                 var arr = new System.Collections.Generic.KeyValuePair<uint, V>[this.arr.Count];
                 var i = 0;
-                var e = this.arr.GetEnumerator(Context.world);
+                var e = this.arr.GetEnumerator(this.world);
                 while (e.MoveNext() == true) {
                     arr[i++] = new System.Collections.Generic.KeyValuePair<uint, V>(e.Current.key, e.Current.value);
                 }

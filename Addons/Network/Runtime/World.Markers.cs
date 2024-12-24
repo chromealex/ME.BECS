@@ -4,10 +4,10 @@ namespace ME.BECS.Network.Markers {
     using BECS.Internal;
     using static Cuts;
 
-    public unsafe struct InternalNetworkHeader {
+    public struct InternalNetworkHeader {
 
         public ClassPtr<INetworkTransport> transport;
-        public UnsafeNetworkModule.Data* moduleData;
+        public safe_ptr<UnsafeNetworkModule.Data> moduleData;
 
         public void Dispose() {
             this.transport.Dispose();
@@ -60,7 +60,7 @@ namespace ME.BECS.Network.Markers {
 
             WorldsNetworkDataStorage.worlds.Resize(world.id + 1u);
             var header = WorldsNetworkDataStorage.worlds.Get(world.id);
-            var playerId = header.moduleData->localPlayerId;
+            var playerId = header.moduleData.ptr->localPlayerId;
             UnsafeNetworkModule.AddEvent(header.transport.Value, header.moduleData, playerId, method, marker, 0UL);
             
         }
@@ -69,7 +69,7 @@ namespace ME.BECS.Network.Markers {
 
             WorldsNetworkDataStorage.worlds.Resize(world.id + 1u);
             var header = WorldsNetworkDataStorage.worlds.Get(world.id);
-            var playerId = header.moduleData->localPlayerId;
+            var playerId = header.moduleData.ptr->localPlayerId;
             UnsafeNetworkModule.AddEvent(header.transport.Value, header.moduleData, playerId, method, marker, negativeDelta);
             
         }

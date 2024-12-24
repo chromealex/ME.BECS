@@ -11,27 +11,18 @@ namespace ME.BECS {
     public unsafe partial struct MemoryAllocator {
 
         [INLINE(256)]
-        public readonly byte* GetUnsafePtr(in MemPtr ptr) {
-
+        public readonly safe_ptr GetUnsafePtr(in MemPtr ptr, uint offset = 0U) {
             #if MEMORY_ALLOCATOR_BOUNDS_CHECK
             if (ptr.zoneId < this.zonesListCount && this.zonesList[ptr.zoneId] != null && this.zonesList[ptr.zoneId]->size < ptr.offset) {
                 throw new System.Exception();
             }
             #endif
-
-            return (byte*)this.zonesList[ptr.zoneId] + ptr.offset;
+            return new safe_ptr((byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset, ((MemBlock*)((byte*)this.zonesList[ptr.zoneId] + ptr.offset - TSize<MemBlock>.size))->size);
         }
 
         [INLINE(256)]
-        public readonly byte* GetUnsafePtr(in MemPtr ptr, uint offset) {
-
-            return (byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset;
-        }
-
-        [INLINE(256)]
-        public readonly byte* GetUnsafePtr(in MemPtr ptr, long offset) {
-
-            return (byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset;
+        public readonly safe_ptr GetUnsafePtr(in MemPtr ptr, long offset) {
+            return new safe_ptr((byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset, ((MemBlock*)((byte*)this.zonesList[ptr.zoneId] + ptr.offset - TSize<MemBlock>.size))->size);
         }
 
         [INLINE(256)]
@@ -42,7 +33,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr ReAlloc(in MemPtr ptr, int size, out void* voidPtr) {
+        public MemPtr ReAlloc(in MemPtr ptr, int size, out safe_ptr voidPtr) {
 
             size = MemoryAllocator.Align(size);
             
@@ -52,7 +43,7 @@ namespace ME.BECS {
             JobUtils.Lock(ref this.lockIndex);
 
             voidPtr = this.GetUnsafePtr(ptr);
-            var block = (MemoryAllocator.MemBlock*)((byte*)voidPtr - TSize<MemoryAllocator.MemBlock>.size);
+            var block = (MemoryAllocator.MemBlock*)((byte*)voidPtr.ptr - TSize<MemoryAllocator.MemBlock>.size);
             var blockSize = block->size;
             var blockDataSize = blockSize - TSize<MemoryAllocator.MemBlock>.sizeInt;
             if (blockDataSize > size) {
@@ -96,7 +87,7 @@ namespace ME.BECS {
                         }
                     }
                     #endif
-                    voidPtr = newPtr;
+                    voidPtr = new safe_ptr(newPtr, size + TSize<MemoryAllocator.MemBlock>.sizeInt);
                     JobUtils.Unlock(ref this.lockIndex);
                     MemoryAllocator.ValidateConsistency(ref this);
                     return ptr;
@@ -124,7 +115,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr Alloc(long size, out void* ptr) {
+        public MemPtr Alloc(long size, out safe_ptr ptr) {
 
             size = MemoryAllocator.Align(size);
             
@@ -136,9 +127,9 @@ namespace ME.BECS {
                 var zone = this.zonesList[i];
                 if (zone == null) continue;
 
-                ptr = MemoryAllocator.ZmMalloc(zone, (int)size);
-                if (ptr != null) {
-                    var memPtr = this.GetSafePtr(ptr, i);
+                ptr = new safe_ptr(MemoryAllocator.ZmMalloc(zone, (int)size), (uint)size);
+                if (ptr.ptr != null) {
+                    var memPtr = this.GetSafePtr(ptr.ptr, i);
                     #if LOGS_ENABLED
                     MemoryAllocator.LogAdd(memPtr, size);
                     #endif
@@ -154,8 +145,8 @@ namespace ME.BECS {
 
                 var zone = MemoryAllocator.ZmCreateZone((int)math.max(size, this.initialSize));
                 var zoneIndex = this.AddZone(zone);
-                ptr = MemoryAllocator.ZmMalloc(zone, (int)size);
-                var memPtr = this.GetSafePtr(ptr, zoneIndex);
+                ptr = new safe_ptr(MemoryAllocator.ZmMalloc(zone, (int)size), (uint)size);
+                var memPtr = this.GetSafePtr(ptr.ptr, zoneIndex);
                 #if LOGS_ENABLED
                 MemoryAllocator.LogAdd(memPtr, size);
                 #endif
@@ -196,7 +187,7 @@ namespace ME.BECS {
             var success = false;
             if (zone != null) {
                 
-                success = MemoryAllocator.ZmFree(zone, this.GetUnsafePtr(ptr));
+                success = MemoryAllocator.ZmFree(zone, this.GetUnsafePtr(ptr).ptr);
 
                 if (MemoryAllocator.IsEmptyZone(zone) == true) {
                     MemoryAllocator.ZmFreeZone(zone);
@@ -288,12 +279,12 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public readonly ref T Ref<T>(in MemPtr ptr) where T : unmanaged {
-            return ref *(T*)this.GetUnsafePtr(ptr);
+            return ref *((safe_ptr<T>)this.GetUnsafePtr(ptr)).ptr;
         }
 
         [INLINE(256)]
         public readonly ref T Ref<T>(MemPtr ptr) where T : unmanaged {
-            return ref *(T*)this.GetUnsafePtr(ptr);
+            return ref *((safe_ptr<T>)this.GetUnsafePtr(ptr)).ptr;
         }
 
         [INLINE(256)]
@@ -404,25 +395,25 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly ref T RefArray<T>(in MemPtr ptr, int index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)this.GetUnsafePtr(in ptr, index * size);
+            return ref *((safe_ptr<T>)this.GetUnsafePtr(in ptr, index * size)).ptr;
         }
 
         [INLINE(256)]
         public readonly ref T RefArray<T>(MemPtr ptr, int index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)this.GetUnsafePtr(in ptr, index * size);
+            return ref *((safe_ptr<T>)this.GetUnsafePtr(in ptr, index * size)).ptr;
         }
 
         [INLINE(256)]
         public readonly ref T RefArray<T>(in MemPtr ptr, uint index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)this.GetUnsafePtr(in ptr, index * size);
+            return ref *((safe_ptr<T>)this.GetUnsafePtr(in ptr, index * size)).ptr;
         }
 
         [INLINE(256)]
         public readonly ref T RefArray<T>(MemPtr ptr, uint index) where T : unmanaged {
             var size = TSize<T>.size;
-            return ref *(T*)this.GetUnsafePtr(in ptr, index * size);
+            return ref *((safe_ptr<T>)this.GetUnsafePtr(in ptr, index * size)).ptr;
         }
 
         [INLINE(256)]
@@ -438,10 +429,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr ReAllocArray<T>(in MemPtr memPtr, uint newLength, out T* ptr) where T : unmanaged {
+        public MemPtr ReAllocArray<T>(in MemPtr memPtr, uint newLength, out safe_ptr<T> ptr) where T : unmanaged {
             var size = TSize<T>.size;
             var newPtr = this.ReAlloc(in memPtr, (int)(size * newLength), out var voidPtr);
-            ptr = (T*)voidPtr;
+            ptr = (safe_ptr<T>)voidPtr;
             return newPtr;
         }
 
@@ -451,7 +442,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr ReAllocArray(uint elementSizeOf, in MemPtr ptr, uint newLength, out void* voidPtr) {
+        public MemPtr ReAllocArray(uint elementSizeOf, in MemPtr ptr, uint newLength, out safe_ptr voidPtr) {
             return this.ReAlloc(in ptr, (int)(elementSizeOf * newLength), out voidPtr);
         }
 
@@ -478,10 +469,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr AllocArray<T>(uint length, out T* ptr) where T : unmanaged {
+        public MemPtr AllocArray<T>(uint length, out safe_ptr<T> ptr) where T : unmanaged {
             var size = TSize<T>.size;
             var memPtr = this.Alloc(size * length, out var voidPtr);
-            ptr = (T*)voidPtr;
+            ptr = voidPtr;
             return memPtr;
         }
 

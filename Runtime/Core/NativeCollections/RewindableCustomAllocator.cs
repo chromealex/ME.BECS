@@ -10,6 +10,7 @@ namespace ME.BECS.NativeCollections {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Mathematics;
+    using static Cuts;
 
     [GenerateTestsForBurstCompatibility]
     internal struct Spinner {
@@ -78,30 +79,30 @@ namespace ME.BECS.NativeCollections {
 
     internal unsafe struct UnmanagedArray<T> : IDisposable where T : unmanaged {
 
-        private void* pointer;
+        private safe_ptr pointer;
         private int length;
         public int Length => this.length;
         private AllocatorManager.AllocatorHandle allocator;
 
         public UnmanagedArray(int length, AllocatorManager.AllocatorHandle allocator) {
-            this.pointer = UnsafeUtility.Malloc(length, TAlign<T>.alignInt, allocator.ToAllocator);
+            this.pointer = _make(length, TAlign<T>.alignInt, allocator.ToAllocator);
             this.length = length;
             this.allocator = allocator;
         }
 
         public void Dispose() {
-            UnsafeUtility.Free(this.pointer, this.allocator.ToAllocator);
+            _free(this.pointer, this.allocator.ToAllocator);
         }
 
-        public unsafe T* GetUnsafePointer() {
-            return (T*)this.pointer;
+        public safe_ptr<T> GetUnsafePointer() {
+            return (safe_ptr<T>)this.pointer;
         }
 
         public ref T this[int index] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 unsafe {
-                    return ref ((T*)this.pointer)[index];
+                    return ref ((safe_ptr<T>)this.pointer)[index];
                 }
             }
         }
@@ -175,7 +176,7 @@ namespace ME.BECS.NativeCollections {
             // can't align any coarser than this many bytes
             public const int kMaximumAlignment = 16384;
             // pointer to contiguous memory
-            public byte* m_pointer;
+            public safe_ptr m_pointer;
             // how many bytes of contiguous memory it points to
             public long m_bytes;
             // Union of current position to give out memory and allocation counts
@@ -183,8 +184,8 @@ namespace ME.BECS.NativeCollections {
 
             public MemoryBlock(long bytes)
             {
-                m_pointer = (byte*)UnsafeUtility.Malloc(bytes, kMaximumAlignment, Allocator.Persistent);
-                Assert.IsTrue(m_pointer != null, "Memory block allocation failed, system out of memory");
+                m_pointer = _make((uint)bytes, kMaximumAlignment, Allocator.Persistent);
+                Assert.IsTrue(m_pointer.ptr != null, "Memory block allocation failed, system out of memory");
                 m_bytes = bytes;
                 m_union = default;
             }
@@ -196,8 +197,8 @@ namespace ME.BECS.NativeCollections {
 
             public void Dispose()
             {
-                UnsafeUtility.Free(m_pointer, Allocator.Persistent);
-                m_pointer = null;
+                _free(m_pointer, Allocator.Persistent);
+                m_pointer = default;
                 m_bytes = 0;
                 m_union = default;
             }
@@ -207,7 +208,7 @@ namespace ME.BECS.NativeCollections {
                 unsafe
                 {
                     void* pointer = (void*)ptr;
-                    return (pointer >= m_pointer) && (pointer < m_pointer + m_union.m_current);
+                    return (pointer >= m_pointer.ptr) && (pointer < m_pointer.ptr + m_union.m_current);
                 }
             }
         };
@@ -382,7 +383,7 @@ namespace ME.BECS.NativeCollections {
                     continue;
                 }
 
-                block.Range.Pointer = (IntPtr)(m_block[best].m_pointer + begin);
+                block.Range.Pointer = (IntPtr)(m_block[best].m_pointer.ptr + begin);
                 block.AllocatedItems = block.Range.Items;
 
                 Interlocked.MemoryBarrier();

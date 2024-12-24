@@ -11,14 +11,14 @@ namespace ME.BECS {
             public WorldStateException(string str) : base(str) { }
 
             [HIDE_CALLSTACK]
-            public static void Throw(WorldState required, WorldState worldState, State* state) {
+            public static void Throw(WorldState required, WorldState worldState, safe_ptr<State> state) {
                 ThrowNotBurst(required, worldState, state);
                 throw new OutOfRangeException($"Out of state. Required world state {required}.");
             }
 
             [BURST_DISCARD]
             [HIDE_CALLSTACK]
-            private static void ThrowNotBurst(WorldState required, WorldState worldState, State* state) => throw new WorldStateException(Exception.Format($"Out of state. Required world state {required}, current state {worldState}. Update type: {state->updateType}"));
+            private static void ThrowNotBurst(WorldState required, WorldState worldState, safe_ptr<State> state) => throw new WorldStateException(Exception.Format($"Out of state. Required world state {required}, current state {worldState}. Update type: {state.ptr->updateType}"));
 
         }
 
@@ -28,34 +28,34 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
-        public static void IS_IN_TICK(State* state) {
+        public static void IS_IN_TICK(safe_ptr<State> state) {
 
-            if (state->mode == WorldMode.Visual ||
-                state->tickCheck == 0 ||
-                state->updateType == UpdateType.FIXED_UPDATE ||
-                state->worldState == WorldState.Initialized ||
-                state->worldState == WorldState.BeginTick) {
+            if (state.ptr->mode == WorldMode.Visual ||
+                state.ptr->tickCheck == 0 ||
+                state.ptr->updateType != UpdateType.FIXED_UPDATE ||
+                state.ptr->worldState == WorldState.Initialized ||
+                state.ptr->worldState == WorldState.BeginTick) {
                 return;
             }
             
-            WorldStateException.Throw(WorldState.BeginTick, state->worldState, state);
+            WorldStateException.Throw(WorldState.BeginTick, state.ptr->worldState, state);
             
         }
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
-        public static void IS_NOT_IN_TICK(State* state) {
+        public static void IS_NOT_IN_TICK(safe_ptr<State> state) {
 
-            if (state->mode == WorldMode.Visual ||
-                state->tickCheck == 0 ||
-                state->updateType == UpdateType.UPDATE ||
-                state->updateType == UpdateType.LATE_UPDATE ||
-                state->worldState == WorldState.Initialized ||
-                state->worldState == WorldState.EndTick) {
+            if (state.ptr->mode == WorldMode.Visual ||
+                state.ptr->tickCheck == 0 ||
+                state.ptr->updateType == UpdateType.UPDATE ||
+                state.ptr->updateType == UpdateType.LATE_UPDATE ||
+                state.ptr->worldState == WorldState.Initialized ||
+                state.ptr->worldState == WorldState.EndTick) {
                 return;
             }
             
-            WorldStateException.Throw(WorldState.EndTick, state->worldState, state);
+            WorldStateException.Throw(WorldState.EndTick, state.ptr->worldState, state);
 
         }
 

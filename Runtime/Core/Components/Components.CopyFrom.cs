@@ -5,10 +5,10 @@ namespace ME.BECS {
     public unsafe partial struct Components {
 
         [INLINE(256)]
-        public static void CopyFrom(State* sourceState, in Ent ent, State* targetState, in Ent targetEnt) {
+        public static void CopyFrom(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) {
 
-            var srcArchId = sourceState->archetypes.entToArchetypeIdx[sourceState, ent.id];
-            var srcArch = sourceState->archetypes.list[sourceState, srcArchId];
+            var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
+            var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
@@ -18,11 +18,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void CopyFrom<TIgnore0>(State* sourceState, in Ent ent, State* targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent {
+        public static void CopyFrom<TIgnore0>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
-            var srcArchId = sourceState->archetypes.entToArchetypeIdx[sourceState, ent.id];
-            var srcArch = sourceState->archetypes.list[sourceState, srcArchId];
+            var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
+            var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
@@ -33,12 +33,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void CopyFrom<TIgnore0, TIgnore1>(State* sourceState, in Ent ent, State* targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent where TIgnore1 : unmanaged, IComponent {
+        public static void CopyFrom<TIgnore0, TIgnore1>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent where TIgnore1 : unmanaged, IComponent {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
             var ignore1 = StaticTypes<TIgnore1>.typeId;
-            var srcArchId = sourceState->archetypes.entToArchetypeIdx[sourceState, ent.id];
-            var srcArch = sourceState->archetypes.list[sourceState, srcArchId];
+            var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
+            var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
@@ -49,10 +49,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private static void CopyFrom_INTERNAL(State* sourceState, in Ent ent, State* targetState, in Ent targetEnt, uint typeId) {
+        private static void CopyFrom_INTERNAL(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt, uint typeId) {
             var groupId = StaticTypes.groups.Get(typeId);
-            ref var ptr = ref sourceState->components.items[in sourceState->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in sourceState->allocator);
+            ref var ptr = ref sourceState.ptr->components.items[in sourceState.ptr->allocator, typeId];
+            ref var storage = ref ptr.As<DataDenseSet>(in sourceState.ptr->allocator);
             var data = storage.Get(sourceState, ent.id, ent.gen, true, out _);
             if (Components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data) == true) {
                 Batches.Set_INTERNAL(typeId, in targetEnt, targetState);

@@ -40,7 +40,7 @@ namespace ME.BECS.Editor {
                 if (path.EndsWith(".cs") == true &&
                     path.Contains("ME.BECS.Gen.cs") == false) {
                     //UnityEngine.Debug.Log($"Destroy helper because of {path}");
-                    CodeGenerator.Destroy();
+                    //CodeGenerator.Destroy();
                     break;
                 }
             }

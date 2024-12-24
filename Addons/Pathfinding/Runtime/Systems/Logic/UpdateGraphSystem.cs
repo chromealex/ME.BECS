@@ -27,11 +27,11 @@ namespace ME.BECS.Pathfinding {
                 if (path.path.graph != this.graph) return;
                 
                 for (uint i = 0; i < this.dirtyChunks.Length; ++i) {
-                    if (this.dirtyChunks[(int)i] != this.world.state->tick) continue;
+                    if (this.dirtyChunks[(int)i] != this.world.state.ptr->tick) continue;
                     ref var chunk = ref path.path.chunks[this.world.state, i];
                     ref var flowField = ref chunk.flowField;
                     if (flowField.IsCreated == true) {
-                        flowField.Dispose(ref this.world.state->allocator);
+                        flowField.Dispose(ref this.world.state.ptr->allocator);
                     }
                 }
 
@@ -54,7 +54,7 @@ namespace ME.BECS.Pathfinding {
                 
                 // update graphs and set dirty chunks
                 var world = ent.World;
-                var dirtyTick = world.state->tick;
+                var dirtyTick = world.state.ptr->tick;
                 for (uint g = 0u; g < this.graphSystem.graphs.Length; ++g) {
 
                     if ((obstacle.graphMask & (1 << (int)g)) == 0) continue;
@@ -79,7 +79,7 @@ namespace ME.BECS.Pathfinding {
                     //var posMaxHeight = pos + heightSize3d * 0.5f;
 
                     // get chunks list by bounds
-                    var chunks = Graph.GetChunksByBounds(in root, in obstacleBounds);
+                    var chunks = Graph.GetChunksByBounds(in root, in obstacleBounds, Constants.ALLOCATOR_TEMP);
                     foreach (var chunkIndex in chunks) {
 
                         if (chunkIndex == uint.MaxValue) continue;
@@ -129,7 +129,7 @@ namespace ME.BECS.Pathfinding {
             }
 
         }
-
+        
         public unsafe void OnUpdate(ref SystemContext context) {
 
             var graphSystem = context.world.GetSystem<BuildGraphSystem>();
@@ -142,7 +142,7 @@ namespace ME.BECS.Pathfinding {
                 var graphEnt = graphSystem.graphs[i];
                 var changedChunks = graphEnt.Read<RootGraphComponent>().changedChunks;
                 var tempDirty = new NativeArray<ulong>((int)changedChunks.Length, Constants.ALLOCATOR_TEMPJOB);
-                _memcpy(changedChunks.GetUnsafePtr(), tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
+                _memcpy(changedChunks.GetUnsafePtr(), (safe_ptr)tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);
                 var dependsOn = Graph.UpdateObstacles(in context.world, in graphEnt, in tempDirty, graphMaskUpdate);
                 // reset all changed chunks in all existing paths
                 dependsOn = context.Query(dependsOn).AsUnsafe().AsParallel().Schedule<ResetPathJob, TargetPathComponent>(new ResetPathJob() {

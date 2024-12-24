@@ -23,7 +23,7 @@ namespace ME.BECS {
         [Preserve]
         public static void MakeMethod(Node* node) {
 
-            BurstCompileMethods.MakeMethodNoBurst<T, FunctionPointerDelegate>(nameof(IAwake.OnAwake), node->dataAwake, CallNoBurst);
+            BurstCompileMethods.MakeMethodNoBurst<T, FunctionPointerDelegate>(nameof(IAwake.OnAwake), node->dataAwake.ptr, CallNoBurst);
             
         }
 
@@ -47,7 +47,7 @@ namespace ME.BECS {
         [Preserve]
         public static void MakeMethod(Node* node) {
 
-            BurstCompileMethods.MakeMethod<T, FunctionPointerDelegate>(nameof(IUpdate.OnUpdate), node->dataUpdate, Call, BurstCompileOnUpdateNoBurst<T>.CallNoBurst);
+            BurstCompileMethods.MakeMethod<T, FunctionPointerDelegate>(nameof(IUpdate.OnUpdate), node->dataUpdate.ptr, Call, BurstCompileOnUpdateNoBurst<T>.CallNoBurst);
 
         }
         

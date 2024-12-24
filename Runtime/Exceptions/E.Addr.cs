@@ -24,9 +24,9 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
-        public static void ADDR_4<T>(ref T value) where T : struct {
+        public static void ADDR_4<T>(ref T value) where T : unmanaged {
 
-            if (((long)(System.IntPtr)_address(ref value)) % 4 == 0) return;
+            if (((long)(System.IntPtr)_address(ref value).ptr) % 4 == 0) return;
             AddrException.Throw();
 
         }

@@ -27,7 +27,7 @@ namespace ME.BECS {
             var buffer = new StreamBufferWriter();
             Batches.Apply(world.state);
             State.BurstMode(world.state, false, default);
-            (*world.state).Serialize(ref buffer);
+            (*world.state.ptr).Serialize(ref buffer);
             State.BurstMode(world.state, true, default);
             var bytes = buffer.ToArray();
             buffer.Dispose();
@@ -67,7 +67,7 @@ namespace ME.BECS {
 
     public unsafe struct StreamBufferReader {
 
-        private readonly byte* arr;
+        private readonly safe_ptr<byte> arr;
         private readonly uint arrSize;
         private uint position;
 
@@ -78,7 +78,7 @@ namespace ME.BECS {
             var size = (uint)bytes.Length;
             this.arr = _makeArray<byte>(size);
             fixed (byte* ptr = &bytes[0]) {
-                _memcpy(ptr, this.arr, size);
+                _memcpy((safe_ptr)ptr, this.arr, size);
             }
 
             this.arrSize = size;
@@ -87,7 +87,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public StreamBufferReader(byte* bytes, uint size) {
+        public StreamBufferReader(safe_ptr<byte> bytes, uint size) {
 
             this = default;
             this.arr = bytes;
@@ -98,22 +98,22 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Dispose() {
-            if (this.arr != null) _free(this.arr);
+            if (this.arr.ptr != null) _free(this.arr);
         }
 
         [INLINE(256)]
         public void ReadBlittable<T>(ref T value, uint size) where T : unmanaged {
 
             var ptr = this.GetPointerAndMove(size);
-            value = *(T*)ptr;
+            value = *(T*)ptr.ptr;
 
         }
 
         [INLINE(256)]
-        public byte* GetPointer() => this.arr + this.position;
+        public safe_ptr<byte> GetPointer() => this.arr + this.position;
 
         [INLINE(256)]
-        public byte* GetPointerAndMove(uint size) {
+        public safe_ptr<byte> GetPointerAndMove(uint size) {
             
             if (this.position + size > this.arrSize) throw new System.Exception();
             
@@ -127,7 +127,7 @@ namespace ME.BECS {
         public void Read(ref byte* value, uint length) {
 
             var ptr = this.GetPointerAndMove(length);
-            _memcpy(ptr, value, length);
+            _memcpy(ptr, (safe_ptr)value, length);
             
         }
 
@@ -136,7 +136,7 @@ namespace ME.BECS {
 
             var size = TSize<T>.size * length;
             var ptr = this.GetPointerAndMove(size);
-            _memcpy(ptr, (byte*)value, size);
+            _memcpy(ptr, (safe_ptr)(byte*)value, size);
             
         }
 
@@ -167,7 +167,7 @@ namespace ME.BECS {
 
     public unsafe struct StreamBufferWriter {
 
-        private byte* arr;
+        private safe_ptr<byte> arr;
         private uint arrSize;
         private uint position;
 
@@ -186,7 +186,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Dispose() {
-            if (this.arr != null) _free(this.arr);
+            if (this.arr.ptr != null) _free(this.arr);
             this = default;
         }
         
@@ -200,7 +200,7 @@ namespace ME.BECS {
 
             var bytes = new byte[this.position];
             fixed (byte* ptr = &bytes[0]) {
-                _memcpy(this.arr, ptr, this.position);
+                _memcpy(this.arr, (safe_ptr)ptr, this.position);
             }
             return bytes;
 
@@ -218,10 +218,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public byte* GetPointer() => this.arr + this.position;
+        public safe_ptr<byte> GetPointer() => this.arr + this.position;
 
         [INLINE(256)]
-        public byte* GetPointerAndMove(uint size) {
+        public safe_ptr<byte> GetPointerAndMove(uint size) {
             
             var pos = this.position;
             this.SetCapacity(this.position + size);
@@ -234,7 +234,7 @@ namespace ME.BECS {
         public void WriteBlittable<T>(T value, uint size) where T : unmanaged {
 
             var ptr = this.GetPointerAndMove(size);
-            *(T*)ptr = value;
+            *(T*)ptr.ptr = value;
 
         }
 
@@ -242,7 +242,7 @@ namespace ME.BECS {
         public void Write(byte* arrBytes, uint length) {
 
             var ptr = this.GetPointerAndMove(length);
-            _memcpy(arrBytes, ptr, length);
+            _memcpy((safe_ptr)arrBytes, ptr, length);
 
         }
 
@@ -251,7 +251,7 @@ namespace ME.BECS {
 
             var size = TSize<T>.size * length;
             var ptr = this.GetPointerAndMove(size);
-            _memcpy((byte*)arrBytes, ptr, size);
+            _memcpy((safe_ptr)(byte*)arrBytes, ptr, size);
 
         }
 

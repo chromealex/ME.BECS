@@ -14,8 +14,8 @@ namespace ME.BECS {
         public RefRO<T> valueRO;
         
         public AspectDataPtr(in World world) {
-            this.value = world.state->components.GetRW<T>(world.state, world.id);
-            this.valueRO = world.state->components.GetRO<T>(world.state, world.id);
+            this.value = world.state.ptr->components.GetRW<T>(world.state, world.id);
+            this.valueRO = world.state.ptr->components.GetRO<T>(world.state, world.id);
         }
 
         [INLINE(256)]
@@ -89,7 +89,7 @@ namespace ME.BECS {
 
         public MemArray<Aspect> list;
         
-        public uint GetReservedSizeInBytes(State* state) {
+        public uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (this.list.IsCreated == false) return 0u;
 
@@ -98,42 +98,42 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static AspectsStorage Create(State* state) {
+        public static AspectsStorage Create(safe_ptr<State> state) {
             var aspectsCount = AspectTypeInfo.counter + 1u;
             var storage = new AspectsStorage() {
-                list = new MemArray<Aspect>(ref state->allocator, aspectsCount),
+                list = new MemArray<Aspect>(ref state.ptr->allocator, aspectsCount),
             };
             
             return storage;
         }
 
         [INLINE(256)]
-        public ref T Initialize<T>(State* state) where T : unmanaged, IAspect {
+        public ref T Initialize<T>(safe_ptr<State> state) where T : unmanaged, IAspect {
             
             var typeId = AspectTypeInfo<T>.typeId;
-            return ref *(T*)this.Initialize(state, typeId, TSize<T>.size);
+            return ref *(T*)this.Initialize(state, typeId, TSize<T>.size).ptr;
             
         }
 
         [INLINE(256)]
-        public byte* Initialize(State* state, uint typeId, uint size) {
+        public safe_ptr Initialize(safe_ptr<State> state, uint typeId, uint size) {
             
             ref var item = ref this.list[state, typeId];
             if (item.constructedAspect.IsValid() == false) {
                 item.lockSpinner.Lock();
                 if (item.constructedAspect.IsValid() == false) {
-                    item.version = state->allocator.version;
-                    item.constructedAspect = state->allocator.Alloc(size);
+                    item.version = state.ptr->allocator.version;
+                    item.constructedAspect = state.ptr->allocator.Alloc(size);
                 }
                 item.lockSpinner.Unlock();
             }
 
-            return state->allocator.GetUnsafePtr(in item.constructedAspect);
+            return state.ptr->allocator.GetUnsafePtr(in item.constructedAspect);
 
         }
 
         [INLINE(256)]
-        public static void SetAspect(State* state, in Ent ent, uint aspectTypeId) {
+        public static void SetAspect(safe_ptr<State> state, in Ent ent, uint aspectTypeId) {
 
             for (uint i = 0u; i < AspectTypeInfo.with.Get(aspectTypeId).Length; ++i) {
 

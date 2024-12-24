@@ -93,7 +93,10 @@ namespace ME.BECS {
             toIndex = 0u;
             this.ValidateStruct(allocator);
             JobUtils.Lock(ref this.lockIndex);
-            if (value >= this.sparse.Length) return false;
+            if (value >= this.sparse.Length) {
+                JobUtils.Unlock(ref this.lockIndex);
+                return false;
+            }
             var denseIdx = this.sparse[in allocator, value];
             if (denseIdx > 0u) {
                 if (denseIdx <= this.denseSize - 1u) {

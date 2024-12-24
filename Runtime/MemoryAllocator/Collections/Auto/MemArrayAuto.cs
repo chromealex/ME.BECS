@@ -10,7 +10,7 @@ namespace ME.BECS {
     using static Cuts;
     using System.Runtime.InteropServices;
 
-    [StructLayout(LayoutKind.Sequential, Size = MemArrayAutoData.SIZE)]
+    [StructLayout(LayoutKind.Sequential)]
     [System.Serializable]
     public struct MemArrayAutoData {
 
@@ -63,7 +63,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemArrayAuto(in Ent ent, void* data, uint length) : this(in ent, length, ClearOptions.UninitializedMemory) {
+        public MemArrayAuto(in Ent ent, safe_ptr data, uint length) : this(in ent, length, ClearOptions.UninitializedMemory) {
 
             if (this.IsCreated == true) {
 
@@ -86,15 +86,15 @@ namespace ME.BECS {
             var state = ent.World.state;
             this = default;
             this.data.ent = ent;
-            var memPtr = state->allocator.AllocArray(length, out T* ptr);
+            var memPtr = state.ptr->allocator.AllocArray(length, out safe_ptr<T> ptr);
             #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state->allocator, ptr);
+            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
             #endif
             this.data.Length = length;
             
             if (clearOptions == ClearOptions.ClearMemory) {
                 var size = TSize<T>.size;
-                state->allocator.MemClear(memPtr, 0u, length * size);
+                state.ptr->allocator.MemClear(memPtr, 0u, length * size);
             }
             
             this.data.arrPtr = memPtr;
@@ -113,9 +113,9 @@ namespace ME.BECS {
             var state = ent.World.state;
             this = default;
             this.data.ent = ent;
-            this.data.arrPtr = state->allocator.Alloc(elementSize * length, out var tPtr);
+            this.data.arrPtr = state.ptr->allocator.Alloc(elementSize * length, out var tPtr);
             #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state->allocator, (T*)tPtr);
+            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, (T*)tPtr);
             #endif
             this.data.Length = length;
             
@@ -140,7 +140,7 @@ namespace ME.BECS {
             this.data.cachedPtr = default;
             #endif
             this.data.Length = arr.Length;
-            this.data.arrPtr = state->allocator.AllocArray<T>(arr.Length);
+            this.data.arrPtr = state.ptr->allocator.AllocArray<T>(arr.Length);
             NativeArrayUtils.CopyNoChecks(in arr, 0u, ref this, 0u, arr.Length);
             CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
 
@@ -160,7 +160,7 @@ namespace ME.BECS {
             this.data.cachedPtr = default;
             #endif
             this.data.Length = arr.Length;
-            this.data.arrPtr = state->allocator.AllocArray<T>(arr.Length, out var ptr);
+            this.data.arrPtr = state.ptr->allocator.AllocArray<T>(arr.Length, out var ptr);
             var size = TSize<T>.size;
             _memcpy(arr.ptr, ptr, this.Length * size);
             CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
@@ -170,7 +170,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly ref U As<U>(uint index) where U : unmanaged {
             E.RANGE(index, 0, this.Length);
-            return ref this.data.ent.World.state->allocator.RefArray<U>(this.data.arrPtr, index);
+            return ref this.data.ent.World.state.ptr->allocator.RefArray<U>(this.data.arrPtr, index);
         }
         
         [INLINE(256)]
@@ -191,7 +191,7 @@ namespace ME.BECS {
             var state = this.data.ent.World.state;
             CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             if (this.data.arrPtr.IsValid() == true) {
-                state->allocator.Free(this.data.arrPtr);
+                state.ptr->allocator.Free(this.data.arrPtr);
             }
             this = default;
 
@@ -226,21 +226,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly void* GetUnsafePtr() {
+        public readonly safe_ptr GetUnsafePtr() {
 
-            return this.data.ent.World.state->allocator.GetUnsafePtr(this.data.arrPtr);
+            return this.data.ent.World.state.ptr->allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
 
         [INLINE(256)]
-        public readonly void* GetUnsafePtr(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
             return allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
 
         [INLINE(256)]
-        public readonly void* GetUnsafePtrCached(in MemoryAllocator allocator) {
+        public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
             #if USE_CACHE_PTR
             return CachedPtr.ReadPtr(in this.data.cachedPtr, in allocator, this.data.arrPtr);
@@ -251,10 +251,10 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly void* GetUnsafePtrCached() {
+        public readonly safe_ptr GetUnsafePtrCached() {
 
             #if USE_CACHE_PTR
-            return CachedPtr.ReadPtr(in this.data.cachedPtr, in this.data.ent.World.state->allocator, this.data.arrPtr);
+            return CachedPtr.ReadPtr(in this.data.cachedPtr, in this.data.ent.World.state.ptr->allocator, this.data.arrPtr);
             #else
             return this.GetUnsafePtr();
             #endif
@@ -264,7 +264,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public MemPtr GetAllocPtr(uint index) {
             
-            return this.data.ent.World.state->allocator.RefArrayPtr<T>(this.data.arrPtr, index);
+            return this.data.ent.World.state.ptr->allocator.RefArrayPtr<T>(this.data.arrPtr, index);
             
         }
 
@@ -275,7 +275,7 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             return ref CachedPtr.Read<T>(this.data.cachedPtr, in allocator, this.data.arrPtr, index);
             #else
-            return ref *((T*)this.GetUnsafePtrCached(in this.data.ent.World.state->allocator) + index);
+            return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
             #endif
             
         }
@@ -284,7 +284,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((T*)this.GetUnsafePtrCached(in this.data.ent.World.state->allocator) + index);
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -292,15 +292,15 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((T*)this.GetUnsafePtrCached(in this.data.ent.World.state->allocator) + index);
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
             }
         }
 
-        public readonly ref T this[State* state, int index] {
+        public readonly ref T this[safe_ptr<State> state, int index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((T*)this.GetUnsafePtrCached(in state->allocator) + index);
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -308,7 +308,7 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             }
         }
 
@@ -316,15 +316,15 @@ namespace ME.BECS {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((T*)this.GetUnsafePtrCached(in allocator) + index);
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             }
         }
 
-        public readonly ref T this[State* state, uint index] {
+        public readonly ref T this[safe_ptr<State> state, uint index] {
             [INLINE(256)]
             get {
                 E.RANGE(index, 0, this.Length);
-                return ref *((T*)this.GetUnsafePtrCached(in state->allocator) + index);
+                return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in state.ptr->allocator) + index).ptr;
             }
         }
 
@@ -344,10 +344,10 @@ namespace ME.BECS {
             var state = this.data.ent.World.state;
             CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             var prevLength = this.Length;
-            this.data.arrPtr = state->allocator.ReAllocArray(this.data.arrPtr, newLength, out T* ptr);
+            this.data.arrPtr = state.ptr->allocator.ReAllocArray(this.data.arrPtr, newLength, out safe_ptr<T> ptr);
             CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state->allocator, ptr);
+            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
             #endif
             if (options == ClearOptions.ClearMemory) {
                 this.Clear(prevLength, newLength - prevLength);
@@ -373,10 +373,10 @@ namespace ME.BECS {
             var state = this.data.ent.World.state;
             CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             var prevLength = this.Length;
-            this.data.arrPtr = state->allocator.Alloc(elementSize * newLength, out var tPtr);
+            this.data.arrPtr = state.ptr->allocator.Alloc(elementSize * newLength, out var tPtr);
             CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state->allocator, (T*)tPtr);
+            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, (T*)tPtr);
             #endif
             if (options == ClearOptions.ClearMemory) {
                 this.Clear(prevLength, newLength - prevLength);
@@ -399,7 +399,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
 
             var size = TSize<T>.size;
-            this.data.ent.World.state->allocator.MemClear(this.data.arrPtr, index * size, length * size);
+            this.data.ent.World.state.ptr->allocator.MemClear(this.data.arrPtr, index * size, length * size);
             
         }
 
@@ -407,10 +407,10 @@ namespace ME.BECS {
         public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
             E.IS_CREATED(this);
-            var ptr = (T*)this.GetUnsafePtrCached(in this.data.ent.World.state->allocator);
+            var ptr = (safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator);
             for (uint i = 0, cnt = this.Length; i < cnt; ++i) {
 
-                if (obj.Equals(*(ptr + i)) == true) {
+                if (obj.Equals(*(ptr + i).ptr) == true) {
 
                     return true;
 

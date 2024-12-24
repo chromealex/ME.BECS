@@ -44,8 +44,8 @@ namespace ME.BECS.Network {
 
             if (this.networkModule == null) return;
 
-            data.beginFrameState->timeSinceStart = this.networkModule.GetCurrentTime();
-            data.beginFrameState->state = this.networkModule.GetStartFrameState();
+            data.beginFrameState.ptr->timeSinceStart = this.networkModule.GetCurrentTime();
+            data.beginFrameState.ptr->state = this.networkModule.GetStartFrameState();
 
         }
 
@@ -53,7 +53,7 @@ namespace ME.BECS.Network {
 
             if (this.networkModule == null) return;
             
-            data.beginFrameState->tickTime = this.networkModule.properties.tickTime;
+            data.beginFrameState.ptr->tickTime = this.networkModule.properties.tickTime;
 
         }
 
@@ -88,7 +88,7 @@ namespace ME.BECS.Network {
             if (this.networkModule is null) {
                 return;
             }
-            
+
             // From here there are some code which overrides default world initializer behaviour
             if (this.world.isCreated == true) {
                 

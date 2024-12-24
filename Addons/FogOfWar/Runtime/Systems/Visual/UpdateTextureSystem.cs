@@ -79,7 +79,7 @@ namespace ME.BECS.FogOfWar {
             
             public void Execute() {
 
-                _memcpy(this.fow.nodes.GetUnsafePtr(), this.currentBuffer, this.fow.nodes.Length);
+                _memcpy(this.fow.nodes.GetUnsafePtr(), (safe_ptr)this.currentBuffer, this.fow.nodes.Length);
 
             }
 
@@ -106,7 +106,7 @@ namespace ME.BECS.FogOfWar {
             
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
             var activePlayer = playersSystem.GetActivePlayer();
-            if (this.lastActivePlayer != activePlayer.ent || logicWorld.state->tick < this.lastTick) {
+            if (this.lastActivePlayer != activePlayer.ent || logicWorld.state.ptr->tick < this.lastTick) {
                 // clean up textures because we need to rebuild them for current player
                 FogOfWarUtils.CleanUpTexture(createTexture.GetBuffer());
             }
@@ -114,7 +114,7 @@ namespace ME.BECS.FogOfWar {
             var fow = activePlayer.readTeam.Read<FogOfWarComponent>();
             
             var buffer = createTexture.GetBuffer();
-            this.lastTick = logicWorld.state->tick;
+            this.lastTick = logicWorld.state.ptr->tick;
         
             var system = logicWorld.GetSystem<CreateSystem>();
             var props = system.heights.Read<FogOfWarStaticComponent>();

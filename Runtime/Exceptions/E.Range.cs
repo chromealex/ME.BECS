@@ -18,7 +18,7 @@ namespace ME.BECS {
 
             [BURST_DISCARD]
             [HIDE_CALLSTACK]
-            private static void ThrowNotBurst(int index, int startIndex, int count) => throw new OutOfRangeException(Exception.Format($"index {index} out of range {startIndex}..{count}"));
+            private static void ThrowNotBurst(int index, int startIndex, int count) => throw new OutOfRangeException(Exception.Format($"index {index} out of range [{startIndex}..{count - 1}]"));
 
         }
 
@@ -55,6 +55,15 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
         [HIDE_CALLSTACK]
+        public static unsafe void RANGE(byte* position, byte* low, byte* high) {
+            
+            if (position >= low && position < high) return;
+            OutOfRangeException.Throw((int)(high - position), 0, (int)(high - low));
+            
+        }
+
+        [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
+        [HIDE_CALLSTACK]
         public static void RANGE_INVERSE(uint index, uint length) {
             
             if (index >= length) return;
@@ -67,7 +76,13 @@ namespace ME.BECS {
         public static void OUT_OF_RANGE() {
             OutOfRangeException.Throw(0, 0, 0);
         }
-        
+
+        [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
+        [HIDE_CALLSTACK]
+        public static void OUT_OF_RANGE(int index, int startIndex, int count) {
+            OutOfRangeException.Throw(index, startIndex, count);
+        }
+
     }
 
 }

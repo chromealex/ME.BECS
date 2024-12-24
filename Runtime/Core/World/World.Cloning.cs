@@ -21,16 +21,16 @@ namespace ME.BECS {
             Batches.Apply(srcWorld.state);
 
             // Dispose current state
-            if (this.state != null) {
+            if (this.state.ptr != null) {
                 Worlds.ReleaseWorld(this);
-                this.state->Dispose();
+                this.state.ptr->Dispose();
                 _free(this.state);
             }
 
             this = srcWorld;
             // Create new state
             this.state = _make(new State());
-            this.state->CopyFrom(*srcWorld.state);
+            this.state.ptr->CopyFrom(*srcWorld.state.ptr);
             Worlds.AddWorld(ref this);
 
         }

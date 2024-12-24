@@ -13,7 +13,7 @@ namespace ME.BECS {
         private struct ResolveTasksParallelJob : IJobParallelFor {
 
             [NativeDisableUnsafePtrRestriction]
-            public State* state;
+            public safe_ptr<State> state;
             public OneShotType type;
             public ushort updateType;
 
@@ -27,7 +27,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         [NotThreadSafe]
-        public static JobHandle ScheduleJobs(State* state, OneShotType type, ushort updateType, JobHandle dependsOn) {
+        public static JobHandle ScheduleJobs(safe_ptr<State> state, OneShotType type, ushort updateType, JobHandle dependsOn) {
             return OneShotTasks.Schedule(state, type, updateType, dependsOn);
         }
 
