@@ -8,32 +8,77 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
 
-    public unsafe struct GlobalEventsData {
+    public abstract class RegistryCallerBase {
+
+        public abstract void Call(safe_ptr data);
+
+        public virtual void Add(System.Delegate callback) {
+            
+        }
+
+        public virtual bool Remove(System.Delegate callback) {
+            return false;
+        }
+
+    }
+
+    public unsafe class RegistryCaller<T> : RegistryCallerBase where T : unmanaged {
+
+        public GlobalEventWithDataCallback<T> callback;
+
+        public override void Add(System.Delegate callback) {
+
+            this.callback += (GlobalEventWithDataCallback<T>)callback;
+
+        }
+
+        public override bool Remove(System.Delegate callback) {
+
+            this.callback -= (GlobalEventWithDataCallback<T>)callback;
+            return true;
+
+        }
+
+        public override void Call(safe_ptr data) {
+            this.callback.Invoke(*(T*)data.ptr);
+        }
+
+    }
+
+    public class RegistryCaller : RegistryCallerBase {
+
+        public GlobalEventCallback callback;
+
+        public override void Add(System.Delegate callback) {
+
+            this.callback += (GlobalEventCallback)callback;
+
+        }
+
+        public override bool Remove(System.Delegate callback) {
+
+            this.callback -= (GlobalEventCallback)callback;
+            return true;
+
+        }
+
+        public override void Call(safe_ptr data) {
+            this.callback.Invoke();
+        }
+
+    }
+
+    public struct GlobalEventsData {
 
         public struct Item {
 
             public safe_ptr data;
-            public System.IntPtr callback;
-            public bool callbackSet;
-            public GCHandle handle;
-            public bool dataSet;
-            public bool withData;
-
-            public void Dispose() {
-                this.handle.Free();
-            }
 
         }
         
         public NativeHashMap<Event, Item> events;
         public LockSpinner spinner;
 
-        public void Dispose() {
-            foreach (var kv in this.events) {
-                kv.Value.Dispose();
-            }
-        }
-        
         [INLINE(256)]
         public void Lock() {
             this.spinner.Lock();
@@ -50,11 +95,11 @@ namespace ME.BECS {
 
         public static readonly SharedStatic<Internal.Array<GlobalEventsData>> events = SharedStatic<Internal.Array<GlobalEventsData>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldEvents>(TAlign<Internal.Array<GlobalEventsData>>.align, 30100L);
         public static readonly SharedStatic<ReadWriteNativeSpinner> readWriteSpinner = SharedStatic<ReadWriteNativeSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<WorldEvents>(TAlign<ReadWriteNativeSpinner>.align, 30101L);
-        public static readonly SharedStatic<LockSpinner> spinner = SharedStatic<LockSpinner>.GetOrCreate<WorldEvents>();
+        public static System.Collections.Generic.Dictionary<Event, RegistryCallerBase>[] evtToCallers;
 
     }
 
-    public unsafe delegate void GlobalEventWithDataCallback(safe_ptr data);
+    public delegate void GlobalEventWithDataCallback<T>(T data) where T : unmanaged;
     public delegate void GlobalEventCallback();
 
     public static unsafe class GlobalEvents {
@@ -66,71 +111,34 @@ namespace ME.BECS {
 
         public static void Dispose() {
             ref var items = ref WorldEvents.events.Data;
-            for (uint i = 0u; i < items.Length; ++i) {
-                ref var item = ref items.Get(i);
-                if (item.events.IsCreated == true) {
-                    item.Dispose();
-                }
-            }
             items.Dispose();
+            WorldEvents.evtToCallers = null;
         }
         
         /// <summary>
         /// Call this method from logic system
         /// </summary>
         /// <param name="evt"></param>
-        /// <param name="context"></param>
         [INLINE(256)]
-        public static void RaiseEvent(in Event evt, in SystemContext context) {
-            RaiseEvent(in evt, default, in context);
+        public static void RaiseEvent(in Event evt) {
+            RaiseEvent<TNull>(in evt, default, false);
         }
 
-        /// <summary>
-        /// Call this method from logic job
-        /// </summary>
-        /// <param name="evt"></param>
-        /// <param name="jobInfo"></param>
-        [INLINE(256)]
-        public static void RaiseEvent(in Event evt, in JobInfo jobInfo) {
-            RaiseEvent(in evt, default, jobInfo.worldId);
-        }
-
-        /// <summary>
-        /// Call this method from logic job with data
-        /// </summary>
-        /// <param name="evt"></param>
-        /// <param name="data"></param>
-        /// <param name="jobInfo"></param>
-        [INLINE(256)]
-        public static void RaiseEvent(in Event evt, safe_ptr data, in JobInfo jobInfo) {
-            RaiseEvent(in evt, data, jobInfo.worldId);
-        }
-
-        /// <summary>
-        /// Call this method from logic system with data
-        /// </summary>
-        /// <param name="evt"></param>
-        /// <param name="data"></param>
-        /// <param name="context"></param>
-        [INLINE(256)]
-        public static void RaiseEvent(in Event evt, safe_ptr data, in SystemContext context) {
-            RaiseEvent(in evt, data, context.world.id);
-        }
-        
         /// <summary>
         /// Call this method from logic step
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="data"></param>
-        /// <param name="logicWorldId"></param>
         [INLINE(256)]
-        public static void RaiseEvent(in Event evt, safe_ptr data, ushort logicWorldId) {
-
+        public static void RaiseEvent<T>(in Event evt, in T data) where T : unmanaged {
+            RaiseEvent(in evt, in data, true);
+        }
+        
+        [INLINE(256)]
+        private static void RaiseEvent<T>(in Event evt, in T data, bool useData) where T : unmanaged {
+            
             var world = Worlds.GetWorld(evt.worldId);
-            //var logicWorld = Worlds.GetWorld(logicWorldId);
             E.IS_VISUAL_MODE(world.state.ptr->mode);
-            //E.IS_LOGIC_MODE(logicWorld.state.ptr->mode);
-            //E.IS_IN_TICK(logicWorld.state);
             
             ValidateCapacity();
             
@@ -144,14 +152,13 @@ namespace ME.BECS {
                 item.Unlock();
             }
             var val = new GlobalEventsData.Item() {
-                data = data,
-                dataSet = true,
+                data = useData == true ? _make(data) : default,
             };
             item.Lock();
             if (item.events.TryAdd(evt, val) == false) {
                 var elem = item.events[evt];
+                _free(elem.data);
                 elem.data = val.data;
-                elem.dataSet = true;
                 item.events[evt] = elem;
             }
             item.Unlock();
@@ -164,11 +171,37 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="callback"></param>
-        [INLINE(256)]
-        public static void RegisterEvent(in Event evt, GlobalEventWithDataCallback callback) {
+        [INLINE(256)][NotThreadSafe]
+        public static bool UnregisterEvent<T>(in Event evt, GlobalEventWithDataCallback<T> callback) where T : unmanaged {
 
-            var handle = GCHandle.Alloc(callback);
-            RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), handle, withData: true);
+            if (WorldEvents.evtToCallers == null || evt.worldId >= WorldEvents.evtToCallers.Length) return false;
+            
+            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == false) {
+                return item.Remove(callback);
+            }
+
+            return false;
+
+        }
+
+        /// <summary>
+        /// Call this method from UI
+        /// </summary>
+        /// <param name="evt"></param>
+        /// <param name="callback"></param>
+        [INLINE(256)][NotThreadSafe]
+        public static void RegisterEvent<T>(in Event evt, GlobalEventWithDataCallback<T> callback) where T : unmanaged {
+
+            if (WorldEvents.evtToCallers == null || Worlds.MaxWorldId >= WorldEvents.evtToCallers.Length) System.Array.Resize(ref WorldEvents.evtToCallers, (int)(Worlds.MaxWorldId + 1u));
+            if (WorldEvents.evtToCallers[evt.worldId] == null) WorldEvents.evtToCallers[evt.worldId] = new System.Collections.Generic.Dictionary<Event, RegistryCallerBase>();
+            
+            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == false) {
+                WorldEvents.evtToCallers[evt.worldId].Add(evt, new RegistryCaller<T>() {
+                    callback = callback,
+                });
+            } else {
+                item.Add(callback);
+            }
 
         }
         
@@ -177,51 +210,22 @@ namespace ME.BECS {
         /// </summary>
         /// <param name="evt"></param>
         /// <param name="callback"></param>
-        [INLINE(256)]
+        [INLINE(256)][NotThreadSafe]
         public static void RegisterEvent(in Event evt, GlobalEventCallback callback) {
 
-            var handle = GCHandle.Alloc(callback);
-            RegisterEvent(in evt, Marshal.GetFunctionPointerForDelegate(callback), handle, withData: false);
+            if (WorldEvents.evtToCallers == null || Worlds.MaxWorldId >= WorldEvents.evtToCallers.Length) System.Array.Resize(ref WorldEvents.evtToCallers, (int)(Worlds.MaxWorldId + 1u));
+            if (WorldEvents.evtToCallers[evt.worldId] == null) WorldEvents.evtToCallers[evt.worldId] = new System.Collections.Generic.Dictionary<Event, RegistryCallerBase>();
+
+            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == false) {
+                WorldEvents.evtToCallers[evt.worldId].Add(evt, new RegistryCaller() {
+                    callback = callback,
+                });
+            } else {
+                item.Add(callback);
+            }
 
         }
         
-        [INLINE(256)]
-        private static void RegisterEvent(in Event evt, System.IntPtr callback, GCHandle handle, bool withData) {
-
-            var world = Worlds.GetWorld(evt.worldId);
-            E.IS_VISUAL_MODE(world.state.ptr->mode);
-            
-            ValidateCapacity();
-            
-            WorldEvents.readWriteSpinner.Data.ReadBegin();
-            ref var item = ref WorldEvents.events.Data.Get(evt.worldId);
-            if (item.events.IsCreated == false) {
-                item.Lock();
-                if (item.events.IsCreated == false) {
-                    item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_DOMAIN);
-                }
-                item.Unlock();
-            }
-            var val = new GlobalEventsData.Item() {
-                callback = callback,
-                handle = handle,
-                withData = withData,
-                callbackSet = true,
-            };
-            item.Lock();
-            if (item.events.TryAdd(evt, val) == false) {
-                var elem = item.events[evt];
-                elem.callback = val.callback;
-                elem.withData = val.withData;
-                elem.callbackSet = true;
-                item.events[evt] = elem;
-            }
-            item.Unlock();
-            WorldEvents.events.Data.Get(evt.worldId) = item;
-            WorldEvents.readWriteSpinner.Data.ReadEnd();
-
-        }
-
         [INLINE(256)]
         private static void ValidateCapacity() {
             if (Worlds.MaxWorldId > WorldEvents.events.Data.Length) {
@@ -235,7 +239,7 @@ namespace ME.BECS {
 
     }
     
-    public unsafe partial struct World {
+    public partial struct World {
 
         public struct GlobalEventsProcessJob : IJob {
 
@@ -254,28 +258,21 @@ namespace ME.BECS {
                     return;
                 }
                 item.Lock();
-                foreach (var kv in item.events) {
-                    ref var val = ref kv.Value;
-                    if (val.dataSet == true && val.callbackSet == true) {
-                        val.dataSet = false;
-                        if (val.withData == true) {
-                            var del = Marshal.GetDelegateForFunctionPointer<GlobalEventWithDataCallback>(val.callback);
+                if (this.worldId < WorldEvents.evtToCallers.Length) {
+                    var callers = WorldEvents.evtToCallers[this.worldId];
+                    foreach (var kv in item.events) {
+                        var evt = kv.Key;
+                        if (callers.TryGetValue(evt, out var caller) == true) {
                             try {
-                                del.Invoke(val.data);
-                            } catch (System.Exception ex) {
-                                UnityEngine.Debug.LogException(ex);
-                            }
-                            _free(val.data);
-                        } else {
-                            var del = Marshal.GetDelegateForFunctionPointer<GlobalEventCallback>(val.callback);
-                            try {
-                                del.Invoke();
+                                caller.Call(kv.Value.data);
                             } catch (System.Exception ex) {
                                 UnityEngine.Debug.LogException(ex);
                             }
                         }
+                        _free(kv.Value.data);
                     }
                 }
+                item.events.Clear();
                 item.Unlock();
                 WorldEvents.readWriteSpinner.Data.ReadEnd();
                 
