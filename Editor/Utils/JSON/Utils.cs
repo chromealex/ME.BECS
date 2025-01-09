@@ -112,6 +112,18 @@ namespace ME.BECS.Editor.JSON {
                     if (serializerPrimitive != null) {
                         serializerPrimitive.Serialize(valueBuilder, val, copy);
                         fields.Add(new System.Collections.Generic.KeyValuePair<string, string>(copy.name, valueBuilder.ToString()));
+                    } else if (val is IUnmanagedList list && copy.serializedObject.targetObject is EntityConfig config) {
+                        config.GetCollection(list.GetConfigId(), out var collectionData, out var collectionIndex);
+                        var items = copy.serializedObject.FindProperty(nameof(EntityConfig.collectionsData)).FindPropertyRelative(nameof(EntityConfig.CollectionsData.items));
+                        var arr = items.GetArrayElementAtIndex(collectionIndex).FindPropertyRelative(nameof(EntityConfig.CollectionsData.Collection.array));
+                        var index = 0;
+                        foreach (UnityEditor.SerializedProperty item in arr) {
+                            var subFields = GetFields(item);
+                            foreach (var kv in subFields) {
+                                fields.Add(new System.Collections.Generic.KeyValuePair<string, string>($"{copy.name}[{index}]/{kv.Key}", kv.Value));
+                            }
+                            ++index;
+                        }
                     } else {
                         var subFields = GetFields(copy);
                         foreach (var kv in subFields) {
