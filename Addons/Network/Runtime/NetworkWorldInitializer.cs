@@ -44,6 +44,8 @@ namespace ME.BECS.Network {
 
             if (this.networkModule == null) return;
 
+            if (data.connectedWorld.id != this.world.id) return;
+
             data.beginFrameState.ptr->timeSinceStart = this.networkModule.GetCurrentTime();
             data.beginFrameState.ptr->state = this.networkModule.GetStartFrameState();
 
@@ -52,6 +54,8 @@ namespace ME.BECS.Network {
         private unsafe void ViewsLoad(ref ViewsModuleData data) {
 
             if (this.networkModule == null) return;
+
+            if (data.connectedWorld.id != this.world.id) return;
             
             data.beginFrameState.ptr->tickTime = this.networkModule.properties.tickTime;
 

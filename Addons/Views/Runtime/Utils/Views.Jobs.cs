@@ -162,13 +162,13 @@ namespace ME.BECS.Views {
                 var pos = tr.GetWorldMatrixPosition();
                 var rot = tr.GetWorldMatrixRotation();
 
-                var prevTick = (long)this.beginFrameState.ptr->tick;
+                var prevTick = this.beginFrameState.ptr->tick;
                 var currentTick = this.currentTick;
                 var tickTime = (double)this.tickTime;
                 var prevTime = prevTick * tickTime;
                 var currentTime = currentTick * tickTime;
                 var currentWorldTime = this.currentTimeSinceStart;
-                var factor = (float)math.select(0d, math.clamp(math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTime);
+                var factor = (float)math.select(0d, math.clamp(math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
                 
                 {
                     var sourceRot = ME.BECS.Transforms.MatrixUtils.GetRotation(sourceData.value);
