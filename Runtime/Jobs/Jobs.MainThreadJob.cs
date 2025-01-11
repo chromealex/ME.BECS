@@ -5,14 +5,17 @@ namespace ME.BECS.Jobs {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst;
     using static Cuts;
-    
+
+    #if !(UNITY_EDITOR || ENABLE_PROFILER || DEVELOPMENT_BUILD)
     [JobProducerType(typeof(JobMainThreadExtensions.JobProcess<>))]
+    #endif
     public interface IJobMainThread {
         void Execute();
     }
 
     public static unsafe class JobMainThreadExtensions {
 
+        #if !(UNITY_EDITOR || ENABLE_PROFILER || DEVELOPMENT_BUILD)
         public static void JobEarlyInit<T>() where T : struct, IJobMainThread => JobProcess<T>.Initialize();
 
         private static System.IntPtr GetReflectionData<T>()
@@ -21,6 +24,7 @@ namespace ME.BECS.Jobs {
             System.IntPtr reflectionData = JobProcess<T>.jobReflectionData.Data;
             return reflectionData;
         }
+        #endif
 
         public static JobHandle Schedule<T>(this T jobData, JobHandle dependsOn = default)
             where T : struct, IJobMainThread {
@@ -40,6 +44,7 @@ namespace ME.BECS.Jobs {
 
         }
 
+        #if !(UNITY_EDITOR || ENABLE_PROFILER || DEVELOPMENT_BUILD)
         private struct JobData<T>
             where T : struct {
             [NativeDisableUnsafePtrRestriction]
@@ -64,9 +69,10 @@ namespace ME.BECS.Jobs {
 
                 if (JobsUtility.ThreadIndex != 0) return;
                 jobData.jobData.Execute();
-                
+
             }
         }
+        #endif
     }
 
 }
