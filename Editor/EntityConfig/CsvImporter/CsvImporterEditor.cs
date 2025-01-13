@@ -394,6 +394,8 @@ namespace ME.BECS.Editor.CsvImporter {
         }
 
         public static void Link(scg::List<ConfigFile> configFiles) {
+
+            ValidateConfigs(configFiles);
             
             var temp = TempComponent.CreateInstance<TempComponent>();
             foreach (var config in configFiles) {
@@ -435,7 +437,9 @@ namespace ME.BECS.Editor.CsvImporter {
                                 component.serializedObject.ApplyModifiedProperties();
 
                                 component = new SerializedObject(so.FindProperty("config").objectReferenceValue).FindProperty("collectionsData").FindPropertyRelative("items").GetArrayElementAtIndex(collectionIndex).FindPropertyRelative("array").GetArrayElementAtIndex(keyArrIndex);
-                                component.managedReferenceValue = System.Activator.CreateInstance(fieldType.GenericTypeArguments[0]);
+                                if (component.managedReferenceValue == null) {
+                                    component.managedReferenceValue = System.Activator.CreateInstance(fieldType.GenericTypeArguments[0]);
+                                }
 
                             } else {
                                 component = component.FindPropertyRelative(key);
@@ -472,6 +476,12 @@ namespace ME.BECS.Editor.CsvImporter {
             }
             TempComponent.DestroyImmediate(temp);
 
+            ValidateConfigs(configFiles);
+            
+        }
+
+        private static void ValidateConfigs(scg::List<ConfigFile> configFiles) {
+
             foreach (var config in configFiles) {
                 if (config.imported == false) continue;
                 config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
@@ -483,7 +493,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 config.instance.OnValidate();
                 EditorUtility.SetDirty(config.instance);
             }
-            
+
         }
 
         public class TempComponent : ScriptableObject {
