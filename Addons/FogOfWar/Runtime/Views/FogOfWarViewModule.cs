@@ -59,7 +59,7 @@ namespace ME.BECS.FogOfWar {
             if (this.crossFade == true) {
                 this.crossFadeTimer += dt / this.crossFadeDuration;
                 this.material.EnableKeyword("CROSS_FADE");
-                var val = (this.targetState == true ? this.crossFadeTimer : 1f - this.crossFadeTimer);
+                var val = UnityEngine.Mathf.Clamp01(this.targetState == true ? this.crossFadeTimer : 1f - this.crossFadeTimer);
                 foreach (var renderer in this.renderers) {
                     renderer.GetPropertyBlock(this.propertyBlock);
                     this.propertyBlock.SetFloat(lodFade, val);
