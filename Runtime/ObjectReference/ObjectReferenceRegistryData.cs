@@ -80,7 +80,7 @@ namespace ME.BECS {
                 hashId ^= (uint)(guid[i] + 31);
             }
 
-            if (hashId == 0) hashId = 1;
+            if (hashId == 0u) hashId = 1u;
 
             while (true) {
                 // Set unique next id

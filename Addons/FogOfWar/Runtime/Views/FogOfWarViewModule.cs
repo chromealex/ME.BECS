@@ -3,6 +3,7 @@ namespace ME.BECS.FogOfWar {
     using Views;
     using Players;
     using Units;
+    using Unity.Mathematics;
 
     public class ForOfWarCrossFadeViewModule : FogOfWarViewModule, IViewUpdate {
 
@@ -59,7 +60,7 @@ namespace ME.BECS.FogOfWar {
             if (this.crossFade == true) {
                 this.crossFadeTimer += dt / this.crossFadeDuration;
                 this.material.EnableKeyword("CROSS_FADE");
-                var val = UnityEngine.Mathf.Clamp01(this.targetState == true ? this.crossFadeTimer : 1f - this.crossFadeTimer);
+                var val = math.clamp(this.targetState == true ? this.crossFadeTimer : 1f - this.crossFadeTimer, 0f, 1f);
                 foreach (var renderer in this.renderers) {
                     renderer.GetPropertyBlock(this.propertyBlock);
                     this.propertyBlock.SetFloat(lodFade, val);
