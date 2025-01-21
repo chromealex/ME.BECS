@@ -31,7 +31,7 @@ namespace ME.BECS.Pathfinding {
         public float movementForce;
         
         [BURST(CompileSynchronously = true)]
-        public struct PathFollowJob : IJobParallelForAspects<TransformAspect, UnitAspect> {
+        public struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
 
             public World world;
             public float dt;
@@ -154,7 +154,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct SpeedDownOnHoldJob : IJobParallelForAspects<UnitAspect> {
+        public struct SpeedDownOnHoldJob : IJobForAspects<UnitAspect> {
 
             public float dt;
             
@@ -168,13 +168,13 @@ namespace ME.BECS.Pathfinding {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOnFollow = context.Query().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().AsUnsafe().Schedule<PathFollowJob, TransformAspect, UnitAspect>(new PathFollowJob() {
+            var dependsOnFollow = context.Query().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().AsUnsafe().AsParallel().Schedule<PathFollowJob, TransformAspect, UnitAspect>(new PathFollowJob() {
                 world = context.world,
                 dt = context.deltaTime,
                 buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
                 followPathSystem = this,
             });
-            var dependsOnStop = context.Query().Without<IsUnitStaticComponent>().With<UnitHoldComponent>().AsUnsafe().Schedule<SpeedDownOnHoldJob, UnitAspect>(new SpeedDownOnHoldJob() {
+            var dependsOnStop = context.Query().Without<IsUnitStaticComponent>().With<UnitHoldComponent>().AsUnsafe().AsParallel().Schedule<SpeedDownOnHoldJob, UnitAspect>(new SpeedDownOnHoldJob() {
                 dt = context.deltaTime,
             });
             context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(dependsOnFollow, dependsOnStop));

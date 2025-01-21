@@ -11,7 +11,7 @@ namespace ME.BECS.Pathfinding {
     public struct LookAtSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<TransformAspect, UnitAspect> {
+        public struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
             public float dt;
             public BuildGraphSystem buildGraphSystem;
@@ -42,7 +42,7 @@ namespace ME.BECS.Pathfinding {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().With<UnitLookAtComponent>().Without<PathFollowComponent>().Without<IsUnitStaticComponent>().Schedule<Job, TransformAspect, UnitAspect>(new Job() {
+            var dependsOn = context.Query().With<UnitLookAtComponent>().Without<PathFollowComponent>().Without<IsUnitStaticComponent>().AsParallel().Schedule<Job, TransformAspect, UnitAspect>(new Job() {
                 dt = context.deltaTime,
                 buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
             });
