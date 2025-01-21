@@ -56,5 +56,10 @@ namespace ME.BECS.Attack {
         public float speedFactor;
 
     }
+    
+    public struct AttackFilterComponent : IConfigComponent {
 
+        public ME.BECS.Units.LayerMask layers;
+
+    }
 }

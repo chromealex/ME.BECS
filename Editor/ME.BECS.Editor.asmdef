@@ -5,7 +5,9 @@
         "ME.BECS",
         "Unity.Burst",
         "Unity.Collections",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "ME.BECS.Units",
+        "ME.BECS.Units.Editor"
     ],
     "includePlatforms": [
         "Editor"

@@ -31,9 +31,17 @@ namespace ME.BECS.Editor.JSON {
         public static ISerializer GetSerializer(System.Type type) {
             if (allSerializers.Count == 0) {
                 allSerializers.Clear();
+                var bannedTypes = new System.Collections.Generic.HashSet<System.Type>();
+                var types = new System.Collections.Generic.HashSet<System.Type>();
                 var serializers = UnityEditor.TypeCache.GetTypesDerivedFrom<ISerializer>();
                 foreach (var serializerType in serializers) {
                     if (serializerType.IsInterface == true || serializerType.IsAbstract == true) continue;
+                    types.Add(serializerType);
+                    if (serializerType.BaseType != null && serializerType.BaseType.IsAbstract == false && serializerType.BaseType.IsInterface == false) bannedTypes.Add(serializerType.BaseType);
+                }
+                
+                foreach (var serializerType in types) {
+                    if (bannedTypes.Contains(serializerType)) continue;
                     allSerializers.Add((ISerializer)System.Activator.CreateInstance(serializerType));
                 }
             }

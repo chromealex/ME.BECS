@@ -105,7 +105,7 @@ namespace ME.BECS.Editor.JSON {
     }
 
     public class FloatSerializer : PrimitiveSerializer<float> {
-        public override object FromString(System.Type fieldType, string value) => float.Parse(value);
+        public override object FromString(System.Type fieldType, string value) => float.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public class DoubleSerializer : PrimitiveSerializer<double> {
@@ -249,6 +249,45 @@ namespace ME.BECS.Editor.JSON {
             builder.Append(", ");
             builder.Append(euler.z.ToString(System.Globalization.CultureInfo.InvariantCulture));
             builder.Append('"');
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+
+    public class LayerSerializer : SerializerBase<ME.BECS.Units.Layer> {
+        
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var layer = (ME.BECS.Units.Layer)obj;
+            builder.Append('"');
+            builder.Append(ME.BECS.Units.Editor.LayerAliasUtils.GetAliasOf(layer));
+            builder.Append('"');
+        }
+
+        public override object FromString(System.Type fieldType, string value) {
+            var fromString = new ME.BECS.Units.Layer { value = ME.BECS.Units.Editor.LayerAliasUtils.GetLayerByAlias(value).value };
+            return fromString;
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+    
+    public class LayerMaskSerializer : SerializerBase<ME.BECS.Units.LayerMask> {
+        
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var layer = (ME.BECS.Units.LayerMask)obj;
+            builder.Append('"');
+            builder.Append(ME.BECS.Units.Editor.LayerAliasUtils.LayerMaskToString(layer));
+            builder.Append('"'); 
+        }
+
+        public override object FromString(System.Type fieldType, string value) {
+            return ME.BECS.Units.Editor.LayerAliasUtils.StringToLayerMask(value);
         }
 
         public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {

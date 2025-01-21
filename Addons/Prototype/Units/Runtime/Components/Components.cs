@@ -163,5 +163,11 @@ namespace ME.BECS.Units {
         public float3 target;
 
     }
+    
+    public struct UnitBelongsToComponent : IConfigComponent {
+
+        public Layer layer;
+        
+    }
 
 }

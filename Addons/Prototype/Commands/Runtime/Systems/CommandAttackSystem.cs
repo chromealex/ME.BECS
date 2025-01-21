@@ -10,7 +10,7 @@ namespace ME.BECS.Commands {
     public struct CommandAttackSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct CleanUpJob : IJobParallelForAspects<UnitAspect> {
+        public struct CleanUpJob : IJobForAspects<UnitAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
 
@@ -50,7 +50,7 @@ namespace ME.BECS.Commands {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var handle = context.Query().With<UnitAttackCommandComponent>().Schedule<CleanUpJob, UnitAspect>();
+            var handle = context.Query().With<UnitAttackCommandComponent>().AsParallel().Schedule<CleanUpJob, UnitAspect>();
             handle = context.Apply(handle);
             handle = context.Query(handle).With<CommandAttack>().With<IsCommandGroupDirty>().Schedule<MoveJob, UnitCommandGroupAspect>();
             context.SetDependency(handle);

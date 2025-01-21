@@ -1,11 +1,10 @@
 namespace ME.BECS.Attack {
-    
+
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Transforms;
     using Unity.Mathematics;
     using ME.BECS.Units;
     using ME.BECS.Bullets;
-    using ME.BECS.Attack;
 
     public static class AttackUtils {
 
@@ -16,10 +15,10 @@ namespace ME.BECS.Attack {
             MoveToPoint,
 
         }
-        
+
         [INLINE(256)]
         public static Ent CreateAttackSensor(int targetsMask, Config config, in JobInfo jobInfo) {
-            
+
             var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
             config.Apply(in attackSensor);
             attackSensor.Set<QuadTreeQueryAspect>();
@@ -65,6 +64,17 @@ namespace ME.BECS.Attack {
             var dirNormalized = math.normalizesafe(dir);
             var distSq = math.lengthsq(dir);
             var minRange = attackSensor.sector.minRangeSqr;
+
+            var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
+            var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
+            var targetAttack = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor.Read<AttackComponent>();
+            
+            // if unit can't attack target and he is in target's attack range
+            if (unitAttackMask.Contains(targetAttackLayer) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
+                var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
+                position = unitTr.GetWorldMatrixPosition() - dirNormalized * (targetAttackRange + offset);
+                return PositionToAttack.MoveToPoint;
+            }
             if (distSq <= minRange) {
                 // get out from target
                 position = unitTr.GetWorldMatrixPosition() - dirNormalized * (minRange + offset);
@@ -80,11 +90,19 @@ namespace ME.BECS.Attack {
                 // we are in attack range already - try to look at attacker
                 return PositionToAttack.RotateToTarget;
             }
-            
+
             position = targetTr.GetWorldMatrixPosition() - dirNormalized * offset * 2f;
 
             return PositionToAttack.MoveToPoint;
 
+        }
+
+        [INLINE(256)]
+        public static bool CanAttack(in UnitAspect unit, in Ent target) {
+            
+            var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
+            var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
+            return unitAttackMask.Contains(targetAttackLayer);
         }
 
     }
