@@ -18,7 +18,8 @@ Bursted Entity Component System
 - Deterministic;
 - Networking & Rollbacks;
 - Very fast runtime;
-- 
+- Zero GC allocations, 99% unsafe and using custom allocators;
+- Views module which allows you to draw prefabs on the scene.
 
 Tested in Unity 2022.3.39f1
 
