@@ -53,10 +53,9 @@ Tested in Unity 2022.3.39f1
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Dependencies
 ```
 "dependencies": {
-    "com.unity.collections": "2.4.0-pre.2",
-    "com.unity.jobs": "0.70.0-preview.7",
-    "com.unity.burst": "1.8.4",
-    "com.unity.mathematics": "1.2.6",
+    "com.unity.collections": "2.5.2",
+    "com.unity.burst": "1.8.19",
+    "com.unity.mathematics": "1.3.2",
     "com.unity.profiling.core": "1.0.2"
   },
 ```
