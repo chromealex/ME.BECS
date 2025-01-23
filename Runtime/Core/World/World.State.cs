@@ -31,6 +31,8 @@ namespace ME.BECS {
 
         public bool IsCreated => this.tick != 0UL;
 
+        public int Hash => Utils.Hash(this.entities.Hash, this.components.Hash, this.random.Hash, this.tick);
+
         [INLINE(256)]
         public static safe_ptr<State> Create(byte[] bytes) {
             State st = default;

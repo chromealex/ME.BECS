@@ -84,8 +84,9 @@ namespace ME.BECS.Jobs {
             }
             #endif
             
+            E.IS_NULL(reflectionData, "Job is not created. Make sure the job is public.");
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
-            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, scheduleMode);
+            data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, flags);
             var parameters = new JobsUtility.JobScheduleParameters(data, reflectionData, dependsOn, scheduleMode);
             #else
             var dataVal = new JobData<T, A0,A1,A2,A3,A4, C0,C1,C2>() {
