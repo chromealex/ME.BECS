@@ -21,6 +21,18 @@ Bursted Entity Component System
 - Zero GC allocations, 99% unsafe and using custom allocators;
 - Views module which allows you to draw prefabs on the scene.
 
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Addons
+- Transforms
+- Pathfinding
+- FogOfWar
+- Trees (like a quadtree or octree)
+- Units API
+- Units attack sensors API
+- Bullets API
+- Unit commands API
+- Players/Teams API
+- Effects API
+
 Tested in Unity 2022.3.39f1
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
