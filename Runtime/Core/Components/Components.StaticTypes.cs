@@ -177,6 +177,12 @@ namespace ME.BECS {
 
     }
 
+    public struct StaticTypesDefault<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<T> defaultValue = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypesDefault<T>>();
+
+    }
+
     public struct StaticTypes<T> where T : unmanaged, IComponentBase {
 
         private static readonly T defaultZero = default;
@@ -196,6 +202,16 @@ namespace ME.BECS {
                 }
 
                 return ref defaultZero;
+            }
+        }
+
+        public static unsafe ref T defaultValueGet {
+            get {
+                if (StaticTypesHasDefaultValue<T>.value.Data == true) {
+                    return ref *(T*)StaticTypes.defaultValues.Get(StaticTypes<T>.typeId);
+                }
+
+                return ref StaticTypesDefault<T>.defaultValue.Data;
             }
         }
 

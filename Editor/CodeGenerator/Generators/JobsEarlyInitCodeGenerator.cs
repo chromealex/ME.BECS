@@ -237,7 +237,7 @@ namespace ME.BECS.Editor.Jobs {
                     funcBuilder.AppendLine($"{{ // {jobType.FullName}");
                     funcBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
                     funcBuilder.AppendLine($"[BurstCompile]");
-                    funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleMode scheduleMode) {{");
+                    funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {{");
                     funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
                     funcBuilder.AppendLine($"if (data == null) {{");
                     funcBuilder.AppendLine($"if (unsafeMode == true) {{");
@@ -247,16 +247,16 @@ namespace ME.BECS.Editor.Jobs {
                     funcBuilder.AppendLine($"}}");
                     funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
                     funcBuilder.AppendLine($"}}");
-                    funcBuilder.AppendLine($"data->scheduleMode = scheduleMode;");
+                    funcBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
                     funcBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
                     funcBuilder.AppendLine($"data->buffer = buffer;");
                     
                     structBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
-                    structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleMode scheduleMode;");
+                    structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
                     structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                     structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
                     structUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
-                    structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleMode scheduleMode;");
+                    structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
                     structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                     structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
                     if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {

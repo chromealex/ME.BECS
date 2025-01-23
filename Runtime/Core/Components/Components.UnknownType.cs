@@ -132,7 +132,6 @@ namespace ME.BECS {
         public static byte* ReadUnknownType(safe_ptr<State> state, MemAllocatorPtr storage, uint typeId, uint entId, ushort gen, out bool exists) {
 
             E.IS_VALID_TYPE_ID(typeId);
-            E.IS_NOT_TAG(typeId);
 
             var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, entId, gen, true, out _);
             exists = data != null;

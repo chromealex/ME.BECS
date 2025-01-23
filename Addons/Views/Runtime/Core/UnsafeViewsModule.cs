@@ -528,7 +528,7 @@ namespace ME.BECS.Views {
                 // Update views
                 {
                     // Assign views first
-                    var query = API.Query(in this.data.ptr->connectedWorld, dependsOn);
+                    var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).AsReadonly();
                     this.provider.Query(ref query);
                     var toAssignJob = query.Schedule<Jobs.JobAssignViews, AssignViewComponent>(new Jobs.JobAssignViews() {
                         viewsWorld = this.data.ptr->viewsWorld,
@@ -541,7 +541,7 @@ namespace ME.BECS.Views {
                 JobHandle toRemoveJob;
                 {
                     // DestroyView() case: Remove views from the scene which don't have ViewComponent, but contained in renderingOnSceneBits (DestroyView called)
-                    var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).Without<IsViewRequested>();
+                    var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).AsReadonly().Without<IsViewRequested>();
                     this.provider.Query(ref query);
                     toRemoveJob = query.AsParallel().Schedule<Jobs.JobRemoveFromScene, ViewComponent>(new Jobs.JobRemoveFromScene() {
                         viewsModuleData = this.data,
@@ -552,7 +552,7 @@ namespace ME.BECS.Views {
                 JobHandle toAddJob;
                 {
                     // InstantiateView() case: Add views to the scene which have ViewComponent, but not contained in renderingOnSceneBits
-                    var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).WithAspect<Transforms.TransformAspect>();
+                    var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).AsReadonly().WithAspect<Transforms.TransformAspect>();
                     this.provider.Query(ref query);
                     toAddJob = query.AsParallel().Schedule<Jobs.JobAddToScene, IsViewRequested>(new Jobs.JobAddToScene() {
                         state = this.data.ptr->viewsWorld.state,
