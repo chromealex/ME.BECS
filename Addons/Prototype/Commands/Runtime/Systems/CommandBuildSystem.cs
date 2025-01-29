@@ -11,7 +11,7 @@ namespace ME.BECS.Commands {
     public struct CommandBuildSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<UnitCommandGroupAspect> {
+        public struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;
             
@@ -74,7 +74,7 @@ namespace ME.BECS.Commands {
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var handle = context.Query().With<CommandBuild>().With<IsCommandGroupDirty>().Schedule<Job, UnitCommandGroupAspect>(new Job() {
+            var handle = context.Query().With<CommandBuild>().With<IsCommandGroupDirty>().AsParallel().Schedule<Job, UnitCommandGroupAspect>(new Job() {
                 buildGraphSystem = buildGraphSystem,
             });
             context.SetDependency(handle);

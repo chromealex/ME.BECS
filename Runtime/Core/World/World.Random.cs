@@ -20,6 +20,8 @@ namespace ME.BECS {
 
         public uint data;
         public LockSpinner lockIndex;
+        
+        public int Hash => Utils.Hash(this.data);
 
         [INLINE(256)]
         public void SetSeed(safe_ptr<State> statePtr, uint seed) {

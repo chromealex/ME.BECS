@@ -14,8 +14,26 @@ Bursted Entity Component System
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
-- Clone world/Serialize world very fast;
-- Deterministic.
+- Clone/Serialize world very fast;
+- Deterministic;
+- Networking & Rollbacks;
+- Very fast runtime;
+- Zero GC allocations, 99% unsafe and using custom allocators;
+- Views module which allows you to draw prefabs on the scene.
+
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Addons
+- Transforms
+- Pathfinding
+- FogOfWar
+- Trees (like a quadtree or octree)
+- Units API
+- Units attack sensors API
+- Bullets API
+- Unit commands API
+- Players/Teams API
+- Effects API
+
+Tested in Unity 2022.3.39f1
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
 - Create csc.rsp in Assets directory with this content:
@@ -28,32 +46,31 @@ Bursted Entity Component System
 -define:EXCEPTIONS_QUERY_BUILDER
 -define:EXCEPTIONS_INTERNAL
 -define:EXCEPTIONS
+-define:ENABLE_BECS_COLLECTIONS_CHECKS
 ```
 - Use "Create/ME.BECS/Create Project" menu to create default project.
-
-Tested in Unity 2023.1
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Dependencies
 ```
 "dependencies": {
-    "com.unity.collections": "2.4.0-pre.2",
-    "com.unity.jobs": "0.70.0-preview.7",
-    "com.unity.burst": "1.8.4",
-    "com.unity.mathematics": "1.2.6",
+    "com.unity.collections": "2.5.2",
+    "com.unity.burst": "1.8.19",
+    "com.unity.mathematics": "1.3.2",
     "com.unity.profiling.core": "1.0.2"
   },
 ```
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> API
-#### Create new world
+### Create new world
 WIKI [https://github.com/chromealex/ME.BECS/wiki/New-World](https://github.com/chromealex/ME.BECS/wiki/New-World)
 
-#### Entities
+### Entities
 WIKI [https://github.com/chromealex/ME.BECS/wiki/Entity-API](https://github.com/chromealex/ME.BECS/wiki/Entity-API)
 
-#### Create components
+### Create components
 ```csharp
-[ComponentGroup(10)] // Set component to group (optional)
+[EditorComment("My component help description")] // Component help description (optional)
+[ComponentGroup(typeof(MyComponentGroup))] // Set component to group (optional)
 public struct Component : IComponent {
     // (optional) Initialize component with default data (ex: ent.Read<Component>() or ent.Get<Component>() returns this value by default)
     public static Component Default => new Component() { data = 100 };
@@ -64,7 +81,7 @@ public struct Component : IComponent {
 }
 ```
 
-#### Access components
+### Access components
 ```csharp
 // Set data
 ent.Set(new Component() { ... });
@@ -103,10 +120,16 @@ ref readonly var comp = ref ent.ReadShared<Component>([hash]);
 ref var comp = ref ent.GetShared<Component>([hash]);
 ```
 
-#### Systems
-Awake systems
+### Systems
+
 ```csharp
-public unsafe struct TransformWorldMatrixUpdateSystem : IAwake {
+[BurstCompile] // Use burst in awake/start/update/destroy by default if you apply this attribute on the system
+[WithoutBurst] // Use this attribute to avoid Burst compilation for method (It's not a BurstDiscard, method will work without Burst instead)
+```
+
+#### Awake systems
+```csharp
+public struct TestSystem : IAwake {
     public void OnAwake(ref SystemContext context) {
         var jobHandle = ...
         context.SetDependency(jobHandle);
@@ -114,10 +137,20 @@ public unsafe struct TransformWorldMatrixUpdateSystem : IAwake {
 }
 ```
 
-Update systems
+#### Start systems
 ```csharp
-[BurstCompile] // Use burst in awake/update/destroy by default
-public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
+public struct TestSystem : IStart {
+    public void OnStart(ref SystemContext context) {
+        var jobHandle = ...
+        context.SetDependency(jobHandle);
+    }
+}
+```
+
+#### Update systems
+```csharp
+
+public struct TestSystem : IUpdate {
     [WithoutBurst] // Do not compile this method into burst
     public void OnUpdate(ref SystemContext context) {
         var jobHandle = ...
@@ -126,10 +159,20 @@ public unsafe struct TransformWorldMatrixUpdateSystem : IUpdate {
 }
 ```
 
-Destroy systems
+#### Destroy systems
 ```csharp
-public unsafe struct TransformWorldMatrixUpdateSystem : IDestroy {
+public struct TestSystem : IDestroy {
     public void OnDestroy(ref SystemContext context) {
+        var jobHandle = ...
+        context.SetDependency(jobHandle);
+    }
+}
+```
+
+#### Gizmos systems
+```csharp
+public struct TestSystem : IDrawGizmos {
+    public void OnDrawGizmos(ref SystemContext context) {
         var jobHandle = ...
         context.SetDependency(jobHandle);
     }
@@ -153,61 +196,68 @@ public struct MyAspect : IAspect {
         
 }
 
-var aspect = ent.GetAspect<MyAspect>();
+var aspect = ent.GetOrCreateAspect<MyAspect>();
 aspect.component1.data = 123;
 ```
 
 #### Queries
-Regular runtime query
-```csharp
-var jobHandle = API.Query(world, dependsOn)
-                   .WithAll<TestComponent, Test2Component>()
-                   .WithAny<TestComponent, Test2Component>()
-                   .With<TestComponent>()
-                   .Without<Test3Component>()
-                   .WithAspect<TestAspect>()
-                   .ParallelFor(64)
-                   .ForEach((in CommandBufferJob commandBuffer) => {
-                       var ent = commandBuffer.ent;
-                       ent // Entity access
-                   });
-```
-
-Aspect job query
+Aspect job parallel query
 ```csharp
 [BurstCompile]
-private struct MyJob : IJobParallelForAspect<MyAspect> {
-    public void Execute(ref MyAspect aspect) {
+private struct MyJob : IJobForAspects<MyAspect> {
+    public void Execute(in JobInfo jobInfo, in Ent ent, ref MyAspect aspect) {
         ...
     }
 }
-var query = API.Query(world, dependsOn).ScheduleParallelFor<MyJob, MyAspect>(new MyJob() { ... });
+var query = API.Query(world, dependsOn).AsParallel().Schedule<MyJob, MyAspect>(new MyJob() { ... });
 ```
 
-Components query
+Components parallel query
 ```csharp
 [BurstCompile]
-private struct MyJob : IJobComponents<MyComponent1, MyComponent2, ...> {
-    public void Execute(ref MyComponent1 comp1, ref MyComponent2 comp2, ...) {
+private struct MyJob : IJobForComponents<MyComponent1, MyComponent2, ...> {
+    public void Execute(in JobInfo jobInfo, in Ent ent, ref MyComponent1 comp1, ref MyComponent2 comp2, ...) {
         ...
     }
 }
-var query = API.Query(world, dependsOn).ScheduleParallelFor<MyJob, MyComponent1, MyComponent2, ...>(new MyJob() { ... });
+var query = API.Query(world, dependsOn).AsParallel().Schedule<MyJob, MyComponent1, MyComponent2, ...>(new MyJob() { ... });
 ```
 
-#### Jobs
-Regular jobs
+Aspects and components parallel query
+```csharp
+[BurstCompile]
+private struct MyJob : IJobFor1Aspects2Components<MyAspect, MyComponent1, MyComponent2> {
+    public void Execute(in JobInfo jobInfo, in Ent ent, ref MyAspect aspect, ref MyComponent1 comp1, ref MyComponent2 comp2) {
+        ...
+    }
+}
+var query = API.Query(world, dependsOn).AsParallel().Schedule<MyJob, MyAspect, MyComponent1, MyComponent2>(new MyJob() { ... });
+```
+
+Using jobs in systems
+```csharp
+public void OnUpdate(ref SystemContext context) {
+    var dependsOn = context.Query().AsParallel().Schedule<MyJob, MyAspect, MyComponent1, MyComponent2>(new MyJob() { ... });
+    context.SetDependency(dependsOn);
+}
+```
+
+### Jobs
+Regular jobs. You can use any unity jobs instead of ME.BECS jobs if you need.
 ```csharp
 [BurstCompile]
 public void Job : IJob {
     public Ent ent;
     public void Execute() {
-        ent.Get<MyComponent>().data = 123;
+        ent.Get<TestComponent1>().data = 123;
+        ent.Set(new TestComponent2() { ... });
+        ent.Remove<TestComponent3>();
+        ent.Destroy();
     }
 }
 ```
 
-#### Clone/Copy world
+### Clone/Copy world
 ```csharp
 // Clone world
 var newWorld = world.Clone();
@@ -216,7 +266,7 @@ var newWorld = world.Clone();
 world.CopyFrom(sourceWorld);
 ```
 
-#### Serialize/Deserialize world
+### Serialize/Deserialize world
 ```csharp
 // Serialize world
 var bytes = world.Serialize();
@@ -225,11 +275,14 @@ var bytes = world.Serialize();
 var world = World.Create(bytes);
 ```
 
-#### Views
+### Views
 ```csharp
 // Instantiate view
 ent.InstantiateView(viewSource);
 
 // Destroy view
 ent.DestroyViews(viewSource);
+
+// Assign view: Remove view from otherEnt and use it for ent
+ent.AssignView(otherEnt);
 ```

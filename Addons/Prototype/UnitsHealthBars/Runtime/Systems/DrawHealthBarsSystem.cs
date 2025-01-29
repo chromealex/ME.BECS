@@ -57,7 +57,7 @@ namespace ME.BECS.UnitsHealthBars {
         private ClassPtr<UnityEngine.Camera> cameraObject;
 
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobParallelForAspects<UnitAspect> {
+        public struct Job : IJobForAspects<UnitAspect> {
 
             public SystemLink<CreateSystem> fow;
             public PlayerAspect activePlayer;
@@ -105,7 +105,7 @@ namespace ME.BECS.UnitsHealthBars {
             var activePlayer = logicWorld.GetSystem<PlayersSystem>().GetActivePlayer();
             if (activePlayer.IsAlive() == false) return;
             
-            var handle = API.Query(in logicWorld, context.dependsOn).Schedule<Job, UnitAspect>(new Job() {
+            var handle = API.Query(in logicWorld, context.dependsOn).AsParallel().Schedule<Job, UnitAspect>(new Job() {
                 activePlayer = activePlayer,
                 fow = fow,
                 camera = this.cameraEnt.GetAspect<CameraAspect>(),

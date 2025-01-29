@@ -24,6 +24,8 @@ namespace ME.BECS {
         private uint entitiesCount;
         private uint aliveCount;
 
+        public int Hash => Utils.Hash(this.FreeCount, this.EntitiesCount);
+
         [INLINE(256)]
         public static void Lock(safe_ptr<State> state, in Ent ent) {
             state.ptr->entities.locksPerEntity[state, ent.id].Lock();

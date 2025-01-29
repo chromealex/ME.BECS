@@ -15,6 +15,8 @@ namespace ME.BECS {
         internal MemArray<MemArray<uint>> entityIdToHash;
         public MemArray<MemAllocatorPtr> items;
 
+        public int Hash => (int)this.items.Length;
+
     }
 
 }

@@ -13,7 +13,7 @@ namespace ME.BECS.Attack {
     public struct StopWhileAttackSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct JobSet2 : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
+        public struct JobSet : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parent) {
 
@@ -59,7 +59,7 @@ namespace ME.BECS.Attack {
                                    .AsParallel()
                                    .With<AttackTargetComponent>()
                                    .Without<CanFireWhileMovesTag>()
-                                   .Schedule<JobSet2, AttackAspect, ParentComponent>();
+                                   .Schedule<JobSet, AttackAspect, ParentComponent>();
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
                                    .With<AttackTargetComponent>()

@@ -347,7 +347,7 @@ namespace ME.BECS.Editor.Systems {
                                         methodContent.Add($"dep{index.ToString()} = input;");
                                         AddApply(systemNode, index, ref schemeDependsOn);
                                         methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, dep{index.ToString()});");
-                                        methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)(systems[{index.globalIndex}]))->{method}(ref localContext{index.ToString()});");
+                                        methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)systems[{index.globalIndex}])->{method}(ref localContext{index.ToString()});");
                                         methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
                                         methodContent.Add("}");
                                         collectedDeps.Add($"dep{index.ToString()}");

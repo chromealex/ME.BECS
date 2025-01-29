@@ -26,6 +26,7 @@ namespace ME.BECS {
         internal JobHandle builderDependsOn;
         internal uint parallelForBatch;
         internal bool isUnsafe;
+        internal bool isReadonly;
         internal Unity.Jobs.LowLevel.Unsafe.ScheduleMode scheduleMode;
         
         public ushort worldId => this.commandBuffer.ptr->worldId;
@@ -37,6 +38,7 @@ namespace ME.BECS {
             this.builderDependsOn = builder.builderDependsOn;
             this.parallelForBatch = builder.parallelForBatch;
             this.isUnsafe = builder.isUnsafe;
+            this.isReadonly = builder.isReadonly;
             this.scheduleMode = builder.scheduleMode;
         }
         

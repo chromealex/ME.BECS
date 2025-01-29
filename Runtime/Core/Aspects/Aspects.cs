@@ -242,9 +242,21 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        internal readonly ref T GetReadonly(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            var typeId = StaticTypes<T>.typeId;
+            ref var res = ref *(T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
+            if (exists == false) return ref StaticTypes<T>.defaultValueGet;
+            return ref res;
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
         public readonly ref readonly T Read(uint entId, ushort gen) {
             E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
+            E.IS_NOT_TAG(typeId);
             ref var res = ref *(T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
@@ -252,13 +264,15 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct RefRO<T> : IRefOp where T : unmanaged, IComponentBase {
+    public unsafe struct RefRO<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
         public RefOp Op => RefOp.ReadOnly;
 
         [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;
         public MemAllocatorPtr storage;
+
+        public bool IsCreated => this.state.ptr != null;
 
         [INLINE(256)]
         public RefRO(in World world) {
@@ -269,7 +283,9 @@ namespace ME.BECS {
         [INLINE(256)]
         #endif
         public readonly ref readonly T Read(uint entId, ushort gen) {
+            E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
+            E.IS_NOT_TAG(typeId);
             ref var res = ref *(T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;

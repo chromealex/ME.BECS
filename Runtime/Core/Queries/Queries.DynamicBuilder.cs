@@ -36,6 +36,7 @@ namespace ME.BECS {
         private bool asJob;
         internal ScheduleMode scheduleMode;
         internal bool isUnsafe;
+        internal bool isReadonly;
         internal bool isCreated;
         
         public ushort WorldId => this.commandBuffer.ptr->worldId;
@@ -106,6 +107,17 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             E.QUERY_BUILDER_IS_UNSAFE(this.isUnsafe);
             this.isUnsafe = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Run readonly filter schedule
+        /// </summary>
+        /// <returns></returns>
+        [INLINE(256)]
+        public QueryBuilder AsReadonly() {
+            E.IS_CREATED(this);
+            this.isReadonly = true;
             return this;
         }
 

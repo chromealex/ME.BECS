@@ -9,6 +9,16 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Jobs;
 
+    public enum ScheduleFlags {
+
+        None = 0,
+        Single = 1 << 0,
+        Parallel = 1 << 1,
+        
+        IsReadonly = 1 << 4,
+
+    }
+    
     public interface IJobParallelForAspectsComponentsBase { }
     public interface IJobParallelForComponentsBase { }
     public interface IJobParallelForAspectsBase { }

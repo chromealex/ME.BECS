@@ -11,14 +11,14 @@ namespace ME.BECS {
             public CollectionInternalException(string str) : base(str) { }
 
             [HIDE_CALLSTACK]
-            public static void Throw(string str) {
+            public static void Throw(Unity.Collections.FixedString64Bytes str) {
                 ThrowNotBurst(str);
-                throw new CollectionInternalException("Internal collection exception");
+                throw new CollectionInternalException("Internal collection exception. Turn off burst mode to get more info.");
             }
 
             [BURST_DISCARD]
             [HIDE_CALLSTACK]
-            private static void ThrowNotBurst(string str) => throw new CollectionInternalException($"{Exception.Format(str)}");
+            private static void ThrowNotBurst(Unity.Collections.FixedString64Bytes str) => throw new CollectionInternalException($"{Exception.Format(str.ToString())}");
 
         }
 
@@ -54,6 +54,18 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void IS_EMPTY(uint size) {
             if (size == 0u) CollectionInternalException.Throw("Collection is empty");
+        }
+
+        [Conditional(COND.EXCEPTIONS_INTERNAL)]
+        [HIDE_CALLSTACK]
+        public static void IS_NULL(System.IntPtr ptr) {
+            if (ptr == System.IntPtr.Zero) CollectionInternalException.Throw("Ptr is null");
+        }
+
+        [Conditional(COND.EXCEPTIONS_INTERNAL)]
+        [HIDE_CALLSTACK]
+        public static void IS_NULL(System.IntPtr ptr, Unity.Collections.FixedString64Bytes err) {
+            if (ptr == System.IntPtr.Zero) CollectionInternalException.Throw(err);
         }
 
     }

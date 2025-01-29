@@ -25,8 +25,10 @@ namespace ME.BECS.Commands {
                 if (progress.value < 1f) {
                     progress.lockSpinner.Lock();
                     if (progress.value < 1f) {
-                        JobUtils.Increment(ref progress.value, this.dt / progress.timeToBuild);
-                        if (progress.value >= 1f) {
+                        var progressValue = progress.value;
+                        JobUtils.Increment(ref progressValue, this.dt / progress.timeToBuild);
+                        progress.value = progressValue;
+                        if (progressValue >= 1f) {
                             // Building is complete
                             //UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
                             // Complete building
