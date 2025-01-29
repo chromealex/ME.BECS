@@ -67,14 +67,18 @@ namespace ME.BECS.Attack {
 
             var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
             var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
-            var targetAttack = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor.Read<AttackComponent>();
-            
-            // if unit can't attack target and he is in target's attack range
-            if (unitAttackMask.Contains(targetAttackLayer) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
-                var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
-                position = unitTr.GetWorldMatrixPosition() - dirNormalized * (targetAttackRange + offset);
-                return PositionToAttack.MoveToPoint;
+
+            var targetAttackSensor = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor;
+            if (targetAttackSensor.IsAlive()) {
+                var targetAttack = targetAttackSensor.Read<AttackComponent>();
+                // if unit can't attack target and he is in target's attack range
+                if (unitAttackMask.Contains(targetAttackLayer) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
+                    var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
+                    position = unitTr.GetWorldMatrixPosition() - dirNormalized * (targetAttackRange + offset);
+                    return PositionToAttack.MoveToPoint;
+                }
             }
+            
             if (distSq <= minRange) {
                 // get out from target
                 position = unitTr.GetWorldMatrixPosition() - dirNormalized * (minRange + offset);

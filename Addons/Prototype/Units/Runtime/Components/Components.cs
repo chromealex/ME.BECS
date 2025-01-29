@@ -164,10 +164,14 @@ namespace ME.BECS.Units {
 
     }
     
+    [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitBelongsToComponent : IConfigComponent {
 
         public Layer layer;
         
     }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitIsDeadTag : IComponent { }
 
 }

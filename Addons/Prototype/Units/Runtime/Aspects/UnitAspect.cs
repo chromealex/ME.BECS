@@ -41,6 +41,13 @@ namespace ME.BECS.Units {
             [INLINE(256)]
             set => this.ent.SetTag<UnitHoldComponent>(value);
         }
+        
+        public readonly bool IsDead {
+            [INLINE(256)]
+            get => this.ent.Has<UnitIsDeadTag>();
+            [INLINE(256)]
+            set => this.ent.SetTag<UnitIsDeadTag>(value);
+        }
 
         public readonly ref float minSightRangeSqr => ref this.component.sightRange.minRangeSqr;
         public readonly ref float sightRangeSqr => ref this.component.sightRange.rangeSqr;

@@ -258,7 +258,7 @@ namespace ME.BECS {
                     return;
                 }
                 item.Lock();
-                if (this.worldId < WorldEvents.evtToCallers.Length) {
+                if (WorldEvents.evtToCallers != null && this.worldId < WorldEvents.evtToCallers.Length) {
                     var callers = WorldEvents.evtToCallers[this.worldId];
                     foreach (var kv in item.events) {
                         var evt = kv.Key;

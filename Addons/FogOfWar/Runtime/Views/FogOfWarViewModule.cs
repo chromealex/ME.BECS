@@ -127,7 +127,7 @@ namespace ME.BECS.FogOfWar {
             if (isShadowCopy == true) {
                 state = !state;
                 // Neutral player always has index 0
-                if (state == false && PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
+                // if (state == false && PlayerUtils.GetOwner(in ent).readIndex == 0u) return true;
             }
 
             return state;

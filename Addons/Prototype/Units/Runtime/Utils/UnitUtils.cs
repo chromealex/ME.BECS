@@ -46,11 +46,12 @@ namespace ME.BECS.Units {
         
         [INLINE(256)]
         public static void DestroyUnit(in UnitAspect unit) {
-
+            
             RemoveFromSelectionGroup(in unit);
             RemoveFromCommandGroup(in unit);
-            unit.ent.DestroyHierarchy();
-
+            unit.IsDead = true;
+            unit.ent.DestroyEndTick();
+            
         }
 
         [INLINE(256)]

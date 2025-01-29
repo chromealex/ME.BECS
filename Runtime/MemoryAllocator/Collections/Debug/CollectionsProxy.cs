@@ -58,6 +58,7 @@ namespace ME.BECS {
 
         public T[] items {
             get {
+                if (this.arr.IsCreated == false) return null;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
                     arr[i] = this.arr[i];
@@ -81,6 +82,7 @@ namespace ME.BECS {
 
         public T[] items {
             get {
+                if (this.arr.IsCreated == false) return null;
                 var world = Context.world;
                 var arr = new T[this.arr.Length];
                 for (int i = 0; i < this.arr.Length; ++i) {
@@ -117,6 +119,7 @@ namespace ME.BECS {
 
         public T[] items {
             get {
+                if (this.arr.IsCreated == false) return null;
                 var world = Context.world;
                 var arr = new T[this.arr.Count];
                 for (uint i = 0; i < this.arr.Count; ++i) {
@@ -153,6 +156,7 @@ namespace ME.BECS {
 
         public T[] items {
             get {
+                if (this.arr.IsCreated == false) return null;
                 var arr = new T[this.arr.Count];
                 for (uint i = 0; i < this.arr.Count; ++i) {
                     arr[i] = this.arr[i];
@@ -182,6 +186,7 @@ namespace ME.BECS {
 
         public T[] items {
             get {
+                if (this.arr.isCreated == false) return null;
                 var arr = new T[this.arr.Count];
                 var i = 0;
                 var e = this.arr.GetEnumerator(Context.world);
@@ -214,6 +219,7 @@ namespace ME.BECS {
 
         public T[] items {
             get {
+                if (this.arr.isCreated == false) return null;
                 var world = Context.world;
                 var arr = new T[this.arr.Count];
                 var i = 0;
