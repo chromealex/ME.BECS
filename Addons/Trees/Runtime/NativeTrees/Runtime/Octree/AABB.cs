@@ -35,7 +35,7 @@ namespace NativeTrees {
         /// Returns wether this AABB overlaps with another AABB
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Overlaps(in AABB other) {
+        public readonly bool Overlaps(in AABB other) {
             return all(this.max >= other.min) &&
                    all(other.max >= this.min);
         }
