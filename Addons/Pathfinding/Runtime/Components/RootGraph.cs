@@ -1,8 +1,13 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Pathfinding {
     
-    using Unity.Mathematics;
-
     public struct RootGraphComponent : IComponent {
 
         public MemArrayAuto<ChunkComponent> chunks;
@@ -12,10 +17,10 @@ namespace ME.BECS.Pathfinding {
         public float3 position => this.properties.position;
         public uint chunkWidth => this.properties.chunkWidth;
         public uint chunkHeight => this.properties.chunkHeight;
-        public float nodeSize => this.properties.nodeSize;
+        public tfloat nodeSize => this.properties.nodeSize;
         
-        public float agentRadius;
-        public float agentMaxSlope;
+        public tfloat agentRadius;
+        public tfloat agentMaxSlope;
         public GraphProperties properties;
 
     }

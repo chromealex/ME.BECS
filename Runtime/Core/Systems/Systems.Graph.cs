@@ -153,35 +153,35 @@ namespace ME.BECS {
         [INLINE(256)]
         public JobHandle DrawGizmos(ref World world, JobHandle dependsOn = default) {
 
-            return this.Run(ref world, 0f, Method.DrawGizmos, 0, dependsOn);
+            return this.Run(ref world, 0u, Method.DrawGizmos, 0, dependsOn);
 
         }
 
         [INLINE(256)]
         public JobHandle Awake(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
 
-            return this.Run(ref world, 0f, Method.Awake, subId, dependsOn);
+            return this.Run(ref world, 0u, Method.Awake, subId, dependsOn);
 
         }
 
         [INLINE(256)]
         public JobHandle Start(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
 
-            return this.Run(ref world, 0f, Method.Start, subId, dependsOn);
+            return this.Run(ref world, 0u, Method.Start, subId, dependsOn);
 
         }
 
         [INLINE(256)]
-        public JobHandle Update(ref World world, float dt, ushort subId = 0, JobHandle dependsOn = default) {
+        public JobHandle Update(ref World world, uint deltaTimeMs, ushort subId = 0, JobHandle dependsOn = default) {
 
-            return this.Run(ref world, dt, Method.Update, subId, dependsOn);
+            return this.Run(ref world, deltaTimeMs, Method.Update, subId, dependsOn);
 
         }
 
         [INLINE(256)]
         public JobHandle Destroy(ref World world, ushort subId = 0, JobHandle dependsOn = default) {
             
-            return this.Run(ref world, 0f, Method.Destroy, subId, dependsOn);
+            return this.Run(ref world, 0u, Method.Destroy, subId, dependsOn);
             
         }
 
@@ -211,7 +211,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private JobHandle Run(ref World world, float dt, Method method, ushort subId, JobHandle dependsOn = default) {
+        private JobHandle Run(ref World world, uint deltaTimeMs, Method method, ushort subId, JobHandle dependsOn = default) {
             
             //UnityEngine.Debug.LogWarning("You are trying to run obsolete method. Use graph code generator instead.");
             var list = new UnsafeList<NodeData>((int)this.index, Constants.ALLOCATOR_TEMP);
@@ -229,7 +229,7 @@ namespace ME.BECS {
                             node.ptr->isStarted = true;
                             if (node.ptr->AllParentsStarted(method) == true) {
                                 var dj = node.ptr->GetJobHandle();
-                                var context = SystemContext.Create(dt, world, dj);
+                                var context = SystemContext.Create(deltaTimeMs, world, dj);
                                 //context.SetDependency(Batches.Apply(context.dependsOn, world.state));
                                 Journal.UpdateSystemStarted(world.id, node.ptr->name);
                                 //UnityEngine.Debug.Log("Started: " + node.ptr->name + " :: " + DebugHandle(dj) + " => " + DebugHandle(node.ptr->dependsOn) + " :: " + DebugParent(node) + ", subId: " + subId);
@@ -250,7 +250,7 @@ namespace ME.BECS {
                             var dj = node.ptr->GetJobHandle();
                             //UnityEngine.Debug.Log("Graph: " + node.ptr->name + " :: " + DebugHandle(dj));
                             node.ptr->isStarted = true;
-                            node.ptr->dependsOn = node.ptr->graph.ptr->Run(ref world, dt, method, subId, dj);
+                            node.ptr->dependsOn = node.ptr->graph.ptr->Run(ref world, deltaTimeMs, method, subId, dj);
                             list.Add(new NodeData() { data = node });
                         }
                     } else {

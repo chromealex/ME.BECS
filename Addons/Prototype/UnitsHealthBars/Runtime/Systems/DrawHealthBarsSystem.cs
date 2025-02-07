@@ -1,8 +1,16 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
 
 namespace ME.BECS.UnitsHealthBars {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
-    using Unity.Mathematics;
     using ME.BECS.Jobs;
     using ME.BECS.Views;
     using ME.BECS.Transforms;
@@ -30,8 +38,8 @@ namespace ME.BECS.UnitsHealthBars {
             public BarSettings settings;
             public float2 position;
             public float2 heightPosition;
-            public float barLerpValue;
-            public float healthPercent;
+            public tfloat barLerpValue;
+            public tfloat healthPercent;
             public byte barLerpIndex;
 
         }
@@ -40,13 +48,13 @@ namespace ME.BECS.UnitsHealthBars {
         public struct BarSettings {
 
             public int Sections => math.min(MAX_SECTIONS, math.max(MIN_SECTIONS, (int)math.ceil(this.health / MAX_HEALTH * MAX_SECTIONS)));
-            internal float health;
-            public float sectionWidth;
-            public float height;
-            public float referenceScale;
+            internal tfloat health;
+            public tfloat sectionWidth;
+            public tfloat height;
+            public tfloat referenceScale;
 
-            public float GetWidth(float scale) => this.Sections * (this.sectionWidth * scale + 1f) - 1f;
-            public float GetHeight(float scale) => this.height * scale + 2f;
+            public tfloat GetWidth(tfloat scale) => this.Sections * (this.sectionWidth * scale + 1f) - 1f;
+            public tfloat GetHeight(tfloat scale) => this.height * scale + 2f;
 
         }
 

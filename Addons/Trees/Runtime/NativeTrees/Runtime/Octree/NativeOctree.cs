@@ -1,8 +1,19 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using System;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 
 // https://bartvandesande.nl
@@ -497,7 +508,7 @@ namespace NativeTrees {
         private void Gizmos(uint nodeId, in ExtentsBounds quarterSizeBounds, int objectCount, int depth) {
             // Are we in a leaf node?
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
-                UnityEngine.Gizmos.DrawWireCube(quarterSizeBounds.nodeCenter, (Vector3)quarterSizeBounds.nodeExtents * 2);
+                UnityEngine.Gizmos.DrawWireCube((Vector3)quarterSizeBounds.nodeCenter, (Vector3)quarterSizeBounds.nodeExtents * 2);
                 return;
             }
 

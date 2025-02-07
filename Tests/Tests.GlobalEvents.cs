@@ -55,7 +55,7 @@ namespace ME.BECS.Tests {
                 ++raise;
             });
 
-            world.Tick(UnityEngine.Time.deltaTime, UpdateType.FIXED_UPDATE).Complete();
+            world.Tick((uint)(UnityEngine.Time.deltaTime * 1000f), UpdateType.FIXED_UPDATE).Complete();
             
             visualWorld.RaiseEvents(default);
 

@@ -1,3 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Commands {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -13,7 +25,7 @@ namespace ME.BECS.Commands {
         [BURST(CompileSynchronously = true)]
         public struct UpdateProgressJob : IJobForComponents<BuildInProgress> {
 
-            public float dt;
+            public tfloat dt;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BuildInProgress buildInProgress) {
 
@@ -25,10 +37,8 @@ namespace ME.BECS.Commands {
                 if (progress.value < 1f) {
                     progress.lockSpinner.Lock();
                     if (progress.value < 1f) {
-                        var progressValue = progress.value;
-                        JobUtils.Increment(ref progressValue, this.dt / progress.timeToBuild);
-                        progress.value = progressValue;
-                        if (progressValue >= 1f) {
+                        JobUtils.Increment(ref progress.value, this.dt / progress.timeToBuild);
+                        if (progress.value >= 1f) {
                             // Building is complete
                             //UnityEngine.Debug.Log("Complete Building: " + buildInProgress.building);
                             // Complete building

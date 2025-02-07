@@ -22,7 +22,7 @@ namespace ME.BECS.Tests {
 
             var world = World.Create();
 
-            var dt = 0.01f;
+            var dt = 100u;
             {
                 var systemGroup = SystemGroup.Create();
                 systemGroup.Add<TestSystem1>();
@@ -59,7 +59,7 @@ namespace ME.BECS.Tests {
 
             var world = World.Create();
 
-            var dt = 0.01f;
+            var dt = 100u;
             {
                 var systemGroup = SystemGroup.Create();
                 systemGroup.Add<TestSystemDefer1>();
@@ -86,7 +86,7 @@ namespace ME.BECS.Tests {
 
             var world = World.Create();
 
-            var dt = 0.01f;
+            var dt = 100u;
             {
                 var systemGroup = SystemGroup.Create();
                 systemGroup.Add<TestSystem2>();
@@ -106,7 +106,7 @@ namespace ME.BECS.Tests {
 
             var world = World.Create();
 
-            var dt = 0.01f;
+            var dt = 100u;
             {
                 var systemGroup = SystemGroup.Create();
                 systemGroup.Add<TestSystem3>();
@@ -126,7 +126,7 @@ namespace ME.BECS.Tests {
 
             var world = World.Create();
 
-            var dt = 0.01f;
+            var dt = 100u;
             {
                 var systemGroup = SystemGroup.Create();
                 systemGroup.Add<TestSystem4>();

@@ -1,6 +1,14 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS.Bullets {
-    
-    using Unity.Mathematics;
     
     public struct BulletConfigComponent : IConfigComponent {
 
@@ -14,9 +22,9 @@ namespace ME.BECS.Bullets {
         /// If hitRangeSqr <= 0 -> use single damage at point or for targetEnt
         /// </summary>
         [ValueSqr]
-        public float hitRangeSqr;
+        public tfloat hitRangeSqr;
 
-        public float speed;
+        public tfloat speed;
 
         /// <summary>
         /// If set - bullet will move towards target point if it moves

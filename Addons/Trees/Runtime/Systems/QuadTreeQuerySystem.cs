@@ -1,9 +1,19 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
 
 namespace ME.BECS {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
-    using Unity.Mathematics;
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
     using ME.BECS.Transforms;
@@ -18,15 +28,15 @@ namespace ME.BECS {
         /// <summary>
         /// Range to select
         /// </summary>
-        public float rangeSqr;
+        public tfloat rangeSqr;
         /// <summary>
         /// Min range to select
         /// </summary>
-        public float minRangeSqr;
+        public tfloat minRangeSqr;
         /// <summary>
         /// Sector angle in degrees (align to look rotation)
         /// </summary>
-        public float sector;
+        public tfloat sector;
         /// <summary>
         /// Select X units for each tree
         /// </summary>
@@ -59,18 +69,18 @@ namespace ME.BECS {
         public AspectDataPtr<QuadTreeQuery> queryPtr;
         public AspectDataPtr<QuadTreeResult> resultPtr;
 
-        public readonly ref QuadTreeQuery query => ref this.queryPtr.value.Get(this.ent.id, this.ent.gen);
-        public readonly ref QuadTreeResult results => ref this.resultPtr.value.Get(this.ent.id, this.ent.gen);
+        public readonly ref QuadTreeQuery query => ref this.queryPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref QuadTreeResult results => ref this.resultPtr.Get(this.ent.id, this.ent.gen);
 
-        public readonly ref readonly QuadTreeQuery readQuery => ref this.queryPtr.value.Read(this.ent.id, this.ent.gen);
-        public readonly ref readonly QuadTreeResult readResults => ref this.resultPtr.value.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly QuadTreeQuery readQuery => ref this.queryPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly QuadTreeResult readResults => ref this.resultPtr.Read(this.ent.id, this.ent.gen);
 
     }
     
     public struct AABBDistanceSquaredProvider<T> : NativeTrees.IOctreeDistanceProvider<T> {
         public bool ignoreY;
         // Just return the distance squared to our bounds
-        public float DistanceSquared(float3 point, T obj, NativeTrees.AABB bounds) => bounds.DistanceSquared(point, this.ignoreY);
+        public tfloat DistanceSquared(float3 point, T obj, NativeTrees.AABB bounds) => bounds.DistanceSquared(point, this.ignoreY);
     }
 
     public struct OctreeNearestIgnoreSelfAABBVisitor<T> : NativeTrees.IOctreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> {
@@ -165,7 +175,7 @@ namespace ME.BECS {
         
         public TSubFilter subFilter;
         public UnsafeHashSet<T> results;
-        public float rangeSqr;
+        public tfloat rangeSqr;
         public uint max;
         public MathSector sector;
         public bool ignoreSelf;

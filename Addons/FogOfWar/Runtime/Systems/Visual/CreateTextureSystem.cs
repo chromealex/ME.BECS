@@ -1,3 +1,10 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.FogOfWar {
     
@@ -5,7 +12,6 @@ namespace ME.BECS.FogOfWar {
     using Unity.Collections.LowLevel.Unsafe;
     using Transforms;
     using Views;
-    using Unity.Mathematics;
     using static Cuts;
 
     public struct CreateTextureSystem : IAwake, IDestroy {

@@ -1,7 +1,14 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Pathfinding {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
-    using Unity.Mathematics;
     using Unity.Collections;
 
     [UnityEngine.Tooltip("Draw graph in gizmos.")]
@@ -68,9 +75,9 @@ namespace ME.BECS.Pathfinding {
                         Graph.DrawGizmos(path, new Graph.GizmosParameters() { drawNormals = this.drawNormals, });
                         
                         UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
-                        UnityEngine.Gizmos.DrawWireSphere(target.Read<TargetPathComponent>().path.to, math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)));
+                        UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)target.Read<TargetPathComponent>().path.to, (float)math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)));
                         UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
-                        UnityEngine.Gizmos.DrawWireSphere(target.Read<TargetPathComponent>().path.to, math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)));
+                        UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)target.Read<TargetPathComponent>().path.to, (float)math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)));
 
                     }
 

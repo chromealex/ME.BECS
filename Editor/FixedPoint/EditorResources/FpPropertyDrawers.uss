@@ -1,0 +1,21 @@
+.root .container {
+    flex-direction: column;
+}
+
+.root .container .type {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 60px;
+}
+
+.root .container .type * {
+    min-width: 10px;
+    border-width: 0px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.root .container .type PopupTextElement {
+    color: rgba(255, 255, 255, 0.5);
+    -unity-text-align: middle-right;
+}

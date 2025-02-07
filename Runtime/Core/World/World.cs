@@ -77,12 +77,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Unity.Jobs.JobHandle Tick(float dt, ushort updateType = 0, Unity.Jobs.JobHandle dependsOn = default) {
+        public Unity.Jobs.JobHandle Tick(uint deltaTimeMs, ushort updateType = 0, Unity.Jobs.JobHandle dependsOn = default) {
 
             E.IS_CREATED(this);
             
             dependsOn = State.SetWorldState(in this, WorldState.BeginTick, updateType, dependsOn);
-            dependsOn = this.TickWithoutWorldState(dt, updateType, dependsOn);
+            dependsOn = this.TickWithoutWorldState(deltaTimeMs, updateType, dependsOn);
             dependsOn = State.SetWorldState(in this, WorldState.EndTick, updateType, dependsOn);
 
             return dependsOn;
@@ -90,7 +90,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public Unity.Jobs.JobHandle TickWithoutWorldState(float dt, ushort updateType, Unity.Jobs.JobHandle dependsOn = default) {
+        public Unity.Jobs.JobHandle TickWithoutWorldState(uint deltaTimeMs, ushort updateType, Unity.Jobs.JobHandle dependsOn = default) {
 
             E.IS_CREATED(this);
             
@@ -101,7 +101,7 @@ namespace ME.BECS {
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.NextTick, updateType, dependsOn);
             {
                 if (updateType == UpdateType.FIXED_UPDATE) dependsOn = State.NextTick(this.state, dependsOn);
-                dependsOn = this.TickRootSystemGroup(dt, updateType, dependsOn);
+                dependsOn = this.TickRootSystemGroup(deltaTimeMs, updateType, dependsOn);
                 dependsOn = Batches.Apply(dependsOn, this.state);
             }
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.CurrentTick, updateType, dependsOn);

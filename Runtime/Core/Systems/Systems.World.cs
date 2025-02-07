@@ -56,7 +56,7 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
                 
                 // if we have static data
-                if (SystemsStatic.RaiseOnAwake(in rootGroup, subId, 0f, ref world, ref dependsOn) == false) {
+                if (SystemsStatic.RaiseOnAwake(in rootGroup, subId, 0u, ref world, ref dependsOn) == false) {
 
                     dependsOn = rootGroup.Awake(ref world, subId, dependsOn);
 
@@ -77,7 +77,7 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
                 
                 // if we have static data
-                if (SystemsStatic.RaiseOnStart(in rootGroup, subId, 0f, ref world, ref dependsOn) == false) {
+                if (SystemsStatic.RaiseOnStart(in rootGroup, subId, 0u, ref world, ref dependsOn) == false) {
 
                     dependsOn = rootGroup.Start(ref world, subId, dependsOn);
 
@@ -113,7 +113,7 @@ namespace ME.BECS {
 
         }
 
-        internal static JobHandle TickRootSystemGroup(this ref World world, float dt, ushort updateType, JobHandle dependsOn) {
+        internal static JobHandle TickRootSystemGroup(this ref World world, uint deltaTimeMs, ushort updateType, JobHandle dependsOn) {
 
             E.IS_CREATED(world);
             var address = world.id;
@@ -121,9 +121,9 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
 
                 // if we have static data
-                if (SystemsStatic.RaiseOnUpdate(in rootGroup, updateType, dt, ref world, ref dependsOn) == false) {
+                if (SystemsStatic.RaiseOnUpdate(in rootGroup, updateType, deltaTimeMs, ref world, ref dependsOn) == false) {
 
-                    dependsOn = rootGroup.Update(ref world, dt, updateType, dependsOn);
+                    dependsOn = rootGroup.Update(ref world, deltaTimeMs, updateType, dependsOn);
 
                 }
 
@@ -173,7 +173,7 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
 
                 // if we have static data
-                if (SystemsStatic.RaiseOnDestroy(in rootGroup, 0, 0f, ref world, ref dependsOn) == false) {
+                if (SystemsStatic.RaiseOnDestroy(in rootGroup, 0, 0u, ref world, ref dependsOn) == false) {
                     dependsOn = rootGroup.Destroy(ref world, 0, dependsOn);
                 }
 

@@ -1,12 +1,18 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Pathfinding {
     
-    using Unity.Mathematics;
-
     public class GraphMaskSceneEntity : SceneEntity {
 
         public byte cost;
         public ObstacleChannel obstacleChannel;
-        public float height;
+        public tfloat height;
         public bool ignoreGraphRadius;
 
         protected override void OnCreate(in Ent ent) {
@@ -14,7 +20,7 @@ namespace ME.BECS.Pathfinding {
             var bounds = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh.bounds;
             var size = new uint2((uint)(bounds.size.x + 0.5f), (uint)(bounds.size.z + 0.5f));
 
-            GraphUtils.CreateGraphMask(in ent, this.transform.position, this.transform.rotation, size, this.cost, this.height, this.obstacleChannel, this.ignoreGraphRadius);
+            GraphUtils.CreateGraphMask(in ent, (float3)this.transform.position, (quaternion)this.transform.rotation, size, this.cost, this.height, this.obstacleChannel, this.ignoreGraphRadius);
 
         }
 

@@ -1,6 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS.Units {
     
-    using Unity.Mathematics;
     using System.Runtime.InteropServices;
 
     public struct UnitComponentGroup {
@@ -16,10 +25,10 @@ namespace ME.BECS.Units {
             sightRange = Sector.Default,
         };
 
-        public float maxSpeed;
-        public float accelerationSpeed;
-        public float decelerationSpeed;
-        public float rotationSpeed;
+        public tfloat maxSpeed;
+        public tfloat accelerationSpeed;
+        public tfloat decelerationSpeed;
+        public tfloat rotationSpeed;
         public Sector sightRange;
 
     }
@@ -49,7 +58,7 @@ namespace ME.BECS.Units {
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct NavAgentRuntimeSpeedComponent : IComponent {
 
-        public float speed;
+        public tfloat speed;
 
     }
 
@@ -60,14 +69,14 @@ namespace ME.BECS.Units {
     public struct UnitQuadSizeComponent : IConfigComponent {
 
         public uint2 size;
-        public float height;
+        public tfloat height;
 
     }
 
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct TimeToBuildComponent : IConfigComponent {
 
-        public float value;
+        public tfloat value;
 
     }
     

@@ -1,7 +1,19 @@
-using System.Runtime.CompilerServices;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using static ME.BECS.FixedPoint.math;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
 using Unity.Mathematics;
-using UnityEngine;
 using static Unity.Mathematics.math;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
+using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace NativeTrees {
 
@@ -18,6 +30,9 @@ namespace NativeTrees {
 
         public float3 Center => .5f * (this.min + this.max);
         public float3 Size => this.max - this.min;
+
+        public float3 Min => this.min;
+        public float3 Max => this.max;
 
 
         /// <summary>
@@ -74,12 +89,12 @@ namespace NativeTrees {
         /// Returns the squared distance of a point to this AABB. If the point lies in the box, zero is returned.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float DistanceSquared(float3 point) {
+        public tfloat DistanceSquared(float3 point) {
             return distancesq(point, this.ClosestPoint(point));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float DistanceSquared(float3 point, bool ignoreY) {
+        public tfloat DistanceSquared(float3 point, bool ignoreY) {
             if (ignoreY == true) {
                 return distancesq(point.xz, this.ClosestPoint(point.xz));
             }
@@ -116,7 +131,7 @@ namespace NativeTrees {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in PrecomputedRay ray, out float tMin) {
+        public bool IntersectsRay(in PrecomputedRay ray, out tfloat tMin) {
             return this.IntersectsRay(ray.origin, ray.invDir, out tMin);
         }
 
@@ -127,7 +142,7 @@ namespace NativeTrees {
         /// and may return a false positive in that case. See https://tavianator.com/2011/ray_box.html and https://tavianator.com/2015/ray_box_nan.html</remarks>
         /// <returns>Wether the ray intersects this bounding box</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in float3 rayPos, in float3 rayInvDir, out float tMin) {
+        public bool IntersectsRay(in float3 rayPos, in float3 rayInvDir, out tfloat tMin) {
             var t1 = (this.min - rayPos) * rayInvDir;
             var t2 = (this.max - rayPos) * rayInvDir;
 

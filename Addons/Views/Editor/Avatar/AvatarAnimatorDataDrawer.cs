@@ -1,3 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using System.Linq;
 using UnityEditor.UIElements;
 
@@ -7,7 +19,6 @@ namespace ME.BECS.Views.Editor {
     using UnityEngine.UIElements;
     using ME.BECS.Editor;
     using UnityEngine;
-    using Unity.Mathematics;
 
     [CustomPropertyDrawer(typeof(InstantiateAvatarViewComponent.AnimatorData))]
     public class AvatarAnimatorDataDrawer : PropertyDrawerWithDispose {
@@ -134,7 +145,7 @@ namespace ME.BECS.Views.Editor {
                         var image = new Image();
                         image.AddToClassList("avatar-preview-image");
                         var progressManual = false;
-                        var progressValue = 0f;
+                        tfloat progressValue = 0f;
                         {
                             var playContainer = new VisualElement();
                             playContainer.AddToClassList("play-container");
@@ -197,7 +208,7 @@ namespace ME.BECS.Views.Editor {
                                     button.text = "\u25b6";
                                 }
 
-                                progress.SetValueWithoutNotify(progressValue = math.round(evt.newValue));
+                                progress.SetValueWithoutNotify((float)(progressValue = math.round(evt.newValue)));
                             });
                             progressContainer.Add(progress);
 
@@ -362,7 +373,7 @@ namespace ME.BECS.Views.Editor {
                                         anim[clipCopy.name].normalizedTime = n;
                                         progress.SetValueWithoutNotify(n * (progress.highValue - progress.lowValue));
                                     } else {
-                                        var n = progressValue / (progress.highValue - progress.lowValue);
+                                        var n = (float)(progressValue / (progress.highValue - progress.lowValue));
                                         anim[clipCopy.name].normalizedTime = n;
                                         progress.SetValueWithoutNotify(n * (progress.highValue - progress.lowValue));
                                     }
@@ -420,8 +431,8 @@ namespace ME.BECS.Views.Editor {
                 var val = (InstantiateAvatarViewComponent.AnimationData)prop.managedReferenceValue;
                 if (val.animationId == id) {
                     val.firePoint.id = (uint)(index + 1);
-                    val.firePoint.position = target.position;
-                    val.firePoint.rotation = target.rotation;
+                    val.firePoint.position = (float3)target.position;
+                    val.firePoint.rotation = (quaternion)target.rotation;
                     prop.managedReferenceValue = val;
                     return;
                 }

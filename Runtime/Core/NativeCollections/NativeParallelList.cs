@@ -1,3 +1,11 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.NativeCollections {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -5,7 +13,6 @@ namespace ME.BECS.NativeCollections {
     using Unity.Collections;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
-    using Unity.Mathematics;
     using Unity.Jobs;
     using static Cuts;
 

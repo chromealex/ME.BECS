@@ -125,11 +125,15 @@ namespace ME.BECS {
             return dependsOn;
         }
 
+        public virtual uint GetDeltaTimeMs() {
+            return (uint)(Time.deltaTime * 1000u);
+        }
+
         protected JobHandle DoUpdate(ushort updateType, JobHandle dependsOn) {
 
             this.previousFrameDependsOn = dependsOn;
             if (this.world.isCreated == true) {
-                this.previousFrameDependsOn = this.world.Tick(Time.deltaTime, updateType, this.previousFrameDependsOn);
+                this.previousFrameDependsOn = this.world.Tick(this.GetDeltaTimeMs(), updateType, this.previousFrameDependsOn);
             }
 
             return this.previousFrameDependsOn;

@@ -21,6 +21,15 @@
 //SOFTWARE.
 //
 // Modifed 2019 Arthur Brussee
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
 
 using System;
 using KNN.Internal;
@@ -28,7 +37,6 @@ using KNN.Jobs;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using Unity.Mathematics;
 using ME.BECS.NativeCollections;
 
 namespace KNN {
@@ -38,7 +46,7 @@ namespace KNN {
 		public struct Node : IComparable<Node> {
 
 			public float3 position;
-			public float radiusSqr;
+			public tfloat radiusSqr;
 			public T data;
 
 			public int CompareTo(Node other) {
@@ -87,8 +95,8 @@ namespace KNN {
 				return temp;
 			}
 
-			public void PushQueryNode(int index, float3 closestPoint, float3 queryPosition, float radiusSqr) {
-				float lengthsq = math.lengthsq(closestPoint - queryPosition);
+			public void PushQueryNode(int index, float3 closestPoint, float3 queryPosition, tfloat radiusSqr) {
+				var lengthsq = math.lengthsq(closestPoint - queryPosition);
 
 				this.MinHeap.PushObjMin(new QueryNode {
 					NodeIndex = index,
@@ -111,7 +119,7 @@ namespace KNN {
 			}
 
 			this = default;
-			int nodeCountEstimate = 4 * (int) math.ceil(points.Length / (float) c_maxPointsPerLeafNode + 1) + 1;
+			int nodeCountEstimate = 4 * (int) math.ceil(points.Length / (tfloat) c_maxPointsPerLeafNode + 1) + 1;
 			this.Points = new UnsafeList<Node>((Node*)points.GetUnsafePtr(), points.Length);
 
 			// Both arrays are filled in as we go, so start with uninitialized mem
@@ -129,7 +137,7 @@ namespace KNN {
 		}
 
 		[System.Runtime.CompilerServices.MethodImplAttribute(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-		public void AddPoint(float3 point, in T data, float radius) {
+		public void AddPoint(float3 point, in T data, tfloat radius) {
 			//Points.Add(point);
 			this.PointsHashWriter.Add(new Node() { position = point, data = data, radiusSqr = radius * radius });
 		}
@@ -148,7 +156,7 @@ namespace KNN {
 			if (this.Points.IsCreated == true) this.Points.Dispose();
 			this.Points = this.PointsHashWriter.ToList(allocator);
 			this.Points.Sort();
-			int nodeCountEstimate = 4 * (int) math.ceil(this.Points.Length / (float) c_maxPointsPerLeafNode + 1) + 1;
+			int nodeCountEstimate = 4 * (int) math.ceil(this.Points.Length / (tfloat) c_maxPointsPerLeafNode + 1) + 1;
 			
 			// Both arrays are filled in as we go, so start with uninitialized mem
 			if (this.m_nodes.IsCreated == false || this.m_nodes.Capacity != this.Points.Length) {
@@ -229,8 +237,8 @@ namespace KNN {
 		/// </summary>
 		/// <returns>Boundary of all Vector3 points</returns>
 		KdNodeBounds MakeBounds() {
-			var max = new float3(float.MinValue, float.MinValue, float.MinValue);
-			var min = new float3(float.MaxValue, float.MaxValue, float.MaxValue);
+			var max = new float3(tfloat.MinValue, tfloat.MinValue, tfloat.MinValue);
+			var min = new float3(tfloat.MaxValue, tfloat.MaxValue, tfloat.MaxValue);
 			int even = this.Points.Length & ~1; // calculate even Length
 
 			// min, max calculations
@@ -351,7 +359,7 @@ namespace KNN {
 
 			// Find axis where bounds are largest
 			int splitAxis = 0;
-			float axisSize = parentBoundsSize.x;
+			var axisSize = parentBoundsSize.x;
 
 			if (axisSize < parentBoundsSize.y) {
 				splitAxis = 1;
@@ -363,11 +371,11 @@ namespace KNN {
 			}
 
 			// Our axis min-max bounds
-			float boundsStart = parentBounds.Min[splitAxis];
-			float boundsEnd = parentBounds.Max[splitAxis];
+			var boundsStart = parentBounds.Min[splitAxis];
+			var boundsEnd = parentBounds.Max[splitAxis];
 
 			// Calculate the spiting coords
-			float splitPivot = this.CalculatePivot(parent.Start, parent.End, boundsStart, boundsEnd, splitAxis);
+			var splitPivot = this.CalculatePivot(parent.Start, parent.End, boundsStart, boundsEnd, splitAxis);
 
 			// 'Spiting' array to two sub arrays
 			int splittingIndex = this.Partition(parent.Start, parent.End, splitPivot, splitAxis);
@@ -406,20 +414,20 @@ namespace KNN {
 		/// 3b. If they are not, then points are only on left or right bound.
 		/// 4. Move the splitting pivot so that it shrinks part with points completely (calculate min or max dependent) and return.
 		/// </summary>
-		float CalculatePivot(int start, int end, float boundsStart, float boundsEnd, int axis) {
+        tfloat CalculatePivot(int start, int end, tfloat boundsStart, tfloat boundsEnd, int axis) {
 			//! sliding midpoint rule
-			float midPoint = (boundsStart + boundsEnd) / 2.0f;
+			var midPoint = (boundsStart + boundsEnd) / 2.0f;
 
 			bool negative = false;
 			bool positive = false;
 
-			float negMax = float.MinValue;
-			float posMin = float.MaxValue;
+			var negMax = tfloat.MinValue;
+			var posMin = tfloat.MaxValue;
 
 			var permutationPtr = (int*)this.m_permutation.GetUnsafeReadOnlyPtr();
 			// this for loop section is used both for sorted and unsorted data
 			for (int i = start; i < end; i++) {
-				float val = this.Points[*(permutationPtr + i)].position[axis];
+				var val = this.Points[*(permutationPtr + i)].position[axis];
 
 				if (val < midPoint) {
 					negative = true;
@@ -434,7 +442,7 @@ namespace KNN {
 
 			if (negative) {
 				for (int i = start; i < end; i++) {
-					float val = this.Points[*(permutationPtr + i)].position[axis];
+					var val = this.Points[*(permutationPtr + i)].position[axis];
 
 					if (negMax < val) {
 						negMax = val;
@@ -445,7 +453,7 @@ namespace KNN {
 			}
 
 			for (int i = start; i < end; i++) {
-				float val = this.Points[*(permutationPtr + i)].position[axis];
+				var val = this.Points[*(permutationPtr + i)].position[axis];
 
 				if (posMin > val) {
 					posMin = val;
@@ -470,7 +478,7 @@ namespace KNN {
 		/// left = [start, pivot),
 		/// right = [pivot, end)
 		/// </returns>
-		int Partition(int start, int end, float partitionPivot, int axis) {
+		int Partition(int start, int end, tfloat partitionPivot, int axis) {
 			// note: increasing right pointer is actually decreasing!
 			int lp = start - 1; // left pointer (negative side)
 			int rp = end; // right pointer (positive side)
@@ -520,7 +528,7 @@ namespace KNN {
 
 				if (!node.Leaf) {
 					int partitionAxis = node.PartitionAxis;
-					float partitionCoord = node.PartitionCoordinate;
+					var partitionCoord = node.PartitionCoordinate;
 					float3 tempClosestPoint = queryNode.TempClosestPoint;
 
 					if (tempClosestPoint[partitionAxis] - partitionCoord < 0) {
@@ -552,7 +560,7 @@ namespace KNN {
 				} else {
 					for (int i = node.Start; i < node.End; i++) {
 						int index = this.m_permutation[i];
-						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
+						var sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
 
 						if (sqrDist <= bssr) {
 							// Unlike the k-query we want to keep _all_ objects in range
@@ -600,7 +608,7 @@ namespace KNN {
 
 				if (!node.Leaf) {
 					int partitionAxis = node.PartitionAxis;
-					float partitionCoord = node.PartitionCoordinate;
+					var partitionCoord = node.PartitionCoordinate;
 					float3 tempClosestPoint = queryNode.TempClosestPoint;
 
 					if (tempClosestPoint[partitionAxis] - partitionCoord < 0) {
@@ -632,7 +640,7 @@ namespace KNN {
 				} else {
 					for (int i = node.Start; i < node.End; i++) {
 						int index = this.m_permutation[i];
-						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
+						var sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
 
 						if (sqrDist <= bssr) {
 							// Unlike the k-query we want to keep _all_ objects in range
@@ -655,10 +663,10 @@ namespace KNN {
 		}
 
 		public uint QueryKNearest(float3 queryPosition, NativeSlice<T> result) {
-			return QueryKNearest(queryPosition, float.PositiveInfinity, result);
+			return QueryKNearest(queryPosition, tfloat.PositiveInfinity, result);
 		}
 
-		public uint QueryKNearest(float3 queryPosition, float range, NativeSlice<T> result) {
+		public uint QueryKNearest(float3 queryPosition, tfloat range, NativeSlice<T> result) {
 
 			if (this.m_rootNodeIndex.Value == -1) return 0;
 
@@ -666,7 +674,7 @@ namespace KNN {
 			uint k = (uint)result.Length;
 			
 			// Biggest Smallest Squared Radius
-			float bssr = range * range;
+			var bssr = range * range;
 			float3 rootClosestPoint = this.RootNode.Bounds.ClosestPoint(queryPosition);
 			
 			temp.PushQueryNode(this.m_rootNodeIndex.Value, rootClosestPoint, queryPosition, 0f);
@@ -682,7 +690,7 @@ namespace KNN {
 
 				if (!node.Leaf) {
 					int partitionAxis = node.PartitionAxis;
-					float partitionCoord = node.PartitionCoordinate;
+					var partitionCoord = node.PartitionCoordinate;
 					float3 tempClosestPoint = queryNode.TempClosestPoint;
 
 					if (tempClosestPoint[partitionAxis] - partitionCoord < 0) {
@@ -713,7 +721,7 @@ namespace KNN {
 				} else {
 					for (int i = node.Start; i < node.End; i++) {
 						int index = this.m_permutation[i];
-						float sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
+						var sqrDist = math.lengthsq(this.Points[index].position - queryPosition) - this.Points[index].radiusSqr;
 
 						if (sqrDist <= bssr) {
 							temp.MaxHeap.PushObjMax(index, sqrDist);

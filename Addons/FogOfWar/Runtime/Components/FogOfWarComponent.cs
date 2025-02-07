@@ -1,7 +1,13 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.FogOfWar {
     
-    using Unity.Mathematics;
-
     public struct FogOfWarComponentGroup {
         
         public static UnityEngine.Color color = UnityEngine.Color.gray;
@@ -24,8 +30,8 @@ namespace ME.BECS.FogOfWar {
         public float2 mapPosition;
         public float2 worldSize;
         public uint2 size;
-        public MemArrayAuto<float> heights;
-        public float maxHeight;
+        public MemArrayAuto<tfloat> heights;
+        public tfloat maxHeight;
 
     }
 
@@ -66,14 +72,14 @@ namespace ME.BECS.FogOfWar {
         /// Range type: minRange
         /// </summary>
         public uint rangeY;
-        public float height;
+        public tfloat height;
         
     }
 
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarSectorRevealerComponent : IConfigComponent {
 
-        public float value;
+        public tfloat value;
 
     }
 

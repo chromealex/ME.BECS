@@ -222,6 +222,19 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static bool SetIfGreater(ref sfloat target, sfloat newValue) {
+            E.ADDR_4(ref target);
+            sfloat snapshot;
+            bool stillMore;
+            do {
+                snapshot = target;
+                stillMore = newValue > snapshot;
+            } while (stillMore && (sfloat)System.Threading.Interlocked.CompareExchange(ref _as<sfloat, float>(ref target), (float)newValue, (float)snapshot) != snapshot);
+
+            return stillMore;
+        }
+
+        [INLINE(256)]
         public static bool SetIfGreaterOrEquals(ref int target, int newValue) {
             E.ADDR_4(ref target);
             int snapshot;
@@ -261,6 +274,17 @@ namespace ME.BECS {
                 initialValue = value;
                 computedValue = initialValue + count;
             } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
+        }
+
+        [INLINE(256)]
+        public static void Increment(ref sfloat value, sfloat count) {
+            E.ADDR_4(ref value);
+            sfloat initialValue;
+            sfloat computedValue;
+            do {
+                initialValue = value;
+                computedValue = initialValue + count;
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<sfloat, float>(ref value), (float)computedValue, (float)initialValue));
         }
 
         [INLINE(256)]

@@ -1,15 +1,26 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Views {
     
     using ME.BECS.Transforms;
-    using Unity.Mathematics;
 
     public static class TransformAspectExt {
 
         public static void Set(this ref TransformAspect aspect, UnityEngine.Transform tr) {
 
-            aspect.localPosition = tr.localPosition;
-            aspect.localRotation = tr.localRotation;
-            aspect.localScale = tr.localScale;
+            aspect.localPosition = (float3)tr.localPosition;
+            aspect.localRotation = (quaternion)tr.localRotation;
+            aspect.localScale = (float3)tr.localScale;
 
         }
 
@@ -49,7 +60,7 @@ namespace ME.BECS.Views {
                 ent.SetParent(parent);
                 tr.Set(obj);
                 if (parent.IsAlive() == true) {
-                    tr.worldMatrix = math.mul(obj.localToWorldMatrix, obj.root.localToWorldMatrix.inverse);
+                    tr.worldMatrix = math.mul((float4x4)obj.localToWorldMatrix, (float4x4)obj.root.localToWorldMatrix.inverse);
                 } else {
                     tr.worldMatrix = float4x4.identity;
                 }

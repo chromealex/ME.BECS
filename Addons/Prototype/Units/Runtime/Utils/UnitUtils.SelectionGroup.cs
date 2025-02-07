@@ -1,14 +1,24 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using ME.BECS.Transforms;
 
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
 
-    
     public struct RangeMoveableAABBUniqueVisitor : NativeTrees.IOctreeRangeVisitor<Ent> {
         public Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent> results;
-        public float rangeSqr;
+        public tfloat rangeSqr;
         public uint max;
         public MathSector sector;
 
@@ -141,7 +151,13 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, float minRange = 0f, float maxRange = 5f, JobInfo jobInfo = default) {
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, tfloat? minRange = null,
+                                                                                            tfloat? maxRange = null, JobInfo jobInfo = default) {
+            return CreateSelectionGroupByTypeInPoint(in context, treeIndex, position, minRange != null ? minRange.Value : 0f, maxRange != null ? maxRange.Value : 5f, jobInfo);
+        }
+
+        [INLINE(256)]
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, tfloat minRange, tfloat maxRange, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
             var group = UnitUtils.CreateSelectionTempGroup(1u, jobInfo);
@@ -167,7 +183,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, float range, JobInfo jobInfo = default) {
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
             //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
@@ -219,30 +235,30 @@ namespace ME.BECS.Units {
 
             {
                 var sp = new float3(min.x, max.y, 0f);
-                var ray = camera.ScreenPointToRay(sp);
+                var ray = camera.ScreenPointToRay((UnityEngine.Vector3)sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
-                    p1 = hit.point;
+                    p1 = (float3)hit.point;
                 }
             }
             {
                 var sp = new float3(max.x, max.y, 0f);
-                var ray = camera.ScreenPointToRay(sp);
+                var ray = camera.ScreenPointToRay((UnityEngine.Vector3)sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
-                    p2 = hit.point;
+                    p2 = (float3)hit.point;
                 }
             }
             {
                 var sp = new float3(max.x, min.y, 0f);
-                var ray = camera.ScreenPointToRay(sp);
+                var ray = camera.ScreenPointToRay((UnityEngine.Vector3)sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
-                    p3 = hit.point;
+                    p3 = (float3)hit.point;
                 }
             }
             {
                 var sp = new float3(min.x, min.y, 0f);
-                var ray = camera.ScreenPointToRay(sp);
+                var ray = camera.ScreenPointToRay((UnityEngine.Vector3)sp);
                 if (UnityEngine.Physics.Raycast(ray, out var hit, distance, layersMask) == true) {
-                    p4 = hit.point;
+                    p4 = (float3)hit.point;
                 }
             }
             

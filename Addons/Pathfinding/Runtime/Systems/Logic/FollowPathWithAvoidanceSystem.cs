@@ -1,11 +1,16 @@
-using ME.BECS.Jobs;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Pathfinding {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
-    using Unity.Mathematics;
-    using Unity.Collections;
+    using ME.BECS.Jobs;
     using ME.BECS.Units;
     using ME.BECS.Transforms;
 
@@ -34,7 +39,7 @@ namespace ME.BECS.Pathfinding {
         public struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
 
             public World world;
-            public float dt;
+            public tfloat dt;
             public BuildGraphSystem buildGraphSystem;
             public FollowPathWithAvoidanceSystem followPathSystem;
             
@@ -111,7 +116,7 @@ namespace ME.BECS.Pathfinding {
                 unit.componentRuntime.desiredDirection = desiredDirection;
                 var lengthSq = math.lengthsq(unit.readComponentRuntime.desiredDirection);
                 
-                var force = 0f;
+                tfloat force = 0f;
                 if (lengthSq > math.EPSILON) {
                     this.buildGraphSystem.heights.GetHeight(tr.position, out var unitNormal);
                     var rot = tr.rotation;
@@ -122,7 +127,7 @@ namespace ME.BECS.Pathfinding {
                         toRot = math.slerp(rot, toRot, math.min(1.0f, maxDegreesDelta / qAngle));
                     }
                     tr.rotation = toRot;
-                    var angle = UnityEngine.Vector3.Angle(tr.forward, unit.readComponentRuntime.desiredDirection);
+                    var angle = mathext.angle(tr.forward, unit.readComponentRuntime.desiredDirection);
                     force = 1f - angle / 180f;
                 }
 
@@ -156,7 +161,7 @@ namespace ME.BECS.Pathfinding {
         [BURST(CompileSynchronously = true)]
         public struct SpeedDownOnHoldJob : IJobForAspects<UnitAspect> {
 
-            public float dt;
+            public tfloat dt;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
                 

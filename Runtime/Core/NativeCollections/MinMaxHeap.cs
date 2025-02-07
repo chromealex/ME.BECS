@@ -21,6 +21,13 @@
 //SOFTWARE.
 //
 // Modifed 2019 Arthur Brussee
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 using System;
 using Unity.Collections;
@@ -65,12 +72,12 @@ namespace ME.BECS.NativeCollections {
         private safe_ptr<T> keys; //objects
 
         [NativeDisableContainerSafetyRestriction]
-        private safe_ptr<float> values;
+        private safe_ptr<tfloat> values;
 
         public uint Count;
         private uint m_capacity;
 
-        public float HeadValue => this.values[1];
+        public tfloat HeadValue => this.values[1];
         private T HeadKey => this.keys[1];
 
         public bool IsFull => this.Count == this.m_capacity;
@@ -83,7 +90,7 @@ namespace ME.BECS.NativeCollections {
 
             // Now alloc starting arrays
             this.m_capacity = startCapacity;
-            this.values = _makeArray<float>(startCapacity + 1u, this.m_allocator);
+            this.values = _makeArray<tfloat>(startCapacity + 1u, this.m_allocator);
             this.keys = _makeArray<T>(startCapacity + 1, this.m_allocator);
         }
 
@@ -105,8 +112,8 @@ namespace ME.BECS.NativeCollections {
         }
 
         public void Resize(uint newSize) {
-            // Allocate more space
-            var newValues = _makeArray<float>(newSize + 1, this.m_allocator);
+            // Allocate more spaces
+            var newValues = _makeArray<tfloat>(newSize + 1, this.m_allocator);
             var newKeys = _makeArray<T>(newSize + 1, this.m_allocator);
 
             // Copy over old arrays
@@ -219,7 +226,7 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
-        public void PushObjMax(T key, float val) {
+        public void PushObjMax(T key, tfloat val) {
             // if heap full
             if (this.Count == this.m_capacity) {
                 // if Heads priority is smaller than input priority, then ignore that item
@@ -236,7 +243,7 @@ namespace ME.BECS.NativeCollections {
             }
         }
 
-        public void PushObjMin(T key, float val) {
+        public void PushObjMin(T key, tfloat val) {
             // if heap full
             if (this.Count == this.m_capacity) {
                 // if Heads priority is smaller than input priority, then ignore that item

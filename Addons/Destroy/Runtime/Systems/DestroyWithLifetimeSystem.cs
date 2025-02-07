@@ -1,3 +1,11 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 using ME.BECS.Transforms;
 
 namespace ME.BECS {
@@ -12,11 +20,11 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         public struct Job : IJobForComponents<DestroyWithLifetime> {
 
-            public float deltaTime;
+            public tfloat deltaTime;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithLifetime component) {
                 component.lifetime -= this.deltaTime;
-                if (component.lifetime <= 0f) {
+                if (component.lifetime <= 0u) {
                     ent.DestroyHierarchy();
                 }
             }

@@ -1,8 +1,19 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Attack {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Transforms;
-    using Unity.Mathematics;
     using ME.BECS.Units;
     using ME.BECS.Bullets;
 
@@ -52,7 +63,7 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, float nodeSize, out float3 position) {
+        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
 
             position = default;
             var unitTr = unit.ent.GetAspect<TransformAspect>();

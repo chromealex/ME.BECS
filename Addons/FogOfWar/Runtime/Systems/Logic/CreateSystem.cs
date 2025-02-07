@@ -1,9 +1,16 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.FogOfWar {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
-    using Unity.Mathematics;
     using ME.BECS.Players;
     using ME.BECS.Pathfinding;
     using Unity.Jobs;
@@ -16,7 +23,7 @@ namespace ME.BECS.FogOfWar {
 
         public float2 mapPosition;
         public float2 mapSize;
-        public float resolution;
+        public tfloat resolution;
         internal Ent heights;
 
         public Ent GetHeights() => this.heights;
@@ -66,8 +73,8 @@ namespace ME.BECS.FogOfWar {
 
                 ref var fow = ref this.heights.Get<FogOfWarStaticComponent>();
                 var chunk = this.graph.chunks[index];
-                var maxHeight = 0f;
-                var cellSize = new uint2((uint)math.ceil((float)this.fowSize.x / (this.graph.chunkWidth * this.graph.width)), (uint)math.ceil((float)this.fowSize.y / (this.graph.chunkHeight * this.graph.height)));
+                tfloat maxHeight = 0f;
+                var cellSize = new uint2((uint)math.ceil((tfloat)this.fowSize.x / (this.graph.chunkWidth * this.graph.width)), (uint)math.ceil((tfloat)this.fowSize.y / (this.graph.chunkHeight * this.graph.height)));
                 for (uint i = 0; i < chunk.nodes.Length; ++i) {
                     var nodeHeight = chunk.nodes[this.world.state, i].height;
                     var worldPos = Graph.GetPosition(this.graph, in chunk, i);
@@ -99,7 +106,7 @@ namespace ME.BECS.FogOfWar {
                 mapPosition = this.mapPosition,
                 worldSize = this.mapSize,
                 size = fowSize,
-                heights = new MemArrayAuto<float>(heights, fowSize.x * fowSize.y),
+                heights = new MemArrayAuto<tfloat>(heights, fowSize.x * fowSize.y),
             });
             this.heights = heights;
             var dependsOn = context.Query().AsParallel().Schedule<CreateJob, TeamAspect>(new CreateJob() {

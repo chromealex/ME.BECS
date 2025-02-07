@@ -1,12 +1,18 @@
-namespace ME.BECS.Pathfinding {
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
-    using Unity.Mathematics;
+namespace ME.BECS.Pathfinding {
 
     public struct GraphMaskComponent : IConfigComponent, IConfigInitialize {
 
         public float2 offset;
         public uint2 size;
-        public float height;
+        public tfloat height;
         public uint heightsSizeX;
         public ObstacleChannel obstacleChannel;
         public byte ignoreGraphRadius;
@@ -24,7 +30,7 @@ namespace ME.BECS.Pathfinding {
 
     public struct GraphMaskRuntimeComponent : IComponentDestroy {
 
-        public MemArrayAuto<float> heights;
+        public MemArrayAuto<tfloat> heights;
         public ListAuto<GraphNodeMemory> nodes;
         public LockSpinner nodesLock;
         

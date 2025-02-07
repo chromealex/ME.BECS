@@ -1,7 +1,14 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
     using ME.BECS.Players;
 
     public struct UnitAspect : IAspect {
@@ -49,14 +56,14 @@ namespace ME.BECS.Units {
             set => this.ent.SetTag<UnitIsDeadTag>(value);
         }
 
-        public readonly ref float minSightRangeSqr => ref this.component.sightRange.minRangeSqr;
-        public readonly ref float sightRangeSqr => ref this.component.sightRange.rangeSqr;
-        public readonly ref float sector => ref this.component.sightRange.sector;
-        public readonly ref readonly float readMinSightRangeSqr => ref this.readComponent.sightRange.minRangeSqr;
-        public readonly ref readonly float readSightRangeSqr => ref this.readComponent.sightRange.rangeSqr;
-        public readonly ref readonly float readSector => ref this.readComponent.sightRange.sector;
-        public readonly ref float height => ref this.componentRuntime.properties.height;
-        public readonly ref readonly float readHeight => ref this.readComponentRuntime.properties.height;
+        public readonly ref tfloat minSightRangeSqr => ref this.component.sightRange.minRangeSqr;
+        public readonly ref tfloat sightRangeSqr => ref this.component.sightRange.rangeSqr;
+        public readonly ref tfloat sector => ref this.component.sightRange.sector;
+        public readonly ref readonly tfloat readMinSightRangeSqr => ref this.readComponent.sightRange.minRangeSqr;
+        public readonly ref readonly tfloat readSightRangeSqr => ref this.readComponent.sightRange.rangeSqr;
+        public readonly ref readonly tfloat readSector => ref this.readComponent.sightRange.sector;
+        public readonly ref tfloat height => ref this.componentRuntime.properties.height;
+        public readonly ref readonly tfloat readHeight => ref this.readComponentRuntime.properties.height;
         public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;
         public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
         public readonly ref uint health => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).health;
@@ -68,18 +75,18 @@ namespace ME.BECS.Units {
         public readonly ref readonly uint readTypeId => ref this.readComponentRuntime.properties.typeId;
         public readonly ref float3 velocity => ref this.componentRuntime.velocity;
         public readonly ref readonly float3 readVelocity => ref this.readComponentRuntime.velocity;
-        public readonly ref float radius => ref this.componentRuntime.properties.radius;
-        public readonly ref readonly float readRadius => ref this.readComponentRuntime.properties.radius;
-        public readonly ref float speed => ref this.componentRuntimeSpeed.speed;
-        public readonly ref readonly float readSpeed => ref this.readComponentRuntimeSpeed.speed;
-        public readonly ref float maxSpeed => ref this.component.maxSpeed;
-        public readonly ref readonly float readMaxSpeed => ref this.readComponent.maxSpeed;
-        public readonly ref float accelerationSpeed => ref this.component.accelerationSpeed;
-        public readonly ref float decelerationSpeed => ref this.component.decelerationSpeed;
-        public readonly ref readonly float readAccelerationSpeed => ref this.readComponent.accelerationSpeed;
-        public readonly ref readonly float readDecelerationSpeed => ref this.readComponent.decelerationSpeed;
-        public readonly ref float rotationSpeed => ref this.component.rotationSpeed;
-        public readonly ref readonly float readRotationSpeed => ref this.readComponent.rotationSpeed;
+        public readonly ref tfloat radius => ref this.componentRuntime.properties.radius;
+        public readonly ref readonly tfloat readRadius => ref this.readComponentRuntime.properties.radius;
+        public readonly ref tfloat speed => ref this.componentRuntimeSpeed.speed;
+        public readonly ref readonly tfloat readSpeed => ref this.readComponentRuntimeSpeed.speed;
+        public readonly ref tfloat maxSpeed => ref this.component.maxSpeed;
+        public readonly ref readonly tfloat readMaxSpeed => ref this.readComponent.maxSpeed;
+        public readonly ref tfloat accelerationSpeed => ref this.component.accelerationSpeed;
+        public readonly ref tfloat decelerationSpeed => ref this.component.decelerationSpeed;
+        public readonly ref readonly tfloat readAccelerationSpeed => ref this.readComponent.accelerationSpeed;
+        public readonly ref readonly tfloat readDecelerationSpeed => ref this.readComponent.decelerationSpeed;
+        public readonly ref tfloat rotationSpeed => ref this.component.rotationSpeed;
+        public readonly ref readonly tfloat readRotationSpeed => ref this.readComponent.rotationSpeed;
         public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.Get(this.ent.id, this.ent.gen).unitCommandGroup;
         public readonly ref Ent unitSelectionGroup => ref this.unitSelectionGroupDataPtr.Get(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;

@@ -4,7 +4,8 @@
     "references": [
         "ME.BECS",
         "Unity.Burst",
-        "ME.BECS.Transforms"
+        "ME.BECS.Transforms",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

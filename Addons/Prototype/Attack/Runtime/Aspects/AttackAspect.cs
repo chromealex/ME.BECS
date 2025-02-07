@@ -1,5 +1,11 @@
-namespace ME.BECS.Attack {
+#if FIXED_POINT
+using tfloat = sfloat;
+#else
+using tfloat = System.Single;
+#endif
 
+namespace ME.BECS.Attack {
+    
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
     public struct AttackAspect : IAspect {
@@ -19,10 +25,10 @@ namespace ME.BECS.Attack {
         public readonly ref readonly AttackRuntimeReloadComponent readComponentRuntimeReload => ref this.attackRuntimeReloadDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref AttackRuntimeFireComponent componentRuntimeFire => ref this.attackRuntimeFireDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackRuntimeFireComponent readComponentRuntimeFire => ref this.attackRuntimeFireDataPtr.Read(this.ent.id, this.ent.gen);
-        public readonly ref float attackRangeSqr => ref this.component.sector.rangeSqr;
-        public readonly ref readonly float readAttackRangeSqr => ref this.readComponent.sector.rangeSqr;
-        public readonly ref readonly float readMinAttackRangeSqr => ref this.readComponent.sector.minRangeSqr;
-        public readonly ref readonly float readAttackSector => ref this.readComponent.sector.sector;
+        public readonly ref tfloat attackRangeSqr => ref this.component.sector.rangeSqr;
+        public readonly ref readonly tfloat readAttackRangeSqr => ref this.readComponent.sector.rangeSqr;
+        public readonly ref readonly tfloat readMinAttackRangeSqr => ref this.readComponent.sector.minRangeSqr;
+        public readonly ref readonly tfloat readAttackSector => ref this.readComponent.sector.sector;
         public readonly ref readonly byte readIgnoreSelf => ref this.readComponent.ignoreSelf;
         
         public readonly Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
@@ -43,8 +49,8 @@ namespace ME.BECS.Attack {
             }
         }
         
-        public readonly float ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
-        public readonly float FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
+        public readonly tfloat ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
+        public readonly tfloat FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
 
         public bool IsReloaded {
             [INLINE(256)]

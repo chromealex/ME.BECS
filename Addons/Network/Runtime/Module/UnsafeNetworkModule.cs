@@ -1,3 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Network {
     
     using Unity.Jobs;
@@ -9,7 +21,6 @@ namespace ME.BECS.Network {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
     using Jobs;
-    using Unity.Mathematics;
 
     public unsafe struct NetworkPackage : System.IComparable<NetworkPackage> {
 
@@ -200,7 +211,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Call(in NetworkPackage package, float dt, in World world, JobHandle dependsOn) {
+            public JobHandle Call(in NetworkPackage package, uint deltaTimeMs, in World world, JobHandle dependsOn) {
                 
                 var idx = package.methodId - 1u;
                 if (idx >= this.methods.Length) return dependsOn;
@@ -208,7 +219,7 @@ namespace ME.BECS.Network {
                 ref var item = ref this.methods[this.state, idx];
                 var func = Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)item.methodPtr);
                 var input = new InputData(package, in world);
-                var context = SystemContext.Create(dt, world, dependsOn);
+                var context = SystemContext.Create(deltaTimeMs, world, dependsOn);
                 func.Invoke(input, ref context);
                 dependsOn = context.dependsOn;
                 return dependsOn;
@@ -324,7 +335,7 @@ namespace ME.BECS.Network {
 
             }
 
-            public JobHandle Tick(ulong tick, float dt, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, uint deltaTimeMs, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
                 
                 var events = this.GetEvents(tick);
                 if (events.IsCreated == true && events.Count > 0u) {
@@ -334,7 +345,7 @@ namespace ME.BECS.Network {
 
                         var evt = events[in allocator, i];
                         Logger.Network.Log($"Play event for tick {tick}: {evt}");
-                        dependsOn = data.ptr->methodsStorage.Call(in evt, dt, in world, dependsOn);
+                        dependsOn = data.ptr->methodsStorage.Call(in evt, deltaTimeMs, in world, dependsOn);
 
                     }
                     
@@ -578,7 +589,7 @@ namespace ME.BECS.Network {
 
             [INLINE(256)]
             public ulong GetTargetTick() {
-                return (ulong)math.ceil(this.currentTimestamp / this.tickTime);
+                return (ulong)math.ceil((tfloat)(this.currentTimestamp / this.tickTime));
             }
 
             [INLINE(256)]
@@ -680,10 +691,10 @@ namespace ME.BECS.Network {
             }
 
             [INLINE(256)]
-            public JobHandle Tick(ulong tick, float dt, in World world, JobHandle dependsOn) {
+            public JobHandle Tick(ulong tick, uint deltaTimeMs, in World world, JobHandle dependsOn) {
 
                 dependsOn = this.statesStorage.Tick(tick, in world, this.selfPtr, dependsOn);
-                dependsOn = this.eventsStorage.Tick(tick, dt, in world, this.selfPtr, dependsOn);
+                dependsOn = this.eventsStorage.Tick(tick, deltaTimeMs, in world, this.selfPtr, dependsOn);
                 
                 return dependsOn;
 
@@ -762,8 +773,8 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
-        private float GetDeltaTime() {
-            return this.properties.tickTime / 1000f;
+        private uint GetDeltaTime() {
+            return this.properties.tickTime;
         }
 
         [INLINE(256)]
@@ -906,7 +917,7 @@ namespace ME.BECS.Network {
             
             dependsOn.Complete();
             {
-                var deltaTime = this.GetDeltaTime();
+                var deltaTimeMs = this.GetDeltaTime();
                 var currentTick = world.state.ptr->tick;
                 var targetTick = this.GetTargetTick();
                 {
@@ -918,7 +929,7 @@ namespace ME.BECS.Network {
                         readBuffer.Dispose();
                     }
                 }
-                if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.LogInfo($"Tick {currentTick}..{targetTick}, dt: {deltaTime}, ticks: {unchecked(targetTick - currentTick)}");
+                if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.LogInfo($"Tick {currentTick}..{targetTick}, dt: {deltaTimeMs}, ticks: {unchecked(targetTick - currentTick)}");
                 {
                     // Do we need the rollback?
                     dependsOn = this.data.ptr->Rollback(ref currentTick, targetTick, dependsOn);
@@ -935,10 +946,10 @@ namespace ME.BECS.Network {
                     dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, dependsOn);
                     {
                         // Apply events for this tick
-                        dependsOn = this.data.ptr->Tick(tick, deltaTime, in world, dependsOn);
+                        dependsOn = this.data.ptr->Tick(tick, deltaTimeMs, in world, dependsOn);
                     }
                     
-                    dependsOn = world.TickWithoutWorldState(deltaTime, UpdateType.FIXED_UPDATE, dependsOn);
+                    dependsOn = world.TickWithoutWorldState(deltaTimeMs, UpdateType.FIXED_UPDATE, dependsOn);
                     dependsOn = State.SetWorldState(in world, WorldState.EndTick, UpdateType.FIXED_UPDATE, dependsOn);
                     dependsOn.Complete();
                     // End tick

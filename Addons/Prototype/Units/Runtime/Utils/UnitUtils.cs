@@ -1,7 +1,16 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
     using ME.BECS.Transforms;
     using ME.BECS.Players;
 
@@ -85,7 +94,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static void LookToTarget(in ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 target, float dt) {
+        public static void LookToTarget(in ME.BECS.Transforms.TransformAspect tr, in UnitAspect unit, in float3 target, tfloat dt) {
 
             var lookDir = target - tr.position;
             if (math.lengthsq(lookDir) >= math.EPSILON) {

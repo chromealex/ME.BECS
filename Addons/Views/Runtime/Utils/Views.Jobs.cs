@@ -1,3 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Views {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -7,7 +19,6 @@ namespace ME.BECS.Views {
     using Unity.Collections;
     using ME.BECS.Jobs;
     using static CutsPool;
-    using Unity.Mathematics;
     
     [BURST(CompileSynchronously = true)]
     public unsafe struct Jobs {
@@ -137,8 +148,8 @@ namespace ME.BECS.Views {
                 
                 var entityData = this.renderingOnSceneEnts[index];
                 var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                transform.SetLocalPositionAndRotation(ME.BECS.Transforms.MatrixUtils.GetPosition(tr.readWorldMatrix), ME.BECS.Transforms.MatrixUtils.GetRotation(tr.readWorldMatrix));
-                transform.localScale = ME.BECS.Transforms.MatrixUtils.GetScale(tr.readWorldMatrix);
+                transform.SetLocalPositionAndRotation((UnityEngine.Vector3)ME.BECS.Transforms.MatrixUtils.GetPosition(tr.readWorldMatrix), (UnityEngine.Quaternion)ME.BECS.Transforms.MatrixUtils.GetRotation(tr.readWorldMatrix));
+                transform.localScale = (UnityEngine.Vector3)ME.BECS.Transforms.MatrixUtils.GetScale(tr.readWorldMatrix);
 
             }
 
@@ -168,14 +179,14 @@ namespace ME.BECS.Views {
                 var prevTime = prevTick * tickTime;
                 var currentTime = currentTick * tickTime;
                 var currentWorldTime = this.currentTimeSinceStart;
-                var factor = (float)math.select(0d, math.clamp(math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
+                var factor = (tfloat)Unity.Mathematics.math.select(0d, Unity.Mathematics.math.clamp(Unity.Mathematics.math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
                 
                 {
                     var sourceRot = ME.BECS.Transforms.MatrixUtils.GetRotation(sourceData.value);
-                    transform.SetLocalPositionAndRotation(math.lerp(ME.BECS.Transforms.MatrixUtils.GetPosition(sourceData.value), pos, factor), math.slerp(sourceRot, rot, factor));
+                    transform.SetLocalPositionAndRotation((UnityEngine.Vector3)math.lerp(ME.BECS.Transforms.MatrixUtils.GetPosition(sourceData.value), pos, factor), (UnityEngine.Quaternion)math.slerp(sourceRot, rot, factor));
                 }
                 {
-                    transform.localScale = math.lerp(ME.BECS.Transforms.MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
+                    transform.localScale = (UnityEngine.Vector3)math.lerp(ME.BECS.Transforms.MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
                 }
 
             }

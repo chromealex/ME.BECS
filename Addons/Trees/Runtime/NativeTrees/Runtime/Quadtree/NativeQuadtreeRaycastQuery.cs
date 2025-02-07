@@ -1,6 +1,17 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using System.Runtime.CompilerServices;
 using Unity.Collections;
-using Unity.Mathematics;
 using UnityEngine;
 
 // https://bartvandesande.nl
@@ -102,7 +113,7 @@ namespace NativeTrees
                 
                 for (int j = 0; j < 2; j++)
                 {
-                    float t = planeHits[j];
+                    tfloat t = planeHits[j];
                     if (t > closestDistance || t < 0) continue; // negative t is backwards
 
                     float2 planeRayIntersection = ray.origin + t * ray.dir;
@@ -111,7 +122,7 @@ namespace NativeTrees
                     {
                         quadRayIntersection = planeRayIntersection;
                         closestPlaneIndex = j;
-                        closestDistance = quadDistance = t;
+                        closestDistance = quadDistance = (float)t;
                         
                         #if DEBUG_RAYCAST_GIZMO
                         var debugExt2 = ExtentsBounds.GetOctant(extentsBounds, octantIndex);

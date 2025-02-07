@@ -1,7 +1,14 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 using System.Linq;
 using Unity.Collections;
 using UnityEngine.Jobs;
-using Unity.Mathematics;
 
 namespace ME.BECS.Views {
     
@@ -81,7 +88,7 @@ namespace ME.BECS.Views {
 
             public NativeList<UnityEngine.Matrix4x4> matrices;
             public NativeList<Ent> entities;
-            public NativeList<Unity.Mathematics.float4x4> prefabWorldMatrices;
+            public NativeList<float4x4> prefabWorldMatrices;
 
             public void Dispose(safe_ptr<State> state) {
 
@@ -118,10 +125,10 @@ namespace ME.BECS.Views {
             [ReadOnly]
             public NativeList<Ent> entities;
             [ReadOnly]
-            public NativeList<Unity.Mathematics.float4x4> prefabWorldMatrices;
+            public NativeList<float4x4> prefabWorldMatrices;
             
             public void Execute(int i) {
-                (*this.matrices.ListData)[i] = math.mul(this.entities[i].Read<ME.BECS.Transforms.WorldMatrixComponent>().value, this.prefabWorldMatrices[i]);
+                (*this.matrices.ListData)[i] = (UnityEngine.Matrix4x4)math.mul(this.entities[i].Read<ME.BECS.Transforms.WorldMatrixComponent>().value, this.prefabWorldMatrices[i]);
             }
             
         }
@@ -213,12 +220,12 @@ namespace ME.BECS.Views {
                     objectsPerInfo = new ObjectsPerInfo() {
                         matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
                         entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
-                        prefabWorldMatrices = new NativeList<Unity.Mathematics.float4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                        prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
                     };
                     this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
                 }
 
-                objectsPerInfo.matrices.Add(worldEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
+                objectsPerInfo.matrices.Add((UnityEngine.Matrix4x4)worldEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
                 objectsPerInfo.entities.Add(worldEnt);
                 objectsPerInfo.prefabWorldMatrices.Add(prefabEnt.Read<ME.BECS.Transforms.WorldMatrixComponent>().value);
             }

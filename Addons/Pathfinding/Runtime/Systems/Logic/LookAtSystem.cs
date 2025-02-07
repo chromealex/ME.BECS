@@ -1,10 +1,17 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Pathfinding {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
     using ME.BECS.Units;
-    using Unity.Mathematics;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Look at target system")]
@@ -13,7 +20,7 @@ namespace ME.BECS.Pathfinding {
         [BURST(CompileSynchronously = true)]
         public struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
-            public float dt;
+            public tfloat dt;
             public BuildGraphSystem buildGraphSystem;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {

@@ -1,8 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.FogOfWar {
     
     using Views;
     using UnityEngine;
-    using Unity.Mathematics;
 
     public class FogOfWarView : EntityView {
 
@@ -24,13 +31,13 @@ namespace ME.BECS.FogOfWar {
             var system = ent.World.GetSystem<CreateTextureSystem>();
             var heightResolution = fowSystem.resolution;
             this.material.SetTexture(fogTex, system.GetTexture());
-            this.material.SetFloat(resolution, heightResolution);
+            this.material.SetFloat(resolution, (float)heightResolution);
 
             this.worldSize = fowSystem.mapSize;
 
             if (this.transformScale != null) {
-                this.transformScale.localScale = new Vector3(this.worldSize.x, 1f, this.worldSize.y);
-                this.transformScale.localPosition = new Vector3(this.worldSize.x * 0.5f, 0f, this.worldSize.y * 0.5f);
+                this.transformScale.localScale = new Vector3((float)this.worldSize.x, 1f, (float)this.worldSize.y);
+                this.transformScale.localPosition = new Vector3((float)this.worldSize.x * 0.5f, 0f, (float)this.worldSize.y * 0.5f);
             }
 
         }
@@ -64,12 +71,12 @@ namespace ME.BECS.FogOfWar {
                 }
             }
             
-            var p = new Vector4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
+            var p = new float4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
             var heightResolution = fowSystem.resolution;
-            this.material.SetFloat(resolution, heightResolution);
+            this.material.SetFloat(resolution, (float)heightResolution);
             this.material.SetMatrix(inverseMvp, inverseMVP);
-            this.material.SetVector(pos, camPos);
-            this.material.SetVector(@params, p);
+            this.material.SetVector(pos, (Vector4)camPos);
+            this.material.SetVector(@params, (Vector4)p);
             
         }
 

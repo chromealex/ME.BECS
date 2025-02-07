@@ -1,3 +1,10 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 using ME.BECS.Transforms;
 
@@ -6,7 +13,6 @@ namespace ME.BECS.Attack {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
     using ME.BECS.Units;
-    using Unity.Mathematics;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Rotate unit while attacking")]
@@ -15,7 +21,7 @@ namespace ME.BECS.Attack {
         [BURST(CompileSynchronously = true)]
         public struct IdleJob : IJobForAspects<UnitAspect, TransformAspect> {
 
-            public float dt;
+            public tfloat dt;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transformAspect) {
 
@@ -31,7 +37,7 @@ namespace ME.BECS.Attack {
         [BURST(CompileSynchronously = true)]
         public struct RotateAttackSensorJob : IJobForAspects<AttackAspect, TransformAspect> {
 
-            public float dt;
+            public tfloat dt;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect attack, ref TransformAspect transformAspect) {
 

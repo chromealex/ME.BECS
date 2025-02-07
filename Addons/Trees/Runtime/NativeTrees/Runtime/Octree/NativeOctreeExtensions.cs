@@ -1,9 +1,22 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using System;
 using Unity.Collections;
-using Unity.Mathematics;
 using UnityEngine;
 
 namespace NativeTrees {
+    
+    using ME.BECS;
 
     /// <summary>
     /// Convenience queries that operate just on the object's bounding boxes
@@ -20,7 +33,7 @@ namespace NativeTrees {
 
         private struct RayAABBIntersecter<T> : IOctreeRayIntersecter<T> {
 
-            public bool IntersectRay(in PrecomputedRay ray, T obj, AABB objBounds, out float distance) {
+            public bool IntersectRay(in PrecomputedRay ray, T obj, AABB objBounds, out tfloat distance) {
                 return objBounds.IntersectsRay(ray, out distance);
             }
 
@@ -95,7 +108,7 @@ namespace NativeTrees {
         /// <param name="nearest">The nearest object found</param>
         /// <typeparam name="T"></typeparam>
         /// <returns>If an object was found within the given maximum distance</returns>
-        public static bool TryGetNearestAABB<T>(this NativeOctree<T> octree, float3 point, float minDistanceSqr, float maxDistanceSqr, out T nearest)
+        public static bool TryGetNearestAABB<T>(this NativeOctree<T> octree, float3 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, out T nearest)
             where T : unmanaged, IComparable<T> {
             var visitor = new OctreeNearestAABBVisitor<T>();
             octree.Nearest(point, minDistanceSqr, maxDistanceSqr, ref visitor, default(AABBDistanceSquaredProvider<T>));
@@ -113,8 +126,8 @@ namespace NativeTrees {
         /// <param name="nearest">The nearest object found</param>
         /// <typeparam name="T"></typeparam>
         /// <returns>If an object was found within the given maximum distance</returns>
-        public static bool TryGetNearestAABB<T>(this NativeOctree<T>.NearestNeighbourCache queryCache, ref NativeOctree<T> octree, float3 point, float minDistanceSqr,
-                                                float maxDistanceSqr, out T nearest) where T : unmanaged, IComparable<T> {
+        public static bool TryGetNearestAABB<T>(this NativeOctree<T>.NearestNeighbourCache queryCache, ref NativeOctree<T> octree, float3 point, tfloat minDistanceSqr,
+                                                tfloat maxDistanceSqr, out T nearest) where T : unmanaged, IComparable<T> {
             var visitor = new OctreeNearestAABBVisitor<T>();
             queryCache.Nearest(ref octree, point, minDistanceSqr, maxDistanceSqr, ref visitor, default(AABBDistanceSquaredProvider<T>));
             nearest = visitor.nearest;
@@ -123,7 +136,7 @@ namespace NativeTrees {
 
         private struct AABBDistanceSquaredProvider<T> : IOctreeDistanceProvider<T> {
 
-            public float DistanceSquared(float3 point, T obj, AABB bounds) {
+            public tfloat DistanceSquared(float3 point, T obj, AABB bounds) {
                 return bounds.DistanceSquared(point);
             }
 

@@ -1,0 +1,150 @@
+namespace ME.BECS {
+    
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Mathematics;
+
+    [System.Serializable]
+    public partial struct {{name}} : System.IEquatable<{{name}}> {
+
+        public const {{type}} PRECISION = {{precision}}; // {{comment}}
+        public const {{type}} PRECISION_SQRT = {{precision_sqrt}};
+        
+        public static readonly {{name}} maxValue = new {{name}}({{max}});
+        public static readonly {{name}} minValue = new {{name}}({{min}});
+        public static readonly {{name}} zero = new {{name}}(0);
+        public static readonly {{name}} one{{one_name}} = new {{name}}(PRECISION);
+
+        [UnityEngine.SerializeField]
+        internal {{type}} value;
+
+        [INLINE(256)]
+        public {{name}}({{type}} rawValue) => this.value = rawValue;
+
+        {{CUSTOM_METHODS}}
+
+        [INLINE(256)]
+        public static {{name}} FromFloat(float value) {
+            var ms = new {{name}} {
+                value = ({{type}})(value * PRECISION),
+            };
+            return ms;
+        }
+        
+        [INLINE(256)]
+        public static implicit operator {{name}}({{type}} value) => new {{name}}(value);
+        
+        [INLINE(256)]
+        public static {{name}} operator *(float value1, {{name}} value2) {
+            return new {{name}}(({{type}})(value1 * value2.value));
+        }
+
+        [INLINE(256)]
+        public static {{name}} operator *({{name}} value1, float value2) {
+            return new {{name}}(({{type}})(value1.value * value2));
+        }
+
+        [INLINE(256)]
+        public static {{name}} operator +({{name}} value1, {{name}} value2) {
+            if (value1 >= maxValue || value2 >= maxValue) {
+                return {{name}}.maxValue;
+            }
+            value1.value += value2.value;
+            return value1;
+        }
+        
+        [INLINE(256)]
+        public static {{name}} operator -({{name}} value1, {{name}} value2) {
+            if (value2.value > value1.value) {
+                value1 = {{name}}.minValue;
+            } else {
+                value1.value -= value2.value;
+            }
+            return value1;
+        }
+
+        [INLINE(256)]
+        public static {{name}} operator *({{name}} value1, {{name}} value2) {
+            return new {{name}}(({{type}})(({{type_long}})value1.value * value2.value / PRECISION));
+        }
+
+        [INLINE(256)]
+        public static {{name}} operator /({{name}} value1, {{name}} value2) {
+            value1.value /= value2.value;
+            value1.value *= PRECISION;
+            return value1;
+        }
+
+        [INLINE(256)]
+        public static bool operator <({{name}} value1, {{name}} value2) {
+            return value1.value < value2.value;
+        }
+
+        [INLINE(256)]
+        public static bool operator >({{name}} value1, {{name}} value2) {
+            return value1.value > value2.value;
+        }
+
+        [INLINE(256)]
+        public static bool operator ==({{name}} value1, {{name}} value2) {
+            return value1.value == value2.value;
+        }
+
+        [INLINE(256)]
+        public static bool operator !=({{name}} value1, {{name}} value2) {
+            return value1.value != value2.value;
+        }
+
+        [INLINE(256)]
+        public static bool operator <=({{name}} value1, {{name}} value2) {
+            return value1.value <= value2.value;
+        }
+
+        [INLINE(256)]
+        public static bool operator >=({{name}} value1, {{name}} value2) {
+            return value1.value >= value2.value;
+        }
+        
+        [INLINE(256)]
+        public readonly int CompareTo({{name}} other) {
+            return this.value.CompareTo(other.value);
+        }
+
+        [INLINE(256)]
+        public readonly float ToFloat() {
+            return this.value / (float)PRECISION;
+        }
+
+        [INLINE(256)]
+        public readonly {{type}} ToValue() {
+            return this.value / PRECISION;
+        }
+
+        [INLINE(256)]
+        public override readonly string ToString() {
+            return (this.value / (float)PRECISION).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        [INLINE(256)]
+        public static {{name}} Parse(string s) {
+            var val = float.Parse(s);
+            return {{name}}.FromFloat(val);
+        }
+
+        [INLINE(256)]
+        public readonly bool Equals({{name}} other) {
+            return this.value == other.value;
+        }
+
+        [INLINE(256)]
+        public override readonly bool Equals(object obj) {
+            return obj is {{name}} other && this.Equals(other);
+        }
+
+        [INLINE(256)]
+        public override readonly int GetHashCode() {
+            return this.value.GetHashCode();
+        }
+
+    }
+
+}

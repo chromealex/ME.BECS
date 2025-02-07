@@ -30,6 +30,13 @@ namespace ME.BECS.Editor {
             LeakDetector.PrintAllocated();
             
         }
+        
+        [UnityEditor.MenuItem("ME.BECS/Internal/Generate Fp")]
+        public static void GenerateFp() {
+            
+            FpCodeGenerator.Generate();
+            
+        }
         #endif
 
     }

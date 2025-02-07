@@ -1,8 +1,19 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Editor {
 
     using UnityEditor;
     using UnityEngine.UIElements;
-    using Unity.Mathematics;
     
     [CustomPropertyDrawer(typeof(ValueSqrAttribute))]
     public class ValueSqrDrawer : PropertyDrawer {
@@ -20,7 +31,9 @@ namespace ME.BECS.Editor {
             } else if (type == typeof(ulong)) {
                 root.Add(CreateField(new UnsignedLongField(), property, (p) => (ulong)math.sqrt(p.ulongValue), (p, v) => p.ulongValue = v * v));
             } else if (type == typeof(float)) {
-                root.Add(CreateField(new FloatField(), property, (p) => math.sqrt(p.floatValue), (p, v) => p.floatValue = v * v));
+                root.Add(CreateField(new FloatField(), property, (p) => (float)math.sqrt(p.floatValue), (p, v) => p.floatValue = (float)(v * v)));
+            } else if (type == typeof(sfloat)) {
+                root.Add(CreateField(new FloatField(), property, (p) => (float)ME.BECS.FixedPoint.math.sqrt((sfloat)p.boxedValue), (p, v) => p.boxedValue = (sfloat)(v * v)));
             } else {
                 var label = new Label($"{property.displayName} type {type} not supported for sqr attribute");
                 root.Add(label);

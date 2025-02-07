@@ -1,9 +1,16 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.FogOfWar {
 
     using UnityEngine;
     using System;
     using System.Runtime.CompilerServices;
-    using Unity.Mathematics;
 
     [System.Serializable]
     public struct RectUInt : IEquatable<RectUInt>, IFormattable {
@@ -36,9 +43,9 @@ namespace ME.BECS.FogOfWar {
         /// <summary>
         ///   <para>Center coordinate of the rectangle.</para>
         /// </summary>
-        public Vector2 center {
+        public float2 center {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => new((float)this.x + (float)this.mWidth / 2f, (float)this.y + (float)this.mHeight / 2f);
+            get => new((tfloat)this.x + (tfloat)this.mWidth / 2f, (tfloat)this.y + (tfloat)this.mHeight / 2f);
         }
 
         /// <summary>

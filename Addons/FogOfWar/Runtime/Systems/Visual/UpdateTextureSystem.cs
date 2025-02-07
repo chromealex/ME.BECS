@@ -7,15 +7,14 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using Unity.Collections;
     using ME.BECS.Jobs;
-    using Unity.Mathematics;
     using static Cuts;
 
     //[BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(CreateTextureSystem))]
     public unsafe struct UpdateTextureSystem : IUpdate {
 
-        public float fadeInSpeed;
-        public float fadeOutSpeed;
+        public sfloat fadeInSpeed;
+        public sfloat fadeOutSpeed;
 
         private Ent lastActivePlayer;
         private Ent camera;
@@ -30,9 +29,9 @@ namespace ME.BECS.FogOfWar {
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public struct UpdateJob : IJobParallelFor {
 
-            public float dt;
-            public float fadeInSpeed;
-            public float fadeOutSpeed;
+            public sfloat dt;
+            public sfloat fadeInSpeed;
+            public sfloat fadeOutSpeed;
             public FogOfWarStaticComponent props;
             public FogOfWarComponent fow;
             public uint textureWidth;

@@ -1,3 +1,11 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Attack {
 
     public struct AttackComponent : IConfigComponent, IConfigInitialize {
@@ -8,9 +16,9 @@ namespace ME.BECS.Attack {
 
         public Sector sector;
         public byte ignoreSelf;
-        public float reloadTime;
-        public float fireTime;
-        public float attackTime;
+        public tfloat reloadTime;
+        public tfloat fireTime;
+        public tfloat attackTime;
         public Config bulletConfig;
         public ME.BECS.Views.View muzzleView;
 
@@ -23,13 +31,13 @@ namespace ME.BECS.Attack {
 
     public struct AttackRuntimeReloadComponent : IComponent {
 
-        public float reloadTimer;
+        public tfloat reloadTimer;
 
     }
 
     public struct AttackRuntimeFireComponent : IComponent {
 
-        public float fireTimer;
+        public tfloat fireTimer;
 
     }
 
@@ -53,7 +61,7 @@ namespace ME.BECS.Attack {
 
         public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { speedFactor = 1f };
         
-        public float speedFactor;
+        public tfloat speedFactor;
 
     }
     

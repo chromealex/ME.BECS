@@ -1,10 +1,16 @@
-using Unity.Collections.LowLevel.Unsafe;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Pathfinding {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
-    using Unity.Mathematics;
+    using Unity.Collections.LowLevel.Unsafe;
 
     //[BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Schedule building a pathfinding graph.")]
@@ -19,9 +25,9 @@ namespace ME.BECS.Pathfinding {
         [Unity.Collections.ReadOnlyAttribute]
         internal Unity.Collections.NativeArray<ME.BECS.Units.AgentType> types;
         internal Heights heights;
-        private float nodeSize;
+        private tfloat nodeSize;
 
-        public readonly float GetNodeSize() => this.nodeSize;
+        public readonly tfloat GetNodeSize() => this.nodeSize;
         
         public readonly Heights ReadHeights() => this.heights;
 
@@ -33,7 +39,7 @@ namespace ME.BECS.Pathfinding {
             { // terrain case
                 var terrain = UnityEngine.Terrain.activeTerrain;
                 if (terrain != null) {
-                    heights = Heights.Create(terrain.GetPosition(), terrain.terrainData, Constants.ALLOCATOR_PERSISTENT);
+                    heights = Heights.Create((float3)terrain.GetPosition(), terrain.terrainData, Constants.ALLOCATOR_PERSISTENT);
                 }
             }
 

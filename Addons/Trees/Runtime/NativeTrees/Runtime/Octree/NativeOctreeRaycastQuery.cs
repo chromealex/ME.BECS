@@ -1,6 +1,17 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using System.Runtime.CompilerServices;
 using Unity.Collections;
-using Unity.Mathematics;
 using UnityEngine;
 
 // https://bartvandesande.nl
@@ -19,8 +30,11 @@ namespace NativeTrees {
         /// <param name="maxDistance">Max distance from the ray's origin a hit may occur</param>
         /// <typeparam name="U">Type of intersecter</typeparam>
         /// <returns>True when a hit has occured</returns>
-        public bool Raycast<U>(Ray ray, out OctreeRaycastHit<T> hit, U intersecter = default, float maxDistance = float.PositiveInfinity)
+        public bool Raycast<U>(Ray ray, out OctreeRaycastHit<T> hit, U intersecter = default, tfloat? maxDistance = null)
             where U : struct, IOctreeRayIntersecter<T> {
+            
+            if (maxDistance == null) maxDistance = tfloat.PositiveInfinity;
+            
             var computedRay = new PrecomputedRay(ray);
 
             // check if ray even hits the boundary, and if so, we use the intersectin point to transpose our ray
@@ -39,7 +53,7 @@ namespace NativeTrees {
                 new ExtentsBounds(this.boundsCenter, this.boundsExtents),
                 out hit,
                 ref intersecter,
-                maxDistance: maxDistance,
+                maxDistance: maxDistance.Value,
                 parentDepth: 0);
         }
 
@@ -48,7 +62,7 @@ namespace NativeTrees {
             uint nodeId, in ExtentsBounds extentsBounds,
             out OctreeRaycastHit<T> hit,
             ref U intersecter,
-            int parentDepth, float maxDistance)
+            int parentDepth, tfloat maxDistance)
             where U : struct, IOctreeRayIntersecter<T> {
             parentDepth++;
 
@@ -64,7 +78,7 @@ namespace NativeTrees {
             // for our first (closest) octant, it must be the position the ray entered the parent node
             var octantIndex = NativeOctree<T>.PointToOctantIndex(ray.origin, extentsBounds.nodeCenter);
             var octantRayIntersection = ray.origin;
-            float octantDistance = 0;
+            tfloat octantDistance = 0;
 
             for (var i = 0; i < 4; i++) {
                 var octantId = NativeOctree<T>.GetOctantId(nodeId, octantIndex);
@@ -118,7 +132,7 @@ namespace NativeTrees {
                                 in ExtentsBounds extentsBounds,
                                 int objectCount,
                                 out OctreeRaycastHit<T> hit,
-                                ref U intersecter, float maxDistance,
+                                ref U intersecter, tfloat maxDistance,
                                 int depth) where U : struct, IOctreeRayIntersecter<T> {
             // Are we in a leaf node?
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {

@@ -1,7 +1,16 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS.Transforms {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
     using System.Runtime.InteropServices;
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
 
@@ -184,8 +193,8 @@ namespace ME.BECS.Transforms {
         public readonly float3 GetWorldMatrixScale() => MatrixUtils.GetScale(in this.readWorldMatrix);
 
         [INLINE(256)]
-        public readonly UnityEngine.Bounds GetBounds() {
-            return new UnityEngine.Bounds(this.GetWorldMatrixPosition(), new UnityEngine.Vector3(1f, 1f, 1f));
+        public readonly Bounds GetBounds() {
+            return new Bounds(this.GetWorldMatrixPosition(), new float3(1f, 1f, 1f));
         }
 
         [INLINE(256)]

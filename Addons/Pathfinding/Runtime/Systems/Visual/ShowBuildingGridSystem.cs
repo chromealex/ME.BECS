@@ -1,13 +1,19 @@
-using ME.BECS.Transforms;
-using ME.BECS.Views;
-using Unity.Collections.LowLevel.Unsafe;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Pathfinding {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using ME.BECS.Transforms;
+    using ME.BECS.Views;
+    using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs;
-    using Unity.Mathematics;
     using ME.BECS.Jobs;
     using static Cuts;
 

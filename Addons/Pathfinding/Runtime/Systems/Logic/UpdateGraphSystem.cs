@@ -1,10 +1,20 @@
-using ME.BECS.Jobs;
-using Unity.Collections.LowLevel.Unsafe;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
 
 namespace ME.BECS.Pathfinding {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
-    using Unity.Mathematics;
+    using ME.BECS.Jobs;
+    using Unity.Collections.LowLevel.Unsafe;
     using Unity.Collections;
     using Unity.Jobs;
     using ME.BECS.Transforms;
@@ -85,19 +95,19 @@ namespace ME.BECS.Pathfinding {
                         if (chunkIndex == uint.MaxValue) continue;
                         var chunkComponent = root.chunks[chunkIndex];
                         root.changedChunks[chunkIndex] = dirtyTick;
-                        UnityEngine.Rect chunkBounds;
+                        Rect chunkBounds;
                         {
                             var min = Graph.GetPosition(in root, in chunkComponent, 0u);
                             var max = Graph.GetPosition(in root, in chunkComponent, chunkComponent.nodes.Length - 1u);
-                            chunkBounds = UnityEngine.Rect.MinMaxRect(min.x, min.z, max.x, max.z);
+                            chunkBounds = Rect.MinMaxRect(min.x, min.z, max.x, max.z);
                         }
 
                         // intersection check
                         if (chunkBounds.Overlaps(obstacleBounds) == false) continue;
 
                         {
-                            for (float x = posMin.x; x <= posMax.x; x += root.nodeSize * 0.45f) {
-                                for (float y = posMin.z; y <= posMax.z; y += root.nodeSize * 0.45f) {
+                            for (tfloat x = posMin.x; x <= posMax.x; x += root.nodeSize * 0.45f) {
+                                for (tfloat y = posMin.z; y <= posMax.z; y += root.nodeSize * 0.45f) {
                                     var worldPos = new float3(x, 0f, y);
                                     var graphPos = math.mul(rotation, worldPos - position) + position;
                                     var nodeIndex = Graph.GetNodeIndex(in root, in chunkComponent, graphPos, clamp: false);

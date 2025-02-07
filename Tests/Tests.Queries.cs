@@ -605,7 +605,7 @@ namespace ME.BECS.Tests {
 
                 Assert.AreEqual(300, result.Count);
 
-                world.Tick(0f, UpdateType.FIXED_UPDATE).Complete();
+                world.Tick(0u, UpdateType.FIXED_UPDATE).Complete();
 
                 API.Query(world, Batches.Apply(default, world))
                    .With<TestComponent>()
@@ -614,7 +614,7 @@ namespace ME.BECS.Tests {
 
                 Assert.AreEqual(600, result.Count);
 
-                world.Tick(0f, UpdateType.FIXED_UPDATE).Complete();
+                world.Tick(0u, UpdateType.FIXED_UPDATE).Complete();
                 
                 API.Query(world, Batches.Apply(default, world))
                    .With<TestComponent>()
@@ -623,7 +623,7 @@ namespace ME.BECS.Tests {
 
                 Assert.AreEqual(900, result.Count);
 
-                world.Tick(0f, UpdateType.FIXED_UPDATE).Complete();
+                world.Tick(0u, UpdateType.FIXED_UPDATE).Complete();
                 
                 API.Query(world, Batches.Apply(default, world))
                    .With<TestComponent>()
@@ -632,7 +632,7 @@ namespace ME.BECS.Tests {
 
                 Assert.AreEqual(1000, result.Count);
 
-                world.Tick(0f, UpdateType.FIXED_UPDATE).Complete();
+                world.Tick(0u, UpdateType.FIXED_UPDATE).Complete();
 
                 API.Query(world, Batches.Apply(default, world))
                    .With<TestComponent>()

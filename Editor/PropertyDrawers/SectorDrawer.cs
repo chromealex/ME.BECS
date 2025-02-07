@@ -1,8 +1,19 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Attack.Editor {
 
     using UnityEditor;
     using UnityEngine.UIElements;
-    using Unity.Mathematics;
     using ME.BECS.Editor;
     using UnityEngine;
 
@@ -36,10 +47,31 @@ namespace ME.BECS.Attack.Editor {
             FloatField minField = null;
             FloatField maxField = null;
             {
-                var rangeProp = property.FindPropertyRelative(nameof(Sector.minRangeSqr));
+                var drawer = new FpFloatPropertyDrawer();
+                drawer.customName = "Min Range";
+                drawer.onValueSet = (value) => {
+                    if (value > 0u) value = math.sqrt(value);
+                    sectorPreview.minRange = (float)value;
+                    sectorPreview.RedrawElement();
+                    return value;
+                };
+                drawer.onValueChanged = (value) => {
+                    if (value > maxField.value) {
+                        maxField.SetValueWithoutNotify((float)value);
+                        sectorPreview.range = (float)value;
+                    }
+                    sectorPreview.minRange = (float)value;
+                    sectorPreview.RedrawElement();
+                    return value * value;
+                };
+                var visualElement = drawer.CreatePropertyGUI(property.FindPropertyRelative(nameof(Sector.minRangeSqr)));
+                minField = visualElement.Q<FloatField>();
+                root.Add(visualElement);
+                /*var rangeProp = property.FindPropertyRelative(nameof(Sector.minRangeSqr));
+                var rangePropVal = rangeProp.FindPropertyRelative(nameof(Sector.minRangeSqr.value));
                 var rangeField = minField = new FloatField("Min Range");
                 rangeField.AddToClassList("range");
-                rangeField.value = rangeProp.floatValue > 0f ? math.sqrt(rangeProp.floatValue) : 0f;
+                rangeField.value = rangePropVal.uintValue > 0u ? fpmath.sqrt(new umeter(rangeProp.uintValue)).value : 0u;
                 sectorPreview.minRange = rangeField.value;
                 rangeField.RegisterValueChangedCallback((evt) => {
                     var val = evt.newValue;
@@ -55,10 +87,30 @@ namespace ME.BECS.Attack.Editor {
                     rangeProp.serializedObject.ApplyModifiedProperties();
                     rangeProp.serializedObject.Update();
                 });
-                root.Add(rangeField);
+                root.Add(rangeField);*/
             }
             {
-                var rangeProp = property.FindPropertyRelative(nameof(Sector.rangeSqr));
+                var drawer = new FpFloatPropertyDrawer();
+                drawer.customName = "Range";
+                drawer.onValueSet = (value) => {
+                    if (value > 0u) value = math.sqrt(value);
+                    sectorPreview.range = (float)value;
+                    sectorPreview.RedrawElement();
+                    return value;
+                };
+                drawer.onValueChanged = (value) => {
+                    if (value < minField.value) {
+                        minField.SetValueWithoutNotify((float)value);
+                        sectorPreview.minRange = (float)value;
+                    }
+                    sectorPreview.range = (float)value;
+                    sectorPreview.RedrawElement();
+                    return value * value;
+                };
+                var visualElement = drawer.CreatePropertyGUI(property.FindPropertyRelative(nameof(Sector.rangeSqr)));
+                maxField = visualElement.Q<FloatField>();
+                root.Add(visualElement);
+                /*var rangeProp = property.FindPropertyRelative(nameof(Sector.rangeSqr));
                 var rangeField = maxField = new FloatField("Range");
                 rangeField.AddToClassList("range");
                 rangeField.value = rangeProp.floatValue > 0f ? math.sqrt(rangeProp.floatValue) : 0f;
@@ -77,7 +129,7 @@ namespace ME.BECS.Attack.Editor {
                     rangeProp.serializedObject.ApplyModifiedProperties();
                     rangeProp.serializedObject.Update();
                 });
-                root.Add(rangeField);
+                root.Add(rangeField);*/
             }
 
             var sectorRoot = new VisualElement();
@@ -85,18 +137,19 @@ namespace ME.BECS.Attack.Editor {
             root.Add(sectorRoot);
             {
                 var valProp = property.FindPropertyRelative(nameof(Sector.sector));
+                var prop = (sfloat)valProp.boxedValue;
                 var sector = new Slider("Sector", 0f, 360f, pageSize: 1f);
                 var sectorValueField = new FloatField();
                 sectorValueField.AddToClassList("sector-field");
                 sector.AddToClassList("sector");
-                sector.value = valProp.floatValue;
-                sector.label = "Sector (" + valProp.floatValue + "\u00b0):";
-                sectorPreview.angle = valProp.floatValue;
+                sector.value = (float)prop;
+                sector.label = $"Sector ({sector.value}\u00b0):";
+                sectorPreview.angle = sector.value;
                 sector.RegisterValueChangedCallback((evt) => {
-                    sector.label = "Sector (" + evt.newValue + "\u00b0):";
+                    sector.label = $"Sector ({evt.newValue}\u00b0):";
                     sectorValueField.SetValueWithoutNotify(evt.newValue);
                     valProp.serializedObject.Update();
-                    valProp.floatValue = evt.newValue;
+                    valProp.boxedValue = (sfloat)evt.newValue;
                     sectorPreview.angle = evt.newValue;
                     sectorPreview.RedrawElement();
                     valProp.serializedObject.ApplyModifiedProperties();
@@ -139,9 +192,9 @@ namespace ME.BECS.Attack.Editor {
             var painter = mgc.painter2D;
 
             var rect = mgc.visualElement.worldBound;
-            var centerPos = new float2(rect.width * 0.5f, rect.height * 0.5f);
+            var centerPos = (Vector2)new float2(rect.width * 0.5f, rect.height * 0.5f);
             var padding = 20f;
-            var scale = (math.min(rect.width, rect.height) - padding) / this.range * 0.5f;
+            var scale = (float)(math.min(rect.width, rect.height) - padding) / this.range * 0.5f;
             //var capLeft = centerPos + new float2(0f, 30f);
             var capLeft = math.mul(quaternion.Euler(0f, 0f, -math.radians(this.angle * 0.5f)), new float3(0f, -this.range * scale, 0f));
             var capRight = math.mul(quaternion.Euler(0f, 0f, math.radians(this.angle * 0.5f)), new float3(0f, -this.range * scale, 0f));
@@ -195,10 +248,10 @@ namespace ME.BECS.Attack.Editor {
                 painter.lineCap = LineCap.Round;
                 painter.BeginPath();
                 painter.Arc(centerPos, this.minRange * scale, new Angle(-this.angle * 0.5f - 90f), new Angle(this.angle * 0.5f - 90f), ArcDirection.Clockwise);
-                painter.LineTo(centerPos + capRight.xy);
+                painter.LineTo(centerPos + (Vector2)capRight.xy);
                 painter.Arc(centerPos, this.range * scale, new Angle(this.angle * 0.5f - 90f), new Angle(-this.angle * 0.5f - 90f), ArcDirection.CounterClockwise);
-                painter.LineTo(centerPos + capLeft.xy);
-                painter.LineTo(centerPos + math.normalize(capLeft.xy) * this.minRange * scale);
+                painter.LineTo(centerPos + (Vector2)capLeft.xy);
+                painter.LineTo(centerPos + (Vector2)math.normalize(capLeft.xy) * this.minRange * scale);
                 painter.ClosePath();
                 painter.Fill(FillRule.OddEven);
                 painter.Stroke();
