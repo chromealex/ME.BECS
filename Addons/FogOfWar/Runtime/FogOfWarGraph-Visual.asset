@@ -114,5 +114,7 @@ MonoBehaviour:
     - rid: 8346928929818279971
       type: {class: UpdateTextureSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
       data:
-        fadeInSpeed: 8
-        fadeOutSpeed: 0.5
+        fadeInSpeed:
+          rawValue: 1077936128
+        fadeOutSpeed:
+          rawValue: 1065353216

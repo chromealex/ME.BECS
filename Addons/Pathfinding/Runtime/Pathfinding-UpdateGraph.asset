@@ -126,12 +126,16 @@ MonoBehaviour:
     - rid: 8346928920201003113
       type: {class: FollowPathSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
       data:
-        collisionForce: 15
-        avoidanceForce: 1
-        cohesionForce: 0.5
-        separationForce: 1
-        alignmentForce: 0.5
-        movementForce: 5
+        collisionForce:
+          rawValue: 1097859072
+        cohesionForce:
+          rawValue: 1056964608
+        separationForce:
+          rawValue: 1065353216
+        alignmentForce:
+          rawValue: 1056964608
+        movementForce:
+          rawValue: 1084227584
     - rid: 8346928920201003114
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

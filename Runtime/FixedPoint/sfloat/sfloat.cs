@@ -34,8 +34,7 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
     /// <summary>
     /// Raw byte representation of an sfloat number
     /// </summary>
-    [UnityEngine.SerializeField]
-    private uint rawValue;
+    public uint rawValue;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private sfloat(uint raw)

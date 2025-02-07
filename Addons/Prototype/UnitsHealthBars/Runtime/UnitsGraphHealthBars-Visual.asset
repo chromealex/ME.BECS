@@ -75,8 +75,12 @@ MonoBehaviour:
         healthBarMaterial:
           id: 3
         barSettings:
-          sectionWidth: 6
-          height: 3
+          sectionWidth:
+            rawValue: 1084227584
+          height:
+            rawValue: 1084227584
+          referenceScale:
+            rawValue: 1137180672
     - rid: 8346928920201003080
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
