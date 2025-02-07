@@ -589,7 +589,7 @@ namespace ME.BECS.Network {
 
             [INLINE(256)]
             public ulong GetTargetTick() {
-                return (ulong)math.ceil((tfloat)(this.currentTimestamp / this.tickTime));
+                return (ulong)Unity.Mathematics.math.ceil(this.currentTimestamp / this.tickTime);
             }
 
             [INLINE(256)]

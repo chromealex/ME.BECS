@@ -107,14 +107,14 @@ namespace ME.BECS.Network {
 
         public bool IsInRollback() => this.network.IsInRollback();
 
-        public JobHandle UpdateInitializer(double dt, NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
+        public JobHandle UpdateInitializer(uint dtMs, NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
             
             {
                 var serverTime = this.network.networkTransport.ServerTime;
                 if (serverTime > this.GetCurrentTime()) {
                     this.SetServerTime(serverTime);
                 } else {
-                    this.SetServerTime(this.GetCurrentTime() + dt * 1000d);
+                    this.SetServerTime(this.GetCurrentTime() + dtMs);
                 }
             }
 

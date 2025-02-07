@@ -249,8 +249,9 @@ namespace ME.BECS {
 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
-                    var data = this.data + this.offsets[i];
                     var typeId = this.typeIds[i];
+                    var elemSize = StaticTypes.sizes.Get(typeId);
+                    var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     var func = this.functionPointers[i];
                     if (func.IsValid() == true) func.Call(in config, data, in ent);
                     Batches.Set(in ent, typeId, data.ptr, state);
@@ -406,7 +407,8 @@ namespace ME.BECS {
             public void Apply(in UnsafeEntityConfig config, in Ent ent) {
 
                 for (uint i = 0u; i < this.count; ++i) {
-                    var data = this.data + this.offsets[i];
+                    var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
+                    var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     this.functionPointers[i].Call(in config, data.ptr, in ent);
                 }
 
