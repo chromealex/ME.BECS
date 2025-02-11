@@ -1,3 +1,10 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Attack {
     
@@ -11,7 +18,7 @@ namespace ME.BECS.Attack {
         [BURST(CompileSynchronously = true)]
         public struct ReloadJob : IJobForAspects<AttackAspect> {
 
-            public float dt;
+            public tfloat dt;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 

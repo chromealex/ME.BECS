@@ -13,7 +13,7 @@ namespace ME.BECS.Editor.Systems {
             //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
             content = new scg::List<string>();
             content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.{methodName}))]");
-            content.Add($"public static void Graph{methodName}_{GetId(graph)}_{this.GetType().Name}(float dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {{");
+            content.Add($"public static void Graph{methodName}_{GetId(graph)}_{this.GetType().Name}(uint dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {{");
             //content.Add("/*");
             {
                 content.Add("// " + graph.name);
@@ -331,7 +331,7 @@ namespace ME.BECS.Editor.Systems {
 
                                             var methodDeps = GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, 0, collectedDeps.Count);
                                             var methodDepsDef = GetMethodDeps("ref", collectedDeps, 0, collectedDeps.Count);
-                                            var methodData = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(float dt, in World world, ref Unity.Jobs.JobHandle dependsOn, {GetMethodDeps("System.IntPtr*", arrMethodDef, 0, arrMethodDef.Count)}, {methodDeps}";
+                                            var methodData = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(uint dt, in World world, ref Unity.Jobs.JobHandle dependsOn, {GetMethodDeps("System.IntPtr*", arrMethodDef, 0, arrMethodDef.Count)}, {methodDeps}";
                                             methodContent.Add($"{(isBursted == true ? "[BURST] " : string.Empty)}private static void {methodData}"); // open next
                                             var methodDef = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(dt, in world, ref dependsOn, {GetMethodDeps("", arrMethodDef, 0, arrMethodDef.Count)}, {methodDepsDef}";
                                             containers.Add(methodDef);

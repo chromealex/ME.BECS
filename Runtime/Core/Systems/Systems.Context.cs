@@ -1,3 +1,9 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+#else
+using tfloat = System.Single;
+#endif
+
 namespace ME.BECS {
 
     using Unity.Jobs;
@@ -14,27 +20,28 @@ namespace ME.BECS {
     
     public struct SystemContext {
 
-        public readonly float deltaTime;
+        public readonly tfloat deltaTime => (tfloat)this.deltaTimeMs / (tfloat)1000f;
+        public readonly uint deltaTimeMs;
         public readonly World world;
         public JobHandle dependsOn { get; private set; }
 
         public JobInfo jobInfo => JobInfo.Create(this.world.id);
 
         [INLINE(256)]
-        private SystemContext(float deltaTime, in World world, JobHandle dependsOn) {
-            this.deltaTime = deltaTime;
+        private SystemContext(uint deltaTimeMs, in World world, JobHandle dependsOn) {
+            this.deltaTimeMs = deltaTimeMs;
             this.world = world;
             this.dependsOn = dependsOn;
         }
         
         [INLINE(256)]
-        public static SystemContext Create(float dt, in World world, JobHandle dependsOn) {
-            return new SystemContext(dt, in world, dependsOn);
+        public static SystemContext Create(uint deltaTimeMs, in World world, JobHandle dependsOn) {
+            return new SystemContext(deltaTimeMs, in world, dependsOn);
         }
 
         [INLINE(256)]
         public static SystemContext Create(in World world, JobHandle dependsOn) {
-            return new SystemContext(0f, in world, dependsOn);
+            return new SystemContext(0u, in world, dependsOn);
         }
 
         [INLINE(256)]

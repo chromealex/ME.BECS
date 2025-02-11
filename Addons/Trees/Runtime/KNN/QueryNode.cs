@@ -21,15 +21,20 @@
 //SOFTWARE.
 //
 // Modifed 2019 Arthur Brussee
-
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
 using Unity.Mathematics;
+#endif
 
 namespace KNN.Internal {
     public struct QueryNode {
         public int NodeIndex;
         public float3 TempClosestPoint;
-        public float Distance;
-        public float RadiusSqr;
+        public tfloat Distance;
+        public tfloat RadiusSqr;
 
     }
 }

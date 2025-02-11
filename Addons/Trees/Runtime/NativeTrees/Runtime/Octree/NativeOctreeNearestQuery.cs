@@ -1,14 +1,23 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 
 // https://bartvandesande.nl
 // https://github.com/bartofzo
 // ReSharper disable StaticMemberInGenericType
 
 namespace NativeTrees {
+    
+    using ME.BECS;
 
     public partial struct NativeOctree<T> : INativeDisposable {
 
@@ -29,7 +38,7 @@ namespace NativeTrees {
         /// <typeparam name="V">Provide a calculation for the distance</typeparam>
         /// <remarks>Allocates native containers. To prevent reallocating for every query, create a <see cref="NearestNeighbourCache"/> struct
         /// and re-use it.</remarks>
-        public void Nearest<U, V>(float3 point, float minDistanceSqr, float maxDistanceSqr, ref U visitor, V distanceSquaredProvider = default)
+        public void Nearest<U, V>(float3 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, V distanceSquaredProvider = default)
             where U : struct, IOctreeNearestVisitor<T>
             where V : struct, IOctreeDistanceProvider<T> {
             var query = new NearestNeighbourCache(Allocator.Temp);
@@ -74,12 +83,13 @@ namespace NativeTrees {
             /// </summary>
             /// <param name="octree">Octree to perform the query on</param>
             /// <param name="point">Point to get nearest neighbours for</param>
-            /// <param name="maxDistance">Maximum distance to look</param>
+            /// <param name="minDistanceSqr">Minimum distance to look</param>
+            /// <param name="maxDistanceSqr">Maximum distance to look</param>
             /// <param name="visitor">Handler for when a neighbour is encountered</param>
             /// <param name="distanceSquaredProvider">Provide a calculation for the distance</param>
             /// <typeparam name="U">Handler type for when a neighbour is encountered</typeparam>
             /// <typeparam name="V">Provide a calculation for the distance</typeparam>
-            public void Nearest<U, V>(ref NativeOctree<T> octree, float3 point, float minDistanceSqr, float maxDistanceSqr, ref U visitor, V distanceSquaredProvider = default)
+            public void Nearest<U, V>(ref NativeOctree<T> octree, float3 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, V distanceSquaredProvider = default)
                 where U : struct, IOctreeNearestVisitor<T>
                 where V : struct, IOctreeDistanceProvider<T> {
                 // reference for the method used:
@@ -126,7 +136,7 @@ namespace NativeTrees {
                 }
             }
 
-            private void NearestNode<V>(ref NativeOctree<T> octree, float3 point, float minDistanceSquared, float maxDistanceSquared,
+            private void NearestNode<V>(ref NativeOctree<T> octree, float3 point, tfloat minDistanceSquared, tfloat maxDistanceSquared,
                                         in DistanceAndIndexWrapper distanceAndIndexWrapper, V distanceProvider = default)
                 where V : struct, IOctreeDistanceProvider<T> {
                 ref var node = ref this.nodeList.ElementAt(distanceAndIndexWrapper.nodeIndex);
@@ -166,7 +176,7 @@ namespace NativeTrees {
                     node.nodeDepth);
             }
 
-            private void NearestNodeNext(ref NativeOctree<T> octree, float3 point, ref NodeWrapper nodeWrapper, float minDistanceSquared, float maxDistanceSquared,
+            private void NearestNodeNext(ref NativeOctree<T> octree, float3 point, ref NodeWrapper nodeWrapper, tfloat minDistanceSquared, tfloat maxDistanceSquared,
                                          int parentDepth) {
                 parentDepth++;
                 for (var i = 0; i < 8; i++) {
@@ -203,14 +213,14 @@ namespace NativeTrees {
             /// </summary>
             private readonly struct DistanceAndIndexWrapper {
 
-                public readonly float distanceSquared;
+                public readonly tfloat distanceSquared;
 
                 // There's no polymorphism with HPC#, so this is our way around that
                 public readonly int objIndex;
                 public readonly int nodeIndex;
                 public readonly bool isNode;
 
-                public DistanceAndIndexWrapper(float distanceSquared, int objIndex, int nodeIndex, bool isNode) {
+                public DistanceAndIndexWrapper(tfloat distanceSquared, int objIndex, int nodeIndex, bool isNode) {
                     this.distanceSquared = distanceSquared;
                     this.objIndex = objIndex;
                     this.nodeIndex = nodeIndex;

@@ -1,9 +1,20 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.FogOfWar {
 
     using Views;
     using Players;
     using Units;
-    using Unity.Mathematics;
 
     public class ForOfWarCrossFadeViewModule : FogOfWarViewModule, IViewUpdate {
 
@@ -63,7 +74,7 @@ namespace ME.BECS.FogOfWar {
                 var val = math.clamp(this.targetState == true ? this.crossFadeTimer : 1f - this.crossFadeTimer, 0f, 1f);
                 foreach (var renderer in this.renderers) {
                     renderer.GetPropertyBlock(this.propertyBlock);
-                    this.propertyBlock.SetFloat(lodFade, val);
+                    this.propertyBlock.SetFloat(lodFade, (float)val);
                     renderer.SetPropertyBlock(this.propertyBlock);
                 }
                 if (this.crossFadeTimer >= 1f) {

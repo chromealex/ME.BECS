@@ -1,7 +1,19 @@
-using System.Runtime.CompilerServices;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using static ME.BECS.FixedPoint.math;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
 using Unity.Mathematics;
-using UnityEngine;
 using static Unity.Mathematics.math;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
+using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace NativeTrees
 {
@@ -62,7 +74,7 @@ namespace NativeTrees
         /// Returns the squared distance of a point to this AABB. If the point lies in the box, zero is returned.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float DistanceSquared(float2 point) => distancesq(point, ClosestPoint(point));
+        public float DistanceSquared(float2 point) => (float)distancesq(point, ClosestPoint(point));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ContainsPoint(in float2 point) => all(point >= min) && all(point <= max);
@@ -108,8 +120,8 @@ namespace NativeTrees
             float2 tMin1 = min(t1, t2);
             float2 tMax1 = max(t1, t2);
 
-            tMin = max(0, cmax(tMin1));
-            float tMax = cmin(tMax1);
+            tMin = (float)max(0, cmax(tMin1));
+            float tMax = (float)cmin(tMax1);
 
             return tMax >= tMin;
         }

@@ -124,7 +124,7 @@ MonoBehaviour:
       type: {class: BuildGraphSystem, ns: ME.BECS.Pathfinding, asm: ME.BECS.Pathfinding}
       data:
         agentTypesConfig:
-          id: 83
+          id: 201
     - rid: 8346928920201003106
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

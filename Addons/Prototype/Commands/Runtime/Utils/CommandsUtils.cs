@@ -3,9 +3,7 @@ namespace ME.BECS.Commands {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Units;
     using Pathfinding;
-    using Transforms;
     using Unity.Collections;
-    using Unity.Mathematics;
 
     public static class CommandsUtils {
 

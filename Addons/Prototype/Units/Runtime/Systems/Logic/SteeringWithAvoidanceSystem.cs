@@ -1,9 +1,17 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
 
 namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
-    using Unity.Mathematics;
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
@@ -25,15 +33,15 @@ namespace ME.BECS.Units {
         public bool calculateSeparation;
         public bool calculateCohesion;
         public bool calculateAlignment;
-        public float alignmentSpeed;
-        public float maxAgentRadius;
+        public tfloat alignmentSpeed;
+        public tfloat maxAgentRadius;
         public bool drawGizmos;
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
+        public struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
 
             public SteeringWithAvoidanceSystem system;
-            public float dt;
+            public tfloat dt;
             public World world;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref QuadTreeQueryAspect query) {
@@ -46,11 +54,11 @@ namespace ME.BECS.Units {
                 var alignmentVector = float3.zero;
                 var cohesionUnitsCount = 0u;
                 var alignmentUnitsCount = 0u;
-                var rangeSq = query.query.rangeSqr;
+                var rangeSq = query.readQuery.rangeSqr;
                 var srcPos = tr.position;
                 srcPos.y = 0f;
-                for (uint i = 0, size = query.results.results.Count; i < size; ++i) {
-                    var queryEnt = query.results.results[this.world.state, i];
+                for (uint i = 0, size = query.readResults.results.Count; i < size; ++i) {
+                    var queryEnt = query.readResults.results[this.world.state, i];
                     if (queryEnt.IsAlive() == false) continue;
                     if (queryEnt == unit.ent) continue;
 
@@ -78,7 +86,7 @@ namespace ME.BECS.Units {
                     var isGroupEquals = entUnit.IsPathFollow == false &&
                                         entUnit.unitCommandGroup == unit.unitCommandGroup;
 
-                    var radiusSum = unit.radius + entUnit.radius;
+                    var radiusSum = (unit.radius + entUnit.radius);
                     var radiusSumSq = radiusSum * radiusSum;
                     
                     var lengthSqr = math.lengthsq(vec);
@@ -161,7 +169,7 @@ namespace ME.BECS.Units {
             }
             
             [INLINE(256)]
-            private static bool IsFacing(float3 rightTransformVector, float3 normal, float cosineValue) {
+            private static bool IsFacing(float3 rightTransformVector, float3 normal, tfloat cosineValue) {
                 return math.dot(rightTransformVector, normal) >= cosineValue;
             }
 
@@ -187,7 +195,7 @@ namespace ME.BECS.Units {
 
                 var tr = unitEnt.GetAspect<TransformAspect>();
                 var unit = unitEnt.GetAspect<UnitAspect>();
-                UnityEngine.Gizmos.DrawWireSphere(tr.position, unit.readRadius);
+                UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)tr.position, (float)unit.readRadius);
 
             }
             

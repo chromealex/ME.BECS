@@ -1,9 +1,16 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.NativeCollections {
 
     using System;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
-    using Unity.Mathematics;
     using static Cuts;
 
     public unsafe struct NativeMinHeap : IDisposable {
@@ -102,14 +109,14 @@ namespace ME.BECS.NativeCollections {
 
     public struct MinHeapNode {
 
-        public MinHeapNode(uint position, float expectedCost) {
+        public MinHeapNode(uint position, tfloat expectedCost) {
             this.Position = position;
             this.ExpectedCost = expectedCost;
             this.Next = -1;
         }
 
         public uint Position { get; }
-        public float ExpectedCost { get; }
+        public tfloat ExpectedCost { get; }
         public int Next { get; set; }
 
     }

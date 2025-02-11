@@ -74,8 +74,8 @@ namespace ME.BECS.Tests {
                 group.Add(new TestCurrentTickSystem() { ent = ent, });
                 world.AssignRootSystemGroup(group);
 
-                world.Tick(0f).Complete();
-                world.Tick(0f).Complete();
+                world.Tick(0u).Complete();
+                world.Tick(0u).Complete();
             }
             world.Dispose();
 
@@ -91,9 +91,9 @@ namespace ME.BECS.Tests {
                 group.Add(new TestNextTickSystem() { ent = ent, });
                 world.AssignRootSystemGroup(group);
 
-                world.Tick(0f).Complete();
-                world.Tick(0f).Complete();
-                world.Tick(0f).Complete();
+                world.Tick(0u).Complete();
+                world.Tick(0u).Complete();
+                world.Tick(0u).Complete();
             }
             world.Dispose();
 

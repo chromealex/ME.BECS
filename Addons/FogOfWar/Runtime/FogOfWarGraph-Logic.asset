@@ -298,12 +298,17 @@ MonoBehaviour:
       type: {class: CreateSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
       data:
         mapPosition:
-          x: 0
-          y: 0
+          x:
+            rawValue: 0
+          y:
+            rawValue: 0
         mapSize:
-          x: 500
-          y: 500
-        resolution: 1
+          x:
+            rawValue: 1128792064
+          y:
+            rawValue: 1128792064
+        resolution:
+          rawValue: 1065353216
     - rid: 8346928923441103773
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -383,4 +388,4 @@ MonoBehaviour:
         renderView:
           viewSource:
             providerId: 1
-            prefabId: 11
+            prefabId: 34

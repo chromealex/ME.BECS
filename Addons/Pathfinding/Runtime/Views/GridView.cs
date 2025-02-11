@@ -1,9 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 using UnityEngine;
 
 namespace ME.BECS.Pathfinding.Views {
     
-    using Unity.Mathematics;
-
     public class GridView : ME.BECS.Views.EntityView {
 
         private static readonly int centerPos = Shader.PropertyToID("_ObjPos");
@@ -15,7 +21,7 @@ namespace ME.BECS.Pathfinding.Views {
         private static readonly int gridOffset = Shader.PropertyToID("_GridOffset");
 
         public Material material;
-        private float2 gridSize;
+        private uint2 gridSize;
         private float2 viewWorldSize;
         private float4 objPos;
         public float2 offset;
@@ -39,10 +45,10 @@ namespace ME.BECS.Pathfinding.Views {
             //objPos.z = math.clamp(objPos.z, (int)halfSize.y * root.nodeSize - halfOffset.y, (int)(root.height * root.chunkHeight - halfSize.y * root.nodeSize + halfOffset.y));
             objPos.x += halfOffset.x;
             objPos.z += halfOffset.y;
-            this.objPos = (Vector4)new float4(objPos, 0f);
+            this.objPos = new float4(objPos, 0f);
             this.material.SetTexture(gridTex, grid.GetTexture());
             this.material.SetFloat(isEnabled, ent.Has<IsShowGridComponent>() == true ? 1f : 0f);
-            this.material.SetVector(_gridSize, new Vector4(this.viewWorldSize.x, this.viewWorldSize.y, 0f, 0f));
+            this.material.SetVector(_gridSize, new Vector4((float)this.viewWorldSize.x, (float)this.viewWorldSize.y, 0f, 0f));
             this.material.SetFloat(isValid, ent.Has<PlaceholderInvalidTagComponent>() == true ? 0f : 1f);
             this.material.SetVector(gridOffset, new Vector4(0.5f, 0.5f, objSize.x % 2 != 0 ? 1f : -1f, objSize.y % 2 != 0 ? 1f : -1f));
 
@@ -55,8 +61,8 @@ namespace ME.BECS.Pathfinding.Views {
             var x = this.offset.x - this.viewWorldSize.x * 0.5f;
             var y = this.offset.y - this.viewWorldSize.y * 0.5f;
             
-            var p = new Vector4(-x * invScaleX, -y * invScaleY, invScaleX, 0f);
-            this.material.SetVector(centerPos, this.objPos);
+            var p = new Vector4((float)(-x * invScaleX), (float)(-y * invScaleY), (float)invScaleX, 0f);
+            this.material.SetVector(centerPos, (Vector4)this.objPos);
             this.material.SetVector(@params, p);
             
         }

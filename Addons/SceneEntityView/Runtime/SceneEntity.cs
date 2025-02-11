@@ -1,3 +1,13 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 using ME.BECS.Views;
 using UnityEngine;
 
@@ -21,9 +31,9 @@ namespace ME.BECS {
                     if (this.config != null) this.config.Apply(in ent);
                     ent.Set<ME.BECS.Transforms.TransformAspect>();
                     var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                    tr.localPosition = this.transform.localPosition;
-                    tr.localRotation = this.transform.localRotation;
-                    tr.localScale = this.transform.localScale;
+                    tr.localPosition = (float3)this.transform.localPosition;
+                    tr.localRotation = (quaternion)this.transform.localRotation;
+                    tr.localScale = (float3)this.transform.localScale;
                     var viewsModule = this.worldInitializer.modules.Get<ViewsModule>();
                     var viewSource = viewsModule.RegisterViewSource(this.entityView, this.providerId, sceneSource: true);
                     ent.InstantiateView(viewSource);

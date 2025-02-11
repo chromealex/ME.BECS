@@ -1,8 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Pathfinding {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
-    using Unity.Mathematics;
     using Unity.Collections;
     using static Cuts;
 

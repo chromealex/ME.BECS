@@ -1,4 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
 using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using UnityEngine;
 
 namespace NativeTrees {
@@ -24,8 +35,8 @@ namespace NativeTrees {
         public readonly float3 invDir;
 
         public PrecomputedRay(Ray ray) {
-            this.origin = ray.origin;
-            this.dir = ray.direction;
+            this.origin = (float3)ray.origin;
+            this.dir = (float3)ray.direction;
             this.invDir = 1 / this.dir;
         }
 
@@ -43,7 +54,7 @@ namespace NativeTrees {
         }
 
         public static explicit operator Ray(PrecomputedRay ray) {
-            return new Ray(ray.origin, ray.dir);
+            return new Ray((Vector3)ray.origin, (Vector3)ray.dir);
         }
 
     }

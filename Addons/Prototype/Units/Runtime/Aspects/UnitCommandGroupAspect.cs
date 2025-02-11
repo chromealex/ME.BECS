@@ -1,7 +1,6 @@
 namespace ME.BECS.Units {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
     
     /// <summary>
     /// Command group used for the special commands

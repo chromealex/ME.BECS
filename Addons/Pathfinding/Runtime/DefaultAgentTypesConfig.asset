@@ -14,27 +14,43 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   graphProperties:
     position:
-      x: 0
-      y: 0
-      z: 0
+      x:
+        rawValue: 0
+      y:
+        rawValue: 0
+      z:
+        rawValue: 0
     chunkWidth: 20
     chunkHeight: 20
-    nodeSize: 1
+    nodeSize:
+      rawValue: 1065353216
     chunksCountX: 10
     chunksCountY: 10
   agentTypes:
   - typeId: 0
-    radius: 0
-    avoidanceRange: 0
-    maxSlope: 1
-    height: 0.5
+    radius:
+      rawValue: 0
+    avoidanceRange:
+      rawValue: 1084227584
+    maxSlope:
+      rawValue: 1119092736
+    height:
+      rawValue: 0
   - typeId: 0
-    radius: 0.5
-    avoidanceRange: 5
-    maxSlope: 30
-    height: 0.5
+    radius:
+      rawValue: 1065353216
+    avoidanceRange:
+      rawValue: 1084227584
+    maxSlope:
+      rawValue: 1119092736
+    height:
+      rawValue: 1077936128
   - typeId: 0
-    radius: 1.25
-    avoidanceRange: 5
-    maxSlope: 30
-    height: 0.2
+    radius:
+      rawValue: 1073741824
+    avoidanceRange:
+      rawValue: 1084227584
+    maxSlope:
+      rawValue: 1119092736
+    height:
+      rawValue: 1077936128

@@ -16,12 +16,12 @@ namespace ME.BECS {
         public Ent Camera => this.camera;
 
         [INLINE(256)]
-        public JobHandle Update(float deltaTime, JobHandle dependsOn) {
+        public JobHandle Update(uint deltaTimeMs, JobHandle dependsOn) {
             this.previousFrameUpdate.Complete();
             if (this.cameraPtr.IsValid == true) {
                 CameraUtils.UpdateCamera(this.camera.GetAspect<CameraAspect>(), this.cameraPtr.Value);
             }
-            dependsOn = this.world.Tick(deltaTime, UpdateType.LATE_UPDATE, dependsOn);
+            dependsOn = this.world.Tick(deltaTimeMs, UpdateType.LATE_UPDATE, dependsOn);
             if (this.viewsModule.IsValid == true) {
                 dependsOn = this.viewsModule.Value.OnUpdate(dependsOn);
             }

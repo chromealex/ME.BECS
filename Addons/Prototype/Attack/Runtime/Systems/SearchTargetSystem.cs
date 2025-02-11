@@ -5,7 +5,6 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
     using ME.BECS.Units;
-    using Unity.Mathematics;
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Search Target system")]

@@ -1,7 +1,17 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Commands {
 
-    using Unity.Mathematics;
-    
     public struct CommandComponentsGroup {
         
         public static UnityEngine.Color color = UnityEngine.Color.yellow;
@@ -25,8 +35,8 @@ namespace ME.BECS.Commands {
     public struct BuildingInProgress : IComponent {
 
         public LockSpinner lockSpinner;
-        public volatile float value;
-        public float timeToBuild;
+        public tfloat value;
+        public tfloat timeToBuild;
         public ListAuto<Ent> builders;
         
     }

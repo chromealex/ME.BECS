@@ -1,10 +1,19 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS.Bullets {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Views;
     using ME.BECS.Transforms;
     using ME.BECS.Players;
-    using Unity.Mathematics;
     
     public static class BulletUtils {
 
@@ -29,6 +38,25 @@ namespace ME.BECS.Bullets {
         }
 
         /// <summary>
+        /// Create bullet entity with 200 ms muzzleLifetime
+        /// </summary>
+        /// <param name="sourceUnit">Source unit</param>
+        /// <param name="position">Initial bullet position</param>
+        /// <param name="rotation">Initial bullet rotation</param>
+        /// <param name="targetsMask">Targets tree mask</param>
+        /// <param name="target">If set - use this to target bullet at runtime</param>
+        /// <param name="targetPosition">If set</param>
+        /// <param name="config">Bullet config</param>
+        /// <param name="muzzleView">Muzzle view</param>
+        /// <param name="jobInfo"></param>
+        /// <returns></returns>
+        [INLINE(256)]
+        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition,
+                                                in Config config, in View muzzleView, in JobInfo jobInfo = default) {
+            return CreateBullet(in sourceUnit, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+        }
+
+        /// <summary>
         /// Create bullet entity
         /// </summary>
         /// <param name="sourceUnit">Source unit</param>
@@ -39,11 +67,11 @@ namespace ME.BECS.Bullets {
         /// <param name="targetPosition">If set</param>
         /// <param name="config">Bullet config</param>
         /// <param name="muzzleView">Muzzle view</param>
-        /// <param name="muzzleLifetime">Muzzle lifetime</param>
+        /// <param name="muzzleLifetime">Muzzle lifetime in ms</param>
         /// <param name="jobInfo"></param>
         /// <returns></returns>
         [INLINE(256)]
-        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View muzzleView, float muzzleLifetime = 0.2f, in JobInfo jobInfo = default) {
+        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View muzzleView, tfloat muzzleLifetime, in JobInfo jobInfo = default) {
 
             if (muzzleView.IsValid == true) {
                 var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");

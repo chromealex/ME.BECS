@@ -1,3 +1,9 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+#else
+using tfloat = System.Single;
+#endif
+
 namespace ME.BECS.Attack {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -11,7 +17,7 @@ namespace ME.BECS.Attack {
         [BURST(CompileSynchronously = true)]
         public struct Job : IJobForAspects<AttackAspect> {
 
-            public float dt;
+            public tfloat dt;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 

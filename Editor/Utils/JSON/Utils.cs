@@ -1,6 +1,5 @@
 namespace ME.BECS.Editor.JSON {
 
-    using Unity.Mathematics;
     using System.Text;
 
     public interface ISerializer {

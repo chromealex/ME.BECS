@@ -1,15 +1,21 @@
-using ME.BECS.Transforms;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Pathfinding {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
+    using ME.BECS.Transforms;
     using ME.BECS.Units;
     
     public static class PathUtils {
 
-        public const float DEFAULT_VOLUME_RADIUS = 2f;
-        public const float RADIUS_FACTOR = math.PI;
+        public static readonly tfloat DEFAULT_VOLUME_RADIUS = 2f;
+        public static readonly tfloat RADIUS_FACTOR = math.PI;
 
         [INLINE(256)]
         public static void AddChainTarget(UnitCommandGroupAspect rootCommandGroup, in UnitCommandGroupAspect unitCommandGroup) {
@@ -181,7 +187,7 @@ namespace ME.BECS.Pathfinding {
             var ent = Ent.New(in jobInfo);
             ent.Set(new TargetInfoComponent() {
                 position = position,
-                volume = (int)(DEFAULT_VOLUME_RADIUS * UnitUtils.FLOAT_TO_UINT),
+                volume = (uint)(DEFAULT_VOLUME_RADIUS * UnitUtils.FLOAT_TO_UINT),
             });
             return ent;
         }
@@ -211,14 +217,14 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static float GetGroupRadiusSqr(in UnitCommandGroupAspect commandGroup) {
+        public static tfloat GetGroupRadiusSqr(in UnitCommandGroupAspect commandGroup) {
 
             return commandGroup.readVolume * UnitUtils.UINT_TO_FLOAT / math.PI * RADIUS_FACTOR;
 
         }
         
         [INLINE(256)]
-        public static float GetTargetRadiusSqr(in TargetComponent target) {
+        public static tfloat GetTargetRadiusSqr(in TargetComponent target) {
 
             return target.target.Read<TargetInfoComponent>().volume * UnitUtils.UINT_TO_FLOAT / math.PI * RADIUS_FACTOR;
 

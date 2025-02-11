@@ -1,7 +1,17 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS.Commands {
     
-    using Unity.Mathematics;
-
     [ComponentGroup(typeof(CommandComponentsGroup))]
     public struct CommandBuild : ICommandComponent {
 
@@ -10,9 +20,9 @@ namespace ME.BECS.Commands {
         public float3 snappedPosition;
         public quaternion rotation;
         public uint2 size;
-        public float height;
+        public tfloat height;
         public uint buildingTypeId;
-        public float timeToBuild;
+        public tfloat timeToBuild;
         public Ent owner;
         public Ent building;
 

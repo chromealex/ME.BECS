@@ -1,19 +1,29 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 namespace ME.BECS {
 
-    using Unity.Mathematics;
-    
     public readonly struct MathSector {
 
         private readonly float3 position;
         private readonly float3 lookDirection;
-        private readonly float sector;
+        private readonly tfloat sector;
         private readonly bool checkSector;
         
-        public MathSector(in float3 position, in quaternion rotation, float sector) {
+        public MathSector(in float3 position, in quaternion rotation, tfloat sector) {
             this.position = position;
             this.lookDirection = math.normalize(math.mul(rotation, math.forward()));
             this.sector = math.radians(sector);
-            this.checkSector = sector > 0f && sector < 360f;
+            this.checkSector = sector > 0 && sector < 360;
         }
 
         public bool IsValid(in float3 objPosition) {

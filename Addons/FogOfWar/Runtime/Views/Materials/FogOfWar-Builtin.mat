@@ -226,7 +226,7 @@ Material:
     - _AlphaRemap: {r: 1, g: 0, b: 0, a: 0}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _BorderColor: {r: 0, g: 0, b: 0, a: 0.09803922}
-    - _CamPos: {r: 130, g: 625, b: -175.4, a: 0}
+    - _CamPos: {r: 100, g: 625, b: -175.4, a: 0}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
     - _Color: {r: 0, g: 0, b: 0, a: 0.69411767}
     - _EdgeColor1: {r: 1, g: 1, b: 1, a: 1}
@@ -236,7 +236,7 @@ Material:
     - _ExploredColor: {r: 0, g: 0, b: 0, a: 0.5176471}
     - _FogColor: {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
     - _HueVariation: {r: 1, g: 0.5, b: 0, a: 0.1}
-    - _Params: {r: 0.5, g: 0.5, b: 0.0038461538, a: 0}
+    - _Params: {r: 0.49999997, g: 0.49999997, b: 0.005, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
     - _UvOffset: {r: 0, g: 0, b: 0, a: 0}

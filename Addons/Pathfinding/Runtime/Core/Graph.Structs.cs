@@ -1,8 +1,14 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Pathfinding {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
     using ME.BECS.Transforms;
     using Unity.Jobs;
     using ME.BECS.Jobs;
@@ -49,7 +55,7 @@ namespace ME.BECS.Pathfinding {
         public float3 position;
         public uint chunkWidth;
         public uint chunkHeight;
-        public float nodeSize;
+        public tfloat nodeSize;
         public uint chunksCountX;
         public uint chunksCountY;
 
@@ -171,7 +177,7 @@ namespace ME.BECS.Pathfinding {
         public static Heights CreateDefault(Unity.Collections.Allocator allocator) {
             return new Heights() {
                 data = new GraphHeights() {
-                    heightMap = Unity.Collections.CollectionHelper.CreateNativeArray<float>(1, allocator),
+                    heightMap = Unity.Collections.CollectionHelper.CreateNativeArray<tfloat>(1, allocator),
                 },
             };
         }
@@ -189,13 +195,13 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public readonly float GetHeight(float3 worldPosition) {
+        public readonly tfloat GetHeight(float3 worldPosition) {
             if (this.data.heightMap.Length == 1) return 0f;
             return this.data.SampleHeight(worldPosition);
         }
 
         [INLINE(256)]
-        public readonly float GetHeight(float3 worldPosition, out float3 normal) {
+        public readonly tfloat GetHeight(float3 worldPosition, out float3 normal) {
             normal = math.up();
             if (this.data.heightMap.Length == 1) return 0f;
             return this.data.SampleHeight(worldPosition, out normal);
@@ -210,7 +216,7 @@ namespace ME.BECS.Pathfinding {
         public uint flags;
         public int cost;
         public ObstacleChannel obstacleChannel;
-        public float height;
+        public tfloat height;
         public float3 normal;
 
     }
@@ -286,7 +292,7 @@ namespace ME.BECS.Pathfinding {
 
                 public byte direction;
                 public byte hasLineOfSight;
-                public float bestCost;
+                public tfloat bestCost;
 
             }
 
@@ -334,7 +340,7 @@ namespace ME.BECS.Pathfinding {
 
         public bool isClosed;
         public bool isOpened;
-        public float startToCurNodeLen;
+        public tfloat startToCurNodeLen;
         public uint parent;
 
     }

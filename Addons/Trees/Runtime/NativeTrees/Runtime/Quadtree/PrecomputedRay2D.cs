@@ -1,4 +1,15 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
 using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
 using UnityEngine;
 
 namespace NativeTrees
@@ -25,8 +36,8 @@ namespace NativeTrees
 
         public PrecomputedRay2D(Ray2D ray)
         {
-            this.origin = ray.origin;
-            this.dir = ray.direction;
+            this.origin = (float2)ray.origin;
+            this.dir = (float2)ray.direction;
             this.invDir = 1f / dir;
         }
 
@@ -41,6 +52,6 @@ namespace NativeTrees
         }
 
         public static explicit operator PrecomputedRay2D(Ray2D ray) => new PrecomputedRay2D(ray);
-        public static explicit operator Ray2D(PrecomputedRay2D ray) => new Ray2D(ray.origin, ray.dir);
+        public static explicit operator Ray2D(PrecomputedRay2D ray) => new Ray2D((Vector2)ray.origin, (Vector2)ray.dir);
     }
 }

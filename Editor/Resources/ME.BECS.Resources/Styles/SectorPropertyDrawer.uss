@@ -31,3 +31,10 @@ SectorPreview {
 .sector-field {
     min-width: 40px;
 }
+
+.root .root {
+    border-width: 0px;
+    padding: 0px;
+    margin: 0px;
+    margin-top: 1px;
+}

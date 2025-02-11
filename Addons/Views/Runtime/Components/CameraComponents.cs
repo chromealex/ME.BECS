@@ -1,19 +1,28 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS.Views {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
     
     public struct CameraComponent : IComponent {
 
         public MemArrayAuto<UnityEngine.Plane> localPlanes;
-        public float nearClipPlane;
-        public float farClipPlane;
-        public float fieldOfViewVertical;
-        public float fieldOfViewHorizontal;
-        public float aspect;
+        public tfloat nearClipPlane;
+        public tfloat farClipPlane;
+        public tfloat fieldOfViewVertical;
+        public tfloat fieldOfViewHorizontal;
+        public tfloat aspect;
         public bool orthographic;
-        public float orthographicSize;
-        public UnityEngine.Bounds bounds;
+        public tfloat orthographicSize;
+        public Bounds bounds;
 
     }
 
@@ -27,9 +36,9 @@ namespace ME.BECS.Views {
 
         public readonly ref CameraComponent component => ref this.cameraDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly CameraComponent readComponent => ref this.cameraDataPtr.Read(this.ent.id, this.ent.gen);
-        public readonly ref readonly UnityEngine.Bounds bounds => ref this.cameraDataPtr.Read(this.ent.id, this.ent.gen).bounds;
+        public readonly ref readonly Bounds bounds => ref this.cameraDataPtr.Read(this.ent.id, this.ent.gen).bounds;
 
-        public UnityEngine.Bounds WorldBounds => new UnityEngine.Bounds((float3)this.bounds.center + this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition(), this.bounds.size);
+        public Bounds WorldBounds => new Bounds((float3)this.bounds.center + this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetWorldMatrixPosition(), this.bounds.size);
 
         public float4x4 worldToCameraMatrix {
             [INLINE(256)]

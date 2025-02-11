@@ -1,12 +1,21 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+#endif
+
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
 
     public static class EntRandomExt {
 
         [INLINE(256)]
-        public static unsafe float3 GetRandomVector3InSphere(this in Ent ent, float radius) {
+        public static unsafe float3 GetRandomVector3InSphere(this in Ent ent, tfloat radius) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -14,7 +23,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static unsafe float3 GetRandomVector3OnSphere(this in Ent ent, float radius) {
+        public static unsafe float3 GetRandomVector3OnSphere(this in Ent ent, tfloat radius) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -22,7 +31,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static unsafe float2 GetRandomVector2InCircle(this in Ent ent, float radius) {
+        public static unsafe float2 GetRandomVector2InCircle(this in Ent ent, tfloat radius) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -30,7 +39,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static unsafe float2 GetRandomVector2OnCircle(this in Ent ent, float radius) {
+        public static unsafe float2 GetRandomVector2OnCircle(this in Ent ent, tfloat radius) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -38,7 +47,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static unsafe float GetRandomValue(this in Ent ent) {
+        public static unsafe tfloat GetRandomValue(this in Ent ent) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -46,7 +55,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static unsafe float GetRandomValue(this in Ent ent, float max) {
+        public static unsafe tfloat GetRandomValue(this in Ent ent, tfloat max) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -54,7 +63,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static unsafe float GetRandomValue(this in Ent ent, float min, float max) {
+        public static unsafe tfloat GetRandomValue(this in Ent ent, tfloat min, tfloat max) {
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -146,7 +155,7 @@ namespace ME.BECS {
     public unsafe partial struct World {
 
         [INLINE(256)]
-        public readonly float3 GetRandomVector3InSphere(uint seed, float radius) {
+        public readonly float3 GetRandomVector3InSphere(uint seed, tfloat radius) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var dir = rnd.NextFloat3Direction();
@@ -155,7 +164,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly float2 GetRandomVector2InCircle(uint seed, float radius) {
+        public readonly float2 GetRandomVector2InCircle(uint seed, tfloat radius) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var dir = rnd.NextFloat2Direction();
@@ -164,7 +173,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly float2 GetRandomVector2OnCircle(uint seed, float radius) {
+        public readonly float2 GetRandomVector2OnCircle(uint seed, tfloat radius) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var result = rnd.NextFloat2Direction() * radius;
@@ -172,7 +181,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly float3 GetRandomVector3OnSphere(uint seed, float radius) {
+        public readonly float3 GetRandomVector3OnSphere(uint seed, tfloat radius) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var result = rnd.NextFloat3Direction() * radius;
@@ -180,7 +189,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly float GetRandomValue(uint seed) {
+        public readonly tfloat GetRandomValue(uint seed) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var result = rnd.NextFloat();
@@ -188,7 +197,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly float GetRandomValue(uint seed, float min, float max) {
+        public readonly tfloat GetRandomValue(uint seed, tfloat min, tfloat max) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var result = rnd.NextFloat(min, max);
@@ -204,7 +213,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly float GetRandomValue(uint seed, float max) {
+        public readonly tfloat GetRandomValue(uint seed, tfloat max) {
             E.IS_IN_TICK(this.state);
             var rnd = new RandomProcessor(seed).random;
             var result = rnd.NextFloat(max);

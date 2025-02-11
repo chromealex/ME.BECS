@@ -1,3 +1,11 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS.Views {
 
     public struct ViewsComponentGroup {
@@ -55,8 +63,8 @@ namespace ME.BECS.Views {
             public struct FirePoint {
 
                 public uint id;
-                public Unity.Mathematics.float3 position;
-                public Unity.Mathematics.quaternion rotation;
+                public float3 position;
+                public quaternion rotation;
 
             }
 

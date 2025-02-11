@@ -241,6 +241,133 @@ namespace ME.BECS.Editor.JSON {
 
         public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
             var val = (Unity.Mathematics.quaternion)obj;
+            var euler = Unity.Mathematics.math.Euler(val);
+            builder.Append('"');
+            builder.Append(euler.x.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(euler.y.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(euler.z.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append('"');
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+
+    public class SFloatSerializer : SerializerBase<sfloat> {
+
+        public override object FromString(System.Type fieldType, string value) {
+            float.TryParse(value, out var val);
+            return (sfloat)(val);
+        }
+        
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var val = (sfloat)obj;
+            builder.Append(val.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+
+    public class FpFloat2Serializer : SerializerBase<ME.BECS.FixedPoint.float2> {
+
+        public override object FromString(System.Type fieldType, string value) {
+            var splitted = (value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+            float.TryParse(splitted[0], out float x);
+            float.TryParse(splitted[1], out float y);
+            return new ME.BECS.FixedPoint.float2(x, y);
+        }
+        
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var val = (ME.BECS.FixedPoint.float2)obj;
+            builder.Append('"');
+            builder.Append(val.x.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(val.y.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append('"');
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+
+    public class FpFloat3Serializer : SerializerBase<ME.BECS.FixedPoint.float3> {
+        
+        public override object FromString(System.Type fieldType, string value) {
+            var splitted = ((string)value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+            float.TryParse(splitted[0], out float x);
+            float.TryParse(splitted[1], out float y);
+            float.TryParse(splitted[2], out float z);
+            return new ME.BECS.FixedPoint.float3(x, y, z);
+        }
+
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var val = (ME.BECS.FixedPoint.float3)obj;
+            builder.Append('"');
+            builder.Append(val.x.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(val.y.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(val.z.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append('"');
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+
+    public class FpFloat4Serializer : SerializerBase<ME.BECS.FixedPoint.float4> {
+        
+        public override object FromString(System.Type fieldType, string value) {
+            var splitted = (value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+            float.TryParse(splitted[0], out float x);
+            float.TryParse(splitted[1], out float y);
+            float.TryParse(splitted[2], out float z);
+            float.TryParse(splitted[3], out float w);
+            return new ME.BECS.FixedPoint.float4(x, y, z, w);
+        }
+
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var val = (ME.BECS.FixedPoint.float4)obj;
+            builder.Append('"');
+            builder.Append(val.x.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(val.y.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(val.z.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append(", ");
+            builder.Append(val.w.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.Append('"');
+        }
+
+        public override void Deserialize(object obj, UnityEditor.SerializedProperty property) {
+            property.boxedValue = this.FromString(obj.GetType(), (string)obj);
+        }
+
+    }
+
+    public class FpQuaternionSerializer : SerializerBase<ME.BECS.FixedPoint.quaternion> {
+        
+        public override object FromString(System.Type fieldType, string value) {
+            var splitted = ((string)value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+            float.TryParse(splitted[0], out float x);
+            float.TryParse(splitted[1], out float y);
+            float.TryParse(splitted[2], out float z);
+            return ME.BECS.FixedPoint.quaternion.Euler(x, y, z);
+        }
+
+        public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
+            var val = (ME.BECS.FixedPoint.quaternion)obj;
             var euler = val.ToEuler();
             builder.Append('"');
             builder.Append(euler.x.ToString(System.Globalization.CultureInfo.InvariantCulture));
