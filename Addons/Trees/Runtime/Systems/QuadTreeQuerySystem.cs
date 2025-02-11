@@ -59,11 +59,11 @@ namespace ME.BECS {
         public AspectDataPtr<QuadTreeQuery> queryPtr;
         public AspectDataPtr<QuadTreeResult> resultPtr;
 
-        public readonly ref QuadTreeQuery query => ref this.queryPtr.value.Get(this.ent.id, this.ent.gen);
-        public readonly ref QuadTreeResult results => ref this.resultPtr.value.Get(this.ent.id, this.ent.gen);
+        public readonly ref QuadTreeQuery query => ref this.queryPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref QuadTreeResult results => ref this.resultPtr.Get(this.ent.id, this.ent.gen);
 
-        public readonly ref readonly QuadTreeQuery readQuery => ref this.queryPtr.value.Read(this.ent.id, this.ent.gen);
-        public readonly ref readonly QuadTreeResult readResults => ref this.resultPtr.value.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly QuadTreeQuery readQuery => ref this.queryPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly QuadTreeResult readResults => ref this.resultPtr.Read(this.ent.id, this.ent.gen);
 
     }
     

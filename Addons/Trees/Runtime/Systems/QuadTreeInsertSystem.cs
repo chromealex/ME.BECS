@@ -25,8 +25,8 @@ namespace ME.BECS {
         [QueryWith]
         public AspectDataPtr<QuadTreeElement> quadTreeElementPtr;
 
-        public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.value.Get(this.ent.id, this.ent.gen);
-        public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.value.Read(this.ent.id, this.ent.gen);
+        public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref int treeIndex => ref this.quadTreeElement.treeIndex;
         public readonly ref readonly int readTreeIndex => ref this.readQuadTreeElement.treeIndex;
 
