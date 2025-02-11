@@ -128,7 +128,7 @@ namespace NativeTrees {
                             distanceProvider: distanceSquaredProvider);
                     } else {
                         var item = this.objList[nearestWrapper.objIndex];
-                        if (minDistanceSqr > tfloat.MinValue && math.distancesq(item.bounds.Center, point) <= minDistanceSqr) continue;
+                        if (minDistanceSqr > 0f && math.distancesq(item.bounds.Center, point) <= minDistanceSqr) continue;
                         if (visitor.OnVisit(item.obj, item.bounds) == false) {
                             break;
                         }

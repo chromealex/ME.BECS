@@ -240,7 +240,7 @@ namespace ME.BECS.Pathfinding {
 
             if (dir == 255) return float3.zero;
             
-            var angle = math.lerp(0f, 360f, dir / (float)254) - 45f;
+            var angle = math.lerp(0f, 360f, dir / (tfloat)254) - 45f;
             return math.rotate(quaternion.AxisAngle(new float3(0f, 1f, 0f), math.radians(angle)), new float3(0f, 0f, 1f));
             
         }
