@@ -241,7 +241,7 @@ namespace ME.BECS {
     
     public partial struct World {
 
-        public struct GlobalEventsProcessJob : IJob {
+        public unsafe struct GlobalEventsProcessJob : IJob {
 
             public ushort worldId;
             
@@ -269,7 +269,7 @@ namespace ME.BECS {
                                 UnityEngine.Debug.LogException(ex);
                             }
                         }
-                        _free(kv.Value.data);
+                        if (kv.Value.data.ptr != null) _free(kv.Value.data);
                     }
                 }
                 item.events.Clear();
