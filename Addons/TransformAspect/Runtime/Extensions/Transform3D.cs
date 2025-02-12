@@ -87,26 +87,31 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
-            var matrix = ent.localMatrix;
-            if (parent.ent.IsAlive() == true) matrix = math.mul(parent.readWorldMatrix, matrix);
-            ent.worldMatrix = matrix;
+            ent.worldMatrix = math.mul(parent.readWorldMatrix, ent.readLocalMatrix);
 
         }
 
         [INLINE(256)]
-        public static void CalculateMatrix(in TransformAspect ent) {
+        public static void CalculateLocalMatrix(in TransformAspect ent) {
 
-            ent.worldMatrix = ent.localMatrix;
+            ent.localMatrix = float4x4.TRS(ent.readLocalPosition, ent.readLocalRotation, ent.readLocalScale);
 
         }
 
         [INLINE(256)]
-        public static void CalculateMatrixHierarchy(ref TransformAspect aspect) {
-            CalculateMatrixHierarchy(aspect.parent, aspect);
+        public static void CalculateWorldMatrix(in TransformAspect ent) {
+
+            ent.worldMatrix = ent.readLocalMatrix;
+
         }
 
         [INLINE(256)]
-        public static void CalculateMatrixHierarchy(in TransformAspect parent, in TransformAspect ent) {
+        public static void CalculateWorldMatrixHierarchy(ref TransformAspect aspect) {
+            CalculateWorldMatrixHierarchy(aspect.parent, aspect);
+        }
+
+        [INLINE(256)]
+        public static void CalculateWorldMatrixHierarchy(in TransformAspect parent, in TransformAspect ent) {
 
             CalculateMatrix(in parent, in ent);
             

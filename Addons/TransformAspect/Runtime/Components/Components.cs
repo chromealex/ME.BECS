@@ -18,10 +18,20 @@ namespace ME.BECS.Transforms {
 
     }
 
-    [EditorComment("Current calculated matrix")]
+    [EditorComment("Current calculated world matrix")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     //[LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct WorldMatrixComponent : IComponent {
+
+        //[FieldOffset(0)]
+        public float4x4 value;
+        
+    }
+
+    [EditorComment("Current calculated local matrix")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    //[LAYOUT(LayoutKind.Explicit, Size = 64)]
+    public struct LocalMatrixComponent : IComponent {
 
         //[FieldOffset(0)]
         public float4x4 value;
@@ -71,6 +81,7 @@ namespace ME.BECS.Transforms {
     public struct ChildrenComponent : IComponent {
 
         public ListAuto<Ent> list;
+        public LockSpinner lockSpinner;
 
     }
 

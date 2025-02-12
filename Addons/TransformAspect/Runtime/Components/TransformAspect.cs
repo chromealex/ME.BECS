@@ -27,6 +27,8 @@ namespace ME.BECS.Transforms {
         internal AspectDataPtr<ParentComponent> parentData;
         internal AspectDataPtr<ChildrenComponent> childrenData;
         [QueryWith]
+        internal AspectDataPtr<LocalMatrixComponent> localMatrixData;
+        [QueryWith]
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
 
         public readonly bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
@@ -70,9 +72,10 @@ namespace ME.BECS.Transforms {
         public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly ListAuto<Ent> children => ref this.childrenData.Read(this.ent.id, this.ent.gen).list;
         public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref float4x4 localMatrix => ref this.localMatrixData.Get(this.ent.id, this.ent.gen).value;
 
         public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
-        public readonly float4x4 localMatrix => float4x4.TRS(this.localPositionData.Read(this.ent.id, this.ent.gen).value, this.localRotationData.Read(this.ent.id, this.ent.gen).value, this.localScaleData.Read(this.ent.id, this.ent.gen).value);
+        public readonly ref readonly float4x4 readLocalMatrix => ref this.localMatrixData.Read(this.ent.id, this.ent.gen).value;
 
         public readonly float3 position {
             [INLINE(256)]
