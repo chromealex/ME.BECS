@@ -176,7 +176,7 @@ namespace ME.BECS {
 
             if (WorldEvents.evtToCallers == null || evt.worldId >= WorldEvents.evtToCallers.Length) return false;
             
-            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == false) {
+            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == true) {
                 return item.Remove(callback);
             }
 

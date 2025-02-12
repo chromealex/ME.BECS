@@ -50,8 +50,10 @@ namespace ME.BECS.Transforms {
             if (currentParent.IsAlive() == true) {
                 
                 // Move out from current parent
-                ref var children = ref currentParent.Get<ChildrenComponent>().list;
-                children.Remove(ent);
+                ref var children = ref currentParent.Get<ChildrenComponent>();
+                children.lockSpinner.Lock();
+                children.list.Remove(ent);
+                children.lockSpinner.Unlock();
                 ent.Remove<IsFirstLevelComponent>();
                 currentParent = default;
 
@@ -67,9 +69,11 @@ namespace ME.BECS.Transforms {
 
             {
                 // Move to the new parent
-                ref var parentChildren = ref parent.Get<ChildrenComponent>().list;
-                if (parentChildren.IsCreated == false) parentChildren = new ListAuto<Ent>(parent, 1u); 
-                parentChildren.Add(ent);
+                ref var parentChildren = ref parent.Get<ChildrenComponent>();
+                parentChildren.lockSpinner.Lock();
+                if (parentChildren.list.IsCreated == false) parentChildren.list = new ListAuto<Ent>(parent, 1u); 
+                parentChildren.list.Add(ent);
+                parentChildren.lockSpinner.Unlock();
                 currentParent = parent;
                 // if new parent has no parent component
                 // set IsFirstLevelComponent
