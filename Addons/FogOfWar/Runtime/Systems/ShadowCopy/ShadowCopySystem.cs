@@ -11,14 +11,16 @@ namespace ME.BECS.FogOfWar {
     public struct ShadowCopySystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct CreateJob : IJobForComponents {
+        public struct CreateJob : IJobForComponents<OwnerComponent> {
 
             public Players.PlayersSystem playersSystem;
             public World world;
 
-            public void Execute(in JobInfo jobInfo, in Ent ent) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref OwnerComponent owner) {
 
                 if (ent.Has<FogOfWarHasShadowCopyComponent>() == true) return;
+                // Ignore neutral player
+                if (owner.ent.GetAspect<PlayerAspect>().readIndex == 0u) return;
                 
                 var origTr = ent.GetAspect<TransformAspect>();
                 var pos = origTr.position;
@@ -26,7 +28,8 @@ namespace ME.BECS.FogOfWar {
                 
                 // Create shadow copies in special world
                 var teams = this.playersSystem.GetTeams();
-                for (uint i = 0u; i < teams.Length; ++i) {
+                // Ignore neutral player team
+                for (uint i = 1u; i < teams.Length; ++i) {
                     var team = teams[(int)i];
                     var copyEnt = ent.Clone(this.world.id, cloneHierarchy: true, in jobInfo);
                     copyEnt.EditorName = ent.EditorName;
@@ -56,7 +59,7 @@ namespace ME.BECS.FogOfWar {
             var logicWorld = context.world.parent;
 
             // Collect all units which has not presented as shadow copy
-            var dependsOn = API.Query(in logicWorld, context.dependsOn).Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().With<OwnerComponent>().Schedule(new CreateJob() {
+            var dependsOn = API.Query(in logicWorld, context.dependsOn).Without<FogOfWarHasShadowCopyComponent>().With<FogOfWarShadowCopyRequiredComponent>().Schedule<CreateJob, OwnerComponent>(new CreateJob() {
                 playersSystem = logicWorld.GetSystem<PlayersSystem>(),
                 world = context.world,
             });
