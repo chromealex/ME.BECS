@@ -224,7 +224,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public byte* Get(safe_ptr<State> state, uint entityId, ushort entityGen, bool isReadonly, out bool isNew) {
+        public byte* Get(safe_ptr<State> state, uint entityId, ushort entityGen, bool isReadonly, out bool isNew, safe_ptr defaultValue) {
             isNew = false;
             if (this.dataSize == 0u) return null;
             var pageIndex = _pageIndex(entityId);
@@ -244,6 +244,7 @@ namespace ME.BECS {
                 }
             }
             var ptr = _getBlock(state, in page, entityId, this.dataSize);
+            var dataPtr = _offsetData(ptr);
             { // update gen
                 var gen = _offsetGen(ptr);
                 if (*gen.ptr != entityGen) {
@@ -254,14 +255,17 @@ namespace ME.BECS {
                     page.Lock();
                     if (*gen.ptr != entityGen) {
                         *gen.ptr = entityGen;
+                        if (this.dataSize > 0u) {
+                            if (defaultValue.ptr != null) {
+                                _memcpy(defaultValue, dataPtr, this.dataSize);
+                            } else {
+                                _memclear(dataPtr, this.dataSize);
+                            }
+                        }
                         isNew = true;
                     }
                     page.Unlock();
                 }
-            }
-            var dataPtr = _offsetData(ptr);
-            if (isReadonly == false && isNew == true) { // clear data if not exist
-                _memclear(dataPtr, this.dataSize);
             }
             this.readWriteSpinner.ReadEnd(state);
 

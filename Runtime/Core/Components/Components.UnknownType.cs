@@ -80,22 +80,22 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static byte* GetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew) {
+        public static byte* GetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
 
             ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            return GetUnknownType(state, in ptr, typeId, groupId, in ent, out isNew);
+            return GetUnknownType(state, in ptr, typeId, groupId, in ent, out isNew, defaultValue);
 
         }
 
         [INLINE(256)]
-        public static byte* GetUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew) {
+        public static byte* GetUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, false, out isNew);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, false, out isNew, defaultValue);
             Ents.UpVersion(state, in ent, groupId);
             return data;
 
@@ -133,7 +133,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, entId, gen, true, out _);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, entId, gen, true, out _, default);
             exists = data != null;
             return data;
 

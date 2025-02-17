@@ -34,7 +34,7 @@ namespace ME.BECS.Attack {
         public readonly Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 
         [INLINE(256)]
-        public void SetTarget(Ent ent) {
+        public readonly void SetTarget(Ent ent) {
             if (ent.IsAlive() == true) {
                 if (this.ent.Read<AttackTargetComponent>().target != ent) {
                     this.CanFire = false;
@@ -52,7 +52,7 @@ namespace ME.BECS.Attack {
         public readonly tfloat ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
         public readonly tfloat FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
 
-        public bool IsReloaded {
+        public readonly bool IsReloaded {
             [INLINE(256)]
             get => this.ent.Has<ReloadedComponent>();
             [INLINE(256)]
@@ -66,7 +66,7 @@ namespace ME.BECS.Attack {
             }
         }
         
-        public bool CanFire {
+        public readonly bool CanFire {
             [INLINE(256)]
             get => this.ent.Has<CanFireComponent>();
             [INLINE(256)]
@@ -82,16 +82,16 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public bool IsFireUsed() => this.ent.Has<FireUsedComponent>();
+        public readonly bool IsFireUsed() => this.ent.Has<FireUsedComponent>();
         
         [INLINE(256)]
-        public void UseFire() {
+        public readonly void UseFire() {
             this.ent.SetTag<FireUsedComponent>(true);
             this.ent.SetOneShot(new OnFireEvent(), OneShotType.NextTick);
         }
 
         [INLINE(256)]
-        public uint CalculateDPS() {
+        public readonly uint CalculateDPS() {
             var config = this.readComponent.bulletConfig.AsUnsafeConfig();
             if (config.IsValid() == true) {
                 if (config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent) == true) {

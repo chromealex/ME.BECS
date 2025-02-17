@@ -172,6 +172,24 @@ namespace ME.BECS {
         /// <param name="evt"></param>
         /// <param name="callback"></param>
         [INLINE(256)][NotThreadSafe]
+        public static bool UnregisterEvent(in Event evt, GlobalEventCallback callback) {
+
+            if (WorldEvents.evtToCallers == null || evt.worldId >= WorldEvents.evtToCallers.Length) return false;
+            
+            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == true) {
+                return item.Remove(callback);
+            }
+
+            return false;
+
+        }
+
+        /// <summary>
+        /// Call this method from UI
+        /// </summary>
+        /// <param name="evt"></param>
+        /// <param name="callback"></param>
+        [INLINE(256)][NotThreadSafe]
         public static bool UnregisterEvent<T>(in Event evt, GlobalEventWithDataCallback<T> callback) where T : unmanaged {
 
             if (WorldEvents.evtToCallers == null || evt.worldId >= WorldEvents.evtToCallers.Length) return false;
@@ -184,25 +202,6 @@ namespace ME.BECS {
 
         }
         
-        
-        /// <summary>
-        /// Call this method from UI
-        /// </summary>
-        /// <param name="evt"></param>
-        /// <param name="callback"></param>
-        [INLINE(256)][NotThreadSafe]
-        public static bool UnregisterEvent(in Event evt, GlobalEventCallback callback) {
-
-            if (WorldEvents.evtToCallers == null || evt.worldId >= WorldEvents.evtToCallers.Length) return false;
-    
-            if (WorldEvents.evtToCallers[evt.worldId].TryGetValue(evt, out var item) == true) {
-                return item.Remove(callback);
-            }
-
-            return false;
-
-        }
-
         /// <summary>
         /// Call this method from UI
         /// </summary>

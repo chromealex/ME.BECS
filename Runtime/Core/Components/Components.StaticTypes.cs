@@ -205,6 +205,16 @@ namespace ME.BECS {
             }
         }
 
+        public static unsafe safe_ptr defaultValuePtr {
+            get {
+                if (StaticTypesHasDefaultValue<T>.value.Data == true) {
+                    return (safe_ptr)(T*)StaticTypes.defaultValues.Get(StaticTypes<T>.typeId);
+                }
+
+                return default;
+            }
+        }
+
         public static unsafe ref T defaultValueGet {
             get {
                 if (StaticTypesHasDefaultValue<T>.value.Data == true) {

@@ -228,7 +228,7 @@ namespace ME.BECS {
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
             var ent = new Ent(entId, gen, this.worldId);
-            ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, in ent, out var isNew);
+            ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, in ent, out var isNew, StaticTypes<T>.defaultValuePtr);
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 Journal.CreateComponent<T>(in ent, in res);

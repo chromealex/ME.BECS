@@ -118,6 +118,7 @@ namespace ME.BECS.Attack {
             var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
             var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
             return unitAttackMask.Contains(targetAttackLayer);
+            
         }
 
     }
