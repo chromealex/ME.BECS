@@ -81,7 +81,8 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static bool IsGraphMaskValid(in BuildGraphSystem system, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
-            foreach (var graph in system.graphs) {
+            for (uint i = 0u; i < system.graphs.Length; ++i) {
+                var graph = system.graphs[system.world.state, i];
                 if (IsGraphMaskValid(in graph, in position, in rotation, size, minCost, maxCost) == false) return false;
             }
 

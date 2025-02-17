@@ -69,7 +69,7 @@ namespace ME.BECS.Pathfinding {
 
                     if ((obstacle.graphMask & (1 << (int)g)) == 0) continue;
                     
-                    var graph = this.graphSystem.graphs[(int)g];
+                    var graph = this.graphSystem.graphs[ent.World.state, g];
                     var root = graph.Read<RootGraphComponent>();
                     var agentRadius = root.agentRadius;
                     if (obstacle.ignoreGraphRadius == 1) {
@@ -147,9 +147,9 @@ namespace ME.BECS.Pathfinding {
                 graphSystem = graphSystem,
             });
             
-            var dependencies = new NativeArray<Unity.Jobs.JobHandle>(graphSystem.graphs.Length, Constants.ALLOCATOR_TEMP);
+            var dependencies = new NativeArray<Unity.Jobs.JobHandle>((int)graphSystem.graphs.Length, Constants.ALLOCATOR_TEMP);
             for (var i = 0; i < graphSystem.graphs.Length; ++i) {
-                var graphEnt = graphSystem.graphs[i];
+                var graphEnt = graphSystem.graphs[context.world.state, i];
                 var changedChunks = graphEnt.Read<RootGraphComponent>().changedChunks;
                 var tempDirty = new NativeArray<ulong>((int)changedChunks.Length, Constants.ALLOCATOR_TEMPJOB);
                 _memcpy(changedChunks.GetUnsafePtr(), (safe_ptr)tempDirty.GetUnsafePtr(), TSize<ulong>.size * changedChunks.Length);

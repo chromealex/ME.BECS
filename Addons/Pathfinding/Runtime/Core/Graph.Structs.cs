@@ -159,14 +159,9 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    public struct Heights {
+    public unsafe struct Heights {
 
         private GraphHeights data;
-        
-        [INLINE(256)]
-        public JobHandle Dispose(JobHandle jobHandle) {
-            return this.data.Dispose(jobHandle);
-        }
 
         [INLINE(256)]
         public void Dispose() {
@@ -174,18 +169,18 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static Heights CreateDefault(Unity.Collections.Allocator allocator) {
+        public static Heights CreateDefault(World world) {
             return new Heights() {
                 data = new GraphHeights() {
-                    heightMap = Unity.Collections.CollectionHelper.CreateNativeArray<tfloat>(1, allocator),
+                    heightMap = new MemArray<tfloat>(ref world.state.ptr->allocator, 1u),
                 },
             };
         }
 
         [INLINE(256)]
-        public static Heights Create(float3 offset, UnityEngine.TerrainData terrain, Unity.Collections.Allocator allocator) {
+        public static Heights Create(float3 offset, UnityEngine.TerrainData terrain, World world) {
             return new Heights() {
-                data = new GraphHeights(offset, terrain, allocator),
+                data = new GraphHeights(offset, terrain, world),
             };
         }
 

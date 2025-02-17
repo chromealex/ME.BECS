@@ -14,20 +14,21 @@ namespace ME.BECS.Pathfinding {
 
     public struct GraphHeights {
 
-        [Unity.Collections.ReadOnlyAttribute]
-        public Unity.Collections.NativeArray<tfloat> heightMap;
+        public MemArray<tfloat> heightMap;
         private int resolution;
         private float2 sampleSize;
         public Bounds AABB { get; private set; }
         public readonly bool IsValid => this.heightMap.IsCreated;
         private readonly int QuadCount => this.resolution - 1;
+        private World world;
 
         [INLINE(256)]
-        public GraphHeights(float3 position, UnityEngine.TerrainData terrainData, Unity.Collections.Allocator alloc) {
+        public GraphHeights(float3 position, UnityEngine.TerrainData terrainData, World world) {
             this.resolution = terrainData.heightmapResolution;
             this.sampleSize = new float2(terrainData.heightmapScale.x, terrainData.heightmapScale.z);
             this.AABB = GetTerrainAABB(position, terrainData);
-            this.heightMap = GetHeightMap(terrainData, alloc);
+            this.heightMap = GetHeightMap(terrainData, world);
+            this.world = world;
         }
 
         /// <summary>
@@ -71,14 +72,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public void Dispose() {
-            Unity.Collections.CollectionHelper.Dispose(this.heightMap);
-        }
-
-        [INLINE(256)]
-        public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle dependsOn) {
-            return this.heightMap.Dispose(dependsOn);
-        }
+        public void Dispose() { }
 
         [INLINE(256)]
         private readonly bool IsWithinBounds(float3 worldPos) {
@@ -90,9 +84,9 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private readonly float3 GetWorldVertex(int2 heightMapCoords) {
+        private readonly unsafe float3 GetWorldVertex(int2 heightMapCoords) {
             var i = heightMapCoords.x + heightMapCoords.y * this.resolution;
-            var vertexPercentages = new float3((float)heightMapCoords.x / this.QuadCount, this.heightMap[i], (float)heightMapCoords.y / this.QuadCount);
+            var vertexPercentages = new float3((float)heightMapCoords.x / this.QuadCount, this.heightMap[in this.world.state.ptr->allocator, i], (float)heightMapCoords.y / this.QuadCount);
             return (float3)this.AABB.min + this.AABB.size * vertexPercentages;
         }
 
@@ -105,14 +99,14 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static Unity.Collections.NativeArray<tfloat> GetHeightMap(UnityEngine.TerrainData terrainData, Unity.Collections.Allocator alloc) {
+        private static unsafe MemArray<tfloat> GetHeightMap(UnityEngine.TerrainData terrainData, World world) {
             var resolution = terrainData.heightmapResolution;
-            var heightList = Unity.Collections.CollectionHelper.CreateNativeArray<tfloat>(resolution * resolution, alloc);
+            var heightList = new MemArray<tfloat>(ref world.state.ptr->allocator, (uint)(resolution * resolution));
             var map = terrainData.GetHeights(0, 0, resolution, resolution);
             for (var y = 0; y < resolution; y++) {
                 for (var x = 0; x < resolution; x++) {
                     var i = y * resolution + x;
-                    heightList[i] = map[y, x];
+                    heightList[in world.state.ptr->allocator, i] = map[y, x];
                 }
             }
 
