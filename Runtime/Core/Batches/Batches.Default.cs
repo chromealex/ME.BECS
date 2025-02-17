@@ -16,7 +16,6 @@ namespace ME.BECS {
             
             var result = Components.Get<T>(state, in ent, out var isNew);
             if (isNew == true) {
-                *result = StaticTypes<T>.defaultValue;
                 var typeId = StaticTypes<T>.typeId;
                 Batches.Set_INTERNAL(typeId, in ent, state);
             }
@@ -31,7 +30,6 @@ namespace ME.BECS {
             
             var result = Components.Get<T>(state, in ent, out var isNew);
             if (isNew == true) {
-                *result = StaticTypes<T>.defaultValue;
                 var typeId = StaticTypes<T>.typeId;
                 Batches.Set_INTERNAL(typeId, in ent, state);
             }

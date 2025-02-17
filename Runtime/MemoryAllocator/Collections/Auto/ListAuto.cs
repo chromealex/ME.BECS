@@ -228,6 +228,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public void Sort<U>() where U : unmanaged, System.IComparable<U> {
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count);
+        }
+
+        [INLINE(256)]
         public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
             E.IS_CREATED(this);

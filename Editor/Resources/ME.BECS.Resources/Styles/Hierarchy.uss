@@ -40,6 +40,10 @@
     background-color: rgba(40, 40, 40, 1);
 }
 
+.search-container {
+    flex-grow: 1;
+}
+
 .search-container ToolbarSearchField {
     width: auto;
     margin: 1px;

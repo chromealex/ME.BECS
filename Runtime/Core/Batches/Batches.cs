@@ -13,6 +13,11 @@ namespace ME.BECS {
     public static class BatchesExt {
 
         [INLINE(256)]
+        public static void Apply(this ref SystemContext context) {
+            context.SetDependency(Batches.Apply(context.dependsOn, in context.world));
+        } 
+
+        [INLINE(256)]
         public static JobHandle Apply(this in SystemContext context, JobHandle dependsOn) {
             return Batches.Apply(dependsOn, in context.world);
         }

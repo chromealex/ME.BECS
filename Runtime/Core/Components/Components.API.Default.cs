@@ -113,7 +113,7 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            var data = Components.GetUnknownType(state, typeId, groupId, in ent, out _);
+            var data = Components.GetUnknownType(state, typeId, groupId, in ent, out _, StaticTypes<T>.defaultValuePtr);
             return ref *(T*)data;
 
         }
@@ -123,7 +123,7 @@ namespace ME.BECS {
             
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.groupId;
-            var data = Components.GetUnknownType(state, typeId, groupId, in ent, out isNew);
+            var data = Components.GetUnknownType(state, typeId, groupId, in ent, out isNew, StaticTypes<T>.defaultValuePtr);
             return (T*)data;
 
         }

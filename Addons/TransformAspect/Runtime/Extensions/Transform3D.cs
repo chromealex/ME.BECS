@@ -73,6 +73,7 @@ namespace ME.BECS.Transforms {
                 parentChildren.lockSpinner.Lock();
                 if (parentChildren.list.IsCreated == false) parentChildren.list = new ListAuto<Ent>(parent, 1u); 
                 parentChildren.list.Add(ent);
+                parentChildren.list.Sort<Ent>();
                 parentChildren.lockSpinner.Unlock();
                 currentParent = parent;
                 // if new parent has no parent component

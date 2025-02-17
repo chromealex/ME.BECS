@@ -310,7 +310,7 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public bool IsVisible(in Ent team, in Ent unit) {
             
-            if (unit.Has<OwnerComponent>() == false || team == UnitUtils.GetTeam(unit.GetAspect<UnitAspect>())) return true;
+            if (unit.Has<OwnerComponent>() == false || team == UnitUtils.GetTeam(in unit)) return true;
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
             var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<TransformAspect>().GetWorldMatrixPosition());
