@@ -37,7 +37,7 @@ namespace ME.BECS.Pathfinding {
             });
             
             unitCommandGroup.Lock();
-            var typeIds = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<uint>(buildGraphSystem.graphs.Length, Unity.Collections.Allocator.Temp);
+            var typeIds = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<uint>((int)buildGraphSystem.graphs.Length, Unity.Collections.Allocator.Temp);
             for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
                 var unit = unitCommandGroup.units[i].GetAspect<UnitAspect>();
                 if (unit.IsStatic == false) typeIds.Add(unit.typeId);

@@ -26,7 +26,7 @@ namespace ME.BECS.FogOfWar {
         public tfloat resolution;
         internal Ent heights;
 
-        public Ent GetHeights() => this.heights;
+        public readonly Ent GetHeights() => this.heights;
         
         [BURST(CompileSynchronously = true)]
         public struct CreateJob : IJobForAspects<TeamAspect> {

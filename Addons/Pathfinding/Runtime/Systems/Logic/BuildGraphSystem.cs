@@ -18,13 +18,10 @@ namespace ME.BECS.Pathfinding {
 
         public BECS.ObjectReference<AgentTypesConfig> agentTypesConfig;
 
-        [Unity.Collections.ReadOnlyAttribute]
-        internal Unity.Collections.NativeArray<Ent> graphs;
-        [NativeDisableUnsafePtrRestriction]
-        internal Ent* graphsPtr;
-        [Unity.Collections.ReadOnlyAttribute]
-        internal Unity.Collections.NativeArray<ME.BECS.Units.AgentType> types;
+        internal MemArray<Ent> graphs;
+        internal MemArray<ME.BECS.Units.AgentType> types;
         internal Heights heights;
+        internal World world;
         private tfloat nodeSize;
 
         public readonly tfloat GetNodeSize() => this.nodeSize;
@@ -34,32 +31,31 @@ namespace ME.BECS.Pathfinding {
         public void OnAwake(ref SystemContext context) {
 
             this.nodeSize = this.agentTypesConfig.Value.graphProperties.nodeSize;
-            
+            this.world = context.world;
             Heights heights = default;
             { // terrain case
                 var terrain = UnityEngine.Terrain.activeTerrain;
                 if (terrain != null) {
-                    heights = Heights.Create((float3)terrain.GetPosition(), terrain.terrainData, Constants.ALLOCATOR_PERSISTENT);
+                    heights = Heights.Create((float3)terrain.GetPosition(), terrain.terrainData, context.world);
                 }
             }
 
             if (heights.IsValid() == false) {
-                heights = Heights.CreateDefault(Constants.ALLOCATOR_PERSISTENT);
+                heights = Heights.CreateDefault(context.world);
             }
 
             this.heights = heights;
 
             var config = this.agentTypesConfig.Value;
             var graphProperties = config.graphProperties;
-            this.graphs = Unity.Collections.CollectionHelper.CreateNativeArray<Ent>(config.agentTypes.Length, Constants.ALLOCATOR_DOMAIN);
-            this.graphsPtr = (Ent*)this.graphs.GetUnsafePtr();
-            this.types = Unity.Collections.CollectionHelper.CreateNativeArray<ME.BECS.Units.AgentType>(config.agentTypes.Length, Constants.ALLOCATOR_DOMAIN);
+            this.graphs = new MemArray<Ent>(ref context.world.state.ptr->allocator, (uint)config.agentTypes.Length);
+            this.types = new MemArray<ME.BECS.Units.AgentType>(ref context.world.state.ptr->allocator, (uint)config.agentTypes.Length);
             var dependencies = new Unity.Collections.NativeArray<Unity.Jobs.JobHandle>(config.agentTypes.Length, Constants.ALLOCATOR_TEMP);
             for (int i = 0; i < config.agentTypes.Length; ++i) {
                 var agentConfig = config.agentTypes[i];
                 dependencies[i] = Graph.Build(in context.world, in heights, out var graphEnt, in graphProperties, in agentConfig, context.dependsOn);
-                this.graphs[i] = graphEnt;
-                this.types[i] = agentConfig;
+                this.graphs[in context.world.state.ptr->allocator, i] = graphEnt;
+                this.types[in context.world.state.ptr->allocator, i] = agentConfig;
             }
 
             var deps = Unity.Jobs.JobHandle.CombineDependencies(dependencies);
@@ -69,9 +65,7 @@ namespace ME.BECS.Pathfinding {
         }
         
         public void OnDestroy(ref SystemContext context) {
-
-            Unity.Collections.CollectionHelper.Dispose(this.graphs);
-            Unity.Collections.CollectionHelper.Dispose(this.types);
+            
             this.heights.Dispose();
 
         }
@@ -79,13 +73,13 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public readonly Ent GetGraphByTypeId(uint agentTypeId) {
             E.RANGE(agentTypeId, 0u, (uint)this.graphs.Length);
-            return this.graphsPtr[agentTypeId];
+            return this.graphs[in this.world.state.ptr->allocator, agentTypeId];
         }
 
         [INLINE(256)]
         public readonly ME.BECS.Units.AgentType GetAgentProperties(uint agentTypeId) {
             E.RANGE(agentTypeId, 0u, (uint)this.types.Length);
-            var type = this.types[(int)agentTypeId];
+            var type = this.types[in this.world.state.ptr->allocator, agentTypeId];
             type.typeId = agentTypeId;
             return type;
         }
