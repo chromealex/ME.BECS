@@ -145,6 +145,8 @@ namespace ME.BECS.Commands {
                 }
             }
 
+            uniqueGroups.Dispose();
+
         }
 
     }

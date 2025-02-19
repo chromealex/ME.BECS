@@ -236,6 +236,7 @@ namespace ME.BECS {
                         foreach (var item in visitor.results) {
                             heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                         }
+                        visitor.results.Dispose();
                     }
                 }
 
@@ -271,6 +272,7 @@ namespace ME.BECS {
                             if (item.IsAlive() == false) continue;
                             heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                         }
+                        visitor.results.Dispose();
                     }
                 }
 

@@ -186,8 +186,9 @@ namespace ME.BECS {
 
             var success = false;
             if (zone != null) {
-                
-                success = MemoryAllocator.ZmFree(zone, this.GetUnsafePtr(ptr).ptr);
+
+                var srcPtr = this.GetUnsafePtr(ptr).ptr;
+                success = MemoryAllocator.ZmFree(zone, srcPtr);
 
                 if (MemoryAllocator.IsEmptyZone(zone) == true) {
                     MemoryAllocator.ZmFreeZone(zone);

@@ -26,7 +26,9 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void ADDR_4<T>(ref T value) where T : unmanaged {
 
-            if (((long)(System.IntPtr)_address(ref value).ptr) % 4 == 0) return;
+            fixed (void* f = &value) {
+                if (((long)(System.IntPtr)f) % 4 == 0) return;
+            }
             AddrException.Throw();
 
         }

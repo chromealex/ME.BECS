@@ -67,6 +67,7 @@ namespace ME.BECS {
             list[2] = handle3;
             list[3] = handle4;
             this.dependsOn = JobHandle.CombineDependencies(list);
+            list.Dispose();
         }
 
         [INLINE(256)]
@@ -78,6 +79,7 @@ namespace ME.BECS {
             list[3] = handle4;
             list[4] = handle5;
             this.dependsOn = JobHandle.CombineDependencies(list);
+            list.Dispose();
         }
 
         [INLINE(256)]
@@ -90,6 +92,7 @@ namespace ME.BECS {
             list[4] = handle5;
             list[5] = handle6;
             this.dependsOn = JobHandle.CombineDependencies(list);
+            list.Dispose();
         }
 
         [INLINE(256)]

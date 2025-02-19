@@ -289,6 +289,7 @@ namespace ME.BECS {
                 }
                 state.ptr->batches.lockReadWrite.ReadEnd(state);
             }
+            temp.Dispose();
             
             state.ptr->batches.workingLock.WriteEnd();
             JobUtils.Decrement(ref state.ptr->batches.openIndex);

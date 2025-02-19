@@ -281,6 +281,8 @@ namespace ME.BECS {
                 arrDepends[i] = dependsOn;
             }
             var resultDepends = JobHandle.CombineDependencies(arrDepends);
+            list.Dispose();
+            arrDepends.Dispose();
             JobUtils.RunScheduled();
 
             return resultDepends;

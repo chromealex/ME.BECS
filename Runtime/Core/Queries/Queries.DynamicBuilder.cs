@@ -594,7 +594,7 @@ namespace ME.BECS {
                     // build archetypes
                     if (this.queryData.ptr->archetypes.ptr == null) {
                         var tempListBits = this.queryData.ptr->archetypesBits.GetTrueBitsTemp();
-                        this.queryData.ptr->archetypes = (safe_ptr)tempListBits.Ptr;
+                        this.queryData.ptr->archetypes = new safe_ptr<uint>(tempListBits.Ptr, (byte*)tempListBits.Ptr, (byte*)(tempListBits.Ptr + tempListBits.Length));
                         archCount = (uint)tempListBits.Length;
                     }
 
@@ -633,6 +633,8 @@ namespace ME.BECS {
                             if (size > 0u) _memcpy((safe_ptr)(temp.Ptr + fromIdx), (safe_ptr)arrPtr, TSize<uint>.size * size);
                             elementsCount += size;
                         }
+
+                        temp.Dispose();
 
                     } else {
 
