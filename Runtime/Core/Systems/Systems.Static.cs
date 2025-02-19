@@ -73,6 +73,12 @@ namespace ME.BECS {
 
     }
 
+    public class SystemsStaticPins {
+
+        public static readonly Unity.Burst.SharedStatic<UnsafeList<System.Runtime.InteropServices.GCHandle>> dic = Unity.Burst.SharedStatic<UnsafeList<System.Runtime.InteropServices.GCHandle>>.GetOrCreate<SystemsStaticPins>();
+
+    }
+
     public static unsafe class SystemsStatic {
 
         public delegate void InitializeGraph();
@@ -86,6 +92,7 @@ namespace ME.BECS {
         private static void Register<T>(ref UnsafeHashMap<int, System.IntPtr> registry, T callback, int graphId, bool isBurst) where T : class {
 
             System.IntPtr ptr;
+            var pinnedHandle = System.Runtime.InteropServices.GCHandle.Alloc(callback, System.Runtime.InteropServices.GCHandleType.Pinned);
             if (isBurst == true) {
                 var pointer = Unity.Burst.BurstCompiler.CompileFunctionPointer(callback);
                 ptr = pointer.Value;
@@ -97,7 +104,12 @@ namespace ME.BECS {
             if (registry.IsCreated == false) {
                 registry = new UnsafeHashMap<int, System.IntPtr>(10, Constants.ALLOCATOR_PERSISTENT_ST);
             }
-            
+
+            if (SystemsStaticPins.dic.Data.IsCreated == false) {
+                SystemsStaticPins.dic.Data = new UnsafeList<System.Runtime.InteropServices.GCHandle>(1, Constants.ALLOCATOR_PERSISTENT_ST);
+            }
+
+            SystemsStaticPins.dic.Data.Add(pinnedHandle);
             registry.Add(graphId, ptr);
 
         }
@@ -109,6 +121,13 @@ namespace ME.BECS {
         }
         
         public static void Dispose() {
+
+            if (SystemsStaticPins.dic.Data.IsCreated == true) {
+                foreach (var pin in SystemsStaticPins.dic.Data) {
+                    pin.Free();
+                }
+                SystemsStaticPins.dic.Data.Dispose();
+            }
 
             SystemsStaticInitialization.dic.Data.Dispose();
             SystemsStaticGetSystem.dic.Data.Dispose();
