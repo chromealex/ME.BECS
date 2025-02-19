@@ -8,17 +8,22 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public readonly byte* ptr;
-        #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+        #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
         [NativeDisableUnsafePtrRestriction]
         public readonly byte* lowBound;
         [NativeDisableUnsafePtrRestriction]
         public readonly byte* hiBound;
+        public byte* HiBound => this.hiBound;
+        public byte* LowBound => this.lowBound;
+        #else
+        public byte* HiBound => this.ptr;
+        public byte* LowBound => this.ptr;
         #endif
 
         [INLINE(256)]
         public safe_ptr(void* ptr) {
             this.ptr = (byte*)ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             this.lowBound = null;
             this.hiBound = null;
             #endif
@@ -27,7 +32,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public safe_ptr(void* ptr, uint size) {
             this.ptr = (byte*)ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             this.lowBound = this.ptr;
             this.hiBound = this.ptr + size;
             #endif
@@ -36,7 +41,7 @@ namespace ME.BECS {
         [INLINE(256)]
         internal safe_ptr(void* ptr, byte* lowBound, byte* hiBound) {
             this.ptr = (byte*)ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             this.lowBound = lowBound;
             this.hiBound = hiBound;
             #endif
@@ -52,7 +57,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr operator +(safe_ptr safePtr, uint index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -62,7 +68,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr operator -(safe_ptr safePtr, uint index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -72,7 +79,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr operator +(safe_ptr safePtr, int index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -82,7 +90,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr operator -(safe_ptr safePtr, int index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -90,7 +99,7 @@ namespace ME.BECS {
             #endif
         }
 
-        #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+        #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
         [INLINE(256)]
         public void CheckRange(uint index, uint lowBoundOffset, uint hiBoundOffset) {
             if (this.hiBound != this.lowBound) E.RANGE(this.ptr + index, this.lowBound + lowBoundOffset, this.hiBound + hiBoundOffset);
@@ -117,7 +126,7 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public readonly T* ptr;
-        #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+        #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
         [NativeDisableUnsafePtrRestriction]
         public readonly byte* lowBound;
         [NativeDisableUnsafePtrRestriction]
@@ -127,7 +136,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public safe_ptr(T* ptr) {
             this.ptr = ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             this.lowBound = null;
             this.hiBound = null;
             #endif
@@ -136,7 +145,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public safe_ptr(T* ptr, uint size) {
             this.ptr = ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             this.lowBound = (byte*)ptr;
             this.hiBound = (byte*)ptr + size;
             #endif
@@ -148,7 +157,7 @@ namespace ME.BECS {
         [INLINE(256)]
         internal safe_ptr(T* ptr, byte* lowBound, byte* hiBound) {
             this.ptr = ptr;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             this.lowBound = lowBound;
             this.hiBound = hiBound;
             #endif
@@ -156,7 +165,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public safe_ptr<U> Cast<U>() where U : unmanaged {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             return new safe_ptr<U>((U*)this.ptr, this.lowBound, this.hiBound);
             #else
             return new safe_ptr<U>((U*)this.ptr);
@@ -167,10 +176,12 @@ namespace ME.BECS {
             [INLINE(256)]
             get => ref this[(uint)index];
         }
+
         public ref T this[uint index] {
             [INLINE(256)]
             get {
-                #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+                #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+                LeakDetector.IsAlive(this);
                 if (this.hiBound != this.lowBound) E.RANGE((byte*)(this.ptr + index), this.lowBound, this.hiBound);
                 #endif
                 return ref this.ptr[index];
@@ -179,7 +190,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static implicit operator safe_ptr(safe_ptr<T> safePtr) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             return new safe_ptr(safePtr.ptr, safePtr.lowBound, safePtr.hiBound);
             #else
             return new safe_ptr(safePtr.ptr);
@@ -188,7 +199,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static implicit operator safe_ptr<T>(safe_ptr safePtr) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             return new safe_ptr<T>((T*)safePtr.ptr, safePtr.lowBound, safePtr.hiBound);
             #else
             return new safe_ptr<T>((T*)safePtr.ptr);
@@ -197,7 +208,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr<T> operator +(safe_ptr<T> safePtr, uint index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr + index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -207,7 +219,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr<T> operator -(safe_ptr<T> safePtr, uint index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr - index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -217,7 +230,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr<T> operator +(safe_ptr<T> safePtr, int index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr + index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr + index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -227,7 +241,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static safe_ptr<T> operator -(safe_ptr<T> safePtr, int index) {
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
+            LeakDetector.IsAlive(safePtr);
             if (safePtr.hiBound != safePtr.lowBound) E.RANGE((byte*)(safePtr.ptr - index), safePtr.lowBound, safePtr.hiBound);
             return new safe_ptr<T>(safePtr.ptr - index, safePtr.lowBound, safePtr.hiBound);
             #else
@@ -298,8 +313,9 @@ namespace ME.BECS {
         public static safe_ptr<T> _makeDefault<T>() where T : unmanaged {
 
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
-            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            LeakDetector.Track(sptr);
+            return sptr;
 
         }
 
@@ -358,10 +374,10 @@ namespace ME.BECS {
         public static safe_ptr<T> _make<T>(T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
             *(T*)ptr = obj;
-            
-            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            LeakDetector.Track(sptr);
+            return sptr;
 
         }
 
@@ -383,10 +399,10 @@ namespace ME.BECS {
             
             var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
-            
-            return new safe_ptr<T>((T*)ptr, size);
+            var sptr = new safe_ptr<T>((T*)ptr, size);
+            LeakDetector.Track(sptr);
+            return sptr;
 
         }
 
@@ -395,10 +411,10 @@ namespace ME.BECS {
             
             var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
-            
-            return new safe_ptr<T>((T*)ptr, size);
+            var sptr = new safe_ptr<T>((T*)ptr, size);
+            LeakDetector.Track(sptr);
+            return sptr;
 
         }
 
@@ -406,10 +422,10 @@ namespace ME.BECS {
         public static safe_ptr<T> _make<T>(in T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
             *(T*)ptr = obj;
-            
-            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            LeakDetector.Track(sptr);
+            return sptr;
 
         }
 
@@ -417,10 +433,10 @@ namespace ME.BECS {
         public static safe_ptr<T> _make<T>(in T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, TSize<T>.sizeInt, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
             *(T*)ptr = obj;
-            
-            return new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
+            LeakDetector.Track(sptr);
+            return sptr;
 
         }
 
@@ -586,13 +602,15 @@ namespace ME.BECS {
 
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
-                LeakDetector.Track(ptr);
-                return new safe_ptr(ptr, size);
+                var sptr = new safe_ptr(ptr, size);
+                LeakDetector.Track(sptr);
+                return sptr;
             }
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
-                LeakDetector.Track(ptr);
-                return new safe_ptr(ptr, size);
+                var sptr = new safe_ptr(ptr, size);
+                LeakDetector.Track(sptr);
+                return sptr;
             }
             
         }
@@ -602,13 +620,15 @@ namespace ME.BECS {
             
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
-                LeakDetector.Track(ptr);
-                return new safe_ptr(ptr, size);
+                var sptr = new safe_ptr(ptr, size);
+                LeakDetector.Track(sptr);
+                return sptr;
             }
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
-                LeakDetector.Track(ptr);
-                return new safe_ptr(ptr, size);
+                var sptr = new safe_ptr(ptr, size);
+                LeakDetector.Track(sptr);
+                return sptr;
             }
 
         }

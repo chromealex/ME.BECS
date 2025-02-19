@@ -134,6 +134,7 @@ namespace ME.BECS.Pathfinding {
                             }
                         }
                     }
+                    chunks.Dispose();
                 }
                 
             }
@@ -165,6 +166,7 @@ namespace ME.BECS.Pathfinding {
             }
 
             var resultDep = Unity.Jobs.JobHandle.CombineDependencies(dependencies);
+            dependencies.Dispose();
             context.SetDependency(resultDep);
 
         }

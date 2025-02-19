@@ -16,7 +16,7 @@ namespace ME.BECS.Transforms {
             ent.SetActive(state);
             if (ent.Has<ChildrenComponent>() == true) {
 
-                var queue = new Unity.Collections.UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
+                var queue = new UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
                 queue.Enqueue(ent);
                 while (queue.Count > 0) {
                     var child = queue.Dequeue();
@@ -27,6 +27,7 @@ namespace ME.BECS.Transforms {
                     }
                     child.SetActive(state);
                 }
+                queue.Dispose();
 
             }
             
@@ -46,7 +47,7 @@ namespace ME.BECS.Transforms {
             
             if (entity.Has<ChildrenComponent>() == true) {
 
-                var queue = new Unity.Collections.UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
+                var queue = new UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
                 queue.Enqueue(entity);
                 while (queue.Count > 0) {
                     var ent = queue.Dequeue();
@@ -57,6 +58,7 @@ namespace ME.BECS.Transforms {
                     }
                     ent.Destroy();
                 }
+                queue.Dispose();
 
             } else {
 

@@ -59,6 +59,7 @@ namespace ME.BECS.Pathfinding {
             }
 
             var deps = Unity.Jobs.JobHandle.CombineDependencies(dependencies);
+            dependencies.Dispose();
             context.SetDependency(deps);
             
         }

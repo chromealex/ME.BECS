@@ -135,6 +135,7 @@ namespace ME.BECS.Transforms {
                         }
                     }
                 }
+                queue.Dispose();
                 
             }
 

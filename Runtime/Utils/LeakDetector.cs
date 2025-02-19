@@ -12,12 +12,14 @@ namespace ME.BECS {
         public struct Item : System.IEquatable<Item> {
 
             public System.IntPtr ptr;
+            public System.IntPtr hiPtr;
             public Unity.Collections.FixedString4096Bytes stackTrace;
 
-            public Item(void* ptr) {
+            public Item(void* ptr, void* hiPtr, bool withStackTrace = true) {
                 this = default;
                 this.ptr = (System.IntPtr)ptr;
-                this.AddStackTrace();
+                this.hiPtr = (System.IntPtr)hiPtr;
+                if (withStackTrace == true) this.AddStackTrace();
             }
 
             [BURST_DISCARD]
@@ -62,7 +64,7 @@ namespace ME.BECS {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -74,7 +76,7 @@ namespace ME.BECS {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.LowBound, ptr.HiBound));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -86,7 +88,7 @@ namespace ME.BECS {
             
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr));
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr, ptr));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
                 throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} which has been already freed or was never instantiated.");
@@ -98,13 +100,13 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         [INLINE(256)]
         public static void Free(safe_ptr ptr) {
-            
+
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr));
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.LowBound, ptr.HiBound));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
-                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
+                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr.LowBound).ToInt64()} which has been already freed or was never instantiated.");
             }
             
         }
@@ -120,6 +122,33 @@ namespace ME.BECS {
                 UnityEngine.Debug.Log($"{item.ptr}\n{str}");
             }
             LeakDetectorData.spinner.Data.Unlock();
+            
+        }
+
+        [Conditional(COND.LEAK_DETECTION)]
+        public static void IsAlive(safe_ptr ptr) {
+            
+            LeakDetectorData.spinner.Data.Lock();
+            LeakDetectorData.Validate();
+            var result = LeakDetectorData.tracked.Data.Contains(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, withStackTrace: false));
+            LeakDetectorData.spinner.Data.Unlock();
+            if (result == false) {
+                if (ptr.HiBound != ptr.LowBound) {
+                    E.RANGE(ptr.ptr, ptr.LowBound, ptr.HiBound);
+                } else {
+                    throw new System.Exception($"Pointer {((System.IntPtr)ptr.ptr).ToInt64()} not found.");
+                }
+                /*var val = ((System.IntPtr)ptr).ToInt64();
+                foreach (var item in LeakDetectorData.tracked.Data) {
+                    var low = item.ptr.ToInt64();
+                    var hi = item.hiPtr.ToInt64();
+                    if (val >= low && val <= hi) {
+                        result = true;
+                        break;
+                    }
+                }*/
+                //throw new System.Exception($"Pointer {((System.IntPtr)ptr.ptr).ToInt64()} not found.");
+            }
             
         }
 
