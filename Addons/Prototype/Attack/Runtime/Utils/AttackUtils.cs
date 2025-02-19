@@ -80,7 +80,7 @@ namespace ME.BECS.Attack {
             var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
 
             var targetAttackSensor = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor;
-            if (targetAttackSensor.IsAlive()) {
+            if (targetAttackSensor.IsAlive() == true) {
                 var targetAttack = targetAttackSensor.Read<AttackComponent>();
                 // if unit can't attack target and he is in target's attack range
                 if (unitAttackMask.Contains(targetAttackLayer) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
@@ -98,8 +98,9 @@ namespace ME.BECS.Attack {
             // if our unit is in range [attackRange, sightRange] - find target point
             if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq > attackSensor.sector.rangeSqr) {
                 // find point on the line
+                var targetRadius = target.GetAspect<UnitAspect>().readRadius;
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
-                position = targetTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
+                position = targetTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(attackRangeSqr) - offset + targetRadius);
                 return PositionToAttack.MoveToPoint;
             } else if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker

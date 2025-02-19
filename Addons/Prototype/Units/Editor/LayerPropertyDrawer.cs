@@ -19,7 +19,7 @@
             }
             
             var valueSp = property.FindPropertyRelative(nameof(ME.BECS.Units.Layer.value));
-            var enumField = new UnityEngine.UIElements.DropdownField("Layer", choises, ME.BECS.Units.Editor.LayerAliasUtils.GetIndexOf(valueSp.uintValue) + 1);
+            var enumField = new UnityEngine.UIElements.DropdownField("Layer", choises, valueSp.uintValue == 0u ? 0 : ME.BECS.Units.Editor.LayerAliasUtils.GetIndexOf(valueSp.uintValue) + 1);
             enumField.RegisterValueChangedCallback(evt => {
                 
                 valueSp.uintValue = evt.newValue.Equals(ZERO_ALIAS) ? 0 : ME.BECS.Units.Editor.LayerAliasUtils.GetLayerByAlias(evt.newValue).value;

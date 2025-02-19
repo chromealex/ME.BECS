@@ -45,7 +45,7 @@ namespace ME.BECS.Pathfinding {
             var idx = 0;
             for (uint i = 0u; i < logicWorld.GetSystem<BuildGraphSystem>().graphs.Length; ++i) {
                 
-                Ent graphEnt = logicWorld.GetSystem<BuildGraphSystem>().graphs[context.world.state, i];
+                Ent graphEnt = logicWorld.GetSystem<BuildGraphSystem>().graphs[logicWorld.state, i];
                 if (this.drawIndex == idx) {
 
                     drawGraphEnt = graphEnt;
