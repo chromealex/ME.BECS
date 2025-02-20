@@ -80,10 +80,11 @@ namespace ME.BECS.Commands {
         /// <param name="data"></param>
         /// <param name="jobInfo"></param>
         [INLINE(256)]
-        public static void SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+        public static UnitCommandGroupAspect SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
             
             var commandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, in jobInfo);
             commandGroup.ent.Set(data);
+            return commandGroup;
             
         }
 
@@ -96,10 +97,11 @@ namespace ME.BECS.Commands {
         /// <param name="data"></param>
         /// <param name="jobInfo"></param>
         [INLINE(256)]
-        public static void SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionTempGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+        public static UnitCommandGroupAspect SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionTempGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
             
             var commandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, in jobInfo);
             commandGroup.ent.Set(data);
+            return commandGroup;
             
         }
 
@@ -111,7 +113,7 @@ namespace ME.BECS.Commands {
         /// <param name="data"></param>
         /// <param name="jobInfo"></param>
         [INLINE(256)]
-        public static void AddCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+        public static UnitCommandGroupAspect AddCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
 
             // get all unique command groups for each unit in current selection
             var noChainCommandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), selectionGroupAspect.units.Count, in jobInfo);
@@ -146,6 +148,8 @@ namespace ME.BECS.Commands {
             }
 
             uniqueGroups.Dispose();
+
+            return noChainCommandGroup;
 
         }
 
