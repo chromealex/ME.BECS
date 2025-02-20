@@ -25,7 +25,11 @@ namespace ME.BECS.Transforms {
                     childrenTarget = new ListAuto<Ent>(in ent, children.Count);
                     for (uint i = 0u; i < children.Count; ++i) {
                         var child = children[i];
-                        childrenTarget.Add(child.Clone(worldId, true, in jobInfo));
+                        var copy = child.Clone(worldId, true, in jobInfo);
+                        copy.Set(new ParentComponent() {
+                            value = ent,
+                        });
+                        childrenTarget.Add(copy);
                     }
                 }
             }
