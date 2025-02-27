@@ -47,6 +47,7 @@ namespace ME.BECS.Attack.Editor {
             FloatField minField = null;
             FloatField maxField = null;
             {
+                #if FIXED_POINT
                 var drawer = new FpFloatPropertyDrawer();
                 drawer.customName = "Min Range";
                 drawer.onValueSet = (value) => {
@@ -67,11 +68,11 @@ namespace ME.BECS.Attack.Editor {
                 var visualElement = drawer.CreatePropertyGUI(property.FindPropertyRelative(nameof(Sector.minRangeSqr)));
                 minField = visualElement.Q<FloatField>();
                 root.Add(visualElement);
-                /*var rangeProp = property.FindPropertyRelative(nameof(Sector.minRangeSqr));
-                var rangePropVal = rangeProp.FindPropertyRelative(nameof(Sector.minRangeSqr.value));
+                #else
+                var rangeProp = property.FindPropertyRelative(nameof(Sector.minRangeSqr));
                 var rangeField = minField = new FloatField("Min Range");
                 rangeField.AddToClassList("range");
-                rangeField.value = rangePropVal.uintValue > 0u ? fpmath.sqrt(new umeter(rangeProp.uintValue)).value : 0u;
+                rangeField.value = rangeProp.floatValue > 0f ? math.sqrt(rangeProp.floatValue) : 0f;
                 sectorPreview.minRange = rangeField.value;
                 rangeField.RegisterValueChangedCallback((evt) => {
                     var val = evt.newValue;
@@ -87,9 +88,11 @@ namespace ME.BECS.Attack.Editor {
                     rangeProp.serializedObject.ApplyModifiedProperties();
                     rangeProp.serializedObject.Update();
                 });
-                root.Add(rangeField);*/
+                root.Add(rangeField);
+                #endif
             }
             {
+                #if FIXED_POINT
                 var drawer = new FpFloatPropertyDrawer();
                 drawer.customName = "Range";
                 drawer.onValueSet = (value) => {
@@ -110,7 +113,8 @@ namespace ME.BECS.Attack.Editor {
                 var visualElement = drawer.CreatePropertyGUI(property.FindPropertyRelative(nameof(Sector.rangeSqr)));
                 maxField = visualElement.Q<FloatField>();
                 root.Add(visualElement);
-                /*var rangeProp = property.FindPropertyRelative(nameof(Sector.rangeSqr));
+                #else
+                var rangeProp = property.FindPropertyRelative(nameof(Sector.rangeSqr));
                 var rangeField = maxField = new FloatField("Range");
                 rangeField.AddToClassList("range");
                 rangeField.value = rangeProp.floatValue > 0f ? math.sqrt(rangeProp.floatValue) : 0f;
@@ -129,13 +133,15 @@ namespace ME.BECS.Attack.Editor {
                     rangeProp.serializedObject.ApplyModifiedProperties();
                     rangeProp.serializedObject.Update();
                 });
-                root.Add(rangeField);*/
+                root.Add(rangeField);
+                #endif
             }
 
             var sectorRoot = new VisualElement();
             sectorRoot.AddToClassList("sector-root");
             root.Add(sectorRoot);
             {
+                #if FIXED_POINT
                 var valProp = property.FindPropertyRelative(nameof(Sector.sector));
                 var prop = (sfloat)valProp.boxedValue;
                 var sector = new Slider("Sector", 0f, 360f, pageSize: 1f);
@@ -156,6 +162,28 @@ namespace ME.BECS.Attack.Editor {
                     valProp.serializedObject.Update();
                 });
                 sectorRoot.Add(sector);
+                #else
+                var valProp = property.FindPropertyRelative(nameof(Sector.sector));
+                var prop = valProp.floatValue;
+                var sector = new Slider("Sector", 0f, 360f, pageSize: 1f);
+                var sectorValueField = new FloatField();
+                sectorValueField.AddToClassList("sector-field");
+                sector.AddToClassList("sector");
+                sector.value = prop;
+                sector.label = $"Sector ({sector.value}\u00b0):";
+                sectorPreview.angle = sector.value;
+                sector.RegisterValueChangedCallback((evt) => {
+                    sector.label = $"Sector ({evt.newValue}\u00b0):";
+                    sectorValueField.SetValueWithoutNotify(evt.newValue);
+                    valProp.serializedObject.Update();
+                    valProp.floatValue = evt.newValue;
+                    sectorPreview.angle = evt.newValue;
+                    sectorPreview.RedrawElement();
+                    valProp.serializedObject.ApplyModifiedProperties();
+                    valProp.serializedObject.Update();
+                });
+                sectorRoot.Add(sector);
+                #endif
                 
                 sectorValueField.value = sector.value;
                 sectorValueField.RegisterValueChangedCallback((evt) => {

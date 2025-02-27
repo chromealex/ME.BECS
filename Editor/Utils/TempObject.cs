@@ -7,10 +7,12 @@ namespace ME.BECS.Editor {
         [SerializeReference]
         [NonReorderable]
         public object[] data;
+        public bool[] dataHas;
 
         [SerializeReference]
         [NonReorderable]
         public object[] dataShared;
+        public bool[] dataSharedHas;
 
     }
 

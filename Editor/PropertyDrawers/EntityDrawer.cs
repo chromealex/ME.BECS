@@ -98,9 +98,9 @@ namespace ME.BECS.Editor {
             }
 
             var obj = PropertyEditorUtils.GetTargetObjectOfProperty(this.property ?? this.propertySerializedObject.FindProperty(this.propertyPath));
-            if (obj == null) return;
+            if (obj == null || obj is not Ent ent) return;
             
-            this.entity = (Ent)obj;
+            this.entity = ent;
             var world = this.entity.World;
             if (this.entity.IsAlive() == true && this.version != this.entity.Version) {
                 this.FetchDataFromEntity(world);
@@ -425,8 +425,8 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
         private void RedrawComponents(World world) {
             
-            DrawFields(this.entity, this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
-            DrawFields(this.entity, this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
+            DrawFields(this.entity, this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.tempObject.dataHas, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
+            DrawFields(this.entity, this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.tempObject.dataSharedHas, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
             
         }
         
@@ -450,6 +450,7 @@ namespace ME.BECS.Editor {
             var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
                     
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
+            var methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
             var cnt = 0;
             {
                 var e = arch.components.GetEnumerator(world);
@@ -470,8 +471,10 @@ namespace ME.BECS.Editor {
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
                             {
                                 var gMethod = methodRead.MakeGenericMethod(type);
+                                var gMethodHas = methodHas.MakeGenericMethod(type);
                                 var val = gMethod.Invoke(null, new object[] { this.entity });
                                 this.tempObject.data[i] = val;
+                                this.tempObject.dataHas[i] = (bool)gMethodHas.Invoke(null, new object[] { this.entity });
                             }
                             ++i;
                         }
@@ -480,6 +483,7 @@ namespace ME.BECS.Editor {
             } else {
                 
                 this.tempObject.data = new object[cnt];
+                this.tempObject.dataHas = new bool[cnt];
                 {
                     var i = 0;
                     var e = arch.components.GetEnumerator(world);
@@ -488,8 +492,10 @@ namespace ME.BECS.Editor {
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
                             {
                                 var gMethod = methodRead.MakeGenericMethod(type);
+                                var gMethodHas = methodHas.MakeGenericMethod(type);
                                 var val = gMethod.Invoke(null, new object[] { this.entity });
                                 this.tempObject.data[i] = val;
+                                this.tempObject.dataHas[i] = (bool)gMethodHas.Invoke(null, new object[] { this.entity });
                             }
                             ++i;
                         }
@@ -545,11 +551,15 @@ namespace ME.BECS.Editor {
                     }
                 }
                 this.tempObject.dataShared = list.ToArray();
+                this.tempObject.dataSharedHas = new bool[list.Count];
+                for (int i = 0; i < this.tempObject.dataSharedHas.Length; ++i) {
+                    this.tempObject.dataSharedHas[i] = true;
+                }
             }
 
         }
 
-        public static void DrawFields(Ent entity, VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet, System.Reflection.MethodInfo methodRead) {
+        public static void DrawFields(Ent entity, VisualElement root, VisualElement rootContainer, System.Collections.Generic.List<VisualElement> fields, World world, object[] arrData, bool[] arrDataHas, SerializedObject serializedObject, string fieldName, System.Reflection.MethodInfo methodSet, System.Reflection.MethodInfo methodRead) {
 
             var dataArr = serializedObject.FindProperty(fieldName);
             var delta = dataArr.arraySize - fields.Count;
@@ -654,6 +664,13 @@ namespace ME.BECS.Editor {
 
                     var field = fields[i];
                     var it = dataArr.GetArrayElementAtIndex(i);
+                    if (arrDataHas[i] == true) {
+                        field.RemoveFromClassList("disabled");
+                        field.AddToClassList("enabled");
+                    } else {
+                        field.RemoveFromClassList("enabled");
+                        field.AddToClassList("disabled");
+                    }
                     if (field is PropertyField propertyField) {
                         var copy = it.Copy();
                         propertyField.name = $"PropertyField:{it.propertyPath}";

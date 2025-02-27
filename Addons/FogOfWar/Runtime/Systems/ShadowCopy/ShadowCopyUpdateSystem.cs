@@ -27,12 +27,12 @@ namespace ME.BECS.FogOfWar {
             marker.Begin();
             ent.CopyFrom<ParentComponent, ChildrenComponent>(in shadowCopy.original);
             marker.End();
+            FogOfWarUtils.ClearQuadTree(in ent);
             var tr = ent.GetAspect<TransformAspect>();
             tr.position = pos;
             tr.rotation = rot;
             ent.SetTag<IsViewRequested>(false);
             ent.SetTag<FogOfWarShadowCopyWasVisibleAnytimeTag>(true);
-            //ent.Remove<FogOfWarHasShadowCopyComponent>();
             return true;
 
         }

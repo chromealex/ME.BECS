@@ -35,13 +35,13 @@ namespace ME.BECS.FogOfWar {
 
     }
 
-    [EditorComment("Tag indicates shadow copy for the entity")]
-    [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct FogOfWarHasShadowCopyComponent : IComponent {}
-
     [EditorComment("Tag indicates shadow copy creation")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct FogOfWarShadowCopyRequiredComponent : IConfigComponent {}
+    public struct FogOfWarShadowCopyRequiredComponent : IConfigComponent {
+
+        public MemArrayAuto<Ent> shadowCopy;
+
+    }
 
     [EditorComment("Stores links to original entity")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
