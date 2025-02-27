@@ -152,8 +152,8 @@ namespace ME.BECS.Editor.JSON {
 
         public override object FromString(System.Type fieldType, string value) {
             var splitted = (value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
             return new Unity.Mathematics.float2(x, y);
         }
         
@@ -176,9 +176,9 @@ namespace ME.BECS.Editor.JSON {
         
         public override object FromString(System.Type fieldType, string value) {
             var splitted = ((string)value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
-            float.TryParse(splitted[2], out float z);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
+            float.TryParse(splitted[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z);
             return new Unity.Mathematics.float3(x, y, z);
         }
 
@@ -203,10 +203,10 @@ namespace ME.BECS.Editor.JSON {
         
         public override object FromString(System.Type fieldType, string value) {
             var splitted = (value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
-            float.TryParse(splitted[2], out float z);
-            float.TryParse(splitted[3], out float w);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
+            float.TryParse(splitted[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z);
+            float.TryParse(splitted[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float w);
             return new Unity.Mathematics.float4(x, y, z, w);
         }
 
@@ -233,9 +233,9 @@ namespace ME.BECS.Editor.JSON {
         
         public override object FromString(System.Type fieldType, string value) {
             var splitted = ((string)value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
-            float.TryParse(splitted[2], out float z);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
+            float.TryParse(splitted[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z);
             return Unity.Mathematics.quaternion.Euler(x, y, z);
         }
 
@@ -260,7 +260,7 @@ namespace ME.BECS.Editor.JSON {
     public class SFloatSerializer : SerializerBase<sfloat> {
 
         public override object FromString(System.Type fieldType, string value) {
-            float.TryParse(value, out var val);
+            float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var val);
             return (sfloat)(val);
         }
         
@@ -279,8 +279,8 @@ namespace ME.BECS.Editor.JSON {
 
         public override object FromString(System.Type fieldType, string value) {
             var splitted = (value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
             return new ME.BECS.FixedPoint.float2(x, y);
         }
         
@@ -303,9 +303,9 @@ namespace ME.BECS.Editor.JSON {
         
         public override object FromString(System.Type fieldType, string value) {
             var splitted = ((string)value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
-            float.TryParse(splitted[2], out float z);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
+            float.TryParse(splitted[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z);
             return new ME.BECS.FixedPoint.float3(x, y, z);
         }
 
@@ -330,10 +330,10 @@ namespace ME.BECS.Editor.JSON {
         
         public override object FromString(System.Type fieldType, string value) {
             var splitted = (value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
-            float.TryParse(splitted[2], out float z);
-            float.TryParse(splitted[3], out float w);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
+            float.TryParse(splitted[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z);
+            float.TryParse(splitted[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float w);
             return new ME.BECS.FixedPoint.float4(x, y, z, w);
         }
 
@@ -360,9 +360,9 @@ namespace ME.BECS.Editor.JSON {
         
         public override object FromString(System.Type fieldType, string value) {
             var splitted = ((string)value).Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-            float.TryParse(splitted[0], out float x);
-            float.TryParse(splitted[1], out float y);
-            float.TryParse(splitted[2], out float z);
+            float.TryParse(splitted[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x);
+            float.TryParse(splitted[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y);
+            float.TryParse(splitted[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z);
             return ME.BECS.FixedPoint.quaternion.Euler(x, y, z);
         }
 

@@ -326,8 +326,8 @@ namespace ME.BECS {
         [INLINE(256)]
         private void Initialize(in Ent ent, uint capacity) {
             uint size = HashHelpers.GetPrime(capacity);
-            this.buckets = new MemArrayAuto<uint>(this.ent, size);
-            this.slots = new MemArrayAuto<Slot>(this.ent, size);
+            this.buckets = new MemArrayAuto<uint>(in ent, size);
+            this.slots = new MemArrayAuto<Slot>(in ent, size);
             var slots = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached();
             for (int i = 0; i < this.slots.Length; ++i) {
                 (*(slots + i).ptr).hashCode = -1;

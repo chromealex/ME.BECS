@@ -11,16 +11,29 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;
+    using System.Runtime.InteropServices;
     using ME.BECS.Transforms;
     using Unity.Jobs;
     using static Cuts;
 
+    [StructLayout(LayoutKind.Explicit)]
     public struct QuadTreeElement : IComponent {
 
-        public int treeIndex;
+        [FieldOffset(0)]
         public tfloat radius;
-        public bool ignoreY;
+        [FieldOffset(0)]
+        public tfloat sizeX;
+        [FieldOffset(4)]
+        public int treeIndex;
+        [FieldOffset(8)]
+        public byte ignoreY;
 
+    }
+
+    public struct QuadTreeElementRect : IComponent {
+
+        public tfloat sizeY;
+        
     }
 
     [EditorComment("Used by QuadTreeInsertSystem to filter entities by treeIndex")]
@@ -30,11 +43,20 @@ namespace ME.BECS {
 
         [QueryWith]
         public AspectDataPtr<QuadTreeElement> quadTreeElementPtr;
+        public AspectDataPtr<QuadTreeElementRect> quadTreeRectPtr;
 
         public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref int treeIndex => ref this.quadTreeElement.treeIndex;
         public readonly ref readonly int readTreeIndex => ref this.readQuadTreeElement.treeIndex;
+        public bool isRect => this.ent.Has<QuadTreeElementRect>();
+        public float2 rectSize => new float2(this.readQuadTreeElement.sizeX, this.quadTreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+
+        public void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
+            ref var rect = ref this.quadTreeRectPtr.Get(this.ent.id, this.ent.gen);
+            rect.sizeY = sizeY;
+            this.quadTreeElement.sizeX = sizeX;
+        }
 
     }
     
@@ -49,6 +71,26 @@ namespace ME.BECS {
         public readonly uint treesCount => (uint)this.quadTrees.Length;
 
         [BURST(CompileSynchronously = true)]
+        public struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
+            
+            [NativeDisableUnsafePtrRestriction]
+            public UnsafeList<safe_ptr> quadTrees;
+
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
+                
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[quadTreeAspect.treeIndex];
+                if (tr.IsCalculated == false) return;
+                var pos = tr.GetWorldMatrixPosition();
+                if (quadTreeAspect.readQuadTreeElement.ignoreY == 1) pos.y = 0f;
+                var size = quadTreeAspect.rectSize;
+                var halfSize = new float3(size.x * 0.5f, 0f, size.y * 0.5f);
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - halfSize, pos + halfSize));
+                
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
         public struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
             [NativeDisableUnsafePtrRestriction]
@@ -59,7 +101,7 @@ namespace ME.BECS {
                 var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[quadTreeAspect.treeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
-                if (quadTreeAspect.readQuadTreeElement.ignoreY == true) pos.y = 0f;
+                if (quadTreeAspect.readQuadTreeElement.ignoreY == 1) pos.y = 0f;
                 tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - quadTreeAspect.readQuadTreeElement.radius, pos + quadTreeAspect.readQuadTreeElement.radius));
                 
             }
@@ -123,14 +165,18 @@ namespace ME.BECS {
             };
             var clearJobHandle = clearJob.Schedule(this.quadTrees.Length, 1, context.dependsOn);
             
-            var handle = context.Query(clearJobHandle).AsParallel().Schedule<CollectJob, QuadTreeAspect, TransformAspect>(new CollectJob() {
+            var handle = context.Query(clearJobHandle).Without<QuadTreeElementRect>().AsParallel().Schedule<CollectJob, QuadTreeAspect, TransformAspect>(new CollectJob() {
+                quadTrees = this.quadTrees,
+            });
+            
+            var handleRect = context.Query(clearJobHandle).With<QuadTreeElementRect>().AsParallel().Schedule<CollectRectJob, QuadTreeAspect, TransformAspect>(new CollectRectJob() {
                 quadTrees = this.quadTrees,
             });
 
             var job = new ApplyJob() {
                 quadTrees = this.quadTrees,
             };
-            var resultHandle = job.Schedule(this.quadTrees.Length, 1, handle);
+            var resultHandle = job.Schedule(this.quadTrees.Length, 1, JobHandle.CombineDependencies(handle, handleRect));
             //var resultHandle = handle;
             context.SetDependency(resultHandle);
 
