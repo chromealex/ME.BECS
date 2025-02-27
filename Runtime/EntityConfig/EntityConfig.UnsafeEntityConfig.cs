@@ -123,9 +123,12 @@ namespace ME.BECS {
                     var dataSize = StaticTypes.sizes.Get(typeId);
                     var sharedTypeId = StaticTypes.sharedTypeId.Get(typeId);
                     var hash = this.hashes[i];
-                    var func = this.functionPointers[i];
-                    if (func.IsValid() == true) func.Call(in config, data, in ent);
                     Batches.SetShared(in ent, groupId, data.ptr, dataSize, typeId, sharedTypeId, state, hash);
+                    var func = this.functionPointers[i];
+                    if (func.IsValid() == true) {
+                        var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _);
+                        func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
+                    }
                 }
 
             }
@@ -253,8 +256,12 @@ namespace ME.BECS {
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     var func = this.functionPointers[i];
-                    if (func.IsValid() == true) func.Call(in config, data, in ent);
                     Batches.Set(in ent, typeId, data.ptr, state);
+                    if (func.IsValid() == true) {
+                        var groupId = StaticTypes.groups.Get(typeId);
+                        var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _);
+                        func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
+                    }
                 }
 
             }
