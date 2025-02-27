@@ -511,7 +511,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static uint GetHashCode(T item) {
-            return (uint)System.Collections.Generic.EqualityComparer<T>.Default.GetHashCode(item);
+            return (uint)item.GetHashCode();
         }
 
     }
