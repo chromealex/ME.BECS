@@ -113,7 +113,7 @@ namespace ME.BECS {
 
             [NativeDisableUnsafePtrRestriction]
             public UnsafeList<safe_ptr> quadTrees;
-
+            
             public void Execute(int index) {
 
                 var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[index];

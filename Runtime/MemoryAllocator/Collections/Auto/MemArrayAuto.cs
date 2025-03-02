@@ -47,7 +47,7 @@ namespace ME.BECS {
         
         public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.data.arrPtr.IsValid();
+            get => this.data.arrPtr.IsValid() == true && this.data.ent.IsAlive() == true;
         }
 
         public Ent Ent => this.ent;
@@ -188,6 +188,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
+            E.IS_ALIVE(this.data.ent);
             var state = this.data.ent.World.state;
             CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             if (this.data.arrPtr.IsValid() == true) {

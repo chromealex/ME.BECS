@@ -20,6 +20,7 @@ namespace ME.BECS {
         public uint sourceId;
         public Item[] items = System.Array.Empty<Item>();
 
+        [UnityEngine.ContextMenu("Call OnValidate")]
         public void OnValidate() {
             this.CleanUp();
         }

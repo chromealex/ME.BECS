@@ -20,7 +20,9 @@ namespace ME.BECS.Commands {
                 PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in move.targetPosition, in jobInfo);
                 
                 for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
-                    var unit = commandGroup.readUnits[i].GetAspect<UnitAspect>();
+                    var u = commandGroup.readUnits[i];
+                    if (u.IsAlive() == false) continue;
+                    var unit = u.GetAspect<UnitAspect>();
                     unit.IsHold = false;
                 }
                 

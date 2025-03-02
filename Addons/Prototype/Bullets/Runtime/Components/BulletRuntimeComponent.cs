@@ -10,6 +10,7 @@ using Bounds = UnityEngine.Bounds;
 
 namespace ME.BECS.Bullets {
 
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletRuntimeComponent : IComponent {
 
         /// <summary>

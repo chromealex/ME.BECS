@@ -450,11 +450,17 @@ namespace ME.BECS.Editor {
                     this.searchTypes.Clear();
                     this.searchNames.Clear();
                     if (string.IsNullOrEmpty(this.search) == false) {
-                        var val = this.search.Split(' ');
+                        var val = this.search.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
                         var groups = EditorUtils.GetComponentGroups();
                         for (int i = 0; i < val.Length; ++i) {
                             var v = val[i];
-                            if (string.IsNullOrEmpty(v) == true) continue;
+                            foreach (var kv in StaticTypesLoadedManaged.loadedTypes) {
+                                var type = kv.Value;
+                                if (type != null && type.Name.Contains(v, System.StringComparison.InvariantCultureIgnoreCase) == true) {
+                                    // Add all components
+                                    this.searchTypes.Add(type);
+                                }
+                            }
                             foreach (var group in groups) {
                                 var addAll = false;
                                 if (group.type != null && group.type.Name.Contains(v, System.StringComparison.InvariantCultureIgnoreCase) == true) {

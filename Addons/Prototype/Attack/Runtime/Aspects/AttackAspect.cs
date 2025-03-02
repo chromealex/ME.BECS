@@ -7,6 +7,7 @@ using tfloat = System.Single;
 namespace ME.BECS.Attack {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Mathematics;
     
     public struct AttackAspect : IAspect {
         
@@ -86,7 +87,11 @@ namespace ME.BECS.Attack {
         
         [INLINE(256)]
         public readonly void UseFire() {
-            this.ent.SetTag<FireUsedComponent>(true);
+            ++this.componentRuntimeFire.fireRateCount;
+            if (this.readComponentRuntimeFire.fireRateCount >= this.readComponent.rateCount) {
+                this.componentRuntimeFire.fireRateCount = 0u;
+                this.ent.SetTag<FireUsedComponent>(true);
+            }
             this.ent.SetOneShot(new OnFireEvent(), OneShotType.NextTick);
         }
 
@@ -95,11 +100,24 @@ namespace ME.BECS.Attack {
             var config = this.readComponent.bulletConfig.AsUnsafeConfig();
             if (config.IsValid() == true) {
                 if (config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent) == true) {
-                    return (uint)(bulletConfigComponent.damage / this.readComponent.fireTime);
+                    return (uint)(bulletConfigComponent.damage * math.max(1u, this.readComponent.rateCount) / this.readComponent.fireTime);
                 }
             }
 
             return 0u;
+        }
+
+        [INLINE(256)]
+        public bool RateFire(tfloat dt) {
+            if (this.readComponentRuntimeFire.fireRateCount < this.readComponent.rateCount) {
+                this.componentRuntimeFire.fireRateTimer += dt;
+                if (this.componentRuntimeFire.fireRateTimer >= this.readComponent.rateTime) {
+                    this.componentRuntimeFire.fireRateTimer -= this.readComponent.rateTime;
+                    return true;
+                }
+                return false;
+            }
+            return true;
         }
 
     }

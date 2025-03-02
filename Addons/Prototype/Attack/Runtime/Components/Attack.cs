@@ -19,6 +19,8 @@ namespace ME.BECS.Attack {
         public tfloat reloadTime;
         public tfloat fireTime;
         public tfloat attackTime;
+        public tfloat rateTime;
+        public uint rateCount;
         public Config bulletConfig;
         public ME.BECS.Views.View muzzleView;
 
@@ -38,6 +40,8 @@ namespace ME.BECS.Attack {
     public struct AttackRuntimeFireComponent : IComponent {
 
         public tfloat fireTimer;
+        public tfloat fireRateTimer;
+        public uint fireRateCount;
 
     }
 

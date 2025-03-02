@@ -78,7 +78,7 @@ namespace NativeTrees {
         /// <summary>
         /// Constructs an octree with a max depth of 8
         /// </summary>
-        public NativeOctree(AABB bounds, Allocator allocator) : this(bounds, 16, 8, allocator) { }
+        public NativeOctree(AABB bounds, Allocator allocator) : this(bounds, 32, 8, allocator) { }
 
         /// <summary>
         /// Constructs an octree
@@ -124,7 +124,7 @@ namespace NativeTrees {
             foreach (var obj in temp) {
                 this.Insert(obj.obj, obj.bounds);
             }
-
+            
         }
 
         /// <summary>

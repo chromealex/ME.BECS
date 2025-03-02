@@ -21,6 +21,7 @@ namespace ME.BECS.Views {
 
             foreach (var tr in this.trailRenderers) {
                 tr.Clear();
+                tr.time = 0f;
             }
 
         }

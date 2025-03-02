@@ -29,7 +29,6 @@ namespace ME.BECS.Players {
                     id = id,
                 });
                 this.teams[(int)i] = team;
-                //UnityEngine.Debug.Log("Team: " + team);
             }
 
             for (uint i = 0u; i < this.players.Length; ++i) {
