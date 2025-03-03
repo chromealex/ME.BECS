@@ -35,6 +35,25 @@ namespace ME.BECS.Editor {
             
         }
 
+        public override void OnGUI(UnityEngine.Rect position, SerializedProperty property, UnityEngine.GUIContent label) {
+            
+            ObjectReferenceRegistry.Initialize();
+            
+            var id = property.FindPropertyRelative(nameof(ObjectReference<UnityEngine.Object>.id));
+            var obj = ObjectReferenceRegistry.GetObjectBySourceId<UnityEngine.Object>(id.uintValue);
+            
+            var type = this.fieldInfo.FieldType.GenericTypeArguments[0];
+
+            var newValue = EditorGUILayout.ObjectField(property.displayName, obj, type, false);
+            if (newValue == obj) return;
+            var pId = ObjectReferenceRegistryUtils.Assign(obj, newValue);
+            var prop = property.serializedObject.FindProperty(id.propertyPath);
+            prop.serializedObject.Update();
+            id.uintValue = pId;
+            prop.serializedObject.ApplyModifiedProperties();
+            prop.serializedObject.Update();
+        }
+
     }
 
 }
