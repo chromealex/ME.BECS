@@ -121,6 +121,10 @@
     visibility: visible;
 }
 
+.h-root .h-element.raw-hierarchy > Foldout > Toggle .unity-toggle__checkmark {
+    visibility: hidden;
+}
+
 .h-root .h-element.hover {
     background-color: rgba(255, 255, 255, 0.1);
 }

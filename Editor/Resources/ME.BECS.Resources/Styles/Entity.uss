@@ -217,6 +217,16 @@
     -unity-font-style: bold;
 }
 
+.fields-container .field.enabled {
+    border-color: rgba(0, 0, 0, 0);
+    border-top-width: 1px;
+}
+
+.fields-container .field.disabled {
+    border-color: red;
+    border-top-width: 1px;
+}
+
 .entity-mini .label-header,
 .entity-mini .entity-id-label,
 .entity-mini .entity-name-label,

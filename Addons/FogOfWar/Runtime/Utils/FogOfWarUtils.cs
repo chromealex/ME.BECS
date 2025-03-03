@@ -730,6 +730,26 @@ namespace ME.BECS.FogOfWar {
             return ent;
         }
 
+        [INLINE(256)]
+        public static void ClearQuadTree(in Ent ent) {
+            
+            var queue = new UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
+            queue.Enqueue(ent);
+            while (queue.Count > 0u) {
+                var e = queue.Dequeue();
+                if (e.Has<QuadTreeElement>() == true) e.Remove<QuadTreeElement>();
+                if (e.Has<QuadTreeResult>() == true) e.Remove<QuadTreeResult>();
+                ref readonly var children = ref e.Read<ChildrenComponent>().list;
+                if (children.Count > 0u) {
+                    for (uint i = 0u; i < children.Count; ++i) {
+                        var child = children[i];
+                        queue.Enqueue(child);
+                    }
+                }
+            }
+            
+        }
+
     }
 
 }

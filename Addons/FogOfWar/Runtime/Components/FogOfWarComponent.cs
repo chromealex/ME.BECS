@@ -35,13 +35,24 @@ namespace ME.BECS.FogOfWar {
 
     }
 
-    [EditorComment("Tag indicates shadow copy for the entity")]
-    [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct FogOfWarHasShadowCopyComponent : IComponent {}
-
     [EditorComment("Tag indicates shadow copy creation")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
-    public struct FogOfWarShadowCopyRequiredComponent : IConfigComponent {}
+    public struct FogOfWarShadowCopyRequiredComponent : IConfigComponent, IConfigInitialize {
+
+        public void OnInitialize(in Ent ent) {
+            var playersSystem = ent.World.GetSystem<Players.PlayersSystem>();
+            ent.Set(new FogOfWarShadowCopyRequiredRuntimeComponent() {
+                shadowCopy = new MemArrayAuto<Ent>(in ent, playersSystem.GetTeams().Length),
+            });
+        }
+
+    }
+
+    public struct FogOfWarShadowCopyRequiredRuntimeComponent : IComponent {
+
+        public MemArrayAuto<Ent> shadowCopy;
+
+    }
 
     [EditorComment("Stores links to original entity")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]

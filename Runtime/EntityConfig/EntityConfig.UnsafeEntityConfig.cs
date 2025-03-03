@@ -123,9 +123,12 @@ namespace ME.BECS {
                     var dataSize = StaticTypes.sizes.Get(typeId);
                     var sharedTypeId = StaticTypes.sharedTypeId.Get(typeId);
                     var hash = this.hashes[i];
-                    var func = this.functionPointers[i];
-                    if (func.IsValid() == true) func.Call(in config, data, in ent);
                     Batches.SetShared(in ent, groupId, data.ptr, dataSize, typeId, sharedTypeId, state, hash);
+                    var func = this.functionPointers[i];
+                    if (func.IsValid() == true) {
+                        var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _, default);
+                        func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
+                    }
                 }
 
             }
@@ -253,8 +256,12 @@ namespace ME.BECS {
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     var func = this.functionPointers[i];
-                    if (func.IsValid() == true) func.Call(in config, data, in ent);
                     Batches.Set(in ent, typeId, data.ptr, state);
+                    if (func.IsValid() == true) {
+                        var groupId = StaticTypes.groups.Get(typeId);
+                        var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _, default);
+                        func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
+                    }
                 }
 
             }
@@ -346,10 +353,15 @@ namespace ME.BECS {
                 [AOT.MonoPInvokeCallbackAttribute(typeof(MethodCallerDelegate))]
                 public static void Call(in UnsafeEntityConfig config, void* component, in Ent ent) {
 
-                    WorldStaticCallbacks.RaiseConfigComponentCallback<T>(in config, component, in ent);
-                    _ptrToStruct(component, out T tempData);
-                    tempData.OnInitialize(in ent);
-                    _structToPtr(ref tempData, component);
+                    if (component == null) {
+                        T tempData = default;
+                        tempData.OnInitialize(in ent);
+                    } else {
+                        WorldStaticCallbacks.RaiseConfigComponentCallback<T>(in config, component, in ent);
+                        _ptrToStruct(component, out T tempData);
+                        tempData.OnInitialize(in ent);
+                        _structToPtr(ref tempData, component);
+                    }
 
                 }
 
@@ -592,7 +604,7 @@ namespace ME.BECS {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         var del = (MethodCallerDelegate)System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
-                        del.Invoke(in config, (void*)ptr, in ent);
+                        del.Invoke(in config, (void*)ptr, in this.staticDataEnt);
                     }
                     Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
                     gcHandle.Free();

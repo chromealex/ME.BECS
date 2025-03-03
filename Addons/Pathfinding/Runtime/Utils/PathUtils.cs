@@ -39,7 +39,9 @@ namespace ME.BECS.Pathfinding {
             unitCommandGroup.Lock();
             var typeIds = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<uint>((int)buildGraphSystem.graphs.Length, Unity.Collections.Allocator.Temp);
             for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
-                var unit = unitCommandGroup.units[i].GetAspect<UnitAspect>();
+                var u = unitCommandGroup.units[i];
+                if (u.IsAlive() == false) continue;
+                var unit = u.GetAspect<UnitAspect>();
                 if (unit.IsStatic == false) typeIds.Add(unit.typeId);
             }
             
@@ -112,6 +114,7 @@ namespace ME.BECS.Pathfinding {
                     // set path follow flag
                     for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
                         var unit = unitCommandGroup.units[i];
+                        if (unit.IsAlive() == false) continue;
                         var aspect = unit.GetAspect<UnitAspect>();
                         aspect.IsPathFollow = true;
                         aspect.collideWithEnd = 0;
@@ -140,6 +143,7 @@ namespace ME.BECS.Pathfinding {
             // set path follow flag
             for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
                 var unit = unitCommandGroup.units[i];
+                if (unit.IsAlive() == false) continue;
                 var aspect = unit.GetAspect<UnitAspect>();
                 aspect.IsPathFollow = true;
                 aspect.collideWithEnd = 0;

@@ -18,7 +18,7 @@ namespace ME.BECS.Bullets {
     public static class BulletUtils {
 
         [INLINE(256)]
-        public static void RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, in JobInfo jobInfo) {
+        public static Ent RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, in JobInfo jobInfo) {
 
             var point = Ent.New(in jobInfo, editorName: "FirePoint");
             var tr = point.GetOrCreateAspect<TransformAspect>();
@@ -26,14 +26,29 @@ namespace ME.BECS.Bullets {
             tr.position = position;
             tr.rotation = rotation;
 
-            root.Get<FirePointComponent>().point = point;
+            ref var firePoints = ref root.Get<FirePointComponent>();
+            if (firePoints.points.IsCreated == false) firePoints.points = new ListAuto<Ent>(in point, 1u);
+            firePoints.points.Add(point);
+            return point;
 
         }
 
         [INLINE(256)]
-        public static Ent GetFirePoint(in Ent root) {
+        public static Ent GetNextFirePoint(in Ent root) {
+            
+            ref var point = ref root.Get<FirePointComponent>();
+            var points = point.points;
+            if (point.index >= points.Count) {
+                point.index = 0u;
+            }
+            return points[point.index++];
 
-            return root.Read<FirePointComponent>().point;
+        }
+
+        [INLINE(256)]
+        public static ListAuto<Ent> GetFirePoints(in Ent root) {
+
+            return root.Read<FirePointComponent>().points;
 
         }
 

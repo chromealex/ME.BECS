@@ -160,6 +160,12 @@ namespace ME.BECS {
 
         }
 
+        public static bool HasDirectEnabled<T>(Ent ent) where T : unmanaged, IComponent {
+
+            return Components.Has<T>(ent.World.state, ent.id, ent.gen, checkEnabled: true);
+
+        }
+
         public static T ReadDirect<T>(Ent ent) where T : unmanaged, IComponent {
 
             if (StaticTypes<T>.isTag == true) return StaticTypes<T>.defaultValue;

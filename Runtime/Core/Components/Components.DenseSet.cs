@@ -155,14 +155,18 @@ namespace ME.BECS {
             this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
             var val = _offsetState(_getBlock(state, in page, entityId, this.dataSize));
-            if (value == true && *val.ptr == 1) {
-                // if we want to enable component and it was disabled
-                changed = true;
-                *val.ptr = 0;
-            } else if (value == false && *val.ptr == 0) {
-                // if we want to disable component and it was enabled
-                changed = true;
-                *val.ptr = 1;
+            if ((value == true && *val.ptr == 1) || (value == false && *val.ptr == 0)) {
+                page.Lock();
+                if (value == true && *val.ptr == 1) {
+                    // if we want to enable component and it was disabled
+                    changed = true;
+                    *val.ptr = 0;
+                } else if (value == false && *val.ptr == 0) {
+                    // if we want to disable component and it was enabled
+                    changed = true;
+                    *val.ptr = 1;
+                }
+                page.Unlock();
             }
             this.readWriteSpinner.ReadEnd(state);
             return changed;
@@ -312,7 +316,7 @@ namespace ME.BECS {
             }
             var ptr = _getBlock(state, in page, entityId, this.dataSize);
             var gen = *_offsetGen(ptr).ptr;
-            var disableState = checkEnabled == true ? *_offsetState(ptr).ptr : 0;
+            var disableState = checkEnabled == true ? *_offsetState(ptr).ptr : (byte)0;
             this.readWriteSpinner.ReadEnd(state);
             return gen == entityGen && disableState == 0;
         }

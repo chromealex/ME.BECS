@@ -13,7 +13,10 @@ namespace ME.BECS.Transforms {
         public static Ent Clone(this in Ent source, ushort worldId, bool cloneHierarchy, in JobInfo jobInfo = default) {
 
             if (cloneHierarchy == false) {
-                return source.Clone();
+                var copy = source.Clone();
+                copy.Remove<ParentComponent>();
+                copy.Remove<ChildrenComponent>();
+                return copy;
             }
             
             var ent = Ent.New(worldId, in jobInfo);

@@ -121,7 +121,10 @@ namespace ME.BECS.Editor {
         }
 
         private void LoadSettings() {
-
+            
+            SceneView.duringSceneGui -= OnSceneGUI;
+            SceneView.duringSceneGui += OnSceneGUI;
+            
             this.search = EditorPrefs.GetString("ME.BECS.WorldHierarchyEditorWindow.search", string.Empty);
 
             var groups = EditorUtils.GetComponentGroups(false);
@@ -148,7 +151,37 @@ namespace ME.BECS.Editor {
             }
             
         }
-        
+
+        private readonly System.Collections.Generic.List<Renderer> currentObjects = new System.Collections.Generic.List<Renderer>();
+        private bool alignSceneViewToObject = false;
+        private void OnSceneGUI(SceneView obj) {
+            
+            if (this.selected.Count > 0) {
+                var initializer = Object.FindObjectsByType<BaseWorldInitializer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault(x => x.world.id == this.selectedWorld.id);
+                var vm = initializer?.GetModule<ViewsModule>();
+                this.currentObjects.Clear();
+                Transform tr = null;
+                foreach (var selection in this.selected) {
+                    var view = vm?.GetViewByEntity(selection);
+                    if (view is Component comp) {
+                        //this.currentObjects.Add(comp.gameObject);
+                        this.currentObjects.AddRange(comp.gameObject.GetComponentsInChildren<Renderer>());
+                        tr = comp.transform;
+                    }
+                    if (selection.Has<WorldMatrixComponent>() == true) {
+                        var t = selection.GetAspect<TransformAspect>();
+                        Handles.PositionHandle((Vector3)t.position, (Quaternion)t.rotation);
+                    }
+                }
+                Handles.DrawOutline(this.currentObjects.ToArray(), Color.green);
+                if (tr != null && this.alignSceneViewToObject == true) {
+                    obj.AlignViewToObject(tr);
+                }
+                this.alignSceneViewToObject = false;
+            }
+
+        }
+
         private void UpdateWorlds() {
             
             this.aliveWorlds.Clear();
@@ -417,11 +450,17 @@ namespace ME.BECS.Editor {
                     this.searchTypes.Clear();
                     this.searchNames.Clear();
                     if (string.IsNullOrEmpty(this.search) == false) {
-                        var val = this.search.Split(' ');
+                        var val = this.search.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
                         var groups = EditorUtils.GetComponentGroups();
                         for (int i = 0; i < val.Length; ++i) {
                             var v = val[i];
-                            if (string.IsNullOrEmpty(v) == true) continue;
+                            foreach (var kv in StaticTypesLoadedManaged.loadedTypes) {
+                                var type = kv.Value;
+                                if (type != null && type.Name.Contains(v, System.StringComparison.InvariantCultureIgnoreCase) == true) {
+                                    // Add all components
+                                    this.searchTypes.Add(type);
+                                }
+                            }
                             foreach (var group in groups) {
                                 var addAll = false;
                                 if (group.type != null && group.type.Name.Contains(v, System.StringComparison.InvariantCultureIgnoreCase) == true) {
@@ -730,6 +769,9 @@ namespace ME.BECS.Editor {
                 element.IsFoldout = evt.newValue;
             });
             container.RegisterCallback<MouseDownEvent>(evt => {
+                if (evt.clickCount == 2) {
+                    this.alignSceneViewToObject = true;
+                }
                 if (evt.ctrlKey == true || evt.commandKey == true) {
                     if (this.selected.Add(element.value) == false) {
                         this.selected.Remove(element.value);
@@ -804,11 +846,12 @@ namespace ME.BECS.Editor {
             this.settingsChanged = false;
 
         }
-
+        
         private void DrawEntities(ref int k, int level, VisualElement root, System.Collections.Generic.List<Ent> list) {
 
-            if (this.searchTypes.Count == 0 && string.IsNullOrEmpty(this.search) == false) return;
-            
+            if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) return;
+
+            var rawHierarchy = false;
             foreach (var ent in list) {
                 if (this.entToTags.TryGetValue(ent, out var tags) == true) {
                     var ignore = false;
@@ -820,6 +863,7 @@ namespace ME.BECS.Editor {
                     if (ignore == true) continue;
                 }
 
+                var found = true;
                 if (this.searchTypes.Count > 0 || this.searchNames.Count > 0) {
                     var containsType = false;
                     var state = ent.World.state;
@@ -839,53 +883,75 @@ namespace ME.BECS.Editor {
 
                     var containsName = false;
                     var name = ent.EditorName;
-                    if (name.IsEmpty == false) {
-                        var n = name.ToString();
+                    {
+                        var idName = $"#{ent.id}";
+                        var n = name.IsEmpty == false ? name.ToString() : null;
                         foreach (var searchName in this.searchNames) {
-                            if (searchName.Contains(n, System.StringComparison.InvariantCultureIgnoreCase) == false) continue;
+                            if ((n == null || n.Contains(searchName, System.StringComparison.InvariantCultureIgnoreCase) == false) && idName.Contains(searchName) == false) continue;
                             containsName = true;
                             break;
                         }
                     }
                     
-                    if (containsType == false && containsName == false) continue;
+                    found = (containsType == true || containsName == true);
+                    rawHierarchy = true;
                 }
 
-                Element element;
-                if (k >= this.elements.Count) {
-                    this.elements.Add(this.MakeElement(ent));
-                }
-                {
-                    element = this.elements[k];
-                    if (element.value != ent) {
-                        element.Reset();
-                        this.entToElement.Remove(element.value);
-                        element.value = ent;
+                if (found == true) {
+
+                    Element element;
+                    if (k >= this.elements.Count) {
+                        this.elements.Add(this.MakeElement(ent));
                     }
-                    element.Redraw(true);
-                    this.elements[k] = element;
-                }
-                if (element.container.parent == null || element.container.parent != root) root.Add(element.container);
-                if (this.entToElement.TryAdd(element.value, element) == false) {
-                    this.entToElement[element.value] = element;
-                }
 
-                element.level = level;
-                ++k;
-                {
+                    {
+                        element = this.elements[k];
+                        if (element.value != ent) {
+                            element.Reset();
+                            this.entToElement.Remove(element.value);
+                            element.value = ent;
+                        }
+
+                        element.Redraw(true);
+                        this.elements[k] = element;
+                    }
+                    if (element.container.parent == null || element.container.parent != root) root.Add(element.container);
+                    if (this.entToElement.TryAdd(element.value, element) == false) {
+                        this.entToElement[element.value] = element;
+                    }
+
+                    element.level = level;
+                    ++k;
+                    {
+                        var children = ent.Read<ChildrenComponent>().list;
+                        if (children.Count > 0u) {
+                            if (rawHierarchy == false) {
+                                if (element.container.ClassListContains("raw-hierarchy") == true) element.container.RemoveFromClassList("raw-hierarchy");
+                            } else {
+                                if (element.container.ClassListContains("raw-hierarchy") == false) element.container.AddToClassList("raw-hierarchy");
+                            }
+                            if (children.Count != element.childrenCount) {
+                                element.container.AddToClassList("has-children");
+                            }
+                            if (element.IsFoldout == true || rawHierarchy == true) {
+                                var childList = new System.Collections.Generic.List<Ent>();
+                                foreach (var child in children) childList.Add(child);
+                                this.DrawEntities(ref k, level + 1, root, childList);
+                            }
+                        } else {
+                            if (children.Count != element.childrenCount) element.container.RemoveFromClassList("has-children");
+                        }
+
+                        element.childrenCount = children.Count;
+                    }
+
+                } else if (rawHierarchy == true) {
                     var children = ent.Read<ChildrenComponent>().list;
                     if (children.Count > 0u) {
-                        if (children.Count != element.childrenCount) element.container.AddToClassList("has-children");
-                        if (element.IsFoldout == true) {
-                            var childList = new System.Collections.Generic.List<Ent>();
-                            foreach (var child in children) childList.Add(child);
-                            this.DrawEntities(ref k, level + 1, root, childList);
-                        }
-                    } else {
-                        if (children.Count != element.childrenCount) element.container.RemoveFromClassList("has-children");
+                        var childList = new System.Collections.Generic.List<Ent>();
+                        foreach (var child in children) childList.Add(child);
+                        this.DrawEntities(ref k, level + 1, root, childList);
                     }
-
-                    element.childrenCount = children.Count;
                 }
 
             }

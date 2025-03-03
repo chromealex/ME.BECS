@@ -9,7 +9,14 @@ using Bounds = UnityEngine.Bounds;
 #endif
 
 namespace ME.BECS.Bullets {
+
+    public struct BulletComponentGroup {
+        
+        public static UnityEngine.Color color = UnityEngine.Color.red;
+
+    }
     
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletConfigComponent : IConfigComponent {
 
         /// <summary>
@@ -33,18 +40,22 @@ namespace ME.BECS.Bullets {
 
     }
 
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletEffectOnDestroy : IConfigComponentStatic {
 
         public ME.BECS.Effects.EffectConfig effect;
 
     }
 
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct FirePointComponent : IComponent {
 
-        public Ent point;
+        public ListAuto<Ent> points;
+        public uint index;
 
     }
 
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletViewPoint : IConfigComponentStatic {
 
         public static BulletViewPoint Default = new BulletViewPoint() {
@@ -53,6 +64,13 @@ namespace ME.BECS.Bullets {
 
         public float3 position;
         public quaternion rotation;
+
+    }
+
+    [ComponentGroup(typeof(BulletComponentGroup))]
+    public struct BulletViewPoints : IConfigComponentStatic {
+
+        public MemArrayAuto<BulletViewPoint> points;
 
     }
 
