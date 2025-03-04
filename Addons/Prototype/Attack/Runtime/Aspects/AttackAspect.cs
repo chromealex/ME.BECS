@@ -8,7 +8,7 @@ namespace ME.BECS.Attack {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
-    
+
     public struct AttackAspect : IAspect {
         
         public Ent ent { get; set; }
@@ -19,6 +19,7 @@ namespace ME.BECS.Attack {
         public AspectDataPtr<AttackRuntimeReloadComponent> attackRuntimeReloadDataPtr;
         public AspectDataPtr<AttackRuntimeFireComponent> attackRuntimeFireDataPtr;
         public AspectDataPtr<AttackTargetComponent> targetDataPtr;
+        public AspectDataPtr<AttackTargetsComponent> targetsDataPtr;
 
         public readonly ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
@@ -34,13 +35,31 @@ namespace ME.BECS.Attack {
         
         public readonly Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 
+        public readonly ListAuto<Ent> targets => this.targetsDataPtr.Read(this.ent.id, this.ent.gen).targets;
+
+        [INLINE(256)]
+        private readonly void CleanUpTarget() {
+            
+            this.ent.Remove<AttackTargetComponent>();
+            
+        }
+        
+        [INLINE(256)]
+        private readonly void CleanUpTargets() {
+            
+            var targets = this.ent.Read<AttackTargetsComponent>().targets;
+            if (targets.IsCreated == true) targets.Dispose();
+            this.ent.Remove<AttackTargetsComponent>();
+            
+        }
+
         [INLINE(256)]
         public readonly void SetTarget(Ent ent) {
+            this.CleanUpTargets();
             if (ent.IsAlive() == true) {
                 if (this.ent.Read<AttackTargetComponent>().target != ent) {
                     this.CanFire = false;
                 }
-                
                 this.ent.Set(new AttackTargetComponent() {
                     target = ent,
                 });
@@ -49,7 +68,27 @@ namespace ME.BECS.Attack {
                 this.CanFire = false;
             }
         }
-        
+
+        [INLINE(256)]
+        public readonly void SetTargets(in ListAuto<Ent> list) {
+            this.CleanUpTarget();
+            if (list.IsCreated == true) {
+                if (this.ent.Read<AttackTargetsComponent>().targets != list) {
+                    this.CanFire = false;
+                    var targets = this.ent.Read<AttackTargetsComponent>().targets;
+                    if (targets.IsCreated == true) targets.Dispose();
+                }
+                this.ent.Set(new AttackTargetsComponent() {
+                    targets = list,
+                });
+            } else {
+                var targets = this.ent.Read<AttackTargetsComponent>().targets;
+                if (targets.IsCreated == true) targets.Dispose();
+                this.ent.Remove<AttackTargetsComponent>();
+                this.CanFire = false;
+            }
+        }
+
         public readonly tfloat ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
         public readonly tfloat FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
 

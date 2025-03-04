@@ -8,6 +8,13 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Attack {
 
+    public struct AttackComponentGroup {
+
+        public static UnityEngine.Color color = new UnityEngine.Color(0.65f, 0.1f, 0f);
+
+    }
+
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackComponent : IConfigComponent, IConfigInitialize {
 
         public static AttackComponent Default => new AttackComponent() {
@@ -31,12 +38,21 @@ namespace ME.BECS.Attack {
 
     }
 
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct AttackTargetsCountComponent : IConfigComponent {
+
+        public uint count;
+
+    }
+
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackRuntimeReloadComponent : IComponent {
 
         public tfloat reloadTimer;
 
     }
 
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackRuntimeFireComponent : IComponent {
 
         public tfloat fireTimer;
@@ -45,22 +61,37 @@ namespace ME.BECS.Attack {
 
     }
 
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct CanFireWhileMovesTag : IConfigComponent {}
 
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackTargetComponent : IComponent {
 
         public Ent target;
 
     }
     
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct AttackTargetsComponent : IComponent {
+
+        public ListAuto<Ent> targets;
+
+    }
+
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct ReloadedComponent : IComponent {}
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct CanFireComponent : IComponent {}
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct FireUsedComponent : IComponent {}
     
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct OnFireEvent : IComponent {}
     
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct RotateToAttackWhileIdleComponent : IConfigComponent {}
 
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct RotateAttackSensorComponent : IConfigComponent {
 
         public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { speedFactor = 1f };
@@ -69,6 +100,7 @@ namespace ME.BECS.Attack {
 
     }
     
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackFilterComponent : IConfigComponent {
 
         public ME.BECS.Units.LayerMask layers;

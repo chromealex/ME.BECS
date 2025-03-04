@@ -41,6 +41,11 @@ namespace ME.BECS {
 
         public readonly Ent ent => this.arr.ent;
         public Ent Ent => this.ent;
+        
+        [INLINE(256)]
+        public static bool operator ==(in ListAuto<T> a, in ListAuto<T> b) => a.arr.arrPtr == b.arr.arrPtr;
+        [INLINE(256)]
+        public static bool operator !=(ListAuto<T> a, ListAuto<T> b) => !(a == b);
 
         object[] IUnmanagedList.ToManagedArray() {
             var arr = new object[this.Count];

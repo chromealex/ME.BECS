@@ -16,7 +16,7 @@ namespace ME.BECS.Attack {
     public struct FireSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public struct FireJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;
             
@@ -48,17 +48,60 @@ namespace ME.BECS.Attack {
 
         }
 
+        [BURST(CompileSynchronously = true)]
+        public struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+
+            public tfloat dt;
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
+
+                if (aspect.targets.IsCreated == true) {
+
+                    if (aspect.RateFire(this.dt) == true) {
+
+                        var firePoint = ME.BECS.Bullets.BulletUtils.GetNextFirePoint(aspect.ent);
+                        var pos = tr.GetWorldMatrixPosition();
+                        var rot = tr.GetWorldMatrixRotation();
+                        if (firePoint.IsAlive() == true) {
+                            var firePointTr = firePoint.GetAspect<TransformAspect>();
+                            pos = firePointTr.GetWorldMatrixPosition();
+                            rot = firePointTr.GetWorldMatrixRotation();
+                        }
+
+                        foreach (var unit in aspect.targets) {
+                            BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.readQuery.treeMask, unit, default, aspect.readComponent.bulletConfig,
+                                                     aspect.readComponent.muzzleView, jobInfo: in jobInfo);
+                        }
+
+                        aspect.UseFire();
+
+                    }
+
+                }
+
+            }
+
+        }
+
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query()
-                               .With<ReloadedComponent>()
-                               .With<CanFireComponent>()
-                               .Without<FireUsedComponent>()
-                               .With<AttackTargetComponent>()
-                               .Schedule<FireJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireJob() {
-                                   dt = context.deltaTime,
-                               });
-            context.SetDependency(dependsOn);
+            var target = context.Query()
+                                .With<ReloadedComponent>()
+                                .With<CanFireComponent>()
+                                .Without<FireUsedComponent>()
+                                .With<AttackTargetComponent>()
+                                .Schedule<FireTargetJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetJob() {
+                                    dt = context.deltaTime,
+                                });
+            var targets = context.Query()
+                                .With<ReloadedComponent>()
+                                .With<CanFireComponent>()
+                                .Without<FireUsedComponent>()
+                                .With<AttackTargetsComponent>()
+                                .Schedule<FireTargetsJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetsJob() {
+                                    dt = context.deltaTime,
+                                });
+            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(target, targets));
 
         }
 

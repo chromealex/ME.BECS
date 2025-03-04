@@ -1,3 +1,10 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Attack {
     
@@ -12,15 +19,12 @@ namespace ME.BECS.Attack {
     public struct SearchTargetSystem : IUpdate {
 
         [BURST(CompileSynchronously = true)]
-        public unsafe struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
+        public struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public World world;
-            public SystemLink<FogOfWar.CreateSystem> fogOfWar;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
-                //var unit = aspect.ent.GetParent().GetAspect<UnitAspect>();
-                //var player = unit.readOwner.GetAspect<Players.PlayerAspect>();
                 UnitAspect nearestResult = default;
                 for (uint i = 0u; i < query.results.results.Count; ++i) {
                     var queryEnt = query.results.results[this.world.state, i];
@@ -28,36 +32,49 @@ namespace ME.BECS.Attack {
                     var result = queryEnt.GetAspect<UnitAspect>();
                     nearestResult = result;
                     break;
-                    //if (this.fogOfWar.IsCreated == true && this.fogOfWar.Value.IsVisible(in player, in ent) == false) continue;
-                    /*var distSq = math.lengthsq(tr.GetWorldMatrixPosition() - ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
-                    var rangeSqr = aspect.readAttackRangeSqr;
-                    if (distSq <= rangeSqr || math.sqrt(distSq) <= math.sqrt(rangeSqr) + result.readRadius) {
-                        nearestResult = result;
-                        break;
-                    }*/
                 }
 
                 if (nearestResult.IsAlive() == true && nearestResult.readHealth > 0f) {
-                    
                     aspect.SetTarget(nearestResult.ent);
-
                 } else {
-                    
                     aspect.SetTarget(default);
-                    
                 }
 
             }
 
         }
 
+        [BURST(CompileSynchronously = true)]
+        public struct SearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent> {
+
+            public World world;
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr, ref AttackTargetsCountComponent targetsCountComponent) {
+
+                ref var targets = ref ent.Get<AttackTargetsComponent>();
+                var count = math.min(query.results.results.Count, targetsCountComponent.count);
+                if (targets.targets.IsCreated == false) targets.targets = new ListAuto<Ent>(in ent, count);
+                for (uint i = 0u; i < count; ++i) {
+                    var queryEnt = query.results.results[this.world.state, i];
+                    if (queryEnt.IsAlive() == false) continue;
+                    targets.targets.Add(queryEnt);
+                }
+
+                aspect.SetTargets(in targets.targets);
+                
+            }
+
+        }
+
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().AsParallel().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
+            var searchTarget = context.Query().AsParallel().Without<AttackTargetsCountComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
                 world = context.world,
-                fogOfWar = context.world.GetSystemLink<ME.BECS.FogOfWar.CreateSystem>(),
             });
-            context.SetDependency(dependsOn);
+            var searchTargets = context.Query().AsParallel().Schedule<SearchTargetsJob, AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent>(new SearchTargetsJob() {
+                world = context.world,
+            });
+            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(searchTarget, searchTargets));
 
         }
 

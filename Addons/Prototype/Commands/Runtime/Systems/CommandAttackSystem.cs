@@ -27,7 +27,8 @@ namespace ME.BECS.Commands {
         public struct MoveJob : IJobForAspects<UnitCommandGroupAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
-
+                
+                UnityEngine.Debug.Log("ATTACK: " + ent);
                 var attack = commandGroup.ent.Read<CommandAttack>();
                 if (attack.target.IsAlive() == false) {
                     // Remove group

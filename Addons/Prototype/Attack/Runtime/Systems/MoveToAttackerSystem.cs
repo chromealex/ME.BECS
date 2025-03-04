@@ -68,6 +68,7 @@ namespace ME.BECS.Attack {
                                                .Without<IsUnitStaticComponent>()
                                                .Without<PathFollowComponent>()
                                                .Without<AttackTargetComponent>()
+                                               .Without<AttackTargetsComponent>()
                                                .Without<UnitHoldComponent>()
                                                .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect, DamageTookEvent>(new MoveToAttackerJob() {
                                                    buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),

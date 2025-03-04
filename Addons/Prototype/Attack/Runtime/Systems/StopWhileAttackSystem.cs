@@ -67,18 +67,21 @@ namespace ME.BECS.Attack {
 
             var dependsOn = context.Query()
                                    .AsParallel()
-                                   .With<AttackTargetComponent>()
+                                   .WithAny<AttackTargetComponent, AttackTargetsComponent>()
+                                   .Without<PathFollowComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobSet, AttackAspect, ParentComponent>();
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
-                                   .With<AttackTargetComponent>()
+                                   .WithAny<AttackTargetComponent, AttackTargetsComponent>()
                                    .Without<CanFireWhileMovesTag>()
+                                   .Without<PathFollowComponent>()
                                    .Schedule<JobRotate, AttackAspect, TransformAspect>();
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
-                                   .Without<AttackTargetComponent>()
+                                   .WithAny<AttackTargetComponent, AttackTargetsComponent>()
                                    .Without<CanFireWhileMovesTag>()
+                                   .Without<PathFollowComponent>()
                                    .Schedule<JobRemove, AttackAspect>();
             context.SetDependency(dependsOn);
 
