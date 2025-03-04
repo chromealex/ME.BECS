@@ -27,7 +27,7 @@
             var attackLayerMask = new ME.BECS.Units.LayerMask();
             
             foreach (var alias in layers) {
-                var layerIndex = LayerAliasUtils.GetIndexOf(LayerAliasUtils.GetLayerByAlias(alias).value);
+                var layerIndex = LayerAliasUtils.GetIndexOf(LayerAliasUtils.GetLayerByAlias(alias.Trim()).value);
                 attackLayerMask.mask |= 1u << layerIndex;
             }
 
