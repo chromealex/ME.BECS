@@ -34,6 +34,11 @@ namespace ME.BECS {
         public readonly UnsafeEntityConfig AsUnsafeConfig() {
             return EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);
         }
+        
+        [INLINE(256)]
+        public readonly EntityConfig Get() {
+            return EntityConfigsRegistry.GetEntityConfigBySourceId(this.sourceId);
+        }
 
         public bool Equals(Config other) {
             return this.sourceId == other.sourceId;
