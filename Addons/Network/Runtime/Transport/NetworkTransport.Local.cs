@@ -34,7 +34,6 @@ namespace ME.BECS.Network {
                 this.transport.Value.Status = TransportStatus.Connecting;
                 {
                     // Connect to server
-                    System.Threading.Thread.Sleep(1000);
                 }
                 if (prevStatus == TransportStatus.Unknown) {
                     
