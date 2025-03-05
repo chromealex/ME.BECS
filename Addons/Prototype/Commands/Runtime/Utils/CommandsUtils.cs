@@ -18,7 +18,6 @@ namespace ME.BECS.Commands {
         [INLINE(256)]
         public static UnitCommandGroupAspect SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitAspect unit, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
 
-            UnityEngine.Debug.Log("SET CMD: " + unit.ent);
             // remove from current group
             PathUtils.RemoveUnitFromGroup(in unit);
             // create new group
@@ -86,7 +85,6 @@ namespace ME.BECS.Commands {
         [INLINE(256)]
         public static UnitCommandGroupAspect SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
             
-            UnityEngine.Debug.Log("SET CMD: " + selectionGroupAspect.readUnits[0]);
             var commandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, in jobInfo);
             commandGroup.ent.Set(data);
             return commandGroup;
@@ -104,7 +102,6 @@ namespace ME.BECS.Commands {
         [INLINE(256)]
         public static UnitCommandGroupAspect SetCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionTempGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
             
-            UnityEngine.Debug.Log("SET CMD: " + selectionGroupAspect.readUnits[0]);
             var commandGroup = UnitUtils.CreateCommandGroup(buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, in jobInfo);
             commandGroup.ent.Set(data);
             return commandGroup;

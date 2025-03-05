@@ -9,28 +9,26 @@ namespace ME.BECS {
 
         public unsafe struct ArrayCacheLine<T> where T : unmanaged {
 
-            public const uint CACHE_LINE_SIZE = JobUtils.CacheLineSize;
+            public static readonly uint CACHE_LINE_SIZE = _align(TSize<T>.size, JobUtils.CacheLineSize);
 
             public readonly uint Length => JobUtils.ThreadsCount;
-            internal safe_ptr<T> ptr;
+            internal safe_ptr ptr;
 
             [INLINE(256)]
             public void Initialize() {
-                var size = TSize<T>.size;
-                var length = JobUtils.ThreadsCount;
-                this.ptr = _make(size * CACHE_LINE_SIZE * length);
+                this.ptr = _make(CACHE_LINE_SIZE * this.Length);
             }
 
             [INLINE(256)]
             public ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
-                return ref *(this.ptr + (uint)index * CACHE_LINE_SIZE).ptr;
+                return ref *(T*)(this.ptr + (uint)index * CACHE_LINE_SIZE).ptr;
             }
 
             [INLINE(256)]
             public ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
-                return ref *(this.ptr + index * CACHE_LINE_SIZE).ptr;
+                return ref *(T*)(this.ptr + index * CACHE_LINE_SIZE).ptr;
             }
 
             [INLINE(256)]

@@ -17,12 +17,20 @@ namespace ME.BECS {
                 throw new System.Exception();
             }
             #endif
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             return new safe_ptr((byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset, ((MemBlock*)((byte*)this.zonesList[ptr.zoneId] + ptr.offset - TSize<MemBlock>.size))->size);
+            #else
+            return new safe_ptr((byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset);
+            #endif
         }
 
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemPtr ptr, long offset) {
+            #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
             return new safe_ptr((byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset, ((MemBlock*)((byte*)this.zonesList[ptr.zoneId] + ptr.offset - TSize<MemBlock>.size))->size);
+            #else
+            return new safe_ptr((byte*)this.zonesList[ptr.zoneId] + ptr.offset + offset);
+            #endif
         }
 
         [INLINE(256)]

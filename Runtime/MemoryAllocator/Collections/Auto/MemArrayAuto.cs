@@ -27,11 +27,14 @@ namespace ME.BECS {
         public CachedPtr cachedPtr;
         #endif
 
+        public override int GetHashCode() => this.arrPtr.GetHashCode();
+        public bool Equals(MemArrayAutoData obj) => this.arrPtr.Equals(obj.arrPtr);
+
     }
 
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayAutoProxy<>))]
-    public unsafe struct MemArrayAuto<T> : IMemArray, IUnmanagedList where T : unmanaged {
+    public unsafe struct MemArrayAuto<T> : IMemArray, IUnmanagedList, System.IEquatable<MemArrayAuto<T>> where T : unmanaged {
 
         public static readonly MemArrayAuto<T> Empty = new MemArrayAuto<T>() {
             data = new MemArrayAutoData() {
@@ -442,6 +445,18 @@ namespace ME.BECS {
 
             return this.Length * (uint)sizeof(T);
 
+        }
+
+        public bool Equals(MemArrayAuto<T> other) {
+            return this.data.Equals(other.data);
+        }
+
+        public override bool Equals(object obj) {
+            return obj is MemArrayAuto<T> other && this.Equals(other);
+        }
+
+        public override int GetHashCode() {
+            return this.data.GetHashCode();
         }
 
     }

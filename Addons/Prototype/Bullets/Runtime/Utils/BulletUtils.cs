@@ -41,6 +41,7 @@ namespace ME.BECS.Bullets {
             if (point.index >= points.Count) {
                 point.index = 0u;
             }
+            if (point.index >= points.Count) return default;
             return points[point.index++];
 
         }

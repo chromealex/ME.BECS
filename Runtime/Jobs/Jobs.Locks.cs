@@ -9,17 +9,17 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe struct ReadWriteNativeSpinner : IIsCreated {
 
-        private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
+        private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
         private Unity.Collections.Allocator allocator;
         private safe_ptr value;
         private int readValue;
         private int writeValue;
-
+        
         public bool IsCreated => this.value.ptr != null;
 
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
-            var size = TSize<int>.size * INTS_PER_CACHE_LINE * JobsUtility.MaxJobThreadCount;
+            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCount;
             var arr = _make(size, TAlign<int>.alignInt, allocator);
             _memclear(arr, size);
             return new ReadWriteNativeSpinner() {
@@ -31,8 +31,8 @@ namespace ME.BECS {
         [INLINE(256)]
         private int ReadCount() {
             var cnt = 0;
-            for (uint i = 0u; i < JobsUtility.MaxJobThreadCount; ++i) {
-                cnt += *((safe_ptr<int>)this.value + i * INTS_PER_CACHE_LINE).ptr;
+            for (uint i = 0u; i < JobUtils.ThreadsCount; ++i) {
+                cnt += *(int*)(this.value + i * CACHE_LINE_SIZE).ptr;
             }
             return cnt;
         }
@@ -55,14 +55,14 @@ namespace ME.BECS {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // acquire read op
-            ++*((safe_ptr<int>)this.value + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            ++*(int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
         public void ReadEnd() {
             E.IS_CREATED(this);
             // release read op
-            --*((safe_ptr<int>)this.value + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            --*(int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
@@ -130,7 +130,7 @@ namespace ME.BECS {
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
 
-        private const uint INTS_PER_CACHE_LINE = JobsUtility.CacheLineSize / sizeof(int);
+        private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
         private MemPtr value;
         private int readValue;
         private int writeValue;
@@ -142,7 +142,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static ReadWriteSpinner Create(safe_ptr<State> state) {
-            var size = TSize<int>.size * INTS_PER_CACHE_LINE * JobsUtility.MaxJobThreadCount;
+            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCount;
             var arr = state.ptr->allocator.Alloc(size, out var ptr);
             state.ptr->allocator.MemClear(arr, 0L, size);
             return new ReadWriteSpinner() {
@@ -156,11 +156,12 @@ namespace ME.BECS {
         [INLINE(256)]
         private int ReadCount(safe_ptr<State> state) {
             var cnt = 0;
-            for (uint i = 0u; i < JobsUtility.MaxJobThreadCount; ++i) {
+            var ptr = state.ptr->allocator.GetUnsafePtr(this.value);
+            for (uint i = 0u; i < JobUtils.ThreadsCount; ++i) {
                 #if USE_CACHE_PTR
-                cnt += this.ptr[i * INTS_PER_CACHE_LINE];
+                cnt += this.ptr[i * CACHE_LINE_SIZE];
                 #else
-                cnt += *((safe_ptr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + i * INTS_PER_CACHE_LINE).ptr;
+                cnt += *(int*)(ptr + i * CACHE_LINE_SIZE).ptr;
                 #endif
             }
             return cnt;
@@ -185,9 +186,9 @@ namespace ME.BECS {
             }
             // acquire read op
             #if USE_CACHE_PTR
-            ++this.ptr[INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex];
+            ++this.ptr[CACHE_LINE_SIZE * JobUtils.ThreadIndex];
             #else
-            ++*((safe_ptr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            ++*(int*)(state.ptr->allocator.GetUnsafePtr(this.value) + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
             #endif
         }
 
@@ -196,9 +197,9 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             // release read op
             #if USE_CACHE_PTR
-            --this.ptr[INTS_PER_CACHE_LINE * JobsUtility.ThreadIndex];
+            --this.ptr[CACHE_LINE_SIZE * JobUtils.ThreadIndex];
             #else
-            --*((safe_ptr<int>)state.ptr->allocator.GetUnsafePtr(this.value) + INTS_PER_CACHE_LINE * (uint)JobsUtility.ThreadIndex).ptr;
+            --*(int*)(state.ptr->allocator.GetUnsafePtr(this.value) + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
             #endif
         }
 

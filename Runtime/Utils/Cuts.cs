@@ -262,6 +262,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static uint _align(uint size, uint alignmentPowerOfTwo) {
+            if (alignmentPowerOfTwo == 0u) return size;
+            CheckPositivePowerOfTwo(alignmentPowerOfTwo);
+            return (size + alignmentPowerOfTwo - 1) & ~(alignmentPowerOfTwo - 1);
+        }
+        
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS"), Conditional("UNITY_DOTS_DEBUG")]
+        private static void CheckPositivePowerOfTwo(uint value) {
+            var valid = (value > 0) && ((value & (value - 1)) == 0);
+            if (valid == false) {
+                throw new System.ArgumentException($"Alignment requested: {value} is not a non-zero, positive power of two.");
+            }
+        }
+        
+        [INLINE(256)]
         public static int _sizeOf<T>() where T : struct => UnsafeUtility.SizeOf<T>();
 
         [INLINE(256)]
@@ -419,7 +434,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static safe_ptr<T> _make<T>(in T obj) where T : unmanaged {
+        public static safe_ptr<T> _makeDefault<T>(in T obj) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             *(T*)ptr = obj;
@@ -430,7 +445,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static safe_ptr<T> _make<T>(in T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static safe_ptr<T> _makeDefault<T>(in T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
             
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, TSize<T>.sizeInt, TAlign<T>.alignInt);
             *(T*)ptr = obj;
@@ -453,10 +468,10 @@ namespace ME.BECS {
             return ptr;
         }
         [INLINE(256)]
-        public static safe_ptr<T> _malloc<T>(in T obj) where T : unmanaged => _make(in obj);
+        public static safe_ptr<T> _mallocDefault<T>(in T obj) where T : unmanaged => _makeDefault(in obj);
         [INLINE(256)]
-        public static safe_ptr<T> _calloc<T>(in T obj) where T : unmanaged {
-            var ptr = _make(in obj);
+        public static safe_ptr<T> _callocDefault<T>(in T obj) where T : unmanaged {
+            var ptr = _makeDefault(in obj);
             _memclear(ptr, TSize<T>.size);
             return ptr;
         }

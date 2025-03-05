@@ -48,7 +48,7 @@ namespace ME.BECS.Units {
             [INLINE(256)]
             set => this.ent.SetTag<UnitHoldComponent>(value);
         }
-        
+
         public readonly bool IsDead {
             [INLINE(256)]
             get => this.ent.Has<UnitIsDeadTag>();

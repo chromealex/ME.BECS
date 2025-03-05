@@ -16,7 +16,6 @@ namespace ME.BECS.Commands {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
-                UnityEngine.Debug.Log("MOVE: " + ent);
                 var move = commandGroup.ent.Read<CommandMove>();
                 PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in move.targetPosition, in jobInfo);
                 

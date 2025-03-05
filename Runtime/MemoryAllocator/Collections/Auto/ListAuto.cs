@@ -12,7 +12,7 @@ namespace ME.BECS {
 
     [System.SerializableAttribute]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListAutoProxy<>))]
-    public unsafe struct ListAuto<T> : IMemList, IUnmanagedList where T : unmanaged {
+    public unsafe struct ListAuto<T> : IMemList, IUnmanagedList, System.IEquatable<ListAuto<T>> where T : unmanaged {
 
         public struct Enumerator {
             
@@ -475,6 +475,16 @@ namespace ME.BECS {
             
             return this.arr.GetReservedSizeInBytes();
             
+        }
+
+        public override int GetHashCode() => this.arr.GetHashCode();
+
+        public bool Equals(ListAuto<T> other) {
+            return this.arr.Equals(other.arr) && this.Count == other.Count;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is ListAuto<T> other && this.Equals(other);
         }
 
     }

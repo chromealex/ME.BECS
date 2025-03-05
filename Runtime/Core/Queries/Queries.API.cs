@@ -84,8 +84,8 @@ namespace ME.BECS {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
             var builder = new QueryBuilder {
-                queryData = _make(new QueryData(), allocator),
-                commandBuffer = _make(new CommandBuffer {
+                queryData = _makeDefault(new QueryData(), allocator),
+                commandBuffer = _makeDefault(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
                 }, allocator),
@@ -113,8 +113,8 @@ namespace ME.BECS {
             //dependsOn = Batches.Open(dependsOn, queryContext.state);
 
             var builder = new QueryBuilder {
-                queryData = _make(new QueryData(), Constants.ALLOCATOR_PERSISTENT),
-                commandBuffer = _make(new CommandBuffer {
+                queryData = _makeDefault(new QueryData(), Constants.ALLOCATOR_PERSISTENT),
+                commandBuffer = _makeDefault(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
                 }, Constants.ALLOCATOR_PERSISTENT),

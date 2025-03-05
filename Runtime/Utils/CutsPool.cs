@@ -57,14 +57,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static safe_ptr<T> _make<T>(T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
+        public static safe_ptr<T> _makeDefault<T>(T obj, Unity.Collections.Allocator allocator) where T : unmanaged {
 
-            return Cuts._make(obj, allocator);
+            return Cuts._makeDefault(obj, allocator);
             
         }
 
         [INLINE(256)]
-        public static safe_ptr<T> _make<T>(in T obj) where T : unmanaged => Cuts._make(in obj);
+        public static safe_ptr<T> _makeDefault<T>(in T obj) where T : unmanaged => Cuts._makeDefault(in obj);
         
         [INLINE(256)]
         public static void _memclear(safe_ptr ptr, uint lengthInBytes) {

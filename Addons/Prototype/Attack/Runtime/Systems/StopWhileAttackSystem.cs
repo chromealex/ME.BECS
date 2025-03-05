@@ -29,7 +29,8 @@ namespace ME.BECS.Attack {
 
                 var unit = parent.value;
                 if (sensor.target.IsAlive() == true) {
-                    unit.GetAspect<UnitAspect>().IsHold = true;
+                    var unitAspect = unit.GetAspect<UnitAspect>();
+                    if (unitAspect.IsPathFollow == false) unitAspect.IsHold = true;
                 }
 
             }
@@ -68,20 +69,17 @@ namespace ME.BECS.Attack {
             var dependsOn = context.Query()
                                    .AsParallel()
                                    .WithAny<AttackTargetComponent, AttackTargetsComponent>()
-                                   .Without<PathFollowComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobSet, AttackAspect, ParentComponent>();
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
                                    .WithAny<AttackTargetComponent, AttackTargetsComponent>()
                                    .Without<CanFireWhileMovesTag>()
-                                   .Without<PathFollowComponent>()
                                    .Schedule<JobRotate, AttackAspect, TransformAspect>();
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
                                    .WithAny<AttackTargetComponent, AttackTargetsComponent>()
                                    .Without<CanFireWhileMovesTag>()
-                                   .Without<PathFollowComponent>()
                                    .Schedule<JobRemove, AttackAspect>();
             context.SetDependency(dependsOn);
 

@@ -45,7 +45,7 @@ namespace ME.BECS {
             var state = new State() {
                 allocator = new MemoryAllocator().Initialize(allocatorProperties.sizeInBytesCapacity),
             };
-            return _make(in state);
+            return _makeDefault(in state);
         }
 
         [INLINE(256)]

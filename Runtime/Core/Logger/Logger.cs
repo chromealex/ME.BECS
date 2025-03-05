@@ -59,7 +59,7 @@ namespace ME.BECS {
 
         private static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN_REAL;
 
-        internal static safe_ptr logger = (safe_ptr)_make(new DummyLogger(), ALLOCATOR);
+        internal static safe_ptr logger = (safe_ptr)_makeDefault(new DummyLogger(), ALLOCATOR);
         
         public static void SetLogger<T>(T logger) where T : unmanaged, ILogger {
             Logger.logger = _make(TSize<T>.size, TAlign<T>.alignInt, ALLOCATOR);
