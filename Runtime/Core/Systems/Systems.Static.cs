@@ -102,11 +102,11 @@ namespace ME.BECS {
             }
             
             if (registry.IsCreated == false) {
-                registry = new UnsafeHashMap<int, System.IntPtr>(10, Constants.ALLOCATOR_PERSISTENT_ST);
+                registry = new UnsafeHashMap<int, System.IntPtr>(10, Constants.ALLOCATOR_DOMAIN);
             }
 
             if (SystemsStaticPins.dic.Data.IsCreated == false) {
-                SystemsStaticPins.dic.Data = new UnsafeList<System.Runtime.InteropServices.GCHandle>(1, Constants.ALLOCATOR_PERSISTENT_ST);
+                SystemsStaticPins.dic.Data = new UnsafeList<System.Runtime.InteropServices.GCHandle>(1, Constants.ALLOCATOR_DOMAIN);
             }
 
             SystemsStaticPins.dic.Data.Add(pinnedHandle);
@@ -176,7 +176,7 @@ namespace ME.BECS {
         }
 
         public static void RegisterDestroyMethod(OnDestroy callback, int graphId, bool isBurst) {
-            
+
             Register(ref SystemsStaticOnDestroy.dic.Data, callback, graphId, isBurst);
 
         }
