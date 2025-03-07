@@ -6,20 +6,12 @@ using tfloat = System.Single;
 using Unity.Mathematics;
 #endif
 
-using System.Linq;
-using Unity.Collections;
-using UnityEngine.Jobs;
-
 namespace ME.BECS.Views {
     
+    using System.Linq;
+    using Unity.Collections;
     using Unity.Jobs;
-    using UnityEngine.Jobs;
-    using vm = UnsafeViewsModule<EntityView>;
-    using Unity.Jobs.LowLevel.Unsafe;
-    using scg = System.Collections.Generic;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Collections.LowLevel.Unsafe;
-    using static CutsPool;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
     public struct DrawMeshProviderTag : IComponent {}
@@ -321,9 +313,9 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
+        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
-            viewsModuleData.ptr->prefabId = data.sourceId;
+            viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.sourceId);
             foreach (var item in data.items) {
                 if (item.IsValid() == false) continue;
                 if (item.source is EntityView entityView) {
@@ -365,13 +357,14 @@ namespace ME.BECS.Views {
                     prefabId = prefabId,
                     typeInfo = typeInfo,
                     sceneSource = sceneSource,
-                    HasUpdateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewUpdate).Any(),
-                    HasApplyStateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewApplyState).Any(),
-                    HasInitializeModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewInitialize).Any(),
-                    HasDeInitializeModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewDeInitialize).Any(),
-                    HasEnableFromPoolModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewEnableFromPool).Any(),
-                    HasDisableToPoolModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewDisableToPool).Any(),
+                    flags = 0,
                 };
+                info.HasUpdateModules = prefab.viewModules.Any(x => x is IViewUpdate);
+                info.HasApplyStateModules = prefab.viewModules.Any(x => x is IViewApplyState);
+                info.HasInitializeModules = prefab.viewModules.Any(x => x is IViewInitialize);
+                info.HasDeInitializeModules = prefab.viewModules.Any(x => x is IViewDeInitialize);
+                info.HasEnableFromPoolModules = prefab.viewModules.Any(x => x is IViewEnableFromPool);
+                info.HasDisableToPoolModules = prefab.viewModules.Any(x => x is IViewDisableToPool);
                 
                 viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 

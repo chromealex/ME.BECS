@@ -12,6 +12,7 @@ namespace ME.BECS.Views {
 
     }
     
+    [System.Serializable]
     public struct ViewTypeInfo {
 
         public TypeFlags flags;

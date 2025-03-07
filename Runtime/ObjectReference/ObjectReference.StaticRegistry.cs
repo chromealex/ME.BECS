@@ -4,7 +4,7 @@ namespace ME.BECS {
 
         public static ObjectReferenceRegistryData data;
 
-        internal static readonly System.Collections.Generic.List<ObjectReferenceRegistryData.Item> additionalRuntimeObjects = new System.Collections.Generic.List<ObjectReferenceRegistryData.Item>();
+        internal static readonly System.Collections.Generic.List<ItemInfo> additionalRuntimeObjects = new System.Collections.Generic.List<ItemInfo>();
         private static uint nextRuntimeId;
         
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
@@ -53,19 +53,19 @@ namespace ME.BECS {
         public static uint AddRuntimeObject(UnityEngine.Object obj) {
 
             var nextId = ObjectReferenceRegistry.data.sourceId;
-            ObjectReferenceRegistryData.Item item;
+            ItemInfo item;
             for (var index = 0; index < additionalRuntimeObjects.Count; ++index) {
                 var elem = additionalRuntimeObjects[index];
                 if (elem.source == obj) {
                     item = elem;
-                    ++item.references;
+                    ++item.referencesCount;
                     additionalRuntimeObjects[index] = item;
                     return item.sourceId;
                 }
             }
 
-            item = new ObjectReferenceRegistryData.Item() {
-                references = 1u,
+            item = new ItemInfo() {
+                referencesCount = 1u,
                 source = obj,
                 sourceId = nextId + (++nextRuntimeId),
             };
@@ -83,10 +83,25 @@ namespace ME.BECS {
 
             if (ObjectReferenceRegistry.data == null) return null;
             
-            var obj = ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId) as T;
+            var obj = ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId).Load<T>();
             if (obj == null) {
                 foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
                     if (item.sourceId == sourceId) return item.source as T;
+                }
+            }
+
+            return obj;
+
+        }
+
+        public static ObjectItem GetObjectBySourceId(uint sourceId) {
+
+            if (ObjectReferenceRegistry.data == null) return default;
+            
+            var obj = ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId);
+            if (obj.IsValid() == false) {
+                foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
+                    if (item.sourceId == sourceId) return new ObjectItem(item);
                 }
             }
 

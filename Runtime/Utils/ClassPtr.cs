@@ -12,7 +12,12 @@ namespace ME.BECS {
 
         public bool IsValid => this.ptr.ToPointer() != null;
 
-        public T Value => (T)this.gcHandle.Target;
+        public T Value {
+            get {
+                if (this.gcHandle.IsAllocated == false) return null;
+                return (T)this.gcHandle.Target;
+            }
+        }
 
         [INLINE(256)]
         public ClassPtr(T data) {

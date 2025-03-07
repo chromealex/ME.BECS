@@ -30,6 +30,7 @@ namespace ME.BECS.FogOfWar {
             var fowSystem = ent.World.parent.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
             var heightResolution = fowSystem.resolution;
+            this.material = new Material(this.material);
             this.material.SetTexture(fogTex, system.GetTexture());
             this.material.SetFloat(resolution, (float)heightResolution);
 

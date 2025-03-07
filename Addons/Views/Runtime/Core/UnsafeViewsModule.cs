@@ -100,14 +100,16 @@ namespace ME.BECS.Views {
 
     }
     
-    public unsafe struct SourceRegistry {
+    public struct SourceRegistry {
 
+        [System.Serializable]
         public struct Info {
 
             public System.IntPtr prefabPtr;
             public uint prefabId;
             public ViewTypeInfo typeInfo;
             public bool sceneSource;
+            public bool isLoaded;
             
             public TypeFlags flags;
 
@@ -229,7 +231,7 @@ namespace ME.BECS.Views {
 
     }
 
-    public unsafe struct SceneInstanceInfo {
+    public struct SceneInstanceInfo {
 
         public System.IntPtr obj;
         public readonly safe_ptr<SourceRegistry.Info> prefabInfo;
@@ -469,7 +471,7 @@ namespace ME.BECS.Views {
             module.data.ptr->connectedWorld = connectedWorld;
             module.data.ptr->viewsWorld = viewsWorld;
             WorldStaticCallbacks.RaiseCallback(ref *module.data.ptr);
-            module.provider.Load(module.data, BECS.ObjectReferenceRegistry.data);
+            module.provider.Load(module.data, ObjectReferenceRegistry.data);
             Context.Switch(in prevContext);
             return module;
 

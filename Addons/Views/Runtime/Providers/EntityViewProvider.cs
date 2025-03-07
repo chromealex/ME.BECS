@@ -1,16 +1,19 @@
-using System.Linq;
-using UnityEngine.Jobs;
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
 
 namespace ME.BECS.Views {
     
+    using System.Linq;
     using Unity.Jobs;
     using UnityEngine.Jobs;
-    using vm = UnsafeViewsModule<EntityView>;
     using Unity.Jobs.LowLevel.Unsafe;
     using scg = System.Collections.Generic;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Collections.LowLevel.Unsafe;
-    using static Cuts;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using System.Runtime.InteropServices;
 
@@ -253,13 +256,27 @@ namespace ME.BECS.Views {
 
                 } else {
 
+                    isNew = true;
+                    
                     var root = this.AssignToRoot(in ent);
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
-                    var prefab = (EntityView)handle.Target;
-                    var instance = EntityView.Instantiate(prefab, root.tr);
-                    instance.rootInfo = root;
-                    isNew = true;
-                    objInstance = instance;
+                    if (prefabInfo.ptr->isLoaded == false) {
+                        // Object is addressable
+                        var assetRef = (UnityEngine.AddressableAssets.AssetReference)handle.Target;
+                        var op = assetRef.InstantiateAsync(root.tr);
+                        // For now, we need to wait for the task completion
+                        // Maybe later we can refactor this part to store async ops in some container
+                        op.WaitForCompletion();
+                        var go = op.Result;
+                        var instance = go.GetComponent<EntityView>();
+                        instance.rootInfo = root;
+                        objInstance = instance;
+                    } else {
+                        var prefab = (EntityView)handle.Target;
+                        var instance = EntityView.Instantiate(prefab, root.tr);
+                        instance.rootInfo = root;
+                        objInstance = instance;
+                    }
                     objPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(new HeapReference<EntityView>(objInstance).handle);
 
                 }
@@ -277,13 +294,13 @@ namespace ME.BECS.Views {
 
             }
 
-            objInstance.groupChangedTracker.Initialize();
-
             SceneInstanceInfo info;
             {
                 this.renderingOnSceneTransforms.Add(objInstance.transform);
                 info = new SceneInstanceInfo(objPtr, prefabInfo, customViewId);
             }
+
+            objInstance.groupChangedTracker.Initialize();
 
             {
                 objInstance.ent = ent;
@@ -413,20 +430,21 @@ namespace ME.BECS.Views {
             
         }
         
-        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data) {
+        public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
-            viewsModuleData.ptr->prefabId = data.sourceId;
+            viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.sourceId);
             foreach (var item in data.items) {
                 if (item.IsValid() == false) continue;
-                if (item.source is EntityView entityView) {
-                    this.Register(viewsModuleData, entityView, item.sourceId);
+                var objectItem = new ObjectItem(item);
+                if (objectItem.IsValid() == true && objectItem.Is<EntityView>() == true) {
+                    this.Register(viewsModuleData, objectItem, item.sourceId);
                 }
             }
 
         }
 
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false) {
-
+            
             ViewSource viewSource;
             if (prefab == null) {
                 throw new System.Exception("Prefab is null");
@@ -449,17 +467,19 @@ namespace ME.BECS.Views {
                 ViewsTypeInfo.types.TryGetValue(prefab.GetType(), out var typeInfo);
                 typeInfo.cullingType = prefab.cullingType;
                 var info = new SourceRegistry.Info() {
-                    prefabPtr = System.Runtime.InteropServices.GCHandle.ToIntPtr(new HeapReference<EntityView>(prefab).handle),
+                    prefabPtr = GCHandle.ToIntPtr(new HeapReference<EntityView>(prefab).handle),
                     prefabId = prefabId,
                     typeInfo = typeInfo,
                     sceneSource = sceneSource,
-                    HasUpdateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewUpdate).Any(),
-                    HasApplyStateModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewApplyState).Any(),
-                    HasInitializeModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewInitialize).Any(),
-                    HasDeInitializeModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewDeInitialize).Any(),
-                    HasEnableFromPoolModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewEnableFromPool).Any(),
-                    HasDisableToPoolModules = prefab.viewModules.Where(x => x != null).Select(x => x as IViewDisableToPool).Any(),
+                    isLoaded = true,
+                    flags = 0,
                 };
+                info.HasUpdateModules = prefab.viewModules.Any(x => x is IViewUpdate);
+                info.HasApplyStateModules = prefab.viewModules.Any(x => x is IViewApplyState);
+                info.HasInitializeModules = prefab.viewModules.Any(x => x is IViewInitialize);
+                info.HasDeInitializeModules = prefab.viewModules.Any(x => x is IViewDeInitialize);
+                info.HasEnableFromPoolModules = prefab.viewModules.Any(x => x is IViewEnableFromPool);
+                info.HasDisableToPoolModules = prefab.viewModules.Any(x => x is IViewDisableToPool);
                 
                 viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 
@@ -473,6 +493,50 @@ namespace ME.BECS.Views {
             }
 
             return viewSource;
+
+        }
+
+        public void Register(safe_ptr<ViewsModuleData> viewsModuleData, ObjectItem prefab, uint prefabId) {
+
+            // Register on-demand
+            if (prefab.IsValid() == false) {
+                throw new System.Exception("Prefab is null");
+            }
+
+            var instanceId = prefab.GetInstanceID();
+
+            var id = (uint)instanceId;
+            if (prefabId > 0u || viewsModuleData.ptr->instanceIdToPrefabId.TryGetValue(in viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, out prefabId) == false) {
+
+                var data = (ViewObjectItemData)prefab.data;
+                
+                prefabId = prefabId > 0u ? prefabId : ++viewsModuleData.ptr->prefabId;
+                viewsModuleData.ptr->instanceIdToPrefabId.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, prefabId);
+                ViewsTypeInfo.types.TryGetValue(prefab.sourceType, out var typeInfo);
+                typeInfo.cullingType = data.info.typeInfo.cullingType;
+                
+                GCHandle handle;
+                bool isLoaded;
+                if (prefab.source != null) {
+                    handle = new HeapReference<EntityView>((EntityView)prefab.source).handle;
+                    isLoaded = true;
+                } else {
+                    handle = new HeapReference<UnityEngine.AddressableAssets.AssetReference>(prefab.sourceReference).handle;
+                    isLoaded = false;
+                }
+
+                var info = new SourceRegistry.Info() {
+                    prefabPtr = GCHandle.ToIntPtr(handle),
+                    prefabId = prefabId,
+                    typeInfo = typeInfo,
+                    sceneSource = false,
+                    isLoaded = isLoaded,
+                    flags = data.info.flags,
+                };
+                
+                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
+
+            }
 
         }
 
