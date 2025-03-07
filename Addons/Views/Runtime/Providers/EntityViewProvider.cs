@@ -434,7 +434,6 @@ namespace ME.BECS.Views {
 
             viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.sourceId);
             foreach (var item in data.items) {
-                if (item.IsValid() == false) continue;
                 var objectItem = new ObjectItem(item);
                 if (objectItem.IsValid() == true && objectItem.Is<EntityView>() == true) {
                     this.Register(viewsModuleData, objectItem, item.sourceId);

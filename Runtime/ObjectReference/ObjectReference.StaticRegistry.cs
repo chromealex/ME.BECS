@@ -7,6 +7,20 @@ namespace ME.BECS {
         internal static readonly System.Collections.Generic.List<ItemInfo> additionalRuntimeObjects = new System.Collections.Generic.List<ItemInfo>();
         private static uint nextRuntimeId;
         
+        #if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethodAttribute]
+        private static void RegisterForPlaymodeChange() {
+            UnityEditor.EditorApplication.playModeStateChanged -= EditorApplicationOnplayModeStateChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += EditorApplicationOnplayModeStateChanged;
+        }
+
+        private static void EditorApplicationOnplayModeStateChanged(UnityEditor.PlayModeStateChange state) {
+            if (UnityEditor.EditorSettings.enterPlayModeOptionsEnabled == true) {
+                data = null;
+            }
+        }
+        #endif
+        
         [UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]
         public static void Initialize() {
             
@@ -48,6 +62,12 @@ namespace ME.BECS {
 
             ObjectReferenceRegistry.data = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
 
+        }
+
+        public static void CleanUpLoadedAssets() {
+            
+            ObjectReferenceRegistry.data.CleanUpLoadedAssets();
+            
         }
 
         public static uint AddRuntimeObject(UnityEngine.Object obj) {

@@ -30,7 +30,7 @@ namespace ME.BECS {
                 if (this.source is T obj) return obj;
                 return null;
             }
-            if (this.sourceReference == null || this.sourceReference.IsValid() == false) return null;
+            if (this.sourceReference == null || string.IsNullOrEmpty(this.sourceReference.AssetGUID) == true) return null;
             var op = this.sourceReference.LoadAssetAsync<T>();
             op.WaitForCompletion();
             return op.Result;
@@ -57,7 +57,7 @@ namespace ME.BECS {
     }
     
     [System.Serializable]
-    public struct ItemInfo {
+    public struct ItemInfo : System.IEquatable<ItemInfo> {
 
         public UnityEngine.Object source;
         public UnityEngine.AddressableAssets.AssetReference sourceReference;
@@ -68,45 +68,21 @@ namespace ME.BECS {
         [UnityEngine.SerializeReference]
         public IObjectItemData customData;
 
-        public bool IsValid() {
-            return this.source != null;
+        public void CleanUpLoadedAssets() {
+            if (this.sourceReference.IsValid() == true) this.sourceReference.ReleaseAsset();
         }
 
-        public void OnValidate() {
-            this.sourceType = this.source.GetType().AssemblyQualifiedName;
-            #if UNITY_EDITOR
-            if (this.sourceReference.IsValid() == false && this.source != null) {
-                this.sourceReference = new UnityEngine.AddressableAssets.AssetReference(UnityEditor.AssetDatabase.AssetPathToGUID(UnityEditor.AssetDatabase.GetAssetPath(this.source)));
-                if (this.sourceReference.IsValid() == true) {
-                    this.source = null;
-                }
-            }
-
-            var src = this.source ?? this.sourceReference.editorAsset;
-            if (src != null) {
-                if (this.customData == null) this.customData = CreateCustomData(src);
-                if (this.customData != null && this.customData.IsValid(src) == true) {
-                    this.customData.Validate(src);
-                }
-            }
-            #endif
+        public bool Equals(ItemInfo other) {
+            return Equals(this.source, other.source) && Equals(this.sourceReference, other.sourceReference) && this.sourceType == other.sourceType && this.sourceId == other.sourceId && this.referencesCount == other.referencesCount && Equals(this.customData, other.customData);
         }
 
-        #if UNITY_EDITOR
-        private static IObjectItemData CreateCustomData(UnityEngine.Object src) {
-
-            var types = UnityEditor.TypeCache.GetTypesDerivedFrom<IObjectItemData>();
-            foreach (var type in types) {
-                var obj = (IObjectItemData)System.Activator.CreateInstance(type);
-                if (obj.IsValid(src) == true) {
-                    return obj;
-                }
-            }
-            
-            return null;
-
+        public override bool Equals(object obj) {
+            return obj is ItemInfo other && this.Equals(other);
         }
-        #endif
+
+        public override int GetHashCode() {
+            return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.referencesCount, this.customData);
+        }
 
     }
 
@@ -115,20 +91,12 @@ namespace ME.BECS {
         public uint sourceId;
         public ItemInfo[] items = System.Array.Empty<ItemInfo>();
 
-        [UnityEngine.ContextMenu("Call OnValidate")]
-        public void OnValidate() {
-            this.CleanUp();
-            for (int i = 0; i < this.items.Length; ++i) {
-                this.items[i].OnValidate();
+        public void CleanUpLoadedAssets() {
+            foreach (var item in this.items) {
+                item.CleanUpLoadedAssets();
             }
         }
-
-        private void CleanUp() {
-
-            this.items = this.items.Where(x => x.source != null || x.sourceReference.IsValid() == true).ToArray();
-
-        }
-
+        
         public ObjectItem GetObjectBySourceId(uint sourceId) {
 
             for (int i = 0; i < this.items.Length; ++i) {

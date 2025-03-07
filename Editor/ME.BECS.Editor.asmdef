@@ -7,7 +7,9 @@
         "Unity.Collections",
         "Unity.Mathematics",
         "ME.BECS.Units",
-        "ME.BECS.Units.Editor"
+        "ME.BECS.Units.Editor",
+        "Unity.Addressables",
+        "Unity.Addressables.Editor"
     ],
     "includePlatforms": [
         "Editor"
