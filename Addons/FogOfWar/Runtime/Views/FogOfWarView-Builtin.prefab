@@ -90,6 +90,9 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -176,6 +179,7 @@ MonoBehaviour:
       gen: 1
       worldId: 2
   material: {fileID: 2100000, guid: 9b834e37845354977b912ee299cb0ee4, type: 2}
+  meshRenderer: {fileID: 1839807796919590216}
   transformScale: {fileID: 5129980867757254938}
   references:
     version: 2

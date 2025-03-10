@@ -262,13 +262,20 @@ namespace ME.BECS.Views {
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                     if (prefabInfo.ptr->isLoaded == false) {
                         // Object is addressable
+                        EntityView instance;
                         var assetRef = (UnityEngine.AddressableAssets.AssetReference)handle.Target;
-                        var op = assetRef.InstantiateAsync(root.tr);
-                        // For now, we need to wait for the task completion
-                        // Maybe later we can refactor this part to store async ops in some container
-                        op.WaitForCompletion();
-                        var go = op.Result;
-                        var instance = go.GetComponent<EntityView>();
+                        if (assetRef.OperationHandle.IsValid() == true) {
+                            var go = (UnityEngine.GameObject)assetRef.OperationHandle.Result;
+                            instance = EntityView.Instantiate(go.GetComponent<EntityView>(), root.tr);
+                        } else {
+                            var op = assetRef.InstantiateAsync(root.tr);
+                            // For now, we need to wait for the task completion
+                            // Maybe later we can refactor this part to store async ops in some container
+                            op.WaitForCompletion();
+                            var go = op.Result;
+                            instance = go.GetComponent<EntityView>();
+                        }
+
                         instance.rootInfo = root;
                         objInstance = instance;
                     } else {

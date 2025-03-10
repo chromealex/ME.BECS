@@ -8,6 +8,7 @@ namespace ME.BECS {
         public UnityEngine.AddressableAssets.AssetReference sourceReference;
         public System.Type sourceType;
         public uint sourceId;
+        public bool isGameObject;
         public IObjectItemData data;
         
         public ObjectItem(ItemInfo data) {
@@ -16,10 +17,11 @@ namespace ME.BECS {
             this.sourceId = data.sourceId;
             this.sourceType = System.Type.GetType(data.sourceType);
             this.data = data.customData;
+            this.isGameObject = data.isGameObject;
         }
 
         public bool IsValid() {
-            if (this.source == null && this.sourceReference.IsValid() == false) {
+            if (this.source == null && this.sourceType == null) {
                 return false;
             }
             return true;
@@ -31,9 +33,29 @@ namespace ME.BECS {
                 return null;
             }
             if (this.sourceReference == null || string.IsNullOrEmpty(this.sourceReference.AssetGUID) == true) return null;
-            var op = this.sourceReference.LoadAssetAsync<T>();
-            op.WaitForCompletion();
-            return op.Result;
+            if (this.isGameObject == true) {
+                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.Object> op;
+                if (this.sourceReference.OperationHandle.IsValid() == true) {
+                    op = this.sourceReference.OperationHandle.Convert<UnityEngine.Object>();
+                } else {
+                    op = this.sourceReference.LoadAssetAsync<UnityEngine.Object>();
+                    op.WaitForCompletion();
+                }
+
+                if (op.Result is UnityEngine.GameObject go) {
+                    return go.GetComponent<T>();
+                }
+                return op.Result as T;
+            } else {
+                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<T> op;
+                if (this.sourceReference.OperationHandle.IsValid() == true) {
+                    op = this.sourceReference.OperationHandle.Convert<T>();
+                } else {
+                    op = this.sourceReference.LoadAssetAsync<T>();
+                    op.WaitForCompletion();
+                }
+                return op.Result;
+            }
         }
 
         public int GetInstanceID() {
@@ -61,6 +83,7 @@ namespace ME.BECS {
 
         public UnityEngine.Object source;
         public UnityEngine.AddressableAssets.AssetReference sourceReference;
+        public bool isGameObject;
         public string sourceType;
         public uint sourceId;
         public uint referencesCount;

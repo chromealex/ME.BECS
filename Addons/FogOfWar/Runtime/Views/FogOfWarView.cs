@@ -21,6 +21,7 @@ namespace ME.BECS.FogOfWar {
         private static readonly int @params = Shader.PropertyToID("_Params");
 
         public Material material;
+        public MeshRenderer meshRenderer;
         public Transform transformScale;
         private float2 worldSize;
         private Vector3 offset;
@@ -33,6 +34,9 @@ namespace ME.BECS.FogOfWar {
             this.material = new Material(this.material);
             this.material.SetTexture(fogTex, system.GetTexture());
             this.material.SetFloat(resolution, (float)heightResolution);
+            if (this.meshRenderer != null) {
+                this.meshRenderer.sharedMaterial = this.material;
+            }
 
             this.worldSize = fowSystem.mapSize;
 
