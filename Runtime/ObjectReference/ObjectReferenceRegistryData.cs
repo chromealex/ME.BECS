@@ -96,7 +96,7 @@ namespace ME.BECS {
         }
 
         public bool Equals(ItemInfo other) {
-            return Equals(this.source, other.source) && Equals(this.sourceReference, other.sourceReference) && this.sourceType == other.sourceType && this.sourceId == other.sourceId && this.referencesCount == other.referencesCount && Equals(this.customData, other.customData);
+            return this.source == other.source && Equals(this.sourceReference, other.sourceReference) && this.sourceType == other.sourceType && this.sourceId == other.sourceId && this.referencesCount == other.referencesCount && Equals(this.customData, other.customData);
         }
 
         public override bool Equals(object obj) {
@@ -109,7 +109,11 @@ namespace ME.BECS {
 
         public bool Is<T>() {
             if (this.source is T) return true;
-            if (typeof(T).IsAssignableFrom(System.Type.GetType(this.sourceType)) == true) return true;
+            if (string.IsNullOrEmpty(this.sourceType) == true) {
+                UnityEngine.Debug.LogError($"SourceType is empty for source {this.source} ({this.sourceReference}) isGameObject: {this.isGameObject} sourceId: {this.sourceId}");
+            } else {
+                if (typeof(T).IsAssignableFrom(System.Type.GetType(this.sourceType)) == true) return true;
+            }
             return false;
         }
         

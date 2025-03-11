@@ -598,15 +598,17 @@ namespace ME.BECS {
                     var comp = sourceConfig.staticData.components[i];
                     StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
                     this.typeIds[i] = typeId;
+                    var groupId = StaticTypes.groups.Get(typeId);
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
+                    Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
+                    var newPtr = Components.GetUnknownType(this.staticDataEnt.World.state, typeId, groupId, in this.staticDataEnt, out _, default);
                     {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         var del = (MethodCallerDelegate)System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
-                        del.Invoke(in config, (void*)ptr, in this.staticDataEnt);
+                        del.Invoke(in config, (void*)newPtr, in this.staticDataEnt);
                     }
-                    Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
                     gcHandle.Free();
                 }
 
