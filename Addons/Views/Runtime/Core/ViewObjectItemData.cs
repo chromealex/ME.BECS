@@ -7,10 +7,16 @@ namespace ME.BECS.Views {
 
         public SourceRegistry.Info info;
 
-        public bool IsValid(UnityEngine.Object obj) => obj is EntityView;
+        public bool IsValid(UnityEngine.Object obj) {
+            if (obj is UnityEngine.GameObject go && go.GetComponent<EntityView>() != null) return true;
+            return obj is EntityView;
+        }
 
         public void Validate(UnityEngine.Object obj) {
 
+            if (obj is UnityEngine.GameObject go) {
+                obj = go.GetComponent<EntityView>();
+            }
             var prefab = (EntityView)obj;
             var typeInfo = new ViewTypeInfo {
                 cullingType = prefab.cullingType,
