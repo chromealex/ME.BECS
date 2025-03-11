@@ -40,22 +40,26 @@ namespace ME.BECS.Editor {
                     if (IsAssetAddressable(asset) == false) {
                         item.source = asset;
                         item.sourceReference = new UnityEngine.AddressableAssets.AssetReference();
-                        var src = item.source != null ? item.source : item.sourceReference?.editorAsset;
-                        if (src != null) {
-                            if (string.IsNullOrEmpty(item.sourceType) == true) item.sourceType = src.GetType().AssemblyQualifiedName;
-                            if (item.customData == null) item.customData = CreateCustomData(src);
-                            if (item.customData != null && item.customData.IsValid(src) == true) {
-                                item.customData.Validate(src);
-                            }
-                        } else {
-                            item.customData = null;
-                            item.sourceType = default;
-                        }
                     } else if (item.source != null || item.sourceReference.editorAsset is UnityEngine.Component) {
                         var src = item.source != null ? item.source : item.sourceReference?.editorAsset;
                         if (src != null && string.IsNullOrEmpty(item.sourceType) == true) item.sourceType = src.GetType().AssemblyQualifiedName;
                         item.sourceReference = new UnityEngine.AddressableAssets.AssetReference(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(item.source)));//CreateAssetForType(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(item.source)), type);
                         item.source = null;
+                    }
+
+                    {
+                        var src = item.source != null ? item.source : item.sourceReference?.editorAsset;
+                        if (src != null) {
+                            if (string.IsNullOrEmpty(item.sourceType) == true) item.sourceType = src.GetType().AssemblyQualifiedName;
+                        } else {
+                            item.customData = null;
+                            item.sourceType = default;
+                        }
+
+                        if (item.customData == null) item.customData = CreateCustomData(src);
+                        if (item.customData != null && item.customData.IsValid(src) == true) {
+                            item.customData.Validate(src);
+                        }
                     }
                     item.isGameObject = asset is UnityEngine.Component || asset is UnityEngine.GameObject;
                 }

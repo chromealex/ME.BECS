@@ -107,6 +107,19 @@ namespace ME.BECS {
             return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.referencesCount, this.customData);
         }
 
+        public bool Is(UnityEngine.Object obj) {
+            if (this.source == obj) return true;
+            #if UNITY_EDITOR
+            if (this.sourceReference != null) {
+                if (obj is UnityEngine.Component comp) {
+                    if (this.sourceReference.editorAsset == comp.gameObject) return true;
+                }
+                if (this.sourceReference.editorAsset == obj) return true;
+            }
+            #endif
+            return false;
+        }
+
     }
 
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
@@ -138,7 +151,7 @@ namespace ME.BECS {
             if (source == null) return 0u;
 
             for (int i = 0; i < this.items.Length; ++i) {
-                if (this.items[i].source == source) {
+                if (this.items[i].Is(source) == true) {
                     ref var item = ref this.items[i];
                     ++item.referencesCount;
                     return item.sourceId;
