@@ -186,8 +186,9 @@ namespace ME.BECS.Editor.CsvImporter {
 
                     { // add project configs
                         foreach (var item in ObjectReferenceRegistry.data.items) {
-                            if (item.source is EntityConfig config) {
-                                configs.Add(new ConfigFile(config));
+                            var obj = new ObjectItem(item);
+                            if (obj.Is<EntityConfig>() == true) {
+                                configs.Add(new ConfigFile(obj.Load<EntityConfig>()));
                             }
                         }
                     }

@@ -107,6 +107,12 @@ namespace ME.BECS {
             return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.referencesCount, this.customData);
         }
 
+        public bool Is<T>() {
+            if (this.source is T) return true;
+            if (typeof(T).IsAssignableFrom(System.Type.GetType(this.sourceType)) == true) return true;
+            return false;
+        }
+        
         public bool Is(UnityEngine.Object obj) {
             if (this.source == obj) return true;
             #if UNITY_EDITOR

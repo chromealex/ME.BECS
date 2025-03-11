@@ -1057,10 +1057,11 @@ namespace ME.BECS.Editor {
         
         public static T GetAssetByPathPart<T>(string pathPart) where T : UnityEngine.Object {
             pathPart = GetFullPathWithoutExtension(pathPart);
-            var items = ObjectReferenceRegistry.data.items.Concat(ObjectReferenceRegistry.additionalRuntimeObjects).Where(x => x.source is T).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(x.source)).ToArray();
+            var items = ObjectReferenceRegistry.data.items.Concat(ObjectReferenceRegistry.additionalRuntimeObjects).Where(x => x.Is<T>()).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(new ObjectItem(x).Load<T>())).ToArray();
             foreach (var item in items) {
-                var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(item.source));
-                if (path.EndsWith(pathPart) == true) return (T)item.source;
+                var obj = new ObjectItem(item).Load<T>();
+                var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(obj));
+                if (path.EndsWith(pathPart) == true) return obj;
             }
 
             var filter = $"t:{typeof(T).Name}";

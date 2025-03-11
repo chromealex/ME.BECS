@@ -76,7 +76,7 @@ namespace ME.BECS {
             ItemInfo item;
             for (var index = 0; index < additionalRuntimeObjects.Count; ++index) {
                 var elem = additionalRuntimeObjects[index];
-                if (elem.source == obj) {
+                if (elem.Is(obj) == true) {
                     item = elem;
                     ++item.referencesCount;
                     additionalRuntimeObjects[index] = item;
@@ -132,11 +132,11 @@ namespace ME.BECS {
         public static uint GetId(UnityEngine.Object obj) {
 
             foreach (var item in ObjectReferenceRegistry.data.items) {
-                if (item.source == obj) return item.sourceId;
+                if (item.Is(obj) == true) return item.sourceId;
             }
 
             foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
-                if (item.source == obj) return item.sourceId;
+                if (item.Is(obj) == true) return item.sourceId;
             }
 
             return 0u;
