@@ -279,8 +279,8 @@ namespace ME.BECS {
                         Logger.Core.Warning("[ME.BECS] ForEach method run with Burst flag on, but delegate must be static. Delegate will be run without burst.");
                     }
 
+                    this.gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(del);
                     var ptr = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del);
-                    this.gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(del, System.Runtime.InteropServices.GCHandleType.Pinned);
                     this.functionPointer = new Unity.Burst.FunctionPointer<QueryDelegate>(ptr);
                     
                 }

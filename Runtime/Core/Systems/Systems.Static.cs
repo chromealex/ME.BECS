@@ -92,7 +92,7 @@ namespace ME.BECS {
         private static void Register<T>(ref UnsafeHashMap<int, System.IntPtr> registry, T callback, int graphId, bool isBurst) where T : class {
 
             System.IntPtr ptr;
-            var pinnedHandle = System.Runtime.InteropServices.GCHandle.Alloc(callback, System.Runtime.InteropServices.GCHandleType.Pinned);
+            var pinnedHandle = System.Runtime.InteropServices.GCHandle.Alloc(callback);
             if (isBurst == true) {
                 var pointer = Unity.Burst.BurstCompiler.CompileFunctionPointer(callback);
                 ptr = pointer.Value;
@@ -108,7 +108,7 @@ namespace ME.BECS {
             if (SystemsStaticPins.dic.Data.IsCreated == false) {
                 SystemsStaticPins.dic.Data = new UnsafeList<System.Runtime.InteropServices.GCHandle>(1, Constants.ALLOCATOR_DOMAIN);
             }
-
+            
             SystemsStaticPins.dic.Data.Add(pinnedHandle);
             registry.Add(graphId, ptr);
 
