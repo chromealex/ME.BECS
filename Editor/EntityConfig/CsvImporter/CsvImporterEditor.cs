@@ -396,7 +396,7 @@ namespace ME.BECS.Editor.CsvImporter {
 
         public static void Link(scg::List<ConfigFile> configFiles) {
 
-            ValidateConfigs(configFiles);
+            //ValidateConfigs(configFiles);
             
             var temp = TempComponent.CreateInstance<TempComponent>();
             foreach (var config in configFiles) {
@@ -485,17 +485,61 @@ namespace ME.BECS.Editor.CsvImporter {
 
             foreach (var config in configFiles) {
                 if (config.imported == false) continue;
-                config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                 if (config.baseConfig >= 0) config.instance.baseConfig = configFiles[config.baseConfig].instance;
-                config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
-                config.instance.sharedData = new ComponentsStorage<IConfigComponentShared>();
-                config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();
-                config.instance.staticData.components = config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray();
-                config.instance.OnValidate();
-                EditorUtility.SetDirty(config.instance);
+                var res = false;
+                res |= Apply(ref config.instance.aspects.components, config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray());
+                res |= Apply(ref config.instance.data.components, config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray());
+                res |= Apply(ref config.instance.sharedData.components, config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray());
+                res |= Apply(ref config.instance.staticData.components, config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray());
+                //config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
+                //config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
+                //config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();
+                //config.instance.staticData.components = config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray();
+                if (res == true) {
+                    config.instance.OnValidate();
+                    EditorUtility.SetDirty(config.instance);
+                }
             }
 
         }
+
+        private static bool Apply<T>(ref T[] source, T[] arr) {
+
+            if (source == null) {
+                source = arr;
+                return true;
+            }
+
+            if (source.Length != arr.Length) {
+                source = arr;
+                return true;
+            }
+
+            for (int i = 0; i < source.Length; ++i) {
+                var src = source[i];
+                var target = arr[i];
+                if (src.GetType() != target.GetType() || CompareStructs(target, src) == false) {
+                    source = arr;
+                    return true;
+                }
+            }
+            
+            return false;
+
+        }
+
+        private static bool CompareStructs(object t1, object t2) {
+            var m = typeof(EntityConfigCsvImporterEditor).GetMethod(nameof(CompareStructsGen), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            return (bool)m.MakeGenericMethod(t1.GetType(), t2.GetType()).Invoke(null, new object[] { t1, t2 });
+        }
+
+        private static unsafe bool CompareStructsGen<T0, T1>(T0 t1, T1 t2) where T0 : unmanaged where T1 : unmanaged {
+            T0* p1 = &t1;
+            T1* p2 = &t2;
+            var size = sizeof(T0);
+            return Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCmp(p1, p2, size) == 0;
+        }
+
 
         public class TempComponent : ScriptableObject {
 

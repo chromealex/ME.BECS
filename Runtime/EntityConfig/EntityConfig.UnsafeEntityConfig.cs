@@ -607,7 +607,7 @@ namespace ME.BECS {
                         var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         var del = (MethodCallerDelegate)System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
-                        del.Invoke(in config, (void*)newPtr, in this.staticDataEnt);
+                        del.Invoke(in config, newPtr, in this.staticDataEnt);
                     }
                     gcHandle.Free();
                 }
