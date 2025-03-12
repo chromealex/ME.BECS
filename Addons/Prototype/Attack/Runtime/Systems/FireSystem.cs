@@ -69,6 +69,7 @@ namespace ME.BECS.Attack {
                         }
 
                         foreach (var unit in aspect.targets) {
+                            if (unit.IsAlive() == false) continue;
                             BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.readQuery.treeMask, unit, default, aspect.readComponent.bulletConfig,
                                                      aspect.readComponent.muzzleView, jobInfo: in jobInfo);
                         }

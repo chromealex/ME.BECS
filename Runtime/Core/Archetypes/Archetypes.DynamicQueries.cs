@@ -8,7 +8,119 @@ namespace ME.BECS {
 
     [BURST(CompileSynchronously = true)]
     public static unsafe class ArchetypeQueries {
+
+        public struct QueryCompose {
+
+            internal UnsafeList<uint> with;
+            internal UnsafeList<System.Collections.Generic.KeyValuePair<uint, uint>> withAny;
+            internal UnsafeList<uint> without;
+            
+            [INLINE(256)]
+            public QueryCompose Initialize() {
+                this.with = new UnsafeList<uint>(1, Constants.ALLOCATOR_TEMPJOB);
+                this.withAny = new UnsafeList<System.Collections.Generic.KeyValuePair<uint, uint>>(1, Constants.ALLOCATOR_TEMPJOB);
+                this.without = new UnsafeList<uint>(1, Constants.ALLOCATOR_TEMPJOB);
+                return this;
+            }
+
+            [INLINE(256)]
+            public void Dispose() {
+                this.with.Dispose();
+                this.withAny.Dispose();
+                this.without.Dispose();
+            }
+            
+            [INLINE(256)]
+            public void With<T>() where T : unmanaged, IComponentBase {
+                this.with.Add(StaticTypes<T>.typeId);
+            }
+
+            [INLINE(256)]
+            public void WithAny<T0, T1>() where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase {
+                this.withAny.Add(new System.Collections.Generic.KeyValuePair<uint, uint>(StaticTypes<T0>.typeId, StaticTypes<T1>.typeId));
+            }
+
+            [INLINE(256)]
+            public void Without<T>() where T : unmanaged, IComponentBase {
+                this.without.Add(StaticTypes<T>.typeId);
+            }
+
+            [INLINE(256)]
+            public void WithAspect<T>() where T : unmanaged, IAspect {
+                var arr = AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId);
+                this.with.AddRange(arr.ptr.ptr, (int)arr.Length);
+            }
+
+            [INLINE(256)]
+            public JobHandle Build(ref QueryBuilder builder, JobHandle dependsOn) {
+                var job = new ComposeJob() {
+                    query = this,
+                    queryData = builder.queryData,
+                    state = builder.commandBuffer.ptr->state,
+                };
+                return job.ScheduleByRef(dependsOn);
+            }
+
+        }
         
+        [BURST(CompileSynchronously = true)]
+        private struct ComposeJob : IJob {
+
+            public QueryCompose query;
+            [NativeDisableUnsafePtrRestriction]
+            public safe_ptr<State> state;
+            [NativeDisableUnsafePtrRestriction]
+            public safe_ptr<QueryData> queryData;
+            
+            [INLINE(256)]
+            public void Execute() {
+
+                if (this.query.with.Length > 0) {
+                    new WithArrJob() {
+                        queryData = this.queryData,
+                        state = this.state,
+                        typeIdArr = new ME.BECS.Internal.Array<uint>() {
+                            ptr = new safe_ptr<uint>(this.query.with.Ptr),
+                            Length = (uint)this.query.with.Length,
+                        },
+                    }.Execute();
+                }
+
+                if (this.query.without.Length > 0) {
+                    new WithoutArrJob() {
+                        queryData = this.queryData,
+                        state = this.state,
+                        typeIdArr = new ME.BECS.Internal.Array<uint>() {
+                            ptr = new safe_ptr<uint>(this.query.without.Ptr),
+                            Length = (uint)this.query.without.Length,
+                        },
+                    }.Execute();
+                }
+
+                if (this.query.withAny.Length > 0) {
+                    var temp = new TempBitArray(this.state.ptr->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
+                    for (int i = 0; i < this.query.withAny.Length; ++i) {
+                        var typeIdPair = this.query.withAny[i];
+                        if (typeIdPair.Key > 0u && typeIdPair.Key < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                            var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeIdPair.Key];
+                            if (list.isCreated == true) {
+                                temp.Union(in this.state.ptr->allocator, list);
+                            }
+                        }
+                        if (typeIdPair.Value > 0u && typeIdPair.Value < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                            var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeIdPair.Value];
+                            if (list.isCreated == true) {
+                                temp.Union(in this.state.ptr->allocator, list);
+                            }
+                        }
+                    }
+                    this.queryData.ptr->archetypesBits.Intersect(temp);
+                }
+
+            }
+
+        }
+
         [INLINE(256)]
         public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponentBase
                                                                                  where T1 : unmanaged, IComponentBase
@@ -241,6 +353,37 @@ namespace ME.BECS {
                         this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, bits);
                     } else {
                         this.queryData.ptr->archetypesBits.Clear();
+                    }
+
+                }
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        private struct WithoutArrJob : IJob {
+
+            public ME.BECS.Internal.Array<uint> typeIdArr;
+            [NativeDisableUnsafePtrRestriction]
+            public safe_ptr<State> state;
+            [NativeDisableUnsafePtrRestriction]
+            public safe_ptr<QueryData> queryData;
+            
+            [INLINE(256)]
+            public void Execute() {
+
+                for (int i = 0; i < this.typeIdArr.Length; ++i) {
+
+                    var typeId = this.typeIdArr.Get(i);
+                    if (typeId >= this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                        this.queryData.ptr->archetypesBits.Clear();
+                        return;
+                    }
+
+                    var bits = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeId];
+                    if (bits.isCreated == true) {
+                        this.queryData.ptr->archetypesBits.Remove(in this.state.ptr->allocator, bits);
                     }
 
                 }

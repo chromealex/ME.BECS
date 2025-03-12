@@ -54,6 +54,7 @@ namespace ME.BECS.Attack {
                 ref var targets = ref ent.Get<AttackTargetsComponent>();
                 var count = math.min(query.results.results.Count, targetsCountComponent.count);
                 if (targets.targets.IsCreated == false) targets.targets = new ListAuto<Ent>(in ent, count);
+                targets.targets.Clear();
                 for (uint i = 0u; i < count; ++i) {
                     var queryEnt = query.results.results[this.world.state, i];
                     if (queryEnt.IsAlive() == false) continue;

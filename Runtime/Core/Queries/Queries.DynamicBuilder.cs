@@ -29,6 +29,7 @@ namespace ME.BECS {
         
         internal safe_ptr<CommandBuffer> commandBuffer;
         internal safe_ptr<QueryData> queryData;
+        internal ArchetypeQueries.QueryCompose compose;
         internal uint parallelForBatch;
         internal JobHandle builderDependsOn;
         internal Allocator allocator;
@@ -48,9 +49,12 @@ namespace ME.BECS {
             public safe_ptr<QueryData> queryData;
             [NativeDisableUnsafePtrRestriction]
             public safe_ptr<CommandBuffer> commandBuffer;
+            public ArchetypeQueries.QueryCompose compose;
             public Allocator allocator;
 
             public void Execute() {
+                
+                this.compose.Dispose();
                 
                 this.queryData.ptr->Dispose();
                 _free(this.queryData, this.allocator);
@@ -72,6 +76,7 @@ namespace ME.BECS {
         public void Dispose() {
             E.IS_CREATED(this);
             this.builderDependsOn.Complete();
+            this.compose.Dispose();
             this.queryData.ptr->Dispose();
             _free(this.queryData, this.allocator);
             this.commandBuffer.ptr->Dispose();
@@ -186,7 +191,8 @@ namespace ME.BECS {
         public QueryBuilder WithAny<T0, T1>() where T0 : unmanaged, IComponentBase
                                               where T1 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, TNull, TNull>(ref this);
+            this.compose.WithAny<T0, T1>();
+            //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, TNull, TNull>(ref this);
             return this;
         }
 
@@ -195,7 +201,9 @@ namespace ME.BECS {
                                                   where T1 : unmanaged, IComponentBase
                                                   where T2 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, TNull>(ref this);
+            this.compose.WithAny<T0, T1>();
+            this.compose.WithAny<T2, TNull>();
+            //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, TNull>(ref this);
             return this;
         }
 
@@ -205,28 +213,33 @@ namespace ME.BECS {
                                                       where T2 : unmanaged, IComponentBase 
                                                       where T3 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
+            this.compose.WithAny<T0, T1>();
+            this.compose.WithAny<T1, T2>();
+            //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilder With<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.With<T>(ref this);
+            this.compose.With<T>();
+            //this.builderDependsOn = ArchetypeQueries.With<T>(ref this);
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilder Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.Without<T>(ref this);
+            this.compose.Without<T>();
+            //this.builderDependsOn = ArchetypeQueries.Without<T>(ref this);
             return this;
         }
 
         [INLINE(256)]
         public QueryBuilder WithAspect<T>() where T : unmanaged, IAspect {
             E.IS_CREATED(this);
-            this.builderDependsOn = ArchetypeQueries.With(ref this, AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId));
+            this.compose.WithAspect<T>();
+            //this.builderDependsOn = ArchetypeQueries.With(ref this, AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId));
             return this;
         }
         
@@ -670,14 +683,15 @@ namespace ME.BECS {
         internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
+            dependsOn = this.compose.Build(ref this, dependsOn);
             var job = new SetEntitiesJob() {
                 buffer = buffer,
                 queryData = this.queryData,
                 state = buffer.ptr->state,
                 allocator = allocator,
             };
-            return job.Schedule(dependsOn);
-            
+            return job.ScheduleByRef(dependsOn);
+
         }
 
         public struct Enumerator : System.Collections.Generic.IEnumerator<Ent> {
