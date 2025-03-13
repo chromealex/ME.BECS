@@ -55,7 +55,7 @@ namespace ME.BECS.FogOfWar {
             var logicWorld = context.world.parent;
 
             // Collect all units which has not presented as shadow copy
-            var dependsOn = API.Query(in logicWorld, context.dependsOn).Schedule<CreateJob, OwnerComponent, FogOfWarShadowCopyRequiredRuntimeComponent>(new CreateJob() {
+            var dependsOn = API.Query(in logicWorld, context.dependsOn).AsReadonly().Schedule<CreateJob, OwnerComponent, FogOfWarShadowCopyRequiredRuntimeComponent>(new CreateJob() {
                 playersSystem = logicWorld.GetSystem<PlayersSystem>(),
                 world = context.world,
             });
