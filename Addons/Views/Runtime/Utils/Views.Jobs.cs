@@ -28,7 +28,6 @@ namespace ME.BECS.Views {
 
             public World connectedWorld;
             public World viewsWorld;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> data;
 
             public void Execute() {
@@ -80,7 +79,6 @@ namespace ME.BECS.Views {
         public struct JobDespawnViews : IJob {
 
             public World viewsWorld;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> data;
             
             public void Execute() {
@@ -159,7 +157,6 @@ namespace ME.BECS.Views {
         public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
 
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> beginFrameState;
             public ulong currentTick;
             public float tickTime;
@@ -197,7 +194,6 @@ namespace ME.BECS.Views {
         public struct JobAssignViews : IJobForComponents<AssignViewComponent> {
 
             public World viewsWorld;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
             public UnsafeParallelHashMap<uint, uint>.ParallelWriter toAssign;
@@ -261,7 +257,6 @@ namespace ME.BECS.Views {
         [BURST(CompileSynchronously = true)]
         public struct JobRemoveFromScene : IJobForComponents<ViewComponent> {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
             public UnsafeList<UnsafeViewsModule.ProviderInfo> registeredProviders;
@@ -296,7 +291,6 @@ namespace ME.BECS.Views {
         public struct JobRemoveEntitiesFromScene : IJobParallelFor {
 
             public World world;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toChange;
@@ -325,9 +319,7 @@ namespace ME.BECS.Views {
         [BURST(CompileSynchronously = true)]
         public struct JobAddToScene : IJobForComponents<IsViewRequested> {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toAdd;
             public UnsafeParallelHashMap<uint, bool>.ParallelWriter toRemove;
@@ -374,7 +366,6 @@ namespace ME.BECS.Views {
         [BURST(CompileSynchronously = true)]
         public struct CompleteJob : IJob {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public WorldMode mode;
 
@@ -390,7 +381,7 @@ namespace ME.BECS.Views {
                 this.viewsModuleData.ptr->dirty.Clear();
 
                 // Set logic mode
-                this.viewsModuleData.ptr->connectedWorld.state.ptr->mode = this.mode;
+                this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = this.mode;
 
             }
 
@@ -400,15 +391,13 @@ namespace ME.BECS.Views {
         public struct PrepareJob : IJob {
 
             public World connectedWorld;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
 
             public void Execute() {
 
                 // Set visual mode
-                this.viewsModuleData.ptr->connectedWorld.state.ptr->mode = WorldMode.Visual;
+                this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = WorldMode.Visual;
 
                 var entitiesCapacity = this.connectedWorld.state.ptr->entities.Capacity;
                 this.viewsModuleData.ptr->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
@@ -435,9 +424,7 @@ namespace ME.BECS.Views {
         [BURST(CompileSynchronously = true)]
         public struct UpdateCullingApplyStateJob : IJobParallelForDefer {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             
             public void Execute(int index) {
@@ -464,9 +451,7 @@ namespace ME.BECS.Views {
         [BURST(CompileSynchronously = true)]
         public struct UpdateCullingUpdateJob : IJobParallelForDefer {
             
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<ViewsModuleData> viewsModuleData;
             
             public void Execute(int index) {

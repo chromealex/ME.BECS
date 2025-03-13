@@ -517,7 +517,7 @@ namespace ME.BECS.Views {
 
             WorldStaticCallbacks.RaiseCallback(ref *this.data.ptr, 1);
 
-            var mode = this.data.ptr->connectedWorld.state.ptr->mode;
+            var mode = this.data.ptr->connectedWorld.state.ptr->Mode;
             ref var allocator = ref this.data.ptr->viewsWorld.state.ptr->allocator;
             dependsOn = new Jobs.PrepareJob() {
                 viewsModuleData = this.data,

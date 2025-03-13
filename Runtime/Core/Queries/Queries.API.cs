@@ -51,9 +51,7 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct BuilderArchetypesJob : IJob {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             public Unity.Collections.Allocator allocator;
             

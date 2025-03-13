@@ -21,7 +21,7 @@ namespace ME.BECS.Tests {
 
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent = Ent.New();
                 var ent2 = Ent.New();
                 ent.Set(new TestComponent() {
@@ -45,7 +45,7 @@ namespace ME.BECS.Tests {
             }
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent = Ent.New();
                 ent.Set(new TestComponent() {
                     data = 1,
@@ -79,7 +79,7 @@ namespace ME.BECS.Tests {
             }
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent = Ent.New();
                 ent.Set(new TestComponent() {
                     data = 1,
@@ -131,7 +131,7 @@ namespace ME.BECS.Tests {
 
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent2 = Ent.New();
                 ent2.Set(new TestComponent() {
                     data = 1,
@@ -158,7 +158,7 @@ namespace ME.BECS.Tests {
 
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent2 = Ent.New();
                 ent2.Set(new TestComponent() {
                     data = 1,
@@ -200,7 +200,7 @@ namespace ME.BECS.Tests {
 
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent = Ent.New();
                 ent.Set(new Test4Component() {
                     data = 1,
@@ -233,7 +233,7 @@ namespace ME.BECS.Tests {
             }
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent2 = Ent.New();
                 ent2.Set(new TestComponent() {
                     data = 1,
@@ -296,7 +296,7 @@ namespace ME.BECS.Tests {
 
             {
                 using var world = World.Create();
-                world.state.ptr->worldState = WorldState.BeginTick;
+                world.state.ptr->WorldState = WorldState.BeginTick;
                 var ent2 = Ent.New();
                 ent2.Set(new TestComponent() {
                     data = 1,

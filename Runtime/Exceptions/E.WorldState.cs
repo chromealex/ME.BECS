@@ -30,15 +30,15 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void IS_IN_TICK(safe_ptr<State> state) {
 
-            if (state.ptr->mode == WorldMode.Visual ||
+            if (state.ptr->Mode == WorldMode.Visual ||
                 state.ptr->tickCheck == 0 ||
                 state.ptr->updateType != UpdateType.FIXED_UPDATE ||
-                state.ptr->worldState == WorldState.Initialized ||
-                state.ptr->worldState == WorldState.BeginTick) {
+                state.ptr->WorldState == WorldState.Initialized ||
+                state.ptr->WorldState == WorldState.BeginTick) {
                 return;
             }
             
-            WorldStateException.Throw(WorldState.BeginTick, state.ptr->worldState, state);
+            WorldStateException.Throw(WorldState.BeginTick, state.ptr->WorldState, state);
             
         }
 
@@ -46,16 +46,16 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         public static void IS_NOT_IN_TICK(safe_ptr<State> state) {
 
-            if (state.ptr->mode == WorldMode.Visual ||
+            if (state.ptr->Mode == WorldMode.Visual ||
                 state.ptr->tickCheck == 0 ||
                 state.ptr->updateType == UpdateType.UPDATE ||
                 state.ptr->updateType == UpdateType.LATE_UPDATE ||
-                state.ptr->worldState == WorldState.Initialized ||
-                state.ptr->worldState == WorldState.EndTick) {
+                state.ptr->WorldState == WorldState.Initialized ||
+                state.ptr->WorldState == WorldState.EndTick) {
                 return;
             }
             
-            WorldStateException.Throw(WorldState.EndTick, state.ptr->worldState, state);
+            WorldStateException.Throw(WorldState.EndTick, state.ptr->WorldState, state);
 
         }
 

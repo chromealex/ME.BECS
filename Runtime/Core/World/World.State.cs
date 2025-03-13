@@ -1,5 +1,3 @@
-using Unity.Jobs;
-
 namespace ME.BECS {
 
     using static Cuts;
@@ -24,10 +22,35 @@ namespace ME.BECS {
         public CollectionsRegistry collectionsRegistry;
         public AutoDestroyRegistry autoDestroyRegistry;
         public ulong tick;
-        public WorldState worldState;
+        public byte state;
         public byte tickCheck;
         public ushort updateType;
-        public WorldMode mode;
+
+        public WorldState WorldState {
+            get {
+                if ((this.state & (1 << 0)) != 0) return WorldState.Initialized;
+                if ((this.state & (1 << 1)) != 0) return WorldState.BeginTick;
+                if ((this.state & (1 << 2)) != 0) return WorldState.EndTick;
+                return default;
+            }
+            set {
+                this.state = (byte)(this.state & ~(1 << 0));
+                this.state = (byte)(this.state & ~(1 << 1));
+                this.state = (byte)(this.state & ~(1 << 2));
+                if (value != default) this.state = (byte)(this.state | (1 << ((int)value - 1)));
+            }
+        }
+        public WorldMode Mode {
+            get {
+                if ((this.state & (1 << 5)) != 0) return WorldMode.Visual;
+                return default;
+            }
+            set {
+                this.state = (byte)(this.state & ~(1 << 4));
+                this.state = (byte)(this.state & ~(1 << 5));
+                if (value != default) this.state = (byte)(this.state | (1 << (4 + (int)value)));
+            }
+        }
 
         public bool IsCreated => this.tick != 0UL;
 
@@ -80,7 +103,7 @@ namespace ME.BECS {
             this.random = RandomData.Create(statePtr);
             this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.entitiesCapacity);
             this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.entitiesCapacity);
-            this.mode = stateProperties.mode;
+            this.Mode = stateProperties.mode;
             return this;
 
         }
@@ -94,7 +117,7 @@ namespace ME.BECS {
             
             public void Execute() {
                 if (this.worldState == WorldState.BeginTick) Context.Switch(in this.world);
-                this.world.state.ptr->worldState = this.worldState;
+                this.world.state.ptr->WorldState = this.worldState;
                 this.world.state.ptr->tickCheck = 1;
                 this.world.state.ptr->updateType = this.updateType;
             }
@@ -104,7 +127,6 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct NextTickJob : IJobSingle {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
             
             public void Execute() {
@@ -116,7 +138,6 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct BurstModeJob : IJobSingle {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
             public bool mode;
             

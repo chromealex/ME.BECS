@@ -207,7 +207,6 @@ namespace ME.BECS {
 
         public RefOp Op => RefOp.ReadWrite;
 
-        [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;
         public MemAllocatorPtr storage;
         public ushort worldId;
@@ -268,7 +267,6 @@ namespace ME.BECS {
 
         public RefOp Op => RefOp.ReadOnly;
 
-        [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;
         public MemAllocatorPtr storage;
 

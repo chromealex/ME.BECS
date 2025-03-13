@@ -19,9 +19,7 @@ namespace ME.BECS {
 
         }
 
-        [NativeDisableUnsafePtrRestriction]
         internal safe_ptr<CommandBuffer> commandBuffer;
-        [NativeDisableUnsafePtrRestriction]
         internal safe_ptr<QueryData> queryData;
         internal JobHandle builderDependsOn;
         internal uint parallelForBatch;

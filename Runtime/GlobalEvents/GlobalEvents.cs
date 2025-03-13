@@ -138,7 +138,7 @@ namespace ME.BECS {
         private static void RaiseEvent<T>(in Event evt, in T data, bool useData) where T : unmanaged {
             
             var world = Worlds.GetWorld(evt.worldId);
-            E.IS_VISUAL_MODE(world.state.ptr->mode);
+            E.IS_VISUAL_MODE(world.state.ptr->Mode);
             
             ValidateCapacity();
             

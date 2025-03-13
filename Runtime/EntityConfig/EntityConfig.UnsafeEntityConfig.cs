@@ -33,17 +33,12 @@ namespace ME.BECS {
 
             }
 
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<byte> data;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> offsets;
-            private readonly uint count;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> typeIds;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> hashes;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<Func> functionPointers;
+            private readonly uint count;
 
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
@@ -174,15 +169,11 @@ namespace ME.BECS {
 
             }
             
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<byte> data;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> offsets;
-            private readonly uint count;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> typeIds;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<Func> functionPointers;
+            private readonly uint count;
 
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
@@ -334,15 +325,11 @@ namespace ME.BECS {
 
             }
 
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<byte> data;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> offsets;
-            private readonly uint count;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> typeIds;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<Func> functionPointers;
+            private readonly uint count;
             
             [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
             private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
@@ -444,12 +431,10 @@ namespace ME.BECS {
 
         private readonly struct Aspect {
 
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> sizes;
-            private readonly uint count;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> typeIds;
-            
+            private readonly uint count;
+                        
             public Aspect(ComponentsStorage<IAspect> configAspects) {
 
                 var components = configAspects.components;
@@ -583,7 +568,6 @@ namespace ME.BECS {
             }
 
             internal readonly Ent staticDataEnt;
-            [NativeDisableUnsafePtrRestriction]
             private readonly safe_ptr<uint> typeIds;
             private readonly uint count;
 
@@ -656,7 +640,6 @@ namespace ME.BECS {
         }
         
         public readonly uint id;
-        [NativeDisableUnsafePtrRestriction]
         private readonly safe_ptr<UnsafeEntityConfig> baseConfig;
         private readonly Data data;
         private readonly SharedData dataShared;

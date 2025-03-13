@@ -429,7 +429,6 @@ namespace ME.BECS.Network {
             [BURST(CompileSynchronously = true)]
             private struct CopyStateCompleteJob : IJobParallelFor {
 
-                [NativeDisableUnsafePtrRestriction]
                 public safe_ptr<Data> data;
                 [Unity.Collections.ReadOnly]
                 public Unity.Collections.NativeReference<System.IntPtr> tempData;
@@ -646,11 +645,11 @@ namespace ME.BECS.Network {
                 currentTick = rollbackState.ptr->tick;
                 var updateType = this.connectedWorld.state.ptr->updateType;
                 var tickCheck = this.connectedWorld.state.ptr->tickCheck;
-                var worldState = this.connectedWorld.state.ptr->worldState;
+                var worldState = this.connectedWorld.state.ptr->WorldState;
                 this.connectedWorld.state.ptr->CopyFrom(in *rollbackState.ptr);
                 this.connectedWorld.state.ptr->updateType = updateType;
                 this.connectedWorld.state.ptr->tickCheck = tickCheck;
-                this.connectedWorld.state.ptr->worldState = worldState;
+                this.connectedWorld.state.ptr->WorldState = worldState;
                 this.statesStorage.InvalidateStatesFromTick(currentTick);
                 this.rollbackTargetTick = targetTick;
                 Logger.Network.Warning($"Rollback State CopyFrom ended: {currentTick}..{targetTick}");

@@ -14,11 +14,10 @@ namespace ME.BECS.NativeCollections {
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
 
-    public unsafe struct NativeMinHeapEnt : IDisposable {
+    public struct NativeMinHeapEnt : IDisposable {
 
         public uint Count => (uint)this.mLength;
 
-        [NativeDisableUnsafePtrRestriction]
         private safe_ptr<MinHeapNodeEnt> mBuffer;
         private uint mCapacity;
         private Allocator mAllocatorLabel;

@@ -9,7 +9,6 @@ namespace ME.BECS {
 
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;
 
-        [NativeDisableUnsafePtrRestriction]
         public readonly safe_ptr<ulong> ptr;
         public uint Length;
         internal readonly Unity.Collections.Allocator allocator;

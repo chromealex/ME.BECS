@@ -7,12 +7,11 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Collections;
 
-    public unsafe partial struct OneShotTasks {
+    public partial struct OneShotTasks {
 
         [BURST(CompileSynchronously = true)]
         private struct ResolveTasksParallelJob : IJobParallelFor {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
             public OneShotType type;
             public ushort updateType;

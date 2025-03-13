@@ -18,7 +18,7 @@ namespace ME.BECS {
 
     public enum WorldMode : byte {
 
-        Logic = 0,
+        Logic  = 0,
         Visual = 1,
 
     }
@@ -27,7 +27,6 @@ namespace ME.BECS {
 
         public bool isCreated => Worlds.IsAlive(this.id);
         public ushort id;
-        [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;
         public string Name => Worlds.GetWorldName(this.id).ToString();
 
@@ -44,7 +43,7 @@ namespace ME.BECS {
                 state = statePtr,
             };
             statePtr.ptr->Initialize(statePtr, properties.stateProperties);
-            world.state.ptr->worldState = WorldState.Initialized;
+            world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name);
@@ -61,7 +60,7 @@ namespace ME.BECS {
             var world = new World() {
                 state = statePtr,
             };
-            world.state.ptr->worldState = WorldState.Initialized;
+            world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name, raiseCallback: false);
@@ -141,10 +140,10 @@ namespace ME.BECS {
 
     public enum WorldState : byte {
 
-        Undefined = 0,
-        Initialized,
-        BeginTick,
-        EndTick,
+        Undefined   = 0,
+        Initialized = 1,
+        BeginTick   = 2,
+        EndTick     = 3,
 
     }
 

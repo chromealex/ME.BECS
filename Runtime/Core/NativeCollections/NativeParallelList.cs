@@ -11,7 +11,6 @@ namespace ME.BECS.NativeCollections {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections;
-    using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs;
     using static Cuts;
@@ -20,7 +19,6 @@ namespace ME.BECS.NativeCollections {
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<UnsafeList<T>>.size, JobUtils.CacheLineSize);
         
-        [NativeDisableUnsafePtrRestriction]
         public safe_ptr lists;
         private AllocatorManager.AllocatorHandle allocator;
 

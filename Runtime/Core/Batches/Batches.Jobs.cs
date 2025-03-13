@@ -8,7 +8,6 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe struct ApplyJob : IJobSingle {
 
-        [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;
             
         [INLINE(256)]
@@ -38,9 +37,8 @@ namespace ME.BECS {
     }
 
     [BURST(CompileSynchronously = true)]
-    public unsafe struct OpenJob : IJobSingle {
+    public struct OpenJob : IJobSingle {
 
-        [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;
             
         [INLINE(256)]
@@ -53,7 +51,7 @@ namespace ME.BECS {
     }
 
     [BURST(CompileSynchronously = true)]
-    public unsafe struct CloseJob : IJobSingle {
+    public struct CloseJob : IJobSingle {
 
         [NativeDisableUnsafePtrRestriction]
         public safe_ptr<State> state;

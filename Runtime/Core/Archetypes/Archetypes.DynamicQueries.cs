@@ -67,9 +67,7 @@ namespace ME.BECS {
         private struct ComposeJob : IJob {
 
             public QueryCompose query;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
@@ -239,9 +237,7 @@ namespace ME.BECS {
             public uint typeId2;
             public uint typeId3;
             public uint typeId4;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
@@ -303,9 +299,7 @@ namespace ME.BECS {
         private struct WithJob : IJob {
 
             public uint typeId;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
@@ -332,9 +326,7 @@ namespace ME.BECS {
         private struct WithArrJob : IJob {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
@@ -365,9 +357,7 @@ namespace ME.BECS {
         private struct WithoutArrJob : IJob {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]
@@ -407,9 +397,7 @@ namespace ME.BECS {
         private struct WithoutJob : IJob {
 
             public uint typeId;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             [INLINE(256)]

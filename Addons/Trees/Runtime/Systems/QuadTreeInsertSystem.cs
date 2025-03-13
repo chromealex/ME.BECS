@@ -66,14 +66,12 @@ namespace ME.BECS {
         public float3 mapPosition;
         public float3 mapSize;
         
-        [NativeDisableUnsafePtrRestriction]
         private UnsafeList<safe_ptr> quadTrees;
         public readonly uint treesCount => (uint)this.quadTrees.Length;
 
         [BURST(CompileSynchronously = true)]
         public struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
-            [NativeDisableUnsafePtrRestriction]
             public UnsafeList<safe_ptr> quadTrees;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
@@ -93,7 +91,6 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         public struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
-            [NativeDisableUnsafePtrRestriction]
             public UnsafeList<safe_ptr> quadTrees;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
@@ -111,7 +108,6 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         public struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
-            [NativeDisableUnsafePtrRestriction]
             public UnsafeList<safe_ptr> quadTrees;
             
             public void Execute(int index) {
@@ -126,7 +122,6 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         public struct ClearJob : Unity.Jobs.IJobParallelFor {
 
-            [NativeDisableUnsafePtrRestriction]
             public UnsafeList<safe_ptr> quadTrees;
 
             public void Execute(int index) {

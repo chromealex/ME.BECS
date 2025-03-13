@@ -45,9 +45,7 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct DisposeJob : IJob {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<CommandBuffer> commandBuffer;
             public ArchetypeQueries.QueryCompose compose;
             public Allocator allocator;
@@ -554,11 +552,8 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct FromQueryDataJob : IJob {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<Queries.QueryDataStatic> queryDataStatic;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             
             public void Execute() {
@@ -590,11 +585,8 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct SetEntitiesJob : IJob {
 
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<State> state;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<CommandBuffer> buffer;
-            [NativeDisableUnsafePtrRestriction]
             public safe_ptr<QueryData> queryData;
             public Allocator allocator;
 
