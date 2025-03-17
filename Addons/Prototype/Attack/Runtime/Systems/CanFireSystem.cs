@@ -36,7 +36,11 @@ namespace ME.BECS.Attack {
                     // use default attack time
                     if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
                         // Fire
-                        aspect.CanFire = true;
+                        if (ent.HasTag<CanFireWhileMovesTag>(true) == false && ent.Read<ME.BECS.Transforms.ParentComponent>().value.GetAspect<ME.BECS.Units.UnitAspect>().IsHold == false) {
+                            aspect.CanFire = false;
+                        } else {
+                            aspect.CanFire = true;
+                        }
                     }
 
                 }
