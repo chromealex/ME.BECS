@@ -57,7 +57,10 @@ namespace ME.BECS.Pathfinding {
 
                 var group = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
                 var target = group.targets[unit.typeId];
-                if (target.IsAlive() == false) return;
+                if (target.IsAlive() == false) {
+                    unit.IsPathFollow = false;
+                    return;
+                }
                 
                 var targetComponent = target.Read<TargetComponent>();
                 if (targetComponent.target.IsAlive() == false) {

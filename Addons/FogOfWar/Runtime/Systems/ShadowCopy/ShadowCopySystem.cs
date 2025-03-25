@@ -17,9 +17,6 @@ namespace ME.BECS.FogOfWar {
             public World world;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OwnerComponent owner, ref FogOfWarShadowCopyRequiredRuntimeComponent sc) {
-
-                // Ignore neutral player
-                if (owner.ent.GetAspect<PlayerAspect>().readIndex == 0u) return;
                 
                 var origTr = ent.GetAspect<TransformAspect>();
                 var pos = origTr.position;
@@ -27,8 +24,7 @@ namespace ME.BECS.FogOfWar {
 
                 // Create shadow copies in special world
                 var teams = this.playersSystem.GetTeams();
-                // Ignore neutral player team
-                for (uint i = 1u; i < teams.Length; ++i) {
+                for (uint i = 0u; i < teams.Length; ++i) {
                     if (sc.shadowCopy[i].IsAlive() == true) continue;
                     var team = teams[(int)i];
                     var copyEnt = ent.Clone(this.world.id, cloneHierarchy: true, in jobInfo);
