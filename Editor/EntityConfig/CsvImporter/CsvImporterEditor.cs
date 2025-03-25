@@ -461,6 +461,9 @@ namespace ME.BECS.Editor.CsvImporter {
                             //var fieldInfo = comp.GetField(field.Key);
                             //var type = fieldInfo.FieldType;
                             PropertyEditorUtils.GetTargetObjectOfProperty(component, out var type);
+                            if (type == null) {
+                                Debug.LogError($"Type is null for component {component.propertyPath}");
+                            }
                             var serializer = JSON.JsonUtils.GetSerializer(type);
                             if (serializer != null) {
                                 var obj = serializer.FromString(type, field.Value);
@@ -496,7 +499,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 //config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();
                 //config.instance.staticData.components = config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray();
                 if (res == true) {
-                    config.instance.OnValidate();
+                    config.instance.Validate();
                     EditorUtility.SetDirty(config.instance);
                 }
             }

@@ -87,7 +87,7 @@ namespace ME.BECS {
         public ComponentsStorage<IAspect> aspects = new() { components = System.Array.Empty<IAspect>() };
         public CollectionsData collectionsData;
 
-        public void OnValidate() {
+        public void Validate() {
             var list = new System.Collections.Generic.List<IConfigInitialize>();
             list.AddRange(this.data.components.OfType<IConfigInitialize>());
             list.AddRange(this.sharedData.components.OfType<IConfigInitialize>());
