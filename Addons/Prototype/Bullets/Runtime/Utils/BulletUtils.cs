@@ -83,11 +83,11 @@ namespace ME.BECS.Bullets {
         /// <param name="targetPosition">If set</param>
         /// <param name="config">Bullet config</param>
         /// <param name="muzzleView">Muzzle view</param>
-        /// <param name="muzzleLifetime">Muzzle lifetime in ms</param>
+        /// <param name="muzzleLifetimeMs">Muzzle lifetime in ms</param>
         /// <param name="jobInfo"></param>
         /// <returns></returns>
         [INLINE(256)]
-        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View muzzleView, tfloat muzzleLifetime, in JobInfo jobInfo = default) {
+        public static BulletAspect CreateBullet(in Ent sourceUnit, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
 
             if (muzzleView.IsValid == true) {
                 var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");
@@ -95,7 +95,7 @@ namespace ME.BECS.Bullets {
                 tr.position = position;
                 tr.rotation = rotation;
                 muzzleEnt.InstantiateView(muzzleView);
-                muzzleEnt.Destroy(muzzleLifetime);
+                muzzleEnt.Destroy(muzzleLifetimeMs);
             }
 
             {

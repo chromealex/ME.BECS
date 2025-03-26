@@ -18,12 +18,26 @@ namespace ME.BECS {
     public struct DestroyWithLifetimeSystem : IUpdate {
         
         [BURST(CompileSynchronously = true)]
-        public struct Job : IJobForComponents<DestroyWithLifetime> {
+        public struct LifetimeJob : IJobForComponents<DestroyWithLifetime> {
 
             public tfloat deltaTime;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithLifetime component) {
                 component.lifetime -= this.deltaTime;
+                if (component.lifetime <= 0f) {
+                    ent.DestroyHierarchy();
+                }
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct LifetimeMsJob : IJobForComponents<DestroyWithLifetimeMs> {
+
+            public uint deltaTimeMs;
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithLifetimeMs component) {
+                component.lifetime -= this.deltaTimeMs;
                 if (component.lifetime <= 0u) {
                     ent.DestroyHierarchy();
                 }
@@ -33,10 +47,13 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
             
-            var childHandle = context.Query().AsParallel().Schedule<Job, DestroyWithLifetime>(new Job() {
+            var childHandle = context.Query().AsParallel().Schedule<LifetimeJob, DestroyWithLifetime>(new LifetimeJob() {
                 deltaTime = context.deltaTime,
             });
-            context.SetDependency(childHandle);
+            var childHandleMs = context.Query().AsParallel().Schedule<LifetimeMsJob, DestroyWithLifetimeMs>(new LifetimeMsJob() {
+                deltaTimeMs = context.deltaTimeMs,
+            });
+            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(childHandleMs, childHandle));
             
         }
 

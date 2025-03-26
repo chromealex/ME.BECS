@@ -14,8 +14,16 @@ namespace ME.BECS {
 
     public static class EntExt {
 
+        public static void Destroy(this in Ent ent, uint ms) {
+
+            ent.Remove<DestroyWithLifetime>();
+            ent.Set(new DestroyWithLifetimeMs() { lifetime = ms, });
+            
+        }
+
         public static void Destroy(this in Ent ent, tfloat lifetime) {
 
+            ent.Remove<DestroyWithLifetimeMs>();
             ent.Set(new DestroyWithLifetime() { lifetime = lifetime, });
             
         }

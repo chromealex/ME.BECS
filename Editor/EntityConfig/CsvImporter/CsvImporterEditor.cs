@@ -205,6 +205,7 @@ namespace ME.BECS.Editor.CsvImporter {
                         foreach (var config in configs) {
                             ObjectReferenceRegistry.data.Add(config.instance, out _);
                         }
+                        ObjectReferenceValidate.Validate();
                     }
                     
                     for (var index = 0; index < data.Count; ++index) {

@@ -19,6 +19,13 @@ namespace ME.BECS {
     }
 
     [ComponentGroup(typeof(DestroyComponentGroup))]
+    public struct DestroyWithLifetimeMs : IConfigComponent {
+
+        public uint lifetime;
+
+    }
+
+    [ComponentGroup(typeof(DestroyComponentGroup))]
     public struct DestroyWithLifetime : IConfigComponent {
 
         public tfloat lifetime;

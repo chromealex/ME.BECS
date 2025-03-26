@@ -86,6 +86,7 @@ namespace ME.BECS {
         public JobHandle Dispose(JobHandle handle) {
             E.IS_CREATED(this);
             var job = new DisposeJob() {
+                compose = this.compose,
                 queryData = this.queryData,
                 commandBuffer = this.commandBuffer,
                 allocator = this.allocator,
