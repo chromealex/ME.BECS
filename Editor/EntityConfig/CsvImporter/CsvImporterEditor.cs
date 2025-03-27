@@ -202,10 +202,16 @@ namespace ME.BECS.Editor.CsvImporter {
                     }
 
                     { // assign configs to ObjectReferenceRegistry
+                        var startIndex = -1;
+                        var count = 0;
                         foreach (var config in configs) {
-                            ObjectReferenceRegistry.data.Add(config.instance, out _);
+                            ObjectReferenceRegistry.data.Add(config.instance, out var isNew);
+                            if (isNew == true) {
+                                if (startIndex == -1) startIndex = ObjectReferenceRegistry.data.items.Length - 1;
+                                ++count;
+                            }
                         }
-                        ObjectReferenceValidate.Validate();
+                        if (startIndex >= 0) ObjectReferenceValidate.Validate(startIndex, count);
                     }
                     
                     for (var index = 0; index < data.Count; ++index) {

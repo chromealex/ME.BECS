@@ -19,9 +19,18 @@ namespace ME.BECS.Editor {
                 ObjectReferenceRegistry.LoadForced();
             }
 
+            var items = ObjectReferenceRegistry.data.items;
+            Validate(0, items.Length);
+        }
+        
+        public static void Validate(int offset, int count) {
+            if (ObjectReferenceRegistry.data == null) {
+                ObjectReferenceRegistry.LoadForced();
+            }
+
             var isDirty = false;
             var items = ObjectReferenceRegistry.data.items;
-            for (int i = 0; i < items.Length; i++) {
+            for (int i = offset; i < (count < items.Length ? offset + count : items.Length); ++i) {
                 var item = items[i];
                 var asset = item.source != null ? item.source : item.sourceReference?.editorAsset;
                 var type = string.IsNullOrEmpty(item.sourceType) == true ? null : System.Type.GetType(item.sourceType);
