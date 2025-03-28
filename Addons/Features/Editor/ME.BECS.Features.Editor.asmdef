@@ -8,7 +8,8 @@
         "Unity.Burst",
         "Unity.Collections",
         "ME.BECS.Transforms",
-        "ME.BECS.Views"
+        "ME.BECS.Views",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"
