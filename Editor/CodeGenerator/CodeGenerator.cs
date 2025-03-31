@@ -206,6 +206,8 @@ namespace ME.BECS.Editor {
 
         public static void RegenerateBurstAOT() {
 
+            if (UnityEngine.Application.isBatchMode == true) return;
+
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
             
             var list = EditorUtils.GetAssembliesInfo();
