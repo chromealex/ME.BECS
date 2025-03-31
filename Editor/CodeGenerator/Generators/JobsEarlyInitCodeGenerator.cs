@@ -241,9 +241,9 @@ namespace ME.BECS.Editor.Jobs {
                     funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
                     funcBuilder.AppendLine($"if (data == null) {{");
                     funcBuilder.AppendLine($"if (unsafeMode == true) {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
+                    funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
                     funcBuilder.AppendLine($"}} else {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_make(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
+                    funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
                     funcBuilder.AppendLine($"}}");
                     funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
                     funcBuilder.AppendLine($"}}");
