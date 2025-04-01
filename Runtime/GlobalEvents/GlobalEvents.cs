@@ -117,7 +117,11 @@ namespace ME.BECS {
 
         public static void DisposeWorld(ushort worldId) {
             if (WorldEvents.evtToCallers == null) return;
-            WorldEvents.evtToCallers[worldId].Clear();
+            var dic = WorldEvents.evtToCallers[worldId];
+            if (dic != null) dic.Clear();
+            if (worldId >= WorldEvents.events.Data.Length) return;
+            ref var events = ref WorldEvents.events.Data.Get(worldId).events;
+            if (events.IsCreated == true) events.Clear();
         }
         
         /// <summary>
