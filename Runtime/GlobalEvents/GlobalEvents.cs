@@ -114,6 +114,11 @@ namespace ME.BECS {
             items.Dispose();
             WorldEvents.evtToCallers = null;
         }
+
+        public static void DisposeWorld(ushort worldId) {
+            if (WorldEvents.evtToCallers == null) return;
+            WorldEvents.evtToCallers[worldId].Clear();
+        }
         
         /// <summary>
         /// Call this method from logic system

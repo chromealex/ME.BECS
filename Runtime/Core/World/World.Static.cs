@@ -452,6 +452,7 @@ namespace ME.BECS {
             ref var worldsStorage = ref WorldsStorage.worlds;
             worldsStorage.Get(world.id) = default;
             
+            GlobalEvents.DisposeWorld(world.id);
             #if UNITY_EDITOR
             EntEditorName.Dispose(world.id);
             #endif
