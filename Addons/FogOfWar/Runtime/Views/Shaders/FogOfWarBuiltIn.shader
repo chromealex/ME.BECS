@@ -11,6 +11,8 @@ Shader "ME.BECS/FogOfWar/Default-BuiltIn"
 		_BorderMax("BorderMax", Range(0, 1)) = 1
         _BorderColor ("Border Color", Color) = (0, 0, 0, 1)
         
+        _Padding("Normalized Padding", Vector) = (0, 0, 0, 0)
+        
 		_BlurRadius("Blur Radius", Range(0, 10)) = 1
 		_BlurHorizontalStep("Blur Horizontal Step", Range(0, 1)) = 0.5
 		_BlurVerticalStep("Blur Vertical Step", Range(0, 1)) = 0.5
@@ -69,6 +71,7 @@ Shader "ME.BECS/FogOfWar/Default-BuiltIn"
 			half _BlurRadius;
 			half _BlurHorizontalStep;
 			half _BlurVerticalStep;
+            float4 _Padding;
 
 			sampler2D _CameraDepthTexture;
 			uniform float4x4 _InverseMVP;
@@ -140,12 +143,25 @@ Shader "ME.BECS/FogOfWar/Default-BuiltIn"
 				pos = mul(_InverseMVP, pos);
 				return pos.xyz / pos.w;
 			}
+
+            float invLerp(float from, float to, float value){
+              return (value - from) / (to - from);
+            }
             
             fixed4 frag(v2f i) : SV_Target
             {
                 fixed4 original = float4(0, 0, 0, 0);
                 //half4 fog = tex2D(_FogTex, i.uv);
-                half4 fog = blur(_FogTex, i.uv);
+
+                half paddingTop = 1 -_Padding.x;
+                half paddingRight = 1 - _Padding.y;
+                half paddingBottom = _Padding.z;
+                half paddingLeft = _Padding.w;
+
+                float2 uvWithPadding = float2(invLerp(paddingLeft, paddingRight, i.uv.x), invLerp(paddingBottom, paddingTop, i.uv.y));
+                
+                half4 fog = blur(_FogTex, uvWithPadding);
+                // half4 fog = blur(_FogTex, i.uv);
                 
                 /*half r = step(_BorderMin, fog.r);
                 half g = step(_BorderMin, fog.g);

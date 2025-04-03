@@ -19,10 +19,13 @@ namespace ME.BECS.FogOfWar {
         private static readonly int inverseMvp = Shader.PropertyToID("_InverseMVP");
         private static readonly int pos = Shader.PropertyToID("_CamPos");
         private static readonly int @params = Shader.PropertyToID("_Params");
+        private static readonly int padding = Shader.PropertyToID("_Padding");
 
         public Material material;
         public MeshRenderer meshRenderer;
         public Transform transformScale;
+        [Tooltip("X - top, Y - right, Z - bottom, W - left")]
+        public Vector4 paddingSize;
         private float2 worldSize;
         private Vector3 offset;
 
@@ -39,16 +42,13 @@ namespace ME.BECS.FogOfWar {
             }
 
             this.worldSize = fowSystem.mapSize;
-
-            if (this.transformScale != null) {
-                this.transformScale.localScale = new Vector3((float)this.worldSize.x, 1f, (float)this.worldSize.y);
-                this.transformScale.localPosition = new Vector3((float)this.worldSize.x * 0.5f, 0f, (float)this.worldSize.y * 0.5f);
-            }
-
+            this.SetScale();
         }
 
         protected override void OnUpdate(in EntRO ent, float dt) {
 
+            // this.SetScale();
+            
             var updateTextureSystem = ent.World.GetSystem<UpdateTextureSystem>();
             var logicWorld = ent.World.parent;
             var fowSystem = logicWorld.GetSystem<CreateSystem>();
@@ -83,6 +83,30 @@ namespace ME.BECS.FogOfWar {
             this.material.SetVector(pos, (Vector4)camPos);
             this.material.SetVector(@params, (Vector4)p);
             
+        }
+
+        private void SetScale()
+        {
+            if (this.transformScale != null) {
+                var horizontalPadding = this.paddingSize.y + this.paddingSize.w;
+                var verticalPadding = this.paddingSize.x + this.paddingSize.z;
+                this.transformScale.localScale = new Vector3(
+                    (float)this.worldSize.x + horizontalPadding, 
+                    1f, 
+                    (float)this.worldSize.y + verticalPadding);
+                
+                this.transformScale.localPosition = new Vector3(
+                    (float)this.worldSize.x * 0.5f - this.paddingSize.w * 0.5f + this.paddingSize.y * 0.5f, 
+                    0f, 
+                    (float)this.worldSize.y * 0.5f - this.paddingSize.z * 0.5f + this.paddingSize.x * 0.5f);
+            }
+
+            this.material.SetVector(padding, new Vector4(
+                                        this.paddingSize.x / this.transformScale.localScale.z,
+                                        this.paddingSize.y / this.transformScale.localScale.x,
+                                        this.paddingSize.z / this.transformScale.localScale.z,
+                                        this.paddingSize.w / this.transformScale.localScale.x
+                                    ));
         }
 
     }
