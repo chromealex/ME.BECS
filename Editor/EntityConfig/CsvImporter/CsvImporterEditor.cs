@@ -474,7 +474,12 @@ namespace ME.BECS.Editor.CsvImporter {
                             var serializer = JSON.JsonUtils.GetSerializer(type);
                             if (serializer != null) {
                                 var obj = serializer.FromString(type, field.Value);
-                                component.boxedValue = obj;
+                                try {
+                                    component.boxedValue = obj;
+                                } catch (System.Exception ex) {
+                                    Debug.LogError($"Serializer returns invalid value `{obj}` while source value was `{field.Value}` in field `{component.type}` at config {config.fullPath}");
+                                    Debug.LogException(ex);
+                                }
                                 component.serializedObject.ApplyModifiedProperties();
                             } else {
                                 Debug.LogWarning($"Serializer was not found for type {comp.type.FullName}");

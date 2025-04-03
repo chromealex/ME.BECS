@@ -37,6 +37,8 @@ namespace ME.BECS.Attack {
 
         public readonly ListAuto<Ent> targets => this.targetsDataPtr.Read(this.ent.id, this.ent.gen).targets;
 
+        public bool HasAnyTarget => this.target.IsAlive() == true || this.targets.Count > 0;
+        
         [INLINE(256)]
         private readonly void CleanUpTarget() {
             
