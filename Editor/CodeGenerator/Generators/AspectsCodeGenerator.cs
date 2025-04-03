@@ -54,7 +54,7 @@ namespace ME.BECS.Editor.Aspects {
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
 
             var content = new System.Collections.Generic.List<string>();
-            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect));
+            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray();
             foreach (var aspect in aspects) {
 
                 if (aspect.IsValueType == false) continue;

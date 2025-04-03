@@ -184,7 +184,12 @@ namespace ME.BECS.Mono.Reflection {
                 case OperandType.InlineType:
                 case OperandType.InlineField:
                 case OperandType.InlineMethod:
-                    instruction.Operand = this.module.ResolveMember(this.il.ReadInt32(), this.type_arguments, this.method_arguments);
+                    try {
+                        instruction.Operand = this.module.ResolveMember(this.il.ReadInt32(), this.type_arguments, this.method_arguments);
+                    } catch (System.Exception) {
+                        instruction.Operand = null;
+                    }
+
                     break;
 
                 case OperandType.ShortInlineVar:

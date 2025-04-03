@@ -168,65 +168,9 @@ namespace ME.BECS.Editor.Jobs {
                             break;
                         }
                     }
+
+                    var uniqueTypes = GetJobTypesInfo(jobType);
                     
-                    var root = jobType.GetMethod("Execute");
-                    var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
-                    q.Enqueue(root);
-                    var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
-                    var visited = new System.Collections.Generic.HashSet<System.Reflection.MethodInfo>();
-                    while (q.Count > 0) {
-                        var body = q.Dequeue();
-                        var instructions = body.GetInstructions();
-                        foreach (var inst in instructions) {
-                            {
-                                if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
-                                    continue;
-                                }
-                            }
-                            {
-                                if (inst.Operand is FieldInfo fieldInfo && fieldInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
-                                    continue;
-                                }
-                            }
-                            {
-                                if (inst.Operand is System.Reflection.FieldInfo field && typeof(IRefOp).IsAssignableFrom(field.FieldType) == true) {
-                                    var op = (IRefOp)System.Activator.CreateInstance(field.FieldType);
-                                    //UnityEngine.Debug.Log(field.FieldType + " :: " + op.Op);
-                                    uniqueTypes.Add(new TypeInfo() {
-                                        type = field.FieldType.GenericTypeArguments[0],
-                                        op = op.Op,
-                                    });
-                                }
-                            }
-                            {
-                                if (inst.Operand is FieldInfo field && typeof(IComponentBase).IsAssignableFrom(field.DeclaringType) == true) {
-                                    uniqueTypes.Add(new TypeInfo() {
-                                        type = field.DeclaringType,
-                                        op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && inst.OpCode == System.Reflection.Emit.OpCodes.Stfld ? RefOp.WriteOnly : RefOp.ReadOnly,
-                                    });
-                                }
-                            }
-                            if (inst.Operand is System.Reflection.MethodInfo method && method.IsGenericMethod == true) {
-                                var safetyCheck = method.GetCustomAttribute<SafetyCheckAttribute>();
-                                if (safetyCheck != null) {
-                                    var type = method.GetGenericArguments()[0];
-                                    if (typeof(IComponentBase).IsAssignableFrom(type) == true) {
-                                        uniqueTypes.Add(new TypeInfo() {
-                                            type = type,
-                                            op = safetyCheck.Op,
-                                        });
-                                    }
-                                }
-                            }
-
-                            if (inst.Operand is System.Reflection.MethodInfo member) {
-                                if (visited.Add(member) == true) {
-                                    if (member.GetMethodBody() != null) q.Enqueue(member);
-                                }
-                            }
-                        }
-                    }
-
                     ++uniqueId;
                     var structName = $"JobDebugData{uniqueId}";
 
@@ -334,6 +278,79 @@ namespace ME.BECS.Editor.Jobs {
                 }
             }
             
+        }
+
+        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType) {
+            var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
+            var componentsType = new System.Collections.Generic.HashSet<System.Type>();
+
+            var root = jobType.GetMethod("Execute");
+            var parameters = root.GetParameters();
+            foreach (var p in parameters) {
+                if (typeof(IAspect).IsAssignableFrom(p.ParameterType) == true) {
+                    aspectsType.Add(p.ParameterType);
+                } else if (typeof(IComponentBase).IsAssignableFrom(p.ParameterType) == true) {
+                    componentsType.Add(p.ParameterType);
+                }
+            }
+            var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
+            q.Enqueue(root);
+            var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
+            var visited = new System.Collections.Generic.HashSet<System.Reflection.MethodInfo>();
+            while (q.Count > 0) {
+                var body = q.Dequeue();
+                var instructions = body.GetInstructions();
+                foreach (var inst in instructions) {
+                    {
+                        if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
+                            continue;
+                        }
+                    }
+                    {
+                        if (inst.Operand is FieldInfo fieldInfo && fieldInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
+                            continue;
+                        }
+                    }
+                    {
+                        if (inst.Operand is System.Reflection.FieldInfo field && typeof(IRefOp).IsAssignableFrom(field.FieldType) == true) {
+                            var op = (IRefOp)System.Activator.CreateInstance(field.FieldType);
+                            //UnityEngine.Debug.Log(field.FieldType + " :: " + op.Op);
+                            uniqueTypes.Add(new TypeInfo() {
+                                type = field.FieldType.GenericTypeArguments[0],
+                                op = op.Op,
+                            });
+                        }
+                    }
+                    {
+                        if (inst.Operand is FieldInfo field && typeof(IComponentBase).IsAssignableFrom(field.DeclaringType) == true) {
+                            uniqueTypes.Add(new TypeInfo() {
+                                type = field.DeclaringType,
+                                op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && inst.OpCode == System.Reflection.Emit.OpCodes.Stfld ? RefOp.WriteOnly : RefOp.ReadOnly,
+                            });
+                        }
+                    }
+                    if (inst.Operand is System.Reflection.MethodInfo method && method.IsGenericMethod == true) {
+                        var safetyCheck = method.GetCustomAttribute<SafetyCheckAttribute>();
+                        if (safetyCheck != null) {
+                            var type = method.GetGenericArguments()[0];
+                            if (typeof(IComponentBase).IsAssignableFrom(type) == true) {
+                                uniqueTypes.Add(new TypeInfo() {
+                                    type = type,
+                                    op = safetyCheck.Op,
+                                });
+                            }
+                        }
+                    }
+
+                    if (inst.Operand is System.Reflection.MethodInfo member) {
+                        if (visited.Add(member) == true) {
+                            if (member.GetMethodBody() != null) q.Enqueue(member);
+                        }
+                    }
+                }
+            }
+
+            return uniqueTypes;
         }
 
         private void GenerateJobsDebug(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
