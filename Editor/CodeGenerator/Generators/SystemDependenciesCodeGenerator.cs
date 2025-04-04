@@ -1,8 +1,9 @@
 using System.Linq;
 using System.Reflection;
 using ME.BECS.Mono.Reflection;
+using ME.BECS.Editor.Jobs;
 
-namespace ME.BECS.Editor.Aspects {
+namespace ME.BECS.Editor.Systems {
 
     public class SystemDependenciesCodeGenerator : CustomCodeGenerator {
 
@@ -17,6 +18,7 @@ namespace ME.BECS.Editor.Aspects {
             var content = new System.Collections.Generic.List<string>();
             content.Add("/*");
             
+            var nodes = new System.Collections.Generic.List<Graph.Node>();
             var systems = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToArray();
             foreach (var system in systems) {
 
@@ -25,22 +27,48 @@ namespace ME.BECS.Editor.Aspects {
 
                 content.Add($"// system: {system.FullName}");
 
+                /*var awakeMethod = system.GetMethod("OnAwake");
+                if (awakeMethod != null) {
+                    var deps = this.GetDeps(awakeMethod);
+                    if (deps.ops != null) {
+                        foreach (var dep in deps.ops) {
+                            content.Add($"//    {dep.op}: {dep.type.FullName}");
+                        }
+                    }
+
+                    var node = new Graph.Node() {
+                        system = system,
+                        dependencies = deps.GetDependencies(),
+                        inputs = deps.GetInputs(),
+                        outputs = deps.GetOutputs(),
+                    };
+                    nodes.Add(node);
+
+                }*/
+
                 var updateMethod = system.GetMethod("OnUpdate");
                 if (updateMethod != null) {
-                    //try {
-                        var deps = this.GetDeps(updateMethod);
-                        if (deps.ops != null) {
-                            foreach (var dep in deps.ops) {
-                                content.Add($"//    {dep.op}: {dep.type.FullName}");
-                            }
+                    var deps = this.GetDeps(updateMethod);
+                    if (deps.ops != null) {
+                        foreach (var dep in deps.ops) {
+                            content.Add($"//    {dep.op}: {dep.type.FullName}");
                         }
-                    //} catch (System.Exception e) {
-                    //    UnityEngine.Debug.LogError(system + ": " + e.Message);
-                    //    content.Add($"// ERROR: {e.Message}");
-                    //}
+                    }
+
+                    var node = new Graph.Node() {
+                        system = system,
+                        dependencies = deps.GetDependencies(),
+                        inputs = deps.GetInputs(),
+                        outputs = deps.GetOutputs(),
+                    };
+                    nodes.Add(node);
+
                 }
 
             }
+
+            var graph = new Graph(nodes);
+            UnityEngine.Debug.Log(graph.ToString());
             
             content.Add("*/");
             var def = new CodeGenerator.MethodDefinition() {
@@ -54,166 +82,171 @@ namespace ME.BECS.Editor.Aspects {
 
         }
 
+        public class Graph {
+
+            public class Node {
+
+                public System.Type system;
+                public System.Collections.Generic.List<System.Type> dependencies;
+                public System.Type[] inputs;
+                public System.Type[] outputs;
+                public Node[] next;
+
+                public override string ToString() {
+                    return this.system.Name + "\n    " + string.Join("\n    ", this.dependencies.Select(x => x.ToString()).ToArray());//"Inputs: " + string.Join(", ", this.inputs.Select(x => x.ToString()).ToArray()) + ", Outputs: " + string.Join(", ", this.outputs.Select(x => x.ToString()).ToArray());
+                }
+
+                public bool ContainsAny(System.Type[] types) {
+                    for (int i = 0; i < this.outputs.Length; ++i) {
+                        for (int j = 0; j < types.Length; ++j) {
+                            if (this.outputs[i] == types[j]) return true;
+                        }
+                    }
+                    return false;
+                }
+
+            }
+
+            public Node[] roots;
+            public Node[] nodes;
+
+            public Graph(System.Collections.Generic.List<Graph.Node> nodes) {
+                this.nodes = nodes.ToArray();
+                // filter out root candidates:
+                //   contains only WriteOnly
+                //   contains any types, but there are no outputs for these types in other nodes
+                var roots = new System.Collections.Generic.HashSet<Node>();
+                foreach (var node in nodes) {
+                    if (node.dependencies.Count > 0) continue;
+                    if (node.inputs.Length == 0) {
+                        roots.Add(node);
+                    }
+
+                    if (node.outputs.Length > 0) {
+                        if (nodes.Any(x => x != node && (x.ContainsAny(node.outputs) == true || x.ContainsAny(node.inputs) == true)) == false) {
+                            roots.Add(node);
+                        }
+                    }
+                }
+                this.roots = roots.ToArray();
+                
+                // find dependencies for each node
+                // node has dependency if current node's inputs contained in any outputs
+                foreach (var node in nodes) {
+                    if (node.inputs.Length > 0) {
+                        var arr = nodes.Where(x => x != node && x.ContainsAny(node.inputs) == true).Select(x => x.system).ToArray();
+                        node.dependencies.AddRange(arr);
+                    }
+                }
+            }
+
+            public override string ToString() {
+
+                var str = new System.Text.StringBuilder();
+                str.Append("Roots:\n");
+                foreach (var root in this.roots) {
+                    str.Append(root.ToString());
+                    str.Append('\n');
+                }
+                str.Append("Nodes:\n");
+                foreach (var node in this.nodes) {
+                    str.Append(node.ToString());
+                    str.Append('\n');
+                }
+                return str.ToString();
+                
+            }
+
+        }
+
         public struct MethodInfoDependencies {
 
-            public System.Collections.Generic.HashSet<TypeInfo> ops;
+            public System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> ops;
 
-            public void Add(System.Type componentType, RefOp op) {
-                
-                if (this.ops == null) this.ops = new System.Collections.Generic.HashSet<TypeInfo>();
-                {
-                    var roOp = new TypeInfo() {
-                        type = componentType,
-                        op = RefOp.ReadOnly,
-                    };
-                    if (this.ops.Contains(roOp) == true) {
-                        if (op == RefOp.WriteOnly) {
-                            this.ops.Remove(roOp);
-                            this.ops.Add(new TypeInfo() {
-                                type = componentType,
-                                op = op,
-                            });
-                        } else if (op == RefOp.ReadWrite) {
-                            this.ops.Remove(roOp);
-                            this.ops.Add(new TypeInfo() {
-                                type = componentType,
-                                op = op,
-                            });
-                        }
-                    } else {
-                        this.ops.Add(new TypeInfo() {
-                            type = componentType,
-                            op = op,
-                        });
-                    }
+            public MethodInfoDependencies(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types) {
+                this.ops = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
+                foreach (var item in types) {
+                    this.ops.Add(item);
                 }
-                {
-                    var roOp = new TypeInfo() {
-                        type = componentType,
-                        op = RefOp.WriteOnly,
-                    };
-                    if (this.ops.Contains(roOp) == true) {
-                        if (op == RefOp.ReadWrite) {
-                            this.ops.Remove(roOp);
-                            this.ops.Add(new TypeInfo() {
-                                type = componentType,
-                                op = op,
-                            });
-                        }
-                    } else {
-                        this.ops.Add(new TypeInfo() {
-                            type = componentType,
-                            op = op,
-                        });
-                    }
-                }
+            }
 
+            public System.Type[] GetInputs() {
+                return this.ops.Where(x => x.op == RefOp.ReadOnly).Select(x => x.type).ToArray();
+            }
+
+            public System.Type[] GetOutputs() {
+                return this.ops.Where(x => x.op != RefOp.ReadOnly && typeof(ISystem).IsAssignableFrom(x.type) == false).Select(x => x.type).ToArray();
+            }
+
+            public System.Collections.Generic.List<System.Type> GetDependencies() {
+                return this.ops.Where(x => typeof(ISystem).IsAssignableFrom(x.type) == true).Select(x => x.type).ToList();
             }
 
         }
 
-        public struct TypeInfo : System.IEquatable<TypeInfo> {
-
-            public System.Type type;
-            public RefOp op;
-
-            public bool Equals(TypeInfo other) {
-                return Equals(this.type, other.type) && this.op == other.op;
-            }
-
-            public override bool Equals(object obj) {
-                return obj is TypeInfo other && this.Equals(other);
-            }
-
-            public override int GetHashCode() {
-                return System.HashCode.Combine(this.type, (int)this.op);
-            }
-
-        }
-        
         private MethodInfoDependencies GetDeps(MethodInfo root) {
 
             if (root == null) return default;
+
+            var getSystemMethod = typeof(SystemsWorldExt).GetMethod(nameof(SystemsWorldExt.GetSystemPtr));
+            var withMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.With));
+            var withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAny));
+            var withoutMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.Without));
+            var withAspectMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAspect));
             
-            var withMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod("With");
-            var withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod("WithAny");
-            var withoutMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod("Without");
-            var withAspectMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod("WithAspect");
-            
-            var deps = new MethodInfoDependencies();
+            var uniqueTypes = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
-            var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
             var visited = new System.Collections.Generic.HashSet<System.Reflection.MethodInfo>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
                     if (inst.Operand is MethodInfo methodInfo) {
-                        if (IsMethod(methodInfo, withMethod) == true) {
-                            deps.Add(methodInfo.GetGenericArguments()[0], RefOp.ReadOnly);
+                        if (IsMethod(methodInfo, getSystemMethod) == true) {
+                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                type = methodInfo.GetGenericArguments()[0],
+                                op = RefOp.ReadWrite,
+                            });
+                        } else if (IsMethod(methodInfo, withMethod) == true) {
+                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                type = methodInfo.GetGenericArguments()[0],
+                                op = RefOp.ReadOnly,
+                            });
                         } else if (IsMethod(methodInfo, withAnyMethod) == true) {
-                            deps.Add(methodInfo.GetGenericArguments()[0], RefOp.ReadOnly);
+                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                type = methodInfo.GetGenericArguments()[0],
+                                op = RefOp.ReadOnly,
+                            });
                         } else if (IsMethod(methodInfo, withoutMethod) == true) {
-                            deps.Add(methodInfo.GetGenericArguments()[0], RefOp.ReadOnly);
+                            uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                type = methodInfo.GetGenericArguments()[0],
+                                op = RefOp.ReadOnly,
+                            });
                         } else if (IsMethod(methodInfo, withAspectMethod) == true) {
                             var aspect = methodInfo.GetGenericArguments()[0];
                             var fields = aspect.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                             foreach (var field in fields) {
                                 if (field.GetCustomAttribute<QueryWithAttribute>() != null) {
                                     var type = field.FieldType.GetGenericArguments()[0];
-                                    deps.Add(type, RefOp.ReadOnly);
+                                    uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                        type = type,
+                                        op = RefOp.ReadOnly,
+                                    });
                                 }
                             }
                         } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
                             var jobType = methodInfo.GetGenericArguments()[0];
-                            var info = ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
+                            var info = JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
                             foreach (var typeInfo in info) {
-                                deps.Add(typeInfo.type, typeInfo.op);
-                            }
-                        }
-                    }
-                    /*{
-                        if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
-                            continue;
-                        }
-                    }
-                    {
-                        if (inst.Operand is FieldInfo fieldInfo && fieldInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
-                            continue;
-                        }
-                    }
-                    {
-                        if (inst.Operand is System.Reflection.FieldInfo field && typeof(IRefOp).IsAssignableFrom(field.FieldType) == true) {
-                            var op = (IRefOp)System.Activator.CreateInstance(field.FieldType);
-                            //UnityEngine.Debug.Log(field.FieldType + " :: " + op.Op);
-                            uniqueTypes.Add(new TypeInfo() {
-                                type = field.FieldType.GenericTypeArguments[0],
-                                op = op.Op,
-                            });
-                        }
-                    }
-                    {
-                        if (inst.Operand is FieldInfo field && typeof(IComponentBase).IsAssignableFrom(field.DeclaringType) == true) {
-                            uniqueTypes.Add(new TypeInfo() {
-                                type = field.DeclaringType,
-                                op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && inst.OpCode == System.Reflection.Emit.OpCodes.Stfld ? RefOp.WriteOnly : RefOp.ReadOnly,
-                            });
-                        }
-                    }
-                    if (inst.Operand is System.Reflection.MethodInfo method && method.IsGenericMethod == true) {
-                        var safetyCheck = method.GetCustomAttribute<SafetyCheckAttribute>();
-                        if (safetyCheck != null) {
-                            var type = method.GetGenericArguments()[0];
-                            if (typeof(IComponentBase).IsAssignableFrom(type) == true) {
-                                uniqueTypes.Add(new TypeInfo() {
-                                    type = type,
-                                    op = safetyCheck.Op,
+                                uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                    type = typeInfo.type,
+                                    op = typeInfo.op,
                                 });
                             }
                         }
-                    }*/
-
+                    }
+                    
                     if (inst.Operand is System.Reflection.MethodInfo member) {
                         if (visited.Add(member) == true) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
@@ -221,7 +254,9 @@ namespace ME.BECS.Editor.Aspects {
                     }
                 }
             }
-
+            
+            JobsEarlyInitCodeGenerator.UpdateDeps(uniqueTypes);
+            var deps = new MethodInfoDependencies(uniqueTypes);
             return deps;
         }
 

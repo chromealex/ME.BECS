@@ -6,6 +6,25 @@ namespace ME.BECS.Editor.Jobs {
     
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
 
+        public struct TypeInfo : System.IEquatable<TypeInfo> {
+
+            public System.Type type;
+            public RefOp op;
+
+            public bool Equals(TypeInfo other) {
+                return Equals(this.type, other.type) && this.op == other.op;
+            }
+
+            public override bool Equals(object obj) {
+                return obj is TypeInfo other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return System.HashCode.Combine(this.type, (int)this.op);
+            }
+
+        }
+
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
             
             {
@@ -113,25 +132,6 @@ namespace ME.BECS.Editor.Jobs {
 
         }
 
-        public struct TypeInfo : System.IEquatable<TypeInfo> {
-
-            public System.Type type;
-            public RefOp op;
-
-            public bool Equals(TypeInfo other) {
-                return Equals(this.type, other.type) && this.op == other.op;
-            }
-
-            public override bool Equals(object obj) {
-                return obj is TypeInfo other && this.Equals(other);
-            }
-
-            public override int GetHashCode() {
-                return System.HashCode.Combine(this.type, (int)this.op);
-            }
-
-        }
-        
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             {
@@ -227,27 +227,7 @@ namespace ME.BECS.Editor.Jobs {
                         }
 
                         {
-                            var list = uniqueTypes.ToList();
-                            for (uint j = 0u; j < list.Count; ++j) {
-                                var item = list[(int)j];
-                                var src = item;
-                                if (item.op == RefOp.ReadOnly) {
-                                    item.op = RefOp.WriteOnly;
-                                    if (uniqueTypes.Contains(item) == true) {
-                                        uniqueTypes.Remove(src);
-                                        uniqueTypes.Remove(item);
-                                        item.op = RefOp.ReadWrite;
-                                        uniqueTypes.Add(item);
-                                    }
-                                }
-                                if (item.op == RefOp.ReadOnly ||
-                                    item.op == RefOp.WriteOnly) {
-                                    item.op = RefOp.ReadWrite;
-                                    if (uniqueTypes.Contains(item) == true) {
-                                        uniqueTypes.Remove(src);
-                                    }
-                                }
-                            }
+                            UpdateDeps(uniqueTypes);
 
                             var i = 0u;
                             var uniqueTypesSorted = uniqueTypes.ToList().OrderBy(x => x.type.FullName);
@@ -351,6 +331,31 @@ namespace ME.BECS.Editor.Jobs {
             }
 
             return uniqueTypes;
+        }
+
+        public static void UpdateDeps(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> uniqueTypes) {
+            if (uniqueTypes == null) return;
+            var list = uniqueTypes.ToList();
+            for (uint j = 0u; j < list.Count; ++j) {
+                var item = list[(int)j];
+                var src = item;
+                if (item.op == RefOp.ReadOnly) {
+                    item.op = RefOp.WriteOnly;
+                    if (uniqueTypes.Contains(item) == true) {
+                        uniqueTypes.Remove(src);
+                        uniqueTypes.Remove(item);
+                        item.op = RefOp.ReadWrite;
+                        uniqueTypes.Add(item);
+                    }
+                }
+                if (item.op == RefOp.ReadOnly ||
+                    item.op == RefOp.WriteOnly) {
+                    item.op = RefOp.ReadWrite;
+                    if (uniqueTypes.Contains(item) == true) {
+                        uniqueTypes.Remove(src);
+                    }
+                }
+            }
         }
 
         private void GenerateJobsDebug(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {

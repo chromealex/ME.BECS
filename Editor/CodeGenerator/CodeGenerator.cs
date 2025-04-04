@@ -261,6 +261,8 @@ namespace ME.BECS.Editor {
             
         }
 
+        private const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
+
         private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
 
             string postfix;
@@ -277,14 +279,14 @@ namespace ME.BECS.Editor {
                 System.IO.Directory.CreateDirectory(dir);
             }
             
+            UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, $"Build {dir}", 0f);
             var componentTypes = new System.Collections.Generic.List<System.Type>();
-            {
+            try {
                 var path = @$"{dir}/{ECS}.Gen.cs";
                 string template = null;
                 if (editorAssembly == true) {
                     template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Editor-Template.txt").text;
-                }
-                else {
+                } else {
                     template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Template.txt").text;
                 }
 
@@ -308,7 +310,7 @@ namespace ME.BECS.Editor {
                     if (editorAssembly == false && info.isEditor == true) continue;
 
                     if (type.IsVisible == false) continue;
-                    
+
                     var systemType = type.FullName.Replace("+", ".");
                     content.Add($"StaticSystemTypes<{systemType}>.Validate();");
                     typesContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
@@ -320,7 +322,7 @@ namespace ME.BECS.Editor {
                     var hasDestroy = typesDestroy.Contains(type);
                     var hasDrawGizmos = typesDrawGizmos.Contains(type);
                     //if (burstedTypes.Contains(type) == false) continue;
-                    
+
                     var awakeBurst = hasAwake == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IAwake.OnAwake))) == false;
                     var startBurst = hasStart == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IStart.OnStart))) == false;
                     var updateBurst = hasUpdate == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IUpdate.OnUpdate))) == false;
@@ -359,14 +361,14 @@ namespace ME.BECS.Editor {
                     if (drawGizmosBurst == true) content.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
 
                 }
-                
+
                 var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
                 foreach (var component in components) {
 
                     var asm = component.Assembly.GetName().Name;
                     var info = asms.FirstOrDefault(x => x.name == asm);
                     if (editorAssembly == false && info.isEditor == true) continue;
-                    
+
                     var attr = (ComponentGroupAttribute)component.GetCustomAttribute(typeof(ComponentGroupAttribute));
                     var systemType = component.FullName.Replace("+", ".");
                     var groupType = attr.groupType.FullName.Replace("+", ".");
@@ -400,8 +402,9 @@ namespace ME.BECS.Editor {
                                 typesContent.Add(str);
                             }
                         }
+
                         content.Add($"StaticTypes<{type}>.AOT();");
-                        
+
                     }
                 }
                 {
@@ -421,7 +424,7 @@ namespace ME.BECS.Editor {
                         typesContent.Add(str);
                         componentTypes.Add(component);
                         content.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(null);");
-                        
+
                     }
                 }
                 {
@@ -486,22 +489,27 @@ namespace ME.BECS.Editor {
                 var methods = new System.Collections.Generic.List<MethodDefinition>();
                 var publicContent = new System.Collections.Generic.List<string>();
                 {
-                    
-                    foreach (var customCodeGenerator in generators) {
+                    for (var index = 0; index < generators.Length; ++index) {
+                        var customCodeGenerator = generators[index];
                         customCodeGenerator.asms = asms;
                         customCodeGenerator.editorAssembly = editorAssembly;
                         customCodeGenerator.burstedTypes = burstedTypes;
                         customCodeGenerator.burstDiscardedTypes = burstDiscardedTypes;
+                        UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, customCodeGenerator.GetType().Name, index / (float)generators.Length);
                         customCodeGenerator.AddInitialization(typesContent, componentTypes);
                         publicContent.Add(customCodeGenerator.AddPublicContent());
                         methods.AddRange(customCodeGenerator.AddMethods(componentTypes));
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
-
                 }
 
-                var methodRegistryContents = methods.Where(x => x.definition != null && x.type != null).Select(x => $"WorldStaticCallbacks.{x.registerMethodName}<{x.type}>({x.GetMethodParamsCall()});").ToArray();
-                var methodContents = methods.Where(x => x.definition != null).Select(x => $"{(x.burstCompile == true ? "[BurstCompile]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}").ToArray();
+                var methodRegistryContents = methods.Where(x => x.definition != null && x.type != null)
+                                                    .Select(x => $"WorldStaticCallbacks.{x.registerMethodName}<{x.type}>({x.GetMethodParamsCall()});").ToArray();
+                var methodContents = methods.Where(x => x.definition != null)
+                                            .Select(
+                                                x =>
+                                                    $"{(x.burstCompile == true ? "[BurstCompile]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
+                                            .ToArray();
 
                 var newContent = template.Replace("{{CONTENT}}", string.Join("\n", content));
                 newContent = newContent.Replace("{{CUSTOM_METHOD_REGISTRY}}", string.Join("\n", methodRegistryContents));
@@ -514,6 +522,10 @@ namespace ME.BECS.Editor {
                     System.IO.File.WriteAllText(path, newContent);
                     UnityEditor.AssetDatabase.ImportAsset(path);
                 }
+            } catch (System.Exception ex) {
+                UnityEngine.Debug.LogException(ex);
+            } finally {
+                UnityEditor.EditorUtility.ClearProgressBar();
             }
             {
                 var csc = @$"{dir}/csc.rsp";
