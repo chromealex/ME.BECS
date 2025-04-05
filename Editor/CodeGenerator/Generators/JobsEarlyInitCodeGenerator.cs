@@ -267,10 +267,10 @@ namespace ME.BECS.Editor.Jobs {
             var root = jobType.GetMethod("Execute");
             var parameters = root.GetParameters();
             foreach (var p in parameters) {
-                if (typeof(IAspect).IsAssignableFrom(p.ParameterType) == true) {
-                    aspectsType.Add(p.ParameterType);
-                } else if (typeof(IComponentBase).IsAssignableFrom(p.ParameterType) == true) {
-                    componentsType.Add(p.ParameterType);
+                if (p.ParameterType.GetInterfaces().Contains(typeof(IAspect)) == true) {
+                    aspectsType.Add(p.ParameterType.GetElementType());
+                } else if (p.ParameterType.GetInterfaces().Contains(typeof(IComponentBase)) == true) {
+                    componentsType.Add(p.ParameterType.GetElementType());
                 }
             }
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
@@ -305,7 +305,7 @@ namespace ME.BECS.Editor.Jobs {
                         if (inst.Operand is FieldInfo field && typeof(IComponentBase).IsAssignableFrom(field.DeclaringType) == true) {
                             uniqueTypes.Add(new TypeInfo() {
                                 type = field.DeclaringType,
-                                op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && inst.OpCode == System.Reflection.Emit.OpCodes.Stfld ? RefOp.WriteOnly : RefOp.ReadOnly,
+                                op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && (inst.OpCode == System.Reflection.Emit.OpCodes.Stfld || inst.OpCode == System.Reflection.Emit.OpCodes.Stobj || inst.OpCode == System.Reflection.Emit.OpCodes.Ldflda) ? RefOp.WriteOnly : RefOp.ReadOnly,
                             });
                         }
                     }

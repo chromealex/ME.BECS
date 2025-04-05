@@ -68,7 +68,7 @@ namespace ME.BECS.Editor.Systems {
             }
 
             var graph = new Graph(nodes);
-            UnityEngine.Debug.Log(graph.ToString());
+            content.Add(graph.ToString());
             
             content.Add("*/");
             var def = new CodeGenerator.MethodDefinition() {
@@ -90,7 +90,6 @@ namespace ME.BECS.Editor.Systems {
                 public System.Collections.Generic.List<System.Type> dependencies;
                 public System.Type[] inputs;
                 public System.Type[] outputs;
-                public Node[] next;
 
                 public override string ToString() {
                     return this.system.Name + "\n    " + string.Join("\n    ", this.dependencies.Select(x => x.ToString()).ToArray());//"Inputs: " + string.Join(", ", this.inputs.Select(x => x.ToString()).ToArray()) + ", Outputs: " + string.Join(", ", this.outputs.Select(x => x.ToString()).ToArray());
@@ -107,29 +106,10 @@ namespace ME.BECS.Editor.Systems {
 
             }
 
-            public Node[] roots;
             public Node[] nodes;
 
             public Graph(System.Collections.Generic.List<Graph.Node> nodes) {
                 this.nodes = nodes.ToArray();
-                // filter out root candidates:
-                //   contains only WriteOnly
-                //   contains any types, but there are no outputs for these types in other nodes
-                var roots = new System.Collections.Generic.HashSet<Node>();
-                foreach (var node in nodes) {
-                    if (node.dependencies.Count > 0) continue;
-                    if (node.inputs.Length == 0) {
-                        roots.Add(node);
-                    }
-
-                    if (node.outputs.Length > 0) {
-                        if (nodes.Any(x => x != node && (x.ContainsAny(node.outputs) == true || x.ContainsAny(node.inputs) == true)) == false) {
-                            roots.Add(node);
-                        }
-                    }
-                }
-                this.roots = roots.ToArray();
-                
                 // find dependencies for each node
                 // node has dependency if current node's inputs contained in any outputs
                 foreach (var node in nodes) {
@@ -143,11 +123,6 @@ namespace ME.BECS.Editor.Systems {
             public override string ToString() {
 
                 var str = new System.Text.StringBuilder();
-                str.Append("Roots:\n");
-                foreach (var root in this.roots) {
-                    str.Append(root.ToString());
-                    str.Append('\n');
-                }
                 str.Append("Nodes:\n");
                 foreach (var node in this.nodes) {
                     str.Append(node.ToString());
@@ -171,11 +146,11 @@ namespace ME.BECS.Editor.Systems {
             }
 
             public System.Type[] GetInputs() {
-                return this.ops.Where(x => x.op == RefOp.ReadOnly).Select(x => x.type).ToArray();
+                return this.ops.Where(x => x.op == RefOp.ReadOnly || x.op == RefOp.ReadWrite).Select(x => x.type).ToArray();
             }
 
             public System.Type[] GetOutputs() {
-                return this.ops.Where(x => x.op != RefOp.ReadOnly && typeof(ISystem).IsAssignableFrom(x.type) == false).Select(x => x.type).ToArray();
+                return this.ops.Where(x => (x.op == RefOp.WriteOnly || x.op == RefOp.ReadWrite) && typeof(ISystem).IsAssignableFrom(x.type) == false).Select(x => x.type).ToArray();
             }
 
             public System.Collections.Generic.List<System.Type> GetDependencies() {
