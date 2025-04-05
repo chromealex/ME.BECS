@@ -38,6 +38,17 @@ namespace ME.BECS.Attack {
         public readonly ListAuto<Ent> targets => this.targetsDataPtr.Read(this.ent.id, this.ent.gen).targets;
 
         public bool HasAnyTarget => this.target.IsAlive() == true || this.targets.Count > 0;
+        public readonly uint Damage {
+            get {
+                if (this.ent.Has<ME.BECS.Bullets.DamageOverrideComponent>()) return this.ent.Read<ME.BECS.Bullets.DamageOverrideComponent>().damage;
+                var config = this.readComponent.bulletConfig.AsUnsafeConfig();
+                if (config.IsValid() == true && config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent)) {
+                    return bulletConfigComponent.damage;
+                }
+                
+                return 0u;
+            }
+        }
         
         [INLINE(256)]
         private readonly void CleanUpTarget() {
@@ -138,14 +149,7 @@ namespace ME.BECS.Attack {
 
         [INLINE(256)]
         public readonly uint CalculateDPS() {
-            var config = this.readComponent.bulletConfig.AsUnsafeConfig();
-            if (config.IsValid() == true) {
-                if (config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent) == true) {
-                    return (uint)(bulletConfigComponent.damage * math.max(1u, this.readComponent.rateCount) / this.readComponent.fireTime);
-                }
-            }
-
-            return 0u;
+            return (uint)(this.Damage * math.max(1u, this.readComponent.rateCount) / this.readComponent.fireTime);
         }
 
         [INLINE(256)]

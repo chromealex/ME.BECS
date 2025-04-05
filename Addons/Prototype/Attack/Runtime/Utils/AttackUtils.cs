@@ -16,6 +16,7 @@ namespace ME.BECS.Attack {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
     using ME.BECS.Bullets;
+    using ME.BECS.Views;
 
     public static class AttackUtils {
 
@@ -132,6 +133,74 @@ namespace ME.BECS.Attack {
             
         }
 
+        /// <summary>
+        /// Create bullet entity with 200 ms muzzleLifetime
+        /// </summary>
+        /// <param name="attackAspect">Attack aspect</param>
+        /// <param name="position">Initial bullet position</param>
+        /// <param name="rotation">Initial bullet rotation</param>
+        /// <param name="targetsMask">Targets tree mask</param>
+        /// <param name="target">If set - use this to target bullet at runtime</param>
+        /// <param name="targetPosition">If set</param>
+        /// <param name="config">Bullet config</param>
+        /// <param name="muzzleView">Muzzle view</param>
+        /// <param name="jobInfo"></param>
+        /// <returns></returns>
+        [INLINE(256)]
+        public static BulletAspect CreateBullet(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition,
+                                                in Config config, in ME.BECS.Views.View muzzleView, in JobInfo jobInfo = default) {
+            return CreateBullet(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+        }
+
+        /// <summary>
+        /// Create bullet entity
+        /// </summary>
+        /// <param name="attackAspect">Attack aspect</param>
+        /// <param name="position">Initial bullet position</param>
+        /// <param name="rotation">Initial bullet rotation</param>
+        /// <param name="targetsMask">Targets tree mask</param>
+        /// <param name="target">If set - use this to target bullet at runtime</param>
+        /// <param name="targetPosition">If set</param>
+        /// <param name="config">Bullet config</param>
+        /// <param name="muzzleView">Muzzle view</param>
+        /// <param name="muzzleLifetimeMs">Muzzle lifetime in ms</param>
+        /// <param name="jobInfo"></param>
+        /// <returns></returns>
+        [INLINE(256)]
+        public static BulletAspect CreateBullet(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
+
+            if (muzzleView.IsValid == true) {
+                var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");
+                var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
+                tr.position = position;
+                tr.rotation = rotation;
+                muzzleEnt.InstantiateView(muzzleView);
+                muzzleEnt.Destroy(muzzleLifetimeMs);
+            }
+
+            {
+                var sourceUnit = attackAspect.ent.GetParent();
+                var ent = Ent.New(in jobInfo, "Bullet");
+                ME.BECS.Players.PlayerUtils.SetOwner(in ent, ME.BECS.Players.PlayerUtils.GetOwner(in sourceUnit));
+                config.Apply(ent);
+                var attack = ent.GetOrCreateAspect<QuadTreeQueryAspect>();
+                attack.query.treeMask = targetsMask; // Search for targets in this tree
+                attack.query.rangeSqr = math.max(1f, ent.Read<BulletConfigComponent>().hitRangeSqr);
+                var tr = ent.GetOrCreateAspect<TransformAspect>();
+                tr.position = position;
+                tr.rotation = rotation;
+                var bullet = ent.GetOrCreateAspect<BulletAspect>();
+                bullet.component.targetEnt = target;
+                bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
+                bullet.component.sourceUnit = sourceUnit;
+
+                if (attackAspect.ent.Has<DamageOverrideComponent>()) {
+                    bullet.damage = attackAspect.ent.Read<DamageOverrideComponent>().damage;
+                }
+                return bullet;
+            }
+
+        }
     }
 
 }

@@ -26,4 +26,11 @@ namespace ME.BECS.Bullets {
 
     }
     
+    [ComponentGroup(typeof(BulletComponentGroup))]
+    public struct DamageOverrideComponent : IComponent {
+
+        public uint damage;
+
+    }
+    
 }
