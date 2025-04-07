@@ -92,7 +92,7 @@ namespace ME.BECS.Editor.Systems {
                 public System.Type[] outputs;
 
                 public override string ToString() {
-                    return this.system.Name + "\n    " + string.Join("\n    ", this.dependencies.Select(x => x.ToString()).ToArray());//"Inputs: " + string.Join(", ", this.inputs.Select(x => x.ToString()).ToArray()) + ", Outputs: " + string.Join(", ", this.outputs.Select(x => x.ToString()).ToArray());
+                    return this.system.Name + "\n|------ " + string.Join("\n|------ ", this.dependencies.Select(x => x.ToString()).ToArray());//"Inputs: " + string.Join(", ", this.inputs.Select(x => x.ToString()).ToArray()) + ", Outputs: " + string.Join(", ", this.outputs.Select(x => x.ToString()).ToArray());
                 }
 
                 public bool ContainsAny(System.Type[] types) {
