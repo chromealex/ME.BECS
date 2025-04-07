@@ -24,14 +24,14 @@ namespace ME.BECS.Bullets {
                         var unit = query.results.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, in jobInfo);
+                        targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.component.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
                     var targetUnit = bullet.component.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, in jobInfo);
+                    targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
                     
                 } else if (bullet.component.targetEnt == Ent.Null) {
 
@@ -40,7 +40,7 @@ namespace ME.BECS.Bullets {
                         var unit = query.results.results[0];
                         if (unit.IsAlive() == true) {
                             var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.config.damage, bullet.component.sourceUnit, in jobInfo);
+                            targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
                         }
                     }
 

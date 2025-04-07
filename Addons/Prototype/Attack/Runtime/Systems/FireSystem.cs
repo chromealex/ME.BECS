@@ -35,7 +35,7 @@ namespace ME.BECS.Attack {
                             rot = firePointTr.GetWorldMatrixRotation();
                         }
 
-                        BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.readQuery.treeMask, aspect.target, default, aspect.readComponent.bulletConfig,
+                        AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, aspect.target, default, aspect.readComponent.bulletConfig,
                                                  aspect.readComponent.muzzleView, jobInfo: jobInfo);
 
                         aspect.UseFire();
@@ -70,7 +70,7 @@ namespace ME.BECS.Attack {
 
                         foreach (var unit in aspect.targets) {
                             if (unit.IsAlive() == false) continue;
-                            BulletUtils.CreateBullet(aspect.ent.GetParent(), pos, rot, query.readQuery.treeMask, unit, default, aspect.readComponent.bulletConfig,
+                            AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, unit, default, aspect.readComponent.bulletConfig,
                                                      aspect.readComponent.muzzleView, jobInfo: in jobInfo);
                         }
 
