@@ -88,6 +88,11 @@ namespace ME.BECS {
         public CollectionsData collectionsData;
 
         public void Validate() {
+            this.OnValidate();
+            this.collectionsData.CleanUp(this);
+        }
+
+        public void OnValidate() {
             var list = new System.Collections.Generic.List<IConfigInitialize>();
             list.AddRange(this.data.components.OfType<IConfigInitialize>());
             list.AddRange(this.sharedData.components.OfType<IConfigInitialize>());
@@ -95,7 +100,6 @@ namespace ME.BECS {
             this.dataInitialize = new ComponentsStorage<IConfigInitialize>() {
                 components = list.ToArray(),
             };
-            this.collectionsData.CleanUp(this);
         }
 
         public UnsafeEntityConfig CreateUnsafeConfig(uint id = 0u, Ent ent = default) {
