@@ -41,7 +41,9 @@ namespace ME.BECS.Units {
             {
                 for (uint i = 0; i < units.Count; ++i) {
                     var unit = units[i];
-                    aspect.Add(unit.GetAspect<UnitAspect>());
+                    var unitAspect = unit.GetAspect<UnitAspect>();
+                    unitAspect.IsHold = false;
+                    aspect.Add(unitAspect);
                 }
             }
             return aspect;
@@ -98,7 +100,9 @@ namespace ME.BECS.Units {
                 aspect.units.Remove(unit.ent);
                 aspect.Unlock();
                 JobUtils.Decrement(ref aspect.volume, UnitUtils.GetVolume(in unit));
+                unit.unitCommandGroup = default;
                 if (aspect.units.Count == 0u) {
+                    aspect.Lock();
                     // destroy group if it is not a chain group
                     // and parent groups count is zero
                     if (aspect.IsPartOfChain == false &&
@@ -106,9 +110,10 @@ namespace ME.BECS.Units {
                         UnitUtils.DestroyCommandGroup(in aspect);
                     }
 
+                    aspect.Unlock();
                     return true;
                 }
-                unit.unitCommandGroup = default;
+                
             }
 
             return false;
