@@ -212,13 +212,13 @@ namespace ME.BECS.FogOfWar {
             for (uint i = 0u; i < points.Length; ++i) {
                 var rect = points[i];
                 var min = rect.min;
-                min.x = math.clamp(min.x, 0u, props.size.x);
-                min.y = math.clamp(min.y, 0u, props.size.y);
+                min.x = math.clamp(min.x, 0u, props.size.x - 1u);
+                min.y = math.clamp(min.y, 0u, props.size.y - 1u);
                 var max = rect.max;
-                max.x = math.clamp(max.x, 0u, props.size.x);
-                max.y = math.clamp(max.y, 0u, props.size.y);
-                for (uint x = min.x; x < max.x; ++x) {
-                    for (uint y = min.y; y < max.y; ++y) {
+                max.x = math.clamp(max.x, 0u, props.size.x - 1u);
+                max.y = math.clamp(max.y, 0u, props.size.y - 1u);
+                for (uint x = min.x; x <= max.x; ++x) {
+                    for (uint y = min.y; y <= max.y; ++y) {
                         if (FogOfWarUtils.IsVisible(in props, in fow, x, y) == true) return true;
                     }
                 }
