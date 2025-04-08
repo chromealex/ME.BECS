@@ -8,12 +8,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
     
     public class FeaturesGraphView : BaseGraphView {
 
+        private static System.Type editorGenType = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
+        
         public FeaturesGraphView(UnityEditor.EditorWindow window) : base(window) { }
 
         public bool isEditable;
         private float timer;
         private System.Action<UnityEditor.Experimental.GraphView.NodeCreationContext> baseNodeCreationRequest;
-        
+
         public void UpdateEnableState() {
             
             if (this.isEditable == false) {
@@ -32,7 +34,13 @@ namespace ME.BECS.Editor.FeaturesGraph {
             }
 
         }
-        
+
+        public override EdgeView CreateEdgeView() {
+            
+            return new FeaturesGraphEdgeView();
+            
+        }
+
         protected override void InitializeView() {
             
             base.InitializeView();

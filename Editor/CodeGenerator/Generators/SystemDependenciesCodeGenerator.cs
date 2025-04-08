@@ -11,14 +11,13 @@ namespace ME.BECS.Editor.Systems {
             
         }
 
-        public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
+        public override string AddPublicContent() {
 
-            if (this.editorAssembly == false) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
+            if (this.editorAssembly == false) return string.Empty;
             
             var content = new System.Collections.Generic.List<string>();
-            content.Add("/*");
             
-            var nodes = new System.Collections.Generic.List<Graph.Node>();
+            var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
             var systems = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToArray();
             foreach (var system in systems) {
 
@@ -27,59 +26,122 @@ namespace ME.BECS.Editor.Systems {
 
                 content.Add($"// system: {system.FullName}");
 
-                /*var awakeMethod = system.GetMethod("OnAwake");
-                if (awakeMethod != null) {
-                    var deps = this.GetDeps(awakeMethod);
-                    if (deps.ops != null) {
-                        foreach (var dep in deps.ops) {
-                            content.Add($"//    {dep.op}: {dep.type.FullName}");
+                {
+                    var method = system.GetMethod("OnUpdate");
+                    if (method != null) {
+                        var deps = this.GetDeps(method);
+                        if (deps.ops != null && deps.ops.Count > 0) {
+                            content.Add($"// |- OnUpdate:");
+                            foreach (var dep in deps.ops) {
+                                content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                            }
+                        }
+                        var node = new Graph.Node() {
+                            system = system,
+                            dependencies = deps.GetDependencies(),
+                            inputs = deps.GetInputs(),
+                            outputs = deps.GetOutputs(),
+                        };
+                        nodes.Add(system, node);
+                    }
+                }
+
+                {
+                    var method = system.GetMethod("OnAwake");
+                    if (method != null) {
+                        var deps = this.GetDeps(method);
+                        if (deps.ops != null && deps.ops.Count > 0) {
+                            content.Add($"// |- OnAwake:");
+                            foreach (var dep in deps.ops) {
+                                content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                            }
+                        }
+
+                        if (nodes.TryGetValue(system, out var node) == false) {
+                            node = new Graph.Node() {
+                                system = system,
+                                dependencies = deps.GetDependencies(),
+                                inputs = deps.GetInputs(),
+                                outputs = deps.GetOutputs(),
+                            };
+                            nodes.Add(system, node);
+                        } else {
+                            node.dependencies.AddRange(deps.GetDependencies());
+                            node.inputs.AddRange(deps.GetInputs());
+                            node.outputs.AddRange(deps.GetOutputs());
                         }
                     }
+                }
 
-                    var node = new Graph.Node() {
-                        system = system,
-                        dependencies = deps.GetDependencies(),
-                        inputs = deps.GetInputs(),
-                        outputs = deps.GetOutputs(),
-                    };
-                    nodes.Add(node);
+                {
+                    var method = system.GetMethod("OnStart");
+                    if (method != null) {
+                        var deps = this.GetDeps(method);
+                        if (deps.ops != null && deps.ops.Count > 0) {
+                            content.Add($"// |- OnStart:");
+                            foreach (var dep in deps.ops) {
+                                content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                            }
+                        }
 
-                }*/
-
-                var updateMethod = system.GetMethod("OnUpdate");
-                if (updateMethod != null) {
-                    var deps = this.GetDeps(updateMethod);
-                    if (deps.ops != null) {
-                        foreach (var dep in deps.ops) {
-                            content.Add($"//    {dep.op}: {dep.type.FullName}");
+                        if (nodes.TryGetValue(system, out var node) == false) {
+                            node = new Graph.Node() {
+                                system = system,
+                                dependencies = deps.GetDependencies(),
+                                inputs = deps.GetInputs(),
+                                outputs = deps.GetOutputs(),
+                            };
+                            nodes.Add(system, node);
+                        } else {
+                            node.dependencies.AddRange(deps.GetDependencies());
+                            node.inputs.AddRange(deps.GetInputs());
+                            node.outputs.AddRange(deps.GetOutputs());
                         }
                     }
+                }
 
-                    var node = new Graph.Node() {
-                        system = system,
-                        dependencies = deps.GetDependencies(),
-                        inputs = deps.GetInputs(),
-                        outputs = deps.GetOutputs(),
-                    };
-                    nodes.Add(node);
+                {
+                    var method = system.GetMethod("OnDestroy");
+                    if (method != null) {
+                        var deps = this.GetDeps(method);
+                        if (deps.ops != null && deps.ops.Count > 0) {
+                            content.Add($"// |- OnDestroy:");
+                            foreach (var dep in deps.ops) {
+                                content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                            }
+                        }
 
+                        if (nodes.TryGetValue(system, out var node) == false) {
+                            node = new Graph.Node() {
+                                system = system,
+                                dependencies = deps.GetDependencies(),
+                                inputs = deps.GetInputs(),
+                                outputs = deps.GetOutputs(),
+                            };
+                            nodes.Add(system, node);
+                        } else {
+                            node.dependencies.AddRange(deps.GetDependencies());
+                            node.inputs.AddRange(deps.GetInputs());
+                            node.outputs.AddRange(deps.GetOutputs());
+                        }
+                    }
                 }
 
             }
 
             var graph = new Graph(nodes);
-            content.Add(graph.ToString());
+            content.Add(graph.GetInitializationString());
             
-            content.Add("*/");
-            var def = new CodeGenerator.MethodDefinition() {
-                methodName = "InitializeSystemDependenciesInfo",
-                type = "World",
-                registerMethodName = "RegisterCallback",
-                definition = "ref World world",
-                content = string.Join("\n", content),
-            };
-            return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
-
+            var str = new System.Text.StringBuilder();
+            str.AppendLine("private static s::Dictionary<System.Type, s::HashSet<System.Type>> systemDependenciesGraph;");
+            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) => systemDependenciesGraph[type];");
+            str.AppendLine("public static void InitializeSystemDependenciesInfo() {");
+            str.AppendLine("if (systemDependenciesGraph != null) return;");
+            str.AppendLine("systemDependenciesGraph = new s::Dictionary<System.Type, s::HashSet<System.Type>>();");
+            str.Append(string.Join("\n", content));
+            str.AppendLine("}");
+            return str.ToString();
+            
         }
 
         public class Graph {
@@ -88,44 +150,65 @@ namespace ME.BECS.Editor.Systems {
 
                 public System.Type system;
                 public System.Collections.Generic.List<System.Type> dependencies;
-                public System.Type[] inputs;
-                public System.Type[] outputs;
+                public System.Collections.Generic.List<System.Type> inputs;
+                public System.Collections.Generic.List<System.Type> outputs;
 
                 public override string ToString() {
-                    return this.system.Name + "\n|------ " + string.Join("\n|------ ", this.dependencies.Select(x => x.ToString()).ToArray());//"Inputs: " + string.Join(", ", this.inputs.Select(x => x.ToString()).ToArray()) + ", Outputs: " + string.Join(", ", this.outputs.Select(x => x.ToString()).ToArray());
+                    return "// " + this.system.FullName + "\n// |------ " + string.Join("\n// |------ ", this.dependencies.Select(x => x.ToString()).ToArray());
                 }
 
-                public bool ContainsAny(System.Type[] types) {
-                    for (int i = 0; i < this.outputs.Length; ++i) {
-                        for (int j = 0; j < types.Length; ++j) {
+                public bool ContainsAny(System.Collections.Generic.List<System.Type> types) {
+                    for (int i = 0; i < this.outputs.Count; ++i) {
+                        for (int j = 0; j < types.Count; ++j) {
                             if (this.outputs[i] == types[j]) return true;
                         }
                     }
                     return false;
                 }
 
+                public void GetInitializationString(System.Text.StringBuilder str) {
+                    
+                    str.Append("systemDependenciesGraph.Add(");
+                    {
+                        str.Append("typeof(");
+                        str.Append(EditorUtils.GetTypeName(this.system));
+                        str.Append(")");
+                    }
+                    str.Append(",");
+                    if (this.dependencies.Count > 0) {
+                        str.Append("new s::HashSet<System.Type>() {\ntypeof(" +
+                                   string.Join("),\ntypeof(", this.dependencies.Select(EditorUtils.GetTypeName).ToArray()) +
+                                   ")\n}");
+                    } else {
+                        str.Append("null");
+                    }
+                    str.Append(");");
+                    
+                }
+
             }
 
             public Node[] nodes;
 
-            public Graph(System.Collections.Generic.List<Graph.Node> nodes) {
-                this.nodes = nodes.ToArray();
+            public Graph(System.Collections.Generic.Dictionary<System.Type, Graph.Node> nodes) {
+                this.nodes = nodes.Select(x => x.Value).ToArray();
                 // find dependencies for each node
                 // node has dependency if current node's inputs contained in any outputs
-                foreach (var node in nodes) {
-                    if (node.inputs.Length > 0) {
-                        var arr = nodes.Where(x => x != node && x.ContainsAny(node.inputs) == true).Select(x => x.system).ToArray();
+                foreach (var node in this.nodes) {
+                    if (node.inputs.Count > 0) {
+                        var arr = nodes.Where(x => x.Value != node && x.Value.ContainsAny(node.inputs) == true).Select(x => x.Value.system).ToArray();
                         node.dependencies.AddRange(arr);
                     }
+                    node.dependencies = node.dependencies.OrderBy(x => x.FullName).ToList();
                 }
             }
 
-            public override string ToString() {
+            public string GetInitializationString() {
 
                 var str = new System.Text.StringBuilder();
-                str.Append("Nodes:\n");
+                str.Append("// Nodes:\n");
                 foreach (var node in this.nodes) {
-                    str.Append(node.ToString());
+                    node.GetInitializationString(str);
                     str.Append('\n');
                 }
                 return str.ToString();
@@ -145,16 +228,16 @@ namespace ME.BECS.Editor.Systems {
                 }
             }
 
-            public System.Type[] GetInputs() {
-                return this.ops.Where(x => x.op == RefOp.ReadOnly || x.op == RefOp.ReadWrite).Select(x => x.type).ToArray();
+            public System.Collections.Generic.List<System.Type> GetInputs() {
+                return this.ops.Where(x => x.op == RefOp.ReadOnly || x.op == RefOp.ReadWrite).Select(x => x.type).OrderBy(x => x.FullName).ToList();
             }
 
-            public System.Type[] GetOutputs() {
-                return this.ops.Where(x => (x.op == RefOp.WriteOnly || x.op == RefOp.ReadWrite) && typeof(ISystem).IsAssignableFrom(x.type) == false).Select(x => x.type).ToArray();
+            public System.Collections.Generic.List<System.Type> GetOutputs() {
+                return this.ops.Where(x => (x.op == RefOp.WriteOnly || x.op == RefOp.ReadWrite) && typeof(ISystem).IsAssignableFrom(x.type) == false).Select(x => x.type).OrderBy(x => x.FullName).ToList();
             }
 
             public System.Collections.Generic.List<System.Type> GetDependencies() {
-                return this.ops.Where(x => typeof(ISystem).IsAssignableFrom(x.type) == true).Select(x => x.type).ToList();
+                return this.ops.Where(x => typeof(ISystem).IsAssignableFrom(x.type) == true).Select(x => x.type).OrderBy(x => x.FullName).ToList();
             }
 
         }

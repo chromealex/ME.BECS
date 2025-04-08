@@ -7,6 +7,7 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using ME.BECS.Jobs;
     using static Cuts;
+    using s = System.Collections.Generic;
     
     [UnityEngine.Scripting.PreserveAttribute]
     public static unsafe class AOTBurstHelper {
