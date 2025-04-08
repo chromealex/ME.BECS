@@ -232,8 +232,8 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static (uint pixelX, uint pixelY) GetPixelPosition(in FogOfWarStaticComponent props, int x, int y, int textureWidth, int textureHeight) {
             
-            var xf = x / (float)textureWidth * props.size.x;
-            var yf = y / (float)textureHeight * props.size.y;
+            var xf = x / (tfloat)textureWidth * props.size.x;
+            var yf = y / (tfloat)textureHeight * props.size.y;
             var pixelX = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
             var pixelY = yf >= 0u ? (uint)(yf + 0.5f) : 0u;
             
@@ -247,8 +247,8 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static float3 FogMapToWorldPosition(in FogOfWarStaticComponent props, in uint2 position) {
             
-            var xf = (position.x - props.mapPosition.x * 0.5f) / (float)props.size.x * props.worldSize.x;
-            var yf = (position.y - props.mapPosition.y * 0.5f) / (float)props.size.y * props.worldSize.y;
+            var xf = (position.x - props.mapPosition.x * 0.5f) / (tfloat)props.size.x * props.worldSize.x;
+            var yf = (position.y - props.mapPosition.y * 0.5f) / (tfloat)props.size.y * props.worldSize.y;
             var h = props.heights[position.y * props.size.x + position.x];
             return new float3(xf, h, yf);
 
