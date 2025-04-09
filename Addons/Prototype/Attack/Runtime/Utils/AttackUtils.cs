@@ -50,12 +50,12 @@ namespace ME.BECS.Attack {
             var unsafeConfig = config.AsUnsafeConfig();
             if (unsafeConfig.HasStatic<BulletViewPoint>() == true) {
                 var point = unsafeConfig.ReadStatic<BulletViewPoint>();
-                BulletUtils.RegisterFirePoint(attackSensor, point.position, point.rotation, jobInfo);    
+                BulletUtils.RegisterFirePoint(in attackSensor, in point.position, in point.rotation, in jobInfo);    
             } else if (unsafeConfig.HasStatic<BulletViewPoints>() == true) {
                 var points = unsafeConfig.ReadStatic<BulletViewPoints>().points;
                 for (uint i = 0u; i < points.Length; ++i) {
                     var point = points[i];
-                    BulletUtils.RegisterFirePoint(attackSensor, point.position, point.rotation, jobInfo);
+                    BulletUtils.RegisterFirePoint(in attackSensor, in point.position, in point.rotation, in jobInfo);
                 }
             }
             
