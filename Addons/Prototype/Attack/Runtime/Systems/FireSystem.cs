@@ -26,7 +26,7 @@ namespace ME.BECS.Attack {
 
                     if (aspect.RateFire(this.dt) == true) {
 
-                        var firePoint = ME.BECS.Bullets.BulletUtils.GetNextFirePoint(aspect.ent);
+                        var firePoint = BulletUtils.GetNextFirePoint(aspect.ent);
                         var pos = tr.GetWorldMatrixPosition();
                         var rot = tr.GetWorldMatrixRotation();
                         if (firePoint.IsAlive() == true) {
@@ -59,7 +59,7 @@ namespace ME.BECS.Attack {
 
                     if (aspect.RateFire(this.dt) == true) {
 
-                        var firePoint = ME.BECS.Bullets.BulletUtils.GetNextFirePoint(aspect.ent);
+                        var firePoint = BulletUtils.GetNextFirePoint(aspect.ent);
                         var pos = tr.GetWorldMatrixPosition();
                         var rot = tr.GetWorldMatrixRotation();
                         if (firePoint.IsAlive() == true) {
@@ -94,7 +94,7 @@ namespace ME.BECS.Attack {
                                 .Schedule<FireTargetJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetJob() {
                                     dt = context.deltaTime,
                                 });
-            var targets = context.Query()
+            var targets = context.Query(target)
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()
@@ -102,7 +102,7 @@ namespace ME.BECS.Attack {
                                 .Schedule<FireTargetsJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetsJob() {
                                     dt = context.deltaTime,
                                 });
-            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(target, targets));
+            context.SetDependency(targets);
 
         }
 
