@@ -97,7 +97,7 @@
 }
 
 .required-dependencies {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.7);
     border-radius: 5px;
     border-color: rgba(54, 169, 152, 0.5);
     border-width: 2px;
