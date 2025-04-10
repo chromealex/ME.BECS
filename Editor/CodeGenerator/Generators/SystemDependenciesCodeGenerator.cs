@@ -29,7 +29,9 @@ namespace ME.BECS.Editor.Systems {
                 content.Add("{");
                 content.Add($"// system: {system.FullName}");
                 content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
+                content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
                 content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system)}), list);");
+                content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system)}), errors);");
                 
                 {
                     var method = system.GetMethod("OnUpdate");
@@ -42,8 +44,17 @@ namespace ME.BECS.Editor.Systems {
                                 systemToComponents.Add(dep);
                             }
                         }
+
+                        if (deps.errors != null) {
+                            foreach (var dep in deps.errors) {
+                                content.Add($"// {dep.message}");
+                                content.Add(dep.AsString());
+                            }
+                        }
+
                         var node = new Graph.Node() {
                             system = system,
+                            errors = deps.errors,
                             dependencies = deps.GetDependencies(),
                             inputs = deps.GetInputs(),
                             outputs = deps.GetOutputs(),
@@ -64,9 +75,17 @@ namespace ME.BECS.Editor.Systems {
                             }
                         }
 
+                        if (deps.errors != null) {
+                            foreach (var dep in deps.errors) {
+                                content.Add($"// {dep.message}");
+                                content.Add(dep.AsString());
+                            }
+                        }
+
                         if (nodes.TryGetValue(system, out var node) == false) {
                             node = new Graph.Node() {
                                 system = system,
+                                errors = deps.errors,
                                 dependencies = deps.GetDependencies(),
                                 inputs = deps.GetInputs(),
                                 outputs = deps.GetOutputs(),
@@ -92,9 +111,17 @@ namespace ME.BECS.Editor.Systems {
                             }
                         }
 
+                        if (deps.errors != null) {
+                            foreach (var dep in deps.errors) {
+                                content.Add($"// {dep.message}");
+                                content.Add(dep.AsString());
+                            }
+                        }
+
                         if (nodes.TryGetValue(system, out var node) == false) {
                             node = new Graph.Node() {
                                 system = system,
+                                errors = deps.errors,
                                 dependencies = deps.GetDependencies(),
                                 inputs = deps.GetInputs(),
                                 outputs = deps.GetOutputs(),
@@ -120,9 +147,17 @@ namespace ME.BECS.Editor.Systems {
                             }
                         }
 
+                        if (deps.errors != null) {
+                            foreach (var dep in deps.errors) {
+                                content.Add($"// {dep.message}");
+                                content.Add(dep.AsString());
+                            }
+                        }
+
                         if (nodes.TryGetValue(system, out var node) == false) {
                             node = new Graph.Node() {
                                 system = system,
+                                errors = deps.errors,
                                 dependencies = deps.GetDependencies(),
                                 inputs = deps.GetInputs(),
                                 outputs = deps.GetOutputs(),
@@ -150,12 +185,15 @@ namespace ME.BECS.Editor.Systems {
             var str = new System.Text.StringBuilder();
             str.AppendLine("private static s::Dictionary<System.Type, s::HashSet<System.Type>> systemDependenciesGraph;");
             str.AppendLine("private static s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>> systemDependenciesComponentsGraph;");
+            str.AppendLine("private static s::Dictionary<System.Type, s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>> systemDependenciesGraphErrors;");
             str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph[type]; }");
+            str.AppendLine("public static s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> GetSystemDependenciesErrors(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraphErrors[type]; }");
             str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph[type]; }");
             str.AppendLine("public static void InitializeSystemDependenciesInfo() {");
             str.AppendLine("if (systemDependenciesGraph != null) return;");
             str.AppendLine("systemDependenciesGraph = new s::Dictionary<System.Type, s::HashSet<System.Type>>();");
             str.AppendLine("systemDependenciesComponentsGraph = new s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>>();");
+            str.AppendLine("systemDependenciesGraphErrors = new s::Dictionary<System.Type, s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>>();");
             str.Append(string.Join("\n", content));
             str.AppendLine("}");
             return str.ToString();
@@ -170,6 +208,7 @@ namespace ME.BECS.Editor.Systems {
                 public System.Collections.Generic.List<System.Type> dependencies;
                 public System.Collections.Generic.List<System.Type> inputs;
                 public System.Collections.Generic.List<System.Type> outputs;
+                public System.Collections.Generic.List<MethodInfoDependencies.Error> errors;
 
                 public override string ToString() {
                     return "// " + this.system.FullName + "\n// |------ " + string.Join("\n// |------ ", this.dependencies.Select(x => x.ToString()).ToArray());
@@ -237,13 +276,57 @@ namespace ME.BECS.Editor.Systems {
 
         public struct MethodInfoDependencies {
 
+            public struct Error : System.IEquatable<Error> {
+
+                public enum Code {
+
+                    MethodCallRequired,
+                    MethodNotRequired,
+
+                }
+
+                public Code code;
+                public MethodInfo callerMethodInfo;
+                public string message;
+                
+                public string AsString() {
+                    string msg = string.Empty;
+                    if (this.code == Code.MethodCallRequired) {
+                        msg = $"Method {this.callerMethodInfo.Name} requires a context.dependsOn.Complete() before accessing components.";
+                    } else if (this.code == Code.MethodNotRequired) {
+                        msg = $"Method {this.callerMethodInfo.Name} doesn't require context.dependsOn.Complete() call.";
+                    }
+
+                    return $"errors.Add(new Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error() {{ code = Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error.Code.{this.code}, message = \"{msg}\" }});";
+                }
+
+                public bool Equals(Error other) {
+                    return this.code == other.code && Equals(this.callerMethodInfo, other.callerMethodInfo);
+                }
+
+                public override bool Equals(object obj) {
+                    return obj is Error other && this.Equals(other);
+                }
+
+                public override int GetHashCode() {
+                    return System.HashCode.Combine((int)this.code, this.callerMethodInfo);
+                }
+
+            }
+
             public System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> ops;
+            public System.Collections.Generic.List<Error> errors;
 
             public MethodInfoDependencies(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types) {
                 this.ops = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
+                this.errors = new System.Collections.Generic.List<Error>();
                 foreach (var item in types) {
                     this.ops.Add(item);
                 }
+            }
+
+            public void AddError(Error error) {
+                this.errors.Add(error);
             }
 
             public System.Collections.Generic.List<System.Type> GetInputs() {
@@ -264,6 +347,10 @@ namespace ME.BECS.Editor.Systems {
 
             if (root == null) return default;
 
+            var errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>();
+            var errorsContains = new System.Collections.Generic.HashSet<MethodInfoDependencies.Error>();
+            
+            var completeHandleMethod = typeof(Unity.Jobs.JobHandle).GetMethod(nameof(Unity.Jobs.JobHandle.Complete));
             var getSystemMethod = typeof(SystemsWorldExt).GetMethod(nameof(SystemsWorldExt.GetSystemPtr));
             var withMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.With));
             var withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAny));
@@ -274,6 +361,9 @@ namespace ME.BECS.Editor.Systems {
             var uniqueTypes = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
+            var hasDirectComponentChange = false;
+            var hasCompleteHandle = false;
+            var hasInterestInstructions = false;
             var visited = new System.Collections.Generic.HashSet<System.Reflection.MethodInfo>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
@@ -281,27 +371,38 @@ namespace ME.BECS.Editor.Systems {
                 var isReadonly = false;
                 foreach (var inst in instructions) {
                     if (inst.Operand is MethodInfo methodInfo) {
+                        if (hasCompleteHandle == false && hasInterestInstructions == false && body == root) {
+                            // search for Complete
+                            if (IsMethod(methodInfo, completeHandleMethod) == true) {
+                                hasCompleteHandle = true;
+                            }
+                        }
                         if (IsMethod(methodInfo, getSystemMethod) == true) {
+                            hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadWrite,
                             });
                         } else if (IsMethod(methodInfo, withMethod) == true) {
+                            hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
                         } else if (IsMethod(methodInfo, withAnyMethod) == true) {
+                            hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
                         } else if (IsMethod(methodInfo, withoutMethod) == true) {
+                            hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
                         } else if (IsMethod(methodInfo, withAspectMethod) == true) {
+                            hasInterestInstructions = true;
                             var aspect = methodInfo.GetGenericArguments()[0];
                             var fields = aspect.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                             foreach (var field in fields) {
@@ -314,8 +415,10 @@ namespace ME.BECS.Editor.Systems {
                                 }
                             }
                         } else if (IsMethod(methodInfo, asReadonlyMethod) == true) {
+                            hasInterestInstructions = true;
                             isReadonly = true;
                         } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
+                            hasInterestInstructions = true;
                             if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                                 var jobType = methodInfo.GetGenericArguments()[0];
                                 var info = JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
@@ -328,19 +431,58 @@ namespace ME.BECS.Editor.Systems {
 
                                 isReadonly = false;
                             }
+                        } else {
+                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null && methodInfo.GetMethodBody() != null) {
+                                var info = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(methodInfo);
+                                if (info.Count > 0) {
+                                    hasInterestInstructions = true;
+                                    hasDirectComponentChange = true;
+                                    // Check if complete method exists
+                                    if (hasCompleteHandle == false) {
+                                        // Add error
+                                        var err = new MethodInfoDependencies.Error() {
+                                            callerMethodInfo = root,
+                                            code = MethodInfoDependencies.Error.Code.MethodCallRequired,
+                                        };
+                                        if (errorsContains.Add(err) == true) {
+                                            errors.Add(err);
+                                        }
+                                    }
+                                }
+                                foreach (var typeInfo in info) {
+                                    uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                        type = typeInfo.type,
+                                        op = typeInfo.op,
+                                    });
+                                }
+                            }
                         }
                     }
                     
                     if (inst.Operand is System.Reflection.MethodInfo member) {
                         if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                            if (member.GetMethodBody() != null) q.Enqueue(member);
+                            if (member.GetMethodBody() != null) {
+                                q.Enqueue(member);
+                            }
                         }
                     }
+                }
+            }
+
+            if (hasDirectComponentChange == false && hasCompleteHandle == true) {
+                // Add error
+                var err = new MethodInfoDependencies.Error() {
+                    callerMethodInfo = root,
+                    code = MethodInfoDependencies.Error.Code.MethodNotRequired,
+                };
+                if (errorsContains.Add(err) == true) {
+                    errors.Add(err);
                 }
             }
             
             JobsEarlyInitCodeGenerator.UpdateDeps(uniqueTypes);
             var deps = new MethodInfoDependencies(uniqueTypes);
+            foreach (var err in errors) deps.AddError(err);
             return deps;
         }
 

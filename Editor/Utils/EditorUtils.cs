@@ -4,8 +4,11 @@ using System.Reflection;
 namespace ME.BECS.Editor {
 
     public struct ComponentDependencyGraphInfo {
+
         public System.Type type;
-        public byte op; 
+        public byte op;
+        public System.Collections.Generic.List<ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> errors;
+        
     }
     
     public struct AssemblyInfo {

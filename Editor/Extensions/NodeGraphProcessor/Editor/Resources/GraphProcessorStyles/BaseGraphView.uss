@@ -106,6 +106,19 @@
     padding-top: 30px;
 }
 
+.errors {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+    border-color: rgba(255, 68, 0, 0.5);
+    border-width: 2px;
+    padding: 10px;
+    margin: 5px;
+}
+
+.errors Label {
+    white-space: normal;
+}
+
 Foldout.required-dependencies {
     padding: 5px;
     margin: 5px;

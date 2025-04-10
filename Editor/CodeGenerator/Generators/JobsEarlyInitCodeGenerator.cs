@@ -261,11 +261,10 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
-        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType) {
+        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root) {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
-            var root = jobType.GetMethod("Execute");
             var parameters = root.GetParameters();
             foreach (var p in parameters) {
                 if (p.ParameterType.GetInterfaces().Contains(typeof(IAspect)) == true) {
@@ -325,7 +324,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(member) == true) {
+                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }
                     }
@@ -333,6 +332,11 @@ namespace ME.BECS.Editor.Jobs {
             }
 
             return uniqueTypes;
+        }
+        
+        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType) {
+            var root = jobType.GetMethod("Execute");
+            return GetMethodTypesInfo(root);
         }
 
         public static void UpdateDeps(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> uniqueTypes) {

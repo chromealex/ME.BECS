@@ -19,6 +19,8 @@ namespace ME.BECS.Players {
 
         public void OnAwake(ref SystemContext context) {
 
+            context.dependsOn.Complete();
+            
             var ent = Ent.New(in context);
             this.players = new MemArrayAuto<Ent>(in ent, this.playersCount);
             this.teams = new MemArrayAuto<Ent>(in ent, this.playersCount);

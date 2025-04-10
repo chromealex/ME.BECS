@@ -120,6 +120,19 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
             if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode node) {
                 var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
+                {
+                    var errors = (System.Collections.Generic.List<ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>)type.GetMethod("GetSystemDependenciesErrors").Invoke(null, new object[] { node.system.GetType() });
+                    if (errors.Count > 0) {
+                        var container = new VisualElement();
+                        container.AddToClassList("errors");
+                        foreach (var err in errors) {
+                            var lbl = new Label("<color=red>\u26A0</color> " + err.message);
+                            container.Add(lbl);
+                        }
+                        this.container.Add(container);
+                    }
+                }
+
                 var list = (System.Collections.Generic.List<ComponentDependencyGraphInfo>)type.GetMethod("GetSystemComponentsDependencies").Invoke(null, new object[] { node.system.GetType() });
                 var requiredContainer = new Foldout();
                 requiredContainer.value = UnityEditor.EditorPrefs.GetBool($"Foldouts.graphs.{node.system.GetType().FullName}");

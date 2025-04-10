@@ -30,6 +30,8 @@ namespace ME.BECS.Pathfinding {
 
         public void OnAwake(ref SystemContext context) {
 
+            context.dependsOn.Complete();
+            
             this.nodeSize = this.agentTypesConfig.Value.graphProperties.nodeSize;
             this.world = context.world;
             Heights heights = default;
