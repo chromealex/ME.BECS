@@ -272,7 +272,7 @@ namespace ME.BECS.Editor {
                 postfix = "Runtime";
             }
 
-            var customCodeGenerators = UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>();
+            var customCodeGenerators = UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>().OrderBy(x => x.FullName);
             var generators = customCodeGenerators.Select(x => (CustomCodeGenerator)System.Activator.CreateInstance(x)).ToArray();
             
             if (System.IO.Directory.Exists(dir) == false) {
