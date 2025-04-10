@@ -55,6 +55,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0> => JobProcess<T, T0>.Initialize();
 
+        [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, T0>(this T jobData, CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             where T0 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0> {

@@ -53,6 +53,7 @@ namespace ME.BECS.Jobs {
         
         public static void JobEarlyInitialize<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>() where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect where T : struct, IJobParallelForAspects<T0,T1,T2,T3,T4,T5,T6,T7,T8> => JobProcess<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>.Initialize();
         
+        [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7,T8>(this T jobData, CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect where T8 : unmanaged, IAspect
             where T : struct, IJobParallelForAspects<T0,T1,T2,T3,T4,T5,T6,T7,T8> {

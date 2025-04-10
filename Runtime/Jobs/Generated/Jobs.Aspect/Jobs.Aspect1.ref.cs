@@ -51,6 +51,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect
             where T : struct, IJobForAspects<T0> => JobProcess<T, T0>.Initialize();
 
+        [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, T0>(this T jobData, CommandBuffer* buffer, bool unsafeMode, bool isReadonly, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             where T0 : unmanaged, IAspect
             where T : struct, IJobForAspects<T0> {

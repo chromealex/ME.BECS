@@ -55,6 +55,7 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> => JobProcess<T, {count(,)[T#i#]}>.Initialize();
 
+        [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this T jobData, CommandBuffer* buffer, uint innerLoopBatchCount, bool unsafeMode, JobHandle dependsOn = default)
             {count( )[where T#i# : unmanaged, IComponentBase]}
             where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {

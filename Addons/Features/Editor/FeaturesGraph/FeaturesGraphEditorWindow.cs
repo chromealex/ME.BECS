@@ -304,6 +304,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             this.UpdateToolbar();
             if (this.graphView != null) this.OnTransformChanged(view, true);
 
+            if (this.breadcrumb != null && this.rootView.Contains(this.breadcrumb) == true) this.rootView.Remove(this.breadcrumb);
             this.breadcrumb = new UnityEditor.UIElements.ToolbarBreadcrumbs();
             this.rootView.Add(this.breadcrumb);
 

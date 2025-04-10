@@ -10,6 +10,7 @@ namespace ME.BECS.Editor.Jobs {
 
             public System.Type type;
             public RefOp op;
+            public bool isArg;
 
             public bool Equals(TypeInfo other) {
                 return Equals(this.type, other.type) && this.op == other.op;
@@ -306,6 +307,7 @@ namespace ME.BECS.Editor.Jobs {
                             uniqueTypes.Add(new TypeInfo() {
                                 type = field.DeclaringType,
                                 op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && (inst.OpCode == System.Reflection.Emit.OpCodes.Stfld || inst.OpCode == System.Reflection.Emit.OpCodes.Stobj || inst.OpCode == System.Reflection.Emit.OpCodes.Ldflda) ? RefOp.WriteOnly : RefOp.ReadOnly,
+                                isArg = componentsType.Contains(field.DeclaringType),
                             });
                         }
                     }

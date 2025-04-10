@@ -18,14 +18,19 @@ namespace ME.BECS.Editor.Systems {
             var content = new System.Collections.Generic.List<string>();
             
             var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
+            var systemToComponents = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
             var systems = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToArray();
             foreach (var system in systems) {
 
                 if (system.IsValueType == false) continue;
                 if (system.IsVisible == false) continue;
 
+                systemToComponents.Clear();
+                content.Add("{");
                 content.Add($"// system: {system.FullName}");
-
+                content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
+                content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system)}), list);");
+                
                 {
                     var method = system.GetMethod("OnUpdate");
                     if (method != null) {
@@ -34,6 +39,7 @@ namespace ME.BECS.Editor.Systems {
                             content.Add($"// |- OnUpdate:");
                             foreach (var dep in deps.ops) {
                                 content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                systemToComponents.Add(dep);
                             }
                         }
                         var node = new Graph.Node() {
@@ -45,7 +51,7 @@ namespace ME.BECS.Editor.Systems {
                         nodes.Add(system, node);
                     }
                 }
-
+                
                 {
                     var method = system.GetMethod("OnAwake");
                     if (method != null) {
@@ -54,6 +60,7 @@ namespace ME.BECS.Editor.Systems {
                             content.Add($"// |- OnAwake:");
                             foreach (var dep in deps.ops) {
                                 content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                systemToComponents.Add(dep);
                             }
                         }
 
@@ -81,6 +88,7 @@ namespace ME.BECS.Editor.Systems {
                             content.Add($"// |- OnStart:");
                             foreach (var dep in deps.ops) {
                                 content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                systemToComponents.Add(dep);
                             }
                         }
 
@@ -108,6 +116,7 @@ namespace ME.BECS.Editor.Systems {
                             content.Add($"// |- OnDestroy:");
                             foreach (var dep in deps.ops) {
                                 content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                systemToComponents.Add(dep);
                             }
                         }
 
@@ -127,6 +136,12 @@ namespace ME.BECS.Editor.Systems {
                     }
                 }
 
+                JobsEarlyInitCodeGenerator.UpdateDeps(systemToComponents);
+                foreach (var item in systemToComponents) {
+                    content.Add($"list.Add(new ComponentDependencyGraphInfo() {{ type = typeof({EditorUtils.GetTypeName(item.type)}), op = {(byte)item.op} }});");
+                }
+                content.Add("}");
+
             }
 
             var graph = new Graph(nodes);
@@ -134,10 +149,13 @@ namespace ME.BECS.Editor.Systems {
             
             var str = new System.Text.StringBuilder();
             str.AppendLine("private static s::Dictionary<System.Type, s::HashSet<System.Type>> systemDependenciesGraph;");
-            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) => systemDependenciesGraph[type];");
+            str.AppendLine("private static s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>> systemDependenciesComponentsGraph;");
+            str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph[type]; }");
+            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph[type]; }");
             str.AppendLine("public static void InitializeSystemDependenciesInfo() {");
             str.AppendLine("if (systemDependenciesGraph != null) return;");
             str.AppendLine("systemDependenciesGraph = new s::Dictionary<System.Type, s::HashSet<System.Type>>();");
+            str.AppendLine("systemDependenciesComponentsGraph = new s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>>();");
             str.Append(string.Join("\n", content));
             str.AppendLine("}");
             return str.ToString();
@@ -251,6 +269,7 @@ namespace ME.BECS.Editor.Systems {
             var withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAny));
             var withoutMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.Without));
             var withAspectMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAspect));
+            var asReadonlyMethod = typeof(QueryBuilder).GetMethod(nameof(QueryBuilder.AsReadonly));
             
             var uniqueTypes = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
@@ -259,6 +278,7 @@ namespace ME.BECS.Editor.Systems {
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
+                var isReadonly = false;
                 foreach (var inst in instructions) {
                     if (inst.Operand is MethodInfo methodInfo) {
                         if (IsMethod(methodInfo, getSystemMethod) == true) {
@@ -293,20 +313,26 @@ namespace ME.BECS.Editor.Systems {
                                     });
                                 }
                             }
+                        } else if (IsMethod(methodInfo, asReadonlyMethod) == true) {
+                            isReadonly = true;
                         } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
-                            var jobType = methodInfo.GetGenericArguments()[0];
-                            var info = JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
-                            foreach (var typeInfo in info) {
-                                uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
-                                    type = typeInfo.type,
-                                    op = typeInfo.op,
-                                });
+                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                                var jobType = methodInfo.GetGenericArguments()[0];
+                                var info = JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
+                                foreach (var typeInfo in info) {
+                                    uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
+                                        type = typeInfo.type,
+                                        op = isReadonly == true && typeInfo.isArg == true ? RefOp.ReadOnly : typeInfo.op,
+                                    });
+                                }
+
+                                isReadonly = false;
                             }
                         }
                     }
                     
                     if (inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(member) == true) {
+                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }
                     }

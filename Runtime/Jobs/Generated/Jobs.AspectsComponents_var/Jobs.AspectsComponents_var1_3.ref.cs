@@ -54,6 +54,7 @@ namespace ME.BECS.Jobs {
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase
             where T : struct, IJobFor1Aspects3Components<A0, C0,C1,C2> => JobProcess<T, A0, C0,C1,C2>.Initialize();
 
+        [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, A0, C0,C1,C2>(this T jobData, CommandBuffer* buffer, bool unsafeMode, bool isReadonly, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             where A0 : unmanaged, IAspect
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase

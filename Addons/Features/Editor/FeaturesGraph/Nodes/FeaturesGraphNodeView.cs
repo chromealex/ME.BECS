@@ -118,6 +118,66 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             var iter = 0;
             this.CollectDependencies(ref iter, this.nodeTarget, types);
             
+            if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode node) {
+                var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
+                var list = (System.Collections.Generic.List<ComponentDependencyGraphInfo>)type.GetMethod("GetSystemComponentsDependencies").Invoke(null, new object[] { node.system.GetType() });
+                var requiredContainer = new Foldout();
+                requiredContainer.value = UnityEditor.EditorPrefs.GetBool($"Foldouts.graphs.{node.system.GetType().FullName}");
+                requiredContainer.RegisterValueChangedCallback(evt => {
+                    UnityEditor.EditorPrefs.SetBool($"Foldouts.graphs.{node.system.GetType().FullName}", evt.newValue);
+                });
+                requiredContainer.AddToClassList("required-dependencies");
+                this.container.Add(requiredContainer);
+                var ro = 0;
+                var wo = 0;
+                var rw = 0;
+                foreach (var item in list) {
+                    var op = (RefOp)item.op;
+                    var typeStr = EditorUtils.GetComponentName(item.type);
+                    var namespaceStr = EditorUtils.GetComponentNamespace(item.type);
+                    var depContainer = new UnityEngine.UIElements.VisualElement();
+                    depContainer.AddToClassList("required-dependencies-container");
+                    requiredContainer.Add(depContainer);
+                    var checkbox = new UnityEngine.UIElements.VisualElement();
+                    checkbox.AddToClassList("node-required-dependency-checkbox");
+
+                    if (op == RefOp.ReadOnly) {
+                        ++ro;
+                        checkbox.AddToClassList("node-required-dependency-checked");
+                        var lbl = new UnityEngine.UIElements.Label("RO");
+                        lbl.AddToClassList("node-required-dependency-true");
+                        checkbox.Add(lbl);
+                    } else if (op == RefOp.ReadWrite) {
+                        ++rw;
+                        var lbl = new UnityEngine.UIElements.Label("RW");
+                        lbl.AddToClassList("node-required-dependency-warning");
+                        checkbox.Add(lbl);
+                    } else if (op == RefOp.WriteOnly) {
+                        ++wo;
+                        var lbl = new UnityEngine.UIElements.Label("WO");
+                        lbl.AddToClassList("node-required-dependency-warning");
+                        checkbox.Add(lbl);
+                    }
+                    depContainer.Add(checkbox);
+
+                    var typeContainer = new UnityEngine.UIElements.VisualElement();
+                    depContainer.Add(typeContainer);
+
+                    {
+                        var label = new UnityEngine.UIElements.Label($"{typeStr}");
+                        label.AddToClassList("node-required-dependency-typename");
+                        typeContainer.Add(label);
+                    }
+
+                    {
+                        var label = new UnityEngine.UIElements.Label($"{namespaceStr}");
+                        label.AddToClassList("node-required-dependency-namespace");
+                        typeContainer.Add(label);
+                    }
+                }
+                requiredContainer.text = "Components Usage (RO: " + ro + ", RW: " + rw + ", WO: " + wo + ")";
+            }
+            
             if (types.Count > 0) {
                 var isInnerGraph = this.nodeTarget.graph is ME.BECS.FeaturesGraph.SystemsGraph systemsGraph && systemsGraph.isInnerGraph;
                 var requiredContainer = new UnityEngine.UIElements.VisualElement();

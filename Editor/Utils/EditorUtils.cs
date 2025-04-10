@@ -2,6 +2,11 @@ using System.Linq;
 using System.Reflection;
 
 namespace ME.BECS.Editor {
+
+    public struct ComponentDependencyGraphInfo {
+        public System.Type type;
+        public byte op; 
+    }
     
     public struct AssemblyInfo {
 

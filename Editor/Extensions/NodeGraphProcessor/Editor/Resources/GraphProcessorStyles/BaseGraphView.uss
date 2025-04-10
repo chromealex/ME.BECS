@@ -106,6 +106,18 @@
     padding-top: 30px;
 }
 
+Foldout.required-dependencies {
+    padding: 5px;
+    margin: 5px;
+}
+Foldout.required-dependencies .unity-foldout__content {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+Foldout.required-dependencies Toggle Label {
+    -unity-font-style: bold;
+}
+
 .required-dependencies.dependencies-failed {
     border-color: rgba(169, 54, 54, 0.5);
 }
@@ -142,7 +154,7 @@
 
 .node-required-dependency-true,
 .node-required-dependency-false,
-.node-required-dependency-Warning {
+.node-required-dependency-warning {
     display: none;
 }
 

@@ -54,6 +54,7 @@ namespace ME.BECS.Jobs {
             {countComponents( )[where C#i# : unmanaged, IComponentBase]}
             where T : struct, IJobFor{{countAspects}}Aspects{{countComponents}}Components<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> => JobProcess<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>.Initialize();
 
+        [CodeGeneratorIgnore]
         public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this T jobData, CommandBuffer* buffer, bool unsafeMode, bool isReadonly, uint innerLoopBatchCount, ScheduleMode scheduleMode, JobHandle dependsOn = default)
             {countAspects( )[where A#i# : unmanaged, IAspect]}
             {countComponents( )[where C#i# : unmanaged, IComponentBase]}
