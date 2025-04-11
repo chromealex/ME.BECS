@@ -261,7 +261,7 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
-        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root) {
+        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true) {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
@@ -323,7 +323,7 @@ namespace ME.BECS.Editor.Jobs {
                         }
                     }
 
-                    if (inst.Operand is System.Reflection.MethodInfo member) {
+                    if (traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
                         if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }

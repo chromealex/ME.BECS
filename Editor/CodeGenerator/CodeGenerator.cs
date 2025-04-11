@@ -261,7 +261,7 @@ namespace ME.BECS.Editor {
             
         }
 
-        private const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
+        public const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
 
         private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
 

@@ -105,6 +105,8 @@ namespace ME.BECS.Pathfinding {
 
         public void OnUpdate(ref SystemContext context) {
 
+            context.dependsOn.Complete();
+
             var placeholder = this.placeholder;
             if (placeholder.IsAlive() == true) {
                 var objPosition = placeholder.GetAspect<TransformAspect>().position;
