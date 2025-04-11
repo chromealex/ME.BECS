@@ -118,7 +118,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             var iter = 0;
             this.CollectDependencies(ref iter, this.nodeTarget, types);
             
-            if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode node) {
+            if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode node && node.system != null) {
                 var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
                 {
                     var errors = (System.Collections.Generic.List<ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>)type.GetMethod("GetSystemDependenciesErrors").Invoke(null, new object[] { node.system.GetType() });
