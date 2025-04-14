@@ -14,12 +14,12 @@ namespace ME.BECS.Transforms {
 
         [INLINE(256)]
         public static ref readonly Ent GetParent(this in Ent ent) {
-            return ref ent.Read<ParentComponent>().value;
+            return ref ent.GetAspect<TransformAspect>().parent;
         }
 
         [INLINE(256)]
         public static ref readonly Ent ReadParent(this in Ent ent) {
-            return ref ent.Read<ParentComponent>().value;
+            return ref ent.GetAspect<TransformAspect>().parent;
         }
 
         [INLINE(256)]

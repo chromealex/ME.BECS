@@ -162,6 +162,7 @@ namespace ME.BECS.Editor {
                 this.currentObjects.Clear();
                 Transform tr = null;
                 foreach (var selection in this.selected) {
+                    if (selection.IsAlive() == false) continue;
                     var view = vm?.GetViewByEntity(selection);
                     if (view is Component comp) {
                         //this.currentObjects.Add(comp.gameObject);
