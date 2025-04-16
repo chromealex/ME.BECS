@@ -74,6 +74,7 @@ namespace ME.BECS.Attack {
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
                                    .WithAny<AttackTargetComponent, AttackTargetsComponent>()
+                                   .With<RotateAttackSensorComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobRotate, AttackAspect, TransformAspect>();
             dependsOn = context.Query(dependsOn)
