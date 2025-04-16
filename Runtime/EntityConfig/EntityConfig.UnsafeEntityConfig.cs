@@ -9,6 +9,9 @@ namespace ME.BECS {
 
     public readonly unsafe struct UnsafeEntityConfig : IIsCreated {
 
+        [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
+
         private readonly struct SharedData {
 
             private struct Func {
@@ -40,9 +43,6 @@ namespace ME.BECS {
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
 
-            [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
-            private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
-            
             internal static class MethodCaller<T> where T : unmanaged, IComponent {
 
                 [UnityEngine.Scripting.PreserveAttribute]
@@ -175,9 +175,6 @@ namespace ME.BECS {
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
 
-            [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
-            private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
-            
             internal static class MethodCaller<T> where T : unmanaged, IComponentBase {
 
                 [UnityEngine.Scripting.PreserveAttribute]
@@ -330,9 +327,6 @@ namespace ME.BECS {
             private readonly safe_ptr<uint> typeIds;
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
-            
-            [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
-            private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
             
             internal static class MethodCaller<T> where T : unmanaged, IConfigInitialize {
 
@@ -552,9 +546,6 @@ namespace ME.BECS {
 
         internal readonly struct StaticData {
 
-            [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
-            private delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
-            
             internal static class MethodCaller<T> where T : unmanaged, IConfigComponentStatic {
 
                 [UnityEngine.Scripting.PreserveAttribute]

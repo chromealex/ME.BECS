@@ -9,6 +9,11 @@ namespace ME.BECS.Jobs {
     #if !(UNITY_EDITOR || ENABLE_PROFILER || DEVELOPMENT_BUILD)
     [JobProducerType(typeof(JobMainThreadExtensions.JobProcess<>))]
     #endif
+    /// <summary>
+    /// This type of job <b>trying</b> to run Execute method on main-thread
+    /// </summary>
+    /// <case name="editor">In editor: dependsOn will be complete</case>
+    /// <case name="build">In build: Schedule will be called in parallel mode as much as it can</case>
     public interface IJobMainThread {
         void Execute();
     }
@@ -39,7 +44,7 @@ namespace ME.BECS.Jobs {
             };
             
             var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref data), GetReflectionData<T>(), dependsOn, ScheduleMode.Parallel);
-            return JobsUtility.ScheduleParallelFor(ref parameters, JobsUtility.JobWorkerCount, 1);
+            return JobsUtility.ScheduleParallelFor(ref parameters, JobsUtility.MaxJobThreadCount, 1);
             #endif
 
         }

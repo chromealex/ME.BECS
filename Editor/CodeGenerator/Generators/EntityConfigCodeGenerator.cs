@@ -73,6 +73,7 @@ namespace ME.BECS.Editor.Aspects {
                         definition = "in UnsafeEntityConfig config, void* componentPtr, in Ent ent",
                         content = string.Join("\n", content),
                         burstCompile = true,
+                        pInvoke = "ME.BECS.UnsafeEntityConfig.MethodCallerDelegate",
                     };
                     definitions.Add(def);
                 }

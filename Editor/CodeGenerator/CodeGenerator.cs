@@ -59,6 +59,7 @@ namespace ME.BECS.Editor {
             public string definition;
             public string content;
             public bool burstCompile;
+            public string pInvoke;
 
             public string GetMethodParamsCall() {
                 if (this.customMethodParamsCall != null) return this.customMethodParamsCall;
@@ -508,7 +509,7 @@ namespace ME.BECS.Editor {
                 var methodContents = methods.Where(x => x.definition != null)
                                             .Select(
                                                 x =>
-                                                    $"{(x.burstCompile == true ? "[BurstCompile]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
+                                                    $"{(x.burstCompile == true ? "[BurstCompile]" : string.Empty)} {(string.IsNullOrEmpty(x.pInvoke) == false ? $"[AOT.MonoPInvokeCallbackAttribute(typeof({x.pInvoke}))]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
                                             .ToArray();
 
                 var newContent = template.Replace("{{CONTENT}}", string.Join("\n", content));
