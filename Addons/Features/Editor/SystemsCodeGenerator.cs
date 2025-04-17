@@ -749,9 +749,8 @@ namespace ME.BECS.Editor.Systems {
                             content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
                             content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
                             content.Add("}");
+                            ++index;
                         }
-
-                        ++index;
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
                     index = InitializeGraph(generator, content, graphNode.graphValue, rootGraphId, index);
@@ -769,7 +768,7 @@ namespace ME.BECS.Editor.Systems {
                         if (systemNode.system.GetType().IsGenericType == true) {
                             var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
                             if (typeGen != null) {
-                                cnt += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count + 1;
+                                cnt += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
                             }
                         } else {
                             ++cnt;
