@@ -765,12 +765,11 @@ namespace ME.BECS.Editor.Systems {
             var cnt = 0;
             foreach (var node in graph.nodes) {
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
-                    var system = systemNode.system;
                     if (systemNode.system != null) {
                         if (systemNode.system.GetType().IsGenericType == true) {
                             var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
                             if (typeGen != null) {
-                                cnt += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
+                                cnt += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count + 1;
                             }
                         } else {
                             ++cnt;
