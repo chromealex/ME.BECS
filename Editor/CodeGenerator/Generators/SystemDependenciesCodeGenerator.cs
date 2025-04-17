@@ -30,7 +30,7 @@ namespace ME.BECS.Editor.Systems {
             var tempItems = new System.Collections.Generic.Dictionary<System.Type, Item>();
 
             this.awaitCount = 0;
-            var systems = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToArray();
+            var systems = this.systems;
             foreach (var sys in systems) {
 
                 if (sys.IsValueType == false) continue;
@@ -38,11 +38,17 @@ namespace ME.BECS.Editor.Systems {
 
                 ++this.awaitCount;
                 
-                UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, sys.Name, this.awaitCount / (float)systems.Length);
+                UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, sys.Name, this.awaitCount / (float)systems.Count);
                 
                 //UnityEngine.Debug.Log("Processing: " + sys.FullName);
-                
+
                 var system = sys;
+                if (system.IsGenericType == true) {
+                    system = system.GetGenericTypeDefinition();
+                    system = EditorUtils.MakeGenericConstraintTypes(system);
+                }
+                if (tempItems.ContainsKey(system) == true) continue;
+                
                 var content = new System.Collections.Generic.List<string>();
                 var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
                 var systemToComponents = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
@@ -291,13 +297,13 @@ namespace ME.BECS.Editor.Systems {
                     str.Append("systemDependenciesGraph.Add(");
                     {
                         str.Append("typeof(");
-                        str.Append(EditorUtils.GetTypeName(this.system));
+                        str.Append(EditorUtils.GetTypeName(this.system, showGenericType: false));
                         str.Append(")");
                     }
                     str.Append(",");
                     if (this.dependencies.Count > 0) {
                         str.Append("new s::HashSet<System.Type>() {\ntypeof(" +
-                                   string.Join("),\ntypeof(", this.dependencies.Select(EditorUtils.GetTypeName).ToArray()) +
+                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetTypeName(x, showGenericType: false)).ToArray()) +
                                    ")\n}");
                     } else {
                         str.Append("null");

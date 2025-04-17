@@ -15,14 +15,16 @@ namespace ME.BECS.Extensions.SubclassSelector {
         public bool showLabel;
         public System.Type additionalType;
         public bool showContent;
+        public bool showGenericTypes;
         
-        public SubclassSelectorAttribute(bool unmanagedTypes = false, bool runtimeAssembliesOnly = false, bool showSelector = true, bool showLabel = false, System.Type additionalType = null, bool showContent = true) {
+        public SubclassSelectorAttribute(bool unmanagedTypes = false, bool runtimeAssembliesOnly = false, bool showSelector = true, bool showLabel = false, System.Type additionalType = null, bool showContent = true, bool showGenericTypes = false) {
             this.unmanagedTypes = unmanagedTypes;
             this.runtimeAssembliesOnly = runtimeAssembliesOnly;
             this.showSelector = showSelector;
             this.showLabel = showLabel;
             this.additionalType = additionalType;
             this.showContent = showContent;
+            this.showGenericTypes = showGenericTypes;
         }
 
     }

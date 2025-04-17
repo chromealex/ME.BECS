@@ -80,6 +80,8 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
         
         public static StyleSheet styleSheetBase;
         public static StyleSheet styleSheetTooltip;
+
+        private bool showGenericTypes;
         
         private void LoadStyle() {
             if (styleSheetBase == null) {
@@ -95,6 +97,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
             this.LoadStyle();
 
             var attr = (this.attribute as ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute);
+            this.showGenericTypes = attr.showGenericTypes;
             
             var container = new VisualElement();
             container.styleSheets.Add(styleSheetBase);
@@ -277,7 +280,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     arr.Where(p =>
                                   (p.IsPublic || p.IsNestedPublic) &&
                                   !p.IsAbstract &&
-                                  !p.IsGenericType &&
+                                  (this.showGenericTypes == true || !p.IsGenericType) &&
                                   !SubclassSelectorDrawer.k_UnityObjectType.IsAssignableFrom(p) &&
                                   //System.Attribute.IsDefined(p, typeof(System.SerializableAttribute)) &&
                                   (filter == null || filter.GetInvocationList().All(x => ((System.Predicate<System.Type>)x).Invoke(p)) == true)
@@ -291,7 +294,12 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
                     var type = item.Type;
                     this.m_TargetProperty.serializedObject.ApplyModifiedProperties();
                     this.m_TargetProperty.serializedObject.Update();
-                    var obj = this.m_TargetProperty.CreateComponent(type);
+                    object obj = null;
+                    if (type.IsGenericType == true) {
+                        obj = this.m_TargetProperty.CreateWithFirstGenericComponent(type);
+                    } else {
+                        obj = this.m_TargetProperty.CreateComponent(type);
+                    }
                     this.m_TargetProperty.isExpanded = obj != null;
                     this.m_TargetProperty.serializedObject.ApplyModifiedProperties();
                     this.m_TargetProperty.serializedObject.Update();

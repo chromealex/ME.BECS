@@ -15,7 +15,7 @@ namespace ME.BECS {
 
     public class SceneEntity : MonoBehaviour {
 
-        public WorldInitializer worldInitializer;
+        public BaseWorldInitializer worldInitializer;
         public EntityView entityView;
         public EntityConfig config;
         public uint providerId;

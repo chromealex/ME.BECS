@@ -47,11 +47,22 @@ namespace ME.BECS {
 
         public uint Offset => this.index * this.itemsPerThread;
 
+        [INLINE(256)]
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
                 itemsPerThread = 1u,
                 worldId = worldId,
             };
+        }
+
+        [INLINE(256)]
+        public static JobInfo Create(in SystemContext context) {
+            return context.jobInfo;
+        }
+
+        [INLINE(256)]
+        public static implicit operator JobInfo(in SystemContext context) {
+            return context.jobInfo;
         }
 
     }

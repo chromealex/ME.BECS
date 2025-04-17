@@ -15,7 +15,7 @@ namespace ME.BECS.FeaturesGraph.Nodes {
         public g::List<SystemHandle> outputNodes;
 
         [UnityEngine.SerializeReference]
-        [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: true, runtimeAssembliesOnly: true, showSelector: true)]
+        [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes: true, runtimeAssembliesOnly: true, showSelector: true, showGenericTypes: true)]
         public ISystem system;
 
         public override string name {

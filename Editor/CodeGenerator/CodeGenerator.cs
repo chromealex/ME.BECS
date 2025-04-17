@@ -12,6 +12,7 @@ namespace ME.BECS.Editor {
         public bool editorAssembly;
         public System.Collections.Generic.List<System.Type> burstedTypes;
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
+        public System.Collections.Generic.List<System.Type> systems;
 
         public bool IsValidTypeForAssembly(System.Type type) {
 
@@ -294,7 +295,8 @@ namespace ME.BECS.Editor {
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var content = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
-                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToArray();
+                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
+                PatchSystemsList(types);
                 var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>().OrderBy(x => x.FullName).ToList();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
                 var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToArray();
@@ -302,8 +304,9 @@ namespace ME.BECS.Editor {
                 var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate)).OrderBy(x => x.FullName).ToArray();
                 var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy)).OrderBy(x => x.FullName).ToArray();
                 var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToArray();
-                foreach (var type in types) {
-
+                for (var index = 0; index < types.Count; ++index) {
+                    
+                    var type = types[index];
                     if (type.IsValueType == false) continue;
                     var asm = type.Assembly;
                     var name = asm.GetName().Name;
@@ -312,7 +315,7 @@ namespace ME.BECS.Editor {
 
                     if (type.IsVisible == false) continue;
 
-                    var systemType = type.FullName.Replace("+", ".");
+                    var systemType = EditorUtils.GetTypeName(type);
                     content.Add($"StaticSystemTypes<{systemType}>.Validate();");
                     typesContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
 
@@ -360,7 +363,6 @@ namespace ME.BECS.Editor {
                     if (updateBurst == true) content.Add($"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
                     if (destroyBurst == true) content.Add($"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
                     if (drawGizmosBurst == true) content.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
-
                 }
 
                 var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
@@ -493,6 +495,7 @@ namespace ME.BECS.Editor {
                     for (var index = 0; index < generators.Length; ++index) {
                         var customCodeGenerator = generators[index];
                         customCodeGenerator.asms = asms;
+                        customCodeGenerator.systems = types;
                         customCodeGenerator.editorAssembly = editorAssembly;
                         customCodeGenerator.burstedTypes = burstedTypes;
                         customCodeGenerator.burstDiscardedTypes = burstDiscardedTypes;
@@ -592,6 +595,33 @@ namespace ME.BECS.Editor {
                 }
             }
             
+        }
+
+        public static void PatchSystemsList(System.Collections.Generic.List<System.Type> types) {
+
+            var genericTypes = new System.Collections.Generic.HashSet<System.Type>(types.Count);
+            for (var index = 0; index < types.Count; ++index) {
+
+                var type = types[index];
+                if (type.IsValueType == false) continue;
+
+                if (type.IsGenericType == true && genericTypes.Contains(type) == false) {
+                    types.RemoveAt(index);
+                    --index;
+                    var typeGen = EditorUtils.GetFirstInterfaceConstraintTypes(type);
+                    if (typeGen != null) {
+                        var genTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).OrderBy(x => x.FullName).ToArray();
+                        foreach (var genType in genTypes) {
+                            if (genType.IsValueType == false) continue;
+                            var gType = type.MakeGenericType(genType);
+                            types.Add(gType);
+                            genericTypes.Add(gType);
+                        }
+                    }
+                }
+
+            }
+
         }
 
     }

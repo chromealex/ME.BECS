@@ -124,9 +124,14 @@ namespace ME.BECS.Editor.Systems {
             public ME.BECS.Extensions.GraphProcessor.BaseGraph graph;
             public int index;
             public int globalIndex;
+            public int genericIndex;
 
             public override string ToString() {
-                return $"{GetId(this.graph)}_{(this.index >= 0 ? this.index.ToString() : $"__{(-this.index)}")}";
+                return $"{GetId(this.graph)}_{(this.index >= 0 ? this.index.ToString() : $"__{(-this.index)}")}_{this.genericIndex}";
+            }
+
+            public void AddGeneric() {
+                ++this.genericIndex;
             }
 
         }
@@ -176,7 +181,7 @@ namespace ME.BECS.Editor.Systems {
                         var maxIter = 10_000;
                         var methodContent = content;
 
-                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn) {
+                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null) {
 
                             if (node.syncPoint == false) return;
                             if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
@@ -187,11 +192,16 @@ namespace ME.BECS.Editor.Systems {
                                 }
                             }
 
-                            var resDep = $"dep{index.ToString()}";
+                            var indexStr = index.ToString();
+                            var resDep = $"dep{indexStr}";
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            methodContent.Add($"dep{index.ToString()} = Batches.Apply(dep{index.ToString()}, world.state);");
+                            if (customDep != null) {
+                                methodContent.Add($"{customDep} = Batches.Apply({customDep}, world.state);");
+                            } else {
+                                methodContent.Add($"dep{indexStr} = Batches.Apply(dep{indexStr}, world.state);");
+                            }
                         }
                         
                         while (q.Count > 0) {
@@ -279,6 +289,7 @@ namespace ME.BECS.Editor.Systems {
                                 if (n is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode && systemNode.system != null &&
                                     n.enabled == true && n.IsGroupEnabled() == true) {
 
+                                    var customAttr = string.Empty;
                                     var notUsedDescr = " - Empty Node";
                                     var hasMethod = HasMethod<T>(n);
                                     if (hasMethod == false ||
@@ -342,19 +353,80 @@ namespace ME.BECS.Editor.Systems {
                                             isInBurst = isBursted;
                                         }
 
-                                        methodContent.Add("{");
-                                        methodContent.Add($"var input = {dependsOn};");
-                                        methodContent.Add($"dep{index.ToString()} = input;");
-                                        AddApply(systemNode, index, ref schemeDependsOn);
-                                        methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, dep{index.ToString()});");
-                                        methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)systems[{index.globalIndex}])->{method}(ref localContext{index.ToString()});");
-                                        methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
-                                        methodContent.Add("}");
-                                        collectedDeps.Add($"dep{index.ToString()}");
+                                        if (systemNode.system.GetType().IsGenericType == true) {
+                                            var systemType = systemNode.system.GetType();
+                                            if (systemType.IsGenericType == true) {
+                                                systemType = systemType.GetGenericTypeDefinition();
+                                                var genType = EditorUtils.GetFirstInterfaceConstraintTypes(systemType);
+                                                if (genType != null) {
+                                                    if (systemType.GetCustomAttribute<SystemGenericParallelModeAttribute>() != null) {
+                                                        customAttr = "[ PARALLEL ]";
+                                                        // Parallel mode
+                                                        var srcDep = index;
+                                                        var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
+                                                        methodContent.Add($"var depsGeneric{srcDep.ToString()} = new NativeArray<Unity.Jobs.JobHandle>({types.Length}, Constants.ALLOCATOR_TEMP);");
+                                                        foreach (var cType in types) {
+                                                            var type = systemType.MakeGenericType(cType);
+                                                            var indexStr = index.ToString();
+                                                            methodContent.Add("{");
+                                                            methodContent.Add($"var input = {dependsOn};");
+                                                            methodContent.Add($"var localContext{indexStr} = SystemContext.Create(dt, in world, input);");
+                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref localContext{indexStr});");
+                                                            methodContent.Add($"var output = localContext{indexStr}.dependsOn;");
+                                                            methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = output;");
+                                                            methodContent.Add("}");
+                                                            if (index.genericIndex == 0) collectedDeps.Add($"dep{indexStr}");
+                                                            printedDependencies.Add($"dep{indexStr}");
+                                                            index.AddGeneric();
+                                                        }
+
+                                                        methodContent.Add($"dep{srcDep.ToString()} = Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()});");
+                                                        AddApply(systemNode, srcDep, ref schemeDependsOn);
+                                                        index = srcDep;
+                                                    } else {
+                                                        // One-by-one mode
+                                                        customAttr = "[ ONE-BY-ONE ]";
+                                                        var srcDep = index;
+                                                        var prevIndex = dependsOn;
+                                                        var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
+                                                        foreach (var cType in types) {
+                                                            var type = systemType.MakeGenericType(cType);
+                                                            var indexStr = index.ToString();
+                                                            methodContent.Add("{");
+                                                            methodContent.Add($"var input = {prevIndex};");
+                                                            methodContent.Add($"var localContext{indexStr} = SystemContext.Create(dt, in world, input);");
+                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref localContext{indexStr});");
+                                                            methodContent.Add($"dep{indexStr} = localContext{indexStr}.dependsOn;");
+                                                            AddApply(systemNode, index, ref schemeDependsOn);
+                                                            methodContent.Add("}");
+                                                            collectedDeps.Add($"dep{indexStr}");
+                                                            printedDependencies.Add($"dep{indexStr}");
+                                                            prevIndex = $"dep{indexStr}";
+                                                            index.AddGeneric();
+                                                        }
+                                                        methodContent.Add($"dep{srcDep.ToString()} = {prevIndex};");
+                                                        index = srcDep;
+                                                    }
+                                                }
+                                            }
+
+                                        } else {
+
+                                            methodContent.Add("{");
+                                            methodContent.Add($"var input = {dependsOn};");
+                                            methodContent.Add($"dep{index.ToString()} = input;");
+                                            methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, dep{index.ToString()});");
+                                            methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)systems[{index.globalIndex}])->{method}(ref localContext{index.ToString()});");
+                                            methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
+                                            AddApply(systemNode, index, ref schemeDependsOn);
+                                            methodContent.Add("}");
+                                            collectedDeps.Add($"dep{index.ToString()}");
+
+                                        }
 
                                     }
 
-                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{notUsedDescr}");
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
 
                                 } else {
 
@@ -584,6 +656,9 @@ namespace ME.BECS.Editor.Systems {
             var sysNode = node as ME.BECS.FeaturesGraph.Nodes.SystemNode;
             if (sysNode == null || sysNode.system == null) return false;
             var type = sysNode.system.GetType();
+            if (type.IsGenericType == true) {
+                type = type.GetGenericTypeDefinition();
+            }
             var isSystemBursted = generator.burstedTypes.Contains(type);
             var methodInfo = type.GetMethod(method);
             var isBursted = generator.burstedTypes.Any(x => x == methodInfo);
@@ -613,15 +688,23 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
-        private static int GetNodeIndex(SystemsGraph graph, ME.BECS.Extensions.GraphProcessor.BaseNode sysNode, out bool found, int index = -1) {
+        private static int GetNodeIndex(SystemsGraph graph, ME.BECS.Extensions.GraphProcessor.BaseNode sysNode, out bool found, int index = 0) {
             found = false;
             foreach (var node in graph.nodes) {
-                if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
-                    if (systemNode.system != null) ++index;
-                }
                 if (node == sysNode) {
                     found = true;
                     return index;
+                } else if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
+                    if (systemNode.system != null) {
+                        if (systemNode.system.GetType().IsGenericType == true) {
+                            var typeGen = EditorUtils.GetFirstInterfaceConstraintTypes(systemNode.system.GetType().GetGenericTypeDefinition());
+                            if (typeGen != null) {
+                                index += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
+                            }
+                        } else {
+                            ++index;
+                        }
+                    }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
                     index = GetNodeIndex(graphNode.graphValue, sysNode, out found, index);
                     if (found == true) {
@@ -640,14 +723,34 @@ namespace ME.BECS.Editor.Systems {
                     if (system == null) {
                         content.Add("// [!] system is null");
                     } else {
-                        var type = system.GetType().FullName;
-                        var systemType = EditorUtils.GetTypeName(systemNode.system.GetType());
-                        content.Add("{");
-                        content.Add($"var item = allocator.Allocate(TSize<{type}>.sizeInt, TAlign<{type}>.alignInt);");
-                        content.Add($"*({systemType}*)item = {GetDefinition(systemNode.system)};");
-                        content.Add($"TSystemGraph.Register<{systemType}>({rootGraphId}, item);");
-                        content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
-                        content.Add("}");
+                        var systemType = system.GetType();
+                        if (systemType.IsGenericType == true) {
+                            systemType = systemType.GetGenericTypeDefinition();
+                            var genType = EditorUtils.GetFirstInterfaceConstraintTypes(systemType);
+                            if (genType != null) {
+                                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
+                                foreach (var cType in types) {
+                                    var type = systemType.MakeGenericType(cType);
+                                    var systemTypeStr = EditorUtils.GetTypeName(type);
+                                    content.Add("{");
+                                    content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
+                                    content.Add($"*({systemTypeStr}*)item = {GetDefinition(systemNode.system, type)};");
+                                    content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
+                                    content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
+                                    content.Add("}");
+                                    ++index;
+                                }
+                            }
+                        } else {
+                            var systemTypeStr = EditorUtils.GetTypeName(systemType);
+                            content.Add("{");
+                            content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
+                            content.Add($"*({systemTypeStr}*)item = {GetDefinition(systemNode.system)};");
+                            content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
+                            content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
+                            content.Add("}");
+                        }
+
                         ++index;
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
@@ -676,14 +779,15 @@ namespace ME.BECS.Editor.Systems {
             return cnt;
         }
 
-        private static string GetDefinition(object system) {
+        private static string GetDefinition(object system, System.Type type = null) {
 
+            if (type == null) type = system.GetType();
             var result = new System.Text.StringBuilder(100);
             result.Append("new ");
-            result.Append(EditorUtils.GetTypeName(system.GetType()));
+            result.Append(EditorUtils.GetTypeName(type));
             result.Append(" {\n");
             //var result = $"new {GetTypeName(system.GetType())}() {{\n";
-            var fields = system.GetType().GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
+            var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
             foreach (var field in fields) {
                 //var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
                 if (field.IsInitOnly == true) continue;

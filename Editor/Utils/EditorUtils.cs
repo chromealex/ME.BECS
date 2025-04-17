@@ -958,12 +958,17 @@ namespace ME.BECS.Editor {
             return name;
         }
 
-        public static string GetTypeName(System.Type type) {
-            if (type.IsGenericType == true) {
-                var first = type.FullName.Split('[')[0].Replace("+", ".").Replace("`1", "");
-                return $"{first}<{GetTypeName(type.GenericTypeArguments[0])}>";
+        public static string GetTypeName(System.Type type, bool useFullName = true, bool showGenericType = true) {
+            var name = type.Name;
+            if (useFullName == true) {
+                name = type.FullName;
             }
-            return type.FullName.Replace("+", ".").Replace("`1", "");
+            if (type.IsGenericType == true) {
+                var first = name.Split('[')[0].Replace("+", ".").Replace("`1", "");
+                if (type.GenericTypeArguments.Length == 0 || showGenericType == false) return $"{first}<>";
+                return $"{first}<{GetTypeName(type.GenericTypeArguments[0], useFullName)}>";
+            }
+            return name.Replace("+", ".").Replace("`1", "");
         }
 
         public static string GetDataTypeName(System.Type type) {
@@ -1132,6 +1137,20 @@ namespace ME.BECS.Editor {
             var arrId = arr.FindPropertyRelative("data").FindPropertyRelative("Length");
             arrId.uintValue = GetEntityCollection(arr.serializedObject, arrId.uintValue, out var data, out _);
             data.FindPropertyRelative("array").DeleteArrayElementAtIndex((int)index);
+        }
+
+        public static System.Type GetFirstInterfaceConstraintTypes(System.Type type) {
+            var constrains = type.GetGenericArguments()[0].GetGenericParameterConstraints();
+            return constrains.FirstOrDefault(x => x.IsInterface == true);
+        }
+
+        public static System.Type GetFirstGenericConstraintTypes(System.Type type) {
+            var interfaceType = GetFirstInterfaceConstraintTypes(type);
+            return UnityEditor.TypeCache.GetTypesDerivedFrom(interfaceType).OrderBy(x => x.FullName).FirstOrDefault();
+        }
+
+        public static System.Type MakeGenericConstraintTypes(System.Type type) {
+            return type.MakeGenericType(GetFirstGenericConstraintTypes(type));
         }
 
     }

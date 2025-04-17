@@ -49,6 +49,14 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                 var updateBurst = IsBurstMethod(node.system, typeof(IUpdate), isBurst, out var hasUpdate);
                 var disposeBurst = IsBurstMethod(node.system, typeof(IDestroy), isBurst, out var hasDestroy);
                 var drawGizmosBurst = IsBurstMethod(node.system, typeof(IDrawGizmos), isBurst, out var hasDrawGizmos);
+
+                if (node.system.GetType().IsGenericType == true) {
+                    if (node.system.GetType().GetCustomAttribute<SystemGenericParallelModeAttribute>() != null) {
+                        AddLabel(container, "Parallel", "Systems will run in parallel mode", true);
+                    } else {
+                        AddLabel(container, "One-by-one", "Systems will run one-by-one", true);
+                    }
+                }
                 
                 if (awakeBurst == true && updateBurst == true && disposeBurst == true && isBurst == true) {
                     AddLabel(container, "Burst", "System run with Burst Compiler", true);
