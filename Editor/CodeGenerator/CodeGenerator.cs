@@ -608,7 +608,7 @@ namespace ME.BECS.Editor {
                 if (type.IsGenericType == true && genericTypes.Contains(type) == false) {
                     types.RemoveAt(index);
                     --index;
-                    var typeGen = EditorUtils.GetFirstInterfaceConstraintTypes(type);
+                    var typeGen = EditorUtils.GetFirstInterfaceConstraintType(type);
                     if (typeGen != null) {
                         var genTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).OrderBy(x => x.FullName).ToArray();
                         foreach (var genType in genTypes) {

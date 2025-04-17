@@ -964,9 +964,9 @@ namespace ME.BECS.Editor {
                 name = type.FullName;
             }
             if (type.IsGenericType == true) {
-                var first = name.Split('[')[0].Replace("+", ".").Replace("`1", "");
-                if (type.GenericTypeArguments.Length == 0 || showGenericType == false) return $"{first}<>";
-                return $"{first}<{GetTypeName(type.GenericTypeArguments[0], useFullName)}>";
+                var first = name.Split('[')[0].Replace("+", ".");
+                if (type.GenericTypeArguments.Length == 0 || showGenericType == false) return $"{first.Replace("`1", "")}<>";
+                return $"{first.Replace("`1", $"<{GetTypeName(type.GenericTypeArguments[0], useFullName)}>")}";
             }
             return name.Replace("+", ".").Replace("`1", "");
         }
@@ -1139,18 +1139,18 @@ namespace ME.BECS.Editor {
             data.FindPropertyRelative("array").DeleteArrayElementAtIndex((int)index);
         }
 
-        public static System.Type GetFirstInterfaceConstraintTypes(System.Type type) {
+        public static System.Type GetFirstInterfaceConstraintType(System.Type type) {
             var constrains = type.GetGenericArguments()[0].GetGenericParameterConstraints();
             return constrains.FirstOrDefault(x => x.IsInterface == true);
         }
 
-        public static System.Type GetFirstGenericConstraintTypes(System.Type type) {
-            var interfaceType = GetFirstInterfaceConstraintTypes(type);
+        public static System.Type GetFirstGenericConstraintType(System.Type type) {
+            var interfaceType = GetFirstInterfaceConstraintType(type);
             return UnityEditor.TypeCache.GetTypesDerivedFrom(interfaceType).OrderBy(x => x.FullName).FirstOrDefault();
         }
 
-        public static System.Type MakeGenericConstraintTypes(System.Type type) {
-            return type.MakeGenericType(GetFirstGenericConstraintTypes(type));
+        public static System.Type MakeGenericConstraintType(System.Type type) {
+            return type.MakeGenericType(GetFirstGenericConstraintType(type));
         }
 
     }

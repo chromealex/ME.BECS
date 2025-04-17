@@ -29,13 +29,19 @@ namespace ME.BECS.Editor.Jobs {
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
             
             {
-                var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase));
+                var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+                CodeGenerator.PatchSystemsList(jobsComponents);
                 foreach (var jobType in jobsComponents) {
 
                     if (jobType.IsValueType == false) continue;
                     if (jobType.IsVisible == false) continue;
 
                     if (this.IsValidTypeForAssembly(jobType) == false) continue;
+
+                    if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
+                    } else if (jobType.IsGenericType == true) {
+                        throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
+                    }
 
                     var jobTypeFullName = EditorUtils.GetTypeName(jobType);
                     var components = new System.Collections.Generic.List<string>();
@@ -136,12 +142,18 @@ namespace ME.BECS.Editor.Jobs {
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             {
-                var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase));
+                var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+                CodeGenerator.PatchSystemsList(jobsComponents);
                 foreach (var jobType in jobsComponents) {
                     if (jobType.IsValueType == false) continue;
                     if (jobType.IsVisible == false) continue;
                     if (this.IsValidTypeForAssembly(jobType) == false) continue;
 
+                    if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
+                    } else if (jobType.IsGenericType == true) {
+                        throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
+                    }
+                    
                     var jobTypeFullName = EditorUtils.GetTypeName(jobType);
                     var aspects = new System.Collections.Generic.List<string>();
                     var components = new System.Collections.Generic.List<string>();

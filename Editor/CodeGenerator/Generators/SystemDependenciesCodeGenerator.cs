@@ -45,7 +45,7 @@ namespace ME.BECS.Editor.Systems {
                 var system = sys;
                 if (system.IsGenericType == true) {
                     system = system.GetGenericTypeDefinition();
-                    system = EditorUtils.MakeGenericConstraintTypes(system);
+                    system = EditorUtils.MakeGenericConstraintType(system);
                 }
                 if (tempItems.ContainsKey(system) == true) continue;
                 

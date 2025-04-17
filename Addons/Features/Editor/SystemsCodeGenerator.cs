@@ -357,7 +357,7 @@ namespace ME.BECS.Editor.Systems {
                                             var systemType = systemNode.system.GetType();
                                             if (systemType.IsGenericType == true) {
                                                 systemType = systemType.GetGenericTypeDefinition();
-                                                var genType = EditorUtils.GetFirstInterfaceConstraintTypes(systemType);
+                                                var genType = EditorUtils.GetFirstInterfaceConstraintType(systemType);
                                                 if (genType != null) {
                                                     if (systemType.GetCustomAttribute<SystemGenericParallelModeAttribute>() != null) {
                                                         customAttr = "[ PARALLEL ]";
@@ -697,7 +697,7 @@ namespace ME.BECS.Editor.Systems {
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                     if (systemNode.system != null) {
                         if (systemNode.system.GetType().IsGenericType == true) {
-                            var typeGen = EditorUtils.GetFirstInterfaceConstraintTypes(systemNode.system.GetType().GetGenericTypeDefinition());
+                            var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
                             if (typeGen != null) {
                                 index += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
                             }
@@ -726,7 +726,7 @@ namespace ME.BECS.Editor.Systems {
                         var systemType = system.GetType();
                         if (systemType.IsGenericType == true) {
                             systemType = systemType.GetGenericTypeDefinition();
-                            var genType = EditorUtils.GetFirstInterfaceConstraintTypes(systemType);
+                            var genType = EditorUtils.GetFirstInterfaceConstraintType(systemType);
                             if (genType != null) {
                                 var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
                                 foreach (var cType in types) {

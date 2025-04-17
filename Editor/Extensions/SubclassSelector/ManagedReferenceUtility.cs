@@ -23,7 +23,7 @@ namespace ME.BECS.Editor.Extensions.SubclassSelector {
         public static object CreateWithFirstGenericComponent(this SerializedProperty property, Type type) {
             var instance = CreateInstance(type);
             if (instance == null && type != null) {
-                var argType = EditorUtils.GetFirstGenericConstraintTypes(type);
+                var argType = EditorUtils.GetFirstGenericConstraintType(type);
                 type = type.MakeGenericType(argType);
                 instance = Activator.CreateInstance(type);
             }
