@@ -766,10 +766,15 @@ namespace ME.BECS.Editor.Systems {
             foreach (var node in graph.nodes) {
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                     var system = systemNode.system;
-                    if (system == null) {
-                        
-                    } else {
-                        ++cnt;
+                    if (systemNode.system != null) {
+                        if (systemNode.system.GetType().IsGenericType == true) {
+                            var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
+                            if (typeGen != null) {
+                                cnt += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
+                            }
+                        } else {
+                            ++cnt;
+                        }
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
                     cnt += GetSystemsCount(graphNode.graphValue);
