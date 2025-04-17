@@ -212,7 +212,6 @@ namespace ME.BECS.Editor.Systems {
                             content = content,
                         };
                         tempItems.Add(system, item);
-                        --this.awaitCount;
                     }
                     
                     //UnityEngine.Debug.Log("Processed: " + system.FullName);

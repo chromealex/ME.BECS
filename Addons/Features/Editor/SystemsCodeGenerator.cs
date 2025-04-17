@@ -734,7 +734,7 @@ namespace ME.BECS.Editor.Systems {
                                     var systemTypeStr = EditorUtils.GetTypeName(type);
                                     content.Add("{");
                                     content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
-                                    content.Add($"*({systemTypeStr}*)item = {GetDefinition(systemNode.system, type)};");
+                                    content.Add($"*({systemTypeStr}*)item = {GetDefinition(System.Activator.CreateInstance(type), type)};");
                                     content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
                                     content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
                                     content.Add("}");
