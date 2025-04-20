@@ -27,7 +27,7 @@ namespace ME.BECS.Transforms {
 
             float3 prevPos = default;
             quaternion prevRot = default;
-            if (parent.IsAlive() == true && worldPositionStay == true) {
+            if (worldPositionStay == true && parent.IsAlive() == true) {
                 var aspect = ent.GetOrCreateAspect<TransformAspect>();
                 prevPos = aspect.position;
                 prevRot = aspect.rotation;
@@ -35,7 +35,7 @@ namespace ME.BECS.Transforms {
             
             ent.SetParent_INTERNAL(in parent);
             
-            if (parent.IsAlive() == true && worldPositionStay == true) {
+            if (worldPositionStay == true && parent.IsAlive() == true) {
                 var aspect = ent.GetOrCreateAspect<TransformAspect>();
                 aspect.position = prevPos;
                 aspect.rotation = prevRot;
@@ -72,12 +72,13 @@ namespace ME.BECS.Transforms {
                 parentChildren.list.Add(ent);
                 parentChildren.list.Sort<Ent>();
                 parentChildren.lockSpinner.Unlock();
-                currentParent = parent;
-                // if new parent has no parent component
-                // set IsFirstLevelComponent
-                if (parent.Has<ParentComponent>() == false) {
-                    ent.Set(new IsFirstLevelComponent());
-                }
+            }
+            
+            currentParent = parent;
+            // if new parent has no parent component
+            // set IsFirstLevelComponent
+            if (parent.Has<ParentComponent>() == false) {
+                ent.Set(new IsFirstLevelComponent());
             }
 
         }

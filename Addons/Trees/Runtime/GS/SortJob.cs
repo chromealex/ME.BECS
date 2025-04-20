@@ -31,7 +31,7 @@ namespace ME.BECS.Trees {
             return new SortJobDefer<T, TU>() { data = array, comp = comp };
         }
 
-        public static void CalculateSegmentCount(int count, DeferJobCounter* segmentCount) {
+        public static void CalculateSegmentCount(int count, ME.BECS.NativeCollections.DeferJobCounter* segmentCount) {
             segmentCount->count = (count + 1023) / 1024;
             //int maxThreadCount = JobsUtility.ThreadIndexCount;
             //var workerCount = math.max(1, maxThreadCount);
@@ -135,7 +135,7 @@ namespace ME.BECS.Trees {
         /// <param name="count"></param>
         /// <param name="inputDeps">Handle of a job to depend upon.</param>
         /// <returns>The handle of this newly scheduled job.</returns>
-        public JobHandle Schedule(DeferJobCounter* count, DeferJobCounter* segmentCount, JobHandle inputDeps = default) {
+        public JobHandle Schedule(ME.BECS.NativeCollections.DeferJobCounter* count, ME.BECS.NativeCollections.DeferJobCounter* segmentCount, JobHandle inputDeps = default) {
             //if (Length == 0) return inputDeps;
             //var segmentCount = (Length + 1023) / 1024;
 

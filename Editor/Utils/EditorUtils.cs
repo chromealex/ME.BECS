@@ -1032,7 +1032,7 @@ namespace ME.BECS.Editor {
             return loadedAssemblies;
         }
 
-        public static bool IsValidTypeForAssembly(bool editorAssembly, System.Type type, System.Collections.Generic.List<AssemblyInfo> asms = null) {
+        public static bool IsValidTypeForAssembly(bool editorAssembly, System.Type type, System.Collections.Generic.List<AssemblyInfo> asms = null, bool runtimeInEditor = true) {
             
             if (type == null) return false;
             if (asms == null) asms = EditorUtils.GetAssembliesInfo();
@@ -1040,7 +1040,7 @@ namespace ME.BECS.Editor {
             var asm = type.Assembly.GetName().Name;
             var info = asms.FirstOrDefault(x => x.name == asm);
             if (editorAssembly == false && info.isEditor == true) return false;
-            if (editorAssembly == true && info.isEditor == false) return false;
+            if (editorAssembly == true && info.isEditor == false && runtimeInEditor == false) return false;
             return true;
 
         }

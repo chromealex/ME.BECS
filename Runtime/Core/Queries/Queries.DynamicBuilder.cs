@@ -16,6 +16,7 @@ namespace ME.BECS {
     using Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections;
+    using ME.BECS.NativeCollections;
     
     public unsafe struct QueryData {
 
@@ -348,7 +349,6 @@ namespace ME.BECS {
 
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
             this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.builderDependsOn);
-            this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
 
         }
@@ -376,7 +376,6 @@ namespace ME.BECS {
 
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
             this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
-            this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
 
         }
@@ -418,7 +417,6 @@ namespace ME.BECS {
             // Need to complete previous job and run SetEntities in sync mode
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
             this.builderDependsOn = job.Schedule(this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
-            this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
 
         }
@@ -567,7 +565,7 @@ namespace ME.BECS {
             
             public void Execute() {
                 
-                this.queryData.ptr->archetypes = (safe_ptr<uint>)this.queryDataStatic.ptr->archetypes.GetUnsafePtr(in this.state.ptr->allocator);
+                this.queryData.ptr->archetypes = this.queryDataStatic.ptr->archetypes.GetUnsafePtr(in this.state.ptr->allocator);
                 this.queryData.ptr->archetypesCount = this.queryDataStatic.ptr->archetypes.Count;
                 
             }
@@ -585,7 +583,7 @@ namespace ME.BECS {
                 state = state,
                 queryData = this.queryData,
             }.Schedule(this.builderDependsOn);
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn, fromStaticQuery: true);
             //this.builderDependsOn.Complete();
             return new QueryBuilderDisposable(this);
 
@@ -595,7 +593,7 @@ namespace ME.BECS {
         public struct FillTrueBitsJob : IJobParallelForDefer {
 
             public safe_ptr<QueryData> queryData;
-            public ME.BECS.NativeCollections.NativeParallelList<uint> list;
+            public NativeParallelList<uint> list;
 
             public void Execute(int index) {
                 var hasBit = this.queryData.ptr->archetypesBits.IsSet(index);
@@ -731,22 +729,24 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn) {
+        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn, bool fromStaticQuery = false) {
 
-            var cmdBuffer = _makeDefault(new CommandBuffer(), Constants.ALLOCATOR_TEMPJOB);
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
-            dependsOn = this.compose.Build(ref this, cmdBuffer, dependsOn);
-            var list = new ME.BECS.NativeCollections.NativeParallelList<uint>(10, Constants.ALLOCATOR_TEMPJOB);
-            dependsOn = new FillTrueBitsJob() {
-                queryData = this.queryData,
-                list = list,
-            }.Schedule((int*)((byte*)cmdBuffer.ptr + sizeof(void*)), 64, dependsOn);
-            dependsOn = new FillArchetypesJob() {
-                queryData = this.queryData,
-                list = list,
-            }.Schedule(dependsOn);
-            Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(list.Dispose(dependsOn));
-            Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(new DisposeWithAllocatorPtrJob() { ptr = cmdBuffer, allocator = Constants.ALLOCATOR_TEMPJOB, }.Schedule(dependsOn));
+            if (fromStaticQuery == false) {
+                var counter = _makeDefault(new ME.BECS.NativeCollections.DeferJobCounter(), allocator);
+                dependsOn = this.compose.Build(ref this, counter, dependsOn);
+                var list = new ME.BECS.NativeCollections.NativeParallelList<uint>(10, allocator);
+                dependsOn = new FillTrueBitsJob() {
+                    queryData = this.queryData,
+                    list = list,
+                }.Schedule(&counter.ptr->count, 64, dependsOn);
+                dependsOn = new FillArchetypesJob() {
+                    queryData = this.queryData,
+                    list = list,
+                }.Schedule(dependsOn);
+                Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(list.Dispose(dependsOn));
+            }
+
             var job = new SetEntitiesJob() {
                 buffer = buffer,
                 queryData = this.queryData,

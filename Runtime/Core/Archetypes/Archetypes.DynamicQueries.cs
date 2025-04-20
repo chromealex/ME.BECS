@@ -52,12 +52,12 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public JobHandle Build(ref QueryBuilder builder, safe_ptr<CommandBuffer> commandBuffer, JobHandle dependsOn) {
+            public JobHandle Build(ref QueryBuilder builder, safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter, JobHandle dependsOn) {
                 var job = new ComposeJob() {
                     query = this,
                     queryData = builder.queryData,
                     state = builder.commandBuffer.ptr->state,
-                    commandBuffer = commandBuffer,
+                    counter = counter,
                 };
                 return job.ScheduleByRef(dependsOn);
             }
@@ -70,7 +70,7 @@ namespace ME.BECS {
             public QueryCompose query;
             public safe_ptr<State> state;
             public safe_ptr<QueryData> queryData;
-            public safe_ptr<CommandBuffer> commandBuffer;
+            public safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter;
 
             [INLINE(256)]
             public void Execute() {
@@ -117,7 +117,7 @@ namespace ME.BECS {
                     this.queryData.ptr->archetypesBits.Intersect(temp);
                 }
 
-                this.commandBuffer.ptr->count = this.queryData.ptr->archetypesBits.Length;
+                this.counter.ptr->count = (int)this.queryData.ptr->archetypesBits.Length;
 
             }
 
