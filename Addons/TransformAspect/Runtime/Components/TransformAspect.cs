@@ -77,6 +77,8 @@ namespace ME.BECS.Transforms {
         public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float4x4 readLocalMatrix => ref this.localMatrixData.Read(this.ent.id, this.ent.gen).value;
 
+        public readonly ref byte isWorldMatrixTickCalculated => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated;
+        
         public readonly float3 position {
             [INLINE(256)]
             set {
@@ -204,6 +206,16 @@ namespace ME.BECS.Transforms {
         public static implicit operator TransformAspect(in Ent ent) {
             if (ent.IsAlive() == false) return default;
             return ent.GetOrCreateAspect<TransformAspect>();
+        }
+
+        [INLINE(256)]
+        public readonly void LockWorldMatrix() {
+            this.worldMatrixData.Get(this.ent.id, this.ent.gen).spinner.Lock();
+        }
+
+        [INLINE(256)]
+        public readonly void UnlockWorldMatrix() {
+            this.worldMatrixData.Get(this.ent.id, this.ent.gen).spinner.Unlock();
         }
 
     }

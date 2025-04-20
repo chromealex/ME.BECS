@@ -19,7 +19,6 @@ namespace ME.BECS.Jobs {
             {count( )[builder.WithAspect<T#i#>();]}
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
-            builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
         

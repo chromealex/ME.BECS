@@ -62,6 +62,10 @@ namespace ME.BECS {
     
     [BURST(CompileSynchronously = true)]
     public unsafe struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy {
+        
+        public static QuadTreeInsertSystem Default => new QuadTreeInsertSystem() {
+            mapSize = new float3(200f, 200f, 200f),
+        };
 
         public float3 mapPosition;
         public float3 mapSize;

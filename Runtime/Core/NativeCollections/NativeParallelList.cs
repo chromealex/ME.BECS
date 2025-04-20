@@ -48,20 +48,26 @@ namespace ME.BECS.NativeCollections {
             
         }
 
+        [BURST]
+        public struct DisposeJob : IJob {
+
+            public NativeParallelList<T> list;
+
+            public void Execute() {
+
+                this.list.Dispose();
+
+            }
+
+        }
+        
         [INLINE(256)]
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle jobHandle) {
 
-            var tempDeps = new NativeArray<JobHandle>((int)this.Length, Allocator.Temp);
-            for (uint i = 0u; i < this.Length; ++i) {
-                var copy = *((UnsafeList<T>*)(this.lists + i * CACHE_LINE_SIZE).ptr);
-                tempDeps[(int)i] = copy.Dispose(jobHandle);
-            }
-            jobHandle = new DisposeWithAllocatorPtrJob() {
-                allocator = this.allocator,
-                ptr = this.lists,
-            }.Schedule(JobHandle.CombineDependencies(tempDeps));
-            return jobHandle;
-
+            return new DisposeJob() {
+                list = this,
+            }.Schedule(jobHandle);
+            
         }
 
         public int Count {
@@ -96,6 +102,7 @@ namespace ME.BECS.NativeCollections {
             var offset = 0;
             for (uint i = 0u; i < this.Length; ++i) {
                 var list = *((UnsafeList<T>*)(this.lists + i * CACHE_LINE_SIZE).ptr);
+                if (list.IsCreated == false || list.Length == 0u) continue;
                 _memcpy((safe_ptr)list.Ptr, (safe_ptr)(targetList.Ptr + offset), TSize<T>.size * list.Length);
                 offset += list.Length;
             }

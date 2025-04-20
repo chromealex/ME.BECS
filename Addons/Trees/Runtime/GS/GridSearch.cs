@@ -12,18 +12,6 @@ namespace ME.BECS.Trees {
 
     //Multithreaded sort from https://coffeebraingames.wordpress.com/2020/06/07/a-multithreaded-sorting-attempt/
 
-    [System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    public unsafe struct DeferJobCounter {
-
-        // [!] For some reason ScheduleParallelForDeferArraySize needs ptr first
-        // so that's why we need LayoutKind.Sequential and first void* must be here
-        // the second must be uint count
-        [NativeDisableUnsafePtrRestriction]
-        public uint* entities;
-        public int count;
-
-    }
-
     [BurstCompile]
     public unsafe struct GridSearch<T> where T : unmanaged {
 

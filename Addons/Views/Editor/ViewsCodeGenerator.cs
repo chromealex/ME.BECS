@@ -19,7 +19,7 @@ namespace ME.BECS.Views.Editor {
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
-            var views = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.Views.EntityView>();
+            var views = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.Views.EntityView>().OrderBy(x => x.FullName).ToArray();
             references.Add(typeof(UnsafeViewsModule));
             foreach (var viewType in views) {
 

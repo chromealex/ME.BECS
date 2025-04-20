@@ -16,10 +16,10 @@ namespace ME.BECS {
             internal UnsafeList<uint> without;
             
             [INLINE(256)]
-            public QueryCompose Initialize() {
-                this.with = new UnsafeList<uint>(1, Constants.ALLOCATOR_TEMPJOB);
-                this.withAny = new UnsafeList<System.Collections.Generic.KeyValuePair<uint, uint>>(1, Constants.ALLOCATOR_TEMPJOB);
-                this.without = new UnsafeList<uint>(1, Constants.ALLOCATOR_TEMPJOB);
+            public QueryCompose Initialize(Unity.Collections.Allocator allocator) {
+                this.with = new UnsafeList<uint>(1, allocator);
+                this.withAny = new UnsafeList<System.Collections.Generic.KeyValuePair<uint, uint>>(1, allocator);
+                this.without = new UnsafeList<uint>(1, allocator);
                 return this;
             }
 
@@ -52,11 +52,12 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public JobHandle Build(ref QueryBuilder builder, JobHandle dependsOn) {
+            public JobHandle Build(ref QueryBuilder builder, safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter, JobHandle dependsOn) {
                 var job = new ComposeJob() {
                     query = this,
                     queryData = builder.queryData,
                     state = builder.commandBuffer.ptr->state,
+                    counter = counter,
                 };
                 return job.ScheduleByRef(dependsOn);
             }
@@ -69,7 +70,8 @@ namespace ME.BECS {
             public QueryCompose query;
             public safe_ptr<State> state;
             public safe_ptr<QueryData> queryData;
-            
+            public safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter;
+
             [INLINE(256)]
             public void Execute() {
 
@@ -114,6 +116,8 @@ namespace ME.BECS {
                     }
                     this.queryData.ptr->archetypesBits.Intersect(temp);
                 }
+
+                this.counter.ptr->count = (int)this.queryData.ptr->archetypesBits.Length;
 
             }
 
