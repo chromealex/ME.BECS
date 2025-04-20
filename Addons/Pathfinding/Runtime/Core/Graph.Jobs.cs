@@ -609,42 +609,27 @@ namespace ME.BECS.Pathfinding {
 
             var xDifOne = (int)math.sign(xDif);
             var yDifOne = (int)math.sign(yDif);
-
-            //Check the direction we are furtherest from the destination on (or both if equal)
-            // If it has LOS then we might
             
-            //If we are not a straight line vertically/horizontally to the exit
-            if (yDifAbs > 0 && xDifAbs > 0) {
-                //If the diagonal doesn't have LOS, we don't
-                var info = Graph.GetCoordInfo(at.x + xDifOne, at.y + yDifOne, root.chunkWidth, root.chunkHeight, root.width, root.height);
-                if (info.IsValid() == true && GetState(this.world.state, in this.path, in info) == 0) {
-                    hasLos = 0;
-                } else if (yDifAbs == xDifAbs) {
-                    // If we are an exact diagonal and either straight direction is a wall, we don't have LOS
-                    var infoNode1 = Graph.GetCoordInfo(at.x + xDifOne, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
-                    var infoNode2 = Graph.GetCoordInfo(at.x, at.y + yDifOne, root.chunkWidth, root.chunkHeight, root.width, root.height);
-                    if (infoNode1.IsValid() == false || root.chunks[this.world.state, infoNode1.chunkIndex].nodes[this.world.state, infoNode1.nodeIndex].cost > 1 || 
-                        infoNode2.IsValid() == false || root.chunks[this.world.state, infoNode2.chunkIndex].nodes[this.world.state, infoNode2.nodeIndex].cost > 1) {
-                        hasLos = 0;
-                    }
-                }
+
+            var xOffset = xDifOne;
+            var yOffset = yDifOne;
+
+            if (xDifAbs * 2 <= yDifAbs) {
+                xOffset = 0;
             }
-
-            //Check in the x direction
-            if (xDifAbs >= yDifAbs) {
-
-                var info = Graph.GetCoordInfo(at.x + xDifOne, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
-                if (info.IsValid() == true && GetState(this.world.state, in this.path, in info) == 1) {
-                    hasLos = 1;
-                }
+            
+            if (yDifAbs * 2 <= xDifAbs) {
+                yOffset = 0;
             }
-            //Check in the y direction
-            if (yDifAbs >= xDifAbs) {
-
-                var info = Graph.GetCoordInfo(at.x, at.y + yDifOne, root.chunkWidth, root.chunkHeight, root.width, root.height);
-                if (info.IsValid() == true && GetState(this.world.state, in this.path, in info) == 1) {
-                    hasLos = 1;
-                }
+            
+            var info = Graph.GetCoordInfo(at.x + xOffset, at.y + yOffset, root.chunkWidth, root.chunkHeight, root.width, root.height);
+            if (info.IsValid() == true) {
+                hasLos = GetState(this.world.state, in this.path, in info);
+            }
+            
+            var currentNodeInfo = Graph.GetCoordInfo(at.x, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
+            if (currentNodeInfo.IsValid() && root.chunks[this.world.state, currentNodeInfo.chunkIndex].nodes[this.world.state, currentNodeInfo.nodeIndex].cost > 1) {
+                hasLos = 0;
             }
 
             chunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = hasLos;
