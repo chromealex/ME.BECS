@@ -1,3 +1,11 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
 namespace ME.BECS {
 
     using static CutsPool;
@@ -584,6 +592,34 @@ namespace ME.BECS {
         }
 
         [BURST(CompileSynchronously = true)]
+        public struct FillTrueBitsJob : IJobParallelForDefer {
+
+            public safe_ptr<QueryData> queryData;
+            public ME.BECS.NativeCollections.NativeParallelList<uint> list;
+
+            public void Execute(int index) {
+                var hasBit = this.queryData.ptr->archetypesBits.IsSet(index);
+                if (hasBit == true) this.list.Add((uint)index);
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct FillArchetypesJob : IJob {
+
+            public safe_ptr<QueryData> queryData;
+            public ME.BECS.NativeCollections.NativeParallelList<uint> list;
+
+            public void Execute() {
+                var list = this.list.ToList(Constants.ALLOCATOR_TEMP);
+                var ptr = list.Ptr;
+                this.queryData.ptr->archetypes = new safe_ptr<uint>(ptr, (byte*)ptr, (byte*)(ptr + list.Length));
+                this.queryData.ptr->archetypesCount = (uint)list.Length;
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
         private struct SetEntitiesJob : IJob {
 
             public safe_ptr<State> state;
@@ -629,7 +665,7 @@ namespace ME.BECS {
                         if (count > 0u) {
                             var elementsPerStep = count / steps;
                             if (elementsPerStep < this.queryData.ptr->minElementsPerStep) elementsPerStep = this.queryData.ptr->minElementsPerStep;
-                            steps = (uint)System.Math.Ceiling((count / (double)elementsPerStep));
+                            steps = (uint)math.ceil((count / (tfloat)elementsPerStep));
                             var fromIdx = (uint)(currentStep % steps) * elementsPerStep;
                             var toIdx = fromIdx + elementsPerStep;
                             if (toIdx > count) toIdx = count;
@@ -644,6 +680,28 @@ namespace ME.BECS {
 
                     } else {
 
+                        elementsCount = archCount * 10u;
+                        if (elementsCount > 0u) arrPtr = _makeArray<uint>(elementsCount, this.allocator);
+                        var k = 0u;
+                        for (uint i = 0u; i < archCount; ++i) {
+                            var archIdx = archs[i];
+                            ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
+                            var prevCount = k;
+                            k += arch.entitiesList.Count;
+                            if (k > elementsCount) {
+                                var oldArr = arrPtr;
+                                var cnt = elementsCount;
+                                elementsCount = math.max(elementsCount * 2u, k);
+                                arrPtr = _makeArray<uint>(elementsCount, this.allocator);
+                                _memcpy(oldArr, arrPtr, TSize<uint>.size * cnt);
+                                _free(oldArr, this.allocator);
+                            }
+                            _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + prevCount, TSize<uint>.size * arch.entitiesList.Count);
+                        }
+
+                        elementsCount = k;
+
+                        /*
                         for (uint i = 0u; i < archCount; ++i) {
                             var archIdx = archs[i];
                             ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
@@ -659,7 +717,7 @@ namespace ME.BECS {
                                 if (arch.entitiesList.Count > 0u) _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + k, TSize<uint>.size * arch.entitiesList.Count);
                                 k += arch.entitiesList.Count;
                             }
-                        }
+                        }*/
 
                     }
 
@@ -675,15 +733,29 @@ namespace ME.BECS {
         [INLINE(256)]
         internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn) {
 
+            var cmdBuffer = _makeDefault(new CommandBuffer(), Constants.ALLOCATOR_TEMPJOB);
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
-            dependsOn = this.compose.Build(ref this, dependsOn);
+            dependsOn = this.compose.Build(ref this, cmdBuffer, dependsOn);
+            var list = new ME.BECS.NativeCollections.NativeParallelList<uint>(10, Constants.ALLOCATOR_TEMPJOB);
+            dependsOn = new FillTrueBitsJob() {
+                queryData = this.queryData,
+                list = list,
+            }.Schedule((int*)((byte*)cmdBuffer.ptr + sizeof(void*)), 64, dependsOn);
+            dependsOn = new FillArchetypesJob() {
+                queryData = this.queryData,
+                list = list,
+            }.Schedule(dependsOn);
+            Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(list.Dispose(dependsOn));
+            Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(new DisposeWithAllocatorPtrJob() { ptr = cmdBuffer, allocator = Constants.ALLOCATOR_TEMPJOB, }.Schedule(dependsOn));
             var job = new SetEntitiesJob() {
                 buffer = buffer,
                 queryData = this.queryData,
                 state = buffer.ptr->state,
                 allocator = allocator,
             };
-            return job.ScheduleByRef(dependsOn);
+            var handle = job.ScheduleByRef(dependsOn);
+            JobHandle.ScheduleBatchedJobs();
+            return handle;
 
         }
 

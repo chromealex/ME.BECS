@@ -1,3 +1,6 @@
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
+
 namespace ME.BECS {
 
     using static Cuts;
@@ -189,6 +192,12 @@ namespace ME.BECS {
 
         public World world;
         public Unity.Collections.FixedString64Bytes name;
+        public LockSpinner endTickHandlesLock;
+        public Unity.Collections.LowLevel.Unsafe.UnsafeList<Unity.Jobs.JobHandle> endTickHandles;
+
+        public void Dispose() {
+            this.endTickHandles.Dispose();
+        }
 
     }
     
@@ -415,6 +424,57 @@ namespace ME.BECS {
 
         }
 
+        [BURST]
+        public struct ClearEndTickHandlesJob : Unity.Jobs.IJob {
+
+            public Array<WorldHeader> worldsStorage;
+            public ushort worldId;
+
+            public void Execute() {
+
+                ref var storage = ref this.worldsStorage.Get(this.worldId);
+                ref var arr = ref storage.endTickHandles;
+                if (arr.IsCreated == true) {
+                    storage.endTickHandlesLock.Lock();
+                    arr.Clear();
+                    storage.endTickHandlesLock.Unlock();
+                }
+                
+            }
+
+        }
+        
+        [INLINE(256)]
+        public static void AddEndTickHandle(ushort worldId, Unity.Jobs.JobHandle handle) {
+            
+            ref var worldsStorage = ref WorldsStorage.worlds;
+            if (worldId >= worldsStorage.Length) return;
+            ref var storage = ref worldsStorage.Get(worldId);
+            ref var arr = ref storage.endTickHandles;
+            storage.endTickHandlesLock.Lock();
+            if (arr.IsCreated == false) {
+                arr = new Unity.Collections.LowLevel.Unsafe.UnsafeList<JobHandle>(10, Constants.ALLOCATOR_DOMAIN);
+            }
+            arr.Add(handle);
+            storage.endTickHandlesLock.Unlock();
+            
+        }
+        
+        [INLINE(256)]
+        public static Unity.Jobs.JobHandle GetEndTickHandle(ushort worldId) {
+            
+            ref var worldsStorage = ref WorldsStorage.worlds;
+            if (worldId >= worldsStorage.Length) return default;
+            ref var arr = ref worldsStorage.Get(worldId).endTickHandles;
+            if (arr.IsCreated == false) return default;
+            var tempArr = new Unity.Collections.NativeArray<JobHandle>(arr.Length, Constants.ALLOCATOR_TEMP);
+            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(tempArr.GetUnsafePtr(), arr.Ptr, arr.Length * TSize<JobHandle>.sizeInt);
+            var dependsOn = Unity.Jobs.JobHandle.CombineDependencies(tempArr);//Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Unity.Jobs.JobHandle>(arr.Ptr, arr.Length, Unity.Collections.Allocator.None));
+            dependsOn = Unity.Jobs.JobHandle.CombineDependencies(dependsOn, new ClearEndTickHandlesJob() { worldsStorage = worldsStorage, worldId = worldId, }.Schedule());
+            return dependsOn;
+
+        }
+        
         [INLINE(256)]
         internal static void AddWorld(ref World world, ushort worldId = 0, Unity.Collections.FixedString64Bytes name = default, bool raiseCallback = true) {
 
@@ -450,6 +510,7 @@ namespace ME.BECS {
 
             Worlds.ReleaseWorldId(world.id);
             ref var worldsStorage = ref WorldsStorage.worlds;
+            worldsStorage.Get(world.id).Dispose();
             worldsStorage.Get(world.id) = default;
             
             GlobalEvents.DisposeWorld(world.id);

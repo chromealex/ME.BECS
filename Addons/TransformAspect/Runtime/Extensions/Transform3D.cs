@@ -48,7 +48,6 @@ namespace ME.BECS.Transforms {
 
             ref var currentParent = ref ent.Get<ParentComponent>().value;
             if (currentParent.IsAlive() == true) {
-                
                 // Move out from current parent
                 ref var children = ref currentParent.Get<ChildrenComponent>();
                 children.lockSpinner.Lock();
@@ -56,18 +55,16 @@ namespace ME.BECS.Transforms {
                 children.lockSpinner.Unlock();
                 ent.Remove<IsFirstLevelComponent>();
                 currentParent = default;
-
             }
 
             if (parent.IsAlive() == false) {
-                
                 // Clean up parent component
                 ent.Remove<ParentComponent>();
                 return;
-
             }
 
-            {
+            // Do not change children if worlds are not the same 
+            if (ent.worldId == parent.worldId) {
                 // Move to the new parent
                 ref var parentChildren = ref parent.Get<ChildrenComponent>();
                 parentChildren.lockSpinner.Lock();
@@ -103,6 +100,7 @@ namespace ME.BECS.Transforms {
         public static void CalculateWorldMatrix(in TransformAspect ent) {
 
             ent.worldMatrix = ent.readLocalMatrix;
+            ent.isWorldMatrixTickCalculated = 1;
 
         }
 
@@ -137,6 +135,32 @@ namespace ME.BECS.Transforms {
                 }
                 queue.Dispose();
                 
+            }
+
+        }
+
+        [INLINE(256)]
+        public static void Clear(in TransformAspect ent) {
+
+            ent.isWorldMatrixTickCalculated = 0;
+
+        }
+
+        [INLINE(256)]
+        public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
+
+            if (parent.isWorldMatrixTickCalculated == 0) {
+                // Calculate parent matrix
+                if (parent.parent.IsAlive() == true) CalculateWorldMatrixParent(parent.parent.GetAspect<TransformAspect>(), in parent);
+            }
+
+            if (ent.isWorldMatrixTickCalculated == 0) {
+                ent.LockWorldMatrix();
+                if (ent.isWorldMatrixTickCalculated == 0) {
+                    CalculateMatrix(in parent, in ent);
+                    ent.isWorldMatrixTickCalculated = 1;
+                }
+                ent.UnlockWorldMatrix();
             }
 
         }
