@@ -149,9 +149,10 @@ namespace ME.BECS.Transforms {
 
         [INLINE(256)]
         public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
-
+            
             if (parent.isWorldMatrixTickCalculated == 0) {
                 // Calculate parent matrix
+                if (ent.ent.worldId != parent.ent.worldId) return;
                 if (parent.parent.IsAlive() == true) CalculateWorldMatrixParent(parent.parent.GetAspect<TransformAspect>(), in parent);
             }
 
