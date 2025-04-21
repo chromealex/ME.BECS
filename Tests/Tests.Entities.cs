@@ -1,3 +1,12 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+#endif
+
+using ME.BECS.Transforms;
 using NUnit.Framework;
 
 namespace ME.BECS.Tests {
@@ -17,6 +26,47 @@ namespace ME.BECS.Tests {
         public System.Collections.IEnumerator TearDown() {
             AllTests.Dispose();
             yield return null;
+        }
+
+        [Test]
+        public void SetParentDifferentWorlds() {
+
+            {
+                var w1 = World.Create();
+                w1.state.ptr->Mode = WorldMode.Logic;
+                var w2 = World.Create();
+                w2.state.ptr->Mode = WorldMode.Visual;
+                var ent1 = Ent.New(JobInfo.Create(w1.id));
+                var tr1 = ent1.Set<ME.BECS.Transforms.TransformAspect>();
+                var ent2 = Ent.New(JobInfo.Create(w2.id));
+                var tr2 = ent2.Set<ME.BECS.Transforms.TransformAspect>();
+
+                tr1.position = new float3(1f, 1f, 1f);
+                tr2.position = new float3(2f, 2f, 2f);
+                
+                ent2.SetParent(ent1, true);
+
+                Batches.Apply(default, w1).Complete();
+                Batches.Apply(default, w2).Complete();
+                
+                var rootGraph = SystemGroup.Create();
+                {
+                    var system1_handle = rootGraph.Add(new TransformWorldMatrixUpdateSystem());
+                    rootGraph.Add<TransformWorldMatrixUpdateSystem>(system1_handle);
+                }
+                w2.AssignRootSystemGroup(rootGraph);
+            
+                w2.Awake();
+                
+                Batches.Apply(default, w1).Complete();
+                Batches.Apply(default, w2).Complete();
+
+                Assert.AreEqual(new float3(2f, 2f, 2f), tr2.position);
+
+                //w1.Dispose();
+                //w2.Dispose();
+            }
+
         }
 
         [Test]

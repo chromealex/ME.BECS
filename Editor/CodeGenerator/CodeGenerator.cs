@@ -14,9 +14,9 @@ namespace ME.BECS.Editor {
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
         public System.Collections.Generic.List<System.Type> systems;
 
-        public bool IsValidTypeForAssembly(System.Type type) {
+        public bool IsValidTypeForAssembly(System.Type type, bool runtimeInEditor = true) {
 
-            return EditorUtils.IsValidTypeForAssembly(this.editorAssembly, type, this.asms);
+            return EditorUtils.IsValidTypeForAssembly(this.editorAssembly, type, this.asms, runtimeInEditor);
             
         }
         

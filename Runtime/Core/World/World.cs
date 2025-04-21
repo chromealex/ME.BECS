@@ -31,6 +31,13 @@ namespace ME.BECS {
         public string Name => Worlds.GetWorldName(this.id).ToString();
 
         [INLINE(256)]
+        public readonly void AddEndTickHandle(Unity.Jobs.JobHandle handle) {
+            
+            Worlds.AddEndTickHandle(this.id, handle);
+            
+        }
+        
+        [INLINE(256)]
         public static World Create(bool switchContext = true) {
             return World.Create(WorldProperties.Default, switchContext);
         }
@@ -109,7 +116,7 @@ namespace ME.BECS {
 
             Journal.EndFrame(this.id);
 
-            return dependsOn;
+            return Unity.Jobs.JobHandle.CombineDependencies(dependsOn, Worlds.GetEndTickHandle(this.id));
 
         }
 

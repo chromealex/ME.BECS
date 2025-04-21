@@ -59,7 +59,6 @@ namespace ME.BECS {
 
         public JobHandle ScheduleParallelForBatch<T>(in T job) where T : struct, IJobParallelForCommandBufferBatch {
             this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
-            this.builderDependsOn = this.Dispose(this.builderDependsOn);
             return this.builderDependsOn;
         }
 
@@ -122,23 +121,22 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public QueryBuilderStatic WithAspect<T>() where T : unmanaged, IAspect {
+            E.IS_CREATED(this);
+            var arr = AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId);
+            for (uint i = 0; i < arr.Length; ++i) {
+                var item = arr.Get(i);
+                this.queryDataStatic.ptr->with.Add(ref this.state.ptr->allocator, item);
+            }
+            return this;
+        }
+
+        [INLINE(256)]
         public QueryBuilderStatic Without<T>() where T : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.queryDataStatic.ptr->without.Add(ref this.state.ptr->allocator, StaticTypes<T>.typeId);
             return this;
         }
-
-        /*
-        [INLINE(256)]
-        public QueryBuilderStatic WithAspect<T>() where T : unmanaged, IAspect {
-            E.IS_CREATED(this);
-            this.dependsOn.Complete();
-            T value = default;
-            var aspectBuilder = new AspectQueryBuilder(in this);
-            value.Query(ref aspectBuilder);
-            return this;
-        }
-        */
 
         [INLINE(256)]
         public QueryBuilderStatic Step(uint steps, uint minElementsPerStep) {

@@ -25,7 +25,9 @@ namespace ME.BECS.Transforms {
 
         //[FieldOffset(0)]
         public float4x4 value;
-        
+        public LockSpinner spinner;
+        public byte isTickCalculated;
+
     }
 
     [EditorComment("Current calculated local matrix")]

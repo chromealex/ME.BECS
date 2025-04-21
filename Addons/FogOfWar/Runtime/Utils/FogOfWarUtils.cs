@@ -737,7 +737,7 @@ namespace ME.BECS.FogOfWar {
             queue.Enqueue(ent);
             while (queue.Count > 0u) {
                 var e = queue.Dequeue();
-                if (e.Has<QuadTreeElement>() == true) e.Remove<QuadTreeElement>();
+                //if (e.Has<QuadTreeElement>() == true) e.Remove<QuadTreeElement>();
                 if (e.Has<QuadTreeResult>() == true) e.Remove<QuadTreeResult>();
                 ref readonly var children = ref e.Read<ChildrenComponent>().list;
                 if (children.Count > 0u) {
