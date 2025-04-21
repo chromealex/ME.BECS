@@ -678,7 +678,7 @@ namespace ME.BECS {
 
                     } else {
 
-                        elementsCount = archCount * 10u;
+                        /*elementsCount = archCount * 10u;
                         if (elementsCount > 0u) arrPtr = _makeArray<uint>(elementsCount, this.allocator);
                         var k = 0u;
                         for (uint i = 0u; i < archCount; ++i) {
@@ -697,9 +697,8 @@ namespace ME.BECS {
                             _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + prevCount, TSize<uint>.size * arch.entitiesList.Count);
                         }
 
-                        elementsCount = k;
+                        elementsCount = k;*/
 
-                        /*
                         for (uint i = 0u; i < archCount; ++i) {
                             var archIdx = archs[i];
                             ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
@@ -715,7 +714,7 @@ namespace ME.BECS {
                                 if (arch.entitiesList.Count > 0u) _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + k, TSize<uint>.size * arch.entitiesList.Count);
                                 k += arch.entitiesList.Count;
                             }
-                        }*/
+                        }
 
                     }
 
@@ -732,7 +731,7 @@ namespace ME.BECS {
         internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn, bool fromStaticQuery = false) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
-            if (fromStaticQuery == false) {
+            /*if (fromStaticQuery == false) {
                 var counter = _makeDefault(new ME.BECS.NativeCollections.DeferJobCounter(), allocator);
                 dependsOn = this.compose.Build(ref this, counter, dependsOn);
                 var list = new ME.BECS.NativeCollections.NativeParallelList<uint>(10, allocator);
@@ -745,8 +744,9 @@ namespace ME.BECS {
                     list = list,
                 }.Schedule(dependsOn);
                 Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(list.Dispose(dependsOn));
-            }
-
+            }*/
+            var counter = _makeDefault(new ME.BECS.NativeCollections.DeferJobCounter(), allocator);
+            dependsOn = this.compose.Build(ref this, counter, dependsOn);
             var job = new SetEntitiesJob() {
                 buffer = buffer,
                 queryData = this.queryData,
