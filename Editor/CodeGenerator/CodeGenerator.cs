@@ -6,6 +6,13 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using scg = System.Collections.Generic;
 
+    public struct FileContent {
+
+        public string filename;
+        public string content;
+
+    }
+
     public abstract class CustomCodeGenerator {
 
         public System.Collections.Generic.List<AssemblyInfo> asms;
@@ -30,6 +37,10 @@ namespace ME.BECS.Editor {
 
         public virtual string AddPublicContent() {
             return string.Empty;
+        }
+
+        public virtual FileContent[] AddFileContent() {
+            return null;
         }
 
     }
@@ -285,11 +296,18 @@ namespace ME.BECS.Editor {
             var componentTypes = new System.Collections.Generic.List<System.Type>();
             try {
                 var path = @$"{dir}/{ECS}.Gen.cs";
+                var filesPath = @$"{dir}/{ECS}.Files";
                 string template = null;
                 if (editorAssembly == true) {
                     template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Editor-Template.txt").text;
                 } else {
                     template = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Template.txt").text;
+                }
+                string fileTemplate = null;
+                if (editorAssembly == true) {
+                    fileTemplate = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-Editor-FileTemplate.txt").text;
+                } else {
+                    fileTemplate = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/Types-FileTemplate.txt").text;
                 }
 
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
@@ -491,6 +509,7 @@ namespace ME.BECS.Editor {
 
                 var methods = new System.Collections.Generic.List<MethodDefinition>();
                 var publicContent = new System.Collections.Generic.List<string>();
+                var filesContent = new System.Collections.Generic.List<FileContent[]>();
                 {
                     for (var index = 0; index < generators.Length; ++index) {
                         var customCodeGenerator = generators[index];
@@ -502,6 +521,8 @@ namespace ME.BECS.Editor {
                         UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, customCodeGenerator.GetType().Name, index / (float)generators.Length);
                         customCodeGenerator.AddInitialization(typesContent, componentTypes);
                         publicContent.Add(customCodeGenerator.AddPublicContent());
+                        var files = customCodeGenerator.AddFileContent();
+                        if (files != null) filesContent.Add(files);
                         methods.AddRange(customCodeGenerator.AddMethods(componentTypes));
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
@@ -512,7 +533,7 @@ namespace ME.BECS.Editor {
                 var methodContents = methods.Where(x => x.definition != null)
                                             .Select(
                                                 x =>
-                                                    $"{(x.burstCompile == true ? "[BurstCompile]" : string.Empty)} {(string.IsNullOrEmpty(x.pInvoke) == false ? $"[AOT.MonoPInvokeCallbackAttribute(typeof({x.pInvoke}))]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
+                                                    $"{(x.burstCompile == true ? "[BURST]" : string.Empty)} {(string.IsNullOrEmpty(x.pInvoke) == false ? $"[AOT.MonoPInvokeCallbackAttribute(typeof({x.pInvoke}))]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
                                             .ToArray();
 
                 var newContent = template.Replace("{{CONTENT}}", string.Join("\n", content));
@@ -520,11 +541,38 @@ namespace ME.BECS.Editor {
                 newContent = newContent.Replace("{{CUSTOM_METHODS}}", string.Join("\n", publicContent) + "\n" + string.Join("\n", methodContents));
                 newContent = newContent.Replace("{{CONTENT_TYPES}}", string.Join("\n", typesContent));
                 newContent = newContent.Replace("{{EDITOR}}", editorAssembly == true ? ".Editor" : string.Empty);
-                var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
-                newContent = EditorUtils.ReFormatCode(newContent);
-                if (prevContent != newContent) {
-                    System.IO.File.WriteAllText(path, newContent);
-                    UnityEditor.AssetDatabase.ImportAsset(path);
+                {
+                    var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
+                    newContent = EditorUtils.ReFormatCode(newContent);
+                    if (prevContent != newContent) {
+                        System.IO.File.WriteAllText(path, newContent);
+                        UnityEditor.AssetDatabase.ImportAsset(path);
+                    }
+                }
+
+                if (filesContent.Count > 0) {
+                    var hasAny = false;
+                    foreach (var files in filesContent) {
+                        foreach (var file in files) {
+                            hasAny = true;
+                            var filepath = $"{filesPath}/{file.filename}.cs";
+                            var prevContent = System.IO.File.Exists(filepath) == true ? System.IO.File.ReadAllText(filepath) : string.Empty;
+                            newContent = EditorUtils.ReFormatCode(fileTemplate.Replace("{{CONTENT}}", file.content));
+                            if (prevContent != newContent) {
+                                System.IO.File.WriteAllText(filepath, newContent);
+                                UnityEditor.AssetDatabase.ImportAsset(filepath);
+                            }
+                        }
+                    }
+
+                    if (hasAny == true) {
+                        System.IO.Directory.CreateDirectory(filesPath);
+                    } else {
+                        System.IO.Directory.Delete(filesPath, true);
+                    }
+                } else {
+                    // Clean up all files
+                    System.IO.Directory.Delete(filesPath, true);
                 }
             } catch (System.Exception ex) {
                 UnityEngine.Debug.LogException(ex);

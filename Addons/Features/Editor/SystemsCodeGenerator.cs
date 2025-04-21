@@ -9,7 +9,7 @@ namespace ME.BECS.Editor.Systems {
     
     public class SystemsCodeGenerator : CustomCodeGenerator {
 
-        private void AddMethod<T>(SystemsGraph graph, string methodName, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
+        private void AddMethod<T>(SystemsGraph graph, string baseName, string methodName, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
             //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
             content = new scg::List<string>();
             content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.{methodName}))]");
@@ -21,97 +21,165 @@ namespace ME.BECS.Editor.Systems {
                 var startNodeIndex = 0;
                 //UnityEngine.Debug.LogWarning("GRAPH: " + graph.name);
                 innerMethods = new System.Collections.Generic.List<string>();
-                innerMethods = AddGraph<T>(this, startNodeIndex, methodName, contentFill, graph);
+                innerMethods = AddGraph<T>(this, baseName, startNodeIndex, methodName, contentFill, graph);
                 content.AddRange(contentFill);
             }
             //content.Add("*/");
             content.Add("}");
         }
 
+        public override FileContent[] AddFileContent() {
+
+            var content = new scg::List<FileContent>();
+            this.AddContent(content);
+
+            return content.ToArray();
+
+        }
+
         public override string AddPublicContent() {
+            
+            return this.AddContent(null);
+            
+        }
+
+        public string AddContent(scg::List<FileContent> filesContent) {
 
             var content = new scg::List<string>();
             if (this.editorAssembly == false) {
-                //content.Add("/*");
                 var graphs = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
-                foreach (var guid in graphs) {
+                if (filesContent != null) {
+                    foreach (var guid in graphs) {
+                        var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                        var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
+                        if (graph.isInnerGraph == true) continue;
+                        var id = GetId(graph);
+                        var baseName = $"Graph{EditorUtils.GetCodeName(graph.name)}";
+                        var graphInitialize = new FileContent() {
+                            filename = $"{baseName}.Initialize",
+                        };
+                        var graphAwake = new FileContent() {
+                            filename = $"{baseName}.Awake",
+                        };
+                        var graphStart = new FileContent() {
+                            filename = $"{baseName}.Start",
+                        };
+                        var graphUpdate = new FileContent() {
+                            filename = $"{baseName}.Update",
+                        };
+                        var graphDestroy = new FileContent() {
+                            filename = $"{baseName}.Destroy",
+                        };
+                        var graphDrawGizmos = new FileContent() {
+                            filename = $"{baseName}.DrawGizmos",
+                        };
+                        var graphInitializeContent = new scg::List<string>();
+                        graphInitializeContent.Add($"public static unsafe class Graph{baseName}Initialize {{");
+                        var graphAwakeContent = new scg::List<string>();
+                        graphAwakeContent.Add($"public static unsafe class Graph{baseName}Awake {{");
+                        var graphStartContent = new scg::List<string>();
+                        graphStartContent.Add($"public static unsafe class Graph{baseName}Start {{");
+                        var graphUpdateContent = new scg::List<string>();
+                        graphUpdateContent.Add($"public static unsafe class Graph{baseName}Update {{");
+                        var graphDestroyContent = new scg::List<string>();
+                        graphDestroyContent.Add($"public static unsafe class Graph{baseName}Destroy {{");
+                        var graphDrawGizmosContent = new scg::List<string>();
+                        graphDrawGizmosContent.Add($"public static unsafe class Graph{baseName}DrawGizmos {{");
+                        
+                        //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
+                        graphInitializeContent.Add($"public static NativeArray<System.IntPtr> graphNodes{GetId(graph)}_{this.GetType().Name};");
 
-                    var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                    var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
-                    var id = GetId(graph);
-                    //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
-                    content.Add($"private static NativeArray<System.IntPtr> graphNodes{GetId(graph)}_{this.GetType().Name};");
-
-                    { // initialize method
-                        content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.InitializeGraph))]");
-                        content.Add($"public static void GraphInitialize_{GetId(graph)}_{this.GetType().Name}() {{"); 
-                        {
-                            content.Add($"// {graph.name}");
-                            content.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
-                            content.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
-                            InitializeGraph(this, content, graph, id, 0);
+                        { // initialize method
+                            graphInitializeContent.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.InitializeGraph))]");
+                            graphInitializeContent.Add($"public static void GraphInitialize_{GetId(graph)}_{this.GetType().Name}() {{"); 
+                            {
+                                graphInitializeContent.Add($"// {graph.name}");
+                                graphInitializeContent.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
+                                graphInitializeContent.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
+                                InitializeGraph(this, graphInitializeContent, graph, id, 0);
+                            }
+                            graphInitializeContent.Add("}");
                         }
+                        {
+                            this.AddMethod<IAwake>(graph, baseName, "OnAwake", out var caller, out var innerMethods);
+                            graphAwakeContent.AddRange(innerMethods);
+                            graphAwakeContent.AddRange(caller);
+                        }
+                        {
+                            this.AddMethod<IStart>(graph, baseName, "OnStart", out var caller, out var innerMethods);
+                            graphStartContent.AddRange(innerMethods);
+                            graphStartContent.AddRange(caller);
+                        }
+                        {
+                            this.AddMethod<IUpdate>(graph, baseName, "OnUpdate", out var caller, out var innerMethods);
+                            graphUpdateContent.AddRange(innerMethods);
+                            graphUpdateContent.AddRange(caller);
+                        }
+                        {
+                            this.AddMethod<IDestroy>(graph, baseName, "OnDestroy", out var caller, out var innerMethods);
+                            graphDestroyContent.AddRange(innerMethods);
+                            graphDestroyContent.AddRange(caller);
+                        }
+                        {
+                            this.AddMethod<IDrawGizmos>(graph, baseName, "OnDrawGizmos", out var caller, out var innerMethods);
+                            graphDrawGizmosContent.AddRange(innerMethods);
+                            graphDrawGizmosContent.AddRange(caller);
+                        }
+                        {
+                            graphInitializeContent.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.GetSystem))]");
+                            graphInitializeContent.Add($"public static void GraphGetSystem_{id}_{this.GetType().Name}(int index, out void* ptr) {{");
+                            graphInitializeContent.Add($"ptr = (void*)graphNodes{id}_{this.GetType().Name}[index];");
+                            graphInitializeContent.Add("}");
+                        }
+
+                        graphInitializeContent.Add("}");
+                        graphAwakeContent.Add("}");
+                        graphStartContent.Add("}");
+                        graphUpdateContent.Add("}");
+                        graphDestroyContent.Add("}");
+                        graphDrawGizmosContent.Add("}");
+                        
+                        graphInitialize.content = string.Join("\n", graphInitializeContent);
+                        graphAwake.content = string.Join("\n", graphAwakeContent);
+                        graphStart.content = string.Join("\n", graphStartContent);
+                        graphUpdate.content = string.Join("\n", graphUpdateContent);
+                        graphDestroy.content = string.Join("\n", graphDestroyContent);
+                        graphDrawGizmos.content = string.Join("\n", graphDrawGizmosContent);
+                        filesContent.Add(graphInitialize);
+                        filesContent.Add(graphAwake);
+                        filesContent.Add(graphStart);
+                        filesContent.Add(graphUpdate);
+                        filesContent.Add(graphDestroy);
+                        filesContent.Add(graphDrawGizmos);
+                    }
+                } else {
+                    // initialize callbacks
+                    content.Add("[UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]");
+                    content.Add("public static void Initialize() {");
+                    content.Add("CustomModules.RegisterFirstPass(SystemsLoad);");
+                    content.Add("}");
+                    content.Add("[UnityEngine.Scripting.PreserveAttribute]");
+                    content.Add("public static void SystemsLoad() {");
+                    foreach (var guid in graphs) {
+                        var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                        var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
+                        if (graph.isInnerGraph == true) continue;
+                        var id = GetId(graph);
+                        var graphId = graph.GetId();
+                        var baseName = $"Graph{EditorUtils.GetCodeName(graph.name)}";
+                        content.Add($"// Graph: {graph.name}");
+                        content.Add("{");
+                        content.Add($"SystemsStatic.RegisterMethod(Graph{baseName}Initialize.GraphInitialize_{id}_{this.GetType().Name}, {graphId}, false);");
+                        content.Add($"SystemsStatic.RegisterAwakeMethod(Graph{baseName}Awake.GraphOnAwake_{id}_{this.GetType().Name}, {graphId}, false);");
+                        content.Add($"SystemsStatic.RegisterStartMethod(Graph{baseName}Start.GraphOnStart_{id}_{this.GetType().Name}, {graphId}, false);");
+                        content.Add($"SystemsStatic.RegisterUpdateMethod(Graph{baseName}Update.GraphOnUpdate_{id}_{this.GetType().Name}, {graphId}, false);");
+                        content.Add($"SystemsStatic.RegisterDrawGizmosMethod(Graph{baseName}DrawGizmos.GraphOnDrawGizmos_{id}_{this.GetType().Name}, {graphId}, false);");
+                        content.Add($"SystemsStatic.RegisterDestroyMethod(Graph{baseName}Destroy.GraphOnDestroy_{id}_{this.GetType().Name}, {graphId}, false);");
+                        content.Add($"SystemsStatic.RegisterGetSystemMethod(Graph{baseName}Initialize.GraphGetSystem_{id}_{this.GetType().Name}, {graphId}, false);");
                         content.Add("}");
                     }
-                    {
-                        this.AddMethod<IAwake>(graph, "OnAwake", out var caller, out var innerMethods);
-                        content.AddRange(innerMethods);
-                        content.AddRange(caller);
-                    }
-                    {
-                        this.AddMethod<IStart>(graph, "OnStart", out var caller, out var innerMethods);
-                        content.AddRange(innerMethods);
-                        content.AddRange(caller);
-                    }
-                    {
-                        this.AddMethod<IUpdate>(graph, "OnUpdate", out var caller, out var innerMethods);
-                        content.AddRange(innerMethods);
-                        content.AddRange(caller);
-                    }
-                    {
-                        this.AddMethod<IDestroy>(graph, "OnDestroy", out var caller, out var innerMethods);
-                        content.AddRange(innerMethods);
-                        content.AddRange(caller);
-                    }
-                    {
-                        this.AddMethod<IDrawGizmos>(graph, "OnDrawGizmos", out var caller, out var innerMethods);
-                        content.AddRange(innerMethods);
-                        content.AddRange(caller);
-                    }
-                    {
-                        content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.GetSystem))]");
-                        content.Add($"public static void GraphGetSystem_{id}_{this.GetType().Name}(int index, out void* ptr) {{");
-                        content.Add($"ptr = (void*)graphNodes{id}_{this.GetType().Name}[index];");
-                        content.Add("}");
-                    }
-
-                }
-                //content.Add("*/");
-
-                // initialize callbacks
-                content.Add("[UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]");
-                content.Add("public static void Initialize() {");
-                content.Add("CustomModules.RegisterFirstPass(SystemsLoad);");
-                content.Add("}");
-                content.Add("[UnityEngine.Scripting.PreserveAttribute]");
-                content.Add("public static void SystemsLoad() {");
-                foreach (var guid in graphs) {
-                    var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                    var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
-                    var id = GetId(graph);
-                    var graphId = graph.GetId();
-                    content.Add($"// Graph: {graph.name}");
-                    content.Add("{");
-                    content.Add($"SystemsStatic.RegisterMethod(GraphInitialize_{id}_{this.GetType().Name}, {graphId}, false);");
-                    content.Add($"SystemsStatic.RegisterAwakeMethod(GraphOnAwake_{id}_{this.GetType().Name}, {graphId}, false);");
-                    content.Add($"SystemsStatic.RegisterStartMethod(GraphOnStart_{id}_{this.GetType().Name}, {graphId}, false);");
-                    content.Add($"SystemsStatic.RegisterUpdateMethod(GraphOnUpdate_{id}_{this.GetType().Name}, {graphId}, false);");
-                    content.Add($"SystemsStatic.RegisterDrawGizmosMethod(GraphOnDrawGizmos_{id}_{this.GetType().Name}, {graphId}, false);");
-                    content.Add($"SystemsStatic.RegisterDestroyMethod(GraphOnDestroy_{id}_{this.GetType().Name}, {graphId}, false);");
-                    content.Add($"SystemsStatic.RegisterGetSystemMethod(GraphGetSystem_{id}_{this.GetType().Name}, {graphId}, false);");
                     content.Add("}");
                 }
-                content.Add("}");
             }
             
             var newContent = string.Join("\n", content);
@@ -136,12 +204,60 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
-        public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, int startNodeIndex, string method, scg::List<string> content, SystemsGraph graph) where T : class {
+        public class CollectedDeps {
+
+            public scg::HashSet<string> deps;
+            public scg::Dictionary<string, int> keyToIndex;
+            public int index;
+
+            public int Count => this.deps.Count;
+
+            public CollectedDeps() {
+                this.deps = new scg::HashSet<string>();
+                this.keyToIndex = new scg::Dictionary<string, int>();
+            }
+
+            public void Add(string dep) {
+                this.deps.Add(dep);
+                if (this.keyToIndex.TryAdd(dep, this.index) == true) {
+                    ++this.index;
+                }
+            }
+
+            public string[] ToArray() {
+                return this.deps.ToArray();
+            }
+
+            public string GetDefinitionString() {
+                return $"var dependencies = _makeArray<Unity.Jobs.JobHandle>({this.Count}, Constants.ALLOCATOR_TEMP, false);";
+            }
+
+            public string GetCallString() {
+                return "dependencies";
+            }
+
+            public string GetArgString() {
+                return "safe_ptr<Unity.Jobs.JobHandle> dependencies";
+            }
+
+            public string GetWriteOpString(string key) {
+                var index = this.keyToIndex[key];
+                return $"dependencies[{index}] = {key};";
+            }
+
+            public string GetReadOpString(string key) {
+                var index = this.keyToIndex[key];
+                return $"dependencies[{index}]";
+            }
+
+        }
+        
+        public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, string baseName, int startNodeIndex, string method, scg::List<string> content, SystemsGraph graph) where T : class {
 
             var graphRootId = GetId(graph);
-            static void AddNodesArrDefinition(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph, scg::List<string> arrMethodDef, int graphRootId) {
+            static void AddNodesArrDefinition(CustomCodeGenerator generator, string baseName, scg::List<string> content, SystemsGraph graph, scg::List<string> arrMethodDef, int graphRootId) {
 
-                content.Add($"var systems = (System.IntPtr*)graphNodes{graphRootId}_{generator.GetType().Name}.GetUnsafePtr();");
+                content.Add($"var systems = (System.IntPtr*)Graph{baseName}Initialize.graphNodes{graphRootId}_{generator.GetType().Name}.GetUnsafePtr();");
                 arrMethodDef.Add($"systems");
                 
                 /*foreach (var node in graph.nodes) {
@@ -152,7 +268,7 @@ namespace ME.BECS.Editor.Systems {
             }
 
             var arrMethodDef = new scg::List<string>();
-            AddNodesArrDefinition(generator, content, graph, arrMethodDef, graphRootId);
+            AddNodesArrDefinition(generator, baseName, content, graph, arrMethodDef, graphRootId);
 
             var insertIndex = content.Count;
 
@@ -163,7 +279,7 @@ namespace ME.BECS.Editor.Systems {
                 if (startNode != null) {
 
                     var containers = new scg::List<string>();
-                    var collectedDeps = new scg::HashSet<string>();
+                    var collectedDeps = new CollectedDeps();
                     string lastDependency = string.Empty;
                     var nodesCount = 0u;
                     {
@@ -268,8 +384,8 @@ namespace ME.BECS.Editor.Systems {
                                     printedDependencies.Add($"dep{dep}");
                                     var dependsOnExit = GetDeps(startNodeIndex, exitNode, out var schemeDependsOnExit, out var depsExit, collectedDeps);
                                     scheme.Add($" * EXIT dep{dep} = {schemeDependsOnExit};");
-                                    methodContent.Add($"dep{dep} = {dependsOnExit};");
                                     collectedDeps.Add($"dep{dep}");
+                                    methodContent.Add($"{collectedDeps.GetReadOpString($"dep{dep}")} = {dependsOnExit};");
 
                                 } else {
 
@@ -295,8 +411,8 @@ namespace ME.BECS.Editor.Systems {
                                     if (hasMethod == false ||
                                         n.enabled == false || n.IsGroupEnabled() == false) {
 
-                                        methodContent.Add($"dep{index.ToString()} = {dependsOn};");
                                         collectedDeps.Add($"dep{index.ToString()}");
+                                        methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
 
                                         if (hasMethod == false) {
                                             notUsedDescr = $" - Method {typeof(T)} was not found. Node skipped.";
@@ -318,9 +434,9 @@ namespace ME.BECS.Editor.Systems {
                                                 }
 
                                                 if (collectedDeps.Count - prevOpenIndexDeps > 0) {
-                                                    var data = $", {GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}) {{";
+                                                    var data = $") {{";
                                                     methodContent.Insert(prevOpenIndex, data);
-                                                    var dataDef = $", {GetMethodDeps("ref", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}";
+                                                    var dataDef = $"";
                                                     containers.Add(dataDef);
                                                 }
 
@@ -340,8 +456,8 @@ namespace ME.BECS.Editor.Systems {
                                                 methodContent.Add("// BURST DISABLE OPEN");
                                             }
 
-                                            var methodDeps = GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, 0, collectedDeps.Count);
-                                            var methodDepsDef = GetMethodDeps("ref", collectedDeps, 0, collectedDeps.Count);
+                                            var methodDeps = collectedDeps.GetArgString();//GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, 0, collectedDeps.Count);
+                                            var methodDepsDef = collectedDeps.GetCallString();//GetMethodDeps("ref", collectedDeps, 0, collectedDeps.Count);
                                             var methodData = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(uint dt, in World world, ref Unity.Jobs.JobHandle dependsOn, {GetMethodDeps("System.IntPtr*", arrMethodDef, 0, arrMethodDef.Count)}, {methodDeps}";
                                             methodContent.Add($"{(isBursted == true ? "[BURST] " : string.Empty)}private static void {methodData}"); // open next
                                             var methodDef = $"InnerMethod{method}_{containers.Count}_{GetId(graph)}_{generator.GetType().Name}_{(isBursted == true ? "Burst" : "NotBurst")}(dt, in world, ref dependsOn, {GetMethodDeps("", arrMethodDef, 0, arrMethodDef.Count)}, {methodDepsDef}";
@@ -380,8 +496,11 @@ namespace ME.BECS.Editor.Systems {
                                                             index.AddGeneric();
                                                         }
 
-                                                        methodContent.Add($"dep{srcDep.ToString()} = Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()});");
+                                                        methodContent.Add("{");
+                                                        methodContent.Add($"var dep{srcDep.ToString()} = Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()});");
                                                         AddApply(systemNode, srcDep, ref schemeDependsOn);
+                                                        methodContent.Add(collectedDeps.GetWriteOpString($"dep{srcDep.ToString()}"));
+                                                        methodContent.Add("}");
                                                         index = srcDep;
                                                     } else {
                                                         // One-by-one mode
@@ -396,10 +515,11 @@ namespace ME.BECS.Editor.Systems {
                                                             methodContent.Add($"var input = {prevIndex};");
                                                             methodContent.Add($"var localContext{indexStr} = SystemContext.Create(dt, in world, input);");
                                                             methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref localContext{indexStr});");
-                                                            methodContent.Add($"dep{indexStr} = localContext{indexStr}.dependsOn;");
+                                                            methodContent.Add($"var dep{indexStr} = localContext{indexStr}.dependsOn;");
                                                             AddApply(systemNode, index, ref schemeDependsOn);
                                                             methodContent.Add("}");
                                                             collectedDeps.Add($"dep{indexStr}");
+                                                            methodContent.Add(collectedDeps.GetWriteOpString($"dep{indexStr}"));
                                                             printedDependencies.Add($"dep{indexStr}");
                                                             prevIndex = $"dep{indexStr}";
                                                             index.AddGeneric();
@@ -412,16 +532,16 @@ namespace ME.BECS.Editor.Systems {
 
                                         } else {
 
+                                            collectedDeps.Add($"dep{index.ToString()}");
                                             methodContent.Add("{");
                                             methodContent.Add($"var input = {dependsOn};");
-                                            methodContent.Add($"dep{index.ToString()} = input;");
-                                            methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, dep{index.ToString()});");
+                                            methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, input);");
                                             methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)systems[{index.globalIndex}])->{method}(ref localContext{index.ToString()});");
-                                            methodContent.Add($"dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
+                                            methodContent.Add($"var dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
                                             AddApply(systemNode, index, ref schemeDependsOn);
+                                            methodContent.Add(collectedDeps.GetWriteOpString($"dep{index.ToString()}"));
                                             methodContent.Add("}");
-                                            collectedDeps.Add($"dep{index.ToString()}");
-
+                                            
                                         }
 
                                     }
@@ -430,9 +550,9 @@ namespace ME.BECS.Editor.Systems {
 
                                 } else {
 
-                                    methodContent.Add($"dep{index.ToString()} = {dependsOn};");
-                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
                                     collectedDeps.Add($"dep{index.ToString()}");
+                                    methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
 
                                 }
 
@@ -461,9 +581,9 @@ namespace ME.BECS.Editor.Systems {
 
                                 } else {
 
-                                    methodContent.Add($"dep{index.ToString()} = {dependsOn};");
-                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
                                     collectedDeps.Add($"dep{index.ToString()}");
+                                    methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
                                     printedDependencies.Add($"dep{index.ToString()}");
 
                                 }
@@ -494,9 +614,9 @@ namespace ME.BECS.Editor.Systems {
                             }
 
                             if (collectedDeps.Count - prevOpenIndexDeps > 0) {
-                                var data = $", {GetMethodDeps("ref Unity.Jobs.JobHandle", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}) {{";
+                                var data = $") {{";
                                 innerMethods.Insert(prevOpenIndex, data);
-                                var dataDef = $", {GetMethodDeps("ref", collectedDeps, prevOpenIndexDeps, collectedDeps.Count - prevOpenIndexDeps)}";
+                                var dataDef = $"";
                                 containers.Add(dataDef);
                             }
 
@@ -506,9 +626,10 @@ namespace ME.BECS.Editor.Systems {
 
                     }
 
-                    foreach (var dep in collectedDeps) {
+                    content.Insert(insertIndex, collectedDeps.GetDefinitionString());
+                    /*foreach (var dep in collectedDeps) {
                         content.Insert(insertIndex, $"Unity.Jobs.JobHandle {dep} = default;");
-                    }
+                    }*/
 
                     content.AddRange(containers);
 
@@ -556,6 +677,11 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
+        private static string GetMethodDeps(string prefix, CollectedDeps collectedDeps, int i, int collectedDepsCount) {
+            return collectedDeps.GetArgString();
+            //return collectedDeps.Count > 0 ? (prefix + " " + string.Join($", {prefix} ", collectedDeps.ToArray(), i, collectedDepsCount)) : string.Empty;
+        }
+
         private static string GetMethodDeps(string prefix, System.Collections.Generic.HashSet<string> collectedDeps, int i, int collectedDepsCount) {
             return collectedDeps.Count > 0 ? (prefix + " " + string.Join($", {prefix} ", collectedDeps.ToArray(), i, collectedDepsCount)) : string.Empty;
         }
@@ -601,9 +727,11 @@ namespace ME.BECS.Editor.Systems {
                 scheme = result;
             } else {
                 var arr = node.inputPorts[0].GetEdges().Select(x => "dep" + GetIndex(x.outputNode, x.outputNode.graph).ToString()).Distinct().ToArray();
-                foreach (var item in arr) {
+                for (var index = 0; index < arr.Length; ++index) {
+                    var item = arr[index];
                     collectedDeps.Add(item);
                 }
+
                 if (arr.Length == 1) {
                     result = $"{arr[0]}";
                     scheme = result;
@@ -617,29 +745,33 @@ namespace ME.BECS.Editor.Systems {
             return result;
         }
 
-        private static string GetDeps(int startNodeIndex, ME.BECS.Extensions.GraphProcessor.BaseNode node, out string scheme, out string[] deps, scg::HashSet<string> collectedDeps) {
+        private static string GetDeps(int startNodeIndex, ME.BECS.Extensions.GraphProcessor.BaseNode node, out string scheme, out string[] deps, CollectedDeps collectedDeps) {
             var result = string.Empty;
             scheme = string.Empty;
             if (node.inputPorts.Count == 0) {
                 result = "dependsOn";
+                collectedDeps.Add(result);
                 scheme = result;
                 deps = System.Array.Empty<string>();
             } else {
                 var arr = node.inputPorts[0].GetEdges().Where(x => x.outputNode.graph != null)
                               .Where(x => ((SystemsGraph)node.graph).IsValidStartNodeOrOther(x.outputNode, startNodeIndex))
                               .Select(x => "dep" + GetIndex(x.outputNode, x.outputNode.graph).ToString()).Distinct().ToArray();
-                foreach (var item in arr) {
+                var outputArr = new string[arr.Length];
+                for (var index = 0; index < arr.Length; ++index) {
+                    var item = arr[index];
                     collectedDeps.Add(item);
+                    outputArr[index] = collectedDeps.GetReadOpString(item);
                 }
                 if (arr.Length == 1) {
                     deps = new[] { arr[0] };
-                    result = $"{arr[0]}";
-                    scheme = result;
+                    result = outputArr[0];
+                    scheme = arr[0];
                 } else {
-                    var list = string.Join(", ", arr);
+                    var list = string.Join(", ", outputArr);
                     deps = arr;
                     result = $"JobsExt.CombineDependencies({list})";
-                    scheme = list;
+                    scheme = string.Join(", ", arr);
                 }
             }
 

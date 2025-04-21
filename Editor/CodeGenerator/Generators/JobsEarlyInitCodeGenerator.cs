@@ -112,8 +112,22 @@ namespace ME.BECS.Editor.Jobs {
             Combined,
         }
         
-        public override string AddPublicContent() {
+        public override FileContent[] AddFileContent() {
 
+            var files = new FileContent[4];
+            var cacheBuilderFile = new FileContent() {
+                filename = "Debug.Cache",
+            };
+            var structBuilderFile = new FileContent() {
+                filename = "Debug.Struct",
+            };
+            var structUnsafeBuilderFile = new FileContent() {
+                filename = "Debug.UnsafeStruct",
+            };
+            var funcBuilderFile = new FileContent() {
+                filename = "Debug.Func",
+            };
+            
             var cacheBuilder = new System.Text.StringBuilder();
             var funcBuilder = new System.Text.StringBuilder();
             var structBuilder = new System.Text.StringBuilder();
@@ -135,8 +149,19 @@ namespace ME.BECS.Editor.Jobs {
             structBuilder.AppendLine($"#endif");
             structUnsafeBuilder.AppendLine($"#endif");
             cacheBuilder.AppendLine($"#endif");
-            return structBuilder.ToString() + "\n" + structUnsafeBuilder.ToString() + "\n" + cacheBuilder.ToString() + "\n" + funcBuilder.ToString();
+            
+            cacheBuilderFile.content = $"public static unsafe class DebugJobsCache {{\n{cacheBuilder}\n}}";
+            funcBuilderFile.content = $"public static unsafe class DebugJobsFunc {{\n{funcBuilder}\n}}";
+            structBuilderFile.content = $"public static unsafe class DebugJobsStruct {{\n{structBuilder}\n}}";
+            structUnsafeBuilderFile.content = $"public static unsafe class DebugJobsStructUnsafe {{\n{structUnsafeBuilder}\n}}";
 
+            files[0] = cacheBuilderFile;
+            files[1] = funcBuilderFile;
+            files[2] = structBuilderFile;
+            files[3] = structUnsafeBuilderFile;
+            
+            return files;
+            
         }
 
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
@@ -378,7 +403,7 @@ namespace ME.BECS.Editor.Jobs {
 
         private void GenerateJobsDebug(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             dataList.Add("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            dataList.Add("StaticMethods.InitializeJobsDebug();");
+            dataList.Add("DebugJobs.InitializeJobsDebug();");
             dataList.Add("#endif");
         }
         
