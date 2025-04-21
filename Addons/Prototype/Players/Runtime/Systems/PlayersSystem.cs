@@ -1,7 +1,9 @@
 namespace ME.BECS.Players {
 
+    using ME.BECS.Network.Markers;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using ME.BECS.Network;
     
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Initialize default players")]
@@ -130,6 +132,35 @@ namespace ME.BECS.Players {
                 }
             }
             return default;
+        }
+        
+        [INLINE(256)]
+        public void SetActivePlayerDefeat() {
+            this.GetActivePlayer().ent.World.SendNetworkEvent(new SetDefeatData(), OnSetDefeatReceived);
+        }
+
+        [NetworkMethod]
+        [AOT.MonoPInvokeCallback(typeof(NetworkMethodDelegate))]
+        public static void OnSetDefeatReceived(in InputData data, ref SystemContext context) {
+            
+            context.dependsOn.Complete();
+            var player = context.world.GetSystem<PlayersSystem>().GetPlayerEntity(data.PlayerId);
+            player.SetDefeat();
+
+        }
+
+        private struct SetDefeatData : ME.BECS.Network.IPackageData {
+
+            private byte someData;
+
+            public void Serialize(ref StreamBufferWriter writer) {
+                writer.Write(this.someData);
+            }
+
+            public void Deserialize(ref StreamBufferReader reader) {
+                reader.Read(ref this.someData);
+            }
+
         }
 
     }

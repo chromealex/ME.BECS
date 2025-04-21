@@ -4,7 +4,8 @@
     "references": [
         "ME.BECS",
         "Unity.Burst",
-        "Unity.Collections"
+        "Unity.Collections",
+        "ME.BECS.Network"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
