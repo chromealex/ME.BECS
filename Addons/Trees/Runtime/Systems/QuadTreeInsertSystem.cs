@@ -203,8 +203,8 @@ namespace ME.BECS {
             var ent = tr.ent;
                 
             // clean up results
-            if (query.results.results.IsCreated == true) query.results.results.Clear();
-            if (query.results.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+            if (query.readResults.results.IsCreated == true) query.results.results.Clear();
+            if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
 
             if (q.nearestCount == 1u) {
                 var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false, in subFilter);
