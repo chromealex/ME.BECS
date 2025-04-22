@@ -299,7 +299,13 @@ namespace ME.BECS.Editor.Systems {
 
                         void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null) {
 
-                            if (node.syncPoint == false) return;
+                            var indexStr = index.ToString();
+                            if (customDep == null) customDep = $"dep{indexStr}";
+                            if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
+                            if (node.syncPoint == false) {
+                                methodContent.Add($"{customOutputDep} = {customDep};");
+                                return;
+                            }
                             if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
                                 while (parentNode != null) {
                                     if (parentNode.syncPoint == false) return;
@@ -308,13 +314,10 @@ namespace ME.BECS.Editor.Systems {
                                 }
                             }
 
-                            var indexStr = index.ToString();
                             var resDep = $"dep{indexStr}";
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            if (customDep == null) customDep = $"dep{indexStr}";
-                            if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
                             methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, world.state);");
                         }
                         
