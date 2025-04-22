@@ -80,7 +80,7 @@ namespace ME.BECS.Attack {
             var unitTr = unit.ent.GetAspect<TransformAspect>();
             var targetTr = target.GetAspect<TransformAspect>();
             var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
-            var offset = unit.readRadius + nodeSize;
+            var offset = unit.readRadius + nodeSize * 1.5f;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
             var dir = targetTr.GetWorldMatrixPosition() - unitTr.GetWorldMatrixPosition();
             var dirNormalized = math.normalizesafe(dir);
