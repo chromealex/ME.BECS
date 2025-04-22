@@ -995,7 +995,7 @@ namespace ME.BECS.Editor {
                 if (d > 0) ++indent;
             }
             
-            return result.ToString();
+            return System.Text.RegularExpressions.Regex.Replace(result.ToString(), @"\r\n?|\n", "\n").Replace("\r", string.Empty);
 
         }
 
