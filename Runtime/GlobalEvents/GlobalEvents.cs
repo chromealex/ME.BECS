@@ -117,7 +117,7 @@ namespace ME.BECS {
 
         public static void DisposeWorld(ushort worldId) {
             if (WorldEvents.evtToCallers == null) return;
-            var dic = WorldEvents.evtToCallers[worldId];
+            ref var dic = ref WorldEvents.evtToCallers[worldId];
             if (dic != null) dic.Clear();
             if (worldId >= WorldEvents.events.Data.Length) return;
             ref var events = ref WorldEvents.events.Data.Get(worldId).events;
@@ -289,7 +289,7 @@ namespace ME.BECS {
                     var callers = WorldEvents.evtToCallers[this.worldId];
                     foreach (var kv in item.events) {
                         var evt = kv.Key;
-                        if (callers.TryGetValue(evt, out var caller) == true) {
+                        if (callers != null && callers.TryGetValue(evt, out var caller) == true) {
                             try {
                                 caller.Call(kv.Value.data);
                             } catch (System.Exception ex) {
