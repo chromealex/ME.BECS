@@ -26,8 +26,8 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
                 
                 UnitAspect nearestResult = default;
-                for (uint i = 0u; i < query.results.results.Count; ++i) {
-                    var queryEnt = query.results.results[this.world.state, i];
+                for (uint i = 0u; i < query.readResults.results.Count; ++i) {
+                    var queryEnt = query.readResults.results[this.world.state, i];
                     if (queryEnt.IsAlive() == false) continue;
                     var result = queryEnt.GetAspect<UnitAspect>();
                     nearestResult = result;
@@ -52,11 +52,11 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr, ref AttackTargetsCountComponent targetsCountComponent) {
 
                 ref var targets = ref ent.Get<AttackTargetsComponent>();
-                var count = math.min(query.results.results.Count, targetsCountComponent.count);
+                var count = math.min(query.readResults.results.Count, targetsCountComponent.count);
                 if (targets.targets.IsCreated == false) targets.targets = new ListAuto<Ent>(in ent, count);
                 targets.targets.Clear();
                 for (uint i = 0u; i < count; ++i) {
-                    var queryEnt = query.results.results[this.world.state, i];
+                    var queryEnt = query.readResults.results[this.world.state, i];
                     if (queryEnt.IsAlive() == false) continue;
                     targets.targets.Add(queryEnt);
                 }
