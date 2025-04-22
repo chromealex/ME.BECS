@@ -40,7 +40,7 @@ namespace ME.BECS {
         }
 
         public override void Call(safe_ptr data) {
-            this.callback.Invoke(*(T*)data.ptr);
+            this.callback?.Invoke(*(T*)data.ptr);
         }
 
     }
@@ -63,7 +63,7 @@ namespace ME.BECS {
         }
 
         public override void Call(safe_ptr data) {
-            this.callback.Invoke();
+            this.callback?.Invoke();
         }
 
     }
