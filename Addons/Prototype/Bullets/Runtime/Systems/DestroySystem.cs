@@ -20,8 +20,8 @@ namespace ME.BECS.Bullets {
                 if (bullet.config.hitRangeSqr > 0f) {
 
                     // use splash
-                    for (uint i = 0u; i < query.results.results.Count; ++i) {
-                        var unit = query.results.results[i];
+                    for (uint i = 0u; i < query.readResults.results.Count; ++i) {
+                        var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<UnitAspect>();
                         targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
@@ -36,8 +36,8 @@ namespace ME.BECS.Bullets {
                 } else if (bullet.component.targetEnt == Ent.Null) {
 
                     // hit first target in range because targetEnt was not set
-                    if (query.results.results.Count > 0u) {
-                        var unit = query.results.results[0];
+                    if (query.readResults.results.Count > 0u) {
+                        var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
                             var targetUnit = unit.GetAspect<UnitAspect>();
                             targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
