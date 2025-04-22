@@ -555,6 +555,19 @@ namespace ME.BECS.Editor {
                     foreach (var files in filesContent) {
                         foreach (var file in files) {
                             hasAny = true;
+                            if (hasAny == true) break;
+                        }
+                        if (hasAny == true) break;
+                    }
+
+                    if (hasAny == true) {
+                        System.IO.Directory.CreateDirectory(filesPath);
+                    } else {
+                        System.IO.Directory.Delete(filesPath, true);
+                    }
+                    
+                    foreach (var files in filesContent) {
+                        foreach (var file in files) {
                             var filepath = $"{filesPath}/{file.filename}.cs";
                             var prevContent = System.IO.File.Exists(filepath) == true ? System.IO.File.ReadAllText(filepath) : string.Empty;
                             newContent = EditorUtils.ReFormatCode(fileTemplate.Replace("{{CONTENT}}", file.content));
@@ -565,11 +578,6 @@ namespace ME.BECS.Editor {
                         }
                     }
 
-                    if (hasAny == true) {
-                        System.IO.Directory.CreateDirectory(filesPath);
-                    } else {
-                        System.IO.Directory.Delete(filesPath, true);
-                    }
                 } else {
                     // Clean up all files
                     System.IO.Directory.Delete(filesPath, true);

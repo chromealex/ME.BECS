@@ -297,7 +297,7 @@ namespace ME.BECS.Editor.Systems {
                         var maxIter = 10_000;
                         var methodContent = content;
 
-                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null) {
+                        void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null) {
 
                             if (node.syncPoint == false) return;
                             if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
@@ -313,11 +313,9 @@ namespace ME.BECS.Editor.Systems {
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            if (customDep != null) {
-                                methodContent.Add($"{customDep} = Batches.Apply({customDep}, world.state);");
-                            } else {
-                                methodContent.Add($"dep{indexStr} = Batches.Apply(dep{indexStr}, world.state);");
-                            }
+                            if (customDep == null) customDep = $"dep{indexStr}";
+                            if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
+                            methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, world.state);");
                         }
                         
                         while (q.Count > 0) {
@@ -464,6 +462,7 @@ namespace ME.BECS.Editor.Systems {
                                             containers.Add(methodDef);
                                             prevOpenIndex = methodContent.Count;
                                             prevOpenIndexDeps = collectedDeps.Count;
+                                            methodContent.Add("SystemContext systemContext = default;");
 
                                             isOpened = true;
                                             isInBurst = isBursted;
@@ -485,11 +484,9 @@ namespace ME.BECS.Editor.Systems {
                                                             var type = systemType.MakeGenericType(cType);
                                                             var indexStr = index.ToString();
                                                             methodContent.Add("{");
-                                                            methodContent.Add($"var input = {dependsOn};");
-                                                            methodContent.Add($"var localContext{indexStr} = SystemContext.Create(dt, in world, input);");
-                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref localContext{indexStr});");
-                                                            methodContent.Add($"var output = localContext{indexStr}.dependsOn;");
-                                                            methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = output;");
+                                                            methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
+                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
+                                                            methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = systemContext.dependsOn;");
                                                             methodContent.Add("}");
                                                             if (index.genericIndex == 0) collectedDeps.Add($"dep{indexStr}");
                                                             printedDependencies.Add($"dep{indexStr}");
@@ -497,9 +494,7 @@ namespace ME.BECS.Editor.Systems {
                                                         }
 
                                                         methodContent.Add("{");
-                                                        methodContent.Add($"var dep{srcDep.ToString()} = Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()});");
-                                                        AddApply(systemNode, srcDep, ref schemeDependsOn);
-                                                        methodContent.Add(collectedDeps.GetWriteOpString($"dep{srcDep.ToString()}"));
+                                                        AddApply(systemNode, srcDep, ref schemeDependsOn, $"Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()})", collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"));
                                                         methodContent.Add("}");
                                                         index = srcDep;
                                                     } else {
@@ -512,14 +507,11 @@ namespace ME.BECS.Editor.Systems {
                                                             var type = systemType.MakeGenericType(cType);
                                                             var indexStr = index.ToString();
                                                             methodContent.Add("{");
-                                                            methodContent.Add($"var input = {prevIndex};");
-                                                            methodContent.Add($"var localContext{indexStr} = SystemContext.Create(dt, in world, input);");
-                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref localContext{indexStr});");
-                                                            methodContent.Add($"var dep{indexStr} = localContext{indexStr}.dependsOn;");
-                                                            AddApply(systemNode, index, ref schemeDependsOn);
+                                                            methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {prevIndex});");
+                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
+                                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{indexStr}"));
                                                             methodContent.Add("}");
                                                             collectedDeps.Add($"dep{indexStr}");
-                                                            methodContent.Add(collectedDeps.GetWriteOpString($"dep{indexStr}"));
                                                             printedDependencies.Add($"dep{indexStr}");
                                                             prevIndex = $"dep{indexStr}";
                                                             index.AddGeneric();
@@ -534,12 +526,9 @@ namespace ME.BECS.Editor.Systems {
 
                                             collectedDeps.Add($"dep{index.ToString()}");
                                             methodContent.Add("{");
-                                            methodContent.Add($"var input = {dependsOn};");
-                                            methodContent.Add($"var localContext{index.ToString()} = SystemContext.Create(dt, in world, input);");
-                                            methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)systems[{index.globalIndex}])->{method}(ref localContext{index.ToString()});");
-                                            methodContent.Add($"var dep{index.ToString()} = localContext{index.ToString()}.dependsOn;");
-                                            AddApply(systemNode, index, ref schemeDependsOn);
-                                            methodContent.Add(collectedDeps.GetWriteOpString($"dep{index.ToString()}"));
+                                            methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
+                                            methodContent.Add($"(({EditorUtils.GetTypeName(systemNode.system.GetType())}*)systems[{index.globalIndex}])->{method}(ref systemContext);");
+                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"));
                                             methodContent.Add("}");
                                             
                                         }
