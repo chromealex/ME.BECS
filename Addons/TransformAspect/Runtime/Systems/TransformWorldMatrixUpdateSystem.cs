@@ -6,7 +6,7 @@ namespace ME.BECS.Transforms {
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
     [BURST(CompileSynchronously = true)]
-    public struct TransformWorldMatrixUpdateSystem : IAwake, IUpdate {
+    public struct TransformWorldMatrixUpdateSystem : IAwake, IStart, IUpdate {
         
         [BURST(CompileSynchronously = true)]
         public struct CalculateLocalMatrixJob : IJobForAspects<TransformAspect> {
@@ -64,6 +64,12 @@ namespace ME.BECS.Transforms {
         }
 
         public void OnAwake(ref SystemContext context) {
+            
+            Calculate(ref context);
+
+        }
+
+        public void OnStart(ref SystemContext context) {
             
             Calculate(ref context);
 
