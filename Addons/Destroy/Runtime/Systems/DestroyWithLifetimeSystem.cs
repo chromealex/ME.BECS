@@ -37,7 +37,11 @@ namespace ME.BECS {
             public uint deltaTimeMs;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithLifetimeMs component) {
-                component.lifetime -= this.deltaTimeMs;
+                if (component.lifetime >= this.deltaTimeMs) {
+                    component.lifetime -= this.deltaTimeMs;
+                } else {
+                    component.lifetime = 0u;
+                }
                 if (component.lifetime <= 0u) {
                     ent.DestroyHierarchy();
                 }
