@@ -78,6 +78,44 @@ namespace ME.BECS {
             return result;
         }
 
+        [INLINE(256)]
+        public static bool IntersectsRect(float2 from, float2 to, Rect rect, out float2 intersect) {
+
+            if (Intersects2D(from, to, new float2(rect.min), new float2(rect.xMin, rect.yMax), out intersect) == true) return true;
+            if (Intersects2D(from, to, new float2(rect.xMin, rect.yMax), new float2(rect.max), out intersect) == true) return true;
+            if (Intersects2D(from, to, new float2(rect.max), new float2(rect.xMax, rect.yMin), out intersect) == true) return true;
+            if (Intersects2D(from, to, new float2(rect.xMax, rect.yMin), new float2(rect.min), out intersect) == true) return true;
+
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public static bool Intersects2D(float2 l1from, float2 l1to, float2 l2from, float2 l2to, out float2 intersect) {
+            
+            var firstLineSlopeX = l1to.x - l1from.x;
+            var firstLineSlopeY = l1to.y - l1to.y;
+
+            var secondLineSlopeX = l2to.x - l2from.x;
+            var secondLineSlopeY = l2to.y - l2from.y;
+
+            var s = (-firstLineSlopeY * (l1from.x - l2from.x) + firstLineSlopeX * (l1to.y - l2from.y)) / (-secondLineSlopeX * firstLineSlopeY + firstLineSlopeX * secondLineSlopeY);
+            var t = (secondLineSlopeX * (l1to.y - l2from.y) - secondLineSlopeY * (l1from.x - l2from.x)) / (-secondLineSlopeX * firstLineSlopeY + firstLineSlopeX * secondLineSlopeY);
+
+            if (s >= 0f && s <= 1f && t >= 0f && t <= 1f) {
+                var intersectionPointX = l1from.x + (t * firstLineSlopeX);
+                var intersectionPointY = l1to.y + (t * firstLineSlopeY);
+
+                // Collision detected
+                intersect = new float2(intersectionPointX, intersectionPointY);
+                return true;
+            }
+
+            intersect = default;
+            return false; // No collision
+            
+        }
+        
     }
 
 }

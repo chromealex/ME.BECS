@@ -74,15 +74,35 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
+        public static float3 GetNearestPoint(in TransformAspect tr, in float3 fromPos) {
+
+            var center = tr.GetWorldMatrixPosition();
+            if (tr.ent.TryRead(out UnitQuadSizeComponent quadSizeComponent) == true) {
+                var rot = tr.GetWorldMatrixRotation();
+                var dir = math.normalizesafe(fromPos - center);
+                dir *= new float3(quadSizeComponent.size.x * 2f, 0f, quadSizeComponent.size.y * 2f);
+                dir = math.mul(rot, dir);
+                if (Math.IntersectsRect(new float2(0f, 0f), new float2(dir.x, dir.z), new Rect(-quadSizeComponent.size, quadSizeComponent.size), out var point) == true) {
+                    center += math.mul(math.inverse(rot), new float3(point.x, 0f, point.y));
+                }
+            }
+            
+            return center;
+            
+        }
+        
+        [INLINE(256)]
         public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
 
             position = default;
             var unitTr = unit.ent.GetAspect<TransformAspect>();
             var targetTr = target.GetAspect<TransformAspect>();
+            var fromPos = unitTr.GetWorldMatrixPosition();
+            var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos);
             var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
             var offset = unit.readRadius + nodeSize * 1.5f;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
-            var dir = targetTr.GetWorldMatrixPosition() - unitTr.GetWorldMatrixPosition();
+            var dir = targetNearestPoint - fromPos;
             var dirNormalized = math.normalizesafe(dir);
             var distSq = math.lengthsq(dir);
             var minRange = attackSensor.sector.minRangeSqr;
@@ -111,14 +131,14 @@ namespace ME.BECS.Attack {
                 // find point on the line
                 var targetRadius = target.GetAspect<UnitAspect>().readRadius;
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
-                position = targetTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(attackRangeSqr) - offset + targetRadius);
+                position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset + targetRadius);
                 return PositionToAttack.MoveToPoint;
             } else if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return PositionToAttack.RotateToTarget;
             }
 
-            position = targetTr.GetWorldMatrixPosition() - dirNormalized * offset * 2f;
+            position = targetNearestPoint - dirNormalized * offset * 2f;
 
             return PositionToAttack.MoveToPoint;
 
