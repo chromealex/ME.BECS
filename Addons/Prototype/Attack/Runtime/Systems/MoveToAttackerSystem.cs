@@ -21,6 +21,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform, ref DamageTookEvent component) {
 
                 if (component.source.IsAlive() == false) return;
+                if (unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>().HasAnyTarget == false) return;
 
                 // move to attacker
                 var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos);
@@ -67,8 +68,6 @@ namespace ME.BECS.Attack {
             var dependsOnMoveToTarget = context.Query()
                                                .Without<IsUnitStaticComponent>()
                                                .Without<PathFollowComponent>()
-                                               .Without<AttackTargetComponent>()
-                                               .Without<AttackTargetsComponent>()
                                                .Without<UnitHoldComponent>()
                                                .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect, DamageTookEvent>(new MoveToAttackerJob() {
                                                    buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),

@@ -25,14 +25,14 @@ namespace ME.BECS.Bullets {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect aspect, ref TransformAspect tr) {
 
-                if (aspect.config.autoTarget == 1 && aspect.component.targetEnt.IsAlive() == true) {
-                    aspect.component.targetWorldPos = aspect.component.targetEnt.GetAspect<TransformAspect>().GetWorldMatrixPosition();
+                if (aspect.readConfig.autoTarget == 1 && aspect.readComponent.targetEnt.IsAlive() == true) {
+                    aspect.component.targetWorldPos = aspect.readComponent.targetEnt.GetAspect<TransformAspect>().GetWorldMatrixPosition();
                 }
 
                 var prevPos = tr.position;
-                tr.position = Math.MoveTowards(prevPos, aspect.component.targetWorldPos, aspect.config.speed * this.dt);
+                tr.position = Math.MoveTowards(prevPos, aspect.readComponent.targetWorldPos, aspect.readConfig.speed * this.dt);
                 tr.rotation = quaternion.LookRotationSafe(tr.position - prevPos, math.up());
-                if (math.lengthsq(tr.position - aspect.component.targetWorldPos) <= 0.01f) {
+                if (math.lengthsq(tr.position - aspect.readComponent.targetWorldPos) <= 0.01f) {
                     aspect.IsReached = true;
                 }
 

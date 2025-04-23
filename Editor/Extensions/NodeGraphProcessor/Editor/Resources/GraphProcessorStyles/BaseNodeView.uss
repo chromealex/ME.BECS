@@ -281,10 +281,16 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 
 #controls .subclass-button-selector {
     min-width: 120px;
+    max-width: 200px;
     height: 24px;
     margin-top: 0px;
     border-top-left-radius: 0px;
     border-top-right-radius: 0px;
+}
+
+#controls .subclass-button-selector Label {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .start-node #node-border {
@@ -342,6 +348,8 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
 .title-container #title-label {
     padding-bottom: 0px;
     margin-bottom: 0px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .container-labels {
@@ -391,12 +399,17 @@ ParameterNodeView #controls EnumField > VisualElement > VisualElement {
     border-bottom-width: 1px !important;
 }
 
-.sync-label {
+.sync-labels {
     position: absolute;
     right: 0px;
+    top: 0px;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.sync-label {
     -unity-text-align: middle-right;
     font-size: 8px !important;
-    top: 0px;
     padding: 2px;
     margin-right: 4px;
     opacity: 0.4;

@@ -17,30 +17,30 @@ namespace ME.BECS.Bullets {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
 
-                if (bullet.config.hitRangeSqr > 0f) {
+                if (bullet.readConfig.hitRangeSqr > 0f) {
 
                     // use splash
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
+                        targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
-                } else if (bullet.component.targetEnt.IsAlive() == true) {
+                } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.component.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
+                    targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
-                } else if (bullet.component.targetEnt == Ent.Null) {
+                } else if (bullet.readComponent.targetEnt == Ent.Null) {
 
                     // hit first target in range because targetEnt was not set
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
                             var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.damage, bullet.component.sourceUnit, in jobInfo);
+                            targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }
 

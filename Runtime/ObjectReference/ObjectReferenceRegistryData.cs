@@ -107,10 +107,10 @@ namespace ME.BECS {
             return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.referencesCount, this.customData);
         }
 
-        public bool Is<T>() {
+        public bool Is<T>(bool ignoreErrors = false) {
             if (this.source is T) return true;
             if (string.IsNullOrEmpty(this.sourceType) == true) {
-                UnityEngine.Debug.LogError($"SourceType is empty for source {this.source} ({this.sourceReference}) isGameObject: {this.isGameObject} sourceId: {this.sourceId}");
+                if (ignoreErrors == false) UnityEngine.Debug.LogError($"SourceType is empty for source {this.source} ({this.sourceReference}) isGameObject: {this.isGameObject} sourceId: {this.sourceId}");
             } else {
                 if (typeof(T).IsAssignableFrom(System.Type.GetType(this.sourceType)) == true) return true;
             }

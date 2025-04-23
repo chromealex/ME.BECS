@@ -9,10 +9,12 @@ namespace ME.BECS.Bullets {
         [QueryWith]
         public AspectDataPtr<BulletRuntimeComponent> bulletRuntimeDataPtr;
         
-        public ref BulletConfigComponent config => ref this.bulletConfigDataPtr.Get(this.ent.id, this.ent.gen);
-        public ref BulletRuntimeComponent component => ref this.bulletRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref BulletConfigComponent config => ref this.bulletConfigDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly BulletConfigComponent readConfig => ref this.bulletConfigDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref BulletRuntimeComponent component => ref this.bulletRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly BulletRuntimeComponent readComponent => ref this.bulletRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
         public uint damage {
-            get => this.ent.Has<DamageOverrideComponent>() ? this.ent.Read<DamageOverrideComponent>().damage : this.config.damage;
+            get => this.ent.Has<DamageOverrideComponent>() ? this.ent.Read<DamageOverrideComponent>().damage : this.readConfig.damage;
             set => this.ent.Get<DamageOverrideComponent>().damage = value;
         }
 

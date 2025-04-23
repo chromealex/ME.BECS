@@ -1070,7 +1070,7 @@ namespace ME.BECS.Editor {
         
         public static T GetAssetByPathPart<T>(string pathPart) where T : UnityEngine.Object {
             pathPart = GetFullPathWithoutExtension(pathPart);
-            var items = ObjectReferenceRegistry.data.items.Concat(ObjectReferenceRegistry.additionalRuntimeObjects).Where(x => x.Is<T>()).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(new ObjectItem(x).Load<T>())).ToArray();
+            var items = ObjectReferenceRegistry.data.items.Concat(ObjectReferenceRegistry.additionalRuntimeObjects).Where(x => x.Is<T>(ignoreErrors: true)).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(new ObjectItem(x).Load<T>())).ToArray();
             foreach (var item in items) {
                 var obj = new ObjectItem(item).Load<T>();
                 var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(obj));

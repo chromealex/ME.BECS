@@ -15,8 +15,46 @@ namespace ME.BECS.Extensions.GraphProcessor
 	[Serializable]
 	public abstract class BaseNode {
 
+        [System.Serializable]
+        public struct SyncPoint {
+
+            public Method method;
+            public bool syncPoint;
+            public int syncCount;
+            public bool hasMethod;
+
+        }
+        
+        public SyncPoint[] syncPoints;
 		public bool syncPoint;
 		public int syncCount;
+
+        public void ResetSyncPoints() {
+            var count = (int)Method.DrawGizmos + 1;
+            if (this.syncPoints == null || this.syncPoints.Length != count) {
+                this.syncPoints = new SyncPoint[count];
+            } else {
+                System.Array.Clear(this.syncPoints, 0, this.syncPoints.Length);
+            }
+        }
+
+        public void ValidateSyncPoints() {
+            var count = (int)Method.DrawGizmos + 1;
+            if (this.syncPoints == null || this.syncPoints.Length != count) {
+                this.syncPoints = new SyncPoint[count];
+            }
+        }
+
+        public void SetSyncPoint(Method method, int count, bool syncPoint, bool hasMethod) {
+            this.syncPoints[(int)method] = new SyncPoint() {
+                method = method,
+                syncCount = count,
+                syncPoint = syncPoint,
+                hasMethod = hasMethod,
+            };
+        }
+
+        public SyncPoint GetSyncPoint(Method method) => this.syncPoints[(int)method];
 		
 		public bool HasBackward(BaseNode lookUpNode) {
 			var q = new System.Collections.Generic.Queue<BaseNode>();

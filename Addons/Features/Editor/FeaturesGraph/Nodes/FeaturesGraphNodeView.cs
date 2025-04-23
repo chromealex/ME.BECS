@@ -15,21 +15,44 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.GraphNode ||
                 this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode) {
 
-                var syncLabel = container.Q(className: "sync-label") as Label;
-                if (syncLabel == null) {
+                var syncLabels = container.Q(className: "sync-labels");
+                if (syncLabels == null) {
 
-                    syncLabel = new UnityEngine.UIElements.Label();
-                    syncLabel.AddToClassList("sync-label");
-                    container.Add(syncLabel);
+                    syncLabels = new UnityEngine.UIElements.VisualElement();
+                    syncLabels.AddToClassList("sync-labels");
+                    container.Add(syncLabels);
 
                 }
+                
+                Run(Method.Awake);
+                Run(Method.Start);
+                Run(Method.Update);
+                Run(Method.Destroy);
+                Run(Method.DrawGizmos);
 
-                {
+                void Run(Method method) {
 
-                    if (this.nodeTarget.syncPoint == true) {
-                        syncLabel.text = "SYNC";
-                    } else {
-                        syncLabel.text = $"BRANCHES: {this.nodeTarget.syncCount}";
+                    this.nodeTarget.ValidateSyncPoints();
+                    var syncPointData = this.nodeTarget.GetSyncPoint(method);
+                    if (syncPointData.hasMethod == false) return;
+                    
+                    var syncLabel = syncLabels.Q(className: "sync-label-" + method.ToString()) as Label;
+                    if (syncLabel == null) {
+
+                        syncLabel = new UnityEngine.UIElements.Label();
+                        syncLabel.AddToClassList("sync-label");
+                        syncLabel.AddToClassList("sync-label-" + method.ToString());
+                        syncLabel.tooltip = method.ToString();
+                        syncLabels.Add(syncLabel);
+
+                    }
+
+                    {
+                        if (syncPointData.syncPoint == true) {
+                            syncLabel.text = method.ToString();
+                        } else {
+                            syncLabel.text = $"{method.ToString()}: {syncPointData.syncCount}";
+                        }
                     }
 
                 }

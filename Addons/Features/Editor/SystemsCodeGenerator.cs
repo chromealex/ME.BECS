@@ -9,7 +9,7 @@ namespace ME.BECS.Editor.Systems {
     
     public class SystemsCodeGenerator : CustomCodeGenerator {
 
-        private void AddMethod<T>(SystemsGraph graph, string baseName, string methodName, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
+        private void AddMethod<T>(SystemsGraph graph, string baseName, string methodName, Method method, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
             //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
             content = new scg::List<string>();
             content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.{methodName}))]");
@@ -21,7 +21,7 @@ namespace ME.BECS.Editor.Systems {
                 var startNodeIndex = 0;
                 //UnityEngine.Debug.LogWarning("GRAPH: " + graph.name);
                 innerMethods = new System.Collections.Generic.List<string>();
-                innerMethods = AddGraph<T>(this, baseName, startNodeIndex, methodName, contentFill, graph);
+                innerMethods = AddGraph<T>(this, baseName, startNodeIndex, methodName, method, contentFill, graph);
                 content.AddRange(contentFill);
             }
             //content.Add("*/");
@@ -101,27 +101,27 @@ namespace ME.BECS.Editor.Systems {
                             graphInitializeContent.Add("}");
                         }
                         {
-                            this.AddMethod<IAwake>(graph, baseName, "OnAwake", out var caller, out var innerMethods);
+                            this.AddMethod<IAwake>(graph, baseName, "OnAwake", Method.Awake, out var caller, out var innerMethods);
                             graphAwakeContent.AddRange(innerMethods);
                             graphAwakeContent.AddRange(caller);
                         }
                         {
-                            this.AddMethod<IStart>(graph, baseName, "OnStart", out var caller, out var innerMethods);
+                            this.AddMethod<IStart>(graph, baseName, "OnStart", Method.Start, out var caller, out var innerMethods);
                             graphStartContent.AddRange(innerMethods);
                             graphStartContent.AddRange(caller);
                         }
                         {
-                            this.AddMethod<IUpdate>(graph, baseName, "OnUpdate", out var caller, out var innerMethods);
+                            this.AddMethod<IUpdate>(graph, baseName, "OnUpdate", Method.Update, out var caller, out var innerMethods);
                             graphUpdateContent.AddRange(innerMethods);
                             graphUpdateContent.AddRange(caller);
                         }
                         {
-                            this.AddMethod<IDestroy>(graph, baseName, "OnDestroy", out var caller, out var innerMethods);
+                            this.AddMethod<IDestroy>(graph, baseName, "OnDestroy", Method.Destroy, out var caller, out var innerMethods);
                             graphDestroyContent.AddRange(innerMethods);
                             graphDestroyContent.AddRange(caller);
                         }
                         {
-                            this.AddMethod<IDrawGizmos>(graph, baseName, "OnDrawGizmos", out var caller, out var innerMethods);
+                            this.AddMethod<IDrawGizmos>(graph, baseName, "OnDrawGizmos", Method.DrawGizmos, out var caller, out var innerMethods);
                             graphDrawGizmosContent.AddRange(innerMethods);
                             graphDrawGizmosContent.AddRange(caller);
                         }
@@ -252,7 +252,7 @@ namespace ME.BECS.Editor.Systems {
 
         }
         
-        public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, string baseName, int startNodeIndex, string method, scg::List<string> content, SystemsGraph graph) where T : class {
+        public static scg::List<string> AddGraph<T>(CustomCodeGenerator generator, string baseName, int startNodeIndex, string method, Method methodEnum, scg::List<string> content, SystemsGraph graph) where T : class {
 
             var graphRootId = GetId(graph);
             static void AddNodesArrDefinition(CustomCodeGenerator generator, string baseName, scg::List<string> content, SystemsGraph graph, scg::List<string> arrMethodDef, int graphRootId) {
@@ -302,13 +302,13 @@ namespace ME.BECS.Editor.Systems {
                             var indexStr = index.ToString();
                             if (customDep == null) customDep = $"dep{indexStr}";
                             if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
-                            if (node.syncPoint == false) {
+                            if (node.GetSyncPoint(methodEnum).syncPoint == false) {
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }
                             if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
                                 while (parentNode != null) {
-                                    if (parentNode.syncPoint == false) return;
+                                    if (parentNode.GetSyncPoint(methodEnum).syncPoint == false) return;
                                     customInputDeps.TryGetValue(parentNode, out var parentNodeInner);
                                     parentNode = parentNodeInner;
                                 }

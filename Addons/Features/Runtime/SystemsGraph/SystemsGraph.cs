@@ -8,40 +8,145 @@ namespace ME.BECS.FeaturesGraph {
 
         public SystemGroup runtimeRootSystemGroup;
 
-        [ContextMenu("Update Sync State")]
-        public void UpdateSyncStateForced() {
-            
-            var startNode = this.GetStartNode(0);
-            startNode.syncCount = 0;
-            foreach (var node in this.nodes) {
-                var visited = new System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
-                this.CollectParents(node, visited);
-                var accumulator = 0;
-                accumulator -= node.GetInputNodes().Count();
-                foreach (var n in visited) {
-                    accumulator += n.GetOutputNodes().Count();
-                    accumulator -= n.GetInputNodes().Count();
-                }
-                node.syncCount = accumulator;
-                node.syncPoint = node.syncCount == 0;
+        public class Graph {
+
+            public class Node {
+
+                public ME.BECS.Extensions.GraphProcessor.BaseNode node;
+                public System.Collections.Generic.List<Node> input = new System.Collections.Generic.List<Node>();
+                public System.Collections.Generic.List<Node> output = new System.Collections.Generic.List<Node>();
+
             }
+
+            public Node startNode;
+            public System.Collections.Generic.Dictionary<ME.BECS.Extensions.GraphProcessor.BaseNode, Node> nodes = new System.Collections.Generic.Dictionary<ME.BECS.Extensions.GraphProcessor.BaseNode, Node>();
             
+            public Graph(ME.BECS.Extensions.GraphProcessor.BaseNode startNode, System.Func<ME.BECS.Extensions.GraphProcessor.BaseNode, bool> filter) {
+                
+                this.startNode = new Node() { node = startNode };
+                var root = this.startNode;
+                {
+                    {
+                        if (this.nodes.TryGetValue(root.node, out var n) == false) {
+                            n = new Node() { node = root.node };
+                            this.nodes.Add(root.node, n);
+                        }
+                    }
+                }
+
+                var q = new System.Collections.Generic.Queue<Node>();
+                q.Enqueue(root);
+                while (q.Count > 0) {
+                    
+                    var current = q.Dequeue();
+                    var list = current.node.GetOutputNodes().ToList();
+                    foreach (var node in list) {
+                        if (filter.Invoke(node) == true || node is ME.BECS.FeaturesGraph.Nodes.ExitNode) {
+                            if (this.nodes.TryGetValue(node, out var n) == false) {
+                                n = new Node() { node = node };
+                                this.nodes.Add(node, n);
+                            }
+                            n.input.Add(current);
+                            current.output.Add(n);
+                            q.Enqueue(n);
+                        } else {
+                            // Connect all inputs with all outputs
+                            foreach (var input in node.GetInputNodes()) {
+                                if (this.nodes.TryGetValue(input, out var n) == false) {
+                                    n = new Node() { node = input };
+                                    this.nodes.Add(input, n);
+                                }
+
+                                foreach (var output in node.GetOutputNodes()) {
+                                    if (this.nodes.TryGetValue(output, out var n2) == false) {
+                                        n2 = new Node() { node = output };
+                                        this.nodes.Add(output, n2);
+                                    }
+
+                                    n.output.Add(n2);
+                                    n2.input.Add(n);
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+
         }
         
-        private void CollectParents(ME.BECS.Extensions.GraphProcessor.BaseNode node, System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode> visited) {
+        [ContextMenu("Update Sync State")]
+        public void UpdateSyncStateForced() {
 
-            if (node is ME.BECS.FeaturesGraph.Nodes.StartNode) {
+            Run(Method.Awake, typeof(IAwake));
+            Run(Method.Update, typeof(IUpdate));
+            Run(Method.Start, typeof(IStart));
+            Run(Method.Destroy, typeof(IDestroy));
+            Run(Method.DrawGizmos, typeof(IDrawGizmos));
+            
+            void Run(Method method, System.Type type) {
+
+                var startNode = this.GetStartNode(0);
+                var graph = new Graph(startNode, Filter);
+
+                bool Filter(ME.BECS.Extensions.GraphProcessor.BaseNode node) {
+                    if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
+                        if (systemNode.system != null) {
+                            if (System.Array.IndexOf(systemNode.system.GetType().GetInterfaces(), type) >= 0) {
+                                return true;
+                            }
+                        }
+                    }
+
+                    if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
+                        if (graphNode.graphValue != null) {
+                            foreach (var n in graphNode.graphValue.nodes) {
+                                if (Filter(n) == true) return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+
+                startNode.ResetSyncPoints();
+                startNode.syncCount = 0;
+                var visited = new System.Collections.Generic.HashSet<Graph.Node>();
+                foreach (var kv in graph.nodes) {
+                    var node = kv.Value;
+                    visited.Clear();
+                    this.CollectParents(node, visited);
+                    var accumulator = 0;
+                    accumulator -= node.input.Count;
+                    foreach (var n in visited) {
+                        accumulator += n.output.Count;
+                        accumulator -= n.input.Count;
+                    }
+
+                    node.node.ValidateSyncPoints();
+                    node.node.syncCount = accumulator;
+                    node.node.SetSyncPoint(method, accumulator, node.node.syncCount == 0, Filter(node.node));
+                    node.node.syncPoint = node.node.syncCount == 0;
+                }
+
+            }
+
+        }
+        
+        private void CollectParents(Graph.Node node, System.Collections.Generic.HashSet<Graph.Node> visited) {
+
+            if (node.node is ME.BECS.FeaturesGraph.Nodes.StartNode) {
                 visited.Add(node);
                 return;
             }
-            
-            var inputNodes = node.GetInputNodes().ToList();
-            
-            foreach (var inputNode in inputNodes) {
-                visited.Add(inputNode);
-                this.CollectParents(inputNode, visited);
+
+            {
+                var inputNodes = node.input;
+                foreach (var inputNode in inputNodes) {
+                    visited.Add(inputNode);
+                    this.CollectParents(inputNode, visited);
+                }
             }
-            
+
         }
 
         public override void UpdateSyncState() {

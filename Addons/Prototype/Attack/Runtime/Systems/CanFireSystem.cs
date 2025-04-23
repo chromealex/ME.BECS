@@ -37,8 +37,7 @@ namespace ME.BECS.Attack {
                     if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
                         // Fire
                         var parent = ent.Read<ME.BECS.Transforms.ParentComponent>().value.GetAspect<ME.BECS.Units.UnitAspect>();
-                        if (ent.HasTag<CanFireWhileMovesTag>(true) == false 
-                            && parent is {IsHold: false, IsStatic: false}) {
+                        if (ent.HasTag<CanFireWhileMovesTag>(true) == false && parent is { IsHold: false, IsStatic: false }) {
                             aspect.CanFire = false;
                         } else {
                             aspect.CanFire = true;

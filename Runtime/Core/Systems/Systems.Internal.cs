@@ -75,7 +75,7 @@ namespace ME.BECS {
 
     }
     
-    internal enum Method : byte {
+    public enum Method : byte {
 
         Undefined = 0,
         Awake,
