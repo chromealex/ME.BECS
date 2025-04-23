@@ -54,9 +54,12 @@ namespace ME.BECS.Extensions.GraphProcessor
             };
         }
 
-        public SyncPoint GetSyncPoint(Method method) => this.syncPoints[(int)method];
-		
-		public bool HasBackward(BaseNode lookUpNode) {
+        public SyncPoint GetSyncPoint(Method method) {
+            this.ValidateSyncPoints();
+            return this.syncPoints[(int)method];
+        }
+
+        public bool HasBackward(BaseNode lookUpNode) {
 			var q = new System.Collections.Generic.Queue<BaseNode>();
 			q.Enqueue(this);
 			var max = 100_000;
