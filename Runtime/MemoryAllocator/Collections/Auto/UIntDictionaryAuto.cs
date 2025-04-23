@@ -206,6 +206,22 @@ namespace ME.BECS {
             return ref this.Insert(key, default);
 
         }
+        
+        [INLINE(256)]
+        public ref TValue GetValueOrDefault(uint key, out bool exist) {
+            
+            E.IS_CREATED(this);
+
+            var entry = this.FindEntry(key);
+            if (entry >= 0) {
+                exist = true;
+                return ref this.entries[entry].value;
+            }
+
+            exist = false;
+            return ref StaticTypesDefault<TValue>.defaultValue.Data;
+
+        }
 
         [INLINE(256)]
         public TValue GetValueAndRemove(uint key) {

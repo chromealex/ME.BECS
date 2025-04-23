@@ -439,7 +439,19 @@ namespace ME.BECS {
             return result;
 
         }
+        
+        /// <summary>
+        /// [ QUERY END POINT ]
+        /// </summary>
+        /// <returns></returns>
+        public uint Count() {
+            
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn.Complete();
+            var cnt = (int)this.commandBuffer.ptr->count;
+            return (uint)cnt;
 
+        }
         /// <summary>
         /// [ QUERY END POINT ]
         /// </summary>

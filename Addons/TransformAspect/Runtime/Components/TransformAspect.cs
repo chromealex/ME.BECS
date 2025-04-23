@@ -78,6 +78,7 @@ namespace ME.BECS.Transforms {
         public readonly ref readonly float4x4 readLocalMatrix => ref this.localMatrixData.Read(this.ent.id, this.ent.gen).value;
 
         public readonly ref byte isWorldMatrixTickCalculated => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated;
+        public readonly ref readonly byte readIsWorldMatrixTickCalculated => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
         
         public readonly float3 position {
             [INLINE(256)]
