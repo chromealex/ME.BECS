@@ -47,7 +47,7 @@ namespace ME.BECS.Transforms {
         private static void SetParent_INTERNAL(this in Ent ent, in Ent parent) {
 
             ref var currentParent = ref ent.Get<ParentComponent>().value;
-            if (currentParent.IsAlive() == true) {
+            if (currentParent.IsAlive() == true && ent.worldId == currentParent.worldId) {
                 // Move out from current parent
                 ref var children = ref currentParent.Get<ChildrenComponent>();
                 children.lockSpinner.Lock();
@@ -150,15 +150,15 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
             
-            if (parent.isWorldMatrixTickCalculated == 0) {
+            if (parent.readIsWorldMatrixTickCalculated == 0) {
                 // Calculate parent matrix
                 if (ent.ent.worldId != parent.ent.worldId) return;
                 if (parent.parent.IsAlive() == true) CalculateWorldMatrixParent(parent.parent.GetAspect<TransformAspect>(), in parent);
             }
 
-            if (ent.isWorldMatrixTickCalculated == 0) {
+            if (ent.readIsWorldMatrixTickCalculated == 0) {
                 ent.LockWorldMatrix();
-                if (ent.isWorldMatrixTickCalculated == 0) {
+                if (ent.readIsWorldMatrixTickCalculated == 0) {
                     CalculateMatrix(in parent, in ent);
                     ent.isWorldMatrixTickCalculated = 1;
                 }

@@ -12,6 +12,12 @@ namespace ME.BECS.Players {
 
         [INLINE(256)]
         public static PlayerAspect GetActivePlayer() {
+            return GetActivePlayer(JobInfo.Create(Context.world.id));
+        }
+        
+        [INLINE(256)]
+        public static PlayerAspect GetActivePlayer(in JobInfo jobInfo) {
+            E.IS_NOT_IN_TICK(Worlds.GetWorld(jobInfo.worldId).state);
             if (PlayerStatic.activePlayer.Data.IsAlive() == false) return default;
             return PlayerStatic.activePlayer.Data.GetAspect<PlayerAspect>();
         }
