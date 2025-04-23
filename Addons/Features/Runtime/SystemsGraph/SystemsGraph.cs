@@ -72,7 +72,7 @@ namespace ME.BECS.FeaturesGraph {
         [ContextMenu("Update Sync State")]
         public void UpdateSyncStateForced() {
 
-            Run(Method.Awake, typeof(IAwake));
+            /*Run(Method.Awake, typeof(IAwake));
             Run(Method.Update, typeof(IUpdate));
             Run(Method.Start, typeof(IStart));
             Run(Method.Destroy, typeof(IDestroy));
@@ -122,6 +122,27 @@ namespace ME.BECS.FeaturesGraph {
                     node.node.syncPoint = node.node.syncCount == 0;
                 }
 
+            }*/
+            
+            var visited = new System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
+            foreach (var node in this.nodes) {
+                visited.Clear();
+                this.CollectParents(node, visited);
+                var accumulator = 0;
+                accumulator -= node.GetInputNodes().Count();
+                foreach (var n in visited) {
+                    accumulator += n.GetOutputNodes().Count();
+                    accumulator -= n.GetInputNodes().Count();
+                }
+
+                node.ValidateSyncPoints();
+                node.syncCount = accumulator;
+                node.SetSyncPoint(Method.Awake, accumulator, node.syncCount == 0, true);
+                node.SetSyncPoint(Method.Start, accumulator, node.syncCount == 0, true);
+                node.SetSyncPoint(Method.Update, accumulator, node.syncCount == 0, true);
+                node.SetSyncPoint(Method.Destroy, accumulator, node.syncCount == 0, true);
+                node.SetSyncPoint(Method.DrawGizmos, accumulator, node.syncCount == 0, true);
+                node.syncPoint = node.syncCount == 0;
             }
 
         }
@@ -135,6 +156,23 @@ namespace ME.BECS.FeaturesGraph {
 
             {
                 var inputNodes = node.input;
+                foreach (var inputNode in inputNodes) {
+                    visited.Add(inputNode);
+                    this.CollectParents(inputNode, visited);
+                }
+            }
+
+        }
+
+        private void CollectParents(ME.BECS.Extensions.GraphProcessor.BaseNode node, System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode> visited) {
+
+            if (node is ME.BECS.FeaturesGraph.Nodes.StartNode) {
+                visited.Add(node);
+                return;
+            }
+
+            {
+                var inputNodes = node.GetInputNodes();
                 foreach (var inputNode in inputNodes) {
                     visited.Add(inputNode);
                     this.CollectParents(inputNode, visited);
