@@ -74,18 +74,26 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static float3 GetNearestPoint(in TransformAspect tr, in float3 fromPos) {
+        public static float3 GetNearestPoint(in TransformAspect targetTr, in float3 fromPos, tfloat unitRadius) {
 
-            var center = tr.GetWorldMatrixPosition();
-            if (tr.ent.TryRead(out UnitQuadSizeComponent quadSizeComponent) == true) {
-                var rot = tr.GetWorldMatrixRotation();
+            var center = targetTr.GetWorldMatrixPosition();
+            if (targetTr.ent.TryRead(out UnitQuadSizeComponent quadSizeComponent) == true) {
                 var dir = math.normalizesafe(fromPos - center);
-                dir *= new float3(quadSizeComponent.size.x * 2f, 0f, quadSizeComponent.size.y * 2f);
+                var srcDir = dir;
+                dir *= new float3(quadSizeComponent.size.x, 0f, quadSizeComponent.size.y);
+                var rot = targetTr.GetWorldMatrixRotation();
                 dir = math.mul(rot, dir);
-                if (Math.IntersectsRect(new float2(0f, 0f), new float2(dir.x, dir.z), new Rect(-quadSizeComponent.size, quadSizeComponent.size), out var point) == true) {
+                if (Math.IntersectsRect(new float2(0f, 0f), new float2(dir.x, dir.z), new Rect(-((float2)quadSizeComponent.size) * 0.5f, quadSizeComponent.size), out var point) == true) {
                     center += math.mul(math.inverse(rot), new float3(point.x, 0f, point.y));
+                    center += srcDir * unitRadius;
                 }
+            } else {
+                var targetRadius = targetTr.ent.GetAspect<UnitAspect>().readRadius;
+                var dir = math.normalizesafe(fromPos - center);
+                center += dir * (targetRadius + unitRadius);
             }
+            
+            UnityEngine.Debug.DrawLine((UnityEngine.Vector3)center, (UnityEngine.Vector3)(center + new float3(0f, 10f, 0f)), UnityEngine.Color.cyan, 3f);
             
             return center;
             
@@ -98,9 +106,9 @@ namespace ME.BECS.Attack {
             var unitTr = unit.ent.GetAspect<TransformAspect>();
             var targetTr = target.GetAspect<TransformAspect>();
             var fromPos = unitTr.GetWorldMatrixPosition();
-            var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos);
+            var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos, unit.readRadius);
             var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
-            var offset = unit.readRadius + nodeSize * 1.5f;
+            var offset = 0f;//unit.readRadius + nodeSize;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
             var dir = targetNearestPoint - fromPos;
             var dirNormalized = math.normalizesafe(dir);
@@ -129,9 +137,8 @@ namespace ME.BECS.Attack {
             // if our unit is in range [attackRange, sightRange] - find target point
             if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq > attackSensor.sector.rangeSqr) {
                 // find point on the line
-                var targetRadius = target.GetAspect<UnitAspect>().readRadius;
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
-                position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset + targetRadius);
+                position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
                 return PositionToAttack.MoveToPoint;
             } else if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
