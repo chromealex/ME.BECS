@@ -108,7 +108,7 @@ namespace ME.BECS.Attack {
             var fromPos = unitTr.GetWorldMatrixPosition();
             var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos, unit.readRadius);
             var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
-            var offset = 0f;//unit.readRadius + nodeSize;
+            var offset = nodeSize;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
             var dir = targetNearestPoint - fromPos;
             var dirNormalized = math.normalizesafe(dir);
