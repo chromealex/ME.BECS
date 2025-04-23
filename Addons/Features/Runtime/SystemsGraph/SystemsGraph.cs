@@ -25,15 +25,8 @@ namespace ME.BECS.FeaturesGraph {
                 
                 this.startNode = new Node() { node = startNode };
                 var root = this.startNode;
-                {
-                    {
-                        if (this.nodes.TryGetValue(root.node, out var n) == false) {
-                            n = new Node() { node = root.node };
-                            this.nodes.Add(root.node, n);
-                        }
-                    }
-                }
-
+                this.nodes.Add(root.node, this.startNode);
+                
                 var q = new System.Collections.Generic.Queue<Node>();
                 q.Enqueue(root);
                 while (q.Count > 0) {
@@ -65,6 +58,7 @@ namespace ME.BECS.FeaturesGraph {
 
                                     n.output.Add(n2);
                                     n2.input.Add(n);
+                                    q.Enqueue(n2);
                                 }
                             }
                         }
