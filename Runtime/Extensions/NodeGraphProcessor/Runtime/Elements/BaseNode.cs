@@ -56,10 +56,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
         public SyncPoint GetSyncPoint(Method method) {
             this.ValidateSyncPoints();
-            return new SyncPoint() {
-                syncCount = this.syncCount,
-                syncPoint = this.syncPoint,
-            }; //this.syncPoints[(int)method];
+            return this.syncPoints[(int)method];
         }
 
         public bool HasBackward(BaseNode lookUpNode) {

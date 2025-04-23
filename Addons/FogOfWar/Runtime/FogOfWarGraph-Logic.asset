@@ -139,8 +139,33 @@ MonoBehaviour:
     - rid: 1536974532762927105
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 1
-        syncCount: 0
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 0
+          syncCount: -2
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: -2
+          hasMethod: 0
+        - method: 4
+          syncPoint: 0
+          syncCount: -1
+          hasMethod: 0
+        - method: 5
+          syncPoint: 0
+          syncCount: -1
+          hasMethod: 0
+        syncPoint: 0
+        syncCount: -1
         nodeCustomName: 
         GUID: db5bcb93-7fe8-405b-a76d-e995a990fcad
         groupGUID: 
@@ -161,8 +186,33 @@ MonoBehaviour:
     - rid: 1536974532762927106
       type: {class: RelayNode, ns: ME.BECS.Extensions.GraphProcessor, asm: ME.BECS}
       data:
-        syncPoint: 1
-        syncCount: 0
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 0
+          syncCount: -3
+          hasMethod: 0
+        - method: 2
+          syncPoint: 0
+          syncCount: -1
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: -2
+          hasMethod: 0
+        - method: 4
+          syncPoint: 0
+          syncCount: -2
+          hasMethod: 0
+        - method: 5
+          syncPoint: 0
+          syncCount: -2
+          hasMethod: 0
+        syncPoint: 0
+        syncCount: -2
         nodeCustomName: 
         GUID: 1656ec53-a88c-4c4d-a9d1-9c7e5dde0c57
         groupGUID: 
@@ -183,8 +233,33 @@ MonoBehaviour:
     - rid: 4603152931227959628
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 0
-        syncCount: 2
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 0acb11e2-895d-45c3-9313-3d458bbb5f14
         groupGUID: 
@@ -208,8 +283,33 @@ MonoBehaviour:
     - rid: 4603152931227959632
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 0
-        syncCount: 2
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 0
+          syncCount: -1
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 21298705-10b9-4936-9a88-7bbe57006d1e
         groupGUID: 
@@ -233,8 +333,33 @@ MonoBehaviour:
     - rid: 8346928923441103769
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 0
         syncPoint: 0
-        syncCount: 3
+        syncCount: 1
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -254,6 +379,31 @@ MonoBehaviour:
     - rid: 8346928923441103770
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
         syncPoint: 1
         syncCount: 0
         nodeCustomName: 
@@ -275,8 +425,33 @@ MonoBehaviour:
     - rid: 8346928923441103771
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 0
-        syncCount: 2
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 0e9ec525-76ba-44e8-a90b-b7c6a0cbfe26
         groupGUID: 
@@ -312,8 +487,33 @@ MonoBehaviour:
     - rid: 8346928923441103773
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 0
-        syncCount: 3
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: f322d675-e5e1-4dfc-839e-1f71fac83c18
         groupGUID: 
@@ -337,8 +537,33 @@ MonoBehaviour:
     - rid: 8346928923441103775
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 0
-        syncCount: 2
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 0
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 37b28351-46ed-4aeb-b7d4-f48fd39cdc77
         groupGUID: 
@@ -363,8 +588,33 @@ MonoBehaviour:
     - rid: 8346928929818279973
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
-        syncPoint: 0
-        syncCount: 3
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 0
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: 59f276f0-dc35-48e5-9058-945103675ed4
         groupGUID: 

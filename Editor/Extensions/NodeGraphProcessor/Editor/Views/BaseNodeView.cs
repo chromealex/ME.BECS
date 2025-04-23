@@ -797,7 +797,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 		}*/
 
 		public virtual void RedrawInspector(bool fromInspector = false) {
-			
+            this.UpdateSync();
 		}
 		
 		protected virtual void DrawDefaultInspector(bool fromInspector = false)
@@ -1216,7 +1216,6 @@ namespace ME.BECS.Extensions.GraphProcessor
 
         public void TestSync() {
             
-	        this.nodeTarget.graph.UpdateSyncState();
 	        this.UpdateSync();
             
         }
@@ -1306,8 +1305,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 		}
 
-		public virtual new bool RefreshPorts()
-		{
+		public virtual new bool RefreshPorts() {
+            
 			// If a port behavior was attached to one port, then
 			// the port count might have been updated by the node
 			// so we have to refresh the list of port views.

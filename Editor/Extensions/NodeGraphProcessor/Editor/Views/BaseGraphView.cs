@@ -715,6 +715,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 					selectedNodeGUIDs.Add(v.nodeTarget.GUID);
 			}
 
+            this.graph.UpdateSyncState();
+            
 			// Remove everything
 			RemoveNodeViews();
 			RemoveEdges();
@@ -758,6 +760,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			}
 
 			this.graph = graph;
+            this.graph.UpdateSyncState();
 
 			exposedParameterFactory = new ExposedParameterFieldFactory(graph);
 
@@ -786,7 +789,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 			UpdateComputeOrder();
 
 			InitializeView();
-
+            
 			NodeProvider.LoadGraph(graph);
 
 			// Register the nodes that can be created from assets
@@ -1153,6 +1156,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 			if (!CanConnectEdge(e, autoDisconnectInputs))
 				return false;
 			
+            this.graph.UpdateSyncState();
+            
 			var inputPortView = e.input as PortView;
 			var outputPortView = e.output as PortView;
 			var inputNodeView = inputPortView.node as BaseNodeView;
@@ -1251,6 +1256,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 		private void UpdateNodes() {
 
+            this.graph.UpdateSyncState();
 			foreach (var node in this.nodeViews) {
 				node.RedrawInspector();
 			}
@@ -1261,7 +1267,9 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
 			if (e == null)
 				return ;
-
+            
+            this.graph.UpdateSyncState();
+            
 			RemoveElement(e);
 
 			if (e?.input?.node is BaseNodeView inputNodeView)
