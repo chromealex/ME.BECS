@@ -198,6 +198,11 @@
     background-color: rgba(0, 0, 0, 0);
 }
 
+.quaternion-field > Label {
+    -unity-text-align: middle-left;
+    margin-left: 4px;
+}
+
 .quaternion-field {
     flex-direction: row;
 }
@@ -206,10 +211,17 @@
     min-width: 20px;
 }
 .quaternion-field FloatField {
-    width: 33%;
-    flex-grow: 1;
+    width: 30%;
+    flex-shrink: 1;
+    flex-grow: 0;
 }
 .quaternion-field FloatInput {
     flex-grow: 1;
-    margin-right: 20px;
+    margin-right: 5px;
+}
+
+FloatField > Label, IntegerField > Label, UnsignedIntegerField > Label, PopupField > Label, ObjectField > Label {
+    min-width: 99px;
+    max-width: 135px;
+    width: 36.5%;
 }
