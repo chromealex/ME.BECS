@@ -69,7 +69,7 @@ namespace ME.BECS.Pathfinding {
                     var target = unitCommandGroup.targets[typeId];
                     if (target.IsAlive() == true && target.Has<TargetPathComponent>() == true) {
                         var root = buildGraphSystem.GetGraphByTypeId(typeId).Read<RootGraphComponent>();
-                        var chunkIndex = Graph.GetChunkIndex(in root, position);
+                        var chunkIndex = Graph.GetChunkIndex(in root, middlePoint);
                         ref var prevPath = ref target.Get<TargetPathComponent>().path;
                         var prevRoot = prevPath.graph.Read<RootGraphComponent>();
                         prevPath.chunks[state, chunkIndex].flowField.Dispose(ref state.ptr->allocator);

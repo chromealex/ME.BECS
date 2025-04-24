@@ -1,6 +1,5 @@
-
 namespace ME.BECS.Attack {
-    
+
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
     using ME.BECS.Units;
@@ -17,11 +16,11 @@ namespace ME.BECS.Attack {
         public struct MoveToAttackerJob : IJobFor2Aspects1Components<UnitAspect, TransformAspect, DamageTookEvent> {
 
             public BuildGraphSystem buildGraphSystem;
-            
+
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform, ref DamageTookEvent component) {
 
                 if (component.source.IsAlive() == false) return;
-                if (unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>().HasAnyTarget == false) return;
+                if (unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>().HasAnyTarget == true) return;
 
                 // move to attacker
                 var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos);
@@ -46,17 +45,34 @@ namespace ME.BECS.Attack {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackCommandComponent target) {
 
+                if (unit.HasCommandGroup() == false || unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId].Read<TargetPathComponent>().path.IsCreated == false) {
+                    return;
+                }
                 if (target.target.IsAlive() == true && AttackUtils.CanAttack(in unit, in target.target) == true) {
-                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out var worldPos);
+                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _);
                     if (result == AttackUtils.PositionToAttack.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {
                             target = target.target.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
                         });
-                    } else {
-                        PathUtils.UpdateTarget(in this.buildGraphSystem, unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>(), in worldPos, in jobInfo);
+                        unit.IsHold = true;
+
                     }
                 }
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
+
+            public BuildGraphSystem buildGraphSystem;
+
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect group, ref CommandAttack command) {
+
+                if (command.target.IsAlive() == false) return;
+                PathUtils.UpdateTarget(in this.buildGraphSystem, group, command.TargetPosition, in jobInfo);
 
             }
 
@@ -65,19 +81,24 @@ namespace ME.BECS.Attack {
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var dependsOnMoveToTarget = context.Query()
-                                               .Without<IsUnitStaticComponent>()
-                                               .Without<PathFollowComponent>()
-                                               .Without<UnitHoldComponent>()
-                                               .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect, DamageTookEvent>(new MoveToAttackerJob() {
-                                                   buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
-                                               });
-            var dependsOnStop = context.Query(dependsOnMoveToTarget)
-                            .Schedule<StopOnTargetJob, UnitAspect, UnitAttackCommandComponent>(new StopOnTargetJob() {
-                                buildGraphSystem = buildGraphSystem,
-                            });
-            context.SetDependency(dependsOnStop);
+            context.Query()
+                   .Without<IsUnitStaticComponent>()
+                   .Without<PathFollowComponent>()
+                   .Without<UnitHoldComponent>()
+                   .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect, DamageTookEvent>(new MoveToAttackerJob() {
+                       buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
+                   }).AddDependency(ref context);
 
+            context.Query()
+                   .Schedule<UpdatePathJob, UnitCommandGroupAspect, CommandAttack>(new UpdatePathJob() {
+                       buildGraphSystem = buildGraphSystem,
+                   }).AddDependency(ref context);
+            
+            context.Query()
+                   .Schedule<StopOnTargetJob, UnitAspect, UnitAttackCommandComponent>(new StopOnTargetJob() {
+                       buildGraphSystem = buildGraphSystem,
+                   }).AddDependency(ref context);
+            
         }
 
     }

@@ -110,37 +110,35 @@ namespace ME.BECS.Attack {
             var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
             var offset = nodeSize;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
+            var sightRangeSqr = sightRange * sightRange;
             var dir = targetNearestPoint - fromPos;
             var dirNormalized = math.normalizesafe(dir);
             var distSq = math.lengthsq(dir);
-            var minRange = attackSensor.sector.minRangeSqr;
-
-            var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
-            var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
+            var minRangeSq = attackSensor.sector.minRangeSqr;
 
             var targetAttackSensor = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor;
             if (targetAttackSensor.IsAlive() == true) {
                 var targetAttack = targetAttackSensor.Read<AttackComponent>();
                 // if unit can't attack target and he is in target's attack range
-                if (unitAttackMask.Contains(targetAttackLayer) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
+                if (CanAttack(in unit, in target) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
                     var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
                     position = unitTr.GetWorldMatrixPosition() - dirNormalized * (targetAttackRange + offset);
                     return PositionToAttack.MoveToPoint;
                 }
             }
             
-            if (distSq <= minRange) {
-                // get out from target
-                position = unitTr.GetWorldMatrixPosition() - dirNormalized * (minRange + offset);
+            if (distSq <= minRangeSq) {
+                //if target is too close - get out from target
+                position = unitTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(minRangeSq) + offset);
                 return PositionToAttack.MoveToPoint;
             }
             // if our unit is in range [attackRange, sightRange] - find target point
-            if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq > attackSensor.sector.rangeSqr) {
+            if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.sector.rangeSqr) {
                 // find point on the line
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
                 return PositionToAttack.MoveToPoint;
-            } else if (distSq > 0f && distSq <= (sightRange * sightRange) && distSq <= attackSensor.sector.rangeSqr) {
+            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return PositionToAttack.RotateToTarget;
             }
