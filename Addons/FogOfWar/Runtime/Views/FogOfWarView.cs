@@ -85,28 +85,27 @@ namespace ME.BECS.FogOfWar {
             
         }
 
-        private void SetScale()
-        {
+        private void SetScale() {
             if (this.transformScale != null) {
                 var horizontalPadding = this.paddingSize.y + this.paddingSize.w;
                 var verticalPadding = this.paddingSize.x + this.paddingSize.z;
-                this.transformScale.localScale = new Vector3(
-                    (float)this.worldSize.x + horizontalPadding, 
-                    1f, 
-                    (float)this.worldSize.y + verticalPadding);
+                this.transformScale.localScale = new Vector3((float)this.worldSize.x + horizontalPadding, 
+                                                             1f, 
+                                                             (float)this.worldSize.y + verticalPadding);
                 
-                this.transformScale.localPosition = new Vector3(
-                    (float)this.worldSize.x * 0.5f - this.paddingSize.w * 0.5f + this.paddingSize.y * 0.5f, 
-                    0f, 
-                    (float)this.worldSize.y * 0.5f - this.paddingSize.z * 0.5f + this.paddingSize.x * 0.5f);
+                this.transformScale.localPosition = new Vector3((float)this.worldSize.x * 0.5f - this.paddingSize.w * 0.5f + this.paddingSize.y * 0.5f, 
+                                                                0f, 
+                                                                (float)this.worldSize.y * 0.5f - this.paddingSize.z * 0.5f + this.paddingSize.x * 0.5f);
+                
+                this.material.SetVector(padding, new Vector4(
+                                            this.paddingSize.x / this.transformScale.localScale.z,
+                                            this.paddingSize.y / this.transformScale.localScale.x,
+                                            this.paddingSize.z / this.transformScale.localScale.z,
+                                            this.paddingSize.w / this.transformScale.localScale.x
+                                        ));
+                
             }
 
-            this.material.SetVector(padding, new Vector4(
-                                        this.paddingSize.x / this.transformScale.localScale.z,
-                                        this.paddingSize.y / this.transformScale.localScale.x,
-                                        this.paddingSize.z / this.transformScale.localScale.z,
-                                        this.paddingSize.w / this.transformScale.localScale.x
-                                    ));
         }
 
     }
