@@ -107,7 +107,7 @@ namespace ME.BECS {
 
     public struct AlwaysTrueSubFilter : ISubFilter<Ent> {
 
-        public bool IsValid(in Ent ent, in NativeTrees.AABB bounds) => true;
+        public bool IsValid(in Ent ent, in NativeTrees.AABB bounds) => ent.IsAlive();
 
     }
     

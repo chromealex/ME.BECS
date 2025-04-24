@@ -220,7 +220,7 @@
     margin-right: 5px;
 }
 
-FloatField > Label, IntegerField > Label, UnsignedIntegerField > Label, PopupField > Label, ObjectField > Label {
+FloatField > Label, IntegerField > Label, UnsignedIntegerField > Label, PopupField > Label, ObjectField > Label, Slider > Label {
     min-width: 99px;
     max-width: 135px;
     width: 36.5%;
