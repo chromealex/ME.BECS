@@ -7,21 +7,26 @@ namespace ME.BECS {
     [System.Serializable]
     public struct Config : System.IEquatable<Config> {
 
+        public enum JoinOptions {
+            FullJoin,
+            LeftJoin,
+        }
+        
         public uint sourceId;
 
         public bool IsValid => this.sourceId > 0u;
 
         [INLINE(256)]
-        public readonly bool Apply(in Ent ent) {
+        public readonly bool Apply(in Ent ent, JoinOptions options = JoinOptions.FullJoin) {
             var entityConfig = EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);
             if (entityConfig.IsValid() == true) {
-                entityConfig.Apply(in ent);
+                entityConfig.Apply(in ent, options);
                 return true;
             }
 
             return false;
         }
-        
+
         public static bool operator ==(Config a, Config b) {
             return a.sourceId == b.sourceId;
         }

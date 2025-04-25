@@ -112,8 +112,8 @@ namespace ME.BECS {
 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
-                    var data = this.data + this.offsets[i];
                     var typeId = this.typeIds[i];
+                    var data = this.data + this.offsets[i];
                     var groupId = StaticTypes.groups.Get(typeId);
                     var dataSize = StaticTypes.sizes.Get(typeId);
                     var sharedTypeId = StaticTypes.sharedTypeId.Get(typeId);
@@ -236,11 +236,16 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Apply(in UnsafeEntityConfig config, in Ent ent) {
+            public void Apply(in UnsafeEntityConfig config, in Ent ent, Config.JoinOptions options) {
 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
                     var typeId = this.typeIds[i];
+                    if (options == Config.JoinOptions.LeftJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == false) {
+                            continue;
+                        }
+                    }
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     var func = this.functionPointers[i];
@@ -400,7 +405,8 @@ namespace ME.BECS {
             public void Apply(in UnsafeEntityConfig config, in Ent ent) {
 
                 for (uint i = 0u; i < this.count; ++i) {
-                    var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
+                    var typeId = this.typeIds[i];
+                    var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     this.functionPointers[i].Call(in config, data.ptr, in ent);
                 }
@@ -689,21 +695,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Apply(in Ent ent) {
+        public void Apply(in Ent ent, Config.JoinOptions options = Config.JoinOptions.FullJoin) {
             
             if (this.IsValid() == false) {
                 throw new System.Exception();
             }
             
-            this.Apply_INTERNAL(in ent);
+            this.Apply_INTERNAL(in ent, options);
 
         }
-        
+
         [INLINE(256)]
-        private void Apply_INTERNAL(in Ent ent) {
+        private void Apply_INTERNAL(in Ent ent, Config.JoinOptions options) {
 
             if (this.baseConfig.ptr != null) {
-                this.baseConfig.ptr->Apply_INTERNAL(in ent);
+                this.baseConfig.ptr->Apply_INTERNAL(in ent, options);
             }
             
             ent.Set(new EntityConfigComponent() {
@@ -711,7 +717,7 @@ namespace ME.BECS {
             });
 
             this.aspects.Apply(in ent);
-            this.data.Apply(in this, in ent);
+            this.data.Apply(in this, in ent, options);
             this.staticData.Apply(in this, in ent);
             this.dataShared.Apply(in this, in ent);
             this.dataInitialize.Apply(in this, in ent);
