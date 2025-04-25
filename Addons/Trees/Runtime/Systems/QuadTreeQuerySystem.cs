@@ -18,12 +18,12 @@ namespace ME.BECS {
     using static Cuts;
     using ME.BECS.Transforms;
 
-    public struct QuadTreeQuery : IComponent {
+    public struct QuadTreeQuery : IConfigComponent {
 
         /// <summary>
         /// Trees mask
         /// </summary>
-        /* Ex: 1 << 0 - select first tree */
+        /// <example>1 &lt;&lt; 0 - select first tree</example>
         public int treeMask;
         /// <summary>
         /// Range to select

@@ -71,6 +71,7 @@ namespace ME.BECS.Units {
         public readonly ref readonly uint readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
         public readonly ref readonly uint readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
         public readonly ref AgentType agentProperties => ref this.componentRuntime.properties;
+        public readonly ref readonly AgentType readAgentProperties => ref this.readComponentRuntime.properties;
         public readonly ref uint typeId => ref this.componentRuntime.properties.typeId;
         public readonly ref readonly uint readTypeId => ref this.readComponentRuntime.properties.typeId;
         public readonly ref float3 velocity => ref this.componentRuntime.velocity;

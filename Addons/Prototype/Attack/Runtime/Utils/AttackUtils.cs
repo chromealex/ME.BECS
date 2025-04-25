@@ -74,23 +74,21 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static float3 GetNearestPoint(in TransformAspect targetTr, in float3 fromPos, tfloat unitRadius) {
+        public static float3 GetNearestPoint(in TransformAspect targetTr, in float3 fromPos) {
 
             var center = targetTr.GetWorldMatrixPosition();
             if (targetTr.ent.TryRead(out UnitQuadSizeComponent quadSizeComponent) == true) {
                 var dir = math.normalizesafe(fromPos - center);
-                var srcDir = dir;
                 dir *= new float3(quadSizeComponent.size.x, 0f, quadSizeComponent.size.y);
                 var rot = targetTr.GetWorldMatrixRotation();
                 dir = math.mul(rot, dir);
                 if (Math.IntersectsRect(new float2(0f, 0f), new float2(dir.x, dir.z), new Rect(-((float2)quadSizeComponent.size) * 0.5f, quadSizeComponent.size), out var point) == true) {
                     center += math.mul(math.inverse(rot), new float3(point.x, 0f, point.y));
-                    center += srcDir * unitRadius;
                 }
             } else {
                 var targetRadius = targetTr.ent.GetAspect<UnitAspect>().readRadius;
                 var dir = math.normalizesafe(fromPos - center);
-                center += dir * (targetRadius + unitRadius);
+                center += dir * (targetRadius);
             }
             
             UnityEngine.Debug.DrawLine((UnityEngine.Vector3)center, (UnityEngine.Vector3)(center + new float3(0f, 10f, 0f)), UnityEngine.Color.cyan, 3f);
@@ -100,13 +98,14 @@ namespace ME.BECS.Attack {
         }
         
         [INLINE(256)]
-        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
+        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem = default) {
 
             position = default;
+            var owner = unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>();
             var unitTr = unit.ent.GetAspect<TransformAspect>();
             var targetTr = target.GetAspect<TransformAspect>();
             var fromPos = unitTr.GetWorldMatrixPosition();
-            var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos, unit.readRadius);
+            var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos);
             var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
             var offset = nodeSize;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
@@ -138,7 +137,7 @@ namespace ME.BECS.Attack {
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
                 return PositionToAttack.MoveToPoint;
-            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq <= attackSensor.sector.rangeSqr) {
+            } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return PositionToAttack.RotateToTarget;
             }

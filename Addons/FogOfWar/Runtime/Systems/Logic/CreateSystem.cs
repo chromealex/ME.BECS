@@ -148,7 +148,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
+        public readonly bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
 
             var team = player.readTeam;
             return this.IsVisibleAny(in team, in points);
@@ -156,7 +156,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
+        public readonly bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
 
             var team = player.readTeam;
             return this.IsVisibleAny(in team, in points);
@@ -164,7 +164,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
+        public readonly bool IsVisibleAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
 
             var team = player.readTeam;
             return this.IsVisibleAny(in team, in points);
@@ -172,7 +172,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisibleAny(in Ent team, in MemArrayAuto<float3> points) {
+        public readonly bool IsVisibleAny(in Ent team, in MemArrayAuto<float3> points) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -186,7 +186,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisibleAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
+        public readonly bool IsVisibleAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -205,7 +205,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisibleAny(in Ent team, in MemArrayAuto<RectUInt> points) {
+        public readonly bool IsVisibleAny(in Ent team, in MemArrayAuto<RectUInt> points) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -228,7 +228,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
+        public readonly bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<float3> points) {
 
             var team = player.readTeam;
             return this.IsExploredAny(in team, in points);
@@ -236,7 +236,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
+        public readonly bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<UnityEngine.Rect> points) {
 
             var team = player.readTeam;
             return this.IsExploredAny(in team, in points);
@@ -244,7 +244,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
+        public readonly bool IsExploredAny(in PlayerAspect player, in MemArrayAuto<RectUInt> points) {
 
             var team = player.readTeam;
             return this.IsExploredAny(in team, in points);
@@ -252,7 +252,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExploredAny(in Ent team, in MemArrayAuto<float3> points) {
+        public readonly bool IsExploredAny(in Ent team, in MemArrayAuto<float3> points) {
 
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -266,7 +266,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExploredAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
+        public readonly bool IsExploredAny(in Ent team, in MemArrayAuto<UnityEngine.Rect> points) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -285,7 +285,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExploredAny(in Ent team, in MemArrayAuto<RectUInt> points) {
+        public readonly bool IsExploredAny(in Ent team, in MemArrayAuto<RectUInt> points) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -308,7 +308,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisible(in Ent team, in Ent unit) {
+        public readonly bool IsVisible(in Ent team, in Ent unit) {
             
             if (unit.Has<OwnerComponent>() == false || team == UnitUtils.GetTeam(in unit)) return true;
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
@@ -319,7 +319,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisible(in Ent team, in float3 position) {
+        public readonly bool IsVisible(in Ent team, in float3 position) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -329,13 +329,13 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsVisible(in PlayerAspect player, in Ent unit) => this.IsVisible(player.readTeam, in unit);
+        public readonly bool IsVisible(in PlayerAspect player, in Ent unit) => this.IsVisible(player.readTeam, in unit);
 
         [INLINE(256)]
-        public bool IsVisible(in PlayerAspect player, in float3 position) => this.IsVisible(player.readTeam, in position);
+        public readonly bool IsVisible(in PlayerAspect player, in float3 position) => this.IsVisible(player.readTeam, in position);
 
         [INLINE(256)]
-        public bool IsExplored(in Ent team, in float3 position) {
+        public readonly bool IsExplored(in Ent team, in float3 position) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -345,7 +345,7 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExplored(in Ent team, in Ent unit) {
+        public readonly bool IsExplored(in Ent team, in Ent unit) {
             
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
@@ -355,10 +355,10 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
-        public bool IsExplored(in PlayerAspect player, in float3 position) => this.IsExplored(player.readTeam, in position);
+        public readonly bool IsExplored(in PlayerAspect player, in float3 position) => this.IsExplored(player.readTeam, in position);
 
         [INLINE(256)]
-        public bool IsExplored(in PlayerAspect player, in Ent unit) => this.IsExplored(player.readTeam, in unit);
+        public readonly bool IsExplored(in PlayerAspect player, in Ent unit) => this.IsExplored(player.readTeam, in unit);
 
     }
 

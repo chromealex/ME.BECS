@@ -16,6 +16,7 @@ namespace ME.BECS.Attack {
         public struct MoveToAttackerJob : IJobFor2Aspects1Components<UnitAspect, TransformAspect, DamageTookEvent> {
 
             public BuildGraphSystem buildGraphSystem;
+            public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform, ref DamageTookEvent component) {
 
@@ -23,7 +24,7 @@ namespace ME.BECS.Attack {
                 if (unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>().HasAnyTarget == true) return;
 
                 // move to attacker
-                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos);
+                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos, in this.fogOfWarSystem);
                 if (result == AttackUtils.PositionToAttack.MoveToPoint) {
                     CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
                         targetPosition = worldPos,
@@ -42,6 +43,7 @@ namespace ME.BECS.Attack {
         public struct StopOnTargetJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackCommandComponent> {
 
             public BuildGraphSystem buildGraphSystem;
+            public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackCommandComponent target) {
 
@@ -49,12 +51,13 @@ namespace ME.BECS.Attack {
                     return;
                 }
                 if (target.target.IsAlive() == true && AttackUtils.CanAttack(in unit, in target.target) == true) {
-                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _);
+                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.fogOfWarSystem);
                     if (result == AttackUtils.PositionToAttack.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {
                             target = target.target.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
                         });
+                        unit.IsPathFollow = false;
                         unit.IsHold = true;
 
                     }
@@ -81,12 +84,14 @@ namespace ME.BECS.Attack {
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
+            var fogOfWarSystem = context.world.GetSystemLink<ME.BECS.FogOfWar.CreateSystem>();
             context.Query()
                    .Without<IsUnitStaticComponent>()
                    .Without<PathFollowComponent>()
                    .Without<UnitHoldComponent>()
                    .Schedule<MoveToAttackerJob, UnitAspect, TransformAspect, DamageTookEvent>(new MoveToAttackerJob() {
-                       buildGraphSystem = context.world.GetSystem<BuildGraphSystem>(),
+                       buildGraphSystem = buildGraphSystem,
+                       fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
 
             context.Query()
@@ -97,6 +102,7 @@ namespace ME.BECS.Attack {
             context.Query()
                    .Schedule<StopOnTargetJob, UnitAspect, UnitAttackCommandComponent>(new StopOnTargetJob() {
                        buildGraphSystem = buildGraphSystem,
+                       fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
             
         }
