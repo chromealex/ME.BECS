@@ -20,9 +20,12 @@ namespace ME.BECS.Attack {
         public AspectDataPtr<AttackRuntimeFireComponent> attackRuntimeFireDataPtr;
         public AspectDataPtr<AttackTargetComponent> targetDataPtr;
         public AspectDataPtr<AttackTargetsComponent> targetsDataPtr;
+        public AspectDataPtr<AttackVisualComponent> attackVisualDataPtr;
 
         public readonly ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref AttackVisualComponent componentVisual => ref this.attackVisualDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly AttackVisualComponent readComponentVisual => ref this.attackVisualDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref AttackRuntimeReloadComponent componentRuntimeReload => ref this.attackRuntimeReloadDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackRuntimeReloadComponent readComponentRuntimeReload => ref this.attackRuntimeReloadDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref AttackRuntimeFireComponent componentRuntimeFire => ref this.attackRuntimeFireDataPtr.Get(this.ent.id, this.ent.gen);
@@ -41,7 +44,7 @@ namespace ME.BECS.Attack {
         public readonly uint Damage {
             get {
                 if (this.ent.Has<ME.BECS.Bullets.DamageOverrideComponent>()) return this.ent.Read<ME.BECS.Bullets.DamageOverrideComponent>().damage;
-                var config = this.readComponent.bulletConfig.AsUnsafeConfig();
+                var config = this.readComponentVisual.bulletConfig.AsUnsafeConfig();
                 if (config.IsValid() == true && config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent)) {
                     return bulletConfigComponent.damage;
                 }

@@ -237,15 +237,46 @@ namespace ME.BECS.Editor.CsvImporter {
         private static void CreateConfig(ConfigFile config) {
             if (config.instance != null) return;
             EntityConfig configInstance = null;
-            if (System.IO.File.Exists(config.fullPath) == false) {
-                configInstance = EntityConfig.CreateInstance<EntityConfig>();
-                AssetDatabase.CreateAsset(configInstance, config.fullPath);
-                AssetDatabase.ImportAsset(config.fullPath);
+            if (config.groupPath != null) {
+                // Create group if not exist
+                GroupConfig groupInstance = null;
+                if (System.IO.File.Exists(config.groupPath) == false) {
+                    groupInstance = GroupConfig.CreateInstance<GroupConfig>();
+                    AssetDatabase.CreateAsset(groupInstance, config.groupPath);
+                } else {
+                    groupInstance = AssetDatabase.LoadAssetAtPath<GroupConfig>(config.groupPath);
+                }
+
+                var allAssets = AssetDatabase.LoadAllAssetsAtPath(config.groupPath);
+                var configObj = allAssets.FirstOrDefault(x => x.name == config.name);
+                if (configObj == null) {
+                    // Add new config
+                    configInstance = EntityConfig.CreateInstance<EntityConfig>();
+                    configInstance.name = config.name;
+                    AssetDatabase.AddObjectToAsset(configInstance, config.groupPath);
+                    if (groupInstance.configs == null) groupInstance.configs = System.Array.Empty<EntityConfig>();
+                    var list = groupInstance.configs.ToList();
+                    list.Add(configInstance);
+                    groupInstance.configs = list.ToArray();
+                    EditorUtility.SetDirty(groupInstance);
+                    AssetDatabase.SaveAssetIfDirty(groupInstance);
+                    AssetDatabase.ImportAsset(config.groupPath);
+                } else {
+                    configInstance = (EntityConfig)configObj;
+                }
+
             } else {
-                configInstance = AssetDatabase.LoadAssetAtPath<EntityConfig>(config.fullPath);
+                if (System.IO.File.Exists(config.fullPath) == false) {
+                    configInstance = EntityConfig.CreateInstance<EntityConfig>();
+                    AssetDatabase.CreateAsset(configInstance, config.fullPath);
+                    AssetDatabase.ImportAsset(config.fullPath);
+                } else {
+                    configInstance = AssetDatabase.LoadAssetAtPath<EntityConfig>(config.fullPath);
+                }
             }
             configInstance.collectionsData = new EntityConfig.CollectionsData();
             config.instance = configInstance;
+            EditorUtility.SetDirty(configInstance);
         }
 
         public class ConfigFile {
@@ -270,6 +301,7 @@ namespace ME.BECS.Editor.CsvImporter {
             public string name;
             public string path;
             public string fullPath;
+            public string groupPath;
             public int baseConfig;
             public scg::List<Component> components;
             public scg::List<Aspect> aspects;
@@ -286,15 +318,23 @@ namespace ME.BECS.Editor.CsvImporter {
                 this.imported = false;
             }
 
-            public ConfigFile(string targetDir, string data) {
+            public ConfigFile(string targetDir, string data, string groupBy) {
                 this.name = data;
                 this.path = System.IO.Path.Combine(targetDir, data);
                 this.fullPath = $"{this.path}.asset";
-                EditorUtils.CreateDirectoriesByPath(this.fullPath);
                 this.baseConfig = -1;
                 this.components = new scg::List<Component>();
                 this.aspects = new scg::List<Aspect>();
                 this.imported = true;
+                if (string.IsNullOrEmpty(groupBy) == false && this.fullPath.Contains(groupBy) == true) {
+                    var splitted = this.fullPath.Split(new string[] { groupBy }, System.StringSplitOptions.RemoveEmptyEntries);
+                    this.groupPath = $"{splitted[0].TrimEnd('/')}/{groupBy}.asset";
+                    this.name = splitted[1].TrimStart('/').Split('/').Last().Replace(".asset", string.Empty);
+                    EditorUtils.CreateDirectoriesByPath(this.groupPath);
+                } else {
+                    EditorUtils.CreateDirectoriesByPath(this.fullPath);
+                    this.groupPath = null;
+                }
             }
 
         }
@@ -302,6 +342,7 @@ namespace ME.BECS.Editor.CsvImporter {
         public static scg::List<ConfigFile> ParseConfigs(scg::List<string[]> csv, string targetDir, out string version, out string name) {
             version = csv[0][0];
             name = csv[0][1];
+            var groupBy = csv[1][1];
             var configFiles = new scg::List<ConfigFile>();
             var offset = 2;
             var line = csv[0];
@@ -309,7 +350,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 // Read config names
                 for (int j = offset; j < line.Length; ++j) {
                     var configName = line[j];
-                    configFiles.Add(new ConfigFile(targetDir, configName));
+                    configFiles.Add(new ConfigFile(targetDir, configName, groupBy));
                 }
             }
             return configFiles;
@@ -482,7 +523,7 @@ namespace ME.BECS.Editor.CsvImporter {
                                 }
                                 component.serializedObject.ApplyModifiedProperties();
                             } else {
-                                Debug.LogWarning($"Serializer was not found for type {comp.type.FullName}");
+                                Debug.LogWarning($"Serializer was not found for component {comp.type.FullName} type {type.FullName}");
                             }
                         }
                     }

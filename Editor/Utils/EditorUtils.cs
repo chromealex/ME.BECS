@@ -1073,8 +1073,17 @@ namespace ME.BECS.Editor {
             var items = ObjectReferenceRegistry.data.items.Concat(ObjectReferenceRegistry.additionalRuntimeObjects).Where(x => x.Is<T>(ignoreErrors: true)).OrderByDescending(x => UnityEditor.AssetDatabase.GetAssetPath(new ObjectItem(x).Load<T>())).ToArray();
             foreach (var item in items) {
                 var obj = new ObjectItem(item).Load<T>();
-                var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(obj));
-                if (path.EndsWith(pathPart) == true) return obj;
+                if (UnityEditor.AssetDatabase.IsMainAsset(obj) == true) {
+                    var path = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(obj));
+                    if (path.EndsWith(pathPart) == true) return obj;
+                } else if (UnityEditor.AssetDatabase.IsSubAsset(obj) == true) {
+                    var mainAssetPath = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(obj));
+                    var subAssetName = pathPart.Split('/').Last();
+                    if (pathPart.Length > subAssetName.Length && obj.name == subAssetName) {
+                        pathPart = pathPart.Substring(0, pathPart.Length - subAssetName.Length).Trim('/');
+                        if (mainAssetPath.EndsWith(pathPart) == true) return obj;
+                    }
+                }
             }
 
             var filter = $"t:{typeof(T).Name}";

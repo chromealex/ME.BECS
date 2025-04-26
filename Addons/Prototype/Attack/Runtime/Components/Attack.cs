@@ -28,13 +28,19 @@ namespace ME.BECS.Attack {
         public tfloat attackTime;
         public tfloat rateTime;
         public uint rateCount;
-        public Config bulletConfig;
-        public ME.BECS.Views.View muzzleView;
 
         public void OnInitialize(in Ent ent) {
             ent.Set(new AttackRuntimeReloadComponent());
             ent.Set(new AttackRuntimeFireComponent());
         }
+
+    }
+
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct AttackVisualComponent : IConfigComponent {
+
+        public Config bulletConfig;
+        public ME.BECS.Views.View muzzleView;
 
     }
 
