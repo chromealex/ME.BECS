@@ -245,6 +245,10 @@ namespace ME.BECS {
                         if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == false) {
                             continue;
                         }
+                    } else if (options == Config.JoinOptions.RightJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == true) {
+                            continue;
+                        }
                     }
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);

@@ -8,8 +8,21 @@ namespace ME.BECS {
     public struct Config : System.IEquatable<Config> {
 
         public enum JoinOptions {
+            /// <summary>
+            /// Add all components from config onto entity.
+            /// If component is existed - data will be replaced.
+            /// </summary>
             FullJoin,
+            /// <summary>
+            /// Only those components that already exist on the entity are replaced.
+            /// If the component doesn't exist on the entity, it will be skipped.
+            /// </summary>
             LeftJoin,
+            /// <summary>
+            /// Only those components that do not exist on the entity are added.
+            /// If the component exists on the entity, it will be skipped.
+            /// </summary>
+            RightJoin,
         }
         
         public uint sourceId;

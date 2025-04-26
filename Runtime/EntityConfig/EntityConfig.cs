@@ -117,7 +117,7 @@ namespace ME.BECS {
             return config;
         }
 
-        public void Apply(in Ent ent) {
+        public void Apply(in Ent ent, Config.JoinOptions options = Config.JoinOptions.FullJoin) {
             
             E.IS_ALIVE(in ent);
             E.IS_CREATED(in ent.World);
@@ -127,7 +127,7 @@ namespace ME.BECS {
                 id = id,
             });
             
-            unsafeConfig.Apply(in ent);
+            unsafeConfig.Apply(in ent, options);
             
         }
 
