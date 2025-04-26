@@ -10,7 +10,7 @@ namespace ME.BECS {
         public enum JoinOptions {
             /// <summary>
             /// Add all components from config onto entity.
-            /// If component is existed - data will be replaced.
+            /// If the component exists on the entity, it will be replaced.
             /// </summary>
             FullJoin,
             /// <summary>
