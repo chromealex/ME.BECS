@@ -151,15 +151,37 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, tfloat? minRange = null,
-                                                                                            tfloat? maxRange = null, JobInfo jobInfo = default) {
-            return CreateSelectionGroupByTypeInPoint(in context, treeIndex, position, minRange != null ? minRange.Value : 0f, maxRange != null ? maxRange.Value : 5f, jobInfo);
+        public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInPoint(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat? minRange = null,
+                                                                                                tfloat? maxRange = null, JobInfo jobInfo = default) {
+            return CreateSelectionGroupByTypeInPoint(in trees, treeIndex, position, minRange != null ? minRange.Value : 0f, maxRange != null ? maxRange.Value : 5f, jobInfo);
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPoint(in SystemContext context, int treeIndex, float3 position, tfloat minRange, tfloat maxRange, JobInfo jobInfo = default) {
+        public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInPoint(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat minRange, tfloat maxRange, JobInfo jobInfo = default) {
 
-            var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
+            var tree = trees.GetTree(treeIndex);
+            var group = UnitUtils.CreateSelectionGroup(1u, jobInfo);
+
+            var visitor = new OctreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
+            tree.ptr->Nearest(position, minRange, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+            if (visitor.found == true) {
+                if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
+            }
+            
+            return group;
+
+        }
+
+        [INLINE(256)]
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPointTemp(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat? minRange = null,
+                                                                                                tfloat? maxRange = null, JobInfo jobInfo = default) {
+            return CreateSelectionGroupByTypeInPointTemp(in trees, treeIndex, position, minRange != null ? minRange.Value : 0f, maxRange != null ? maxRange.Value : 5f, jobInfo);
+        }
+
+        [INLINE(256)]
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInPointTemp(in QuadTreeInsertSystem trees, int treeIndex, float3 position, tfloat minRange, tfloat maxRange, JobInfo jobInfo = default) {
+
+            var tree = trees.GetTree(treeIndex);
             var group = UnitUtils.CreateSelectionTempGroup(1u, jobInfo);
 
             var visitor = new OctreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
@@ -167,32 +189,44 @@ namespace ME.BECS.Units {
             if (visitor.found == true) {
                 if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
             }
-            /*
-            var results = new Unity.Collections.NativeArray<Ent>(1, Unity.Collections.Allocator.Temp);
-            tree->Range(new NativeTrees.AABB(position - maxRange, position + maxRange), ref visitor);
-            tree->QueryKNearest(position, maxRange, new Unity.Collections.NativeSlice<Ent>(results));
-            foreach (var unit in results) {
-                if (unit.IsAlive() == false) continue;
-                group.Add(unit.GetAspect<UnitAspect>());
-            }*/
-            //var ent = tree->QueryNearest(position, maxRange);
-            //if (ent.IsAlive() == true) group.Add(ent.GetAspect<UnitAspect>());
             
             return group;
 
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
+        public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
             var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
                 results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
                 rangeSqr = range * range,
             };
             tree.ptr->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
-            //tree->QueryRange(position, range, ref results);
+            
+            var group = UnitUtils.CreateSelectionGroup((uint)visitor.results.Count, jobInfo);
+            foreach (var unit in visitor.results) {
+
+                if (unit.IsAlive() == false) continue;
+                if (unit.GetAspect<UnitAspect>().agentProperties.typeId == unitTypeId) {
+                    group.Add(unit.GetAspect<UnitAspect>());
+                }
+
+            }
+
+            return group;
+
+        }
+
+        [INLINE(256)]
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRangeTemp(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
+
+            var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
+            var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
+                results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
+                rangeSqr = range * range,
+            };
+            tree.ptr->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
             
             var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count, jobInfo);
             foreach (var unit in visitor.results) {
@@ -267,7 +301,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByRect(in SystemContext context, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4, in JobInfo jobInfo = default, bool selectMoveableOnly = false) {
+        public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByRectTemp(in QuadTreeInsertSystem trees, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4, in JobInfo jobInfo = default, bool selectMoveableOnly = false) {
 
             /*
             UnityEngine.Debug.DrawLine(p1, p2, UnityEngine.Color.cyan, 3f);
@@ -279,7 +313,7 @@ namespace ME.BECS.Units {
             var center = (p1 + p3) * 0.5f;
             var range = math.length(p3 - center);
             
-            var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
+            var tree = trees.GetTree(treeIndex);
             var results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp);
             if (selectMoveableOnly == true) {
                 var visitor = new RangeMoveableAABBUniqueVisitor() {
@@ -296,9 +330,56 @@ namespace ME.BECS.Units {
                 tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
                 results = visitor.results;
             }
-            //var results = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(10, Unity.Collections.Allocator.Temp);
-            //tree->QueryRange(center, range, ref results);
+            
+            var group = UnitUtils.CreateSelectionTempGroup((uint)results.Count, in jobInfo);
+            foreach (var unit in results) {
 
+                if (unit.IsAlive() == false) continue;
+                var unitAspect = unit.GetAspect<UnitAspect>();
+                var tr = unit.GetAspect<TransformAspect>();
+                if (Math.IsInPolygon(tr.position, p1, p2, p3, p4) == true) {
+                    
+                    group.Add(unitAspect);
+                    
+                }
+
+            }
+
+            return group;
+
+        }
+
+        [INLINE(256)]
+        public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByRect(in QuadTreeInsertSystem trees, int treeIndex, float3 p1, float3 p2, float3 p3, float3 p4, in JobInfo jobInfo = default, bool selectMoveableOnly = false) {
+
+            /*
+            UnityEngine.Debug.DrawLine(p1, p2, UnityEngine.Color.cyan, 3f);
+            UnityEngine.Debug.DrawLine(p2, p3, UnityEngine.Color.cyan, 3f);
+            UnityEngine.Debug.DrawLine(p3, p4, UnityEngine.Color.cyan, 3f);
+            UnityEngine.Debug.DrawLine(p4, p1, UnityEngine.Color.cyan, 3f);
+            */
+            
+            var center = (p1 + p3) * 0.5f;
+            var range = math.length(p3 - center);
+            
+            var tree = trees.GetTree(treeIndex);
+            var results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp);
+            if (selectMoveableOnly == true) {
+                var visitor = new RangeMoveableAABBUniqueVisitor() {
+                    results = results,
+                    rangeSqr = range * range,
+                };
+                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                results = visitor.results;
+            } else {
+                var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
+                    results = results,
+                    rangeSqr = range * range,
+                };
+                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                results = visitor.results;
+            }
+            
             var group = UnitUtils.CreateSelectionGroup((uint)results.Count, in jobInfo);
             foreach (var unit in results) {
 
