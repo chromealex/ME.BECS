@@ -318,7 +318,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 this.imported = false;
             }
 
-            public ConfigFile(string targetDir, string data, string groupBy) {
+            public ConfigFile(string targetDir, string data, string groupsBy) {
                 this.name = data;
                 this.path = System.IO.Path.Combine(targetDir, data);
                 this.fullPath = $"{this.path}.asset";
@@ -326,12 +326,20 @@ namespace ME.BECS.Editor.CsvImporter {
                 this.components = new scg::List<Component>();
                 this.aspects = new scg::List<Aspect>();
                 this.imported = true;
-                if (string.IsNullOrEmpty(groupBy) == false && this.fullPath.Contains(groupBy) == true) {
-                    var splitted = this.fullPath.Split(new string[] { groupBy }, System.StringSplitOptions.RemoveEmptyEntries);
-                    this.groupPath = $"{splitted[0].TrimEnd('/')}/{groupBy}.asset";
-                    this.name = splitted[1].TrimStart('/').Split('/').Last().Replace(".asset", string.Empty);
-                    EditorUtils.CreateDirectoriesByPath(this.groupPath);
-                } else {
+                var hasGroup = false;
+                var groups = groupsBy.Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+                foreach (var groupByStr in groups) {
+                    var groupBy = groupByStr.Trim();
+                    if (string.IsNullOrEmpty(groupBy) == false && this.fullPath.Contains(groupBy) == true) {
+                        var splitted = this.fullPath.Split(new string[] { groupBy }, System.StringSplitOptions.RemoveEmptyEntries);
+                        this.groupPath = $"{splitted[0].TrimEnd('/')}/{groupBy}.asset";
+                        this.name = splitted[1].TrimStart('/').Split('/').Last().Replace(".asset", string.Empty);
+                        EditorUtils.CreateDirectoriesByPath(this.groupPath);
+                        hasGroup = true;
+                        break;
+                    }
+                }
+                if (hasGroup == false) {
                     EditorUtils.CreateDirectoriesByPath(this.fullPath);
                     this.groupPath = null;
                 }
