@@ -65,7 +65,7 @@ namespace ME.BECS {
             },
         };
 
-        [UnityEngine.Tooltip("World's name (Useful in editor only).")]
+        [UnityEngine.Tooltip("World's name.")]
         public Unity.Collections.FixedString64Bytes name;
         public StateProperties stateProperties;
         public AllocatorProperties allocatorProperties;
