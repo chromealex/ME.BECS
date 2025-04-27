@@ -8,38 +8,49 @@ using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 #endif
 
-using ME.BECS.Views;
-using UnityEngine;
-
 namespace ME.BECS {
+    
+    using ME.BECS.Transforms;
+    using ME.BECS.Views;
+    using UnityEngine;
 
     public class SceneEntity : MonoBehaviour {
 
-        public BaseWorldInitializer worldInitializer;
+        public string worldName;
         public EntityView entityView;
         public EntityConfig config;
+        [ViewsProvider]
         public uint providerId;
 
         public void Start() {
 
-            if (this.worldInitializer != null && this.entityView != null) {
+            if (string.IsNullOrEmpty(this.worldName) == false && this.entityView != null) {
 
-                var world = this.worldInitializer.world;
+                var initializer = WorldInitializers.GetByWorldName(this.worldName);
+                if (initializer == null) {
+                    Debug.LogError($"WorldInitializer was not found by the world name {this.worldName}");
+                    return;
+                }
+
+                var world = initializer.world;
                 if (world.isCreated == true) {
 
                     var ent = Ent.New(in world);
                     if (this.config != null) this.config.Apply(in ent);
-                    ent.Set<ME.BECS.Transforms.TransformAspect>();
-                    var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                    var tr = ent.Set<TransformAspect>();
                     tr.localPosition = (float3)this.transform.localPosition;
                     tr.localRotation = (quaternion)this.transform.localRotation;
                     tr.localScale = (float3)this.transform.localScale;
-                    var viewsModule = this.worldInitializer.modules.Get<ViewsModule>();
+                    var viewsModule = initializer.modules.Get<ViewsModule>();
                     var viewSource = viewsModule.RegisterViewSource(this.entityView, this.providerId, sceneSource: true);
                     ent.InstantiateView(viewSource);
                     this.OnCreate(in ent);
                     Object.DestroyImmediate(this);
 
+                } else {
+                    
+                    Debug.LogError($"WorldInitializer {this.worldName} is not created yet");
+                    
                 }
 
             }

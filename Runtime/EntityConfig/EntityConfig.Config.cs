@@ -29,6 +29,8 @@ namespace ME.BECS {
 
         public bool IsValid => this.sourceId > 0u;
 
+        public readonly UnsafeEntityConfig UnsafeConfig => this.AsUnsafeConfig();
+
         [INLINE(256)]
         public readonly bool Apply(in Ent ent, JoinOptions options = JoinOptions.FullJoin) {
             var entityConfig = EntityConfigsRegistry.GetUnsafeEntityConfigBySourceId(this.sourceId);

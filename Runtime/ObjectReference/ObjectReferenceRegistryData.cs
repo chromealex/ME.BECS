@@ -1,15 +1,13 @@
-using System.Linq;
-
 namespace ME.BECS {
 
-    public struct ObjectItem {
+    public readonly struct ObjectItem {
 
-        public UnityEngine.Object source;
-        public UnityEngine.AddressableAssets.AssetReference sourceReference;
-        public System.Type sourceType;
-        public uint sourceId;
-        public bool isGameObject;
-        public IObjectItemData data;
+        public readonly UnityEngine.Object source;
+        public readonly UnityEngine.AddressableAssets.AssetReference sourceReference;
+        public readonly System.Type sourceType;
+        public readonly uint sourceId;
+        public readonly bool isGameObject;
+        public readonly IObjectItemData data;
         
         public ObjectItem(ItemInfo data) {
             this.source = data.source;

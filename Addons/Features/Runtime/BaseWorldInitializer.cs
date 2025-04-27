@@ -3,7 +3,32 @@ using UnityEngine;
 namespace ME.BECS {
     
     using Unity.Jobs;
+    using Unity.Collections;
+    using scg = System.Collections.Generic;
 
+    public static class WorldInitializers {
+
+        private static scg::List<BaseWorldInitializer> list = new scg::List<BaseWorldInitializer>();
+
+        public static BaseWorldInitializer GetByWorldName(FixedString64Bytes worldName) {
+            foreach (var item in list) {
+                if (item.properties.name == worldName) {
+                    return item;
+                }
+            }
+            return null;
+        }
+        
+        public static void Add(BaseWorldInitializer initializer) {
+            list.Add(initializer);
+        }
+
+        public static void Remove(BaseWorldInitializer initializer) {
+            list.Remove(initializer);
+        }
+
+    }
+    
     public abstract class BaseWorldInitializer : MonoBehaviour {
 
         [System.Serializable]
@@ -56,15 +81,16 @@ namespace ME.BECS {
             return null;
 
         }
+
+        protected virtual World CreateWorld() => World.Create(this.properties);
         
         protected virtual void Awake() {
 
             instance = this;
+            WorldInitializers.Add(this);
 
             this.modules.Load();
-
-            this.world = World.Create(this.properties);
-            
+            this.world = this.CreateWorld();
             this.DoWorldAwake();
 
         }
@@ -184,6 +210,8 @@ namespace ME.BECS {
             if (this.world.isCreated == true) {
                 this.world.Dispose();
             }
+            
+            WorldInitializers.Remove(this);
             
         }
 
