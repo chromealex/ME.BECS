@@ -715,10 +715,12 @@ namespace ME.BECS {
             if (this.baseConfig.ptr != null) {
                 this.baseConfig.ptr->Apply_INTERNAL(in ent, options);
             }
-            
-            ent.Set(new EntityConfigComponent() {
-                id = this.id,
-            });
+
+            if (options == Config.JoinOptions.FullJoin) {
+                ent.Set(new EntityConfigComponent() {
+                    id = this.id,
+                });
+            }
 
             this.aspects.Apply(in ent);
             this.data.Apply(in this, in ent, options);
