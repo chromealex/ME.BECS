@@ -30,6 +30,7 @@ namespace ME.BECS.Transforms {
         internal AspectDataPtr<LocalMatrixComponent> localMatrixData;
         [QueryWith]
         internal AspectDataPtr<WorldMatrixComponent> worldMatrixData;
+        internal AspectDataPtr<BoundsSizeComponent> boundsSizeData;
 
         public readonly bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
 
@@ -77,6 +78,9 @@ namespace ME.BECS.Transforms {
         public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float4x4 readLocalMatrix => ref this.localMatrixData.Read(this.ent.id, this.ent.gen).value;
 
+        public readonly ref float3 boundsSize => ref this.boundsSizeData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref readonly float3 readBoundsSize => ref this.boundsSizeData.Read(this.ent.id, this.ent.gen).value;
+        
         public readonly ref byte isWorldMatrixTickCalculated => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated;
         public readonly ref readonly byte readIsWorldMatrixTickCalculated => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
         
@@ -200,7 +204,7 @@ namespace ME.BECS.Transforms {
 
         [INLINE(256)]
         public readonly Bounds GetBounds() {
-            return new Bounds(this.GetWorldMatrixPosition(), new float3(1f, 1f, 1f));
+            return new Bounds(this.GetWorldMatrixPosition(), this.readBoundsSize);
         }
 
         [INLINE(256)]

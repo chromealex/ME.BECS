@@ -18,6 +18,16 @@ namespace ME.BECS.Transforms {
 
     }
 
+    [EditorComment("Object bounds size")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct BoundsSizeComponent : IConfigComponent {
+
+        public static BoundsSizeComponent Default => new BoundsSizeComponent() { value = new float3(1f, 1f, 1f) };
+        
+        public float3 value;
+
+    }
+
     [EditorComment("Current calculated world matrix")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     //[LAYOUT(LayoutKind.Explicit, Size = 64)]
