@@ -432,14 +432,10 @@ namespace ME.BECS.Views {
                 var entId = this.viewsModuleData.ptr->renderingOnSceneApplyState.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
                 var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
                 var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum) {
+                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
                     var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
                     var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
-                    if (camera.readComponent.orthographic == true) {
-                        this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling[in this.state.ptr->allocator, entId] = false;
-                        return;
-                    }
                     var isVisible = CameraUtils.IsVisible(in camera, in bounds);
                     this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling[in this.state.ptr->allocator, entId] = isVisible == false;
                 }
@@ -459,7 +455,7 @@ namespace ME.BECS.Views {
                 var entId = this.viewsModuleData.ptr->renderingOnSceneUpdate.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
                 var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
                 var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum) {
+                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumOnUpdateOnly) {
                     var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
                     var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();

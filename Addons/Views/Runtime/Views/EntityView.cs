@@ -38,6 +38,8 @@ namespace ME.BECS.Views {
 
         Frustum = 0,
         Never = 1,
+        FrustumOnUpdateOnly = 2,
+        FrustumApplyStateOnly = 3,
 
     }
     
