@@ -96,9 +96,14 @@ namespace ME.BECS.Attack {
             return center;
             
         }
-        
+
         [INLINE(256)]
-        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem = default) {
+        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
+            return GetPositionToAttack(in unit, in target, nodeSize, out position, default);
+        }
+
+        [INLINE(256)]
+        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
 
             position = default;
             var owner = unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>();
