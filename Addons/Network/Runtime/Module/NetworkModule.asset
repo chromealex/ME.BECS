@@ -16,6 +16,8 @@ MonoBehaviour:
     tickTime: 33
     maxFrameTime: 10
     inputLag: 1
+    transport:
+      rid: 4174007374806777858
     eventsStorageProperties:
       capacity: 1000
       capacityPerTick: 30
@@ -26,10 +28,12 @@ MonoBehaviour:
       copyPerTick: 10
     methodsStorageProperties:
       capacity: 10
-    transport:
-      rid: 8411176145102831617
   references:
     version: 2
     RefIds:
-    - rid: 8411176145102831617
-      type: {class: LocalTransport, ns: ME.MiniECS, asm: ME.MiniECS.NetworkMarkers}
+    - rid: 4174007374806777858
+      type: {class: LocalTransport, ns: ME.BECS.Network, asm: ME.BECS.Network}
+      data:
+        useAbsoluteTime: 1
+        simulationMode: 0
+        replayData: {fileID: 0}
