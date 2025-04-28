@@ -82,7 +82,7 @@ namespace ME.BECS.Attack {
                 dir *= new float3(quadSizeComponent.size.x, 0f, quadSizeComponent.size.y);
                 var rot = targetTr.GetWorldMatrixRotation();
                 dir = math.mul(rot, dir);
-                if (Math.IntersectsRect(new float2(0f, 0f), new float2(dir.x, dir.z), new Rect(-((float2)quadSizeComponent.size) * 0.5f, quadSizeComponent.size), out var point) == true) {
+                if (Math.IntersectsRect(new float2(0f, 0f), new float2(dir.x, dir.z), new Rect(-(new float2(quadSizeComponent.size)) * 0.5f, new float2(quadSizeComponent.size)), out var point) == true) {
                     center += math.mul(math.inverse(rot), new float3(point.x, 0f, point.y));
                 }
             } else {
