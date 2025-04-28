@@ -308,7 +308,10 @@ namespace ME.BECS.Editor.Systems {
                             }
                             if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
                                 while (parentNode != null) {
-                                    if (parentNode.GetSyncPoint(methodEnum).syncPoint == false) return;
+                                    if (parentNode.GetSyncPoint(methodEnum).syncPoint == false) {
+                                        methodContent.Add($"{customOutputDep} = {customDep};");
+                                        return;
+                                    }
                                     customInputDeps.TryGetValue(parentNode, out var parentNodeInner);
                                     parentNode = parentNodeInner;
                                 }
