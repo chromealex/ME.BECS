@@ -458,8 +458,13 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// Build the contextual menu shown when right clicking inside the graph view
 		/// </summary>
 		/// <param name="evt"></param>
-		public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
-		{
+		public override void BuildContextualMenu(ContextualMenuPopulateEvent evt) {
+			if (evt.target is BaseNodeView nodeView) {
+				this.selection.AddRange(nodeView.owner.selection);
+			}
+			if (evt.target is GraphView graphView) {
+				this.selection.AddRange(graphView.selection);
+			}
 			base.BuildContextualMenu(evt);
 			BuildDefaultContextMenu(evt);
 		}
