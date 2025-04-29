@@ -381,7 +381,7 @@ namespace ME.BECS.Views {
                 this.viewsModuleData.ptr->dirty.Clear();
 
                 // Set logic mode
-                this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = this.mode;
+                //this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = this.mode;
 
             }
 
@@ -397,7 +397,7 @@ namespace ME.BECS.Views {
             public void Execute() {
 
                 // Set visual mode
-                this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = WorldMode.Visual;
+                //this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = WorldMode.Visual;
 
                 var entitiesCapacity = this.connectedWorld.state.ptr->entities.Capacity;
                 this.viewsModuleData.ptr->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
