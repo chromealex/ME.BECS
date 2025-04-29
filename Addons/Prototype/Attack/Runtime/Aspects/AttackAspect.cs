@@ -110,8 +110,8 @@ namespace ME.BECS.Attack {
             this.targetsDataPtr.Get(this.ent.id, this.ent.gen).targets[index] = target;
         }
         
-        public readonly tfloat ReloadProgress => this.componentRuntimeReload.reloadTimer / this.component.reloadTime;
-        public readonly tfloat FireProgress => this.componentRuntimeFire.fireTimer / this.component.fireTime;
+        public readonly tfloat ReloadProgress => this.readComponentRuntimeReload.reloadTimer / this.readComponent.reloadTime;
+        public readonly tfloat FireProgress => this.readComponentRuntimeFire.fireTimer / this.readComponent.fireTime;
 
         public readonly bool IsReloaded {
             [INLINE(256)]
