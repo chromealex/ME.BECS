@@ -55,6 +55,10 @@ namespace ME.BECS.FogOfWar {
                         ent.SetTag<IsViewRequested>(true);
                     }
                 }
+                
+                if (shadowCopy.original.IsAlive() == false && ent.IsAlive() == true) {
+                    ent.DestroyHierarchy();
+                }
 
             }
 
