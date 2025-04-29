@@ -1080,8 +1080,8 @@ namespace ME.BECS.Editor {
                     var mainAssetPath = GetFullPathWithoutExtension(UnityEditor.AssetDatabase.GetAssetPath(obj));
                     var subAssetName = pathPart.Split('/').Last();
                     if (pathPart.Length > subAssetName.Length && obj.name == subAssetName) {
-                        pathPart = pathPart.Substring(0, pathPart.Length - subAssetName.Length).Trim('/');
-                        if (mainAssetPath.EndsWith(pathPart) == true) return obj;
+                        var subPathPart = pathPart.Substring(0, pathPart.Length - subAssetName.Length).Trim('/');
+                        if (mainAssetPath.EndsWith(subPathPart) == true) return obj;
                     }
                 }
             }
