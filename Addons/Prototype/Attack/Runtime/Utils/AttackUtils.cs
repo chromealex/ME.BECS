@@ -219,7 +219,7 @@ namespace ME.BECS.Attack {
                 tr.position = position;
                 tr.rotation = rotation;
                 var bullet = ent.GetOrCreateAspect<BulletAspect>();
-                bullet.component.targetEnt = target;
+                if (bullet.readConfig.autoTarget == 1) bullet.component.targetEnt = target;
                 bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
                 bullet.component.sourceUnit = sourceUnit;
 

@@ -78,10 +78,13 @@ namespace ME.BECS.Editor {
                     isDirty = true;
                 }
             }
+
+            if (isDirty == true) {
+                items = items.Where(x => x.source != null || x.sourceReference.editorAsset != null).ToArray();
+                ObjectReferenceRegistry.data.items = items;
+                EditorUtility.SetDirty(ObjectReferenceRegistry.data);
+            }
             
-            items = items.Where(x => x.source != null || x.sourceReference.editorAsset != null).ToArray();
-            ObjectReferenceRegistry.data.items = items;
-            if (isDirty == true) EditorUtility.SetDirty(ObjectReferenceRegistry.data);
         }
 
         private static UnityEngine.AddressableAssets.AssetReference CreateAssetForType(string guid, System.Type type) {
