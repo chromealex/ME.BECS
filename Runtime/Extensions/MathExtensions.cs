@@ -96,17 +96,17 @@ namespace ME.BECS {
         public static bool Intersects2D(float2 l1from, float2 l1to, float2 l2from, float2 l2to, out float2 intersect) {
             
             var firstLineSlopeX = l1to.x - l1from.x;
-            var firstLineSlopeY = l1to.y - l1to.y;
+            var firstLineSlopeY = l1to.y - l1from.y;
 
             var secondLineSlopeX = l2to.x - l2from.x;
             var secondLineSlopeY = l2to.y - l2from.y;
 
-            var s = (-firstLineSlopeY * (l1from.x - l2from.x) + firstLineSlopeX * (l1to.y - l2from.y)) / (-secondLineSlopeX * firstLineSlopeY + firstLineSlopeX * secondLineSlopeY);
+            var s = (-firstLineSlopeY * (l1from.x - l2from.x) + firstLineSlopeX * (l1from.y - l2from.y)) / (-secondLineSlopeX * firstLineSlopeY + firstLineSlopeX * secondLineSlopeY);
             var t = (secondLineSlopeX * (l1to.y - l2from.y) - secondLineSlopeY * (l1from.x - l2from.x)) / (-secondLineSlopeX * firstLineSlopeY + firstLineSlopeX * secondLineSlopeY);
 
             if (s >= 0f && s <= 1f && t >= 0f && t <= 1f) {
                 var intersectionPointX = l1from.x + (t * firstLineSlopeX);
-                var intersectionPointY = l1to.y + (t * firstLineSlopeY);
+                var intersectionPointY = l1from.y + (t * firstLineSlopeY);
 
                 // Collision detected
                 intersect = new float2(intersectionPointX, intersectionPointY);
