@@ -39,29 +39,36 @@ namespace ME.BECS.FogOfWar {
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
             public UnityEngine.Color32* currentBuffer;
-            
+            public byte useFade;
+
             public void Execute(int index) {
 
                 var w = this.textureWidth;
-                //var h = this.textureHeight;
                 {
                     var fowX = (uint)(index % w);
                     var fowY = (uint)(index / w);
-                    //(var fowX, var fowY) = FogOfWarUtils.GetPixelPosition(in this.props, x, y, w, h);
-                    //var height = FogOfWarUtils.GetHeight(in this.props, fowX, fowY) / this.props.maxHeight;
                     ref var color = ref this.currentBuffer[index];
-                    if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {
-                        color.r = (byte)(color.r + (255 - color.r) * this.dt * this.fadeInSpeed);
+                    if (this.useFade == 1) {
+                        if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {
+                            color.r = (byte)(color.r + (255 - color.r) * this.dt * this.fadeInSpeed);
+                        } else {
+                            color.r = (byte)(color.r + (0 - color.r) * this.dt * this.fadeOutSpeed);
+                        }
+
+                        if (FogOfWarUtils.IsExplored(in this.props, in this.fow, fowX, fowY) == true) {
+                            color.g = (byte)(color.g + (255 - color.g) * this.dt * this.fadeInSpeed);
+                        }
                     } else {
-                        color.r = (byte)(color.r + (0 - color.r) * this.dt * this.fadeOutSpeed);
+                        if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {
+                            color.r = 255;
+                        } else {
+                            color.r = 0;
+                        }
+
+                        if (FogOfWarUtils.IsExplored(in this.props, in this.fow, fowX, fowY) == true) {
+                            color.g = 255;
+                        }
                     }
-
-                    if (FogOfWarUtils.IsExplored(in this.props, in this.fow, fowX, fowY) == true) {
-                        color.g = (byte)(color.g + (255 - color.g) * this.dt * this.fadeInSpeed);
-                    }
-
-                    //color.b = (byte)math.lerp(0, 255, height);
-
                 }
                 
             }
@@ -123,12 +130,14 @@ namespace ME.BECS.FogOfWar {
             var bufferPtr = (UnityEngine.Color32*)buffer.GetUnsafePtr();
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
             var activePlayer = playersSystem.GetActivePlayer();
+            var useFade = true;
             if (this.lastActivePlayer != activePlayer.ent || logicWorld.CurrentTick < this.lastTick) {
                 // clean up textures because we need to rebuild them for current player
                 context.SetDependency(new ClearTextureJob() {
                     currentBuffer = bufferPtr,
                     length = (uint)buffer.Length,
                 }.Schedule(context.dependsOn));
+                useFade = false;
             }
             this.lastActivePlayer = activePlayer.ent;
             var fow = activePlayer.readTeam.Read<FogOfWarComponent>();
@@ -144,6 +153,7 @@ namespace ME.BECS.FogOfWar {
                 props = props,
                 fow = fow,
                 textureWidth = props.size.x,
+                useFade = (byte)(useFade == true ? 1 : 0),
                 //textureHeight = (int)system.mapSize.y,
                 currentBuffer = bufferPtr,
             }.Schedule(buffer.Length / 4, JobUtils.GetScheduleBatchCount(buffer.Length), context.dependsOn);
