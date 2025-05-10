@@ -35,7 +35,6 @@ namespace ME.BECS.FogOfWar {
             public FogOfWarStaticComponent props;
             public FogOfWarComponent fow;
             public uint textureWidth;
-            //public int textureHeight;
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
             public UnityEngine.Color32* currentBuffer;
@@ -131,7 +130,7 @@ namespace ME.BECS.FogOfWar {
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
             var activePlayer = playersSystem.GetActivePlayer();
             var useFade = true;
-            if (this.lastActivePlayer != activePlayer.ent || logicWorld.CurrentTick < this.lastTick) {
+            if (this.lastActivePlayer != activePlayer.ent) {
                 // clean up textures because we need to rebuild them for current player
                 context.SetDependency(new ClearTextureJob() {
                     currentBuffer = bufferPtr,
@@ -154,7 +153,6 @@ namespace ME.BECS.FogOfWar {
                 fow = fow,
                 textureWidth = props.size.x,
                 useFade = (byte)(useFade == true ? 1 : 0),
-                //textureHeight = (int)system.mapSize.y,
                 currentBuffer = bufferPtr,
             }.Schedule(buffer.Length / 4, JobUtils.GetScheduleBatchCount(buffer.Length), context.dependsOn);
             
