@@ -45,6 +45,9 @@ namespace ME.BECS.Attack {
                 if (attack.target.IsAlive() == true) {
                     var lookDir = attack.target.GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
                     transformAspect.rotation = math.slerp(transformAspect.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
+                } else if (attack.targets.Count > 0u) {
+                    var lookDir = attack.targets[0u].GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
+                    transformAspect.rotation = math.slerp(transformAspect.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
                 } else {
                     transformAspect.localRotation = math.slerp(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
                 }

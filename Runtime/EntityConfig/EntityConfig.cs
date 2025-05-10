@@ -122,11 +122,7 @@ namespace ME.BECS {
             E.IS_ALIVE(in ent);
             E.IS_CREATED(in ent.World);
 
-            var id = EntityConfigRegistry.Register(this, out var unsafeConfig);
-            ent.Set(new EntityConfigComponent() {
-                id = id,
-            });
-            
+            EntityConfigRegistry.Register(this, out var unsafeConfig);
             unsafeConfig.Apply(in ent, options);
             
         }

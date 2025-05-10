@@ -443,7 +443,11 @@ namespace ME.BECS.Editor.CsvImporter {
                                 configFile.components.Add(component);
                             }
 
-                            component.fields.Add(fieldName, value);
+                            if (component.fields.ContainsKey(fieldName) == false) {
+                                component.fields.Add(fieldName, value);
+                            } else {
+                                Debug.LogWarning($"Key duplicate {fieldName} in component {componentName}");
+                            }
                         }
                     }
                 }
