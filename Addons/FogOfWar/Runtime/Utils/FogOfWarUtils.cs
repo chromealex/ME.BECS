@@ -589,7 +589,12 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static void CleanUpTexture(Unity.Collections.NativeArray<byte> data) {
-            _memclear((safe_ptr)data.GetUnsafePtr(), TSize<byte>.sizeInt * data.Length);
+            CleanUpTexture((UnityEngine.Color32*)data.GetUnsafePtr(), (uint)data.Length);
+        }
+
+        [INLINE(256)]
+        public static void CleanUpTexture(UnityEngine.Color32* data, uint length) {
+            _memclear((safe_ptr)data, TSize<byte>.sizeInt * length);
         }
 
         [INLINE(256)]

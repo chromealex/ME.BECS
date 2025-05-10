@@ -37,7 +37,7 @@ namespace ME.BECS.Pathfinding {
                 if (path.path.graph != this.graph) return;
                 
                 for (uint i = 0; i < this.dirtyChunks.Length; ++i) {
-                    if (this.dirtyChunks[(int)i] != this.world.state.ptr->tick) continue;
+                    if (this.dirtyChunks[(int)i] != this.world.CurrentTick) continue;
                     ref var chunk = ref path.path.chunks[this.world.state, i];
                     ref var flowField = ref chunk.flowField;
                     if (flowField.IsCreated == true) {
@@ -64,7 +64,7 @@ namespace ME.BECS.Pathfinding {
                 
                 // update graphs and set dirty chunks
                 var world = ent.World;
-                var dirtyTick = world.state.ptr->tick;
+                var dirtyTick = world.CurrentTick;
                 for (uint g = 0u; g < this.graphSystem.graphs.Length; ++g) {
 
                     if ((obstacle.graphMask & (1 << (int)g)) == 0) continue;

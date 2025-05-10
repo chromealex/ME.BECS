@@ -1075,7 +1075,7 @@ namespace ME.BECS.Pathfinding {
         public static bool UpdateChunk(in World world, in Ent graph, uint chunkIndex, ref ChunkComponent chunkComponent, Unity.Collections.NativeArray<ulong> changedChunks, bool forced = false) {
 
             var root = graph.Read<RootGraphComponent>();
-            var changed = root.changedChunks[(int)chunkIndex] == world.state.ptr->tick;
+            var changed = root.changedChunks[(int)chunkIndex] == world.CurrentTick;
             if (forced == true || changed == true) {
                 // calculate portals
                 var marker = new Unity.Profiling.ProfilerMarker("Calculate Portals");
@@ -1086,7 +1086,7 @@ namespace ME.BECS.Pathfinding {
             }
             
             if (changedChunks.IsCreated == true && changed == true) {
-                changedChunks[(int)chunkIndex] = world.state.ptr->tick;
+                changedChunks[(int)chunkIndex] = world.CurrentTick;
             }
             
             return changed;
@@ -1157,14 +1157,14 @@ namespace ME.BECS.Pathfinding {
                     ref var remotePortal = ref root.chunks[world.state, sourceInfo.chunkIndex].portals.list[world.state, sourceInfo.portalIndex];
                     if (remotePortal.remoteNeighbours.IsCreated == true) remotePortal.remoteNeighbours.Clear();
                     if (changedChunks.IsCreated == true) {
-                        changedChunks[(int)remotePortal.portalInfo.chunkIndex] = world.state.ptr->tick;
-                        changedChunks[(int)sourceInfo.chunkIndex] = world.state.ptr->tick;
+                        changedChunks[(int)remotePortal.portalInfo.chunkIndex] = world.CurrentTick;
+                        changedChunks[(int)sourceInfo.chunkIndex] = world.CurrentTick;
                     }
                 }
                 portal.remoteNeighbours.Dispose();
                 portal.localNeighbours.Dispose();
             }
-            if (changedChunks.IsCreated == true) changedChunks[(int)chunkIndex] = world.state.ptr->tick;
+            if (changedChunks.IsCreated == true) changedChunks[(int)chunkIndex] = world.CurrentTick;
 
         }
 

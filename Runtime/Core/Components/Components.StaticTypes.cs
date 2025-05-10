@@ -59,6 +59,7 @@ namespace ME.BECS {
 
     public struct StaticTypesLoadedManaged {
 
+        public static readonly System.Collections.Generic.Dictionary<uint, System.Type> allLoadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedStaticTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
         public static readonly System.Collections.Generic.Dictionary<System.Type, uint> typeToId = new System.Collections.Generic.Dictionary<System.Type, uint>();
@@ -312,6 +313,7 @@ namespace ME.BECS {
             } else {
                 StaticTypesLoadedManaged.loadedTypes.Add(StaticTypes<T>.typeId, typeof(T));
             }
+            StaticTypesLoadedManaged.allLoadedTypes.Add(StaticTypes<T>.typeId, typeof(T));
             StaticTypesLoadedManaged.typeToId.Add(typeof(T), StaticTypes<T>.typeId);
         }
 

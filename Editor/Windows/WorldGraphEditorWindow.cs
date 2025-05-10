@@ -1358,7 +1358,7 @@ namespace ME.BECS.Editor {
                     var e = arch.components.GetEnumerator(world);
                     while (e.MoveNext() == true) {
                         var cId = e.Current;
-                        var type = StaticTypesLoadedManaged.loadedTypes[cId];
+                        var type = StaticTypesLoadedManaged.allLoadedTypes[cId];
                         var componentType = new Label(EditorUtils.GetComponentName(type));
                         componentType.AddToClassList("archetype-component-type");
                         componentsList.Add(componentType);

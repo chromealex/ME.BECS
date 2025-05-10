@@ -431,9 +431,9 @@ namespace ME.BECS {
         public static JournalItem Create(JournalItem source) {
             source.threadIndex = Unity.Jobs.LowLevel.Unsafe.JobsUtility.ThreadIndex;
             if (source.ent.IsAlive() == true) {
-                source.tick = source.ent.World.state.ptr->tick;
+                source.tick = source.ent.World.CurrentTick;
             } else {
-                source.tick = Context.world.state.ptr->tick;
+                source.tick = Context.world.CurrentTick;
             }
             return source;
         }

@@ -176,7 +176,7 @@ namespace ME.BECS.Network {
         }
 
         public ulong GetCurrentTick() {
-            return this.network.data.ptr->connectedWorld.state.ptr->tick;
+            return this.network.data.ptr->connectedWorld.CurrentTick;
         }
 
     }

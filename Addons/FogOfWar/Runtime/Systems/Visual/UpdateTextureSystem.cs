@@ -84,6 +84,22 @@ namespace ME.BECS.FogOfWar {
 
         }
 
+        [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
+        public struct ClearTextureJob : IJob {
+
+            [NativeDisableParallelForRestriction]
+            [NativeDisableUnsafePtrRestriction]
+            public UnityEngine.Color32* currentBuffer;
+            public uint length;
+            
+            public void Execute() {
+                
+                FogOfWarUtils.CleanUpTexture(this.currentBuffer, this.length);
+                
+            }
+
+        }
+
         public struct ApplyTextureJob : IJobMainThread {
 
             public CreateTextureSystem system;
@@ -103,17 +119,21 @@ namespace ME.BECS.FogOfWar {
             
             var createTexture = context.world.GetSystem<CreateTextureSystem>();
             
+            var buffer = createTexture.GetBuffer();
+            var bufferPtr = (UnityEngine.Color32*)buffer.GetUnsafePtr();
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
             var activePlayer = playersSystem.GetActivePlayer();
-            if (this.lastActivePlayer != activePlayer.ent || logicWorld.state.ptr->tick < this.lastTick) {
+            if (this.lastActivePlayer != activePlayer.ent || logicWorld.CurrentTick < this.lastTick) {
                 // clean up textures because we need to rebuild them for current player
-                FogOfWarUtils.CleanUpTexture(createTexture.GetBuffer());
+                context.SetDependency(new ClearTextureJob() {
+                    currentBuffer = bufferPtr,
+                    length = (uint)buffer.Length,
+                }.Schedule(context.dependsOn));
             }
             this.lastActivePlayer = activePlayer.ent;
             var fow = activePlayer.readTeam.Read<FogOfWarComponent>();
             
-            var buffer = createTexture.GetBuffer();
-            this.lastTick = logicWorld.state.ptr->tick;
+            this.lastTick = logicWorld.CurrentTick;
         
             var system = logicWorld.GetSystem<CreateSystem>();
             var props = system.heights.Read<FogOfWarStaticComponent>();
@@ -125,8 +145,8 @@ namespace ME.BECS.FogOfWar {
                 fow = fow,
                 textureWidth = props.size.x,
                 //textureHeight = (int)system.mapSize.y,
-                currentBuffer = (UnityEngine.Color32*)buffer.GetUnsafePtr(),
-            }.Schedule(buffer.Length / 4, JobUtils.GetScheduleBatchCount(buffer.Length));
+                currentBuffer = bufferPtr,
+            }.Schedule(buffer.Length / 4, JobUtils.GetScheduleBatchCount(buffer.Length), context.dependsOn);
             
             handle = new ApplyTextureJob() {
                 system = createTexture,

@@ -105,7 +105,7 @@ namespace ME.BECS.Pathfinding {
             
             for (uint idx = 0u; idx < root.chunks.Length; ++idx) {
                 ref var chunk = ref this.chunks[this.world.state, idx];
-                if (this.changedChunks.IsCreated == true && this.changedChunks[(int)idx] != this.world.state.ptr->tick) continue;
+                if (this.changedChunks.IsCreated == true && this.changedChunks[(int)idx] != this.world.CurrentTick) continue;
                 Graph.BuildPortals(in this.graph, idx, ref chunk, in this.world);
             }
 
@@ -127,7 +127,7 @@ namespace ME.BECS.Pathfinding {
         public void Execute(int index) {
 
             var chunkIndex = (uint)index;
-            if (this.changedChunks.IsCreated == false || this.changedChunks[index] == this.world.state.ptr->tick) {
+            if (this.changedChunks.IsCreated == false || this.changedChunks[index] == this.world.CurrentTick) {
                 // calculate portals connections
                 var root = this.graph.Read<RootGraphComponent>();
                 var chunk = this.chunks[this.world.state, chunkIndex];

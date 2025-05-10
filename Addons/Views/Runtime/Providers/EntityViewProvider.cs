@@ -152,7 +152,7 @@ namespace ME.BECS.Views {
                     dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
                         renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
                         beginFrameState = data.ptr->beginFrameState.ptr->state,
-                        currentTick = data.ptr->connectedWorld.state.ptr->tick,
+                        currentTick = data.ptr->connectedWorld.CurrentTick,
                         tickTime = data.ptr->beginFrameState.ptr->tickTime,
                         currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);

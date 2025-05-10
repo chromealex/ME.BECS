@@ -25,7 +25,7 @@ namespace ME.BECS.Tests {
                 
                 context.dependsOn.Complete();
 
-                var tick = context.world.state.ptr->tick;
+                var tick = context.world.CurrentTick;
                 if (tick == 1UL) {
                     Assert.IsFalse(this.ent.Has<TestComponent>());
                     this.ent.SetOneShot(new TestComponent(), OneShotType.CurrentTick);
@@ -47,7 +47,7 @@ namespace ME.BECS.Tests {
                 
                 context.dependsOn.Complete();
 
-                var tick = context.world.state.ptr->tick;
+                var tick = context.world.CurrentTick;
                 if (tick == 1UL) {
                     Assert.IsFalse(this.ent.Has<TestComponent>());
                     this.ent.SetOneShot(new TestComponent(), OneShotType.NextTick);

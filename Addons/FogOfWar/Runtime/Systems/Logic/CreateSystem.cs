@@ -69,7 +69,7 @@ namespace ME.BECS.FogOfWar {
 
             public void Execute(int index) {
                 
-                if (this.dirtyChunks.IsCreated == true && this.dirtyChunks[index] != this.world.state.ptr->tick) return;
+                if (this.dirtyChunks.IsCreated == true && this.dirtyChunks[index] != this.world.CurrentTick) return;
 
                 ref var fow = ref this.heights.Get<FogOfWarStaticComponent>();
                 var chunk = this.graph.chunks[index];

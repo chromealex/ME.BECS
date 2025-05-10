@@ -30,6 +30,8 @@ namespace ME.BECS {
         public safe_ptr<State> state;
         public string Name => Worlds.GetWorldName(this.id).ToString();
 
+        public ulong CurrentTick => this.state.ptr->tick;
+
         [INLINE(256)]
         public readonly void AddEndTickHandle(Unity.Jobs.JobHandle handle) {
             
