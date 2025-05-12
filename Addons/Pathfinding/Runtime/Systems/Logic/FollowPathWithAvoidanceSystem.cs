@@ -54,6 +54,7 @@ namespace ME.BECS.Pathfinding {
                 }
 
                 if (unit.readUnitCommandGroup.IsAlive() == false) {
+                    unit.IsPathFollow = false;
                     return;
                 }
 
