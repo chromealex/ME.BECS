@@ -61,13 +61,13 @@ namespace ME.BECS {
         public readonly float2 rectSize => new float2(this.readQuadTreeElement.sizeX, this.quadTreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
         public readonly tfloat height => this.quadTreeHeightPtr.Read(this.ent.id, this.ent.gen).height;
 
-        public void SetHeight(tfloat height) {
+        public readonly void SetHeight(tfloat height) {
             this.ent.Set(new QuadTreeHeightComponent() {
                 height = height,
             });
         }
         
-        public void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
+        public readonly void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
             ref var rect = ref this.quadTreeRectPtr.Get(this.ent.id, this.ent.gen);
             rect.sizeY = sizeY;
             this.quadTreeElement.sizeX = sizeX;
