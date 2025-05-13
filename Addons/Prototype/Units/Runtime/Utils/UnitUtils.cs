@@ -84,6 +84,11 @@ namespace ME.BECS.Units {
             aspect.quadTreeElement.radius = agentType.radius;
             aspect.quadTreeElement.treeIndex = treeIndex;
             unit.agentProperties = agentType;
+            if (agentType.height > 0)
+            {
+                ent.Set(new QuadTreeHeightComponent(){height = agentType.height});
+            }
+
             return ent.GetAspect<UnitAspect>();
 
         }
