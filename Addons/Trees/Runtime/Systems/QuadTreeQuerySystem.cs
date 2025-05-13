@@ -194,7 +194,7 @@ namespace ME.BECS {
             if (this.sector.IsValid(objBounds.Center) == true) {
                 // check if our object's AABB overlaps with the query AABB
                 if (objBounds.Overlaps(queryRange) == true &&
-                    queryRange.DistanceSquared(objBounds.Center) <= this.rangeSqr) {
+                    objBounds.DistanceSquared(queryRange.Center) <= this.rangeSqr) {
                     this.results.Add(obj);
                     if (this.max > 0u && this.results.Count == this.max) return false;
                 }

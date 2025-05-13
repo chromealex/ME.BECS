@@ -36,6 +36,11 @@ namespace ME.BECS {
         
     }
 
+    public struct QuadTreeHeightComponent : IComponent
+    {
+        public tfloat height;
+    }
+
     [EditorComment("Used by QuadTreeInsertSystem to filter entities by treeIndex")]
     public struct QuadTreeAspect : IAspect {
         
@@ -84,9 +89,14 @@ namespace ME.BECS {
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (quadTreeAspect.readQuadTreeElement.ignoreY == 1) pos.y = 0f;
+                sfloat height = 0f;
+                if (ent.TryRead(out QuadTreeHeightComponent heightComponent))
+                {
+                    height = heightComponent.height;
+                }
                 var size = quadTreeAspect.rectSize;
                 var halfSize = new float3(size.x * 0.5f, 0f, size.y * 0.5f);
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - halfSize, pos + halfSize));
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - halfSize, pos + new float3(halfSize.x, height, halfSize.z)));
                 
             }
 
@@ -103,7 +113,14 @@ namespace ME.BECS {
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (quadTreeAspect.readQuadTreeElement.ignoreY == 1) pos.y = 0f;
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - quadTreeAspect.readQuadTreeElement.radius, pos + quadTreeAspect.readQuadTreeElement.radius));
+                sfloat height = 0f;
+                if (ent.TryRead(out QuadTreeHeightComponent heightComponent))
+                {
+                    height = heightComponent.height;
+                }
+                var radius = quadTreeAspect.readQuadTreeElement.radius;
+
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - quadTreeAspect.readQuadTreeElement.radius, pos + new float3(radius, height, radius)));
                 
             }
 
@@ -258,7 +275,7 @@ namespace ME.BECS {
         }
 
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, in T subFilter = default) where T : struct, ISubFilter<Ent> {
-
+            
             if (nearestCount > 0u) {
 
                 var heap = new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
