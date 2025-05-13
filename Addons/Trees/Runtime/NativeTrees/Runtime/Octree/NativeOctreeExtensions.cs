@@ -26,8 +26,14 @@ namespace NativeTrees {
         /// <summary>
         /// Performs a raycast on the octree just using the bounds of the objects in it
         /// </summary>
-        public static bool RaycastAABB<T>(this NativeOctree<T> octree, Ray ray, out OctreeRaycastHit<T> hit, float maxDistance = float.PositiveInfinity)
-            where T : unmanaged, IComparable<T> {
+        public static bool RaycastAABB<T>(this NativeOctree<T> octree, Ray ray, out OctreeRaycastHit<T> hit) where T : unmanaged, IComparable<T> {
+            return octree.RaycastAABB<T>(ray, out hit, tfloat.PositiveInfinity);
+        }
+        
+        /// <summary>
+        /// Performs a raycast on the octree just using the bounds of the objects in it
+        /// </summary>
+        public static bool RaycastAABB<T>(this NativeOctree<T> octree, Ray ray, out OctreeRaycastHit<T> hit, tfloat maxDistance) where T : unmanaged, IComparable<T> {
             return octree.Raycast<RayAABBIntersecter<T>>(ray, out hit, maxDistance: maxDistance);
         }
 

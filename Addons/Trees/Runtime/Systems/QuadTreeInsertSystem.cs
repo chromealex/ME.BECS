@@ -36,9 +36,10 @@ namespace ME.BECS {
         
     }
 
-    public struct QuadTreeHeightComponent : IComponent
-    {
+    public struct QuadTreeHeightComponent : IComponent {
+        
         public tfloat height;
+        
     }
 
     [EditorComment("Used by QuadTreeInsertSystem to filter entities by treeIndex")]
@@ -49,14 +50,23 @@ namespace ME.BECS {
         [QueryWith]
         public AspectDataPtr<QuadTreeElement> quadTreeElementPtr;
         public AspectDataPtr<QuadTreeElementRect> quadTreeRectPtr;
+        public AspectDataPtr<QuadTreeHeightComponent> quadTreeHeightPtr;
 
         public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref int treeIndex => ref this.quadTreeElement.treeIndex;
         public readonly ref readonly int readTreeIndex => ref this.readQuadTreeElement.treeIndex;
-        public bool isRect => this.ent.Has<QuadTreeElementRect>();
-        public float2 rectSize => new float2(this.readQuadTreeElement.sizeX, this.quadTreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+        public readonly bool isRect => this.ent.Has<QuadTreeElementRect>();
+        public readonly bool hasHeight => this.ent.Has<QuadTreeHeightComponent>();
+        public readonly float2 rectSize => new float2(this.readQuadTreeElement.sizeX, this.quadTreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+        public readonly tfloat height => this.quadTreeHeightPtr.Read(this.ent.id, this.ent.gen).height;
 
+        public void SetHeight(tfloat height) {
+            this.ent.Set(new QuadTreeHeightComponent() {
+                height = height,
+            });
+        }
+        
         public void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
             ref var rect = ref this.quadTreeRectPtr.Get(this.ent.id, this.ent.gen);
             rect.sizeY = sizeY;
@@ -89,9 +99,8 @@ namespace ME.BECS {
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (quadTreeAspect.readQuadTreeElement.ignoreY == 1) pos.y = 0f;
-                sfloat height = 0f;
-                if (ent.TryRead(out QuadTreeHeightComponent heightComponent))
-                {
+                tfloat height = 0f;
+                if (ent.TryRead(out QuadTreeHeightComponent heightComponent) == true) {
                     height = heightComponent.height;
                 }
                 var size = quadTreeAspect.rectSize;
@@ -113,9 +122,8 @@ namespace ME.BECS {
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (quadTreeAspect.readQuadTreeElement.ignoreY == 1) pos.y = 0f;
-                sfloat height = 0f;
-                if (ent.TryRead(out QuadTreeHeightComponent heightComponent))
-                {
+                tfloat height = 0f;
+                if (ent.TryRead(out QuadTreeHeightComponent heightComponent) == true) {
                     height = heightComponent.height;
                 }
                 var radius = quadTreeAspect.readQuadTreeElement.radius;
