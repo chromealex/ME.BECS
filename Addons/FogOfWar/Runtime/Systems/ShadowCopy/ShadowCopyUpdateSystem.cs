@@ -26,6 +26,7 @@ namespace ME.BECS.FogOfWar {
             var marker = new Unity.Profiling.ProfilerMarker("ent.CopyFrom");
             marker.Begin();
             ent.CopyFrom<ParentComponent, ChildrenComponent>(in shadowCopy.original);
+            ent.SetActive(true);
             marker.End();
             FogOfWarUtils.ClearQuadTree(in ent);
             var tr = ent.GetAspect<TransformAspect>();
