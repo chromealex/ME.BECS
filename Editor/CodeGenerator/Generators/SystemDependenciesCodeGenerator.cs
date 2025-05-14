@@ -7,7 +7,8 @@ namespace ME.BECS.Editor.Systems {
 
     public class SystemDependenciesCodeGenerator : CustomCodeGenerator {
 
-        private int awaitCount;
+        private static uint awaitCount;
+        private readonly object lockObj = new object();
 
         public struct Item {
 
@@ -28,17 +29,15 @@ namespace ME.BECS.Editor.Systems {
             var allContent = new System.Collections.Generic.List<string>();
             var allNodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
             var tempItems = new System.Collections.Generic.Dictionary<System.Type, Item>();
-
-            this.awaitCount = 0;
+            
+            awaitCount = 0;
             var systems = this.systems;
             foreach (var sys in systems) {
 
                 if (sys.IsValueType == false) continue;
                 if (sys.IsVisible == false) continue;
 
-                ++this.awaitCount;
-                
-                UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, sys.Name, this.awaitCount / (float)systems.Count);
+                //UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, sys.Name, this.awaitCount / (float)systems.Count);
                 
                 //UnityEngine.Debug.Log("Processing: " + sys.FullName);
 
@@ -48,179 +47,198 @@ namespace ME.BECS.Editor.Systems {
                     system = EditorUtils.MakeGenericConstraintType(system);
                 }
                 if (tempItems.ContainsKey(system) == true) continue;
+                tempItems.Add(system, new Item());
                 
+                JobUtils.Increment(ref awaitCount);
+
                 var content = new System.Collections.Generic.List<string>();
                 var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
                 var systemToComponents = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
-                //System.Threading.ThreadPool.QueueUserWorkItem((state) => {
-                    
-                    content.Add("{");
-                    content.Add($"// system: {system.FullName}");
-                    content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
-                    content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
-                    content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system)}), list);");
-                    content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system)}), errors);");
-                    
-                    {
-                        var method = system.GetMethod("OnUpdate");
-                        if (method != null) {
-                            var deps = this.GetDeps(method);
-                            if (deps.ops != null && deps.ops.Count > 0) {
-                                content.Add($"// |- OnUpdate:");
-                                foreach (var dep in deps.ops) {
-                                    content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                    systemToComponents.Add(dep);
+                System.Threading.ThreadPool.QueueUserWorkItem((state) => {
+
+                    //UnityEngine.Debug.Log("Processing: " + system.FullName);
+
+                    try {
+
+                        content.Add("{");
+                        content.Add($"// system: {system.FullName}");
+                        content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
+                        content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
+                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system)}), list);");
+                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system)}), errors);");
+
+                        {
+                            var method = system.GetMethod("OnUpdate");
+                            if (method != null) {
+                                var deps = this.GetDeps(method);
+                                if (deps.ops != null && deps.ops.Count > 0) {
+                                    content.Add($"// |- OnUpdate:");
+                                    foreach (var dep in deps.ops) {
+                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                        systemToComponents.Add(dep);
+                                    }
+                                }
+
+                                if (deps.errors != null) {
+                                    foreach (var dep in deps.errors) {
+                                        content.Add($"// {dep.message}");
+                                        content.Add(dep.AsString());
+                                    }
+                                }
+
+                                var node = new Graph.Node() {
+                                    system = system,
+                                    errors = deps.errors,
+                                    dependencies = deps.GetDependencies(),
+                                    inputs = deps.GetInputs(),
+                                    outputs = deps.GetOutputs(),
+                                };
+                                nodes.Add(system, node);
+                            }
+                        }
+
+                        {
+                            var method = system.GetMethod("OnAwake");
+                            if (method != null) {
+                                var deps = this.GetDeps(method);
+                                if (deps.ops != null && deps.ops.Count > 0) {
+                                    content.Add($"// |- OnAwake:");
+                                    foreach (var dep in deps.ops) {
+                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                        systemToComponents.Add(dep);
+                                    }
+                                }
+
+                                if (deps.errors != null) {
+                                    foreach (var dep in deps.errors) {
+                                        content.Add($"// {dep.message}");
+                                        content.Add(dep.AsString());
+                                    }
+                                }
+
+                                if (nodes.TryGetValue(system, out var node) == false) {
+                                    node = new Graph.Node() {
+                                        system = system,
+                                        errors = deps.errors,
+                                        dependencies = deps.GetDependencies(),
+                                        inputs = deps.GetInputs(),
+                                        outputs = deps.GetOutputs(),
+                                    };
+                                    nodes.Add(system, node);
+                                } else {
+                                    node.dependencies.AddRange(deps.GetDependencies());
+                                    node.inputs.AddRange(deps.GetInputs());
+                                    node.outputs.AddRange(deps.GetOutputs());
                                 }
                             }
+                        }
 
-                            if (deps.errors != null) {
-                                foreach (var dep in deps.errors) {
-                                    content.Add($"// {dep.message}");
-                                    content.Add(dep.AsString());
+                        {
+                            var method = system.GetMethod("OnStart");
+                            if (method != null) {
+                                var deps = this.GetDeps(method);
+                                if (deps.ops != null && deps.ops.Count > 0) {
+                                    content.Add($"// |- OnStart:");
+                                    foreach (var dep in deps.ops) {
+                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                        systemToComponents.Add(dep);
+                                    }
+                                }
+
+                                if (deps.errors != null) {
+                                    foreach (var dep in deps.errors) {
+                                        content.Add($"// {dep.message}");
+                                        content.Add(dep.AsString());
+                                    }
+                                }
+
+                                if (nodes.TryGetValue(system, out var node) == false) {
+                                    node = new Graph.Node() {
+                                        system = system,
+                                        errors = deps.errors,
+                                        dependencies = deps.GetDependencies(),
+                                        inputs = deps.GetInputs(),
+                                        outputs = deps.GetOutputs(),
+                                    };
+                                    nodes.Add(system, node);
+                                } else {
+                                    node.dependencies.AddRange(deps.GetDependencies());
+                                    node.inputs.AddRange(deps.GetInputs());
+                                    node.outputs.AddRange(deps.GetOutputs());
                                 }
                             }
+                        }
 
-                            var node = new Graph.Node() {
+                        {
+                            var method = system.GetMethod("OnDestroy");
+                            if (method != null) {
+                                var deps = this.GetDeps(method);
+                                if (deps.ops != null && deps.ops.Count > 0) {
+                                    content.Add($"// |- OnDestroy:");
+                                    foreach (var dep in deps.ops) {
+                                        content.Add($"// |--- {dep.op}: {dep.type.FullName}");
+                                        systemToComponents.Add(dep);
+                                    }
+                                }
+
+                                if (deps.errors != null) {
+                                    foreach (var dep in deps.errors) {
+                                        content.Add($"// {dep.message}");
+                                        content.Add(dep.AsString());
+                                    }
+                                }
+
+                                if (nodes.TryGetValue(system, out var node) == false) {
+                                    node = new Graph.Node() {
+                                        system = system,
+                                        errors = deps.errors,
+                                        dependencies = deps.GetDependencies(),
+                                        inputs = deps.GetInputs(),
+                                        outputs = deps.GetOutputs(),
+                                    };
+                                    nodes.Add(system, node);
+                                } else {
+                                    node.dependencies.AddRange(deps.GetDependencies());
+                                    node.inputs.AddRange(deps.GetInputs());
+                                    node.outputs.AddRange(deps.GetOutputs());
+                                }
+                            }
+                        }
+
+                        JobsEarlyInitCodeGenerator.UpdateDeps(systemToComponents);
+                        foreach (var item in systemToComponents) {
+                            content.Add($"list.Add(new ComponentDependencyGraphInfo() {{ type = typeof({EditorUtils.GetTypeName(item.type)}), op = {(byte)item.op} }});");
+                        }
+
+                        content.Add("}");
+
+                        {
+                            var item = new Item() {
                                 system = system,
-                                errors = deps.errors,
-                                dependencies = deps.GetDependencies(),
-                                inputs = deps.GetInputs(),
-                                outputs = deps.GetOutputs(),
+                                nodes = nodes,
+                                content = content,
                             };
-                            nodes.Add(system, node);
+                            lock (this.lockObj) tempItems[system] = item;
                         }
-                    }
-                    
-                    {
-                        var method = system.GetMethod("OnAwake");
-                        if (method != null) {
-                            var deps = this.GetDeps(method);
-                            if (deps.ops != null && deps.ops.Count > 0) {
-                                content.Add($"// |- OnAwake:");
-                                foreach (var dep in deps.ops) {
-                                    content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                    systemToComponents.Add(dep);
-                                }
-                            }
 
-                            if (deps.errors != null) {
-                                foreach (var dep in deps.errors) {
-                                    content.Add($"// {dep.message}");
-                                    content.Add(dep.AsString());
-                                }
-                            }
+                        //UnityEngine.Debug.Log("Processed: " + system.FullName);
 
-                            if (nodes.TryGetValue(system, out var node) == false) {
-                                node = new Graph.Node() {
-                                    system = system,
-                                    errors = deps.errors,
-                                    dependencies = deps.GetDependencies(),
-                                    inputs = deps.GetInputs(),
-                                    outputs = deps.GetOutputs(),
-                                };
-                                nodes.Add(system, node);
-                            } else {
-                                node.dependencies.AddRange(deps.GetDependencies());
-                                node.inputs.AddRange(deps.GetInputs());
-                                node.outputs.AddRange(deps.GetOutputs());
-                            }
-                        }
+                    } catch (System.Exception ex) {
+                        UnityEngine.Debug.LogException(ex);
+                    } finally {
+                        //UnityEngine.Debug.Log("BREAK: " + system.FullName);
+                        JobUtils.Decrement(ref awaitCount);
                     }
 
-                    {
-                        var method = system.GetMethod("OnStart");
-                        if (method != null) {
-                            var deps = this.GetDeps(method);
-                            if (deps.ops != null && deps.ops.Count > 0) {
-                                content.Add($"// |- OnStart:");
-                                foreach (var dep in deps.ops) {
-                                    content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                    systemToComponents.Add(dep);
-                                }
-                            }
-
-                            if (deps.errors != null) {
-                                foreach (var dep in deps.errors) {
-                                    content.Add($"// {dep.message}");
-                                    content.Add(dep.AsString());
-                                }
-                            }
-
-                            if (nodes.TryGetValue(system, out var node) == false) {
-                                node = new Graph.Node() {
-                                    system = system,
-                                    errors = deps.errors,
-                                    dependencies = deps.GetDependencies(),
-                                    inputs = deps.GetInputs(),
-                                    outputs = deps.GetOutputs(),
-                                };
-                                nodes.Add(system, node);
-                            } else {
-                                node.dependencies.AddRange(deps.GetDependencies());
-                                node.inputs.AddRange(deps.GetInputs());
-                                node.outputs.AddRange(deps.GetOutputs());
-                            }
-                        }
-                    }
-
-                    {
-                        var method = system.GetMethod("OnDestroy");
-                        if (method != null) {
-                            var deps = this.GetDeps(method);
-                            if (deps.ops != null && deps.ops.Count > 0) {
-                                content.Add($"// |- OnDestroy:");
-                                foreach (var dep in deps.ops) {
-                                    content.Add($"// |--- {dep.op}: {dep.type.FullName}");
-                                    systemToComponents.Add(dep);
-                                }
-                            }
-
-                            if (deps.errors != null) {
-                                foreach (var dep in deps.errors) {
-                                    content.Add($"// {dep.message}");
-                                    content.Add(dep.AsString());
-                                }
-                            }
-
-                            if (nodes.TryGetValue(system, out var node) == false) {
-                                node = new Graph.Node() {
-                                    system = system,
-                                    errors = deps.errors,
-                                    dependencies = deps.GetDependencies(),
-                                    inputs = deps.GetInputs(),
-                                    outputs = deps.GetOutputs(),
-                                };
-                                nodes.Add(system, node);
-                            } else {
-                                node.dependencies.AddRange(deps.GetDependencies());
-                                node.inputs.AddRange(deps.GetInputs());
-                                node.outputs.AddRange(deps.GetOutputs());
-                            }
-                        }
-                    }
-
-                    JobsEarlyInitCodeGenerator.UpdateDeps(systemToComponents);
-                    foreach (var item in systemToComponents) {
-                        content.Add($"list.Add(new ComponentDependencyGraphInfo() {{ type = typeof({EditorUtils.GetTypeName(item.type)}), op = {(byte)item.op} }});");
-                    }
-                    content.Add("}");
-
-                    {
-                        var item = new Item() {
-                            system = system,
-                            nodes = nodes,
-                            content = content,
-                        };
-                        tempItems.Add(system, item);
-                    }
-                    
-                    //UnityEngine.Debug.Log("Processed: " + system.FullName);
-
-                //});
+                });
 
             }
 
-            UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, "Finalizing...", 1f);
+            while (awaitCount > 0) {
+                UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, $"Await for Systems Generator ({(systems.Count - awaitCount)} of {systems.Count})", (systems.Count - awaitCount) / (float)systems.Count);
+            }
+            
+            //UnityEditor.EditorUtility.DisplayProgressBar(CodeGenerator.PROGRESS_BAR_CAPTION, "Finalizing...", 1f);
 
             /*var sw = System.Diagnostics.Stopwatch.StartNew();
             var awaitCount = 0;
