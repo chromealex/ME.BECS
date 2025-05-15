@@ -1,0 +1,24 @@
+{
+    "name": "ME.BECS.SceneEntityView.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Transforms",
+        "ME.BECS.Features",
+        "ME.BECS.Views",
+        "ME.BECS.SceneEntityView",
+        "Unity.Mathematics",
+        "Unity.Collections"
+    ],
+    "includePlatforms": [
+      "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
