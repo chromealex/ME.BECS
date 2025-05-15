@@ -19,11 +19,11 @@ namespace ME.BECS.Editor {
             usePrefabField.Bind(so);
             root.Add(usePrefabField);
 
-            var worldNameField = this.CreatePropertyField("worldName", "World Name");
-            var prefabField = this.CreatePropertyField("prefab", "Prefab");
-            var entityViewField = this.CreatePropertyField("entityView", "Entity View");
-            var configField = this.CreatePropertyField("config", "Config");
-            var providerIdField = this.CreatePropertyField("providerId", "Provider ID");
+            var worldNameField = this.CreatePropertyField("worldName");
+            var prefabField = this.CreatePropertyField("prefab");
+            var entityViewField = this.CreatePropertyField("entityView");
+            var configField = this.CreatePropertyField("config");
+            var providerIdField = this.CreatePropertyField("providerId");
 
             root.Add(worldNameField);
             root.Add(configField);
@@ -50,14 +50,14 @@ namespace ME.BECS.Editor {
             
         }
 
-        private VisualElement CreatePropertyField(string propertyName, string label = null) {
+        private VisualElement CreatePropertyField(string propertyName) {
             var property = this.serializedObject.FindProperty(propertyName);
             if (property != null) {
-                var field = new PropertyField(property, label ?? propertyName);
+                var field = new PropertyField(property, property.displayName);
                 field.Bind(this.serializedObject);
                 return field;
             } else {
-                Debug.LogWarning($"Не удалось найти SerializedProperty с именем: {propertyName}");
+                Debug.LogWarning($"Can't find SerializedProperty with the name `{propertyName}`");
                 return new Label($"[Missing] {propertyName}");
             }
         }
