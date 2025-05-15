@@ -11,13 +11,18 @@ namespace ME.BECS.FogOfWar {
 
     //[BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(CreateTextureSystem))]
-    public unsafe struct UpdateTextureSystem : IUpdate {
+    public unsafe struct UpdateTextureSystemGPU : IAwake, IUpdate {
 
         public sfloat fadeInSpeed;
         public sfloat fadeOutSpeed;
-
+        public ObjectReference<UnityEngine.ComputeShader> shader;
+        private ClassPtr<UnityEngine.ComputeBuffer> nodesBuffer;
+        private ClassPtr<UnityEngine.ComputeBuffer> exploredBuffer;
+        private ClassPtr<UnityEngine.RenderTexture> renderTexture;
+        
         private Ent lastActivePlayer;
         private ulong lastTick;
+        
 
         [BURST(CompileSynchronously = true, FloatMode = Unity.Burst.FloatMode.Fast, FloatPrecision = Unity.Burst.FloatPrecision.Low, OptimizeFor = Unity.Burst.OptimizeFor.Performance)]
         public struct UpdateJob : IJobParallelFor {
@@ -89,8 +94,7 @@ namespace ME.BECS.FogOfWar {
             [NativeDisableParallelForRestriction]
             [NativeDisableUnsafePtrRestriction]
             public UnityEngine.Color32* currentBuffer;
-            public uint length;
-            
+            public uint length;          
             public void Execute() {
                 
                 FogOfWarUtils.CleanUpTexture(this.currentBuffer, this.length);
@@ -106,6 +110,41 @@ namespace ME.BECS.FogOfWar {
             public void Execute() {
                 
                 this.system.GetTexture().Apply(false);
+                
+            }
+
+        }
+
+        public void OnAwake(ref SystemContext context) {
+            
+            var mapSize = context.world.parent.GetSystem<CreateSystem>().mapSize;
+            var resolution = context.world.parent.GetSystem<CreateSystem>().resolution;
+            var fowSize = ME.BECS.FixedPoint.math.max(32u, (ME.BECS.FixedPoint.uint2)(mapSize * resolution));
+            this.renderTexture = new ClassPtr<UnityEngine.RenderTexture>(new UnityEngine.RenderTexture((int)fowSize.x, (int)fowSize.y, 32) {
+                enableRandomWrite = true,
+            });
+
+            this.nodesBuffer = new ClassPtr<UnityEngine.ComputeBuffer>(new UnityEngine.ComputeBuffer((int)(fowSize.x * fowSize.y * FogOfWarUtils.BYTES_PER_NODE), sizeof(byte), UnityEngine.ComputeBufferType.Default));
+            this.exploredBuffer = new ClassPtr<UnityEngine.ComputeBuffer>(new UnityEngine.ComputeBuffer((int)(fowSize.x * fowSize.y * FogOfWarUtils.BYTES_PER_NODE), sizeof(byte), UnityEngine.ComputeBufferType.Default));
+            this.shader.Value.SetTexture(0, "_Tex", this.renderTexture.Value);
+            this.shader.Value.SetTexture(1, "_Tex", this.renderTexture.Value);
+            this.shader.Value.SetBuffer(1, "_Nodes", this.nodesBuffer.Value);
+            this.shader.Value.SetBuffer(1, "_Explored", this.exploredBuffer.Value);
+            
+        }
+        
+        
+        public struct Job : IJob {
+            
+            public ObjectReference<UnityEngine.ComputeShader> shader;
+            public ME.BECS.FixedPoint.uint2 size;
+            
+            public void Execute() {
+
+                int sizeX = Unity.Mathematics.math.ceilpow2(Unity.Mathematics.math.ceillog2(this.size.x));
+                int sizeY = Unity.Mathematics.math.ceilpow2(Unity.Mathematics.math.ceillog2(this.size.y));
+                // this.shader.Value.Dispatch(0, this.size.x / 8, this.size.y / 8, 1);
+                // this.shader.Value.Dispatch(1, this.size.x / 8, this.size.y / 8, 1);
                 
             }
 
@@ -152,6 +191,17 @@ namespace ME.BECS.FogOfWar {
             handle = new ApplyTextureJob() {
                 system = createTexture,
             }.Schedule(handle);
+            
+            
+            var mapSize = context.world.parent.GetSystem<CreateSystem>().mapSize;
+            var resolution = context.world.parent.GetSystem<CreateSystem>().resolution;
+            var fowSize = ME.BECS.FixedPoint.math.max(32u, (ME.BECS.FixedPoint.uint2)(mapSize * resolution));
+
+            handle = new Job() {
+                shader = this.shader,
+                size = fowSize,
+            }.Schedule(handle);
+            
             context.SetDependency(handle);
             
         }

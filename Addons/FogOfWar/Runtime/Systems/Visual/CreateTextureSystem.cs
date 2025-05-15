@@ -19,9 +19,16 @@ namespace ME.BECS.FogOfWar {
         public View renderView;
         
         private ClassPtr<UnityEngine.Texture2D> texture;
+        private Ent camera;
 
         public bool IsCreated => this.texture.IsValid;
 
+        public void SetCamera(in ME.BECS.Views.CameraAspect camera) {
+            this.camera = camera.ent;
+        }
+        
+        public ME.BECS.Views.CameraAspect GetCamera() => this.camera.GetAspect<ME.BECS.Views.CameraAspect>();
+        
         [WithoutBurst]
         public void OnAwake(ref SystemContext context) {
 
