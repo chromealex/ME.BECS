@@ -456,6 +456,7 @@ namespace ME.BECS.Editor.Systems {
                 var instructions = body.GetInstructions();
                 var isReadonly = false;
                 foreach (var inst in instructions) {
+                    var continueTraverse = true;
                     if (inst.Operand is MethodInfo methodInfo) {
                         if (hasCompleteHandle == false && hasInterestInstructions == false && body == root) {
                             // search for Complete
@@ -469,24 +470,28 @@ namespace ME.BECS.Editor.Systems {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadWrite,
                             });
+                            continueTraverse = false;
                         } else if (IsMethod(methodInfo, withMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
+                            continueTraverse = false;
                         } else if (IsMethod(methodInfo, withAnyMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
+                            continueTraverse = false;
                         } else if (IsMethod(methodInfo, withoutMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
+                            continueTraverse = false;
                         } else if (IsMethod(methodInfo, withAspectMethod) == true) {
                             hasInterestInstructions = true;
                             var aspect = methodInfo.GetGenericArguments()[0];
@@ -498,11 +503,13 @@ namespace ME.BECS.Editor.Systems {
                                         type = type,
                                         op = RefOp.ReadOnly,
                                     });
+                                    continueTraverse = false;
                                 }
                             }
                         } else if (IsMethod(methodInfo, asReadonlyMethod) == true) {
                             hasInterestInstructions = true;
                             isReadonly = true;
+                            continueTraverse = false;
                         } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
                             hasInterestInstructions = true;
                             if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
@@ -513,6 +520,7 @@ namespace ME.BECS.Editor.Systems {
                                         type = typeInfo.type,
                                         op = isReadonly == true && typeInfo.isArg == true ? RefOp.ReadOnly : typeInfo.op,
                                     });
+                                    //continueTraverse = false;
                                 }
 
                                 isReadonly = false;
@@ -533,12 +541,13 @@ namespace ME.BECS.Editor.Systems {
                                         type = typeInfo.type,
                                         op = typeInfo.op,
                                     });
+                                    //continueTraverse = false;
                                 }
                             }
                         }
                     }
                     
-                    if (inst.Operand is System.Reflection.MethodInfo member) {
+                    if (continueTraverse == true && inst.Operand is System.Reflection.MethodInfo member) {
                         if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) {
                                 q.Enqueue(member);
