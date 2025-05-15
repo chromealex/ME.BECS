@@ -1,15 +1,52 @@
-// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel ClearTex
+#pragma kernel UpdateTex
 
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
-RWTexture2D<float4> _Tex;
-int _Width;
-int _Height;
+RWTexture2D<float4>   _Tex;
+StructuredBuffer<int> _Explored;
+StructuredBuffer<int> _Nodes;
+int                   _Width;
+int                   _BytesPerNode;
+half                  _FadeOutSpeed;
+half                  _FadeInSpeed;
+half                  _DeltaTime;
+half                  _UseFade;
 
-[numthreads(8,8,1)]
-void ClearTex (uint3 id : SV_DispatchThreadID)
+int CoordsToValue(int2 pos, StructuredBuffer<int> buffer)
 {
-    
-    _Tex[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+    int byteIndex = pos.y * _Width + pos.x * _BytesPerNode;
+    int intIndex = byteIndex * 0.25;
+    int offsetMask = 3;
+    int offset = byteIndex & offsetMask;
+    int arrValue = buffer[intIndex];
+    int value = arrValue >> 8 * offset & 255;
+    return value;
+}
+
+int IsExplored(int2 pos)
+{
+    return CoordsToValue(pos, _Explored) > 0;
+}
+
+int IsVisible(int2 pos)
+{
+    return CoordsToValue(pos, _Nodes) > 0;
+}
+
+[numthreads(4,4,1)]
+void ClearTex(uint3 id : SV_DispatchThreadID)
+{
+    _Tex[id.xy] = 0.0;
+}
+
+[numthreads(4,4,1)]
+void UpdateTex(uint3 id : SV_DispatchThreadID)
+{
+    float r = _Tex[id.xy].r;
+    float g = _Tex[id.xy].g;
+    int   isVisible = IsVisible(id);
+    float rFaded = lerp(r + (0 - r) * _DeltaTime * _FadeOutSpeed, r + (1 - r) * _DeltaTime * _FadeInSpeed, isVisible);
+    r = lerp(isVisible, rFaded, _UseFade);
+    int isExplored = IsExplored(id);
+    g = lerp(g, lerp(1, g = g + (1 - g) * _DeltaTime * _FadeInSpeed, _UseFade), isExplored);
+    _Tex[id.xy] = float4(r, g, 0, 0);
 }
