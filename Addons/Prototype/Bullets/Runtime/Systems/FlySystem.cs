@@ -19,13 +19,13 @@ namespace ME.BECS.Bullets {
 
     [BURST(CompileSynchronously = true)]
     [UnityEngine.Tooltip("Bullet fly system")]
-    public struct FlySystem : IUpdate
-    {
+    public struct FlySystem : IUpdate {
+        
         public bool continuousTargetCheck;
         
         [BURST(CompileSynchronously = true)]
-        public unsafe struct FlyJob : IJobForAspects<BulletAspect, TransformAspect>
-        {
+        public unsafe struct FlyJob : IJobForAspects<BulletAspect, TransformAspect> {
+            
             public bool continuousTargetCheck;
             public QuadTreeInsertSystem qt;
             public tfloat dt;
@@ -43,23 +43,20 @@ namespace ME.BECS.Bullets {
                     aspect.IsReached = true;
                 }
 
-                if (continuousTargetCheck)
-                {
+                if (this.continuousTargetCheck == true) {
                     var vector = prevPos - tr.position;
                     var direction = math.normalize(vector);
                     var distance = math.length(vector);
                 
                     var mask = ent.GetAspect<QuadTreeQueryAspect>().query.treeMask;
-                    for (int i = 0; i < qt.treesCount; i++)
-                    {
+                    for (int i = 0; i < this.qt.treesCount; i++) {
                         if ((mask & (1 << i)) == 0) {
                             continue;
                         }
                     
                         ref var tree = ref *qt.GetTree(i).ptr;
                         var ray = new Ray((Vector3)tr.position, (Vector3)direction);
-                        if (tree.RaycastAABB(ray, out var hitResult, (float)distance))
-                        {
+                        if (tree.RaycastAABB(ray, out var hitResult, distance) == true) {
                             aspect.component.targetEnt = hitResult.obj;
                             aspect.IsReached = true;
                         }
@@ -69,12 +66,11 @@ namespace ME.BECS.Bullets {
 
         }
 
-        public void OnUpdate(ref SystemContext context)
-        {
+        public void OnUpdate(ref SystemContext context) {
 
             var qt = context.world.GetSystem<QuadTreeInsertSystem>();
             var dependsOn = context.Query().AsParallel().Without<TargetReachedComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
-                continuousTargetCheck = continuousTargetCheck,
+                continuousTargetCheck = this.continuousTargetCheck,
                 qt = qt,
                 dt = context.deltaTime,
             });

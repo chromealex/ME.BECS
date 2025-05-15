@@ -318,6 +318,7 @@ namespace ME.BECS.Editor.Jobs {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
+                    var continueTraverse = true;
                     {
                         if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
                             continue;
@@ -336,6 +337,7 @@ namespace ME.BECS.Editor.Jobs {
                                 type = field.FieldType.GenericTypeArguments[0],
                                 op = op.Op,
                             });
+                            continueTraverse = false;
                         }
                     }
                     {
@@ -345,6 +347,7 @@ namespace ME.BECS.Editor.Jobs {
                                 op = (componentsType.Contains(field.DeclaringType) == true || aspectsType.Contains(field.DeclaringType) == true) && (inst.OpCode == System.Reflection.Emit.OpCodes.Stfld || inst.OpCode == System.Reflection.Emit.OpCodes.Stobj || inst.OpCode == System.Reflection.Emit.OpCodes.Ldflda) ? RefOp.WriteOnly : RefOp.ReadOnly,
                                 isArg = componentsType.Contains(field.DeclaringType),
                             });
+                            continueTraverse = false;
                         }
                     }
                     if (inst.Operand is System.Reflection.MethodInfo method && method.IsGenericMethod == true) {
@@ -356,11 +359,12 @@ namespace ME.BECS.Editor.Jobs {
                                     type = type,
                                     op = safetyCheck.Op,
                                 });
+                                continueTraverse = false;
                             }
                         }
                     }
 
-                    if (traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
+                    if (continueTraverse == true && traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
                         if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }

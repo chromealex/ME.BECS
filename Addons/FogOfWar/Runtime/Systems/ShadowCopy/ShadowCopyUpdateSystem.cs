@@ -26,6 +26,7 @@ namespace ME.BECS.FogOfWar {
             var marker = new Unity.Profiling.ProfilerMarker("ent.CopyFrom");
             marker.Begin();
             ent.CopyFrom<ParentComponent, ChildrenComponent>(in shadowCopy.original);
+            ent.SetActive(true);
             marker.End();
             FogOfWarUtils.ClearQuadTree(in ent);
             var tr = ent.GetAspect<TransformAspect>();
@@ -45,7 +46,7 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
 
                 var isVisible = this.fow.IsVisible(in shadowCopy.forTeam, ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
-                if (isVisible == true) {
+                if (isVisible == true && shadowCopy.original.IsAlive() == true) {
                     ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(true);
                     return;
                 }
@@ -72,7 +73,7 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy, ref FogOfWarShadowCopyPointsComponent points) {
 
                 var isVisible = this.fow.IsVisibleAny(in shadowCopy.forTeam, in points.points);
-                if (isVisible == true) {
+                if (isVisible == true && shadowCopy.original.IsAlive() == true) {
                     ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(true);
                     return;
                 }
@@ -81,6 +82,10 @@ namespace ME.BECS.FogOfWar {
                     if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
                         ent.SetTag<IsViewRequested>(true);
                     }
+                }
+
+                if (shadowCopy.original.IsAlive() == false && ent.IsAlive() == true) {
+                    ent.DestroyHierarchy();
                 }
 
             }

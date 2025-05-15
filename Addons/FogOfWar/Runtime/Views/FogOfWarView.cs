@@ -49,13 +49,13 @@ namespace ME.BECS.FogOfWar {
 
             // this.SetScale();
             
-            var updateTextureSystem = ent.World.GetSystem<UpdateTextureSystem>();
+            var createTextureSystem = ent.World.GetSystem<CreateTextureSystem>();
             var logicWorld = ent.World.parent;
             var fowSystem = logicWorld.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
             this.material.SetTexture(fogTex, system.GetTexture());
 
-            var camera = updateTextureSystem.GetCamera();
+            var camera = createTextureSystem.GetCamera();
             var proj = (Matrix4x4)camera.projectionMatrix;
             var cam = (Matrix4x4)camera.worldToCameraMatrix;
             var inverseMVP = (proj * cam).inverse;
