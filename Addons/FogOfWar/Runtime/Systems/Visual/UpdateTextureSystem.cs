@@ -118,6 +118,7 @@ namespace ME.BECS.FogOfWar {
             
             var createTexture = context.world.GetSystem<CreateTextureSystem>();
             
+            context.dependsOn.Complete();
             var buffer = createTexture.GetBuffer();
             var bufferPtr = (UnityEngine.Color32*)buffer.GetUnsafePtr();
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
