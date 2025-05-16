@@ -32,6 +32,8 @@ namespace ME.BECS.FogOfWar {
         [WithoutBurst]
         public void OnAwake(ref SystemContext context) {
 
+            context.dependsOn.Complete();
+            
             var logicWorld = context.world.parent;
             E.IS_CREATED(logicWorld);
             

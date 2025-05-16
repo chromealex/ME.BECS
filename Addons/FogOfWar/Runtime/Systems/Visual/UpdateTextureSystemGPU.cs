@@ -42,6 +42,8 @@ namespace ME.BECS.FogOfWar {
 
         public void OnAwake(ref SystemContext context) {
 
+            context.dependsOn.Complete();
+
             var fowSize = context.world.parent.GetSystem<CreateSystem>().GetHeights().Read<FogOfWarStaticComponent>().size;
 
             this.renderTexture = new ClassPtr<UnityEngine.RenderTexture>(new UnityEngine.RenderTexture((int)fowSize.x, (int)fowSize.y, 32) {
@@ -78,6 +80,8 @@ namespace ME.BECS.FogOfWar {
 
         public void OnUpdate(ref SystemContext context) {
 
+            context.dependsOn.Complete();
+            
             {
                 //there is no need to init shader every frame, this is here cos of debug shader purposes
                 // var mapSize = context.world.parent.GetSystem<CreateSystem>().mapSize;
@@ -134,6 +138,9 @@ namespace ME.BECS.FogOfWar {
             this.nodesBuffer.Value.Release();
             this.exploredBuffer.Value.Release();
             this.renderTexture.Value.Release();
+            this.nodesBuffer.Dispose();
+            this.exploredBuffer.Dispose();
+            this.renderTexture.Dispose();
 
         }
 
