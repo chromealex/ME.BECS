@@ -11,7 +11,7 @@ half                  _FadeInSpeed;
 half                  _DeltaTime;
 half                  _UseFade;
 
-int CoordsToValue(int2 pos, StructuredBuffer<int> buffer)
+inline int CoordsToValue(uint3 pos, StructuredBuffer<int> buffer)
 {
     int byteIndex = pos.y * _Width + pos.x * _BytesPerNode;
     int intIndex = byteIndex * 0.25;
@@ -22,12 +22,12 @@ int CoordsToValue(int2 pos, StructuredBuffer<int> buffer)
     return value;
 }
 
-int IsExplored(int2 pos)
+inline int IsExplored(uint3 pos)
 {
     return CoordsToValue(pos, _Explored) > 0;
 }
 
-int IsVisible(int2 pos)
+inline int IsVisible(uint3 pos)
 {
     return CoordsToValue(pos, _Nodes) > 0;
 }
