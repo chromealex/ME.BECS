@@ -180,9 +180,9 @@ namespace ME.BECS.Pathfinding {
             if (globalX < 0 || globalY < 0) return TempNode.Invalid;
             if (globalX >= chunkWidth * chunksX || globalY >= chunkHeight * chunksY) return TempNode.Invalid;
             var localX = globalX % (int)chunkWidth;
-            var localXChunk = (uint)math.floor(globalX / (float)chunkWidth);
+            var localXChunk = (uint)math.floor(globalX / (tfloat)chunkWidth);
             var localY = globalY % (int)chunkHeight;
-            var localYChunk = (uint)math.floor(globalY / (float)chunkHeight);
+            var localYChunk = (uint)math.floor(globalY / (tfloat)chunkHeight);
             return new TempNode() {
                 chunkIndex = localYChunk * chunksX + localXChunk,
                 nodeIndex = (uint)localY * chunkWidth + (uint)localX,
@@ -604,7 +604,7 @@ namespace ME.BECS.Pathfinding {
         internal static byte GetCommonNeighbourSumDir(in World world, TempNode node, uint direction, uint width, uint height, MemArray<Path.Chunk> gridChunks, uint chunksX,
                                                           uint chunksY) {
 
-            var baseDir = math.lerp(0f, 254f - 254f / 8f, (float)direction / 7u);
+            var baseDir = math.lerp(0f, 254f - 254f / 8f, (tfloat)direction / 7u);
             var dir = (Direction)direction;
             if (dir is Direction.UpLeft or Direction.UpRight or Direction.DownLeft or Direction.DownRight) {
 
