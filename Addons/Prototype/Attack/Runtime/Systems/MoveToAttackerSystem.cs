@@ -75,7 +75,11 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect group, ref CommandAttack command) {
 
                 if (command.target.IsAlive() == false) return;
-                PathUtils.UpdateTarget(in this.buildGraphSystem, group, command.TargetPosition, in jobInfo);
+                
+                var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos);
+                if (result == AttackUtils.PositionToAttack.MoveToPoint) {
+                    PathUtils.UpdateTarget(in this.buildGraphSystem, group, pos, in jobInfo);
+                }
 
             }
 

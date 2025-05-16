@@ -98,6 +98,31 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
+        public static PositionToAttack GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position) {
+
+            position = default;
+            if (group.readUnits.Count == 0u) return PositionToAttack.None;
+
+            var targetPos = target.GetAspect<TransformAspect>().position;
+            var d = tfloat.MaxValue;
+            var result = PositionToAttack.RotateToTarget;
+            foreach (var unit in group.readUnits) {
+                var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, default);
+                var dist = math.distancesq(targetPos, pos);
+                if (dist < d) {
+                    position = pos;
+                    d = dist;
+                }
+                if (res == PositionToAttack.MoveToPoint) {
+                    result = PositionToAttack.MoveToPoint;
+                }
+            }
+
+            return result;
+            
+        }
+
+        [INLINE(256)]
         public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
             return GetPositionToAttack(in unit, in target, nodeSize, out position, default);
         }
