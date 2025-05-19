@@ -124,7 +124,10 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref ComebackAfterAttackComponent comeback) {
 
                 var maxDistanceSqr = ent.ReadStatic<AttackerFollowDistanceComponent>();
-                if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr) return;
+                if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr
+                    || math.distancesq(comeback.returnToPosition, float3.zero) == 0) {//temp solution, somehow comeback component appears on an entity where it was removed
+                    return;
+                }
                 CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
                     targetPosition = comeback.returnToPosition,
                 }, jobInfo);
