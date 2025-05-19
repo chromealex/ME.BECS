@@ -1,3 +1,14 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
 namespace ME.BECS.Attack {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -25,14 +36,23 @@ namespace ME.BECS.Attack {
 
                 // move to attacker
                 var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos, in this.fogOfWarSystem);
-                if (result == AttackUtils.PositionToAttack.MoveToPoint) {
+                if (result == AttackUtils.ReactionType.RunAway) {
                     CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
                         targetPosition = worldPos,
                     }, jobInfo);
-                } else if (result == AttackUtils.PositionToAttack.RotateToTarget) {
+                } else if (result == AttackUtils.ReactionType.RotateToTarget) {
                     unit.ent.Set(new UnitLookAtComponent() {
                         target = component.source.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
                     });
+                } else if (result == AttackUtils.ReactionType.MoveToTarget) {
+                    CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandAttack() {
+                        target = component.source,
+                    }, jobInfo);
+                    if (ent.HasStatic<AttackerFollowDistanceComponent>() == true) {
+                        ent.Set(new ComebackAfterAttackComponent() {
+                            returnToPosition = transform.position,
+                        });
+                    }
                 }
 
             }
@@ -47,19 +67,21 @@ namespace ME.BECS.Attack {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackCommandComponent target) {
 
-                if (unit.HasCommandGroup() == false || unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId].Read<TargetPathComponent>().path.IsCreated == false) {
+                var t = unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId];
+                if (unit.HasCommandGroup() == false || t.IsAlive() == false || t.Read<TargetPathComponent>().path.IsCreated == false) {
                     return;
                 }
                 if (target.target.IsAlive() == true && AttackUtils.CanAttack(in unit, in target.target) == true) {
                     var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.fogOfWarSystem);
-                    if (result == AttackUtils.PositionToAttack.RotateToTarget) {
+                    if (result == AttackUtils.ReactionType.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {
                             target = target.target.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
                         });
                         unit.IsPathFollow = false;
                         unit.IsHold = true;
-
+                        ent.Remove<ComebackAfterAttackComponent>();
+                        
                     }
                 }
 
@@ -77,9 +99,36 @@ namespace ME.BECS.Attack {
                 if (command.target.IsAlive() == false) return;
                 
                 var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos);
-                if (result == AttackUtils.PositionToAttack.MoveToPoint) {
+                if (result == AttackUtils.ReactionType.MoveToTarget) {
                     PathUtils.UpdateTarget(in this.buildGraphSystem, group, pos, in jobInfo);
                 }
+
+            }
+
+        }
+
+        [BURST(CompileSynchronously = true)]
+        public struct RemoveComebackAfterAttackComponentJob : IJobForComponents {
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent) {
+                ent.Remove<ComebackAfterAttackComponent>();
+            }
+
+        }
+        
+        [BURST(CompileSynchronously = true)]
+        public struct ComebackAfterAttackJob : IJobFor2Aspects1Components<TransformAspect, UnitAspect, ComebackAfterAttackComponent> {
+
+            public BuildGraphSystem buildGraphSystem;
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref ComebackAfterAttackComponent comeback) {
+
+                var maxDistanceSqr = ent.ReadStatic<AttackerFollowDistanceComponent>();
+                if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr) return;
+                CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
+                    targetPosition = comeback.returnToPosition,
+                }, jobInfo);
+                ent.Remove<ComebackAfterAttackComponent>();
 
             }
 
@@ -108,7 +157,18 @@ namespace ME.BECS.Attack {
                        buildGraphSystem = buildGraphSystem,
                        fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
-            
+
+            context.Query()
+                   .With<ComebackAfterAttackComponent>()
+                   .With<ReceivedCommandFromUserEvent>()
+                   .Schedule<RemoveComebackAfterAttackComponentJob>()
+                   .AddDependency(ref context);
+
+            context.Query()
+                   .Schedule<ComebackAfterAttackJob, TransformAspect, UnitAspect, ComebackAfterAttackComponent>(new ComebackAfterAttackJob() {
+                       buildGraphSystem = buildGraphSystem,
+                   }).AddDependency(ref context);
+
         }
 
     }

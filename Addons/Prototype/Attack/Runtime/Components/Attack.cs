@@ -112,4 +112,19 @@ namespace ME.BECS.Attack {
         public ME.BECS.Units.LayerMask layers;
 
     }
+
+    [EditorComment("Unit will follow attacker")]
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct AttackerFollowDistanceComponent : IConfigComponentStatic {
+
+        public tfloat maxValueSqr;
+
+    }
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    [EditorComment("The component contains position to comeback after trying to attack unit on damage took")]
+    public struct ComebackAfterAttackComponent : IComponent {
+
+        public float3 returnToPosition;
+
+    }
 }

@@ -40,5 +40,8 @@ namespace ME.BECS.Commands {
         public ListAuto<Ent> builders;
         
     }
+    
+    [ComponentGroup(typeof(CommandComponentsGroup))]
+    public struct ReceivedCommandFromUserEvent : IComponent {}
 
 }
