@@ -79,7 +79,7 @@ namespace ME.BECS.Attack {
                             target = target.target.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
                         });
                         unit.IsPathFollow = false;
-                        unit.IsHold = true;
+                        // unit.IsHold = true;
                         ent.Remove<ComebackAfterAttackComponent>();
                         
                     }
@@ -124,8 +124,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref ComebackAfterAttackComponent comeback) {
 
                 var maxDistanceSqr = ent.ReadStatic<AttackerFollowDistanceComponent>();
-                if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr
-                    || math.distancesq(comeback.returnToPosition, float3.zero) == 0) {//temp solution, somehow comeback component appears on an entity where it was removed
+                if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr) {
                     return;
                 }
                 CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
@@ -133,6 +132,32 @@ namespace ME.BECS.Attack {
                 }, jobInfo);
                 ent.Remove<ComebackAfterAttackComponent>();
 
+            }
+
+        }
+
+        public static float3 test;
+        
+        public struct TestJob : IJobForAspects<UnitAspect> {
+
+            public BuildGraphSystem buildGraphSystem;
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
+                if (unit.readUnitCommandGroup.IsAlive() == true 
+                    && math.all(unit.readUnitCommandGroup.Read<CommandMove>().targetPosition == test)) return;
+                CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
+                    targetPosition = test,
+                }, jobInfo);
+                UnityEngine.Debug.Log("MoveToAttackerSystem");
+                // if (unit.readUnitCommandGroup.IsAlive() == false) {
+                //     var selectionGroupAspect = UnitUtils.CreateSelectionTempGroup(1, in jobInfo);
+                //     selectionGroupAspect.Add(in unit);
+                //     UnitUtils.CreateCommandGroup(this.buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, in jobInfo);
+                //     selectionGroupAspect.Destroy();
+                // } 
+                //
+                // PathUtils.UpdateTarget(in this.buildGraphSystem, unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>(),  test, in jobInfo);
+                //
             }
 
         }
@@ -161,16 +186,25 @@ namespace ME.BECS.Attack {
                        fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
 
+
             context.Query()
                    .With<ComebackAfterAttackComponent>()
                    .With<ReceivedCommandFromUserEvent>()
                    .Schedule<RemoveComebackAfterAttackComponentJob>()
                    .AddDependency(ref context);
+            
+            context.Apply();
 
             context.Query()
                    .Schedule<ComebackAfterAttackJob, TransformAspect, UnitAspect, ComebackAfterAttackComponent>(new ComebackAfterAttackJob() {
                        buildGraphSystem = buildGraphSystem,
                    }).AddDependency(ref context);
+
+            context.Query()
+                   .Without<IsUnitStaticComponent>()
+                   .Schedule<TestJob, UnitAspect>(new TestJob() {
+                       buildGraphSystem = buildGraphSystem,
+                   });
 
         }
 
