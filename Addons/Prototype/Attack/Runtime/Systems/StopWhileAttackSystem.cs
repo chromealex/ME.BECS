@@ -30,7 +30,9 @@ namespace ME.BECS.Attack {
                 var unit = parent.value;
                 if (sensor.target.IsAlive() == true) {
                     var unitAspect = unit.GetAspect<UnitAspect>();
-                    if (unitAspect.IsPathFollow == false) unitAspect.IsHold = true;
+                    if (unitAspect.IsPathFollow == false && sensor.readComponentRuntimeFire.fireTimer > 0) {
+                        unitAspect.IsHold = true;
+                    }
                 }
 
             }
@@ -58,7 +60,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor) {
 
                 var unit = sensor.ent.GetParent();
-                if (sensor.target.IsAlive() == false) unit.GetAspect<UnitAspect>().IsHold = false;
+                if (sensor.target.IsAlive() == false || sensor.readComponentRuntimeFire.fireTimer <= 0) unit.GetAspect<UnitAspect>().IsHold = false;
 
             }
 
@@ -79,7 +81,6 @@ namespace ME.BECS.Attack {
                                    .Schedule<JobRotate, AttackAspect, TransformAspect>();
             dependsOn = context.Query(dependsOn)
                                    .AsParallel()
-                                   .WithAny<AttackTargetComponent, AttackTargetsComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobRemove, AttackAspect>();
             context.SetDependency(dependsOn);

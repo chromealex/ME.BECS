@@ -29,6 +29,63 @@ namespace ME.BECS.Commands {
             return group;
 
         }
+        
+        /// <summary>
+        /// Clear command chain for unit
+        /// Add new command
+        /// </summary>
+        /// <param name="buildGraphSystem"></param>
+        /// <param name="unit"></param>
+        /// <param name="data"></param>
+        /// <param name="jobInfo"></param>
+        [INLINE(256)]
+        public static UnitCommandGroupAspect SetUserCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitAspect unit, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+
+            var group = SetCommand(in  buildGraphSystem, in unit, data, in jobInfo);
+            unit.ent.SetOneShot(new ReceivedCommandFromUserEvent());
+            return group;
+
+        }
+        
+        /// <summary>
+        /// Clear command chain for all units in selection
+        /// Add new command
+        /// </summary>
+        /// <param name="buildGraphSystem"></param>
+        /// <param name="selectionGroupAspect"></param>
+        /// <param name="data"></param>
+        /// <param name="jobInfo"></param>
+        [INLINE(256)]
+        public static UnitCommandGroupAspect SetUserCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+            
+            var commandGroup = SetCommand(in buildGraphSystem, in selectionGroupAspect, data, in jobInfo);
+            foreach (var unit in selectionGroupAspect.readUnits) {
+                unit.SetOneShot(new ReceivedCommandFromUserEvent());
+            }
+            return commandGroup;
+            
+        }
+
+        /// <summary>
+        /// Clear command chain for all units in selection
+        /// Add new command
+        /// </summary>
+        /// <param name="buildGraphSystem"></param>
+        /// <param name="selectionGroupAspect"></param>
+        /// <param name="data"></param>
+        /// <param name="jobInfo"></param>
+        [INLINE(256)]
+        public static UnitCommandGroupAspect SetUserCommand<T>(in BuildGraphSystem buildGraphSystem, in UnitSelectionTempGroupAspect selectionGroupAspect, in T data, in JobInfo jobInfo) where T : unmanaged, ICommandComponent {
+            
+            var commandGroup = SetCommand(in buildGraphSystem, in selectionGroupAspect, data, in jobInfo);
+            foreach (var unit in selectionGroupAspect.readUnits) {
+                unit.SetOneShot(new ReceivedCommandFromUserEvent());
+            }
+            return commandGroup;
+            
+        }
+        
+        
 
         /// <summary>
         /// Clear command chain for all units in selection

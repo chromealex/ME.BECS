@@ -20,11 +20,12 @@ namespace ME.BECS.Attack {
 
     public static class AttackUtils {
 
-        public enum PositionToAttack {
+        public enum ReactionType {
 
             None,
             RotateToTarget,
-            MoveToPoint,
+            MoveToTarget,
+            RunAway,
 
         }
 
@@ -98,14 +99,14 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static PositionToAttack GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position) {
+        public static ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position) {
 
             position = default;
-            if (group.readUnits.Count == 0u) return PositionToAttack.None;
+            if (group.readUnits.Count == 0u) return ReactionType.None;
 
             var targetPos = target.GetAspect<TransformAspect>().position;
             var d = tfloat.MaxValue;
-            var result = PositionToAttack.RotateToTarget;
+            var result = ReactionType.RotateToTarget;
             foreach (var unit in group.readUnits) {
                 var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, default);
                 var dist = math.distancesq(targetPos, pos);
@@ -113,8 +114,8 @@ namespace ME.BECS.Attack {
                     position = pos;
                     d = dist;
                 }
-                if (res == PositionToAttack.MoveToPoint) {
-                    result = PositionToAttack.MoveToPoint;
+                if (res == ReactionType.MoveToTarget) {
+                    result = ReactionType.MoveToTarget;
                 }
             }
 
@@ -123,12 +124,12 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
+        public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
             return GetPositionToAttack(in unit, in target, nodeSize, out position, default);
         }
 
         [INLINE(256)]
-        public static PositionToAttack GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
+        public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
 
             position = default;
             var owner = unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>();
@@ -152,29 +153,29 @@ namespace ME.BECS.Attack {
                 if (CanAttack(in unit, in target) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
                     var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
                     position = unitTr.GetWorldMatrixPosition() - dirNormalized * (targetAttackRange + offset);
-                    return PositionToAttack.MoveToPoint;
+                    return ReactionType.RunAway;
                 }
             }
             
             if (distSq <= minRangeSq) {
                 //if target is too close - get out from target
                 position = unitTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(minRangeSq) + offset);
-                return PositionToAttack.MoveToPoint;
+                return ReactionType.MoveToTarget;
             }
             // if our unit is in range [attackRange, sightRange] - find target point
             if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.sector.rangeSqr) {
                 // find point on the line
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
-                return PositionToAttack.MoveToPoint;
+                return ReactionType.MoveToTarget;
             } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
-                return PositionToAttack.RotateToTarget;
+                return ReactionType.RotateToTarget;
             }
 
             position = targetNearestPoint - dirNormalized * offset * 2f;
 
-            return PositionToAttack.MoveToPoint;
+            return ReactionType.MoveToTarget;
 
         }
 

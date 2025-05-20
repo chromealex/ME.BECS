@@ -150,7 +150,7 @@ namespace ME.BECS.Units {
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct DamageTookEvent : IComponent {
 
-        public Ent source;
+        public Ent source;//unit ent
 
     }
     
