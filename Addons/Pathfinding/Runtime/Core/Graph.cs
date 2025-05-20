@@ -1329,7 +1329,18 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         private static void DrawGizmosLevel(safe_ptr<State> state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
-            
+
+            {
+                var x = rootGraph.chunkWidth * rootGraph.nodeSize;
+                var y = rootGraph.chunkHeight * rootGraph.nodeSize;
+                UnityEngine.Gizmos.color = UnityEngine.Color.gray;
+                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)chunk.center, new UnityEngine.Vector3((float)x, 0f, (float)y));
+                #if UNITY_EDITOR
+                UnityEditor.Handles.color = UnityEngine.Color.cyan;
+                UnityEditor.Handles.Label((UnityEngine.Vector3)chunk.center, chunkIndex.ToString());
+                #endif
+            }
+
             var cellSize = (UnityEngine.Vector3)new float3(rootGraph.nodeSize, 0f, rootGraph.nodeSize);
             for (uint i = 0; i < rootGraph.chunkWidth; ++i) {
                 for (uint j = 0; j < rootGraph.chunkHeight; ++j) {
