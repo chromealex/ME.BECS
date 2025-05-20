@@ -136,32 +136,6 @@ namespace ME.BECS.Attack {
 
         }
 
-        public static float3 test;
-        
-        public struct TestJob : IJobForAspects<UnitAspect> {
-
-            public BuildGraphSystem buildGraphSystem;
-            
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {
-                if (unit.readUnitCommandGroup.IsAlive() == true 
-                    && math.all(unit.readUnitCommandGroup.Read<CommandMove>().targetPosition == test)) return;
-                CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
-                    targetPosition = test,
-                }, jobInfo);
-                UnityEngine.Debug.Log("MoveToAttackerSystem");
-                // if (unit.readUnitCommandGroup.IsAlive() == false) {
-                //     var selectionGroupAspect = UnitUtils.CreateSelectionTempGroup(1, in jobInfo);
-                //     selectionGroupAspect.Add(in unit);
-                //     UnitUtils.CreateCommandGroup(this.buildGraphSystem.GetTargetsCapacity(), in selectionGroupAspect, in jobInfo);
-                //     selectionGroupAspect.Destroy();
-                // } 
-                //
-                // PathUtils.UpdateTarget(in this.buildGraphSystem, unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>(),  test, in jobInfo);
-                //
-            }
-
-        }
-
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
@@ -186,7 +160,6 @@ namespace ME.BECS.Attack {
                        fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
 
-
             context.Query()
                    .With<ComebackAfterAttackComponent>()
                    .With<ReceivedCommandFromUserEvent>()
@@ -199,12 +172,6 @@ namespace ME.BECS.Attack {
                    .Schedule<ComebackAfterAttackJob, TransformAspect, UnitAspect, ComebackAfterAttackComponent>(new ComebackAfterAttackJob() {
                        buildGraphSystem = buildGraphSystem,
                    }).AddDependency(ref context);
-
-            context.Query()
-                   .Without<IsUnitStaticComponent>()
-                   .Schedule<TestJob, UnitAspect>(new TestJob() {
-                       buildGraphSystem = buildGraphSystem,
-                   });
 
         }
 
