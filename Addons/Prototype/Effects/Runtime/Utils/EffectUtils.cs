@@ -19,13 +19,20 @@ namespace ME.BECS.Effects {
     public static class EffectUtils {
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(in float3 position, in EffectConfig effect, in JobInfo jobInfo = default) {
-            return CreateEffect(in position, quaternion.identity, in effect, in jobInfo);
+        public static EffectAspect CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect) {
+            return CreateEffect(in jobInfo, in position, quaternion.identity, in effect);
         }
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(in float3 position, in quaternion rotation, in EffectConfig effect, in JobInfo jobInfo = default, in PlayerAspect owner = default) {
+        public static EffectAspect CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect, in PlayerAspect owner) {
+            return CreateEffect(in jobInfo, in position, quaternion.identity, in effect, owner);
+        }
 
+        [INLINE(256)]
+        public static EffectAspect CreateEffect(in JobInfo jobInfo, in float3 position, in quaternion rotation, in EffectConfig effect, in PlayerAspect owner = default) {
+
+            if (effect.config.IsValid == false) return default;
+            
             var ent = Ent.New(in jobInfo);
             effect.config.Apply(ent);
             if (owner.ent != default) {

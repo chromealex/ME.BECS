@@ -46,7 +46,7 @@ namespace ME.BECS.Bullets {
 
                 }
 
-                EffectUtils.CreateEffect(tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect, in jobInfo);
+                EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
                 bullet.ent.DestroyHierarchy();
 
             }
