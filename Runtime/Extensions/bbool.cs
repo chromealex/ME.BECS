@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 /// <summary>
 /// Implementation of blittable boolean
 /// </summary>
+[System.Serializable]
 [StructLayout(LayoutKind.Sequential, Size = 1, Pack = 1)]
 public struct bbool : System.IEquatable<bbool> {
 
