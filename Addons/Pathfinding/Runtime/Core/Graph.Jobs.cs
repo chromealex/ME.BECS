@@ -279,7 +279,7 @@ namespace ME.BECS.Pathfinding {
 
                             var localChunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
                             var node = localChunk.nodes[this.world.state, neighbourTempNode.nodeIndex];
-                            if (this.filter.IsValid(in node) == false) {
+                            if (this.filter.IsValid(new NodeInfo(node, neighbourTempNode.chunkIndex, neighbourTempNode.nodeIndex), in root) == false) {
                                 continue;
                             }
 
@@ -323,18 +323,36 @@ namespace ME.BECS.Pathfinding {
 
             var root = this.graph.Read<RootGraphComponent>();
             
+            var w = root.chunkWidth * root.nodeSize;
+            var h = root.chunkHeight * root.nodeSize;
+            var globalCoefficient = (w * w + h * h) * 0.01f + root.chunkWidth + root.chunkHeight;
+            
             var to = this.path.to;
             var highLevelPath = new Unity.Profiling.ProfilerMarker("HierarchyPath");
             highLevelPath.Begin();
             var list = this.path.from.As(in this.world.state.ptr->allocator);
             var nodesCount = 0;
             var hierarchyPathList = new Unity.Collections.LowLevel.Unsafe.UnsafeList<PathInfo>((int)list.Count, Unity.Collections.Allocator.Temp);
+            int hierarchyPathHash = 0;
             for (uint i = 0; i < list.Count; ++i) {
                 var hierarchyPath = Graph.HierarchyPath(this.world.state, in this.graph, list[this.world.state, i], to, this.filter, root.nodeSize);
                 if (hierarchyPath.pathState == PathState.Success) {
                     hierarchyPathList.Add(hierarchyPath);
+                    hierarchyPathHash += hierarchyPath.GetHashCode();
                     nodesCount += hierarchyPath.nodes.Length;
                 }
+            }
+
+            if (hierarchyPathHash != 0) {
+                ref var hash = ref this.path.hierarchyPathHash.As(this.world.state.ptr->allocator);
+                if (hash != hierarchyPathHash && hash != 0) {
+                    for (uint i = 0u; i < this.path.chunks.Length; ++i) {
+                        this.path.chunks[this.world.state, i].flowField.Dispose(ref this.world.state.ptr->allocator);
+                    }
+                    this.path.isRecalculationRequired = 0;
+                }
+                
+                hash = hierarchyPathHash;
             }
 
             var chunks = new Unity.Collections.NativeList<uint>(nodesCount, Unity.Collections.Allocator.Temp);
@@ -359,7 +377,6 @@ namespace ME.BECS.Pathfinding {
 
                         var data = this.path.chunks[this.world.state, portalInfo.chunkIndex];
                         if (data.flowField.IsCreated == false) {
-
                             ref var chunk = ref root.chunks[this.world.state, portalInfo.chunkIndex];
                             /*if (k < nodes.Length - 1) {
                                 var nextPortal = nodes[k + 1];
@@ -387,6 +404,8 @@ namespace ME.BECS.Pathfinding {
                                 data.flowField[this.world.state, i].bestCost = Graph.UNWALKABLE_COST;
                             }
                             setDefaultMarker.End();
+                        } else {
+                            
                         }
 
                         this.path.chunks[this.world.state, portalInfo.chunkIndex] = data;
@@ -403,8 +422,8 @@ namespace ME.BECS.Pathfinding {
                     { // Creating cost field
 
                         float3 targetNodePosition;
-                        uint targetChunkIndex;
                         uint targetNodeIndex;
+                        uint targetChunkIndex;
                         {
                             // get target chunk
                             targetChunkIndex = Graph.GetChunkIndex(in root, to, true);
@@ -532,15 +551,22 @@ namespace ME.BECS.Pathfinding {
                                         var neighbourTempNode = Graph.GetNeighbourIndex(in this.world, curTempNode, localDir, root.chunkWidth, root.chunkHeight, this.path.chunks,
                                                                                         root.width, root.height);
                                         if (neighbourTempNode.chunkIndex == uint.MaxValue) continue;
+                                        // if (chunksVisited.IsSet((int)neighbourTempNode.chunkIndex) == false) continue;
 
                                         chunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
                                         gridChunk = this.path.chunks[this.world.state, neighbourTempNode.chunkIndex];
                                         var neighbor = chunk.nodes[this.world.state, neighbourTempNode.nodeIndex];
-                                        if (this.filter.IsValid(in neighbor) == false) {
+                                        if (this.filter.IsValid(new NodeInfo(neighbor, neighbourTempNode.chunkIndex, neighbourTempNode.nodeIndex), in root) == false) {
                                             continue;
                                         }
+
+                                        tfloat coef = globalCoefficient;
                                         
-                                        var endNodeCost = neighbor.cost + rootCost + 0.01f * math.lengthsq(targetNodePosition - Graph.GetPosition(in root, in chunk, neighbourTempNode.nodeIndex));
+                                        if (targetChunkIndex == neighbourTempNode.chunkIndex && this.path.isRecalculationRequired == 1) {
+                                            coef = 0;
+                                        }
+                                        
+                                        var endNodeCost = coef + neighbor.cost + rootCost + 0.01f * math.lengthsq(targetNodePosition - Graph.GetPosition(in root, in chunk, neighbourTempNode.nodeIndex));
                                         ref var ffItem = ref gridChunk.flowField[this.world.state, neighbourTempNode.nodeIndex];
                                         if (endNodeCost < ffItem.bestCost) {
                                             ffItem.bestCost = endNodeCost;

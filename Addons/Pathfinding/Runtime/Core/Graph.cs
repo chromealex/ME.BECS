@@ -151,7 +151,7 @@ namespace ME.BECS.Pathfinding {
         public static void SetTarget(ref Path path, float3 position, in Filter filter) {
             
             path.to = Graph.ClampPosition(in path.graph, position);
-            path.to = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to, in filter);
+            path.to = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to, filter);
 
         }
 
@@ -166,6 +166,7 @@ namespace ME.BECS.Pathfinding {
                 chunks = new MemArray<Path.Chunk>(ref world.state.ptr->allocator, root.width * root.height),
             };
             path.from.Set(ref world.state.ptr->allocator, new List<float3>(ref world.state.ptr->allocator, 100u));
+            path.hierarchyPathHash.Set(ref world.state.ptr->allocator, 0);
 
         }
 
@@ -460,7 +461,7 @@ namespace ME.BECS.Pathfinding {
                             var nTemp = temp[(int)nIndex];
                             if (nTemp.isClosed == true) continue;
                             var n = chunk.nodes[state, nIndex];
-                            if (filter.IsValid(in n) == false) {
+                            if (filter.IsValid(new NodeInfo(n, chunkIndex, nIndex), in root) == false) {
                                 continue;
                             }
                             var cost = currentNodeCost + n.cost;
@@ -1253,9 +1254,10 @@ namespace ME.BECS.Pathfinding {
                         UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(Graph.GetDirection(item.direction) * 0.25f * cellSize), (UnityEngine.Vector3)Graph.GetDirection(item.direction) * 0.5f, scale: (float)cellSize);
                     }
+                    
+                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"{item.bestCost}");
                     /*if (Unity.Mathematics.math.lengthsq(pos - root.chunks[world.state, chunkIndex].center) <= 100f) {
                         var node = path.chunks[world.state, chunkIndex].bestCost[world.state, nodeIndex];
-                        UnityEditor.Handles.Label(pos, node.ToString() + "\n" + dir);
                     }*/
                 }
             }

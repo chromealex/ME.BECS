@@ -99,7 +99,7 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position) {
+        public static ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem) {
 
             position = default;
             if (group.readUnits.Count == 0u) return ReactionType.None;
@@ -108,7 +108,7 @@ namespace ME.BECS.Attack {
             var d = tfloat.MaxValue;
             var result = ReactionType.RotateToTarget;
             foreach (var unit in group.readUnits) {
-                var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, default);
+                var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, in buildGraphSystem, default);
                 var dist = math.distancesq(targetPos, pos);
                 if (dist < d) {
                     position = pos;
@@ -124,12 +124,12 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position) {
-            return GetPositionToAttack(in unit, in target, nodeSize, out position, default);
+        public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem) {
+            return GetPositionToAttack(in unit, in target, nodeSize, out position, in buildGraphSystem, default);
         }
 
         [INLINE(256)]
-        public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
+        public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
 
             position = default;
             var owner = unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>();
@@ -158,23 +158,26 @@ namespace ME.BECS.Attack {
             }
             
             if (distSq <= minRangeSq) {
-                //if target is too close - get out from target
+                // if target is too close - get out from target
                 position = unitTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(minRangeSq) + offset);
-                return ReactionType.MoveToTarget;
-            }
-            // if our unit is in range [attackRange, sightRange] - find target point
-            if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.sector.rangeSqr) {
+            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.sector.rangeSqr) {            
+                // if our unit is in range [attackRange, sightRange] - find target point
                 // find point on the line
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
-                return ReactionType.MoveToTarget;
             } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return ReactionType.RotateToTarget;
+            } else {
+                position = targetNearestPoint - dirNormalized * offset * 2f;
             }
-
-            position = targetNearestPoint - dirNormalized * offset * 2f;
-
+            
+            position = ME.BECS.Pathfinding.GraphUtils.GetNearestNodeByFilter(buildGraphSystem.GetGraphByTypeId(unit.readTypeId), position, new NearestPositionToAttackFilter() {
+                rangeSqr = attackSensor.sector.rangeSqr,
+                sourcePos = position,
+                targetPos = targetNearestPoint,
+            });
+            
             return ReactionType.MoveToTarget;
 
         }
@@ -256,6 +259,27 @@ namespace ME.BECS.Attack {
             }
 
         }
+    }
+
+    public struct NearestPositionToAttackFilter : ME.BECS.Pathfinding.IFilter {
+
+        public float3 sourcePos;
+        public float3 targetPos;
+        public tfloat rangeSqr;
+        
+        public bool IsValid(in ME.BECS.Pathfinding.NodeInfo info, in ME.BECS.Pathfinding.RootGraphComponent root) {
+
+            if (new ME.BECS.Pathfinding.Filter().IsValid(in info, in root) == false) return false;
+            var nodePosition = ME.BECS.Pathfinding.Graph.GetPosition(in root, root.chunks[info.chunkIndex], info.nodeIndex);
+            var dir = this.targetPos - nodePosition;
+            var rangeSqr = math.lengthsq(dir);
+            if (rangeSqr > this.rangeSqr) return false;
+            
+            var dot = -math.dot(math.normalizesafe(this.targetPos - this.sourcePos), math.normalizesafe(dir));
+            return rangeSqr * dot * 2 <= this.rangeSqr;
+            
+        }
+
     }
 
 }

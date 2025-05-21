@@ -50,7 +50,7 @@ namespace ME.BECS.Pathfinding {
             if (typeIds.Count > 0) {
                 foreach (var typeId in typeIds) {
                     var graph = buildGraphSystem.GetGraphByTypeId(typeId);
-                    var pos = GraphUtils.GetNearestNodeByFilter(in graph, position, default);
+                    var pos = GraphUtils.GetNearestNodeByFilter(in graph, position, new Filter());
                     middlePoint += pos;
                 }
                 middlePoint /= typeIds.Count;
@@ -72,6 +72,7 @@ namespace ME.BECS.Pathfinding {
                         var chunkIndex = Graph.GetChunkIndex(in root, middlePoint);
                         ref var prevPath = ref target.Get<TargetPathComponent>().path;
                         var prevRoot = prevPath.graph.Read<RootGraphComponent>();
+                        var wasCreated = prevPath.chunks[state, chunkIndex].flowField.IsCreated;
                         prevPath.chunks[state, chunkIndex].flowField.Dispose(ref state.ptr->allocator);
                         var prevChunkIndex = Graph.GetChunkIndex(in prevRoot, prevPath.to);
                         if (chunkIndex != prevChunkIndex) {
@@ -84,6 +85,9 @@ namespace ME.BECS.Pathfinding {
                         var prevNodeIndex = Graph.GetNodeIndex(in prevRoot, in prevRoot.chunks[state, prevChunkIndex], prevPath.to);
                         if (nodeIndex != prevNodeIndex) {
                             nodeChanged = true;
+                            if (wasCreated == true) {
+                                prevPath.isRecalculationRequired = 1;
+                            }
                         }
                     } else {
                         chunkChanged = true;

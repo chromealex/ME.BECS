@@ -15,7 +15,8 @@
         "ME.BECS.FogOfWar",
         "ME.BECS.Commands",
         "Unity.Mathematics",
-        "Unity.Collections"
+        "Unity.Collections",
+        "ME.ECS.Pathfinding"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

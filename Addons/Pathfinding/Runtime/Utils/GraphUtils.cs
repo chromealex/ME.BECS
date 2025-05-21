@@ -41,11 +41,11 @@ namespace ME.BECS.Pathfinding {
             if (size.y % 2 == 0) {
                 offset.y -= 0.5f;
             }
-            
+
             var root = graph.Read<RootGraphComponent>();
             worldPosition.x = math.round(worldPosition.x / root.nodeSize) * root.nodeSize + offset.x;
             worldPosition.z = math.round(worldPosition.z / root.nodeSize) * root.nodeSize + offset.y;
-            
+
             return worldPosition;
 
         }
@@ -73,7 +73,7 @@ namespace ME.BECS.Pathfinding {
             if (size.y % 2 == 0) {
                 offset.y -= 0.5f;
             }
-            
+
             return offset;
 
         }
@@ -89,7 +89,7 @@ namespace ME.BECS.Pathfinding {
             return true;
 
         }
-        
+
         [INLINE(256)]
         public static unsafe bool IsGraphMaskValid(in Ent graph, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
@@ -125,9 +125,9 @@ namespace ME.BECS.Pathfinding {
                 mask.Destroy();
             }
             ent.DestroyHierarchy();
-            
+
         }
-        
+
         [INLINE(256)]
         public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, ObstacleChannel obstacleChannel = ObstacleChannel.Obstacle, bool ignoreGraphRadius = false, int graphMask = -1, in JobInfo jobInfo = default) {
 
@@ -190,7 +190,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe bool GetPositionWithMapBordersNode(out Node node, in Ent graph, in float3 newPos) {
+        public static unsafe bool GetPositionWithMapBordersNode(out NodeInfo node, in Ent graph, in float3 newPos) {
 
             node = default;
             var root = graph.Read<RootGraphComponent>();
@@ -205,10 +205,14 @@ namespace ME.BECS.Pathfinding {
             if (nodeIndex == uint.MaxValue) {
                 return false;
             }
-            
-            node = targetChunk.nodes[state, nodeIndex];
+
+            node = new NodeInfo() {
+                node = targetChunk.nodes[state, nodeIndex],
+                chunkIndex = chunkIndex,
+                nodeIndex = nodeIndex,
+            };
             return true;
-            
+
         }
 
         public struct TempNodeTraverse {
@@ -220,41 +224,56 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe float3 GetNearestNodeByFilter(in Ent graph, in float3 position, in Filter filter) {
+        public static unsafe float3 GetNearestNodeByFilter<T>(in Ent graph, in float3 position, T filter) where T : struct, IFilter {
 
             var root = graph.Read<RootGraphComponent>();
             var world = graph.World;
             var queue = new NativeQueue<TempNodeTraverse>(10, Unity.Collections.Allocator.Temp);
             var globalCoord = Graph.GetGlobalCoord(in root, position);
             var nodeInfo = Graph.GetCoordInfo(in root, globalCoord.x, globalCoord.y);
-            queue.Enqueue(new TempNodeTraverse() { node = nodeInfo, coord = globalCoord, side = Side.Down });
-            queue.Enqueue(new TempNodeTraverse() { node = nodeInfo, coord = globalCoord, side = Side.Up });
-            queue.Enqueue(new TempNodeTraverse() { node = nodeInfo, coord = globalCoord, side = Side.Left });
-            queue.Enqueue(new TempNodeTraverse() { node = nodeInfo, coord = globalCoord, side = Side.Right });
+            queue.Enqueue(new TempNodeTraverse() {node = nodeInfo, coord = globalCoord, side = Side.Down});
+            queue.Enqueue(new TempNodeTraverse() {node = nodeInfo, coord = globalCoord, side = Side.Up});
+            queue.Enqueue(new TempNodeTraverse() {node = nodeInfo, coord = globalCoord, side = Side.Left});
+            queue.Enqueue(new TempNodeTraverse() {node = nodeInfo, coord = globalCoord, side = Side.Right});
             while (queue.Count > 0) {
                 var tempNodeInfo = queue.Dequeue();
                 var chunk = root.chunks[tempNodeInfo.node.chunkIndex];
                 var node = chunk.nodes[world.state, tempNodeInfo.node.nodeIndex];
-                if (filter.IsValid(in node) == true) {
+                if (filter.IsValid(new NodeInfo(node, tempNodeInfo.node.chunkIndex, tempNodeInfo.node.nodeIndex), in root) == true) {
                     return Graph.GetPosition(in root, in chunk, tempNodeInfo.node.nodeIndex);
                 }
 
-                {
+                if (tempNodeInfo.side != Side.None) {
                     var dir = Graph.GetDirectionBySide(tempNodeInfo.side);
                     var x = tempNodeInfo.coord.x + dir.x;
                     var y = tempNodeInfo.coord.y + dir.y;
-                    var neighbour = Graph.GetCoordInfo(in root, x, y);
-                    if (neighbour.IsValid() == true) {
-                        queue.Enqueue(new TempNodeTraverse() {
-                            node = neighbour,
-                            coord = new int2(x, y),
-                            side = tempNodeInfo.side,
-                        });
+
+                    Enqueue(in root, x, y, ref queue, tempNodeInfo.side);
+                    
+                    if (tempNodeInfo.side is Side.Up or Side.Down) {
+                        Enqueue(in root, x + 1, y, ref queue, Side.None);
+                        Enqueue(in root, x - 1, y, ref queue, Side.None);
+                    }
+
+                    if (tempNodeInfo.side is Side.Left or Side.Right) {
+                        Enqueue(in root, x, y + 1, ref queue, Side.None);
+                        Enqueue(in root, x, y - 1, ref queue, Side.None);
                     }
                 }
             }
 
             return position;
+
+            static void Enqueue(in RootGraphComponent root, int x, int y, ref NativeQueue<TempNodeTraverse> queue, Side side) {
+                var neighbour = Graph.GetCoordInfo(in root, x, y);
+                if (neighbour.IsValid() == true) {
+                    queue.Enqueue(new TempNodeTraverse() {
+                        node = neighbour,
+                        coord = new int2(x, y),
+                        side = side,
+                    });
+                }
+            }
 
         }
 
@@ -262,8 +281,8 @@ namespace ME.BECS.Pathfinding {
         public static float3 GetPositionWithMapBorders(in Ent graph, out float3 collisionDirection, in float3 newPos, in float3 prevPos, in Filter filter = default) {
 
             collisionDirection = float3.zero;
-            /*var root = graph.Read<RootGraphComponent>();
-            const float offset = 0.1f;
+            var root = graph.Read<RootGraphComponent>();
+            /*const float offset = 0.1f;
             const float minOffset = 0.01f;
             var localPos = newPos - root.position;
             if (localPos.x < offset || localPos.y < offset || localPos.x > root.width * root.chunkWidth * root.nodeSize - offset || localPos.z > root.height * root.chunkHeight * root.nodeSize - offset) {
@@ -274,16 +293,16 @@ namespace ME.BECS.Pathfinding {
                 if (localPos.z > root.height * root.chunkHeight * root.nodeSize - offset) resultPos.z = root.position.z + root.height * root.chunkHeight * root.nodeSize - offset - minOffset;
                 return resultPos;
             }*/
-            
+
             // if chunk and node are exist
             if (GetPositionWithMapBordersNode(out var node, in graph, in newPos) == true) {
-                if (filter.IsValid(in node) == false) {
+                if (filter.IsValid(in node, in root) == false) {
                     // if previous pos is not walkable too
                     if (GetPositionWithMapBordersNode(out node, in graph, in prevPos) == true) {
-                        if (filter.IsValid(in node) == false) {
+                        if (filter.IsValid(in node, in root) == false) {
                             // default clamping doesn't work
                             // so we need to find nearest walkable node
-                            var targetPos = GetNearestNodeByFilter(in graph, in newPos, in filter);
+                            var targetPos = GetNearestNodeByFilter(in graph, in newPos, filter);
                             collisionDirection = math.normalizesafe(targetPos - prevPos);
                             return prevPos;
                         }
@@ -313,11 +332,11 @@ namespace ME.BECS.Pathfinding {
                 result = prevPos;
                 return false;
             }
-            if (filter.IsValid(in node) == false) {
+            if (filter.IsValid(in node, in graph.Read<RootGraphComponent>()) == false) {
                 result = prevPos;
                 return false;
             }
-            
+
             result = newPos;
             return true;
 

@@ -7,7 +7,7 @@ using Unity.Mathematics;
 #endif
 
 namespace ME.BECS.Pathfinding {
-    
+
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Transforms;
     using Unity.Jobs;
@@ -34,7 +34,7 @@ namespace ME.BECS.Pathfinding {
         Failed,
 
     }
-    
+
     public enum NodeFlag : uint {
 
         None = 0,
@@ -51,7 +51,7 @@ namespace ME.BECS.Pathfinding {
 
     [System.Serializable]
     public struct GraphProperties {
-            
+
         public float3 position;
         public uint chunkWidth;
         public uint chunkHeight;
@@ -61,19 +61,27 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    public interface IFilter {
+
+        bool IsValid(in NodeInfo info, in RootGraphComponent root);
+
+    }
+
     [System.Serializable]
-    public struct Filter {
+    public struct Filter : IFilter {
 
         public byte ignoreNonWalkable;
         public NodeFlag flags;
 
-        public readonly bool IsValid(in Node node) {
-            if (this.ignoreNonWalkable == 0 && node.walkable == false) return false;
-            if (node.flags == 0) return true;
-            return ((uint)this.flags & node.flags) != 0;
+        public readonly bool IsValid(in NodeInfo info, in RootGraphComponent root) {
+            if (this.ignoreNonWalkable == 0 && info.node.walkable == false) return false;
+            if (info.node.flags == 0) return true;
+            return ((uint)this.flags & info.node.flags) != 0;
         }
 
     }
+    
+    
 
     public struct ChunkCache {
 
@@ -203,7 +211,21 @@ namespace ME.BECS.Pathfinding {
         }
 
     }
+    
+    public ref struct NodeInfo {
 
+        public Node node;
+        public uint chunkIndex;
+        public uint nodeIndex;
+
+        public NodeInfo(Node node, uint chunkIndex, uint nodeIndex) {
+            this.node = node;
+            this.chunkIndex = chunkIndex;
+            this.nodeIndex = nodeIndex;
+        }
+
+    }
+    
     [System.Serializable]
     public struct Node {
 
@@ -218,6 +240,7 @@ namespace ME.BECS.Pathfinding {
 
     public enum Side : byte {
 
+        None = 0,
         Up,
         Down,
         Left,
@@ -255,7 +278,7 @@ namespace ME.BECS.Pathfinding {
         public uint chunkIndex;
         public uint portalIndex;
 
-        public static readonly PortalInfo Invalid = new PortalInfo() { chunkIndex = uint.MaxValue, portalIndex = uint.MaxValue };
+        public static readonly PortalInfo Invalid = new PortalInfo() {chunkIndex = uint.MaxValue, portalIndex = uint.MaxValue};
 
         public bool IsValid => this.chunkIndex != uint.MaxValue && this.portalIndex != uint.MaxValue;
 
@@ -264,18 +287,25 @@ namespace ME.BECS.Pathfinding {
         }
 
     }
-    
+
     public struct ChunkPortals {
 
         public List<Portal> list;
 
     }
-    
+
     public struct PathInfo {
 
-        public World world;
         public Unity.Collections.NativeList<PortalInfo> nodes;
         public PathState pathState;
+
+        public override int GetHashCode() {
+            int hash = 0;
+            foreach (var portalInfo in this.nodes) {
+                hash += (int)((portalInfo.portalIndex + 17) ^ portalInfo.chunkIndex);
+            }
+            return hash;
+        }
 
     }
 
@@ -309,8 +339,10 @@ namespace ME.BECS.Pathfinding {
         public Ent graph;
         public MemArray<Chunk> chunks;
         public MemAllocatorPtr<List<float3>> from;
+        public MemAllocatorPtr<int> hierarchyPathHash;
         public float3 to;
         public Filter filter;
+        public byte isRecalculationRequired;
 
         public bool IsCreated => this.graph.IsAlive() == true && this.from.IsValid() == true && this.chunks.IsCreated == true;
 
@@ -330,7 +362,7 @@ namespace ME.BECS.Pathfinding {
         }
 
     }
-    
+
     public struct TempNodeData {
 
         public bool isClosed;
