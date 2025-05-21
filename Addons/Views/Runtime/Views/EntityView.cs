@@ -196,6 +196,14 @@ namespace ME.BECS.Views {
                 }
             }
 
+            var trails = this.GetComponentsInChildren<TrailRenderer>(true);
+            foreach (var trail in trails) {
+                if (trail.autodestruct == true) {
+                    Debug.LogWarning($"TrailRenderer on object {this} can't have autodestruct as true", this);
+                    trail.autodestruct = false;
+                }
+            }
+
         }
 
         private void ValidateModules<T>(ref int[] indexes) {
