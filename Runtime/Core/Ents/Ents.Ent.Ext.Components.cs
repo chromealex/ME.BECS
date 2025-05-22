@@ -11,6 +11,17 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        public static bool IsEnabled<T>(in this Ent ent) where T : unmanaged, IComponent {
+            
+            var world = ent.World;
+            var typeId = StaticTypes<T>.typeId;
+            return Components.ReadState(world.state, typeId, in ent);
+            
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
         [SafetyCheck(RefOp.ReadWrite)] public static bool Enable<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

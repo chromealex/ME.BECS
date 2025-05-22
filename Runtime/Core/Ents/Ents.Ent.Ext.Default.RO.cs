@@ -8,6 +8,9 @@ namespace ME.BECS {
         public static bool IsAlive(in this EntRO ent) => ent.ent.IsAlive();
 
         [INLINE(256)]
+        public static bool IsActive(in this EntRO ent) => ent.ent.IsActive();
+
+        [INLINE(256)]
         public static bool IsEmpty(in this EntRO ent) => ent.ent.IsEmpty();
 
     }
