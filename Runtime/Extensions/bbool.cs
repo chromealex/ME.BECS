@@ -11,6 +11,16 @@ public struct bbool : System.IEquatable<bbool> {
     public byte value;
 
     [INLINE(256)]
+    public bbool(int value) {
+        this.value = (byte)value;
+    }
+
+    [INLINE(256)]
+    public bbool(bool value) {
+        this.value = value ? (byte)1 : (byte)0;
+    }
+
+    [INLINE(256)]
     public static implicit operator bbool(bool value) => new bbool() { value = (value == true ? (byte)1 : (byte)0) };
 
     [INLINE(256)]

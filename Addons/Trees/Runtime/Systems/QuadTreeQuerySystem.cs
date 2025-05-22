@@ -44,11 +44,11 @@ namespace ME.BECS {
         /// <summary>
         /// Reset pos.y to zero
         /// </summary>
-        public byte ignoreY;
+        public bbool ignoreY;
         /// <summary>
         /// Ignore self
         /// </summary>
-        public byte ignoreSelf;
+        public bbool ignoreSelf;
 
     }
     

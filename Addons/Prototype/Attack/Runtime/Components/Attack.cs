@@ -22,7 +22,7 @@ namespace ME.BECS.Attack {
         };
 
         public Sector sector;
-        public byte ignoreSelf;
+        public bbool ignoreSelf;
         public tfloat reloadTime;
         public tfloat fireTime;
         public tfloat attackTime;

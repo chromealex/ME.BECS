@@ -34,7 +34,7 @@ namespace ME.BECS.Attack {
         public readonly ref readonly tfloat readAttackRangeSqr => ref this.readComponent.sector.rangeSqr;
         public readonly ref readonly tfloat readMinAttackRangeSqr => ref this.readComponent.sector.minRangeSqr;
         public readonly ref readonly tfloat readAttackSector => ref this.readComponent.sector.sector;
-        public readonly ref readonly byte readIgnoreSelf => ref this.readComponent.ignoreSelf;
+        public readonly ref readonly bbool readIgnoreSelf => ref this.readComponent.ignoreSelf;
         
         public readonly Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
 

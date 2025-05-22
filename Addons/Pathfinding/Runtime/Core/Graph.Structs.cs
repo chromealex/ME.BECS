@@ -70,19 +70,17 @@ namespace ME.BECS.Pathfinding {
     [System.Serializable]
     public struct Filter : IFilter {
 
-        public byte ignoreNonWalkable;
+        public bbool ignoreNonWalkable;
         public NodeFlag flags;
 
         public readonly bool IsValid(in NodeInfo info, in RootGraphComponent root) {
-            if (this.ignoreNonWalkable == 0 && info.node.walkable == false) return false;
+            if (this.ignoreNonWalkable == false && info.node.walkable == false) return false;
             if (info.node.flags == 0) return true;
             return ((uint)this.flags & info.node.flags) != 0;
         }
 
     }
     
-    
-
     public struct ChunkCache {
 
         [StructLayout(LayoutKind.Explicit, Size = 8)]
