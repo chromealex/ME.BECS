@@ -47,6 +47,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static bool operator !=(ListAuto<T> a, ListAuto<T> b) => !(a == b);
 
+        public uint ElementsCount => this.Count;
+
         object[] IUnmanagedList.ToManagedArray() {
             var arr = new object[this.Count];
             for (uint i = 0u; i < this.Count; ++i) {
@@ -85,6 +87,15 @@ namespace ME.BECS {
             this.arr = new MemArrayAuto<T>(in ent, capacity);
             this.EnsureCapacity(in ent, capacity);
 
+        }
+
+        [INLINE(256)]
+        public ListAuto(in Ent ent, in ListAuto<T> source) {
+
+            this = default;
+            this.arr = new MemArrayAuto<T>(in ent, in source.arr);
+            this.Count = source.Count;
+            
         }
 
         [INLINE(256)]

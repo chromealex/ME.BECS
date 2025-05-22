@@ -78,13 +78,24 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public HashSetAuto(in Ent ent, in HashSetAuto<T> other) {
+
+            E.IS_CREATED(other);
+            
+            this = other;
+            this.buckets = new MemArrayAuto<uint>(in ent, in other.buckets);
+            this.slots = new MemArrayAuto<Slot>(in ent, in other.slots);
+
+        }
+
+        [INLINE(256)]
         public HashSetAuto(in HashSetAuto<T> other) {
 
             E.IS_CREATED(other);
             
             this = other;
-            this.buckets = new MemArrayAuto<uint>(this.ent, other.buckets);
-            this.slots = new MemArrayAuto<Slot>(this.ent, other.slots);
+            this.buckets = new MemArrayAuto<uint>(this.ent, in other.buckets);
+            this.slots = new MemArrayAuto<Slot>(this.ent, in other.slots);
 
         }
 

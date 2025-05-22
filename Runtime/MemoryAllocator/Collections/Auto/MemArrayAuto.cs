@@ -47,6 +47,7 @@ namespace ME.BECS {
         public readonly uint Length => this.data.Length;
         public readonly Ent ent => this.data.ent;
         public readonly MemPtr arrPtr => this.data.arrPtr;
+        public uint ElementsCount => this.Length;
         
         public readonly bool IsCreated {
             [INLINE(256)]

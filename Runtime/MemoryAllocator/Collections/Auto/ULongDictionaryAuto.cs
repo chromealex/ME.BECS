@@ -71,6 +71,19 @@ namespace ME.BECS {
             this.Initialize(in ent, capacity);
 
         }
+        
+        [INLINE(256)]
+        public ULongDictionaryAuto(in Ent ent, in ULongDictionaryAuto<TValue> source) {
+
+            this = default;
+            this.buckets = new MemArrayAuto<uint>(in ent, in source.buckets);
+            this.entries = new MemArrayAuto<Entry>(in ent, in source.entries);
+            this.count = source.count;
+            this.version = source.version;
+            this.freeList = source.freeList;
+            this.freeCount = source.freeCount;
+
+        }
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {

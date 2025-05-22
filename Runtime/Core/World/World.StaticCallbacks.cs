@@ -24,6 +24,12 @@ namespace ME.BECS {
 
     }
 
+    public class WorldStaticCopyFromComponentCallbacksTypes<T> where T : unmanaged, IComponentBase {
+
+        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticCopyFromComponentCallbacksTypes<T>>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>>.align, 20001);
+
+    }
+
     public static class WorldStaticCallbacks {
 
         private static scg::HashSet<System.Collections.IDictionary> allDics = new scg::HashSet<System.Collections.IDictionary>();
@@ -45,6 +51,22 @@ namespace ME.BECS {
 
         public delegate void CallbackDelegate<T>(ref T data) where T : unmanaged;
         public unsafe delegate void ConfigComponentCallbackDelegate(in UnsafeEntityConfig config, void* componentPtr, in Ent ent);
+        public unsafe delegate void CopyFromComponentCallbackDelegate(void* componentPtr, in Ent ent);
+
+        public static void RegisterCopyFromComponentCallback<T>(CopyFromComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
+
+            var maxTypeId = StaticTypes.counter;
+            WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Resize(maxTypeId + 1u);
+            WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
+
+        }
+
+        public static unsafe void RaiseCopyFromComponentCallback<T>(void* component, in Ent ent) where T : unmanaged, IComponentBase {
+
+            if (WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Length == 0u) return;
+            WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId).Invoke(component, in ent);
+
+        }
 
         public static void RegisterConfigComponentCallback<T>(ConfigComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
 

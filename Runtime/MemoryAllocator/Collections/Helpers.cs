@@ -10,6 +10,7 @@ namespace ME.BECS {
 
     public interface IUnmanagedList : IIsCreated {
 
+        uint ElementsCount { get; }
         object[] ToManagedArray();
         Ent Ent { get; }
         uint GetConfigId();
