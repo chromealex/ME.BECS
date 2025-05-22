@@ -51,9 +51,9 @@ Tested in Unity 2022.3.39f1
 
 Optional defines:
 ```
-#-define:ENABLE_BECS_COLLECTIONS_CHECKS
-#-define:LEAK_DETECTION
-#-define:MEMORY_ALLOCATOR_BOUNDS_CHECK
+-define:ENABLE_BECS_COLLECTIONS_CHECKS
+-define:LEAK_DETECTION
+-define:MEMORY_ALLOCATOR_BOUNDS_CHECK
 ```
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 
