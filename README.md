@@ -47,10 +47,13 @@ Tested in Unity 2022.3.39f1
 -define:EXCEPTIONS_INTERNAL
 -define:EXCEPTIONS_ASPECTS
 -define:EXCEPTIONS
-# These defines are optional and leads some debug information:
-#-define:ENABLE_BECS_COLLECTIONS_CHECKS
-#-define:LEAK_DETECTION
-#-define:MEMORY_ALLOCATOR_BOUNDS_CHECK
+```
+
+Optional defines:
+```
+-define:ENABLE_BECS_COLLECTIONS_CHECKS
+-define:LEAK_DETECTION
+-define:MEMORY_ALLOCATOR_BOUNDS_CHECK
 ```
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 
