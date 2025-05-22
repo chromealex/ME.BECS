@@ -112,20 +112,6 @@ namespace ME.BECS.Pathfinding {
                         }
                     }
 
-                } else {
-
-                    // we need to update last chunk only if last node has been changed
-                    // set path follow flag
-                    for (uint i = 0; i < unitCommandGroup.units.Count; ++i) {
-                        var unit = unitCommandGroup.units[i];
-                        if (unit.IsAlive() == false) continue;
-                        var aspect = unit.GetAspect<UnitAspect>();
-                        aspect.IsPathFollow = true;
-                        aspect.collideWithEnd = 0;
-                    }
-                    unitCommandGroup.Unlock();
-                    return;
-
                 }
 
             } else {

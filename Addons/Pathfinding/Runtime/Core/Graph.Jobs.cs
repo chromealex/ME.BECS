@@ -343,7 +343,7 @@ namespace ME.BECS.Pathfinding {
                 }
             }
 
-            if (hierarchyPathHash != 0) {
+            if (hierarchyPathHash != 0 && this.path.isRecalculationRequired == 1) {
                 ref var hash = ref this.path.hierarchyPathHash.As(this.world.state.ptr->allocator);
                 if (hash != hierarchyPathHash && hash != 0) {
                     for (uint i = 0u; i < this.path.chunks.Length; ++i) {
