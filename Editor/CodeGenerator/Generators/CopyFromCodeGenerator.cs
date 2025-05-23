@@ -7,6 +7,8 @@ namespace ME.BECS.Editor.Aspects {
 
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
 
+            if (this.editorAssembly == true) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
+            
             var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             var content = new System.Collections.Generic.List<string>();
             var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>().OrderBy(x => x.FullName).ToArray();

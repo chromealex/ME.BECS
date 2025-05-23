@@ -81,8 +81,8 @@ namespace ME.BECS.Transforms {
         public readonly ref float3 boundsSize => ref this.boundsSizeData.Get(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float3 readBoundsSize => ref this.boundsSizeData.Read(this.ent.id, this.ent.gen).value;
         
-        public readonly ref byte isWorldMatrixTickCalculated => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated;
-        public readonly ref readonly byte readIsWorldMatrixTickCalculated => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
+        public readonly ref bbool isWorldMatrixTickCalculated => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated;
+        public readonly ref readonly bbool readIsWorldMatrixTickCalculated => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
         
         public readonly float3 position {
             [INLINE(256)]

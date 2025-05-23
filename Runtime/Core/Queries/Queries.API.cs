@@ -93,12 +93,12 @@ namespace ME.BECS {
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             
-            var job = new BuilderArchetypesJob() {
+            /*var job = new BuilderArchetypesJob() {
                 state = queryContext.state,
                 queryData = builder.queryData,
                 allocator = allocator,
             };
-            dependsOn = job.Schedule(dependsOn);
+            dependsOn = job.Schedule(dependsOn);*/
             builder.builderDependsOn = dependsOn;//Batches.Close(dependsOn, queryContext.state);
             builder.Without<IsInactive>();
             

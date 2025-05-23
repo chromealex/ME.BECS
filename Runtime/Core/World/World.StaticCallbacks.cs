@@ -18,15 +18,15 @@ namespace ME.BECS {
 
     }
 
-    public class WorldStaticConfigComponentCallbacksTypes<T> where T : unmanaged, IComponentBase {
+    public class WorldStaticConfigComponentCallbacksTypes {
 
-        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentCallbacksTypes<T>>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.align, 20001);
+        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentCallbacksTypes>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.align, 20001);
 
     }
 
-    public class WorldStaticCopyFromComponentCallbacksTypes<T> where T : unmanaged, IComponentBase {
+    public class WorldStaticCopyFromComponentCallbacksTypes {
 
-        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticCopyFromComponentCallbacksTypes<T>>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>>.align, 20001);
+        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticCopyFromComponentCallbacksTypes>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.CopyFromComponentCallbackDelegate>>>.align, 20002);
 
     }
 
@@ -56,30 +56,32 @@ namespace ME.BECS {
         public static void RegisterCopyFromComponentCallback<T>(CopyFromComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
 
             var maxTypeId = StaticTypes.counter;
-            WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Resize(maxTypeId + 1u);
-            WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
+            WorldStaticCopyFromComponentCallbacksTypes.callbacks.Data.Resize(maxTypeId + 1u);
+            WorldStaticCopyFromComponentCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
 
         }
 
-        public static unsafe void RaiseCopyFromComponentCallback<T>(void* component, in Ent ent) where T : unmanaged, IComponentBase {
+        public static unsafe void RaiseCopyFromComponentCallback(uint typeId, void* component, in Ent ent) {
 
-            if (WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Length == 0u) return;
-            WorldStaticCopyFromComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId).Invoke(component, in ent);
+            if (WorldStaticCopyFromComponentCallbacksTypes.callbacks.Data.Length == 0u) return;
+            var callback = WorldStaticCopyFromComponentCallbacksTypes.callbacks.Data.Get(typeId);
+            if (callback.IsCreated == true) callback.Invoke(component, in ent);
 
         }
 
         public static void RegisterConfigComponentCallback<T>(ConfigComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
 
             var maxTypeId = StaticTypes.counter;
-            WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Resize(maxTypeId + 1u);
-            WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
+            WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Resize(maxTypeId + 1u);
+            WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
 
         }
         
         public static unsafe void RaiseConfigComponentCallback<T>(in UnsafeEntityConfig config, void* component, in Ent ent) where T : unmanaged, IComponentBase {
 
-            if (WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Length == 0u) return;
-            WorldStaticConfigComponentCallbacksTypes<T>.callbacks.Data.Get(StaticTypes<T>.typeId).Invoke(in config, component, in ent);
+            if (WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Length == 0u) return;
+            var callback = WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId);
+            if (callback.IsCreated == true) callback.Invoke(in config, component, in ent);
 
         }
 

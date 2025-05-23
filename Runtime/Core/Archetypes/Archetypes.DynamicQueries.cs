@@ -53,11 +53,13 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public JobHandle Build(ref QueryBuilder builder, safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter, JobHandle dependsOn) {
+                var allocator = WorldsTempAllocator.allocatorTemp.Get(builder.WorldId).Allocator.ToAllocator;
                 var job = new ComposeJob() {
                     query = this,
                     queryData = builder.queryData,
                     state = builder.commandBuffer.ptr->state,
                     counter = counter,
+                    allocator = allocator,
                 };
                 return job.ScheduleByRef(dependsOn);
             }
@@ -71,10 +73,13 @@ namespace ME.BECS {
             public safe_ptr<State> state;
             public safe_ptr<QueryData> queryData;
             public safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter;
+            public Unity.Collections.Allocator allocator;
 
             [INLINE(256)]
             public void Execute() {
 
+                if (this.queryData.ptr->archetypesBits.IsCreated == false) this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
+                
                 if (this.query.with.Length > 0) {
                     new WithArrJob() {
                         queryData = this.queryData,
