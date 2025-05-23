@@ -54,7 +54,7 @@ namespace ME.BECS.Attack {
                 return 0u;
             }
         }
-        
+
         [INLINE(256)]
         private readonly void CleanUpTarget() {
             
@@ -111,6 +111,8 @@ namespace ME.BECS.Attack {
         public void SetTargetsAt(uint index, Ent target) {
             this.targetsDataPtr.Get(this.ent.id, this.ent.gen).targets[index] = target;
         }
+        
+        public readonly bool CanFireWhileMoves => this.ent.Has<CanFireWhileMovesTag>();
         
         public readonly tfloat ReloadProgress => this.readComponentRuntimeReload.reloadTimer / this.readComponent.reloadTime;
         public readonly tfloat FireProgress => this.readComponentRuntimeFire.fireTimer / this.readComponent.fireTime;
