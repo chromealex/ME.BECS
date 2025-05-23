@@ -1065,7 +1065,7 @@ namespace ME.BECS.Editor {
                 path = System.IO.Path.GetFileNameWithoutExtension(path);
             }
 
-            return path;
+            return path.Replace('\\', '/');
         }
         
         public static T GetAssetByPathPart<T>(string pathPart) where T : UnityEngine.Object {
