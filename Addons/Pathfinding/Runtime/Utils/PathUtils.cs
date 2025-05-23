@@ -136,7 +136,7 @@ namespace ME.BECS.Pathfinding {
                 if (unit.IsAlive() == false) continue;
                 var aspect = unit.GetAspect<UnitAspect>();
                 aspect.IsPathFollow = true;
-                aspect.collideWithEnd = 0;
+                aspect.IsCollideWithEnd = false;
             }
             
             unitCommandGroup.Unlock();

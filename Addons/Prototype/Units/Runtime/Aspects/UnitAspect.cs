@@ -56,6 +56,13 @@ namespace ME.BECS.Units {
             set => this.ent.SetTag<UnitIsDeadTag>(value);
         }
 
+        public readonly bool IsCollideWithEnd {
+            [INLINE(256)]
+            get => this.ent.Has<UnitIsCollideWithEnd>();
+            [INLINE(256)]
+            set => this.ent.SetTag<UnitIsCollideWithEnd>(value);
+        }
+
         public readonly ref tfloat minSightRangeSqr => ref this.component.sightRange.minRangeSqr;
         public readonly ref tfloat sightRangeSqr => ref this.component.sightRange.rangeSqr;
         public readonly ref tfloat sector => ref this.component.sightRange.sector;
@@ -93,7 +100,6 @@ namespace ME.BECS.Units {
         public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitCommandGroup => ref this.unitCommandGroupDataPtr.Read(this.ent.id, this.ent.gen).unitCommandGroup;
         
-        public readonly ref int collideWithEnd => ref this.componentRuntime.collideWithEnd;
         public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentComponent readComponent => ref this.navAgentDataPtr.Read(this.ent.id, this.ent.gen);

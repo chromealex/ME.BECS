@@ -1,6 +1,7 @@
 namespace ME.BECS.Attack {
 
     using Views;
+    using ME.BECS.Units;
     
     public class AnimatorAttackViewModule : IViewApplyState {
 
@@ -13,7 +14,7 @@ namespace ME.BECS.Attack {
 
         public void ApplyState(in EntRO ent) {
 
-            var unit = ent.GetAspect<ME.BECS.Units.UnitAspect>();
+            var unit = ent.GetAspect<UnitAspect>();
             var sensor = unit.readComponentRuntime.attackSensor;
             if (sensor.IsAlive() == false) return;
             var attack = sensor.GetAspect<AttackAspect>();

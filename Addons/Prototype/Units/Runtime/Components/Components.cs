@@ -39,8 +39,6 @@ namespace ME.BECS.Units {
 
         public AgentType properties;
 
-        public int collideWithEnd;
-        
         public float3 collisionDirection;
         public float3 separationVector;
         public float3 alignmentVector;
@@ -182,5 +180,8 @@ namespace ME.BECS.Units {
     
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitIsDeadTag : IComponent { }
+    
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitIsCollideWithEnd : IComponent { }
 
 }
