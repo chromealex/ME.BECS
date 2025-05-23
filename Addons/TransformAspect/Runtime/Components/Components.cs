@@ -18,6 +18,12 @@ namespace ME.BECS.Transforms {
 
     }
 
+    public struct TransformMatrixComponentGroup {
+
+        public static UnityEngine.Color color = UnityEngine.Color.red;
+
+    }
+
     [EditorComment("Object bounds size")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct BoundsSizeComponent : IConfigComponent {
@@ -29,7 +35,7 @@ namespace ME.BECS.Transforms {
     }
 
     [EditorComment("Current calculated world matrix")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
+    [ComponentGroup(typeof(TransformMatrixComponentGroup))]
     //[LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct WorldMatrixComponent : IComponent {
 
@@ -41,7 +47,7 @@ namespace ME.BECS.Transforms {
     }
 
     [EditorComment("Current calculated local matrix")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
+    [ComponentGroup(typeof(TransformMatrixComponentGroup))]
     //[LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct LocalMatrixComponent : IComponent {
 
@@ -99,8 +105,6 @@ namespace ME.BECS.Transforms {
 
     [EditorComment("Is first level entity under the root?")]
     [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct IsFirstLevelComponent : IComponent {
-
-    }
+    public struct IsFirstLevelComponent : IComponent { }
 
 }
