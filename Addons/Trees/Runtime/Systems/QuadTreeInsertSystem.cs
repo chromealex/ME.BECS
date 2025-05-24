@@ -16,6 +16,7 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
 
+    [ComponentGroup(typeof(QuadTreeComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
     public struct QuadTreeElement : IComponent {
 
@@ -30,12 +31,14 @@ namespace ME.BECS {
 
     }
 
+    [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeElementRect : IComponent {
 
         public tfloat sizeY;
         
     }
 
+    [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeHeightComponent : IComponent {
         
         public tfloat height;

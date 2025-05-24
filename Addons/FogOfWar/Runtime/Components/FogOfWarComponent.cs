@@ -14,6 +14,13 @@ namespace ME.BECS.FogOfWar {
         
     }
 
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
+    public struct QuadTreeQueryFogOfWarFilter : IComponent {
+
+        public FogOfWarSubFilter data;
+
+    }
+
     [EditorComment("Main runtime component to store nodes")]
     [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarComponent : IComponent {
@@ -48,6 +55,7 @@ namespace ME.BECS.FogOfWar {
 
     }
 
+    [ComponentGroup(typeof(FogOfWarComponentGroup))]
     public struct FogOfWarShadowCopyRequiredRuntimeComponent : IComponent {
 
         public MemArrayAuto<Ent> shadowCopy;

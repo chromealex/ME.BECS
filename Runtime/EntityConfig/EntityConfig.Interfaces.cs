@@ -1,5 +1,11 @@
 namespace ME.BECS {
 
+    public struct EntityConfigComponentGroup {
+
+        public static UnityEngine.Color color = UnityEngine.Color.cyan;
+
+    }
+    
     /// <summary>
     /// Use this interface to assign to unmanaged type
     /// to show in EntityConfig static list
@@ -28,6 +34,7 @@ namespace ME.BECS {
     /// </summary>
     public interface IConfigComponentShared : IComponentShared { }
 
+    [ComponentGroup(typeof(EntityConfigComponentGroup))]
     public struct EntityConfigComponent : IComponent {
 
         public uint id;

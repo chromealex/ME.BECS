@@ -4,12 +4,6 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    public struct QuadTreeQueryFogOfWarFilter : IComponent {
-
-        public FogOfWarSubFilter data;
-
-    }
-    
     [BURST(CompileSynchronously = true)]
     [RequiredDependencies(typeof(CreateSystem), typeof(QuadTreeInsertSystem))]
     public struct QuadTreeQueryFogOfWarSystem : IUpdate {

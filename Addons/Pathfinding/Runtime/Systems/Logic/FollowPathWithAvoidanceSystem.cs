@@ -28,12 +28,12 @@ namespace ME.BECS.Pathfinding {
             movementForce = 5f,
         };
 
-        public float collisionForce;
-        public float avoidanceForce;
-        public float cohesionForce;
-        public float separationForce;
-        public float alignmentForce;
-        public float movementForce;
+        public tfloat collisionForce;
+        public tfloat avoidanceForce;
+        public tfloat cohesionForce;
+        public tfloat separationForce;
+        public tfloat alignmentForce;
+        public tfloat movementForce;
         
         [BURST(CompileSynchronously = true)]
         public struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {

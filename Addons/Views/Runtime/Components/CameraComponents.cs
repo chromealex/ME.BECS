@@ -12,6 +12,13 @@ namespace ME.BECS.Views {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
+    public struct CameraComponentGroup {
+
+        public static UnityEngine.Color color = new UnityEngine.Color(0.36f, 0.65f, 0.5f);
+
+    }
+
+    [ComponentGroup(typeof(CameraComponentGroup))]
     public struct CameraComponent : IComponent {
 
         public MemArrayAuto<UnityEngine.Plane> localPlanes;
@@ -20,9 +27,9 @@ namespace ME.BECS.Views {
         public tfloat fieldOfViewVertical;
         public tfloat fieldOfViewHorizontal;
         public tfloat aspect;
-        public bool orthographic;
         public tfloat orthographicSize;
         public Bounds bounds;
+        public bbool orthographic;
 
     }
 

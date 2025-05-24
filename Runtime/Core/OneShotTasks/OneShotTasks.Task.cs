@@ -7,7 +7,6 @@ namespace ME.BECS {
         public OneShotType type;
         public Ent ent;
         public uint typeId;
-        public uint groupId;
         public ushort updateType;
         public MemAllocatorPtr data;
 

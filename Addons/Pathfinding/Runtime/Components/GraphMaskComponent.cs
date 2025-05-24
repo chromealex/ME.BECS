@@ -8,6 +8,7 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Pathfinding {
 
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct GraphMaskComponent : IConfigComponent, IConfigInitialize {
 
         public float2 offset;
@@ -28,6 +29,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct GraphMaskRuntimeComponent : IComponentDestroy {
 
         public MemArrayAuto<tfloat> heights;
@@ -52,6 +54,7 @@ namespace ME.BECS.Pathfinding {
 
     }
     
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct IsGraphMaskDirtyComponent : IComponent {}
 
 }

@@ -50,15 +50,21 @@ namespace ME.BECS {
             public bool IsCreated => this.ptr.ptr != null;
 
             [INLINE(256)]
-            public ref T Get(int index) {
+            public readonly ref T Get(int index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(this.ptr + index).ptr;
             }
 
             [INLINE(256)]
-            public ref T Get(uint index) {
+            public readonly ref T Get(uint index) {
                 E.RANGE(index, 0, this.Length);
                 return ref *(this.ptr + index).ptr;
+            }
+
+            [INLINE(256)]
+            public readonly T FirstOrDefault() {
+                if (this.Length > 0u) return this.Get(0u);
+                return default;
             }
 
             [INLINE(256)]

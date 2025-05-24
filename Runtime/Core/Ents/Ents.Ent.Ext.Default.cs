@@ -2,10 +2,17 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
+    public struct CoreComponentGroup {
+
+        public static UnityEngine.Color color = UnityEngine.Color.white;
+
+    }
+
     /// <summary>
     /// Default component.
     /// See ent.SetActive() API for more details.
     /// </summary>
+    [ComponentGroup(typeof(CoreComponentGroup))]
     public struct IsInactive : IComponent { }
     
     public static unsafe partial class EntExt {

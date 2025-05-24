@@ -18,6 +18,13 @@ namespace ME.BECS {
     using static Cuts;
     using ME.BECS.Transforms;
 
+    public struct QuadTreeComponentGroup {
+
+        public static UnityEngine.Color color = UnityEngine.Color.yellow;
+
+    }
+    
+    [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeQuery : IConfigComponent {
 
         /// <summary>
@@ -52,8 +59,10 @@ namespace ME.BECS {
 
     }
     
+    [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeQueryHasCustomFilterTag : IComponent {}
 
+    [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeResult : IComponent {
 
         public ListAuto<Ent> results;

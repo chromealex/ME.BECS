@@ -8,6 +8,7 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Pathfinding {
     
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct RootGraphComponent : IComponent {
 
         public MemArrayAuto<ChunkComponent> chunks;

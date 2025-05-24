@@ -8,12 +8,20 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Pathfinding {
 
+    public struct PathfindingComponentGroup {
+
+        public static UnityEngine.Color color = UnityEngine.Color.green;
+
+    }
+
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct AgentComponent : IComponent {
 
         public Filter filter;
 
     }
     
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct TargetComponent : IComponent {
 
         public static TargetComponent Create(in Ent targetInfo, in Ent graphEnt) => new TargetComponent() {
@@ -26,6 +34,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct TargetInfoComponent : IComponent {
         
         public float3 position;
@@ -33,6 +42,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct TargetPathComponent : IComponent {
 
         public Path path;

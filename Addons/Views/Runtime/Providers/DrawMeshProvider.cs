@@ -14,6 +14,7 @@ namespace ME.BECS.Views {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
+    [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct DrawMeshProviderTag : IComponent {}
 
     [BURST(CompileSynchronously = true)]

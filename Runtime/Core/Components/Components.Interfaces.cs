@@ -21,6 +21,7 @@ namespace ME.BECS {
     }
 
     // ReSharper disable once InconsistentNaming
+    [ComponentGroup(typeof(CoreComponentGroup))]
     public readonly struct TNull : IComponent { }
 
 }

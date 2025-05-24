@@ -49,12 +49,12 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             var dataPtr = new MemAllocatorPtr();
             if (type == OneShotType.NextTick) dataPtr.Set(ref state.ptr->allocator, in data);
-            Add(state, in ent, StaticTypes<T>.typeId, StaticTypes<T>.groupId, updateType, dataPtr, type);
+            Add(state, in ent, StaticTypes<T>.typeId, updateType, dataPtr, type);
 
         }
 
         [INLINE(256)]
-        public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, uint groupId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
+        public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
             var threadIndex = JobUtils.ThreadIndex;
@@ -69,7 +69,6 @@ namespace ME.BECS {
                 collection.ptr->lockIndex.Lock();
                 collection.ptr->items.Add(ref state.ptr->allocator, new Task() {
                     typeId = typeId,
-                    groupId = groupId,
                     ent = ent,
                     type = type,
                     data = data,
@@ -130,7 +129,6 @@ namespace ME.BECS {
                                     // add new task to remove at the end of the tick
                                     var newTask = new Task() {
                                         typeId = item.typeId,
-                                        groupId = item.groupId,
                                         ent = item.ent,
                                         type = OneShotType.CurrentTick,
                                         data = default,

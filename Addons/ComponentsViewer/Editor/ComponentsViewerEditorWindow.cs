@@ -157,7 +157,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                 components.AddToClassList("fields-container");
                 componentsContainer.Add(components);
 
-                var componentGroups = EditorUtils.GetComponentGroups();
+                var componentGroups = EditorUtils.GetComponentGroups().OrderBy(x => x.order).ThenBy(x => x.value).ToArray();
                 foreach (var group in componentGroups) {
 
                     var groupFoldout = new Foldout();

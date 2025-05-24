@@ -25,6 +25,7 @@ namespace ME.BECS.Views {
 
     }
     
+    [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct EntityViewProviderTag : IComponent {}
 
     [StructLayout(LayoutKind.Explicit, Size = 8)]
