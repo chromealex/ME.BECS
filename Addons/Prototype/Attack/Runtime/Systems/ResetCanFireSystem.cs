@@ -16,7 +16,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr) {
 
                 if (tr.parent.Has<IsUnitStaticComponent>() == false) return;
-                aspect.CanFire = false;
+                if (aspect.HasAnyTarget == false) aspect.CanFire = false;
 
             }
 
