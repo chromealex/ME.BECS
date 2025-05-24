@@ -16,8 +16,8 @@ namespace ME.BECS.Views {
 
     public static class CameraUtils {
 
-        private const int PLANES_COUNT = 6;
-        private const int CORNERS_COUNT = 4;
+        private const uint PLANES_COUNT = 6u;
+        private const uint CORNERS_COUNT = 4u;
 
         private static readonly UnityEngine.Plane[] planes = new UnityEngine.Plane[6];
         private static readonly UnityEngine.Vector3[] corners = new UnityEngine.Vector3[4];
@@ -57,12 +57,12 @@ namespace ME.BECS.Views {
             var bounds = new Bounds();
             camera.CalculateFrustumCorners(new UnityEngine.Rect(0f, 0f, 1f, 1f), camera.nearClipPlane, UnityEngine.Camera.MonoOrStereoscopicEye.Mono, corners);
             bounds.SetMinMax(math.mul(rotation, (float3)corners[0]), math.mul(rotation, (float3)corners[1]));
-            for (int i = 0; i < CORNERS_COUNT; ++i) {
+            for (uint i = 0u; i < CORNERS_COUNT; ++i) {
                 bounds.Encapsulate(math.mul(rotation, (float3)corners[i]));
             }
             
             camera.CalculateFrustumCorners(new UnityEngine.Rect(0f, 0f, 1f, 1f), camera.farClipPlane, UnityEngine.Camera.MonoOrStereoscopicEye.Mono, corners);
-            for (int i = 0; i < CORNERS_COUNT; ++i) {
+            for (uint i = 0u; i < CORNERS_COUNT; ++i) {
                 bounds.Encapsulate(math.mul(rotation, (float3)corners[i]));
             }
             

@@ -36,9 +36,21 @@ namespace ME.BECS.Views {
 
     public enum CullingType {
 
+        /// <summary>
+        /// Apply frustum culling for ApplyState/OnUpdate methods
+        /// </summary>
         Frustum = 0,
+        /// <summary>
+        /// Ignore frustum culling
+        /// </summary>
         Never = 1,
+        /// <summary>
+        /// Apply frustum culling for OnUpdate method only
+        /// </summary>
         FrustumOnUpdateOnly = 2,
+        /// <summary>
+        /// Apply frustum culling for ApplyState method only
+        /// </summary>
         FrustumApplyStateOnly = 3,
 
     }
