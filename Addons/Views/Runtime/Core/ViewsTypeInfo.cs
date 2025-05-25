@@ -17,6 +17,7 @@ namespace ME.BECS.Views {
 
         public TypeFlags flags;
         public CullingType cullingType;
+        public ViewsTracker.ViewInfo tracker;
 
         public bool HasInitialize => (this.flags & TypeFlags.Initialize) != 0;
         public bool HasDeInitialize => (this.flags & TypeFlags.DeInitialize) != 0;

@@ -53,6 +53,93 @@ namespace ME.BECS.Views {
 
         }
 
+        public struct ModuleItem<T> where T : IViewModule {
+
+            public T module;
+            public GroupChangedTracker tracker;
+
+            public ModuleItem(T module, GroupChangedTracker tracker) {
+                this.module = module;
+                this.tracker = tracker;
+            }
+
+        }
+
+        public struct ModuleMethod<T> where T : IViewModule {
+
+            public delegate void Delegate(T module, in EntRO ent);
+            public delegate void DelegateState<in TState>(T module, in EntRO ent, TState state) where TState : struct;
+            
+            private scg::Dictionary<EntityView, scg::List<ModuleItem<T>>> methods;
+
+            public void Initialize() {
+                this.methods = new System.Collections.Generic.Dictionary<EntityView, System.Collections.Generic.List<ModuleItem<T>>>();
+            }
+
+            [INLINE(256)]
+            public void Register(EntityView objInstance, int[] indexes) {
+                foreach (var applyState in indexes) {
+                    var applyStateModule = (T)objInstance.viewModules[applyState];
+                    this.RegisterMethod(objInstance, applyStateModule);
+                }
+            }
+            
+            [INLINE(256)]
+            public void RegisterMethod(EntityView objInstance, T applyStateModule) {
+                if (this.methods.TryGetValue(objInstance, out var list) == false) {
+                    list = UnityEngine.Pool.ListPool<ModuleItem<T>>.Get();
+                    this.methods.TryAdd(objInstance, list);
+                }
+                list.Add(new ModuleItem<T>(applyStateModule, ViewsTracker.CreateTracker(applyStateModule)));
+            }
+
+            [INLINE(256)]
+            public void UnregisterMethods(EntityView objInstance) {
+                if (this.methods.TryGetValue(objInstance, out var list) == true) {
+                    foreach (var item in list) item.tracker.Dispose();
+                    UnityEngine.Pool.ListPool<ModuleItem<T>>.Release(list);
+                    this.methods.Remove(objInstance);
+                }
+            }
+
+            [INLINE(256)]
+            public void InvokeForced(EntityView objInstance, in EntRO ent, Delegate onModule) {
+                if (this.methods.TryGetValue(objInstance, out var list) == true) {
+                    foreach (var module in list) {
+                        onModule.Invoke(module.module, in ent);
+                    }
+                }
+            }
+
+            [INLINE(256)]
+            public void Invoke(EntityView objInstance, in EntRO ent, Delegate onModule) {
+                if (this.methods.TryGetValue(objInstance, out var list) == true) {
+                    foreach (var module in list) {
+                        var hasChanged = module.tracker.HasChanged(in ent, ViewsTracker.GetTracker(module.module));
+                        if (hasChanged == true) onModule.Invoke(module.module, in ent);
+                    }
+                }
+            }
+
+            [INLINE(256)]
+            public void Invoke<TState>(EntityView objInstance, in EntRO ent, TState state, DelegateState<TState> onModule) where TState : struct {
+                if (this.methods.TryGetValue(objInstance, out var list) == true) {
+                    foreach (var module in list) {
+                        var hasChanged = module.tracker.HasChanged(in ent, ViewsTracker.GetTracker(module.module));
+                        if (hasChanged == true) onModule.Invoke(module.module, in ent, state);
+                    }
+                }
+            }
+
+        }
+
+        private ModuleMethod<IViewApplyState> applyStateModules;
+        private ModuleMethod<IViewUpdate> updateModules;
+        private ModuleMethod<IViewEnableFromPool> enableModules;
+        private ModuleMethod<IViewDisableToPool> disableModules;
+        private ModuleMethod<IViewInitialize> initializeModules;
+        private ModuleMethod<IViewDeInitialize> deinitializeModules;
+        
         private scg::Dictionary<ulong, scg::Stack<Item>> prefabIdToPool;
         private scg::HashSet<EntityView> tempViews;
         private scg::List<ViewRoot> roots;
@@ -80,6 +167,13 @@ namespace ME.BECS.Views {
             this.roots = new scg::List<ViewRoot>();
             this.renderingOnSceneTransforms = new TransformAccessArray((int)properties.renderingObjectsCapacity, JobsUtility.JobWorkerCount);
             this.batchPerRoot = BATCH_PER_ROOT;
+
+            this.applyStateModules.Initialize();
+            this.updateModules.Initialize();
+            this.enableModules.Initialize();
+            this.disableModules.Initialize();
+            this.initializeModules.Initialize();
+            this.deinitializeModules.Initialize();
 
         }
 
@@ -127,18 +221,16 @@ namespace ME.BECS.Views {
                             // call despawn methods
                             {
                                 if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
-                                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) {
-                                    instance.DoDisableToPoolChildren();
-                                }
+                                //if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) instance.DoDisableToPoolChildren();
+                                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in EntRO _) => module.OnDisableToPool());
                             }
                         }
                         {
                             // call spawn methods
                             instance.ent = data.ptr->renderingOnSceneEnts[(int)index].element;
                             if (instanceInfo.prefabInfo.ptr->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
-                            if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) {
-                                instance.DoEnableFromPoolChildren(instance.ent);
-                            }
+                            //if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) instance.DoEnableFromPoolChildren(instance.ent);
+                            if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(instance, in instance.ent, static (IViewEnableFromPool module, in EntRO e) => module.OnEnableFromPool(in e));
                         }
                     }
                 }
@@ -308,21 +400,26 @@ namespace ME.BECS.Views {
                 info = new SceneInstanceInfo(objPtr, prefabInfo, customViewId);
             }
 
-            objInstance.groupChangedTracker.Initialize();
-
+            objInstance.groupChangedTracker.Initialize(in prefabInfo.ptr->typeInfo.tracker);
+            if (prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Register(objInstance, objInstance.applyStateModules);
+            if (prefabInfo.ptr->HasUpdateModules == true) this.updateModules.Register(objInstance, objInstance.updateModules);
+            if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.Register(objInstance, objInstance.initializeModules);
+            if (prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.Register(objInstance, objInstance.deInitializeModules);
+            if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.Register(objInstance, objInstance.enableFromPoolModules);
+            if (prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.Register(objInstance, objInstance.disableToPoolModules);
+                
             {
-                objInstance.ent = ent;
+                EntRO entRo = ent;
+                objInstance.ent = entRo;
                 if (isNew == true) {
-                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(ent);
-                    if (prefabInfo.ptr->HasInitializeModules == true) {
-                        objInstance.DoInitializeChildren(ent);
-                    }
+                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(in entRo);
+                    //if (prefabInfo.ptr->HasInitializeModules == true) objInstance.DoInitializeChildren(ent);
+                    if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.InvokeForced(objInstance, in entRo, static (IViewInitialize module, in EntRO e) => module.OnInitialize(in e));
                 }
 
-                if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(ent);
-                if (prefabInfo.ptr->HasEnableFromPoolModules == true) {
-                    objInstance.DoEnableFromPoolChildren(ent);
-                }
+                if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in entRo);
+                //if (prefabInfo.ptr->HasEnableFromPoolModules == true) objInstance.DoEnableFromPoolChildren(ent);
+                if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(objInstance, in entRo, static (IViewEnableFromPool module, in EntRO e) => module.OnEnableFromPool(in e));
             }
 
             return info;
@@ -334,15 +431,16 @@ namespace ME.BECS.Views {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             instance.ent = default;
-            
+
             var customViewId = instanceInfo.uniqueId;
 
             {
                 if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
-                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) {
-                    instance.DoDisableToPoolChildren();
-                }
+                //if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) instance.DoDisableToPoolChildren();
+                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in EntRO _) => module.OnDisableToPool());
             }
+
+            this.applyStateModules.UnregisterMethods(instance);
 
             // Store despawn in temp (don't deactivate)
             this.tempViews.Add(instance);
@@ -373,22 +471,30 @@ namespace ME.BECS.Views {
 
         [INLINE(256)]
         public void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent) {
-            
+
+            EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            var hasChanged = instanceObj.groupChangedTracker.HasChanged(in ent);
-            if (hasChanged == true) {
-                instanceObj.DoApplyState(ent);
-                if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(ent);
+            {
+                var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
+                if (hasChanged == true) {
+                    instanceObj.DoApplyState(in entRo);
+                    //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in entRo);
+                }
             }
-            
+
+            if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in entRo, static (IViewApplyState module, in EntRO e) => module.ApplyState(in e));
+
         }
 
         [INLINE(256)]
         public void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
             
+            EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            instanceObj.DoOnUpdate(ent, dt);
-            if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
+            instanceObj.DoOnUpdate(in entRo, dt);
+            //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
+            
+            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.Invoke(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
             
         }
 
@@ -399,7 +505,8 @@ namespace ME.BECS.Views {
                 var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
                 if (instance.prefabInfo.ptr->typeInfo.HasDeInitialize == true) instanceObj.DoDeInitialize();
-                if (instance.prefabInfo.ptr->HasDeInitializeModules == true) instanceObj.DoDeInitializeChildren();
+                //if (instance.prefabInfo.ptr->HasDeInitializeModules == true) instanceObj.DoDeInitializeChildren();
+                if (instance.prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(instanceObj, default, static (IViewDeInitialize module, in EntRO _) => module.OnDeInitialize());
             }
 
             foreach (var kv in this.prefabIdToPool) {
@@ -408,7 +515,8 @@ namespace ME.BECS.Views {
 
                     if (comp.obj != null) {
                         if (comp.info.ptr->typeInfo.HasDeInitialize == true) comp.obj.DoDeInitialize();
-                        if (comp.info.ptr->HasDeInitializeModules == true) comp.obj.DoDeInitializeChildren();
+                        //if (comp.info.ptr->HasDeInitializeModules == true) comp.obj.DoDeInitializeChildren();
+                        if (comp.info.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(comp.obj, default, static (IViewDeInitialize module, in EntRO _) => module.OnDeInitialize());
                         EntityView.DestroyImmediate(comp.obj.gameObject);
                     }
                     

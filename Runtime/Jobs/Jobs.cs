@@ -261,7 +261,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static uint Increment(ref uint value) {
             E.ADDR_4(ref value);
-            return (uint)System.Threading.Interlocked.Increment(ref _as<uint, int>(ref value));
+            unchecked {
+                return (uint)System.Threading.Interlocked.Increment(ref _as<uint, int>(ref value));
+            }
         }
 
         [INLINE(256)]
@@ -273,7 +275,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static uint Decrement(ref uint value) {
             E.ADDR_4(ref value);
-            return (uint)System.Threading.Interlocked.Decrement(ref _as<uint, int>(ref value));
+            unchecked {
+                return (uint)System.Threading.Interlocked.Decrement(ref _as<uint, int>(ref value));
+            }
         }
 
         [INLINE(256)]

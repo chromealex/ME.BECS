@@ -225,7 +225,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             E.IS_IN_TICK(this.state);
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             var ent = new Ent(entId, gen, this.worldId);
             ref var res = ref *(T*)Components.GetUnknownType(this.state, this.storage, typeId, groupId, in ent, out var isNew, StaticTypes<T>.defaultValuePtr);
             if (isNew == true) {

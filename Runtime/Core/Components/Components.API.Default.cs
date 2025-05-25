@@ -18,7 +18,7 @@ namespace ME.BECS {
         public static bool Enable<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
             
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             return Components.SetState(state, typeId, groupId, in ent, true);
             
         }
@@ -27,7 +27,7 @@ namespace ME.BECS {
         public static bool Disable<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             return Components.SetState(state, typeId, groupId, in ent, false);
             
         }
@@ -36,7 +36,7 @@ namespace ME.BECS {
         public static bool Set<T>(safe_ptr<State> state, in Ent ent, in T data) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             return Components.SetUnknownType(state, typeId, groupId, in ent, in data);
             
         }
@@ -45,7 +45,7 @@ namespace ME.BECS {
         public static bool Remove<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             return Components.RemoveUnknownType(state, typeId, groupId, in ent);
 
         }
@@ -112,7 +112,7 @@ namespace ME.BECS {
         public static ref T Get<T>(safe_ptr<State> state, Ent ent) where T : unmanaged, IComponent {
 
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             var data = Components.GetUnknownType(state, typeId, groupId, in ent, out _, StaticTypes<T>.defaultValuePtr);
             return ref *(T*)data;
 
@@ -122,7 +122,7 @@ namespace ME.BECS {
         public static T* Get<T>(safe_ptr<State> state, in Ent ent, out bool isNew) where T : unmanaged, IComponent {
             
             var typeId = StaticTypes<T>.typeId;
-            var groupId = StaticTypes<T>.groupId;
+            var groupId = StaticTypes<T>.trackerIndex;
             var data = Components.GetUnknownType(state, typeId, groupId, in ent, out isNew, StaticTypes<T>.defaultValuePtr);
             return (T*)data;
 

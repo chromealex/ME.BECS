@@ -9,11 +9,21 @@ namespace ME.BECS {
         public static System.Collections.Generic.Dictionary<System.Type, ushort> groups = new System.Collections.Generic.Dictionary<System.Type, ushort>();
         public static ushort nextGroupId;
 
+        public static System.Collections.Generic.Dictionary<System.Type, ushort> tracker = new System.Collections.Generic.Dictionary<System.Type, ushort>();
+        public static ushort nextTrackId;
+
     }
 
     public struct StaticTypesGroupsBurst {
 
         public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroupsBurst>();
+        public static ref uint maxId => ref maxIdBurst.Data;
+        
+    }
+
+    public struct StaticTypesTrackedBurst {
+
+        public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesTrackedBurst>();
         public static ref uint maxId => ref maxIdBurst.Data;
         
     }
@@ -40,6 +50,13 @@ namespace ME.BECS {
 
         public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> collectionsCountBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10206);
         public static ref ME.BECS.Internal.Array<uint> collectionsCount => ref collectionsCountBurst.Data;
+
+        public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> trackerBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10207);
+        public static ref ME.BECS.Internal.Array<uint> tracker => ref trackerBurst.Data;
+
+        public static void SetTracker(uint count) {
+            tracker.Resize(StaticTypes.counter + 1u);
+        }
 
     }
 
@@ -84,6 +101,12 @@ namespace ME.BECS {
     public struct StaticTypesGroupId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroupId<T>>();
+
+    }
+
+    public struct StaticTypesTrackId<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesTrackId<T>>();
 
     }
 
@@ -195,6 +218,8 @@ namespace ME.BECS {
         public static ref uint typeId => ref StaticTypesId<T>.value.Data;
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
         public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
+        public static ref uint trackerIndex => ref StaticTypesTrackId<T>.value.Data;
+        public static bool isTracked => StaticTypes.tracker.Get(StaticTypes<T>.typeId) > 0u;
 
         public static unsafe ref readonly T defaultValue {
             get {
@@ -235,6 +260,21 @@ namespace ME.BECS {
 
             StaticTypes.collectionsCount.Get(StaticTypes<T>.typeId) = count;
             
+        }
+
+        [INLINE(256)]
+        public static void TrackVersion() {
+
+            if (StaticTypes<T>.trackerIndex == 0u) {
+                StaticTypes<T>.trackerIndex = ++StaticTypesTrackedBurst.maxId;
+                StaticTypes.tracker.Get(StaticTypes<T>.typeId) = StaticTypes<T>.trackerIndex;
+            }
+            
+            if (StaticTypesGroups.tracker.TryGetValue(typeof(T), out var groupId) == false) {
+                groupId = ++StaticTypesGroups.nextTrackId;
+                StaticTypesGroups.tracker.Add(typeof(T), groupId);
+            }
+
         }
 
         [INLINE(256)]

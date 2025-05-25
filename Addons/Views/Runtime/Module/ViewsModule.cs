@@ -4,6 +4,67 @@ namespace ME.BECS {
     using Views;
     using Unity.Jobs;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+
+    public static class ViewsTracker {
+
+        public struct ViewInfo {
+
+            public Internal.Array<uint> tracker;
+
+        }
+
+        public static ViewInfo[] info;
+        public static System.Collections.Generic.Dictionary<System.Type, uint> typeToIndex;
+
+        public static class Tracker {
+            public static uint id;
+        }
+
+        public static class Tracker<T> {
+            public static uint id;
+        }
+
+        public static void SetTracker(uint count) {
+            
+            System.Array.Resize(ref info, (int)(count + 1u));
+            typeToIndex = new System.Collections.Generic.Dictionary<System.Type, uint>();
+            
+        }
+        
+        public static void TrackView<T>(ViewsTracker.ViewInfo viewInfo) where T : IView {
+
+            var idx = Tracker<T>.id;
+            if (idx == 0u) idx = Tracker<T>.id = ++Tracker.id;
+            info[idx] = viewInfo;
+            typeToIndex.Add(typeof(T), idx);
+
+        }
+
+        public static void TrackViewModule<T>(ViewsTracker.ViewInfo viewInfo) where T : IViewModule {
+            
+            var idx = Tracker<T>.id;
+            if (idx == 0u) idx = Tracker<T>.id = ++Tracker.id;
+            info[idx] = viewInfo;
+            typeToIndex.Add(typeof(T), idx);
+            
+        }
+
+        [INLINE(256)]
+        public static ViewInfo GetTracker<T>(T module) where T : IViewModule {
+            if (typeToIndex.TryGetValue(module.GetType(), out uint idx) == true) {
+                return info[idx];
+            }
+            return default;
+        }
+
+        [INLINE(256)]
+        public static GroupChangedTracker CreateTracker<T>(T applyStateModule) where T : IViewModule {
+            var tracker = new GroupChangedTracker();
+            tracker.Initialize(GetTracker(applyStateModule));
+            return tracker;
+        }
+
+    }
     
     [UnityEngine.CreateAssetMenu(menuName = "ME.BECS/Views Module")]
     public class ViewsModule : Module {

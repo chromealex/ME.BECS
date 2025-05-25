@@ -9,8 +9,8 @@ namespace ME.BECS {
         public MemArray<ushort> generations;
         public MemArray<uint> versions;
         public MemArray<uint> seeds;
-        public MemArray<uint> versionsGroup;
-        public MemArray<bool> aliveBits;
+        public MemArray<ushort> versionsGroup;
+        public MemArray<bbool> aliveBits;
         public JobThreadStack<uint> free;
         public List<uint> destroyed;
         public MemArray<LockSpinner> locksPerEntity;
@@ -73,8 +73,8 @@ namespace ME.BECS {
                 generations = new MemArray<ushort>(ref state.ptr->allocator, entityCapacity),
                 versions = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
                 seeds = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
-                versionsGroup = new MemArray<uint>(ref state.ptr->allocator, entityCapacity * (StaticTypesGroupsBurst.maxId + 1u)),
-                aliveBits = new MemArray<bool>(ref state.ptr->allocator, entityCapacity),
+                versionsGroup = new MemArray<ushort>(ref state.ptr->allocator, entityCapacity * (StaticTypesTrackedBurst.maxId + 1u)),
+                aliveBits = new MemArray<bbool>(ref state.ptr->allocator, entityCapacity),
                 free = new JobThreadStack<uint>(ref state.ptr->allocator, entityCapacity),
                 destroyed = new List<uint>(ref state.ptr->allocator, entityCapacity),
                 locksPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, entityCapacity),
@@ -123,7 +123,7 @@ namespace ME.BECS {
             
             // Resize by maxId
             state.ptr->entities.generations.Resize(ref state.ptr->allocator, maxId + 1u, 2);
-            state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (maxId + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
+            state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (maxId + 1u) * (StaticTypesTrackedBurst.maxId + 1u), 2);
             state.ptr->entities.versions.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->entities.seeds.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u, 1);
@@ -182,8 +182,8 @@ namespace ME.BECS {
                 var nextGen = ++state.ptr->entities.generations[in state.ptr->allocator, idx];
                 state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
                 state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx;
-                var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * idx;
-                _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<uint>.size, (StaticTypesGroupsBurst.maxId + 1u) * TSize<uint>.size);
+                var groupsIndex = (StaticTypesTrackedBurst.maxId + 1u) * idx;
+                _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<ushort>.size, (StaticTypesTrackedBurst.maxId + 1u) * TSize<ushort>.size);
                 state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
                 state.ptr->entities.readWriteSpinner.ReadEnd(state);
                 return new Ent(idx, nextGen, worldId);
@@ -202,7 +202,7 @@ namespace ME.BECS {
                 state.ptr->entities.locksPerEntity.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.generations.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.generations[in state.ptr->allocator, idx] = gen;
-                state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (idx + 1u) * (StaticTypesGroupsBurst.maxId + 1u), 2);
+                state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (idx + 1u) * (StaticTypesTrackedBurst.maxId + 1u), 2);
                 state.ptr->entities.versions.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
                 state.ptr->entities.seeds.Resize(ref state.ptr->allocator, idx + 1u, 2);
@@ -282,11 +282,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static uint GetVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
+        public static ushort GetVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
 
-            var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * ent.id;
+            var groupsIndex = (StaticTypesTrackedBurst.maxId + 1u) * ent.id;
             var idx = groupsIndex + groupId;
-            if (idx >= state.ptr->entities.versionsGroup.Length) return 0u;
+            if (idx >= state.ptr->entities.versionsGroup.Length) return 0;
             return state.ptr->entities.versionsGroup[in state.ptr->allocator, idx];
 
         }
@@ -294,7 +294,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void UpVersion<T>(safe_ptr<State> state, in Ent ent) where T : unmanaged, IComponent {
 
-            Ents.UpVersion(state, in ent, StaticTypes<T>.groupId);
+            Ents.UpVersion(state, in ent, StaticTypes<T>.trackerIndex);
             
         }
 
@@ -312,7 +312,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void UpVersion(safe_ptr<State> state, in Ent ent) {
             
-            JobUtils.Increment(ref state.ptr->entities.versions[in state.ptr->allocator, ent.id]);
+            ++state.ptr->entities.versions[in state.ptr->allocator, ent.id];
             Journal.VersionUp(in ent);
 
         }
@@ -320,9 +320,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void UpVersionGroup(safe_ptr<State> state, uint id, uint groupId) {
 
-            var groupsIndex = (StaticTypesGroupsBurst.maxId + 1u) * id;
-            JobUtils.Increment(ref state.ptr->entities.versionsGroup[in state.ptr->allocator, groupsIndex + groupId]);
-            
+            var groupsIndex = (StaticTypesTrackedBurst.maxId + 1u) * id + groupId;
+            ++state.ptr->entities.versionsGroup[in state.ptr->allocator, groupsIndex];
+
         }
 
         [INLINE(256)]

@@ -9,6 +9,11 @@ namespace ME.BECS.Views {
         void OnValidate(GameObject gameObject);
 
     }
+    
+    public interface IViewIgnoreTracker { }
+
+    public interface IViewTrack { }
+    public interface IViewTrack<T> : IViewTrack { }
 
     public interface IViewInitialize : IViewModule {
         void OnInitialize(in EntRO ent);
@@ -56,7 +61,7 @@ namespace ME.BECS.Views {
     }
     
     public abstract class EntityView : MonoBehaviour, IView {
-
+        
         [SerializeReference]
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes = false, runtimeAssembliesOnly = true)]
         [SerializeField]

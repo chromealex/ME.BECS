@@ -36,7 +36,7 @@ namespace ME.BECS.Views.Editor {
                     }
                 }
 
-                var str = $"ME.BECS.Views.ViewsTypeInfo.RegisterType<{viewType.FullName}>({ViewsCodeGenerator.InfoToString(info)});";
+                var str = $"ME.BECS.Views.ViewsTypeInfo.RegisterType<{EditorUtils.GetTypeName(viewType)}>({ViewsCodeGenerator.InfoToString(info, viewType)});";
                 content.Add(str);
                 
                 references.Add(viewType);
@@ -54,9 +54,10 @@ namespace ME.BECS.Views.Editor {
             
         }
 
-        private static string InfoToString(ViewTypeInfo info) {
+        private static string InfoToString(ViewTypeInfo info, System.Type viewType) {
             return $@"new ME.BECS.Views.ViewTypeInfo() {{
 {nameof(ViewTypeInfo.flags)} = (ME.BECS.Views.TypeFlags){(int)info.flags},
+{nameof(ViewTypeInfo.tracker)} = ViewsTracker.info[ViewsTracker.Tracker<{EditorUtils.GetTypeName(viewType)}>.id],
 }}";
         }
 

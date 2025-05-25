@@ -99,7 +99,7 @@ namespace ME.BECS {
             }
 
             var rData = data;
-            return SetShared(state, in ent, StaticTypes<T>.groupId, _address(ref rData).ptr, TSize<T>.size, StaticTypes<T>.sharedTypeId, hash);
+            return SetShared(state, in ent, StaticTypes<T>.trackerIndex, _address(ref rData).ptr, TSize<T>.size, StaticTypes<T>.sharedTypeId, hash);
             
         }
 

@@ -57,7 +57,7 @@ namespace ME.BECS {
             
             E.IS_IN_TICK(state);
             
-            var groupId = StaticTypes.groups.Get(typeId);
+            var groupId = StaticTypes.tracker.Get(typeId);
             if (Components.SetUnknownType(state, typeId, groupId, in ent, data) == true) {
                 Batches.Set_INTERNAL(typeId, in ent, state);
                 return true;
@@ -87,7 +87,7 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
-            var groupId = StaticTypes.groups.Get(typeId);
+            var groupId = StaticTypes.tracker.Get(typeId);
             if (Components.Remove(state, in ent, typeId, groupId) == true) {
                 Batches.Remove_INTERNAL(typeId, in ent, state);
                 return true;

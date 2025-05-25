@@ -114,7 +114,7 @@ namespace ME.BECS {
                 for (uint i = 0u; i < this.count; ++i) {
                     var typeId = this.typeIds[i];
                     var data = this.data + this.offsets[i];
-                    var groupId = StaticTypes.groups.Get(typeId);
+                    var groupId = StaticTypes.tracker.Get(typeId);
                     var dataSize = StaticTypes.sizes.Get(typeId);
                     var sharedTypeId = StaticTypes.sharedTypeId.Get(typeId);
                     var hash = this.hashes[i];
@@ -255,7 +255,7 @@ namespace ME.BECS {
                     var func = this.functionPointers[i];
                     Batches.Set(in ent, typeId, data.ptr, state);
                     if (func.IsValid() == true) {
-                        var groupId = StaticTypes.groups.Get(typeId);
+                        var groupId = StaticTypes.tracker.Get(typeId);
                         var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _, default);
                         func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
                     }
@@ -581,9 +581,11 @@ namespace ME.BECS {
                 
                 for (int i = 0; i < sourceConfig.staticData.components.Length; ++i) {
                     var comp = sourceConfig.staticData.components[i];
-                    StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
+                    var type = comp.GetType();
+                    StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var typeId);
                     this.typeIds[i] = typeId;
-                    var groupId = StaticTypes.groups.Get(typeId);
+                    StaticTypesGroups.tracker.TryGetValue(type, out var trackerIndex);
+                    var groupId = trackerIndex == 0 ? 0u : StaticTypes.tracker.Get(trackerIndex);
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);

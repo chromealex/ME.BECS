@@ -14,7 +14,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(this.uiWorld);
 
-            entityView.groupChangedTracker.Initialize();
+            //entityView.groupChangedTracker.Initialize();
             
             this.views.Add(entityView);
             var ent = Ent.New(this.uiWorld);
@@ -50,9 +50,9 @@ namespace ME.BECS {
                     view.uiEntityVersion = v;
                     view.worldEntityVersion = wv;
                     
-                    var changed = view.groupChangedTracker.HasChanged(in worldEnt);
-                    
-                    if (changed == true) {
+                    //var changed = view.groupChangedTracker.HasChanged(in worldEnt, default);
+                    //if (changed == true)
+                    {
                         view.DoApplyState();
                     }
                 }

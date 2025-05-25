@@ -870,7 +870,7 @@ namespace ME.BECS.Editor {
                     var state = ent.World.state;
                     foreach (var type in this.searchTypes) {
                         if (StaticTypesGroups.groups.TryGetValue(type, out var groupId) == true) {
-                            if (ent.GetVersion(groupId) > 0u) {
+                            if (groupId > 0u) {
                                 containsType = true;
                                 break;
                             }

@@ -140,7 +140,7 @@ namespace ME.BECS {
                 var typeId = AspectTypeInfo.with.Get(aspectTypeId).Get(i);
                 var has = Components.HasUnknownType(state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
-                    Components.SetUnknownType(state, typeId, StaticTypes.groups.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
+                    Components.SetUnknownType(state, typeId, StaticTypes.tracker.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
                     Batches.Set_INTERNAL(typeId, in ent, state);
                 }
 

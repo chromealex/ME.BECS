@@ -93,7 +93,7 @@ namespace ME.BECS.FogOfWar {
 
     }
     
-    public class FogOfWarViewModule : CollectRenderers, IViewApplyState, IViewInitialize {
+    public class FogOfWarViewModule : CollectRenderers, IViewApplyState, IViewInitialize, IViewIgnoreTracker {
         
         private bool isVisible;
         protected CreateSystem fow;

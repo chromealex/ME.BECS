@@ -229,7 +229,7 @@ namespace ME.BECS {
             }
             E.IS_IN_TICK(this.state);
             var ent = new Ent(id, gen, this.worldId);
-            return Components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent, in data);
+            return Components.SetUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.trackerIndex, in ent, in data);
 
         }
 
@@ -242,7 +242,7 @@ namespace ME.BECS {
             } else {
                 E.IS_IN_TICK(this.state);
                 var ent = new Ent(id, gen, this.worldId);
-                return Components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.groupId, in ent);
+                return Components.RemoveUnknownType(this.state, StaticTypes<T>.typeId, StaticTypes<T>.trackerIndex, in ent);
             }
 
         }
