@@ -9,7 +9,6 @@ namespace ME.BECS.Transforms {
             return source.Clone(source.worldId, cloneHierarchy, in jobInfo);
         }
 
-        [INLINE(256)]
         public static Ent Clone(this in Ent source, ushort worldId, bool cloneHierarchy, in JobInfo jobInfo = default) {
 
             if (cloneHierarchy == false) {
