@@ -22,6 +22,7 @@ namespace ME.BECS {
 
         public static class Tracker<T> {
             public static uint id;
+            public static string name;
         }
 
         public static void SetTracker(uint count) {
@@ -37,6 +38,7 @@ namespace ME.BECS {
             if (idx == 0u) idx = Tracker<T>.id = ++Tracker.id;
             info[idx] = viewInfo;
             typeToIndex.Add(typeof(T), idx);
+            Tracker<T>.name = typeof(T).Name;
 
         }
 
@@ -46,6 +48,7 @@ namespace ME.BECS {
             if (idx == 0u) idx = Tracker<T>.id = ++Tracker.id;
             info[idx] = viewInfo;
             typeToIndex.Add(typeof(T), idx);
+            Tracker<T>.name = typeof(T).Name;
             
         }
 

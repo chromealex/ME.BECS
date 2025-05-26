@@ -131,6 +131,8 @@ namespace ME.BECS {
 
         public static uint GetId(UnityEngine.Object obj) {
 
+            if (obj == null) return 0u;
+            
             foreach (var item in ObjectReferenceRegistry.data.items) {
                 if (item.Is(obj) == true) return item.sourceId;
             }

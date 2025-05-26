@@ -57,6 +57,7 @@ namespace ME.BECS.Views {
 
             public T module;
             public GroupChangedTracker tracker;
+            public string name => ViewsTracker.Tracker<T>.name;
 
             public ModuleItem(T module, GroupChangedTracker tracker) {
                 this.module = module;
@@ -106,7 +107,10 @@ namespace ME.BECS.Views {
             public void InvokeForced(EntityView objInstance, in EntRO ent, Delegate onModule) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
+                        var marker = new Unity.Profiling.ProfilerMarker(module.name);
+                        marker.Begin();
                         onModule.Invoke(module.module, in ent);
+                        marker.End();
                     }
                 }
             }
@@ -116,7 +120,12 @@ namespace ME.BECS.Views {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
                         var hasChanged = module.tracker.HasChanged(in ent, ViewsTracker.GetTracker(module.module));
-                        if (hasChanged == true) onModule.Invoke(module.module, in ent);
+                        if (hasChanged == true) {
+                            var marker = new Unity.Profiling.ProfilerMarker(module.name);
+                            marker.Begin();
+                            onModule.Invoke(module.module, in ent);
+                            marker.End();
+                        }
                     }
                 }
             }
@@ -126,7 +135,12 @@ namespace ME.BECS.Views {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
                         var hasChanged = module.tracker.HasChanged(in ent, ViewsTracker.GetTracker(module.module));
-                        if (hasChanged == true) onModule.Invoke(module.module, in ent, state);
+                        if (hasChanged == true) {
+                            var marker = new Unity.Profiling.ProfilerMarker(module.name);
+                            marker.Begin();
+                            onModule.Invoke(module.module, in ent, state);
+                            marker.End();
+                        }
                     }
                 }
             }
@@ -135,7 +149,10 @@ namespace ME.BECS.Views {
             public void InvokeForced<TState>(EntityView objInstance, in EntRO ent, TState state, DelegateState<TState> onModule) where TState : struct {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
+                        var marker = new Unity.Profiling.ProfilerMarker(module.name);
+                        marker.Begin();
                         onModule.Invoke(module.module, in ent, state);
+                        marker.End();
                     }
                 }
             }
@@ -489,15 +506,20 @@ namespace ME.BECS.Views {
 
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            var mainMarker = new Unity.Profiling.ProfilerMarker(instanceObj.name);
+            mainMarker.Begin();
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
+                    var marker = new Unity.Profiling.ProfilerMarker("ApplyState");
+                    marker.Begin();
                     instanceObj.DoApplyState(in entRo);
+                    marker.End();
                     //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in entRo);
                 }
             }
-
             if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in entRo, static (IViewApplyState module, in EntRO e) => module.ApplyState(in e));
+            mainMarker.End();
 
         }
 
@@ -506,10 +528,17 @@ namespace ME.BECS.Views {
             
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            instanceObj.DoOnUpdate(in entRo, dt);
-            //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
-            
+            var mainMarker = new Unity.Profiling.ProfilerMarker(instanceObj.name);
+            mainMarker.Begin();
+            {
+                var marker = new Unity.Profiling.ProfilerMarker("OnUpdate");
+                marker.Begin();
+                instanceObj.DoOnUpdate(in entRo, dt);
+                marker.End();
+                //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
+            }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
+            mainMarker.End();
             
         }
 
