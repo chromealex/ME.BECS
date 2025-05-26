@@ -632,12 +632,16 @@ namespace ME.BECS {
         [BURST(CompileSynchronously = true)]
         private struct SetEntitiesJob : IJob {
 
+            public ArchetypeQueries.ComposeJob composeJob;
             public safe_ptr<State> state;
             public safe_ptr<CommandBuffer> buffer;
             public safe_ptr<QueryData> queryData;
             public Allocator allocator;
 
             public void Execute() {
+                
+                this.composeJob.allocator = this.allocator;
+                this.composeJob.Execute();
 
                 {
                     var archCount = this.queryData.ptr->archetypesCount;
@@ -758,15 +762,15 @@ namespace ME.BECS {
                 Worlds.GetWorld(buffer.ptr->worldId).AddEndTickHandle(list.Dispose(dependsOn));
             }*/
             var counter = _makeDefault(new ME.BECS.NativeCollections.DeferJobCounter(), allocator);
-            dependsOn = this.compose.Build(ref this, counter, dependsOn);
+            var composeJob = this.compose.Build(ref this, counter);
             var job = new SetEntitiesJob() {
+                composeJob = composeJob,
                 buffer = buffer,
                 queryData = this.queryData,
                 state = buffer.ptr->state,
                 allocator = allocator,
             };
             var handle = job.ScheduleByRef(dependsOn);
-            JobHandle.ScheduleBatchedJobs();
             return handle;
 
         }
