@@ -78,19 +78,19 @@ namespace ME.BECS.Views {
 
             [INLINE(256)]
             public void Register(EntityView objInstance, int[] indexes) {
-                foreach (var applyState in indexes) {
-                    var applyStateModule = (T)objInstance.viewModules[applyState];
-                    this.RegisterMethod(objInstance, applyStateModule);
+                foreach (var index in indexes) {
+                    var module = (T)objInstance.viewModules[index];
+                    this.RegisterMethod(objInstance, module);
                 }
             }
             
             [INLINE(256)]
-            public void RegisterMethod(EntityView objInstance, T applyStateModule) {
+            public void RegisterMethod(EntityView objInstance, T module) {
                 if (this.methods.TryGetValue(objInstance, out var list) == false) {
                     list = UnityEngine.Pool.ListPool<ModuleItem<T>>.Get();
                     this.methods.TryAdd(objInstance, list);
                 }
-                list.Add(new ModuleItem<T>(applyStateModule, ViewsTracker.CreateTracker(applyStateModule)));
+                list.Add(new ModuleItem<T>(module, ViewsTracker.CreateTracker(module)));
             }
 
             [INLINE(256)]
