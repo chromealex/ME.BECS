@@ -131,6 +131,15 @@ namespace ME.BECS.Views {
                 }
             }
 
+            [INLINE(256)]
+            public void InvokeForced<TState>(EntityView objInstance, in EntRO ent, TState state, DelegateState<TState> onModule) where TState : struct {
+                if (this.methods.TryGetValue(objInstance, out var list) == true) {
+                    foreach (var module in list) {
+                        onModule.Invoke(module.module, in ent, state);
+                    }
+                }
+            }
+
         }
 
         private ModuleMethod<IViewApplyState> applyStateModules;
@@ -431,6 +440,7 @@ namespace ME.BECS.Views {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             instance.ent = default;
+            instance.groupChangedTracker.Dispose();
 
             var customViewId = instanceInfo.uniqueId;
 
@@ -441,6 +451,11 @@ namespace ME.BECS.Views {
             }
 
             this.applyStateModules.UnregisterMethods(instance);
+            this.updateModules.UnregisterMethods(instance);
+            this.initializeModules.UnregisterMethods(instance);
+            this.deinitializeModules.UnregisterMethods(instance);
+            this.enableModules.UnregisterMethods(instance);
+            this.disableModules.UnregisterMethods(instance);
 
             // Store despawn in temp (don't deactivate)
             this.tempViews.Add(instance);
@@ -494,7 +509,7 @@ namespace ME.BECS.Views {
             instanceObj.DoOnUpdate(in entRo, dt);
             //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
             
-            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.Invoke(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
+            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
             
         }
 
