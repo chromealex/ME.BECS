@@ -21,7 +21,7 @@ namespace ME.BECS {
         public readonly ref readonly World World => ref this.ent.World;
 
         [INLINE(256)]
-        public readonly uint GetVersion(uint groupId) => this.ent.GetVersion(groupId);
+        public readonly ushort GetVersion(uint groupId) => this.ent.GetVersion(groupId);
 
         [INLINE(256)]
         public readonly ulong ToULong() => this.ent.ToULong();

@@ -35,7 +35,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly uint GetVersion(uint groupId) {
+        public readonly ushort GetVersion(uint groupId) {
             E.IS_ALIVE(this);
             var world = this.World;
             return Ents.GetVersion(world.state, in this, groupId);

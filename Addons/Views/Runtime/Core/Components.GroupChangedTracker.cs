@@ -4,19 +4,22 @@ namespace ME.BECS {
 
     public struct GroupChangedTracker {
 
-        private uint[] versionByGroup;
+        private ushort[] versionByGroup;
 
         [INLINE(256)]
         public void Initialize(in ViewsTracker.ViewInfo tracker) {
             if (this.versionByGroup == null) {
-                this.versionByGroup = System.Buffers.ArrayPool<uint>.Shared.Rent((int)tracker.tracker.Length);
+                this.versionByGroup = System.Buffers.ArrayPool<ushort>.Shared.Rent((int)tracker.tracker.Length);
             }
-            System.Array.Clear(this.versionByGroup, 0, this.versionByGroup.Length);
+
+            for (uint i = 0u; i < this.versionByGroup.Length; ++i) {
+                this.versionByGroup[i] = ushort.MaxValue;
+            }
         }
 
         [INLINE(256)]
         public readonly void Dispose() {
-            System.Buffers.ArrayPool<uint>.Shared.Return(this.versionByGroup, false);
+            System.Buffers.ArrayPool<ushort>.Shared.Return(this.versionByGroup, false);
         }
 
         [INLINE(256)]
