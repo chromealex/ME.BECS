@@ -37,6 +37,7 @@ namespace ME.BECS.Editor.Aspects {
                     { "ViewsTracker.TrackViewModule", modules },
                 };
 
+                var ignoreTypes = new scg::HashSet<System.Type>();
                 foreach (var method in methods) {
                     foreach (var viewType in method.Value) {
                         if (viewType.IsAbstract == true) continue;
@@ -49,16 +50,25 @@ namespace ME.BECS.Editor.Aspects {
                         var startIdx = str.Length;
                         var idx = 0u;
                         if (typeof(IViewIgnoreTracker).IsAssignableFrom(viewType) == false) {
-                            AddMethod(str, types, viewType, nameof(EntityView.ApplyState), ref idx);
-                            AddMethod(str, types, viewType, nameof(EntityView.OnUpdate), ref idx);
-                            AddMethod(str, types, viewType, nameof(EntityView.OnInitialize), ref idx);
-                            AddMethod(str, types, viewType, nameof(EntityView.OnDeInitialize), ref idx);
-                            AddMethod(str, types, viewType, nameof(EntityView.OnEnableFromPool), ref idx);
-                            AddMethod(str, types, viewType, nameof(EntityView.OnDisableToPool), ref idx);
 
+                            ignoreTypes.Clear();
                             var interfaces = viewType.GetInterfaces();
                             foreach (var interfaceType in interfaces) {
-                                if (interfaceType.IsGenericType == true && typeof(IViewTrack).IsAssignableFrom(interfaceType) == true) {
+                                if (interfaceType.IsGenericType == true && typeof(IViewTrackIgnore<>).IsAssignableFrom(interfaceType) == true) {
+                                    var t = interfaceType.GetGenericArguments()[0];
+                                    ignoreTypes.Add(t);
+                                }
+                            }
+
+                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.ApplyState), ref idx);
+                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnUpdate), ref idx);
+                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnInitialize), ref idx);
+                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnDeInitialize), ref idx);
+                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnEnableFromPool), ref idx);
+                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnDisableToPool), ref idx);
+
+                            foreach (var interfaceType in interfaces) {
+                                if (interfaceType.IsGenericType == true && typeof(IViewTrack<>).IsAssignableFrom(interfaceType) == true) {
                                     var t = interfaceType.GetGenericArguments()[0];
                                     if (typeof(IAspect).IsAssignableFrom(t) == true) {
                                         var fields = t.GetFields(System.Reflection.BindingFlags.Instance |
@@ -108,7 +118,7 @@ namespace ME.BECS.Editor.Aspects {
             
         }
 
-        public static void AddMethod(System.Text.StringBuilder str, scg::HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types, System.Type obj, string methodName, ref uint idx) {
+        public static void AddMethod(System.Text.StringBuilder str, scg::HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types, scg::HashSet<System.Type> ignoreTypes, System.Type obj, string methodName, ref uint idx) {
             var methodInfo = obj.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (methodInfo == null) {
                 str.AppendLine($"// {methodName} not found");
@@ -120,13 +130,18 @@ namespace ME.BECS.Editor.Aspects {
                 if (type.op != RefOp.ReadOnly) {
                     UnityEngine.Debug.LogWarning($"EntityView {obj.FullName} writes to {type.type.FullName} in method {methodName}, be sure this view has been used in Visual mode world only");
                 }
-                AddType(str, types, type, ref idx);
+
+                if (ignoreTypes.Contains(type.type) == false) {
+                    AddType(str, types, type, ref idx);
+                } else {
+                    str.AppendLine($"// [IGNORE] {type.type.FullName} + {type.op}");
+                }
             }
         }
 
         public static void AddType(System.Text.StringBuilder str, scg::HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types, JobsEarlyInitCodeGenerator.TypeInfo type, ref uint idx) {
             str.AppendLine($"viewInfo.tracker.Get({idx++}u) = StaticTypes<{EditorUtils.GetTypeName(type.type)}>.trackerIndex;");
-            str.AppendLine($"//   {type.type.FullName} + {type.op}");
+            str.AppendLine($"// [ADD] {type.type.FullName} + {type.op}");
             types.Add(type);
         }
 

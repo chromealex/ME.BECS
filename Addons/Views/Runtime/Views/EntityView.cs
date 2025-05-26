@@ -10,10 +10,29 @@ namespace ME.BECS.Views {
 
     }
     
+    /// <summary>
+    /// Use this interface for View or ViewModule to ignore auto components tracker
+    /// If interface is on components tracker will be ignored (any changes will fire ApplyState)
+    /// </summary>
     public interface IViewIgnoreTracker { }
 
-    public interface IViewTrack { }
-    public interface IViewTrack<T> : IViewTrack { }
+    /// <summary>
+    /// Use this interface for View or ViewModule
+    /// Code Generator automatically find all components usage in your code, but if you want to
+    /// track some additional component changes - you can use this interface to do that.
+    /// You can use multiple interfaces to track as many components as you need.
+    /// </summary>
+    /// <typeparam name="T">Type to add</typeparam>
+    public interface IViewTrack<T> { }
+    
+    /// <summary>
+    /// Use this interface for View or ViewModule
+    /// Code Generator automatically find all components usage in your code, but if you want to
+    /// ignore some component changes - you can use this interface to do that.
+    /// You can use multiple interfaces to ignore as many components as you need.
+    /// </summary>
+    /// <typeparam name="T">Type to ignore</typeparam>
+    public interface IViewTrackIgnore<T> { }
 
     public interface IViewInitialize : IViewModule {
         void OnInitialize(in EntRO ent);
