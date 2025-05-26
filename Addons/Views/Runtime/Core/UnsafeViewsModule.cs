@@ -93,10 +93,11 @@ namespace ME.BECS.Views {
     public interface IView {
 
         void DoInitialize(in EntRO ent);
-        void DoInitializeChildren(in EntRO ent);
-        void DoEnableFromPool(in EntRO ent);
-        void DoEnableFromPoolChildren(in EntRO ent);
         void DoDeInitialize();
+        void DoEnableFromPool(in EntRO ent);
+        void DoDisableToPool();
+        void DoApplyState(in EntRO ent);
+        void DoOnUpdate(in EntRO ent, float dt);
 
     }
     

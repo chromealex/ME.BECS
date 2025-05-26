@@ -122,7 +122,6 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Called once when this view removed from scene
         /// </summary>
-        /// <param name="ent"></param>
         public void DoDeInitialize() {
             this.OnDeInitialize();
         }
@@ -138,7 +137,6 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Called every time this view moved to pool
         /// </summary>
-        /// <param name="ent"></param>
         public void DoDisableToPool() {
             this.OnDisableToPool();
         }
@@ -158,42 +156,6 @@ namespace ME.BECS.Views {
         /// <param name="dt"></param>
         public void DoOnUpdate(in EntRO ent, float dt) {
             this.OnUpdate(in ent, dt);
-        }
-
-        public void DoInitializeChildren(in EntRO ent) {
-            for (int i = 0; i < this.initializeModules.Length; ++i) {
-                ((IViewInitialize)this.viewModules[this.initializeModules[i]]).OnInitialize(in ent);
-            }
-        }
-
-        public void DoDeInitializeChildren() {
-            for (int i = 0; i < this.deInitializeModules.Length; ++i) {
-                ((IViewDeInitialize)this.viewModules[this.deInitializeModules[i]]).OnDeInitialize();
-            }
-        }
-
-        public void DoEnableFromPoolChildren(in EntRO ent) {
-            for (int i = 0; i < this.enableFromPoolModules.Length; ++i) {
-                ((IViewEnableFromPool)this.viewModules[this.enableFromPoolModules[i]]).OnEnableFromPool(in ent);
-            }
-        }
-
-        public void DoDisableToPoolChildren() {
-            for (int i = 0; i < this.disableToPoolModules.Length; ++i) {
-                ((IViewDisableToPool)this.viewModules[this.disableToPoolModules[i]]).OnDisableToPool();
-            }
-        }
-
-        public void DoApplyStateChildren(in EntRO ent) {
-            for (int i = 0; i < this.applyStateModules.Length; ++i) {
-                ((IViewApplyState)this.viewModules[this.applyStateModules[i]]).ApplyState(in ent);
-            }
-        }
-
-        public void DoOnUpdateChildren(in EntRO ent, float dt) {
-            for (int i = 0; i < this.updateModules.Length; ++i) {
-                ((IViewUpdate)this.viewModules[this.updateModules[i]]).OnUpdate(in ent, dt);
-            }
         }
 
         protected internal virtual void OnEnableFromPool(in EntRO ent) { }
