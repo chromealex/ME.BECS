@@ -57,7 +57,7 @@ namespace ME.BECS {
             if (Components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data) == true) {
                 Batches.Set_INTERNAL(typeId, in targetEnt, targetState);
             }
-            WorldStaticCallbacks.RaiseCopyFromComponentCallback(typeId, data, in targetEnt);
+            //WorldStaticCallbacks.RaiseCopyFromComponentCallback(typeId, data, in targetEnt);
         }
 
     }
