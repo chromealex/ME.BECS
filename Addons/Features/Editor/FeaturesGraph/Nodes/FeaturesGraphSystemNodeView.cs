@@ -112,7 +112,7 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
 
             var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode)?.system;
             if (system != null) {
-                var script = FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
+                var script = EditorUtils.FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
                 if (script != null) return UnityEngine.UIElements.DropdownMenuAction.Status.Normal;
             }
             
@@ -124,27 +124,10 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             
             var system = (this.nodeTarget as ME.BECS.FeaturesGraph.Nodes.SystemNode)?.system;
             if (system != null) {
-                var script = FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
+                var script = EditorUtils.FindScriptFromClassName(system.GetType().Name, system.GetType().Namespace);
                 if (script != null) AssetDatabase.OpenAsset(script.GetInstanceID(), 0, 0);
             }
             
-        }
-        
-        private static MonoScript FindScriptFromClassName(string className, string @namespace) {
-            
-            var scriptGUIDs = AssetDatabase.FindAssets($"t:script {className}");
-            if (scriptGUIDs.Length == 0) return null;
-
-            foreach (var scriptGUID in scriptGUIDs) {
-                var assetPath = AssetDatabase.GUIDToAssetPath(scriptGUID);
-                var script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
-
-                if (script != null && string.Equals(className, System.IO.Path.GetFileNameWithoutExtension(assetPath), System.StringComparison.OrdinalIgnoreCase) &&
-                    (string.IsNullOrEmpty(@namespace) == true || System.Text.RegularExpressions.Regex.IsMatch(script.text, @$"namespace\s+{@namespace}", System.Text.RegularExpressions.RegexOptions.Singleline) == true))
-                    return script;
-            }
-
-            return null;
         }
 
     }

@@ -33,10 +33,38 @@ namespace ME.BECS.FogOfWar {
             tr.position = pos;
             tr.rotation = rot;
             ent.SetTag<IsViewRequested>(false);
-            ent.SetTag<FogOfWarShadowCopyWasVisibleAnytimeTag>(true);
             return true;
 
         }
+        
+        private static void SetShadowCopy(in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy, bool isVisible) {
+            if (isVisible == true) {
+                ent.SetTag<FogOfWarShadowCopyWasVisibleAnytimeTag>(true);
+            }
+            if (isVisible == false && ent.HasTag<FogOfWarShadowCopyWasVisibleAnytimeTag>(true) == false) return;
+            var shouldBeVisible = isVisible == false;
+            var currentVisibilityState = shouldBeVisible == true && shadowCopy.original.IsAlive() == true && shadowCopy.original.IsActive() == true;
+                
+            bool isVisibilityStateJustChanged;
+            bool wasVisible = ent.HasTag<FogOfWarShadowCopyWasVisibleTag>(true);
+
+            if (currentVisibilityState == true) {
+                isVisibilityStateJustChanged = wasVisible == false;
+            } else {
+                isVisibilityStateJustChanged = wasVisible == true;
+            }
+            
+            //if visibility state has not changed or shadow copy was and currently is visible - do not change anything
+            if (isVisibilityStateJustChanged == false || shouldBeVisible == true && wasVisible == true) return;
+                
+            if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
+                ent.SetTag<IsViewRequested>(currentVisibilityState);
+            }
+                
+            ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(currentVisibilityState);
+        }
+
+        
         
         [BURST(CompileSynchronously = true)]
         public struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
@@ -45,24 +73,11 @@ namespace ME.BECS.FogOfWar {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy) {
 
-                var isVisible = this.fow.IsVisible(in shadowCopy.forTeam, ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
-                if (isVisible == true && shadowCopy.original.IsAlive() == true) {
-                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(true);
-                    return;
-                }
-                if (ent.Has<FogOfWarShadowCopyWasVisibleTag>() == true) {
-                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(false);
-                    if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
-                        ent.SetTag<IsViewRequested>(true);
-                    }
-                }
-                
-                if (shadowCopy.original.IsAlive() == false && ent.IsAlive() == true) {
-                    ent.DestroyHierarchy();
-                }
+                var isPointVisible = this.fow.IsVisible(in shadowCopy.forTeam, ent.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+                SetShadowCopy(ent, ref shadowCopy, isPointVisible);
 
             }
-
+            
         }
 
         [BURST(CompileSynchronously = true)]
@@ -73,20 +88,7 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarShadowCopyComponent shadowCopy, ref FogOfWarShadowCopyPointsComponent points) {
 
                 var isVisible = this.fow.IsVisibleAny(in shadowCopy.forTeam, in points.points);
-                if (isVisible == true && shadowCopy.original.IsAlive() == true) {
-                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(true);
-                    return;
-                }
-                if (ent.Has<FogOfWarShadowCopyWasVisibleTag>() == true) {
-                    ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(false);
-                    if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
-                        ent.SetTag<IsViewRequested>(true);
-                    }
-                }
-
-                if (shadowCopy.original.IsAlive() == false && ent.IsAlive() == true) {
-                    ent.DestroyHierarchy();
-                }
+                SetShadowCopy(ent, ref shadowCopy, isVisible);
 
             }
 
