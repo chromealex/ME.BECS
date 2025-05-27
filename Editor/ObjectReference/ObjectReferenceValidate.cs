@@ -42,7 +42,9 @@ namespace ME.BECS.Editor {
                         var t = asset.GetType();
                         if (t.IsAssignableFrom(type) == false) {
                             if (asset is UnityEngine.GameObject go) {
-                                asset = go.GetComponent(type);
+                                if (typeof(UnityEngine.Component).IsAssignableFrom(type) == true) {
+                                    asset = go.GetComponent(type);
+                                }
                             }
                         }
                     }

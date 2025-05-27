@@ -176,9 +176,23 @@ namespace ME.BECS {
 
         public static void SetDirect<T>(Ent ent, T data) where T : unmanaged, IComponent {
 
+            SetDirect_INTERNAL(ent, in data);
+
+        }
+
+        private static void SetDirect_INTERNAL<T>(Ent ent, in T data) where T : unmanaged, IComponent {
+
             if (StaticTypes<T>.isTag == true) return;
 
-            Components.Set(ent.World.state, in ent, in data);
+            var typeId = StaticTypes<T>.typeId;
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var state = ent.World.state;
+            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
+            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
+            fixed (T* dataPtr = &data) {
+                storage.Set(state, ent.id, ent.gen, dataPtr, out var changed);
+            }
 
         }
 

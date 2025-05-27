@@ -591,7 +591,7 @@ namespace ME.BECS.Editor {
                                 child.userData = propertyField.userData;
                                 child.RegisterValueChangeCallback((evt) => {
 
-                                    /*if (evt.target == null) return;
+                                    if (evt.target == null) return;
                                     var userData = ((PropertyField)evt.target).userData;
                                     if (userData == null) return;
                                     var idx = (int)userData;
@@ -616,7 +616,7 @@ namespace ME.BECS.Editor {
                                             var gMethod = methodSet.MakeGenericMethod(value.GetType());
                                             gMethod.Invoke(world.state.ptr->components, new object[] { entity, value });
                                         }
-                                    }*/
+                                    }
 
                                 });
                             }

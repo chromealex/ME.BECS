@@ -17,7 +17,7 @@ namespace ME.BECS.Editor {
 
         public System.Collections.Generic.List<AssemblyInfo> asms;
         public bool editorAssembly;
-        public System.Collections.Generic.List<System.Type> burstedTypes;
+        public UnityEditor.TypeCache.TypeCollection burstedTypes;
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
         public System.Collections.Generic.List<System.Type> systems;
 
@@ -315,7 +315,7 @@ namespace ME.BECS.Editor {
                 var typesContent = new System.Collections.Generic.List<string>();
                 var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
                 PatchSystemsList(types);
-                var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>().OrderBy(x => x.FullName).ToList();
+                var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
                 var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToArray();
                 var typesStart = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IStart)).OrderBy(x => x.FullName).ToArray();
@@ -391,8 +391,8 @@ namespace ME.BECS.Editor {
                     if (editorAssembly == false && info.isEditor == true) continue;
 
                     var attr = (ComponentGroupAttribute)component.GetCustomAttribute(typeof(ComponentGroupAttribute));
-                    var systemType = component.FullName.Replace("+", ".");
-                    var groupType = attr.groupType.FullName.Replace("+", ".");
+                    var systemType = EditorUtils.GetTypeName(component);
+                    var groupType = EditorUtils.GetTypeName(attr.groupType);
                     var str = $"StaticTypes<{systemType}>.ApplyGroup(typeof({groupType}));";
                     typesContent.Add(str);
                     componentTypes.Add(component);
@@ -411,7 +411,7 @@ namespace ME.BECS.Editor {
 
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = component.FullName.Replace("+", ".");
+                        var type = EditorUtils.GetTypeName(component);
                         {
                             var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
                             typesContent.Add(str);
@@ -440,7 +440,7 @@ namespace ME.BECS.Editor {
 
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = component.FullName.Replace("+", ".");
+                        var type = EditorUtils.GetTypeName(component);
                         var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -460,7 +460,7 @@ namespace ME.BECS.Editor {
 
                         var isTag = IsTagType(component).ToString().ToLower();
                         var hasCustomHash = HasComponentCustomSharedHash(component);
-                        var type = component.FullName.Replace("+", ".");
+                        var type = EditorUtils.GetTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -479,7 +479,7 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = component.FullName.Replace("+", ".");
+                        var type = EditorUtils.GetTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -498,7 +498,7 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = component.FullName.Replace("+", ".");
+                        var type = EditorUtils.GetTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -507,9 +507,9 @@ namespace ME.BECS.Editor {
                     }
                 }
 
-                var methods = new System.Collections.Generic.List<MethodDefinition>();
-                var publicContent = new System.Collections.Generic.List<string>();
-                var filesContent = new System.Collections.Generic.List<FileContent[]>();
+                var methods = new scg::List<MethodDefinition>();
+                var publicContent = new scg::List<string>();
+                var filesContent = new scg::List<FileContent[]>();
                 {
                     for (var index = 0; index < generators.Length; ++index) {
                         var customCodeGenerator = generators[index];
@@ -612,7 +612,7 @@ namespace ME.BECS.Editor {
                     }";
                 }
 
-                var content = new System.Collections.Generic.HashSet<string>();
+                var content = new scg::HashSet<string>();
                 var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem));
                 foreach (var type in types) {
                     var asm = type.Assembly.GetName().Name;
@@ -640,7 +640,7 @@ namespace ME.BECS.Editor {
                     }
                 }
 
-                var newContent = template.Replace("{{CONTENT}}", string.Join(@""",""", content));
+                var newContent = template.Replace("{{CONTENT}}", string.Join(@""",""", content.OrderBy(x => x).ToArray()));
                 var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
                 if (prevContent != newContent) {
                     var pathDummy = @$"{dir}/{ECS}.Dummy.cs";

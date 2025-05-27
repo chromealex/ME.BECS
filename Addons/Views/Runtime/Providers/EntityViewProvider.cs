@@ -55,7 +55,7 @@ namespace ME.BECS.Views {
 
         public struct ModuleItem<T> where T : IViewModule {
 
-            public T module;
+            public readonly T module;
             public GroupChangedTracker tracker;
             public string name => ViewsTracker.Tracker<T>.name;
 
