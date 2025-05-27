@@ -269,15 +269,15 @@ namespace ME.BECS.Views {
                     // Remove
                     if (this.toRemove.TryAdd(entId, false) == true) {
                         
-                        var viewSource = component.source;
-                        var providerId = viewSource.providerId;
-                        if (providerId > 0u &&
-                            viewSource.providerId < this.registeredProviders.Length) {
-                            ref var item = ref *(this.registeredProviders.Ptr + viewSource.providerId);
-                            E.IS_CREATED(item);
-                            ent.Remove(item.typeId);
-                        }
-                        ent.Remove<ViewComponent>();
+                        // var viewSource = component.source;
+                        // var providerId = viewSource.providerId;
+                        // if (providerId > 0u &&
+                        //     viewSource.providerId < this.registeredProviders.Length) {
+                        //     ref var item = ref *(this.registeredProviders.Ptr + viewSource.providerId);
+                        //     E.IS_CREATED(item);
+                        //     ent.Remove(item.typeId);
+                        // }
+                        // ent.Remove<ViewComponent>();
 
                     }
 
