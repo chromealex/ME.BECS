@@ -1161,6 +1161,35 @@ namespace ME.BECS.Editor {
         public static System.Type MakeGenericConstraintType(System.Type type) {
             return type.MakeGenericType(GetFirstGenericConstraintType(type));
         }
+        
+        public static UnityEditor.MonoScript FindScriptFromClassName(string className, string @namespace) {
+            
+            var scriptGUIDs = UnityEditor.AssetDatabase.FindAssets($"t:script {className}");
+            if (scriptGUIDs.Length == 0) return null;
+
+            foreach (var scriptGUID in scriptGUIDs) {
+                var assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(scriptGUID);
+                var script = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(assetPath);
+
+                if (script != null && string.Equals(className, System.IO.Path.GetFileNameWithoutExtension(assetPath), System.StringComparison.OrdinalIgnoreCase) &&
+                    (string.IsNullOrEmpty(@namespace) == true || System.Text.RegularExpressions.Regex.IsMatch(script.text, @$"namespace\s+{@namespace}", System.Text.RegularExpressions.RegexOptions.Singleline) == true))
+                    return script;
+            }
+
+            return null;
+            
+        }
+        
+        public static string ProjectPathToAbsolute(string unityPath) {
+            
+            if (string.IsNullOrEmpty(unityPath) == true || unityPath.StartsWith("Assets") == false) {
+                return null;
+            }
+            
+            string absolutePath = System.IO.Path.Combine(UnityEngine.Application.dataPath, unityPath.Substring("Assets/".Length));
+            return System.IO.Path.GetFullPath(absolutePath);
+            
+        } 
 
     }
 

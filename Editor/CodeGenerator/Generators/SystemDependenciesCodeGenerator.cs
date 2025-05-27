@@ -7,9 +7,14 @@ namespace ME.BECS.Editor.Systems {
 
     public class SystemDependenciesCodeGenerator : CustomCodeGenerator {
 
+        private static readonly string cachePath = $"Assets/{CodeGenerator.ECS}.Gen/Editor/ME.BECS.Files/SysDepGenCache.txt";
         private static uint awaitCount;
         private readonly object lockObj = new object();
+        private System.Collections.Generic.Dictionary<System.Type, CachedItem> cache;
 
+
+
+        [System.SerializableAttribute]
         public struct Item {
 
             public System.Type system;
@@ -17,7 +22,18 @@ namespace ME.BECS.Editor.Systems {
             public System.Collections.Generic.List<string> content;
 
         }
-        
+
+        public SystemDependenciesCodeGenerator() {
+            
+            var loadedCache = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(cachePath);
+            if (loadedCache == null) {
+                this.cache = new System.Collections.Generic.Dictionary<System.Type, CachedItem>();
+                return;
+            }
+            this.cache = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.Generic.Dictionary<System.Type, CachedItem>>(loadedCache.text);
+
+        }
+
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             
         }
@@ -25,7 +41,6 @@ namespace ME.BECS.Editor.Systems {
         public override string AddPublicContent() {
 
             if (this.editorAssembly == false) return string.Empty;
-            
             var allContent = new System.Collections.Generic.List<string>();
             var allNodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
             var tempItems = new System.Collections.Generic.Dictionary<System.Type, Item>();
@@ -50,16 +65,21 @@ namespace ME.BECS.Editor.Systems {
                 tempItems.Add(system, new Item());
                 
                 JobUtils.Increment(ref awaitCount);
-
+                 
                 var content = new System.Collections.Generic.List<string>();
                 var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
                 var systemToComponents = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
-                System.Threading.ThreadPool.QueueUserWorkItem((state) => {
+                
+                var monoScriptHashCode = EditorUtils.FindScriptFromClassName(system.Name, system.Namespace)?.text.GetHashCode();
+                if (monoScriptHashCode.HasValue && this.cache.TryGetValue(system, out var cachedItem) && cachedItem.hashCode == monoScriptHashCode) {
+                    lock (this.lockObj) tempItems[system] = cachedItem.item;
+                    JobUtils.Decrement(ref awaitCount);
+                } else System.Threading.ThreadPool.QueueUserWorkItem((state) => {
 
                     //UnityEngine.Debug.Log("Processing: " + system.FullName);
 
                     try {
-
+                        
                         content.Add("{");
                         content.Add($"// system: {system.FullName}");
                         content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
@@ -264,6 +284,20 @@ namespace ME.BECS.Editor.Systems {
                 allContent.AddRange(item.content);
             }
 
+            {
+                //cache items
+                foreach (var i in tempItems) {
+                    var hashCode = EditorUtils.FindScriptFromClassName(i.Key.Name, i.Key.Namespace)?.text.GetHashCode();
+                    if (hashCode == null) continue; 
+                    this.cache[i.Key] = new CachedItem {
+                        hashCode = hashCode.Value,
+                        item = i.Value,
+                    };
+                }
+                System.IO.File.WriteAllText(EditorUtils.ProjectPathToAbsolute(cachePath), Newtonsoft.Json.JsonConvert.SerializeObject(this.cache));
+                
+            }
+
 
             var graph = new Graph(allNodes);
             allContent.Add(graph.GetInitializationString());
@@ -294,7 +328,8 @@ namespace ME.BECS.Editor.Systems {
                 public System.Collections.Generic.List<System.Type> dependencies;
                 public System.Collections.Generic.List<System.Type> inputs;
                 public System.Collections.Generic.List<System.Type> outputs;
-                public System.Collections.Generic.List<MethodInfoDependencies.Error> errors;
+                [System.NonSerializedAttribute]
+                public System.Collections.Generic.List<MethodInfoDependencies.Error> errors; 
 
                 public override string ToString() {
                     return "// " + this.system.FullName + "\n// |------ " + string.Join("\n// |------ ", this.dependencies.Select(x => x.ToString()).ToArray());
@@ -585,6 +620,14 @@ namespace ME.BECS.Editor.Systems {
             return method1.MetadataToken == method2.MetadataToken && method1.Module == method2.Module && method1.DeclaringType == method2.DeclaringType;
         }
 
-    }
+        [System.SerializableAttribute]
+        public class CachedItem{
+        
+            public int hashCode;
+            public Item item;
 
+        }
+        
+    }
+    
 }
