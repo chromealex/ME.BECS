@@ -52,22 +52,20 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public JobHandle Build(ref QueryBuilder builder, safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter, JobHandle dependsOn) {
-                var allocator = WorldsTempAllocator.allocatorTemp.Get(builder.WorldId).Allocator.ToAllocator;
+            public ComposeJob Build(ref QueryBuilder builder, safe_ptr<ME.BECS.NativeCollections.DeferJobCounter> counter) {
                 var job = new ComposeJob() {
                     query = this,
                     queryData = builder.queryData,
                     state = builder.commandBuffer.ptr->state,
                     counter = counter,
-                    allocator = allocator,
                 };
-                return job.ScheduleByRef(dependsOn);
+                return job;
             }
 
         }
         
         [BURST(CompileSynchronously = true)]
-        private struct ComposeJob : IJob {
+        public struct ComposeJob : IJob {
 
             public QueryCompose query;
             public safe_ptr<State> state;
