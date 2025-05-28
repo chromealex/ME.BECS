@@ -13,8 +13,123 @@ namespace ME.BECS.Editor {
 
     }
 
+    public class Cache {
+
+        [System.Serializable]
+        public struct CachedItem {
+        
+            public int hashCode;
+            [UnityEngine.SerializeReference]
+            public object data;
+
+        }
+
+        public struct Key {
+
+            public System.Type type;
+            public string method;
+            
+            public Key(System.Type type, string method) {
+                this.type = type;
+                this.method = method;
+            }
+
+            public override string ToString() {
+                return $"{this.type.AssemblyQualifiedName}:{this.method}";
+            }
+
+        }
+
+        private string dir;
+        private string filename;
+        private string method;
+
+        private System.Collections.Generic.Dictionary<string, CachedItem> cacheData;
+        private bool isDirty;
+        
+        public void Add<T>(System.Type type, T data) {
+
+            var scriptPath = ScriptsImporter.FindScript(type);
+            var hashCode = scriptPath != null ? UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(scriptPath)?.text.GetHashCode() : null;
+            if (hashCode == null) return;
+            {
+                var key = new Key(type, this.method).ToString();
+                this.cacheData.Add(key, new CachedItem() {
+                    hashCode = hashCode.Value,
+                    data = data,
+                });
+            }
+            this.isDirty = true;
+
+        }
+        
+        public bool TryGetValue<T>(System.Type key, out T value) {
+            var scriptPath = ScriptsImporter.FindScript(key);
+            var monoScriptHashCode = scriptPath != null ? UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(scriptPath)?.text.GetHashCode() : null;
+            if (monoScriptHashCode.HasValue == true && this.cacheData.TryGetValue(new Key(key, this.method).ToString(), out var cachedItem) == true && cachedItem.hashCode == monoScriptHashCode) {
+                if (cachedItem.data is T data) {
+                    value = data;
+                    return true;
+                }
+                if (typeof(T) == typeof(scg::List<string>)) {
+                    var list = new scg::List<string>();
+                    foreach (var item in (Newtonsoft.Json.Linq.JArray)cachedItem.data) {
+                        list.Add(item.ToString());
+                    }
+                    value = (T)(object)list;
+                    return true;
+                }
+                value = (T)((Newtonsoft.Json.Linq.JObject)cachedItem.data).ToObject(typeof(T));
+                return true;
+            }
+            value = default;
+            return false;
+        }
+
+        internal void Load(string dir, string filename) {
+
+            this.dir = dir;
+            this.filename = filename;
+            this.isDirty = false;
+            //var ms = System.Diagnostics.Stopwatch.StartNew();
+            var path = $"{this.dir}/{this.filename}";
+            var loadedCache = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : null;
+            if (loadedCache == null) {
+                this.cacheData = new System.Collections.Generic.Dictionary<string, CachedItem>();
+            } else {
+                this.cacheData = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.Generic.Dictionary<string, CachedItem>>(loadedCache);
+            }
+            //UnityEngine.Debug.Log($"Cache {this.filename} loaded in {ms.ElapsedMilliseconds}ms");
+
+        }
+
+        internal void SetMethod(string method) {
+            this.method = method;
+            this.cacheData.Clear();
+        }
+
+        internal void Push() {
+
+            if (this.isDirty == false) return;
+            
+            var path = $"{this.dir}/{this.filename}";
+            var dir = System.IO.Path.GetDirectoryName(path);
+            if (System.IO.Directory.Exists(dir) == false) System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(this.cacheData));
+            UnityEditor.AssetDatabase.ImportAsset(path);
+
+            this.isDirty = false;
+            this.cacheData.Clear();
+
+        }
+
+    }
+
     public abstract class CustomCodeGenerator {
 
+        public Cache cache;
+        
+        public string dir;
         public System.Collections.Generic.List<AssemblyInfo> asms;
         public bool editorAssembly;
         public UnityEditor.TypeCache.TypeCollection burstedTypes;
@@ -511,19 +626,31 @@ namespace ME.BECS.Editor {
                 var publicContent = new scg::List<string>();
                 var filesContent = new scg::List<FileContent[]>();
                 {
+                    var cache = new Cache();
                     for (var index = 0; index < generators.Length; ++index) {
                         var customCodeGenerator = generators[index];
+                        cache.Load(dir, $"Cache/{customCodeGenerator.GetType().Name}.cache");
+                        customCodeGenerator.cache = cache;
+                        customCodeGenerator.dir = dir;
                         customCodeGenerator.asms = asms;
                         customCodeGenerator.systems = types;
                         customCodeGenerator.editorAssembly = editorAssembly;
                         customCodeGenerator.burstedTypes = burstedTypes;
                         customCodeGenerator.burstDiscardedTypes = burstDiscardedTypes;
                         UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, customCodeGenerator.GetType().Name, index / (float)generators.Length);
+                        cache.SetMethod("AddInitialization");
                         customCodeGenerator.AddInitialization(typesContent, componentTypes);
+                        cache.Push();
+                        cache.SetMethod("AddPublicContent");
                         publicContent.Add(customCodeGenerator.AddPublicContent());
+                        cache.Push();
+                        cache.SetMethod("AddFileContent");
                         var files = customCodeGenerator.AddFileContent();
                         if (files != null) filesContent.Add(files);
+                        cache.Push();
+                        cache.SetMethod("AddMethods");
                         methods.AddRange(customCodeGenerator.AddMethods(componentTypes));
+                        cache.Push();
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
                 }

@@ -28,80 +28,87 @@ namespace ME.BECS.Editor.Jobs {
 
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
             
-            {
-                var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
-                CodeGenerator.PatchSystemsList(jobsComponents);
-                foreach (var jobType in jobsComponents) {
+            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            CodeGenerator.PatchSystemsList(jobsComponents);
+            foreach (var jobType in jobsComponents) {
 
-                    if (jobType.IsValueType == false) continue;
-                    if (jobType.IsVisible == false) continue;
+                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
+                    dataList.AddRange(list);
+                    continue;
+                }
+                
+                if (jobType.IsValueType == false) continue;
+                if (jobType.IsVisible == false) continue;
 
-                    if (this.IsValidTypeForAssembly(jobType) == false) continue;
+                if (this.IsValidTypeForAssembly(jobType) == false) continue;
 
-                    if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
-                    } else if (jobType.IsGenericType == true) {
-                        throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
+                var content = new System.Collections.Generic.List<string>();
+                if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
+                } else if (jobType.IsGenericType == true) {
+                    throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
+                }
+
+                var jobTypeFullName = EditorUtils.GetTypeName(jobType);
+                var components = new System.Collections.Generic.List<string>();
+                var componentsTypes = new System.Collections.Generic.List<System.Type>();
+                var jobInterfaces = jobType.GetInterfaces();
+                System.Type workInterface = null;
+                foreach (var i in jobInterfaces) {
+                    if (i.IsGenericType == true) {
+                        foreach (var type in i.GenericTypeArguments) {
+                            if (typeof(T0).IsAssignableFrom(type) == true ||
+                                typeof(T1).IsAssignableFrom(type) == true) {
+                                if (this.IsValidTypeForAssembly(type) == false) continue;
+                                components.Add(EditorUtils.GetDataTypeName(type));
+                                componentsTypes.Add(type);
+                            }
+                        }
+
+                        workInterface = i;
+                        break;
+                    } else if (typeof(T0) == typeof(TNull) && typeof(T1) == typeof(TNull) && i.Name.EndsWith("Base") == false) {
+                        workInterface = i;
+                        break;
                     }
+                }
 
-                    var jobTypeFullName = EditorUtils.GetTypeName(jobType);
-                    var components = new System.Collections.Generic.List<string>();
-                    var componentsTypes = new System.Collections.Generic.List<System.Type>();
-                    var jobInterfaces = jobType.GetInterfaces();
-                    System.Type workInterface = null;
-                    foreach (var i in jobInterfaces) {
-                        if (i.IsGenericType == true) {
-                            foreach (var type in i.GenericTypeArguments) {
-                                if (typeof(T0).IsAssignableFrom(type) == true ||
-                                    typeof(T1).IsAssignableFrom(type) == true) {
-                                    if (this.IsValidTypeForAssembly(type) == false) continue;
-                                    components.Add(EditorUtils.GetDataTypeName(type));
-                                    componentsTypes.Add(type);
+                if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
+
+                    var methods = typeof(ME.BECS.Jobs.EarlyInit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    MethodInfo methodInfoResult = null;
+                    foreach (var methodInfo in methods) {
+                        if (methodInfo.Name.StartsWith(method) == false) continue;
+                        if (methodInfo.GetGenericArguments().Length != components.Count + 1) continue;
+
+                        {
+                            var types = methodInfo.GetGenericArguments();
+                            var check = true;
+                            for (int i = 0; i < componentsTypes.Count; ++i) {
+                                if (types[i + 1].GetInterfaces()[0].IsAssignableFrom(componentsTypes[i]) == false) {
+                                    check = false;
+                                    break;
                                 }
                             }
-
-                            workInterface = i;
-                            break;
-                        } else if (typeof(T0) == typeof(TNull) && typeof(T1) == typeof(TNull) && i.Name.EndsWith("Base") == false) {
-                            workInterface = i;
-                            break;
+                            if (check == false) continue;
                         }
+
+                        methodInfoResult = methodInfo;
+                        break;
                     }
 
-                    if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
-
-                        var methods = typeof(ME.BECS.Jobs.EarlyInit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        MethodInfo methodInfoResult = null;
-                        foreach (var methodInfo in methods) {
-                            if (methodInfo.Name.StartsWith(method) == false) continue;
-                            if (methodInfo.GetGenericArguments().Length != components.Count + 1) continue;
-
-                            {
-                                var types = methodInfo.GetGenericArguments();
-                                var check = true;
-                                for (int i = 0; i < componentsTypes.Count; ++i) {
-                                    if (types[i + 1].GetInterfaces()[0].IsAssignableFrom(componentsTypes[i]) == false) {
-                                        check = false;
-                                        break;
-                                    }
-                                }
-                                if (check == false) continue;
-                            }
-
-                            methodInfoResult = methodInfo;
-                            break;
-                        }
-
-                        if (methodInfoResult == null) {
-                            UnityEngine.Debug.LogWarning($"[ CodeGenerator ] Failed to generate EarlyInit method for job type {jobTypeFullName}.");
-                            continue;
-                        }
-                        var str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}, {string.Join(", ", components)}>();";
-                        if (components.Count == 0) str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}>();";
-                        dataList.Add(str);
-
+                    if (methodInfoResult == null) {
+                        UnityEngine.Debug.LogWarning($"[ CodeGenerator ] Failed to generate EarlyInit method for job type {jobTypeFullName}.");
+                        continue;
                     }
+                    var str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}, {string.Join(", ", components)}>();";
+                    if (components.Count == 0) str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}>();";
+                    content.Add(str);
 
                 }
+
+                this.cache.Add(jobType, content);
+                dataList.AddRange(content);
+
             }
             
         }
@@ -164,136 +171,157 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
+        public struct Item {
+
+            public string cacheBuilder;
+            public string funcBuilder;
+            public string structBuilder;
+            public string structUnsafeBuilder;
+
+        }
+        
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
-            {
-                var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
-                CodeGenerator.PatchSystemsList(jobsComponents);
-                foreach (var jobType in jobsComponents) {
-                    if (jobType.IsValueType == false) continue;
-                    if (jobType.IsVisible == false) continue;
-                    if (this.IsValidTypeForAssembly(jobType) == false) continue;
-
-                    if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
-                    } else if (jobType.IsGenericType == true) {
-                        throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
-                    }
-                    
-                    var jobTypeFullName = EditorUtils.GetTypeName(jobType);
-                    var aspects = new System.Collections.Generic.List<string>();
-                    var components = new System.Collections.Generic.List<string>();
-                    var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
-                    var componentsType = new System.Collections.Generic.HashSet<System.Type>();
-                    var interfaces = jobType.GetInterfaces();
-                    System.Type workInterface = null;
-                    foreach (var i in interfaces) {
-                        if (i.IsGenericType == true) {
-                            foreach (var type in i.GenericTypeArguments) {
-                                if (typeof(T0).IsAssignableFrom(type) == true) {
-                                    if (this.IsValidTypeForAssembly(type) == false) continue;
-                                    components.Add(EditorUtils.GetDataTypeName(type));
-                                    componentsType.Add(type);
-                                }
-
-                                if (typeof(T1).IsAssignableFrom(type) == true) {
-                                    if (this.IsValidTypeForAssembly(type) == false) continue;
-                                    aspects.Add(EditorUtils.GetDataTypeName(type));
-                                    aspectsType.Add(type);
-                                }
-                            }
-
-                            workInterface = i;
-                            break;
-                        }
-                    }
-
-                    var uniqueTypes = GetJobTypesInfo(jobType);
-                    
-                    ++uniqueId;
-                    var structName = $"JobDebugData{uniqueId}";
-
-                    cacheBuilder.AppendLine($"private struct Cache{structName} {{");
-                    cacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
-                    cacheBuilder.AppendLine($"}}");
-
-                    funcBuilder.AppendLine($"{{ // {jobType.FullName}");
-                    funcBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
-                    funcBuilder.AppendLine($"[BurstCompile]");
-                    funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {{");
-                    funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
-                    funcBuilder.AppendLine($"if (data == null) {{");
-                    funcBuilder.AppendLine($"if (unsafeMode == true) {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
-                    funcBuilder.AppendLine($"}} else {{");
-                    funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
-                    funcBuilder.AppendLine($"}}");
-                    funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
-                    funcBuilder.AppendLine($"}}");
-                    funcBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
-                    funcBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
-                    funcBuilder.AppendLine($"data->buffer = buffer;");
-                    
-                    structBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
-                    structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
-                    structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
-                    structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                    structUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
-                    structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
-                    structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
-                    structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                    if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
-
-                        {
-                            var i = 0u;
-                            
-                            i = 0u;
-                            foreach (var component in aspects) {
-                                structBuilder.AppendLine($"public {component} a{i};");
-                                structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
-                                funcBuilder.AppendLine($"data->a{i} = buffer->state.ptr->aspectsStorage.Initialize<{component}>(buffer->state);");
-                                ++i;
-                            }
-                            
-                            i = 0u;
-                            foreach (var component in components) {
-                                structBuilder.AppendLine($"public RefRW<{component}> c{i};");
-                                structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
-                                funcBuilder.AppendLine($"data->c{i} = buffer->state.ptr->components.GetRW<{component}>(buffer->state, buffer->worldId);");
-                                ++i;
-                            }
-
-                        }
-
-                        {
-                            UpdateDeps(uniqueTypes);
-
-                            var i = 0u;
-                            var uniqueTypesSorted = uniqueTypes.ToList().OrderBy(x => x.type.FullName);
-                            foreach (var typeInfo in uniqueTypesSorted) {
-                                var type = EditorUtils.GetDataTypeName(typeInfo.type);
-                                var RWRO = string.Empty;
-                                if (typeInfo.op == RefOp.ReadOnly) RWRO = "RO";
-                                if (typeInfo.op == RefOp.WriteOnly) RWRO = "WO";
-                                if (typeInfo.op == RefOp.ReadWrite) RWRO = "RW";
-                                var fieldName = EditorUtils.GetCodeName(type);
-                                funcBuilder.AppendLine($"data->{fieldName} = new SafetyComponentContainer{RWRO}<{type}>(buffer->state, buffer->worldId);");
-                                structBuilder.AppendLine($"public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
-                                structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
-                                ++i;
-                            }
-                        }
-
-                    }
-                    structBuilder.AppendLine($"}}");
-                    structUnsafeBuilder.AppendLine($"}}");
-                    
-                    funcBuilder.AppendLine($"return data;");
-                    funcBuilder.AppendLine($"}}");
-                    funcBuilder.AppendLine($"var fn = BurstCompiler.CompileFunctionPointer<CompiledJobCallback>(Method);");
-                    funcBuilder.AppendLine($"CompiledJobs<{jobTypeFullName}>.SetFunction(fn, (unsafeMode) => unsafeMode == true ? typeof({structName}Unsafe) : typeof({structName}));");
-                    funcBuilder.AppendLine($"}}");
-                    
+            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            CodeGenerator.PatchSystemsList(jobsComponents);
+            foreach (var jobType in jobsComponents) {
+                if (this.cache.TryGetValue<Item>(jobType, out var item) == true) {
+                    cacheBuilder.AppendLine(item.cacheBuilder);
+                    funcBuilder.AppendLine(item.funcBuilder);
+                    structBuilder.AppendLine(item.structBuilder);
+                    structUnsafeBuilder.AppendLine(item.structUnsafeBuilder);
+                    continue;
                 }
+                if (jobType.IsValueType == false) continue;
+                if (jobType.IsVisible == false) continue;
+                if (this.IsValidTypeForAssembly(jobType) == false) continue;
+
+                if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
+                } else if (jobType.IsGenericType == true) {
+                    throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
+                }
+                
+                var jobTypeFullName = EditorUtils.GetTypeName(jobType);
+                var aspects = new System.Collections.Generic.List<string>();
+                var components = new System.Collections.Generic.List<string>();
+                var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
+                var componentsType = new System.Collections.Generic.HashSet<System.Type>();
+                var interfaces = jobType.GetInterfaces();
+                System.Type workInterface = null;
+                foreach (var i in interfaces) {
+                    if (i.IsGenericType == true) {
+                        foreach (var type in i.GenericTypeArguments) {
+                            if (typeof(T0).IsAssignableFrom(type) == true) {
+                                if (this.IsValidTypeForAssembly(type) == false) continue;
+                                components.Add(EditorUtils.GetDataTypeName(type));
+                                componentsType.Add(type);
+                            }
+
+                            if (typeof(T1).IsAssignableFrom(type) == true) {
+                                if (this.IsValidTypeForAssembly(type) == false) continue;
+                                aspects.Add(EditorUtils.GetDataTypeName(type));
+                                aspectsType.Add(type);
+                            }
+                        }
+
+                        workInterface = i;
+                        break;
+                    }
+                }
+
+                var uniqueTypes = GetJobTypesInfo(jobType);
+                
+                ++uniqueId;
+                var structName = $"JobDebugData{uniqueId}";
+
+                cacheBuilder.AppendLine($"private struct Cache{structName} {{");
+                cacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
+                cacheBuilder.AppendLine($"}}");
+
+                funcBuilder.AppendLine($"{{ // {jobType.FullName}");
+                funcBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
+                funcBuilder.AppendLine($"[BurstCompile]");
+                funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {{");
+                funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
+                funcBuilder.AppendLine($"if (data == null) {{");
+                funcBuilder.AppendLine($"if (unsafeMode == true) {{");
+                funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
+                funcBuilder.AppendLine($"}} else {{");
+                funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
+                funcBuilder.AppendLine($"}}");
+                funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
+                funcBuilder.AppendLine($"}}");
+                funcBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
+                funcBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
+                funcBuilder.AppendLine($"data->buffer = buffer;");
+                
+                structBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
+                structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
+                structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
+                structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
+                structUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
+                structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
+                structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
+                structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
+                if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
+
+                    {
+                        var i = 0u;
+                        
+                        i = 0u;
+                        foreach (var component in aspects) {
+                            structBuilder.AppendLine($"public {component} a{i};");
+                            structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
+                            funcBuilder.AppendLine($"data->a{i} = buffer->state.ptr->aspectsStorage.Initialize<{component}>(buffer->state);");
+                            ++i;
+                        }
+                        
+                        i = 0u;
+                        foreach (var component in components) {
+                            structBuilder.AppendLine($"public RefRW<{component}> c{i};");
+                            structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
+                            funcBuilder.AppendLine($"data->c{i} = buffer->state.ptr->components.GetRW<{component}>(buffer->state, buffer->worldId);");
+                            ++i;
+                        }
+
+                    }
+
+                    {
+                        UpdateDeps(uniqueTypes);
+
+                        var i = 0u;
+                        var uniqueTypesSorted = uniqueTypes.ToList().OrderBy(x => x.type.FullName);
+                        foreach (var typeInfo in uniqueTypesSorted) {
+                            var type = EditorUtils.GetDataTypeName(typeInfo.type);
+                            var RWRO = string.Empty;
+                            if (typeInfo.op == RefOp.ReadOnly) RWRO = "RO";
+                            if (typeInfo.op == RefOp.WriteOnly) RWRO = "WO";
+                            if (typeInfo.op == RefOp.ReadWrite) RWRO = "RW";
+                            var fieldName = EditorUtils.GetCodeName(type);
+                            funcBuilder.AppendLine($"data->{fieldName} = new SafetyComponentContainer{RWRO}<{type}>(buffer->state, buffer->worldId);");
+                            structBuilder.AppendLine($"public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
+                            structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
+                            ++i;
+                        }
+                    }
+
+                }
+                structBuilder.AppendLine($"}}");
+                structUnsafeBuilder.AppendLine($"}}");
+                
+                funcBuilder.AppendLine($"return data;");
+                funcBuilder.AppendLine($"}}");
+                funcBuilder.AppendLine($"var fn = BurstCompiler.CompileFunctionPointer<CompiledJobCallback>(Method);");
+                funcBuilder.AppendLine($"CompiledJobs<{jobTypeFullName}>.SetFunction(fn, (unsafeMode) => unsafeMode == true ? typeof({structName}Unsafe) : typeof({structName}));");
+                funcBuilder.AppendLine($"}}");
+                
+                this.cache.Add(jobType, new Item() {
+                    cacheBuilder = cacheBuilder.ToString(),
+                    funcBuilder = funcBuilder.ToString(),
+                    structBuilder = structBuilder.ToString(),
+                    structUnsafeBuilder = structUnsafeBuilder.ToString(),
+                });
+                
             }
             
         }

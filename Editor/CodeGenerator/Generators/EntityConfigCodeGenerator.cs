@@ -22,7 +22,7 @@ namespace ME.BECS.Editor.Aspects {
 
                 var collectionsCount = GetCollectionsCount(component);
                 if (collectionsCount == 0u) continue;
-                var type = component.FullName.Replace("+", ".");
+                var type = EditorUtils.GetTypeName(component);
                 var str = $"StaticTypes<{type}>.SetCollectionsCount({collectionsCount}u);";
                 dataList.Add(str);
 

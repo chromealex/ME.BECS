@@ -194,17 +194,17 @@ namespace ME.BECS.Extensions.GraphProcessor
 			UpdatePortSize();
 		}
 
-		protected override void ExecuteDefaultAction(EventBase evt) {
-			
-			base.ExecuteDefaultAction(evt);
+        protected override void HandleEventBubbleUp(EventBase evt) {
+            
+            base.HandleEventBubbleUp(evt);
+            
+            if (this.connected == true) {
+                this.AddToClassList("connected");
+            } else {
+                this.RemoveFromClassList("connected");
+            }
 
-			if (this.connected == true) {
-				this.AddToClassList("connected");
-			} else {
-				this.RemoveFromClassList("connected");
-			}
-			
-		}
+        }
 
 		public scg::List< EdgeView >	GetEdges()
 		{

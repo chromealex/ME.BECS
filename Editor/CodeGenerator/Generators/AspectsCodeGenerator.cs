@@ -11,11 +11,17 @@ namespace ME.BECS.Editor.Aspects {
             var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray();
             foreach (var aspect in aspects) {
 
+                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(aspect, out var cacheData) == true) {
+                    content.AddRange(cacheData);
+                    continue;
+                }
+
                 if (aspect.IsValueType == false) continue;
                 if (aspect.IsVisible == false) continue;
 
                 if (this.IsValidTypeForAssembly(aspect) == false) continue;
                 
+                var contentItem = new System.Collections.Generic.List<string>();
                 var type = aspect;
                 var strType = EditorUtils.GetTypeName(type);
                 var types = new System.Collections.Generic.List<string>();
@@ -34,18 +40,23 @@ namespace ME.BECS.Editor.Aspects {
                 }
 
                 var str = $"AspectTypeInfo<{strType}>.Validate();";
-                content.Add(str);
+                contentItem.Add(str);
                 if (fieldsCount > 0 && fieldsCount == types.Count) {
                     references.Add(type);
                     str = $"AspectTypeInfo.with.Get(AspectTypeInfo<{strType}>.typeId).Resize({types.Count});";
-                    content.Add(str);
+                    contentItem.Add(str);
                     for (int i = 0; i < types.Count; ++i) {
                         str = $"AspectTypeInfo.with.Get(AspectTypeInfo<{strType}>.typeId).Get({i}) = StaticTypes<{types[i]}>.typeId;";
-                        content.Add(str);
+                        contentItem.Add(str);
                     }
                 }
+                
+                this.cache.Add(aspect, contentItem);
+                content.AddRange(contentItem);
 
             }
+            
+            this.cache.Push();
             
             dataList.AddRange(content);
             
