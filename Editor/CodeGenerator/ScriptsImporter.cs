@@ -121,6 +121,13 @@ namespace ME.BECS.Editor {
                         if (script != null) {
                             {
                                 var classNames = GetClassNames(script.text);
+                                for (int i = data.items.Count - 1; i >= 0; --i) {
+                                    var item = data.items[i];
+                                    if (item.assetPath == assetPath) {
+                                        data.items.RemoveAt(i);
+                                        isDirty = true;
+                                    }
+                                }
                                 foreach (var className in classNames) {
                                     AddClassName(className.ns, className.name, assetPath);
                                     isDirty = true;
