@@ -50,6 +50,19 @@ namespace ME.BECS.Editor.FeaturesGraph {
         
         public System.Collections.Generic.List<BreadcrumbItem> breadcrumbs = new System.Collections.Generic.List<BreadcrumbItem>();
 
+        public void SetCompileDirty(bool value) {
+            this.isCompileDirty = value;
+            this.UpdateCompileButton();
+        }
+
+        private void UpdateCompileButton() {
+            if (this.isCompileDirty == true) {
+                this.compileButton.text = "Compile Graphs*";
+            } else {
+                this.compileButton.text = "Compile Graphs";
+            }
+        }
+
         private void MoveTo(BaseGraph graph) {
 
             var index = -1;
@@ -153,6 +166,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
             //Debug.Log("Dirty");
             this.hasUnsavedChanges = true;
             this.UpdateToolbar();
+
+            if (obj.addedEdge != null || obj.removedEdge != null || obj.addedNode != null || obj.removedNode != null) {
+                this.SetCompileDirty(true);
+            }
         }
 
         private void UpdateToolbar() {
@@ -232,6 +249,11 @@ namespace ME.BECS.Editor.FeaturesGraph {
         private UnityEditor.UIElements.ToolbarBreadcrumbs breadcrumb;
         private UnityEditor.UIElements.Toolbar toolbar;
         private UnityEngine.UIElements.Button saveButton;
+        private UnityEditor.UIElements.ToolbarButton compileButton;
+        private bool isCompileDirty {
+            get => UnityEditor.EditorPrefs.GetBool($"ME.BECS.{nameof(FeaturesGraphEditorWindow)}.isCompileDirty", false);
+            set => UnityEditor.EditorPrefs.SetBool($"ME.BECS.{nameof(FeaturesGraphEditorWindow)}.isCompileDirty", value);
+        }
         private const float maxOpacity = 1f;
         protected override void InitializeWindow(BaseGraph graph) {
             
@@ -293,11 +315,12 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 toolbar.Add(centerButton);
             }
             {
-                var compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                this.compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                    this.SetCompileDirty(false);
                     CodeGenerator.RegenerateBurstAOT();
                 });
-                compileButton.text = "Compile Graphs";
-                toolbar.Add(compileButton);
+                this.UpdateCompileButton();
+                toolbar.Add(this.compileButton);
             }
             this.rootView.Add(toolbar);
             

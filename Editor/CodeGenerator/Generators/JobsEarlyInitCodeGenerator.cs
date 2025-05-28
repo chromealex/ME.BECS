@@ -28,6 +28,7 @@ namespace ME.BECS.Editor.Jobs {
 
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
             
+            this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
             var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
@@ -182,6 +183,7 @@ namespace ME.BECS.Editor.Jobs {
         
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
+            this.cache.SetKey(typeof(TJobBase).Name);
             var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {

@@ -844,7 +844,8 @@ namespace ME.BECS.Editor.Systems {
         }
 
         public static int InitializeGraph(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
-            foreach (var node in graph.nodes) {
+            for (int idx = 0; idx < graph.nodes.Count; ++idx) {
+                var node = graph.nodes[idx];
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                     var system = systemNode.system;
                     if (system == null) {
@@ -861,7 +862,7 @@ namespace ME.BECS.Editor.Systems {
                                     var systemTypeStr = EditorUtils.GetTypeName(type);
                                     content.Add("{");
                                     content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
-                                    content.Add($"*({systemTypeStr}*)item = {GetDefinition(System.Activator.CreateInstance(type), type)};");
+                                    content.Add($"*({systemTypeStr}*)item = {GetDefinition(graph, idx, System.Activator.CreateInstance(type), type)};");
                                     content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
                                     content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
                                     content.Add("}");
@@ -872,7 +873,7 @@ namespace ME.BECS.Editor.Systems {
                             var systemTypeStr = EditorUtils.GetTypeName(systemType);
                             content.Add("{");
                             content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
-                            content.Add($"*({systemTypeStr}*)item = {GetDefinition(systemNode.system)};");
+                            content.Add($"*({systemTypeStr}*)item = {GetDefinition(graph, idx, systemNode.system)};");
                             content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
                             content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
                             content.Add("}");
@@ -909,51 +910,54 @@ namespace ME.BECS.Editor.Systems {
             return cnt;
         }
 
-        private static string GetDefinition(object system, System.Type type = null) {
+        private static string GetDefinition(SystemsGraph graph, int nodeIndex, object system, System.Type type = null) {
 
             if (type == null) type = system.GetType();
-            var result = new System.Text.StringBuilder(100);
-            result.Append("new ");
-            result.Append(EditorUtils.GetTypeName(type));
-            result.Append(" {\n");
-            //var result = $"new {GetTypeName(system.GetType())}() {{\n";
-            var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
-            foreach (var field in fields) {
-                //var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
-                if (field.IsInitOnly == true) continue;
-                if (field.IsPublic == false) continue;
-                //if (field.IsPublic == false && field.GetCustomAttribute<UnityEngine.SerializeField>() == null) continue;
-                //if (isSerializable == false) continue;
-                result.Append(field.Name);
-                result.Append(" = ");
-                if (field.FieldType.IsEnum == true) {
-                    result.Append(field.FieldType.FullName);
-                    result.Append(".");
-                    result.Append(field.GetValue(system));
-                } else if (field.FieldType.IsPrimitive == true) {
-                    var val = field.GetValue(system);
-                    if (val is double) {
-                        result.Append(val);
-                        result.Append("d");
-                    } else if (val is float fVal) {
-                        result.Append(fVal.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                        result.Append("f");
-                    } else if (val is bool) {
-                        result.Append(val.ToString().ToLower());
-                    } else if (val is string str) {
-                        result.Append("\"");
-                        result.Append(str);
-                        result.Append("\"");
-                    } else {
-                        result.Append(val);
-                    }
-                } else {
-                    result.Append(GetDefinition(field.GetValue(system)));
-                }
-                result.Append(",\n");
-            }
-            result.Append("}\n");
-            return result.ToString();
+            if (type.IsGenericType == true) return "default";
+            var sourceId = ObjectReferenceRegistry.data.Add(graph, out var isNew);
+            return $"({EditorUtils.GetTypeName(type)})((ME.BECS.FeaturesGraph.Nodes.SystemNode)ObjectReferenceRegistry.GetObjectBySourceId<ME.BECS.FeaturesGraph.SystemsGraph>({sourceId}).nodes[{nodeIndex}]).system";
+            // var result = new System.Text.StringBuilder(100);
+            // result.Append("new ");
+            // result.Append(EditorUtils.GetTypeName(type));
+            // result.Append(" {\n");
+            // //var result = $"new {GetTypeName(system.GetType())}() {{\n";
+            // var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
+            // foreach (var field in fields) {
+            //     //var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
+            //     if (field.IsInitOnly == true) continue;
+            //     if (field.IsPublic == false) continue;
+            //     //if (field.IsPublic == false && field.GetCustomAttribute<UnityEngine.SerializeField>() == null) continue;
+            //     //if (isSerializable == false) continue;
+            //     result.Append(field.Name);
+            //     result.Append(" = ");
+            //     if (field.FieldType.IsEnum == true) {
+            //         result.Append(field.FieldType.FullName);
+            //         result.Append(".");
+            //         result.Append(field.GetValue(system));
+            //     } else if (field.FieldType.IsPrimitive == true) {
+            //         var val = field.GetValue(system);
+            //         if (val is double) {
+            //             result.Append(val);
+            //             result.Append("d");
+            //         } else if (val is float fVal) {
+            //             result.Append(fVal.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            //             result.Append("f");
+            //         } else if (val is bool) {
+            //             result.Append(val.ToString().ToLower());
+            //         } else if (val is string str) {
+            //             result.Append("\"");
+            //             result.Append(str);
+            //             result.Append("\"");
+            //         } else {
+            //             result.Append(val);
+            //         }
+            //     } else {
+            //         result.Append(GetDefinition(graph, nodeIndex, field.GetValue(system)));
+            //     }
+            //     result.Append(",\n");
+            // }
+            // result.Append("}\n");
+            // return result.ToString();
 
         }
 

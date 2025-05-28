@@ -24,18 +24,20 @@ namespace ME.BECS.Editor {
 
         }
 
-        public struct Key {
+        public readonly struct Key {
 
-            public System.Type type;
-            public string method;
+            private readonly System.Type type;
+            private readonly string method;
+            private readonly string key;
 
-            public Key(System.Type type, string method) {
+            public Key(System.Type type, string method, string key) {
                 this.type = type;
                 this.method = method;
+                this.key = key;
             }
 
             public override string ToString() {
-                return $"{this.type.AssemblyQualifiedName}:{this.method}";
+                return $"{this.type.AssemblyQualifiedName}:{this.method}:{this.key}";
             }
 
         }
@@ -43,6 +45,7 @@ namespace ME.BECS.Editor {
         private string dir;
         private string filename;
         private string method;
+        private string key;
 
         private System.Collections.Generic.Dictionary<string, CachedItem> cacheData;
         private bool isDirty;
@@ -55,7 +58,7 @@ namespace ME.BECS.Editor {
                 var hashCode = scriptPath != null ? Md5(scriptPath) : null;
                 if (hashCode == null) continue;
                 {
-                    var key = new Key(type, this.method).ToString();
+                    var key = new Key(type, this.method, this.key).ToString();
                     if (this.cacheData.TryGetValue(key, out var item) == true) {
                         System.Array.Resize(ref item.hashCodes, item.hashCodes.Length + 1);
                         item.hashCodes[^1] = hashCode;
@@ -74,7 +77,7 @@ namespace ME.BECS.Editor {
 
         public bool TryGetValue<T>(System.Type key, out T value) {
             var cacheIsInvalid = true;
-            if (this.cacheData.TryGetValue(new Key(key, this.method).ToString(), out var cachedItem) == true) {
+            if (this.cacheData.TryGetValue(new Key(key, this.method, this.key).ToString(), out var cachedItem) == true) {
                 cacheIsInvalid = false;
                 var scriptsPath = ScriptsImporter.FindScript(key);
                 foreach (string scriptPath in scriptsPath) {
@@ -106,6 +109,10 @@ namespace ME.BECS.Editor {
             }
             value = default;
             return false;
+        }
+
+        public void SetKey(string key) {
+            this.key = key;
         }
 
         private static string Md5(string scriptPath) {
