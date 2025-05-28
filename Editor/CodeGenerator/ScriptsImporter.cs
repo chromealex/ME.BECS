@@ -15,6 +15,7 @@ namespace ME.BECS.Editor {
                 public string ns;
                 public string className;
                 public string assetPath;
+                public string type;
 
                 public bool Equals(Item other) {
                     return this.ns == other.ns && this.className == other.className && this.assetPath == other.assetPath;
@@ -201,7 +202,7 @@ namespace ME.BECS.Editor {
 
                     foundClasses.Add(new TypeInfo {
                         ns = string.Join(".", namespaceStack),
-                        name = string.Join(".", fullParts),
+                        name = GetParts(fullParts),
                         nestingLevel = typeStack.Count,
                     });
                 }
@@ -217,6 +218,25 @@ namespace ME.BECS.Editor {
 
             return foundClasses.ToArray();
 
+            static string GetParts(System.Collections.Generic.List<string> list) {
+                var str = new System.Text.StringBuilder();
+                for (var index = 0; index < list.Count; ++index) {
+                    var item = list[index];
+                    if (index == list.Count - 1) {
+                        str.Append(item);
+                    } else {
+                        if (index > 0) {
+                            str.Append(item);
+                            str.Append("+");
+                        } else {
+                            str.Append(item);
+                            str.Append(".");
+                        }
+                    }
+                }
+                return str.ToString();
+            }
+            
             static int CountChar(string line, char c) {
                 var count = 0;
                 foreach (var ch in line) {
@@ -231,13 +251,32 @@ namespace ME.BECS.Editor {
         }
 
         private static void AddClassName(string ns, string className, string assetPath) {
+            var type = System.Type.GetType(className);
+            if (type == null) {
+                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies()) {
+                    type = asm.GetType(className);
+                    if (type != null) break;
+                }
+            }
             if (data.items == null) data.items = new System.Collections.Generic.List<Data.Item>();
             var item = new Data.Item() {
                 ns = ns,
                 assetPath = assetPath.Replace("\\", "/"),
                 className = className,
+                type = type != null ? type.AssemblyQualifiedName : null,
             };
-            if (data.items.Contains(item) == false) data.items.Add(item);
+            var found = false;
+            for (int i = 0; i < data.items.Count; ++i) {
+                var elem = data.items[i];
+                if (elem.Equals(item) == true) {
+                    elem.type = item.type;
+                    data.items[i] = elem;
+                    found = true;
+                }
+            }
+            if (found == false) {
+                data.items.Add(item);
+            }
         }
 
         public static string FindScript(System.Type type) {
