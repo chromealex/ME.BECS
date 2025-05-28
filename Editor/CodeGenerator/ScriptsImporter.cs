@@ -115,7 +115,8 @@ namespace ME.BECS.Editor {
                 data = LoadData();
 
                 foreach (var assetPath in importedAssets) {
-                    if (assetPath.EndsWith(".cs") == true) {
+                    if (assetPath.EndsWith(".cs") == true &&
+                        assetPath.Contains("ME.BECS.Gen") == false) {
                         var script = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(assetPath);
                         if (script != null) {
                             {
