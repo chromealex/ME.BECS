@@ -61,6 +61,7 @@ namespace ME.BECS.Editor {
         }
         
         private static void SaveData(Data data) {
+            data.items = data.items.OrderBy(x => x.type).ThenBy(x => x.className).ToList();
             var dir = $"{CodeGenerator.ECS}.Cache";
             var path = $"{dir}/{FILENAME}";
             System.IO.File.WriteAllText(path, UnityEngine.JsonUtility.ToJson(data, true));
