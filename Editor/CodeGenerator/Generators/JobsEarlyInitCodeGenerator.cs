@@ -190,6 +190,7 @@ namespace ME.BECS.Editor.Jobs {
                     funcBuilder.AppendLine(item.funcBuilder);
                     structBuilder.AppendLine(item.structBuilder);
                     structUnsafeBuilder.AppendLine(item.structUnsafeBuilder);
+                    ++uniqueId;
                     continue;
                 }
                 if (jobType.IsValueType == false) continue;
@@ -200,6 +201,11 @@ namespace ME.BECS.Editor.Jobs {
                 } else if (jobType.IsGenericType == true) {
                     throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
                 }
+                
+                var tempCacheBuilder = new System.Text.StringBuilder();
+                var tempFuncBuilder = new System.Text.StringBuilder();
+                var tempStructBuilder = new System.Text.StringBuilder();
+                var tempStructUnsafeBuilder = new System.Text.StringBuilder();
                 
                 var jobTypeFullName = EditorUtils.GetTypeName(jobType);
                 var aspects = new System.Collections.Generic.List<string>();
@@ -234,35 +240,34 @@ namespace ME.BECS.Editor.Jobs {
                 ++uniqueId;
                 var structName = $"JobDebugData{uniqueId}";
 
-                cacheBuilder.AppendLine($"private struct Cache{structName} {{");
-                cacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
-                cacheBuilder.AppendLine($"}}");
+                tempCacheBuilder.AppendLine($"private struct Cache{structName} {{");
+                tempCacheBuilder.AppendLine($"public static readonly SharedStatic<System.IntPtr> cache = SharedStatic<System.IntPtr>.GetOrCreate<Cache{structName}>();");
+                tempCacheBuilder.AppendLine($"}}");
 
-                funcBuilder.AppendLine($"{{ // {jobType.FullName}");
-                funcBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
-                funcBuilder.AppendLine($"[BurstCompile]");
-                funcBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {{");
-                funcBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
-                funcBuilder.AppendLine($"if (data == null) {{");
-                funcBuilder.AppendLine($"if (unsafeMode == true) {{");
-                funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
-                funcBuilder.AppendLine($"}} else {{");
-                funcBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
-                funcBuilder.AppendLine($"}}");
-                funcBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
-                funcBuilder.AppendLine($"}}");
-                funcBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
-                funcBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
-                funcBuilder.AppendLine($"data->buffer = buffer;");
-                
-                structBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
-                structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
-                structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
-                structBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                structUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
-                structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
-                structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
-                structUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
+                tempFuncBuilder.AppendLine($"{{ // {jobType.FullName}");
+                tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
+                tempFuncBuilder.AppendLine($"[BurstCompile]");
+                tempFuncBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {{");
+                tempFuncBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
+                tempFuncBuilder.AppendLine($"if (data == null) {{");
+                tempFuncBuilder.AppendLine($"if (unsafeMode == true) {{");
+                tempFuncBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}Unsafe(), Constants.ALLOCATOR_DOMAIN).ptr;");
+                tempFuncBuilder.AppendLine($"}} else {{");
+                tempFuncBuilder.AppendLine($"data = ({structName}*)_makeDefault(new {structName}(), Constants.ALLOCATOR_DOMAIN).ptr;");
+                tempFuncBuilder.AppendLine($"}}");
+                tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
+                tempFuncBuilder.AppendLine($"}}");
+                tempFuncBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
+                tempFuncBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
+                tempFuncBuilder.AppendLine($"data->buffer = buffer;");
+                tempStructBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
+                tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
+                tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
+                tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
+                tempStructUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
+                tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
+                tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
+                tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
                 if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
 
                     {
@@ -270,17 +275,17 @@ namespace ME.BECS.Editor.Jobs {
                         
                         i = 0u;
                         foreach (var component in aspects) {
-                            structBuilder.AppendLine($"public {component} a{i};");
-                            structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
-                            funcBuilder.AppendLine($"data->a{i} = buffer->state.ptr->aspectsStorage.Initialize<{component}>(buffer->state);");
+                            tempStructBuilder.AppendLine($"public {component} a{i};");
+                            tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
+                            tempFuncBuilder.AppendLine($"data->a{i} = buffer->state.ptr->aspectsStorage.Initialize<{component}>(buffer->state);");
                             ++i;
                         }
                         
                         i = 0u;
                         foreach (var component in components) {
-                            structBuilder.AppendLine($"public RefRW<{component}> c{i};");
-                            structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
-                            funcBuilder.AppendLine($"data->c{i} = buffer->state.ptr->components.GetRW<{component}>(buffer->state, buffer->worldId);");
+                            tempStructBuilder.AppendLine($"public RefRW<{component}> c{i};");
+                            tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public RefRW<{component}> c{i};");
+                            tempFuncBuilder.AppendLine($"data->c{i} = buffer->state.ptr->components.GetRW<{component}>(buffer->state, buffer->worldId);");
                             ++i;
                         }
 
@@ -298,29 +303,33 @@ namespace ME.BECS.Editor.Jobs {
                             if (typeInfo.op == RefOp.WriteOnly) RWRO = "WO";
                             if (typeInfo.op == RefOp.ReadWrite) RWRO = "RW";
                             var fieldName = EditorUtils.GetCodeName(type);
-                            funcBuilder.AppendLine($"data->{fieldName} = new SafetyComponentContainer{RWRO}<{type}>(buffer->state, buffer->worldId);");
-                            structBuilder.AppendLine($"public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
-                            structUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
+                            tempFuncBuilder.AppendLine($"data->{fieldName} = new SafetyComponentContainer{RWRO}<{type}>(buffer->state, buffer->worldId);");
+                            tempStructBuilder.AppendLine($"public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
+                            tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public SafetyComponentContainer{RWRO}<{type}> {fieldName};");
                             ++i;
                         }
                     }
 
                 }
-                structBuilder.AppendLine($"}}");
-                structUnsafeBuilder.AppendLine($"}}");
-                
-                funcBuilder.AppendLine($"return data;");
-                funcBuilder.AppendLine($"}}");
-                funcBuilder.AppendLine($"var fn = BurstCompiler.CompileFunctionPointer<CompiledJobCallback>(Method);");
-                funcBuilder.AppendLine($"CompiledJobs<{jobTypeFullName}>.SetFunction(fn, (unsafeMode) => unsafeMode == true ? typeof({structName}Unsafe) : typeof({structName}));");
-                funcBuilder.AppendLine($"}}");
-                
-                this.cache.Add(jobType, new Item() {
-                    cacheBuilder = cacheBuilder.ToString(),
-                    funcBuilder = funcBuilder.ToString(),
-                    structBuilder = structBuilder.ToString(),
-                    structUnsafeBuilder = structUnsafeBuilder.ToString(),
-                });
+                tempStructBuilder.AppendLine($"}}");
+                tempStructUnsafeBuilder.AppendLine($"}}");
+                tempFuncBuilder.AppendLine($"return data;");
+                tempFuncBuilder.AppendLine($"}}");
+                tempFuncBuilder.AppendLine($"var fn = BurstCompiler.CompileFunctionPointer<CompiledJobCallback>(Method);");
+                tempFuncBuilder.AppendLine($"CompiledJobs<{jobTypeFullName}>.SetFunction(fn, (unsafeMode) => unsafeMode == true ? typeof({structName}Unsafe) : typeof({structName}));");
+                tempFuncBuilder.AppendLine($"}}");
+
+                var data = new Item() {
+                    cacheBuilder = tempCacheBuilder.ToString(),
+                    funcBuilder = tempFuncBuilder.ToString(),
+                    structBuilder = tempStructBuilder.ToString(),
+                    structUnsafeBuilder = tempStructUnsafeBuilder.ToString(),
+                };
+                cacheBuilder.AppendLine(data.cacheBuilder);
+                funcBuilder.AppendLine(data.funcBuilder);
+                structBuilder.AppendLine(data.structBuilder);
+                structUnsafeBuilder.AppendLine(data.structUnsafeBuilder);
+                this.cache.Add(jobType, data);
                 
             }
             

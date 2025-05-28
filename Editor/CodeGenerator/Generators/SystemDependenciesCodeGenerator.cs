@@ -57,7 +57,7 @@ namespace ME.BECS.Editor.Systems {
                 var nodes = new System.Collections.Generic.Dictionary<System.Type, Graph.Node>();
                 var systemToComponents = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
                 
-                if (this.cache.TryGetValue<Item>(system, out var data) == true) {
+                if (this.cache.TryGetValue<Item>(system, out var data) == true) { 
                     lock (this.lockObj) {
                         tempItems[system] = data;
                         cacheLoaded.Add(system);

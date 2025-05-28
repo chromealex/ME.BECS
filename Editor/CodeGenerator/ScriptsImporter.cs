@@ -14,11 +14,19 @@ namespace ME.BECS.Editor {
 
                 public string ns;
                 public string className;
-                public string assetPath;
                 public string type;
+                public string[] assetPath;
 
                 public bool Equals(Item other) {
-                    return this.ns == other.ns && this.className == other.className && this.assetPath == other.assetPath;
+                    return this.ns == other.ns && this.className == other.className && this.type == other.type;
+                }
+
+                public bool PathsEquals(string[] other) {
+                    if (other.Length != this.assetPath.Length) return false;
+                    for (var i = 0; i < this.assetPath.Length; i++) {
+                        if (other[i] != this.assetPath[i]) return false;
+                    }
+                    return true;
                 }
 
                 public override bool Equals(object obj) {
@@ -26,11 +34,11 @@ namespace ME.BECS.Editor {
                 }
 
                 public override int GetHashCode() {
-                    return System.HashCode.Combine(this.ns, this.className, this.assetPath);
+                    return System.HashCode.Combine(this.ns, this.className, this.type);
                 }
 
                 public string GetKey() {
-                    return $"{this.ns}::{this.className}";
+                    return this.type;
                 }
 
             }
@@ -71,9 +79,10 @@ namespace ME.BECS.Editor {
                         var fromPath = movedFromAssetPaths[index];
                         for (int i = data.items.Count - 1; i >= 0; --i) {
                             var item = data.items[i];
-                            if (item.assetPath == assetPath) {
-                                item.assetPath = fromPath;
-                                data.items[i] = item;;
+                            var idx = System.Array.IndexOf(item.assetPath, fromPath);
+                            if (idx >= 0) {
+                                item.assetPath[idx] = assetPath;
+                                data.items[i] = item;
                                 isDirty = true;
                             }
                         }
@@ -93,13 +102,7 @@ namespace ME.BECS.Editor {
 
                 foreach (var assetPath in deletedAssets) {
                     if (assetPath.EndsWith(".cs") == true) {
-                        for (int i = data.items.Count - 1; i >= 0; --i) {
-                            var item = data.items[i];
-                            if (item.assetPath == assetPath) {
-                                data.items.RemoveAt(i);
-                                isDirty = true;
-                            }
-                        }
+                        if (DeleteByPath(assetPath) == true) isDirty = true;
                     }
                 }
 
@@ -121,13 +124,7 @@ namespace ME.BECS.Editor {
                         if (script != null) {
                             {
                                 var classNames = GetClassNames(script.text);
-                                for (int i = data.items.Count - 1; i >= 0; --i) {
-                                    var item = data.items[i];
-                                    if (item.assetPath == assetPath) {
-                                        data.items.RemoveAt(i);
-                                        isDirty = true;
-                                    }
-                                }
+                                DeleteByPath(assetPath);
                                 foreach (var className in classNames) {
                                     AddClassName(className.ns, className.name, assetPath);
                                     isDirty = true;
@@ -161,6 +158,26 @@ namespace ME.BECS.Editor {
                 isDirty = false;
             }
 
+        }
+
+        private static bool DeleteByPath(string assetPath) {
+            var isDirty = false;
+            if (data.items == null) return false;
+            for (int i = data.items.Count - 1; i >= 0; --i) {
+                var item = data.items[i];
+                var idx = System.Array.IndexOf(item.assetPath, assetPath);
+                if (idx >= 0) {
+                    if (item.assetPath.Length == 1) {
+                        data.items.RemoveAt(i);
+                    } else {
+                        item.assetPath[idx] = item.assetPath[^1];
+                        System.Array.Resize(ref item.assetPath, item.assetPath.Length - 1);
+                        data.items[i] = item;
+                    }
+                    isDirty = true;
+                }
+            }
+            return isDirty;
         }
 
         private struct TypeInfo {
@@ -269,7 +286,6 @@ namespace ME.BECS.Editor {
             if (data.items == null) data.items = new System.Collections.Generic.List<Data.Item>();
             var item = new Data.Item() {
                 ns = ns,
-                assetPath = assetPath.Replace("\\", "/"),
                 className = className,
                 type = type != null ? type.AssemblyQualifiedName : null,
             };
@@ -277,28 +293,34 @@ namespace ME.BECS.Editor {
             for (int i = 0; i < data.items.Count; ++i) {
                 var elem = data.items[i];
                 if (elem.Equals(item) == true) {
-                    elem.type = item.type;
+                    var idx = System.Array.IndexOf(elem.assetPath, assetPath);
+                    if (idx < 0) {
+                        System.Array.Resize(ref elem.assetPath, elem.assetPath.Length + 1);
+                        elem.assetPath[^1] = assetPath;
+                    }
                     data.items[i] = elem;
                     found = true;
                 }
             }
             if (found == false) {
+                item.assetPath = new[] {assetPath};
                 data.items.Add(item);
             }
         }
 
-        public static string FindScript(System.Type type) {
+        public static string[] FindScript(System.Type type) {
             if (data.items == null) {
                 data = LoadData();
                 cache.Clear();
                 if (data.items != null) {
                     foreach (var item in data.items) {
-                        cache.Add(item.GetKey(), item);
+                        string s = item.GetKey();
+                        if (string.IsNullOrEmpty(s) == false) cache.Add(s, item);
                     }
                 }
             }
             if (data.items == null) return null;
-            var key = type.FullName;
+            var key = type.AssemblyQualifiedName;
             cache.TryGetValue(key, out var elem);
             return elem.assetPath;
         }

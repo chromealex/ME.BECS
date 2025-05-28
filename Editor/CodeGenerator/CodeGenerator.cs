@@ -17,8 +17,8 @@ namespace ME.BECS.Editor {
 
         [System.Serializable]
         public struct CachedItem {
-        
-            public int hashCode;
+
+            public string[] hashCodes;
             [UnityEngine.SerializeReference]
             public object data;
 
@@ -28,7 +28,7 @@ namespace ME.BECS.Editor {
 
             public System.Type type;
             public string method;
-            
+
             public Key(System.Type type, string method) {
                 this.type = type;
                 this.method = method;
@@ -46,27 +46,48 @@ namespace ME.BECS.Editor {
 
         private System.Collections.Generic.Dictionary<string, CachedItem> cacheData;
         private bool isDirty;
-        
+
         public void Add<T>(System.Type type, T data) {
 
-            var scriptPath = ScriptsImporter.FindScript(type);
-            var hashCode = scriptPath != null ? UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(scriptPath)?.text.GetHashCode() : null;
-            if (hashCode == null) return;
-            {
-                var key = new Key(type, this.method).ToString();
-                this.cacheData.Add(key, new CachedItem() {
-                    hashCode = hashCode.Value,
-                    data = data,
-                });
+            var scriptsPath = ScriptsImporter.FindScript(type);
+            if (scriptsPath == null) return;
+            foreach (string scriptPath in scriptsPath) {
+                var hashCode = scriptPath != null ? Md5(scriptPath) : null;
+                if (hashCode == null) continue;
+                {
+                    var key = new Key(type, this.method).ToString();
+                    if (this.cacheData.TryGetValue(key, out var item) == true) {
+                        System.Array.Resize(ref item.hashCodes, item.hashCodes.Length + 1);
+                        item.hashCodes[^1] = hashCode;
+                        this.cacheData[key] = item;
+                    } else {
+                        this.cacheData.Add(key, new CachedItem() {
+                            hashCodes = new[] { hashCode },
+                            data = data,
+                        });
+                    }
+                    this.isDirty = true;
+                }
             }
-            this.isDirty = true;
 
         }
-        
+
         public bool TryGetValue<T>(System.Type key, out T value) {
-            var scriptPath = ScriptsImporter.FindScript(key);
-            var monoScriptHashCode = scriptPath != null ? UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(scriptPath)?.text.GetHashCode() : null;
-            if (monoScriptHashCode.HasValue == true && this.cacheData.TryGetValue(new Key(key, this.method).ToString(), out var cachedItem) == true && cachedItem.hashCode == monoScriptHashCode) {
+            var cacheIsInvalid = true;
+            if (this.cacheData.TryGetValue(new Key(key, this.method).ToString(), out var cachedItem) == true) {
+                cacheIsInvalid = false;
+                var scriptsPath = ScriptsImporter.FindScript(key);
+                foreach (string scriptPath in scriptsPath) {
+                    var monoScriptHashCode = scriptPath != null ? Md5(scriptPath) : null;
+                    if (System.Array.IndexOf(cachedItem.hashCodes, monoScriptHashCode) == -1) {
+                        cacheIsInvalid = true;
+                        break;
+                    }
+                }
+            }
+
+            if (cacheIsInvalid == false) {
+                
                 if (cachedItem.data is T data) {
                     value = data;
                     return true;
@@ -81,9 +102,20 @@ namespace ME.BECS.Editor {
                 }
                 value = (T)((Newtonsoft.Json.Linq.JObject)cachedItem.data).ToObject(typeof(T));
                 return true;
+                
             }
             value = default;
             return false;
+        }
+
+        private static string Md5(string scriptPath) {
+            var text = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.MonoScript>(scriptPath)?.text;
+            if (text == null) return null;
+            using (var md5 = System.Security.Cryptography.MD5.Create()) {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+                var computeHash = md5.ComputeHash(bytes);
+                return System.BitConverter.ToString(computeHash);
+            }
         }
 
         internal void Load(string dir, string filename) {
@@ -105,13 +137,13 @@ namespace ME.BECS.Editor {
 
         internal void SetMethod(string method) {
             this.method = method;
-            this.cacheData.Clear();
+            // this.cacheData.Clear();
         }
 
         internal void Push() {
 
             if (this.isDirty == false) return;
-            
+
             var path = $"{this.dir}/{this.filename}";
             var dir = System.IO.Path.GetDirectoryName(path);
             if (System.IO.Directory.Exists(dir) == false) System.IO.Directory.CreateDirectory(dir);
@@ -119,7 +151,7 @@ namespace ME.BECS.Editor {
             UnityEditor.AssetDatabase.ImportAsset(path);
 
             this.isDirty = false;
-            this.cacheData.Clear();
+            // this.cacheData.Clear();
 
         }
 
@@ -128,7 +160,7 @@ namespace ME.BECS.Editor {
     public abstract class CustomCodeGenerator {
 
         public Cache cache;
-        
+
         public string dir;
         public System.Collections.Generic.List<AssemblyInfo> asms;
         public bool editorAssembly;
@@ -139,12 +171,10 @@ namespace ME.BECS.Editor {
         public bool IsValidTypeForAssembly(System.Type type, bool runtimeInEditor = true) {
 
             return EditorUtils.IsValidTypeForAssembly(this.editorAssembly, type, this.asms, runtimeInEditor);
-            
+
         }
-        
-        public virtual void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            
-        }
+
+        public virtual void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) { }
 
         public virtual scg::List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
@@ -172,9 +202,9 @@ namespace ME.BECS.Editor {
                 }
             }
         }
-        
+
     }
-    
+
     public static class CodeGenerator {
 
         public struct MethodDefinition {
@@ -194,7 +224,7 @@ namespace ME.BECS.Editor {
             }
 
         }
-        
+
         public const string ECS = "ME.BECS";
         public const string AWAKE_METHOD = "BurstCompileOnAwake";
         public const string START_METHOD = "BurstCompileOnStart";
@@ -203,7 +233,7 @@ namespace ME.BECS.Editor {
         public const string DRAWGIZMOS_METHOD = "BurstCompileOnDrawGizmos";
 
         static CodeGenerator() {
-            
+
             UnityEngine.Application.logMessageReceived -= OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
@@ -213,14 +243,14 @@ namespace ME.BECS.Editor {
 
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptsReload() {
-            
+
             UnityEngine.Application.logMessageReceived -= OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded += OnLogAdded;
 
             RegenerateBurstAOT();
-            
+
         }
 
         public struct VariantInfo {
@@ -233,13 +263,13 @@ namespace ME.BECS.Editor {
         public static void GenerateComponentsParallelFor() {
 
             var variables = new System.Collections.Generic.Dictionary<string, string>() {
-                { "inref", "ref" },
-                { "RWRO", "RW" },
+                {"inref", "ref"},
+                {"RWRO", "RW"},
             };
             var postfixes = new VariantInfo[] {
                 new VariantInfo() {
                     filenamePostfix = ".ref",
-                    variables = new [] {
+                    variables = new[] {
                         new System.Collections.Generic.KeyValuePair<string, string>("inref", "ref"),
                         new System.Collections.Generic.KeyValuePair<string, string>("GetRead", "Get"),
                         new System.Collections.Generic.KeyValuePair<string, string>("RWRO", "RW"),
@@ -278,7 +308,7 @@ namespace ME.BECS.Editor {
                         variationsCount = 5u;
                         for (int i = 1; i < maxCount; ++i) {
                             var keys = new System.Collections.Generic.Dictionary<string, int>() {
-                                { "countAspects", i },
+                                {"countAspects", i},
                             };
                             variables["countAspects"] = i.ToString();
                             for (int j = 1; j < variationsCount; ++j) {
@@ -295,7 +325,7 @@ namespace ME.BECS.Editor {
                     } else {
                         for (int i = 1; i < maxCount; ++i) {
                             var keys = new System.Collections.Generic.Dictionary<string, int>() {
-                                { "count", i },
+                                {"count", i},
                             };
                             variables["PREFIX"] = $"{i}";
                             var filePath = $"{dir}/{fileName.Replace(".Tpl.txt", $"{i}{postfix.filenamePostfix}.cs")}";
@@ -307,7 +337,7 @@ namespace ME.BECS.Editor {
                 }
 
             }
-            
+
             /*
             var text = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>("Assets/BECS/Runtime/Jobs/Components/Jobs.ComponentsParallelFor.Tpl.txt").text;
             var result = "";
@@ -337,7 +367,7 @@ namespace ME.BECS.Editor {
             if (UnityEngine.Application.isBatchMode == true) return;
 
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
-            
+
             var list = EditorUtils.GetAssembliesInfo();
             {
                 var dir = $"Assets/{ECS}.Gen/Runtime";
@@ -347,7 +377,7 @@ namespace ME.BECS.Editor {
                 var dir = $"Assets/{ECS}.Gen/Editor";
                 Build(list, dir, editorAssembly: true);
             }
-            
+
         }
 
         private static bool HasComponentCustomSharedHash(System.Type type) {
@@ -367,9 +397,9 @@ namespace ME.BECS.Editor {
                 type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Length == 0) {
                 return true;
             }
-            
+
             return false;
-            
+
         }
 
         private static void OnLogAdded(string condition, string stackTrace, UnityEngine.LogType type) {
@@ -386,7 +416,7 @@ namespace ME.BECS.Editor {
                     }
                 }
             }*/
-            
+
         }
 
         public const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
@@ -402,11 +432,11 @@ namespace ME.BECS.Editor {
 
             var customCodeGenerators = UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>().OrderBy(x => x.FullName);
             var generators = customCodeGenerators.Select(x => (CustomCodeGenerator)System.Activator.CreateInstance(x)).ToArray();
-            
+
             if (System.IO.Directory.Exists(dir) == false) {
                 System.IO.Directory.CreateDirectory(dir);
             }
-            
+
             UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, $"Build {dir}", 0f);
             var componentTypes = new System.Collections.Generic.List<System.Type>();
             try {
@@ -438,7 +468,7 @@ namespace ME.BECS.Editor {
                 var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy)).OrderBy(x => x.FullName).ToArray();
                 var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToArray();
                 for (var index = 0; index < types.Count; ++index) {
-                    
+
                     var type = types[index];
                     if (type.IsValueType == false) continue;
                     var asm = type.Assembly;
@@ -640,14 +670,11 @@ namespace ME.BECS.Editor {
                         UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, customCodeGenerator.GetType().Name, index / (float)generators.Length);
                         cache.SetMethod("AddInitialization");
                         customCodeGenerator.AddInitialization(typesContent, componentTypes);
-                        cache.Push();
                         cache.SetMethod("AddPublicContent");
                         publicContent.Add(customCodeGenerator.AddPublicContent());
-                        cache.Push();
                         cache.SetMethod("AddFileContent");
                         var files = customCodeGenerator.AddFileContent();
                         if (files != null) filesContent.Add(files);
-                        cache.Push();
                         cache.SetMethod("AddMethods");
                         methods.AddRange(customCodeGenerator.AddMethods(componentTypes));
                         cache.Push();
@@ -692,7 +719,7 @@ namespace ME.BECS.Editor {
                     } else {
                         System.IO.Directory.Delete(filesPath, true);
                     }
-                    
+
                     foreach (var files in filesContent) {
                         foreach (var file in files) {
                             var filepath = $"{filesPath}/{file.filename}.cs";
@@ -754,7 +781,7 @@ namespace ME.BECS.Editor {
                     if (editorAssembly == false && info.isEditor == true) continue;
                     content.Add(asm);
                 }
-                
+
                 // load references
                 foreach (var asm in content.ToArray()) {
                     var asmInfo = asms.FirstOrDefault(x => x.name == asm);
@@ -777,7 +804,7 @@ namespace ME.BECS.Editor {
                     UnityEditor.AssetDatabase.ImportAsset(path);
                 }
             }
-            
+
         }
 
         public static void PatchSystemsList(System.Collections.Generic.List<System.Type> types) {
