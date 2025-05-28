@@ -463,17 +463,23 @@ namespace ME.BECS.Editor {
                 }
 
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
-                var content = new System.Collections.Generic.List<string>();
+                var aotContent = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
                 var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
                 PatchSystemsList(types);
                 var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
-                var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToArray();
-                var typesStart = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IStart)).OrderBy(x => x.FullName).ToArray();
-                var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate)).OrderBy(x => x.FullName).ToArray();
-                var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy)).OrderBy(x => x.FullName).ToArray();
-                var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToArray();
+                /*var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToList();
+                PatchSystemsList(typesAwake);
+                var typesStart = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IStart)).OrderBy(x => x.FullName).ToList();
+                PatchSystemsList(typesStart);
+                var typesUpdate = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IUpdate)).OrderBy(x => x.FullName).ToList();
+                PatchSystemsList(typesUpdate);
+                var typesDestroy = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDestroy)).OrderBy(x => x.FullName).ToList();
+                PatchSystemsList(typesDestroy);
+                var typesDrawGizmos = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IDrawGizmos)).OrderBy(x => x.FullName).ToList();
+                PatchSystemsList(typesDrawGizmos);*/
+                aotContent.Add("var nullContext = new SystemContext();");
                 for (var index = 0; index < types.Count; ++index) {
 
                     var type = types[index];
@@ -486,15 +492,15 @@ namespace ME.BECS.Editor {
                     if (type.IsVisible == false) continue;
 
                     var systemType = EditorUtils.GetTypeName(type);
-                    content.Add($"StaticSystemTypes<{systemType}>.Validate();");
+                    aotContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
                     typesContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
 
                     var isBursted = (burstedTypes.Contains(type) == true);
-                    var hasAwake = typesAwake.Contains(type);
-                    var hasStart = typesStart.Contains(type);
-                    var hasUpdate = typesUpdate.Contains(type);
-                    var hasDestroy = typesDestroy.Contains(type);
-                    var hasDrawGizmos = typesDrawGizmos.Contains(type);
+                    var hasAwake = typeof(IAwake).IsAssignableFrom(type);
+                    var hasStart = typeof(IStart).IsAssignableFrom(type);
+                    var hasUpdate = typeof(IUpdate).IsAssignableFrom(type);
+                    var hasDestroy = typeof(IDestroy).IsAssignableFrom(type);
+                    var hasDrawGizmos = typeof(IDrawGizmos).IsAssignableFrom(type);
                     //if (burstedTypes.Contains(type) == false) continue;
 
                     var awakeBurst = hasAwake == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IAwake.OnAwake))) == false;
@@ -503,36 +509,42 @@ namespace ME.BECS.Editor {
                     var destroyBurst = hasDestroy == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDestroy.OnDestroy))) == false;
                     var drawGizmosBurst = hasDrawGizmos == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDrawGizmos.OnDrawGizmos))) == false;
                     if (awakeBurst == true) {
-                        if (isBursted == true) content.Add($"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add($"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (startBurst == true) {
-                        if (isBursted == true) content.Add($"{START_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add($"{START_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (updateBurst == true) {
-                        if (isBursted == true) content.Add($"{UPDATE_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add($"{UPDATE_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (destroyBurst == true) {
-                        if (isBursted == true) content.Add($"{DESTROY_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add($"{DESTROY_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (drawGizmosBurst == true) {
-                        if (isBursted == true) content.Add($"{DRAWGIZMOS_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add($"{DRAWGIZMOS_METHOD}<{systemType}>.MakeMethod(null);");
                     }
+                    
+                    if (hasAwake == true) aotContent.Add($"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasStart == true) aotContent.Add($"{START_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasUpdate == true) aotContent.Add($"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasDestroy == true) aotContent.Add($"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasDrawGizmos == true) aotContent.Add($"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
 
-                    if (hasAwake == true) content.Add($"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasStart == true) content.Add($"{START_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasUpdate == true) content.Add($"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasDestroy == true) content.Add($"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasDrawGizmos == true) content.Add($"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasAwake == true) aotContent.Add($"new {systemType}().OnAwake(ref nullContext);");
+                    if (hasStart == true) aotContent.Add($"new {systemType}().OnStart(ref nullContext);");
+                    if (hasUpdate == true) aotContent.Add($"new {systemType}().OnUpdate(ref nullContext);");
+                    if (hasDestroy == true) aotContent.Add($"new {systemType}().OnDestroy(ref nullContext);");
+                    if (hasDrawGizmos == true) aotContent.Add($"new {systemType}().OnDrawGizmos(ref nullContext);");
 
-                    if (awakeBurst == true) content.Add($"BurstCompileMethod.MakeAwake<{systemType}>(default);");
-                    if (startBurst == true) content.Add($"BurstCompileMethod.MakeStart<{systemType}>(default);");
-                    if (updateBurst == true) content.Add($"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
-                    if (destroyBurst == true) content.Add($"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
-                    if (drawGizmosBurst == true) content.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
+                    if (awakeBurst == true) aotContent.Add($"BurstCompileMethod.MakeAwake<{systemType}>(default);");
+                    if (startBurst == true) aotContent.Add($"BurstCompileMethod.MakeStart<{systemType}>(default);");
+                    if (updateBurst == true) aotContent.Add($"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
+                    if (destroyBurst == true) aotContent.Add($"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
+                    if (drawGizmosBurst == true) aotContent.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
                 }
 
                 var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
@@ -576,7 +588,7 @@ namespace ME.BECS.Editor {
                             }
                         }
 
-                        content.Add($"StaticTypes<{type}>.AOT();");
+                        aotContent.Add($"StaticTypes<{type}>.AOT();");
 
                     }
                 }
@@ -596,7 +608,7 @@ namespace ME.BECS.Editor {
                         var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
-                        content.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(null);");
+                        aotContent.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(null);");
 
                     }
                 }
@@ -616,7 +628,7 @@ namespace ME.BECS.Editor {
                         var str = $"StaticTypes<{type}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
-                        content.Add($"StaticTypesShared<{type}>.AOT();");
+                        aotContent.Add($"StaticTypesShared<{type}>.AOT();");
 
                     }
                 }
@@ -635,7 +647,7 @@ namespace ME.BECS.Editor {
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
-                        content.Add($"StaticTypesStatic<{type}>.AOT();");
+                        aotContent.Add($"StaticTypesStatic<{type}>.AOT();");
 
                     }
                 }
@@ -654,7 +666,7 @@ namespace ME.BECS.Editor {
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
-                        content.Add($"ConfigInitializeTypes<{type}>.AOT();");
+                        aotContent.Add($"ConfigInitializeTypes<{type}>.AOT();");
 
                     }
                 }
@@ -697,7 +709,7 @@ namespace ME.BECS.Editor {
                                                     $"{(x.burstCompile == true ? "[BURST]" : string.Empty)} {(string.IsNullOrEmpty(x.pInvoke) == false ? $"[AOT.MonoPInvokeCallbackAttribute(typeof({x.pInvoke}))]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
                                             .ToArray();
 
-                var newContent = template.Replace("{{CONTENT}}", string.Join("\n", content));
+                var newContent = template.Replace("{{CONTENT}}", string.Join("\n", aotContent));
                 newContent = newContent.Replace("{{CUSTOM_METHOD_REGISTRY}}", string.Join("\n", methodRegistryContents));
                 newContent = newContent.Replace("{{CUSTOM_METHODS}}", string.Join("\n", publicContent) + "\n" + string.Join("\n", methodContents));
                 newContent = newContent.Replace("{{CONTENT_TYPES}}", string.Join("\n", typesContent));

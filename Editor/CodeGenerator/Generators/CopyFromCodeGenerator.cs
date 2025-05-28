@@ -9,7 +9,7 @@ namespace ME.BECS.Editor.Aspects {
 
             if (this.editorAssembly == true) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             // TODO: Disabled for now because of Burst Compiler failed in Unity Cloud
-            if (this.editorAssembly == false) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
+            //if (this.editorAssembly == false) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             
             var contentItem = new System.Collections.Generic.List<string>();
             var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
