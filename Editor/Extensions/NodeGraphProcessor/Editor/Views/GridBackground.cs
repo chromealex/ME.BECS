@@ -42,7 +42,7 @@ namespace ME.BECS.Extensions.GraphProcessor
     public ref float spacing => ref this.m_Spacing;
     public ref float spacingY => ref this.m_SpacingY;
 
-    private int thickLines => this.m_ThickLines;
+    public ref int thickLines => ref this.m_ThickLines;
 
     private Color lineColor => new Color(this.m_LineColor.r, this.m_LineColor.g, this.m_LineColor.b, this.m_LineColor.a * this.opacity);
 

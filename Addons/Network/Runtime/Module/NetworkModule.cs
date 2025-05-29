@@ -185,6 +185,14 @@ namespace ME.BECS.Network {
             return this.network.data.ptr->connectedWorld.CurrentTick;
         }
 
+        public ulong GetTargetTick() {
+            return this.network.data.ptr->GetTargetTick();
+        }
+
+        public UnsafeNetworkModule GetUnsafeModule() {
+            return this.network;
+        }
+
     }
 
 }

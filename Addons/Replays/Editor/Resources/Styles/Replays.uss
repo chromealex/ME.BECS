@@ -18,18 +18,24 @@
 
 .timeline {
     height: 51px;
-    width: 100%;
+    width: auto;
     background-color: black;
     border-width: 1px;
     border-color: rgb(150, 150, 150);
+    margin: 8px;
 }
 
-.timeline .current {
+.timeline .current,
+.timeline .realtick {
     position: absolute;
     top: 0px;
     height: 100%;
     width: 2px;
     background-color: greenyellow;
+}
+
+.timeline .realtick {
+    background-color: #ffac2f;
 }
 
 .timeline .buffer {
@@ -43,12 +49,17 @@
 
 GridBackground {
     --line-color: #5c5959;
+    --thick-line-color: #5c5959;
     /*--grid-background-color: rgb(30, 30, 30);*/
 }
 
 .timeline .min, .timeline .max {
     position: absolute;
     bottom: 0px;
+    font-size: 10px;
+    text-shadow: 0px -2px 0px black;
+    -unity-font-style: bold;
+    margin-bottom: -14px;
 }
 
 .timeline .max {
@@ -58,4 +69,143 @@ GridBackground {
 .timeline .min {
     left: 0px;
     -unity-text-align: middle-left;
+}
+
+.timeline .tick {
+    position: absolute;
+    font-size: 8px;
+    -unity-font-style: bold;
+    opacity: 0.5;
+    margin-top: -10px;
+}
+
+.timeline .storage {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    top: 0px;
+    left: 0px;
+}
+
+.timeline .events {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    top: 0px;
+    left: 0px;
+}
+
+.timeline .storage .entry {
+    position: absolute;
+    top: 0px;
+}
+
+.timeline .storage .entry .dot {
+    position: absolute;
+    width: 4px;
+    height: 20px;
+    background-color: rgba(0, 255, 0, 0.3);
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-bottom-color: rgba(0, 0, 0, 0.5);
+    border-bottom-width: 2px;
+}
+
+.timeline .storage .entry Label {
+    -unity-text-align: middle-center;
+    font-size: 8px;
+}
+
+.timeline .events .entry {
+    position: absolute;
+    bottom: 0px;
+}
+
+.timeline .events .entry .dot {
+    position: absolute;
+    width: 2px;
+    top: -10px;
+    height: 10px;
+    background-color: rgba(255, 255, 0, 1);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.timeline .events .entry Label {
+    -unity-text-align: middle-center;
+    font-size: 8px;
+}
+
+.timeline .entry .dot .tooltip-text {
+    min-width: 100px;
+    bottom: 0px;
+    border-radius: 4px;
+}
+
+.timeline .entry .dot .tooltip {
+    margin: 0px;
+    height: 100%;
+    padding-left: 8px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+
+
+.toolbar-container {
+    height: 22px;
+    min-height: 22px;
+}
+
+.toolbar-container .toolbar-buttons {
+    flex-direction: row;
+}
+
+.toolbar-container .space {
+    flex-grow: 1;
+}
+
+.toolbar-container .unity-toolbar {
+    background-color: rgba(40, 40, 40, 1);
+}
+
+.toolbar-container DropdownField {
+    margin: 0px;
+}
+.toolbar-container DropdownField .unity-base-field__input {
+    min-width: 30px;
+}
+.toolbar-container DropdownField PopupTextElement {
+    padding-left: 2px;
+}
+
+.toolbar-container Button, .toolbar-container RepeatButton {
+    -unity-text-align: middle-center;
+    min-width: 20px;
+    margin: 0px;
+    border-radius: 0px;
+    border-width: 0px;
+    background-color: rgba(0, 0, 0, 0.3);
+    margin-left: 1px;
+    align-items: center;
+    justify-content: center;
+}
+.toolbar-container Button Image, .toolbar-container RepeatButton Image {
+    align-self: center;
+    width: 14px;
+    height: 14px;
+}
+
+.toolbar-container Button:hover, .toolbar-container RepeatButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-container DropdownField .unity-base-field__input {
+    border-radius: 0px;
+    border-width: 0px;
+    background-color: rgba(0, 0, 0, 0.3);
+    margin: 0px;
+}
+.toolbar-container DropdownField:hover .unity-base-field__input {
+    background-color: rgba(0, 0, 0, 0.1);
 }

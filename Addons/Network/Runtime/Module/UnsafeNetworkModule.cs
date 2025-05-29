@@ -144,11 +144,44 @@ namespace ME.BECS.Network {
 
     }
     
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct CopyStatePrepareJob : IJobSingle {
+        
+        public safe_ptr<UnsafeNetworkModule.Data> data;
+        public Unity.Collections.NativeReference<System.IntPtr> tempData;
+        
+        public void Execute() {
+            
+            var srcState = this.data.ptr->connectedWorld.state;
+            var state = State.ClonePrepare(srcState);
+            this.tempData.Value = (System.IntPtr)state.ptr;
+            this.data.ptr->statesStorage.Put(state);
+            
+        }
+        
+    }
+
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct CopyStateCompleteJob : IJobParallelFor {
+        
+        public safe_ptr<UnsafeNetworkModule.Data> data;
+        [Unity.Collections.ReadOnly]
+        public Unity.Collections.NativeReference<System.IntPtr> tempData;
+        
+        public void Execute(int index) {
+            
+            var srcState = this.data.ptr->connectedWorld.state;
+            State.CloneComplete(srcState, new safe_ptr<State>((State*)this.tempData.Value, TSize<State>.size), index);
+            
+        }
+        
+    }
+
     public unsafe struct UnsafeNetworkModule {
 
         public struct MethodsStorage {
 
-            private struct Method {
+            public struct Method {
 
                 public GCHandle targetHandle;
                 public GCHandle methodHandle;
@@ -209,6 +242,15 @@ namespace ME.BECS.Network {
                 
                 return id;
 
+            }
+
+            public Method GetMethodInfo(uint methodId) {
+                
+                var idx = methodId - 1u;
+                if (idx >= this.methods.Length) return default;
+
+                return this.methods[this.state, idx];
+                
             }
 
             public JobHandle Call(in NetworkPackage package, uint deltaTimeMs, in World world, JobHandle dependsOn) {
@@ -359,7 +401,7 @@ namespace ME.BECS.Network {
 
         public struct StatesStorage {
 
-            private struct Entry {
+            public struct Entry {
 
                 public safe_ptr<State> state;
                 public ulong tick;
@@ -384,8 +426,10 @@ namespace ME.BECS.Network {
                 this.resetState = default;
 
             }
+            
+            public readonly MemArrayAuto<Entry> GetEntries() => this.entries;
 
-            public void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
+            public readonly void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
                 minTick = ulong.MaxValue;
                 maxTick = 0UL;
                 for (uint i = 0u; i < this.entries.Length; ++i) {
@@ -397,9 +441,13 @@ namespace ME.BECS.Network {
                 }
             }
 
-            private void Put(safe_ptr<State> state) {
+            internal void Put(safe_ptr<State> state) {
 
                 if (this.resetState.ptr == null) this.SaveResetState();
+                
+                if (this.rover >= this.entries.Length) {
+                    this.rover = 0u;
+                }
                 
                 ref var item = ref this.entries[this.rover];
                 if (item.state.ptr != null) {
@@ -417,44 +465,11 @@ namespace ME.BECS.Network {
 
             }
 
-            public safe_ptr<State> GetResetState() {
+            public readonly safe_ptr<State> GetResetState() {
                 return this.resetState;
             }
 
-            [BURST(CompileSynchronously = true)]
-            private struct CopyStatePrepareJob : IJobSingle {
-
-                public safe_ptr<Data> data;
-                public Unity.Collections.NativeReference<System.IntPtr> tempData;
-                
-                public void Execute() {
-                    
-                    var srcState = this.data.ptr->connectedWorld.state;
-                    var state = State.ClonePrepare(srcState);
-                    this.tempData.Value = (System.IntPtr)state.ptr;
-                    this.data.ptr->statesStorage.Put(state);
-                    
-                }
-
-            }
-
-            [BURST(CompileSynchronously = true)]
-            private struct CopyStateCompleteJob : IJobParallelFor {
-
-                public safe_ptr<Data> data;
-                [Unity.Collections.ReadOnly]
-                public Unity.Collections.NativeReference<System.IntPtr> tempData;
-                
-                public void Execute(int index) {
-                    
-                    var srcState = this.data.ptr->connectedWorld.state;
-                    State.CloneComplete(srcState, new safe_ptr<State>((State*)this.tempData.Value, TSize<State>.size), index);
-                    
-                }
-
-            }
-
-            public JobHandle Tick(ulong tick, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
+            public readonly JobHandle Tick(ulong tick, in World world, safe_ptr<Data> data, JobHandle dependsOn) {
 
                 if (tick % this.properties.copyPerTick == 0u) {
                     
@@ -496,21 +511,29 @@ namespace ME.BECS.Network {
             }
 
             public void InvalidateStatesFromTick(ulong tick) {
-                
+
+                var minTick = ulong.MaxValue;
+                var minTickIndex = 0u;
                 for (uint i = 0u; i < this.entries.Length; ++i) {
 
                     ref var entry = ref this.entries[i];
-                    if (tick > entry.tick && entry.state.ptr != null) {
+                    if (entry.tick >= tick && entry.state.ptr != null) {
+                        if (entry.tick < minTick) {
+                            minTick = entry.tick;
+                            minTickIndex = i;
+                        }
                         entry.state.ptr->Dispose();
                         _free(entry.state);
                         entry = default;
                     }
                     
                 }
+
+                if (minTick != ulong.MaxValue) this.rover = minTickIndex;
                 
             }
 
-            public safe_ptr<State> GetStateForRollback(ulong tickToRollback) {
+            public readonly safe_ptr<State> GetStateForRollback(ulong tickToRollback) {
 
                 safe_ptr<State> nearestState = default;
                 var rover = this.rover;
@@ -752,24 +775,8 @@ namespace ME.BECS.Network {
 
         public ULongDictionaryAuto<SortedNetworkPackageList> GetEvents() => this.data.ptr->eventsStorage.GetEvents();
 
-        /*
-        public struct TestData {
-
-            public int a;
-            public byte b;
-            public int c;
-
-        }
-
-        [NetworkMethod]
-        [AOT.MonoPInvokeCallback(typeof(NetworkMethodDelegate))]
-        public static JobHandle TestNetMethod(in InputData data, JobHandle dependsOn) {
-            var input = data.GetData<TestData>();
-            UnityEngine.Debug.Log("TestNetMethod: " + input.a + " :: " + input.b + " :: " + input.c);
-            return dependsOn;
-        }
-        */
-
+        public safe_ptr<Data> GetUnsafeData() => this.data;
+        
         [INLINE(256)]
         public void Dispose() {
             if (this.networkTransport != null) this.networkTransport.Dispose();
