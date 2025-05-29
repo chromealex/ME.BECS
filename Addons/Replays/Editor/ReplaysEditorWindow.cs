@@ -155,61 +155,6 @@ namespace ME.BECS.Editor {
 
         }
 
-        public class Timeline : VisualElement, IValueField<float> {
-
-            private System.Action onValueChanged;
-            
-            public Timeline(System.Action onValueChanged) {
-                this.onValueChanged = onValueChanged;
-            }
-            
-            public static double CalculateFloatDragSensitivity(
-                double value,
-                double minValue,
-                double maxValue)
-            {
-                return double.IsInfinity(value) || double.IsNaN(value) ? 0.0 : System.Math.Abs(maxValue - minValue) / 100.0 * 0.029999999329447746;
-            }
-            
-            public static float Acceleration(bool shiftPressed, bool altPressed)
-            {
-                return (float) ((shiftPressed ? 4.0 : 1.0) * (altPressed ? 0.25 : 1.0));
-            }
-
-            public static float NiceDelta(Vector2 deviceDelta, float acceleration)
-            {
-                deviceDelta.y = -deviceDelta.y;
-                var s_UseYSign = false;
-                if ((double) Mathf.Abs(Mathf.Abs(deviceDelta.x) - Mathf.Abs(deviceDelta.y)) / (double) Mathf.Max(Mathf.Abs(deviceDelta.x), Mathf.Abs(deviceDelta.y)) > 0.10000000149011612)
-                    s_UseYSign = (double) Mathf.Abs(deviceDelta.x) <= (double) Mathf.Abs(deviceDelta.y);
-                return s_UseYSign ? Mathf.Sign(deviceDelta.y) * deviceDelta.magnitude * acceleration : Mathf.Sign(deviceDelta.x) * deviceDelta.magnitude * acceleration;
-            }
-            
-            public void ApplyInputDeviceDelta(Vector3 delta, DeltaSpeed speed, float startValue) {
-                
-                double floatDragSensitivity = CalculateFloatDragSensitivity(startValue, 0, 1);
-                float acceleration = Acceleration(speed == DeltaSpeed.Fast, speed == DeltaSpeed.Slow);
-                this.value += NiceDelta((Vector2) delta, acceleration) * (float) floatDragSensitivity;
-                
-                this.onValueChanged?.Invoke();
-            }
-
-            public void StartDragging() {
-                
-                this.onValueChanged?.Invoke();
-                
-            }
-
-            public void StopDragging() {
-                
-                this.onValueChanged?.Invoke();
-                
-            }
-
-            public float value { get; set; }
-
-        }
-        
         private void DrawBar(VisualElement root) {
 
             if (this.selectedWorld.isCreated == true && this.selectedNetworkModule?.Status == TransportStatus.Connected) {
@@ -256,6 +201,8 @@ namespace ME.BECS.Editor {
                     }, TrickleDown.TrickleDown);
                     this.timeline.RegisterCallback<MouseUpEvent>(evt => {
                         this.timeline.UnregisterCallback<MouseMoveEvent>(OnMove);
+                        this.timeline.ReleaseMouse();
+                        OnMove(evt);
                         this.timelinePressed = false;
                     });
                     this.timeline.AddToClassList("timeline");
@@ -551,11 +498,11 @@ namespace ME.BECS.Editor {
                         });
                         void UpdateSyncModeButton() {
                             if (this.syncMode == true) {
-                                sync.text = "Sync Mode On";
+                                sync.text = "Sync Mode: On";
                                 sync.RemoveFromClassList("toggle-off");
                                 sync.AddToClassList("toggle-on");
                             } else {
-                                sync.text = "Sync Mode Off";
+                                sync.text = "Sync Mode: Off";
                                 sync.RemoveFromClassList("toggle-on");
                                 sync.AddToClassList("toggle-off");
                             }

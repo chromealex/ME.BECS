@@ -112,6 +112,10 @@ GridBackground {
     border-bottom-width: 2px;
 }
 
+.timeline .storage .entry:hover .dot {
+    background-color: white;
+}
+
 .timeline .storage .entry Label {
     -unity-text-align: middle-center;
     font-size: 8px;
@@ -133,6 +137,10 @@ GridBackground {
 }
 .timeline .events .entry.remote .dot {
     background-color: rgb(171, 117, 255);
+}
+
+.timeline .events .entry:hover .dot {
+    background-color: white;
 }
 
 .timeline .events .entry Label {
