@@ -78,14 +78,14 @@ namespace ME.BECS {
                 var elem = additionalRuntimeObjects[index];
                 if (elem.Is(obj) == true) {
                     item = elem;
-                    ++item.referencesCount;
+                    //++item.referencesCount;
                     additionalRuntimeObjects[index] = item;
                     return item.sourceId;
                 }
             }
 
             item = new ItemInfo() {
-                referencesCount = 1u,
+                //referencesCount = 1u,
                 source = obj,
                 sourceId = nextId + (++nextRuntimeId),
             };

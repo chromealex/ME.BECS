@@ -84,7 +84,6 @@ namespace ME.BECS {
         public bool isGameObject;
         public string sourceType;
         public uint sourceId;
-        public uint referencesCount;
 
         [UnityEngine.SerializeReference]
         public IObjectItemData customData;
@@ -94,7 +93,7 @@ namespace ME.BECS {
         }
 
         public bool Equals(ItemInfo other) {
-            return this.source == other.source && Equals(this.sourceReference, other.sourceReference) && this.sourceType == other.sourceType && this.sourceId == other.sourceId && this.referencesCount == other.referencesCount && Equals(this.customData, other.customData);
+            return this.source == other.source && Equals(this.sourceReference, other.sourceReference) && this.sourceType == other.sourceType && this.sourceId == other.sourceId && Equals(this.customData, other.customData);
         }
 
         public override bool Equals(object obj) {
@@ -102,7 +101,7 @@ namespace ME.BECS {
         }
 
         public override int GetHashCode() {
-            return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.referencesCount, this.customData);
+            return System.HashCode.Combine(this.source, this.sourceReference, this.sourceType, this.sourceId, this.customData);
         }
 
         public bool Is<T>(bool ignoreErrors = false) {
@@ -161,7 +160,6 @@ namespace ME.BECS {
             for (int i = 0; i < this.items.Length; ++i) {
                 if (this.items[i].Is(source) == true) {
                     ref var item = ref this.items[i];
-                    ++item.referencesCount;
                     return item.sourceId;
                 }
             }
@@ -173,7 +171,6 @@ namespace ME.BECS {
                 var item = new ItemInfo() {
                     sourceId = nextId,
                     source = source,
-                    referencesCount = 1u,
                 };
                 System.Array.Resize(ref this.items, this.items.Length + 1);
                 this.items[this.items.Length - 1] = item;
@@ -220,8 +217,8 @@ namespace ME.BECS {
             for (int i = 0; i < this.items.Length; ++i) {
                 if (this.items[i].source == source) {
                     ref var item = ref this.items[i];
-                    if (item.referencesCount == 0u) return false;
-                    --item.referencesCount;
+                    //if (item.referencesCount == 0u) return false;
+                    //--item.referencesCount;
                     // if (item.references == 0u) {
                     //     if (this.items.Length == 1) {
                     //         this.items = System.Array.Empty<Item>();
