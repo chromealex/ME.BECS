@@ -12,6 +12,34 @@ namespace ME.BECS.Editor {
         private StyleSheet styleSheet;
         private StyleSheet styleSheetTooltip;
 
+        private VisualElement[] storage;
+        private VisualElement[] events;
+        private VisualElement timeline;
+        private VisualElement timelineCurrent;
+        private VisualElement timelineRealTick;
+        private VisualElement timelineBuffer;
+        private VisualElement timelineStorage;
+        private VisualElement timelineEvents;
+        private VisualElement[] timelineTicks;
+        private Label timelineMax;
+        private Label timelineMin;
+        private ulong maxTick;
+        private bool timelinePressed;
+        private ulong targetTick;
+        private ulong startTick;
+        private ME.BECS.Extensions.GraphProcessor.GridBackground timelineGrid;
+
+        public NetworkWorldInitializer selectedInitializer;
+        public NetworkModule selectedNetworkModule;
+        private VisualElement toolbarButtons;
+
+        private long delta;
+
+        private bool syncMode {
+            get => EditorPrefs.GetBool("ME.BECS.Editor.Replays.SyncMode", false);
+            set => EditorPrefs.SetBool("ME.BECS.Editor.Replays.SyncMode", value);
+        }
+
         [MenuItem("ME.BECS/\u21BB Replays...", priority = 10000)]
         public static void ShowReplaysWindow() {
             
@@ -104,8 +132,10 @@ namespace ME.BECS.Editor {
             
             this.selectedWorld = world;
             this.selectedNetworkModule = null;
+            this.selectedInitializer = null;
             var initializer = WorldInitializers.GetByWorldName(this.selectedWorld.Name);
-            if (initializer != null) {
+            if (initializer is NetworkWorldInitializer networkWorldInitializer) {
+                this.selectedInitializer = networkWorldInitializer;
                 var networkModule = initializer.GetModule<NetworkModule>();
                 if (networkModule != null) {
                     this.selectedNetworkModule = networkModule;
@@ -113,26 +143,6 @@ namespace ME.BECS.Editor {
             }
 
         }
-
-        private VisualElement[] storage;
-        private VisualElement[] events;
-        private VisualElement timeline;
-        private VisualElement timelineCurrent;
-        private VisualElement timelineRealTick;
-        private VisualElement timelineBuffer;
-        private VisualElement timelineStorage;
-        private VisualElement timelineEvents;
-        private VisualElement[] timelineTicks;
-        private Label timelineMax;
-        private Label timelineMin;
-        private ulong maxTick;
-        private bool timelinePressed;
-        private ulong targetTick;
-        private ulong startTick;
-        private ME.BECS.Extensions.GraphProcessor.GridBackground timelineGrid;
-
-        public NetworkModule selectedNetworkModule;
-        private VisualElement toolbarButtons;
 
         private float GetPositionOnTimeline(ulong tick) {
             
@@ -176,6 +186,7 @@ namespace ME.BECS.Editor {
                             tick = this.targetTick - ticksAmount;
                         }
                         networkModule.RewindTo(tick);
+                        this.TrySync();
                         //Debug.Log("evt: " + evt.localMousePosition + " :: " + progress + ", tick: " + tick + " => " + networkModule.GetCurrentTick() + ", currentTick: " + networkModule.GetCurrentTick());
                         DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
                         this.timelinePressed = true;
@@ -188,6 +199,7 @@ namespace ME.BECS.Editor {
                                 tick = this.targetTick - ticksAmount;
                             }
                             networkModule.RewindTo(tick);
+                            this.TrySync();
                             this.timelinePressed = true;
                         }
                     });
@@ -265,6 +277,7 @@ namespace ME.BECS.Editor {
                     var tick = ((long)currentTick + this.delta);
                     if (tick < 0L) tick = 0L;
                     this.selectedNetworkModule.RewindTo((ulong)tick);
+                    this.TrySync();
                     this.delta = 0L;
                 }
                 
@@ -391,6 +404,12 @@ namespace ME.BECS.Editor {
             
         }
 
+        private void TrySync() {
+            if (this.syncMode == true) {
+                this.selectedInitializer.SyncRewind();
+            }
+        }
+
         private void CreateGUI() {
 
             this.UpdateWorlds();
@@ -442,6 +461,26 @@ namespace ME.BECS.Editor {
                     this.toolbarButtons = toolbarButtons;
                     toolbar.Add(toolbarButtons);
                     {
+                        Button sync = null;
+                        sync = new Button(() => {
+                            this.syncMode = !this.syncMode;
+                            UpdateSyncModeButton();
+                        });
+                        void UpdateSyncModeButton() {
+                            if (this.syncMode == true) {
+                                sync.text = "Sync Mode On";
+                                sync.RemoveFromClassList("toggle-off");
+                                sync.AddToClassList("toggle-on");
+                            } else {
+                                sync.text = "Sync Mode Off";
+                                sync.RemoveFromClassList("toggle-on");
+                                sync.AddToClassList("toggle-off");
+                            }
+                        }
+                        UpdateSyncModeButton();
+                        toolbarButtons.Add(sync);
+                    }
+                    {
                         var stepLeft = new RepeatButton(() => {
                             if (this.selectedNetworkModule == null) return;
                             var currentTick = this.selectedNetworkModule.GetCurrentTick();
@@ -473,8 +512,6 @@ namespace ME.BECS.Editor {
             this.rootVisualElement.Add(root);
             
         }
-
-        private long delta;
 
     }
 

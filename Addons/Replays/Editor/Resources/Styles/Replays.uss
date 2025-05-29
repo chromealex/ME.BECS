@@ -180,7 +180,9 @@ GridBackground {
     padding-left: 2px;
 }
 
-.toolbar-container Button, .toolbar-container RepeatButton {
+.toolbar-container Button,
+.toolbar-container Toggle,
+.toolbar-container RepeatButton {
     -unity-text-align: middle-center;
     min-width: 20px;
     margin: 0px;
@@ -191,13 +193,21 @@ GridBackground {
     align-items: center;
     justify-content: center;
 }
-.toolbar-container Button Image, .toolbar-container RepeatButton Image {
+.toolbar-container Button Image,
+.toolbar-container Toggle,
+.toolbar-container RepeatButton Image {
     align-self: center;
     width: 14px;
     height: 14px;
 }
 
-.toolbar-container Button:hover, .toolbar-container RepeatButton:hover {
+.toolbar-container .toggle-on {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.toolbar-container Button:hover,
+.toolbar-container Toggle:hover,
+.toolbar-container RepeatButton:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
 

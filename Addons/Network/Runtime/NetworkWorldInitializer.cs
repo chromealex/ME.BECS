@@ -104,16 +104,7 @@ namespace ME.BECS.Network {
                 handle.Complete();
                 
                 if (this.networkModule.IsInRollback() == false) {
-
-                    this.previousFrameDependsOn = this.world.RaiseEvents(this.previousFrameDependsOn);
-                    // Update visual - once per frame
-                    this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);
-                    for (var i = 0; i < this.modules.list.Length; ++i) {
-                        var module = this.modules.list[i];
-                        if (module.IsEnabled() == false) continue;
-                        this.previousFrameDependsOn = module.obj.OnUpdate(this.previousFrameDependsOn);
-                    }
-
+                    this.RedrawVisual();
                 }
                 
                 this.previousFrameDependsOn.Complete();
@@ -122,6 +113,25 @@ namespace ME.BECS.Network {
             
         }
 
+        public void RedrawVisual() {
+            this.previousFrameDependsOn = this.world.RaiseEvents(this.previousFrameDependsOn);
+            // Update visual - once per frame
+            this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);
+            for (var i = 0; i < this.modules.list.Length; ++i) {
+                var module = this.modules.list[i];
+                if (module.IsEnabled() == false) continue;
+                this.previousFrameDependsOn = module.obj.OnUpdate(this.previousFrameDependsOn);
+            }
+        }
+
+        public void SyncRewind() {
+            while (this.world.CurrentTick < this.networkModule.GetTargetTick()) {
+                this.Update();
+            }
+            this.RedrawVisual();
+            this.LateUpdate();
+        }
+        
         /*
         protected override void LateUpdate() {
 
