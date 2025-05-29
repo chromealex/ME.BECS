@@ -1,0 +1,61 @@
+.bar {
+}
+
+.bar .below-tick {
+    color: green;
+}
+
+.bar .current-tick {
+    color: yellow;
+}
+
+.bar .above-tick {
+    color: red;
+}
+
+.bar ScrollView {
+}
+
+.timeline {
+    height: 51px;
+    width: 100%;
+    background-color: black;
+    border-width: 1px;
+    border-color: rgb(150, 150, 150);
+}
+
+.timeline .current {
+    position: absolute;
+    top: 0px;
+    height: 100%;
+    width: 2px;
+    background-color: greenyellow;
+}
+
+.timeline .buffer {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    height: 8px;
+    background-color: rgba(36, 89, 128, 0.8);
+    border-top-left-radius: 4px;
+}
+
+GridBackground {
+    --line-color: #5c5959;
+    /*--grid-background-color: rgb(30, 30, 30);*/
+}
+
+.timeline .min, .timeline .max {
+    position: absolute;
+    bottom: 0px;
+}
+
+.timeline .max {
+    right: 0px;
+    -unity-text-align: middle-right;
+}
+.timeline .min {
+    left: 0px;
+    -unity-text-align: middle-left;
+}

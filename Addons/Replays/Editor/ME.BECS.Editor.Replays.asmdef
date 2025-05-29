@@ -1,0 +1,20 @@
+{
+    "name": "ME.BECS.Editor.Replays",
+    "rootNamespace": "",
+    "references": [
+      "ME.BECS",
+      "ME.BECS.Editor",
+      "ME.BECS.Features",
+      "Unity.Collections",
+      "ME.BECS.Network"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

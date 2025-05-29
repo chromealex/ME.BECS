@@ -129,6 +129,10 @@ namespace ME.BECS.Network {
             
         }
 
+        public void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
+            this.network.GetMinMaxTicks(out minTick, out maxTick);
+        }
+
         public double GetCurrentTime() => this.network.GetCurrentTime();
 
         public void SetLocalPlayerId(uint playerId) {
@@ -146,6 +150,8 @@ namespace ME.BECS.Network {
         public void SaveResetState() {
             this.network.SaveResetState();
         }
+
+        public safe_ptr<State> GetResetState() => this.network.GetResetState();
 
         public void RegisterMethod(NetworkMethodDelegate method) {
             this.network.RegisterMethod(method);

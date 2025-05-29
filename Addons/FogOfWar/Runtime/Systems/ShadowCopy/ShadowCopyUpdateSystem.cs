@@ -59,13 +59,11 @@ namespace ME.BECS.FogOfWar {
                 
             if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
                 ent.SetTag<IsViewRequested>(currentVisibilityState);
+                ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(currentVisibilityState);
             }
-                
-            ent.SetTag<FogOfWarShadowCopyWasVisibleTag>(currentVisibilityState);
+            
         }
 
-        
-        
         [BURST(CompileSynchronously = true)]
         public struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
 

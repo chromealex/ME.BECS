@@ -200,6 +200,7 @@ namespace ME.BECS {
         public Unity.Collections.FixedString64Bytes name;
         public LockSpinner endTickHandlesLock;
         public Unity.Collections.LowLevel.Unsafe.UnsafeList<Unity.Jobs.JobHandle> endTickHandles;
+        public Unity.Collections.FixedString64Bytes srcName;
 
         public void Dispose() {
             this.endTickHandles.Dispose();
@@ -430,6 +431,15 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
+        public static Unity.Collections.FixedString64Bytes GetWorldSourceName(ushort worldId) {
+            
+            ref var worldsStorage = ref WorldsStorage.worlds;
+            if (worldId >= worldsStorage.Length) return default;
+            return worldsStorage.Get(worldId).srcName;
+
+        }
+
         [BURST]
         public struct ClearEndTickHandlesJob : Unity.Jobs.IJob {
 
@@ -494,6 +504,7 @@ namespace ME.BECS {
             
             WorldsParent.Resize(world.id);
 
+            var srcName = name;
             if (name.IsEmpty == true) {
                 name = $"World #{world.id}";
             } else {
@@ -503,6 +514,7 @@ namespace ME.BECS {
             worldsStorage.Get(worldId) = new WorldHeader() {
                 world = world,
                 name = name,
+                srcName = srcName,
             };
             
             WorldsTempAllocator.Initialize(worldId);

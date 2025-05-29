@@ -385,6 +385,18 @@ namespace ME.BECS.Network {
 
             }
 
+            public void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
+                minTick = ulong.MaxValue;
+                maxTick = 0UL;
+                for (uint i = 0u; i < this.entries.Length; ++i) {
+                    var entry = this.entries[i];
+                    if (entry.state.ptr != null) {
+                        minTick = math.min(minTick, entry.tick);
+                        maxTick = math.max(maxTick, entry.tick);
+                    }
+                }
+            }
+
             private void Put(safe_ptr<State> state) {
 
                 if (this.resetState.ptr == null) this.SaveResetState();
@@ -772,6 +784,11 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
+        public void GetMinMaxTicks(out ulong minTick, out ulong maxTick) {
+            this.data.ptr->statesStorage.GetMinMaxTicks(out minTick, out maxTick);
+        }
+
+        [INLINE(256)]
         private uint GetDeltaTime() {
             return this.properties.tickTime;
         }
@@ -799,6 +816,11 @@ namespace ME.BECS.Network {
         [INLINE(256)]
         public void SaveResetState() {
             this.data.ptr->SaveResetState();
+        }
+
+        [INLINE(256)]
+        public safe_ptr<State> GetResetState() {
+            return this.data.ptr->statesStorage.GetResetState();
         }
 
         [INLINE(256)]

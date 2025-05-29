@@ -28,7 +28,8 @@ namespace ME.BECS {
         public bool isCreated => Worlds.IsAlive(this.id);
         public ushort id;
         public safe_ptr<State> state;
-        public string Name => Worlds.GetWorldName(this.id).ToString();
+        public string FullName => Worlds.GetWorldName(this.id).ToString();
+        public string Name => Worlds.GetWorldSourceName(this.id).ToString();
 
         public ulong CurrentTick => this.state.ptr->tick;
 
