@@ -22,7 +22,7 @@ namespace ME.BECS.Network {
     using static Cuts;
     using Jobs;
 
-    public unsafe struct NetworkPackage : System.IComparable<NetworkPackage> {
+    public unsafe struct NetworkPackage : System.IComparable<NetworkPackage>, System.IEquatable<NetworkPackage> {
 
         /// <summary>
         /// Tick
@@ -51,6 +51,8 @@ namespace ME.BECS.Network {
         public override string ToString() {
             return $"[ PACKAGE ] Tick: {this.tick}, playerId: {this.playerId}, methodId: {this.methodId}, dataSize: {this.dataSize}, localOrder: {this.localOrder}";
         }
+
+        public string ToStringShort() => $"playerId: {this.playerId}, methodId: {this.methodId}";
 
         internal void Dispose() {
             _free((safe_ptr)this.data);
@@ -99,6 +101,18 @@ namespace ME.BECS.Network {
             }
 
             return this.localOrder.CompareTo(other.localOrder);
+        }
+
+        public bool Equals(NetworkPackage other) {
+            return this.tick == other.tick && this.playerId == other.playerId && this.methodId == other.methodId && this.dataSize == other.dataSize && this.localOrder == other.localOrder;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is NetworkPackage other && this.Equals(other);
+        }
+
+        public override int GetHashCode() {
+            return System.HashCode.Combine(this.tick, this.playerId, this.methodId, this.dataSize, this.localOrder);
         }
 
     }
@@ -395,6 +409,14 @@ namespace ME.BECS.Network {
 
                 return dependsOn;
 
+            }
+
+            public void RemoveEvent(NetworkPackage package) {
+                if (this.eventsByTick.TryGetValue(package.tick, out var list) == true) {
+                    if (list.Remove(ref this.state.ptr->allocator, package) == true) {
+                        this.eventsByTick[package.tick] = list;
+                    }
+                }
             }
 
         }

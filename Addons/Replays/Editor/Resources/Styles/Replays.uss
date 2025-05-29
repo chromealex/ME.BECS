@@ -132,7 +132,7 @@ GridBackground {
     border-top-right-radius: 3px;
 }
 .timeline .events .entry.remote .dot {
-    background-color: rgb(102, 0, 255);
+    background-color: rgb(171, 117, 255);
 }
 
 .timeline .events .entry Label {

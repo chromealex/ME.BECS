@@ -154,6 +154,61 @@ namespace ME.BECS.Editor {
             return (float)(current / (double)size * this.timeline.localBound.width);
 
         }
+
+        public class Timeline : VisualElement, IValueField<float> {
+
+            private System.Action onValueChanged;
+            
+            public Timeline(System.Action onValueChanged) {
+                this.onValueChanged = onValueChanged;
+            }
+            
+            public static double CalculateFloatDragSensitivity(
+                double value,
+                double minValue,
+                double maxValue)
+            {
+                return double.IsInfinity(value) || double.IsNaN(value) ? 0.0 : System.Math.Abs(maxValue - minValue) / 100.0 * 0.029999999329447746;
+            }
+            
+            public static float Acceleration(bool shiftPressed, bool altPressed)
+            {
+                return (float) ((shiftPressed ? 4.0 : 1.0) * (altPressed ? 0.25 : 1.0));
+            }
+
+            public static float NiceDelta(Vector2 deviceDelta, float acceleration)
+            {
+                deviceDelta.y = -deviceDelta.y;
+                var s_UseYSign = false;
+                if ((double) Mathf.Abs(Mathf.Abs(deviceDelta.x) - Mathf.Abs(deviceDelta.y)) / (double) Mathf.Max(Mathf.Abs(deviceDelta.x), Mathf.Abs(deviceDelta.y)) > 0.10000000149011612)
+                    s_UseYSign = (double) Mathf.Abs(deviceDelta.x) <= (double) Mathf.Abs(deviceDelta.y);
+                return s_UseYSign ? Mathf.Sign(deviceDelta.y) * deviceDelta.magnitude * acceleration : Mathf.Sign(deviceDelta.x) * deviceDelta.magnitude * acceleration;
+            }
+            
+            public void ApplyInputDeviceDelta(Vector3 delta, DeltaSpeed speed, float startValue) {
+                
+                double floatDragSensitivity = CalculateFloatDragSensitivity(startValue, 0, 1);
+                float acceleration = Acceleration(speed == DeltaSpeed.Fast, speed == DeltaSpeed.Slow);
+                this.value += NiceDelta((Vector2) delta, acceleration) * (float) floatDragSensitivity;
+                
+                this.onValueChanged?.Invoke();
+            }
+
+            public void StartDragging() {
+                
+                this.onValueChanged?.Invoke();
+                
+            }
+
+            public void StopDragging() {
+                
+                this.onValueChanged?.Invoke();
+                
+            }
+
+            public float value { get; set; }
+
+        }
         
         private void DrawBar(VisualElement root) {
 
@@ -179,19 +234,8 @@ namespace ME.BECS.Editor {
                 
                 if (this.timeline == null) {
                     this.timeline = new VisualElement();
-                    this.timeline.RegisterCallback<MouseDownEvent>(evt => {
-                        var progress = evt.localMousePosition.x / this.timeline.localBound.width;
-                        var tick = (ulong)((this.targetTick - this.startTick) * progress) + this.startTick;
-                        if (tick <= this.targetTick - ticksAmount) {
-                            tick = this.targetTick - ticksAmount;
-                        }
-                        networkModule.RewindTo(tick);
-                        this.TrySync();
-                        //Debug.Log("evt: " + evt.localMousePosition + " :: " + progress + ", tick: " + tick + " => " + networkModule.GetCurrentTick() + ", currentTick: " + networkModule.GetCurrentTick());
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
-                        this.timelinePressed = true;
-                    });
-                    this.timeline.RegisterCallback<DragPerformEvent>(evt => {
+
+                    void OnMove(IMouseEvent evt) {
                         if (this.timelinePressed == true) {
                             var progress = evt.localMousePosition.x / this.timeline.localBound.width;
                             var tick = (ulong)((this.targetTick - this.startTick) * progress) + this.startTick;
@@ -200,20 +244,19 @@ namespace ME.BECS.Editor {
                             }
                             networkModule.RewindTo(tick);
                             this.TrySync();
-                            this.timelinePressed = true;
                         }
-                    });
+                    }
+                    this.timeline.RegisterCallback<MouseDownEvent>(evt => {
+                        if (evt.button != 0) return;
+                        this.timeline.CaptureMouse();
+                        evt.StopPropagation();
+                        this.timeline.RegisterCallback<MouseMoveEvent>(OnMove);
+                        OnMove(evt);
+                        this.timelinePressed = true;
+                    }, TrickleDown.TrickleDown);
                     this.timeline.RegisterCallback<MouseUpEvent>(evt => {
+                        this.timeline.UnregisterCallback<MouseMoveEvent>(OnMove);
                         this.timelinePressed = false;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.None;
-                    });
-                    this.timeline.RegisterCallback<DragExitedEvent>(evt => {
-                        this.timelinePressed = false;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.None;
-                    });
-                    this.timeline.RegisterCallback<DragLeaveEvent>(evt => {
-                        this.timelinePressed = false;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.None;
                     });
                     this.timeline.AddToClassList("timeline");
                     root.Add(this.timeline);
@@ -317,24 +360,23 @@ namespace ME.BECS.Editor {
                     string GetEventTooltip(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
                         str.Clear();
                         for (uint i = 0u; i < entry.value.Count; ++i) {
-                            var evt = entry.value[this.selectedNetworkModule.GetUnsafeModule().GetUnsafeData().ptr->networkWorld.state.ptr->allocator, i];
+                            var evt = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
                             str.AppendLine($"Player #{evt.playerId}");
                             str.AppendLine($"Size: {EditorUtils.BytesToString(evt.dataSize)}");
-                            var method = networkModule.GetUnsafeModule().GetUnsafeData().ptr->methodsStorage.GetMethodInfo(evt.methodId);
+                            var method = data.ptr->methodsStorage.GetMethodInfo(evt.methodId);
                             var func = System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)method.methodPtr);
                             str.AppendLine($"Method {func.Method.Name}");
                         }
                         return $"Events ({entry.value.Count}):\n{str.ToString()}";
                     }
 
-                    bool HasMultiplePlayers(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
-                        var prevId = uint.MaxValue;
+                    bool HasRemovePlayers(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
+                        var localPlayerId = data.ptr->localPlayerId;
                         for (uint i = 0u; i < entry.value.Count; ++i) {
-                            var evt = entry.value[this.selectedNetworkModule.GetUnsafeModule().GetUnsafeData().ptr->networkWorld.state.ptr->allocator, i];
-                            if (prevId != uint.MaxValue && evt.playerId != prevId) {
+                            var evt = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
+                            if (localPlayerId != evt.playerId) {
                                 return true;
                             }
-                            if (prevId == uint.MaxValue) prevId = evt.playerId;
                         }
                         return false;
                     }
@@ -350,12 +392,33 @@ namespace ME.BECS.Editor {
                             dot.AddToClassList("dot");
                             step.Add(dot);
                             step.userData = EditorUIUtils.DrawTooltip(dot, GetEventTooltip(entry));
+                            step.AddManipulator(new ContextualMenuManipulator((ctx) => {
+                                if (entry.value.Count == 1u) {
+                                    ctx.menu.AppendAction("Remove", (evt) => {
+                                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                                            data.ptr->eventsStorage.RemoveEvent(entry.value[data.ptr->networkWorld.state.ptr->allocator, i]);
+                                        }
+                                    });
+                                } else {
+                                    ctx.menu.AppendAction("Remove All", (evt) => {
+                                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                                            data.ptr->eventsStorage.RemoveEvent(entry.value[data.ptr->networkWorld.state.ptr->allocator, i]);
+                                        }
+                                    });
+                                    {
+                                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                                            var package = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
+                                            ctx.menu.AppendAction($"Remove {package.ToStringShort()}", (evt) => { data.ptr->eventsStorage.RemoveEvent(package); });
+                                        }
+                                    }
+                                }
+                            }));
                             this.timelineEvents.Add(step);
                         }
 
                         if (entry.value.Count > 0u && tick >= this.startTick && tick <= this.targetTick) {
                             step.RemoveFromClassList("remote");
-                            if (HasMultiplePlayers(entry) == true) {
+                            if (HasRemovePlayers(entry) == true) {
                                 step.AddToClassList("remote");
                             }
 
@@ -430,6 +493,8 @@ namespace ME.BECS.Editor {
 
         private void CreateGUI() {
 
+            this.LoadStyle();
+            
             this.UpdateWorlds();
             
             var root = new VisualElement();
