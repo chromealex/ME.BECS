@@ -23,7 +23,7 @@ namespace ME.BECS {
 
     }
 
-    public unsafe partial struct World : System.IDisposable {
+    public unsafe partial struct World : System.IDisposable, System.IEquatable<World> {
 
         public bool isCreated => Worlds.IsAlive(this.id);
         public ushort id;
@@ -144,6 +144,18 @@ namespace ME.BECS {
 
             return dependsOn;
 
+        }
+
+        public bool Equals(World other) {
+            return this.id == other.id;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is World other && this.Equals(other);
+        }
+
+        public override int GetHashCode() {
+            return this.id.GetHashCode();
         }
 
     }

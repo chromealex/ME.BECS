@@ -12,7 +12,7 @@ namespace ME.BECS.Editor {
         private StyleSheet styleSheet;
         private StyleSheet styleSheetTooltip;
 
-        [UnityEditor.MenuItem("ME.BECS/Replays...")]
+        [MenuItem("ME.BECS/\u21BB Replays...", priority = 10000)]
         public static void ShowReplaysWindow() {
             
             ReplaysEditorWindow.ShowWindow();
@@ -57,6 +57,8 @@ namespace ME.BECS.Editor {
 
         private bool pause;
         private DropdownField toolbarItemsContainer;
+        private readonly System.Collections.Generic.HashSet<World> disabledWorlds = new System.Collections.Generic.HashSet<World>();
+        private readonly System.Collections.Generic.List<string> worldsSelection = new System.Collections.Generic.List<string>();
         private VisualElement hierarchyRoot;
 
         private void Update() {
@@ -74,18 +76,25 @@ namespace ME.BECS.Editor {
 
             if (this.toolbarItemsContainer != null) {
 
-                var selectedId = this.selectedWorld.id;
-                var list = new System.Collections.Generic.List<string>();
-                var index = -1;
-                var k = 0;
+                this.disabledWorlds.Clear();
+                this.worldsSelection.Clear();
                 foreach (var world in this.aliveWorlds) {
-                    list.Add(world.Name);
-                    if (world.id == selectedId) index = k;
-                    ++k;
+                    var added = false;
+                    this.worldsSelection.Add(world.FullName);
+                    var initializer = WorldInitializers.GetByWorldName(world.Name);
+                    if (initializer != null) {
+                        var networkModule = initializer.GetModule<NetworkModule>();
+                        if (networkModule != null) {
+                            added = true;
+                        }
+                    }
+
+                    if (added == false) {
+                        this.disabledWorlds.Add(world);
+                    }
                 }
 
-                this.toolbarItemsContainer.choices = list;
-                //this.toolbarItemsContainer.index = index;
+                this.toolbarItemsContainer.choices = this.worldsSelection;
 
             }
 
@@ -401,16 +410,20 @@ namespace ME.BECS.Editor {
                     var list = new System.Collections.Generic.List<string>();
                     var selection = new DropdownField(list, -1, formatListItemCallback: (val) => {
                         if (val == null) return null;
-                        return val.Replace("#", string.Empty);
+                        var idx = this.toolbarItemsContainer.choices.IndexOf(val);
+                        if (idx < 0 || idx >= this.aliveWorlds.Count) return null;
+                        var world = this.aliveWorlds[idx];
+                        return $"{world.FullName}{(this.disabledWorlds.Contains(world) == true ? " (NO NETWORK)" : string.Empty)}";
                     }, formatSelectedValueCallback: (val) => {
                         if (val == null) return "<b>World</b>";
                         if (this.toolbarItemsContainer.choices.Count == 0) return null;
                         var idx = this.toolbarItemsContainer.choices.IndexOf(val);
                         if (idx < 0 || idx >= this.aliveWorlds.Count) return null;
-                        return $"#{this.aliveWorlds[idx].id} {this.aliveWorlds[idx].Name}";
+                        var world = this.aliveWorlds[idx];
+                        return world.FullName;
                     });
                     selection.RegisterValueChangedCallback((evt) => {
-                        var idx = selection.choices.IndexOf(evt.newValue);
+                        var idx = this.toolbarItemsContainer.choices.IndexOf(evt.newValue);
                         if (idx >= 0) {
                             this.SelectWorld(this.aliveWorlds[idx]);
                         }

@@ -18,6 +18,7 @@
 
 .timeline {
     height: 51px;
+    max-height: 30px;
     width: auto;
     background-color: black;
     border-width: 1px;

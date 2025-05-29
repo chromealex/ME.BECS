@@ -101,7 +101,7 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.HashSet<string> searchNames = new System.Collections.Generic.HashSet<string>();
         private VisualElement tagsBackground;
 
-        [UnityEditor.MenuItem("ME.BECS/Hierarchy...")]
+        [MenuItem("ME.BECS/\u2637 Hierarchy...", priority = 10000)]
         public static void ShowWindow() {
             var win = WorldHierarchyEditorWindow.CreateInstance<WorldHierarchyEditorWindow>();
             win.titleContent = new GUIContent("ECS Hierarchy", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-hierarchy.png"));

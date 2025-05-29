@@ -508,7 +508,7 @@ namespace ME.BECS {
             if (name.IsEmpty == true) {
                 name = $"World #{world.id}";
             } else {
-                name = $"{name.ToString()} (World #{world.id})";
+                name = $"#{world.id} {name.ToString()}";
             }
             
             worldsStorage.Get(worldId) = new WorldHeader() {

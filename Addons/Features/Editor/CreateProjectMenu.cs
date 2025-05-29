@@ -9,7 +9,7 @@ namespace ME.BECS.Features.Editor {
     
     public static class CreateProjectMenu {
 
-        [UnityEditor.MenuItem("ME.BECS/Features Graph...")]
+        [UnityEditor.MenuItem("ME.BECS/\u26DC Features Graph...", priority = 10000)]
         public static void ShowFeaturesGraph() {
             
             ME.BECS.Editor.FeaturesGraph.FeaturesGraphEditorWindow.ShowWindow();

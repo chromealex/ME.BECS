@@ -9,7 +9,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
 
     public class ComponentsViewerEditorWindow : EditorWindow {
 
-        [MenuItem("ME.BECS/Components Viewer...")]
+        [MenuItem("ME.BECS/\u2631 Components Viewer...", priority = 10000)]
         public static void ShowWindow() {
 
             var win = ComponentsViewerEditorWindow.GetWindow<ComponentsViewerEditorWindow>();

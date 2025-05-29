@@ -13,7 +13,7 @@ namespace ME.BECS.Editor {
         }
 
         [InitializeOnLoadMethod]
-        [MenuItem("ME.BECS/Validate Resources")]
+        [MenuItem("ME.BECS/Validate Resources", priority = 100)]
         public static void Validate() {
             if (ObjectReferenceRegistry.data == null) {
                 ObjectReferenceRegistry.LoadForced();
