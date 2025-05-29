@@ -313,8 +313,9 @@ namespace ME.BECS.Editor {
                         System.Array.Resize(ref this.events, (int)capacity);
                     }
 
+                    var str = new System.Text.StringBuilder();
                     string GetEventTooltip(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
-                        var str = new System.Text.StringBuilder();
+                        str.Clear();
                         for (uint i = 0u; i < entry.value.Count; ++i) {
                             var evt = entry.value[this.selectedNetworkModule.GetUnsafeModule().GetUnsafeData().ptr->networkWorld.state.ptr->allocator, i];
                             str.AppendLine($"Player #{evt.playerId}");
@@ -324,6 +325,18 @@ namespace ME.BECS.Editor {
                             str.AppendLine($"Method {func.Method.Name}");
                         }
                         return $"Events ({entry.value.Count}):\n{str.ToString()}";
+                    }
+
+                    bool HasMultiplePlayers(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
+                        var prevId = uint.MaxValue;
+                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                            var evt = entry.value[this.selectedNetworkModule.GetUnsafeModule().GetUnsafeData().ptr->networkWorld.state.ptr->allocator, i];
+                            if (prevId != uint.MaxValue && evt.playerId != prevId) {
+                                return true;
+                            }
+                            if (prevId == uint.MaxValue) prevId = evt.playerId;
+                        }
+                        return false;
                     }
                     
                     var k = 0u;
@@ -341,6 +354,11 @@ namespace ME.BECS.Editor {
                         }
 
                         if (entry.value.Count > 0u && tick >= this.startTick && tick <= this.targetTick) {
+                            step.RemoveFromClassList("remote");
+                            if (HasMultiplePlayers(entry) == true) {
+                                step.AddToClassList("remote");
+                            }
+
                             var lbl = (Label)step.userData;
                             lbl.text = GetEventTooltip(entry);
                             step.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(tick), LengthUnit.Pixel));

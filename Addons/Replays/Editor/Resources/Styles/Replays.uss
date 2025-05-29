@@ -131,6 +131,9 @@ GridBackground {
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
 }
+.timeline .events .entry.remote .dot {
+    background-color: rgb(102, 0, 255);
+}
 
 .timeline .events .entry Label {
     -unity-text-align: middle-center;
