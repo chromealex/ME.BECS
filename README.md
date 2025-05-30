@@ -1,7 +1,7 @@
 <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
 
-# ME.BECS
-Bursted Entity Component System
+### ME.BECS
+##### Bursted Entity Component System
 <br>
 <br>
 <br>
