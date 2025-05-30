@@ -75,7 +75,8 @@ namespace ME.BECS.Editor {
                             root = this,
                             offsetIndex = i,
                         };
-                        this.Add(this.circles[i]);
+                        var idx = i;
+                        UnityEditor.EditorApplication.delayCall += () => this.Add(this.circles[idx]);
                     }
                 }
             }
@@ -85,7 +86,7 @@ namespace ME.BECS.Editor {
         public void SetDirty() {
             this.MarkDirtyRepaint();
             for (int i = 0; i < this.circles.Length; ++i) {
-                this.circles[i].MarkDirtyRepaint();
+                this.circles[i]?.MarkDirtyRepaint();
             }
         }
         

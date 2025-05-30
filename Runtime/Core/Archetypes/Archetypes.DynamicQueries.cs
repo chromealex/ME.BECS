@@ -120,36 +120,31 @@ namespace ME.BECS {
                     this.queryData.ptr->archetypesBits.Intersect(temp);
                 }
 
-                this.counter.ptr->count = (int)this.queryData.ptr->archetypesBits.Length;
+                if (this.counter.ptr != null) this.counter.ptr->count = (int)this.queryData.ptr->archetypesBits.Length;
 
             }
 
         }
 
         [INLINE(256)]
-        public static void WithAnySync<T0, T1, T2, T3>(ref QueryBuilder builder) where T0 : unmanaged, IComponentBase
-                                                                                 where T1 : unmanaged, IComponentBase
-                                                                                 where T2 : unmanaged, IComponentBase
-                                                                                 where T3 : unmanaged, IComponentBase {
+        public static void WithAnySync<T0, T1>(ref QueryBuilder builder) where T0 : unmanaged, IComponentBase
+                                                                         where T1 : unmanaged, IComponentBase {
 
-            builder.WaitForAllJobs();
-            WithAny(ref builder, StaticTypes<T0>.typeId, StaticTypes<T1>.typeId, StaticTypes<T2>.typeId, StaticTypes<T3>.typeId);
+            builder.compose.WithAny<T0, T1>();
             
         }
 
         [INLINE(256)]
         public static void WithSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
 
-            builder.WaitForAllJobs();
-            With(ref builder, StaticTypes<T>.typeId);
+            builder.compose.With<T>();
             
         }
 
         [INLINE(256)]
         public static void WithoutSync<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
 
-            builder.WaitForAllJobs();
-            Without(ref builder, StaticTypes<T>.typeId);
+            builder.compose.Without<T>();
             
         }
 

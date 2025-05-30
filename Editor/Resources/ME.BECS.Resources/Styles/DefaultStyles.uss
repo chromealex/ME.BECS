@@ -1,7 +1,3 @@
-:root {
-    --color-toolbar-button-border: rgba(0, 0, 0, 0.7);
-}
-
 .horizontal-group {
     align-items: stretch;
     flex-direction: row;
@@ -21,17 +17,17 @@
     width: 20%;
 }
 
-LogoLine {
+GradientAnimated {
     width: 100%;
     height: 1px;
     min-height: 1px;
-    --left-color: #3c165c;
-    --right-color: #981eff;
+    --left-color: var(--main-color);
+    --right-color: var(--highlight-color);
     --speed: 1000;
 }
 
 .unity-toolbar {
-    background-color: #3c165c;
+    background-color: var(--toolbar-color);
     border-width: 0px;
     padding-left: 0px;
     padding-right: 4px;
@@ -39,44 +35,48 @@ LogoLine {
 
 .unity-toolbar > Button,
 .unity-toolbar > ToolbarButton,
+.unity-toolbar > ToolbarToggle,
 .unity-toolbar > RepeatButton,
 .unity-toolbar > DropdownField {
-    margin: 0px;
-    margin-left: 4px;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
+    margin: var(--toolbar-buttons-margin);
+    border-width: var(--toolbar-buttons-border-width);
+    border-radius: var(--toolbar-buttons-radius);
 }
 .unity-toolbar > Button,
 .unity-toolbar > ToolbarButton,
+.unity-toolbar > ToolbarToggle,
 .unity-toolbar > RepeatButton,
 .unity-toolbar > DropdownField,
 .unity-toolbar > DropdownField .unity-base-field__input {
-    background-color: rgba(0, 0, 0, 0.4);
-    border-width: 1px;
-    border-color: var(--color-toolbar-button-border);
+    background-color: var(--toolbar-buttons-background-color);
+    border-color: var(--toolbar-buttons-border-color);
 }
 .unity-toolbar > DropdownField .unity-base-field__input {
+    border-width: 0px;
     background-color: rgba(0, 0, 0, 0);
 }
 
 .unity-toolbar > Button:hover,
 .unity-toolbar > ToolbarButton:hover,
+.unity-toolbar > ToolbarToggle:hover,
 .unity-toolbar > RepeatButton:hover,
 .unity-toolbar > DropdownField:hover {
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: var(--toolbar-buttons-background-color-hover);
 }
 
 .unity-toolbar > Button:active,
 .unity-toolbar > ToolbarButton:active,
+.unity-toolbar > ToolbarToggle:active,
 .unity-toolbar > RepeatButton:active,
 .unity-toolbar > DropdownField:active {
-    border-width: 1px;
+    border-width: var(--toolbar-buttons-border-width);
 }
 .unity-toolbar > Button:focus,
 .unity-toolbar > ToolbarButton:focus,
+.unity-toolbar > ToolbarToggle:focus,
 .unity-toolbar > RepeatButton:focus,
 .unity-toolbar > DropdownField:focus {
-    border-width: 1px;
+    border-width: var(--toolbar-buttons-border-width);
 }
 
 .unity-toolbar ToolbarSearchField {
@@ -92,23 +92,30 @@ LogoLine {
  */
 
 .window-content-back {
-    background-color: #3c165c;
     flex-grow: 1;
-    --left-top-color: #3c165c;
-    --right-top-color: #3c165c;
-    --left-bottom-color: #1f0337;
-    --right-bottom-color: #1f0337;
+    background-color: var(--main-color);
+    --left-top-color: var(--main-color);
+    --right-top-color: var(--main-color);
+    --left-bottom-color: var(--dark-color);
+    --right-bottom-color: var(--dark-color);
 }
 .window-content {
     flex-grow: 1;
-    margin: 2px;
-    border-width: 1px;
-    border-radius: 4px;
-    border-color: rgba(0, 0, 0, 0.3);
-    background-color: rgb(55, 55, 55);
+    margin: var(--content-margin);
+    border-width: var(--content-border-width);
+    border-radius: var(--content-border-radius);
+    border-color: var(--content-border-color);
+    background-color: var(--content-background-color);
 }
 .window-content > .empty-label {
     flex-grow: 1;
     -unity-text-align: middle-center;
     color: rgba(255, 255, 255, 0.5);
+}
+
+/*
+ BREADCRUMBS
+ */
+.unity-toolbar-breadcrumbs .unity-toolbar-breadcrumbs__item {
+    color: var(--highlight-text-color);
 }

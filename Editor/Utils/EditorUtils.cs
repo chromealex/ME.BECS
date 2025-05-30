@@ -677,7 +677,12 @@ namespace ME.BECS.Editor {
         };
         
         public static T LoadResource<T>(string path, bool isRequired = true) where T : UnityEngine.Object {
-            
+
+            if (path.StartsWith("Assets/") == true) {
+                var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(path);
+                if (asset != null) return asset;
+            }
+
             foreach (var searchPath in searchPaths) {
 
                 var data = UnityEditor.AssetDatabase.LoadAssetAtPath<T>($"{searchPath}Editor/EditorResources/{path}");
@@ -1178,17 +1183,6 @@ namespace ME.BECS.Editor {
             return type.MakeGenericType(GetFirstGenericConstraintType(type));
         }
         
-        public static string ProjectPathToAbsolute(string unityPath) {
-            
-            if (string.IsNullOrEmpty(unityPath) == true || unityPath.StartsWith("Assets") == false) {
-                return null;
-            }
-            
-            string absolutePath = System.IO.Path.Combine(UnityEngine.Application.dataPath, unityPath.Substring("Assets/".Length));
-            return System.IO.Path.GetFullPath(absolutePath);
-            
-        } 
-
     }
 
 }

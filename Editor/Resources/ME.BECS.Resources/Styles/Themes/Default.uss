@@ -1,0 +1,18 @@
+:root {
+    --main-color: #3c165c;
+    --dark-color: #1f0337;
+    --highlight-color: #981eff;
+    --highlight-text-color: #E0BBFF;
+    --toolbar-color: #3c165c;
+    --content-background-color: rgb(55, 55, 55);
+    --content-border-color: rgba(0, 0, 0, 0.3);
+    --content-border-width: 1px;
+    --content-border-radius: 4px;
+    --content-margin: 2px;
+    --toolbar-buttons-radius: 4px 4px 4px 4px;
+    --toolbar-buttons-margin: 1px 0px 0px 4px;
+    --toolbar-buttons-border-width: 1px;
+    --toolbar-buttons-border-color: rgba(0, 0, 0, 0.7);
+    --toolbar-buttons-background-color: rgba(0, 0, 0, 0.4);
+    --toolbar-buttons-background-color-hover: rgba(0, 0, 0, 0.7);
+}

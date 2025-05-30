@@ -134,6 +134,7 @@
     margin-right: 4px;
     flex-direction: row;
     justify-content: flex-end;
+    align-items: center;
     flex-grow: 1;
 }
 

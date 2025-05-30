@@ -1,0 +1,35 @@
+:root {
+    --main-color: #16545c;
+    --dark-color: #033735;
+    --highlight-color: #1ee5ff;
+    --highlight-text-color: #bbefff;
+    --toolbar-color: #16565c;
+    --content-background-color: rgba(0, 0, 0, 0.3);
+    --content-border-color: rgba(0, 0, 0, 0.3);
+    --content-border-width: 1px;
+    --content-border-radius: 6px;
+    --content-margin: 4px;
+    --toolbar-buttons-radius: 4px;
+    --toolbar-buttons-margin: 2px 0px 0px 4px;
+    --toolbar-buttons-border-width: 1px;
+    --toolbar-buttons-border-color: rgba(0, 0, 0, 0.7);
+    --toolbar-buttons-background-color: rgba(0, 0, 0, 0.4);
+    --toolbar-buttons-background-color-hover: rgba(0, 0, 0, 0.7);
+}
+
+.unity-base-slider__dragger {
+    background-color: var(--main-color);
+    border-color: var(--dark-color);
+}
+
+.h-root .h-element > Foldout > Toggle .unity-base-field__input .unity-toggle__text {
+    font-size: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.tag-label {
+    width: 8px;
+    height: 8px;
+    max-height: 8px;
+}

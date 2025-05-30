@@ -562,8 +562,6 @@ namespace ME.BECS.Editor {
                         break;
                     case nameof(QueryBuilder.WithAny): {
                         if (item.parameters[0] == null || item.parameters[1] == null) break;
-                        if (item.parameters[2] == null) item.parameters[2] = typeof(TNull);
-                        if (item.parameters[3] == null) item.parameters[3] = typeof(TNull);
                         var method = typeof(ArchetypeQueries).GetMethod(nameof(ArchetypeQueries.WithAnySync));
                         var gMethod = method.MakeGenericMethod(item.parameters);
                         var d = (QueryWith)System.Delegate.CreateDelegate(typeof(QueryWith), null, gMethod);
@@ -577,7 +575,11 @@ namespace ME.BECS.Editor {
             
             sw.Stop();
             this.lastQueryStopwatch = sw;
-            
+
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(world.id).Allocator.ToAllocator;
+            var job = queryBuilder.compose.Build(ref queryBuilder, default);
+            job.allocator = allocator;
+            job.Execute();
             queryBuilder.WaitForAllJobs();
 
             var list = queryBuilder.queryData.ptr->archetypesBits.GetTrueBitsTemp(world.id);
@@ -695,6 +697,7 @@ namespace ME.BECS.Editor {
 
         public void Draw(World world, VisualElement rootVisualElement, float zoom) {
 
+            this.rootVisualElement = rootVisualElement;
             var graphElement = new VisualElement();
             this.graphElement = graphElement;
             graphElement.AddToClassList("full-screen");
@@ -1566,7 +1569,7 @@ namespace ME.BECS.Editor {
                             }
                             break;
                         case nameof(QueryBuilder.WithAny):
-                            System.Array.Resize(ref this.currentQuery[idx].parameters, 4);
+                            System.Array.Resize(ref this.currentQuery[idx].parameters, 2);
                             if (idx == this.currentQuery.Count - 1) {
                                 addElementContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                             }

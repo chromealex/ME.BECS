@@ -44,6 +44,91 @@ namespace ME.BECS.Editor {
         #endif
 
     }
+
+    public class ThemesCodeGenerator : CustomCodeGenerator {
+
+        public struct Theme {
+
+            public string menuName;
+            public string style;
+
+        }
+
+        public static readonly Theme[] themes = new Theme[] {
+            new Theme { menuName = "Default", style = "ME.BECS.Resources/Styles/Themes/Default.uss" },
+            new Theme { menuName = "Classic", style = "ME.BECS.Resources/Styles/Themes/Classic.uss" },
+            new Theme { menuName = "Alternative", style = "ME.BECS.Resources/Styles/Themes/Alternative.uss" },
+        };
+        
+        public static readonly string DEFAULT = themes[0].style;
+
+        public override FileContent[] AddFileContent() {
+
+            if (this.editorAssembly == false) return System.Array.Empty<FileContent>();
+            
+            var customList = new System.Collections.Generic.List<UnityEngine.UIElements.StyleSheet>();
+            var guids = AssetDatabase.FindAssets("t:Object ME.BECS.CustomThemes");
+            foreach (var guid in guids) {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var styleSheets = AssetDatabase.FindAssets("t:StyleSheet", new string[] { path });
+                foreach (var assetGuid in styleSheets) {
+                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.StyleSheet>(AssetDatabase.GUIDToAssetPath(assetGuid));
+                    if (asset != null) {
+                        customList.Add(asset);
+                    }
+                }
+            }
+
+            void Add(System.Text.StringBuilder builder, Theme theme, int priority) {
+                builder.AppendLine($"[UnityEditor.MenuItem(\"ME.BECS/Themes/{theme.menuName}\", true)] private static bool {EditorUtils.GetCodeName(theme.menuName)}Validation() {{ UnityEditor.Menu.SetChecked(\"ME.BECS/Themes/{theme.menuName}\", Themes.CurrentTheme == \"{theme.style}\"); return true; }}");
+                builder.AppendLine($"[UnityEditor.MenuItem(\"ME.BECS/Themes/{theme.menuName}\", priority = {priority})] private static void {EditorUtils.GetCodeName(theme.menuName)}() => Themes.CurrentTheme = \"{theme.style}\";");
+            }
+            
+            var priority = 200;
+            var builder = new System.Text.StringBuilder();
+            foreach (var theme in themes) {
+                Add(builder, theme, priority);
+                ++priority;
+            }
+
+            priority += 10;
+            foreach (var custom in customList) {
+                Add(builder, new Theme() {
+                    menuName = custom.name,
+                    style = AssetDatabase.GetAssetPath(custom),
+                }, priority);
+                ++priority;
+            }
+            
+            var content = $@"
+    public static class ThemesMenu {{
+        {builder.ToString()}
+    }}
+    ";
+            
+            var file = new FileContent();
+            file.filename = "MenuThemes.cs";
+            file.content = content;
+            
+            return new FileContent[] {
+                file,
+            };
+            
+        }
+
+    }
+    
+    public static class Themes {
+        
+        public static string CurrentTheme {
+            get => EditorPrefs.GetString("ME.BECS.Editor.Theme", ThemesCodeGenerator.DEFAULT);
+            set {
+                EditorPrefs.SetString("ME.BECS.Editor.Theme", value);
+                EditorUIUtils.RefreshStyles();
+            }
+        }
+
+    }
     
     public static class ThreadingToggle {
 

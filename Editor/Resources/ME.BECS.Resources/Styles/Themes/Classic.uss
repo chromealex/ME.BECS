@@ -1,0 +1,18 @@
+:root {
+    --main-color: rgb(45, 45, 45);
+    --highlight-color: #808080;
+    --highlight-text-color: #bcbcbc;
+    --dark-color: #1f0337;
+    --toolbar-color: rgb(45, 45, 45);
+    --content-background-color: rgb(55, 55, 55);
+    --content-border-color: rgba(0, 0, 0, 0.3);
+    --content-border-width: 0px;
+    --content-border-radius: 0px;
+    --content-margin: 0px;
+    --toolbar-buttons-radius: 0px;
+    --toolbar-buttons-margin: 0px 0px 0px 0px;
+    --toolbar-buttons-border-width: 0px 1px 0px 0px;
+    --toolbar-buttons-border-color: rgba(30, 30, 30, 1);
+    --toolbar-buttons-background-color: rgb(47, 47, 47);
+    --toolbar-buttons-background-color-hover: rgb(40, 40, 40);
+}

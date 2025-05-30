@@ -53,14 +53,14 @@ namespace ME.BECS.Editor.FeaturesGraph {
         protected override VisualElement CreateRootElement() {
             
             EditorUIUtils.ApplyDefaultStyles(this.rootVisualElement);
-            this.logoLine = EditorUIUtils.AddLogoLine(this.rootVisualElement);
+            this.gradientAnimated = EditorUIUtils.AddLogoLine(this.rootVisualElement);
 
             //if (this.toolbar != null && this.rootView.Contains(this.toolbar) == true) this.rootView.Remove(this.toolbar);
             var toolbar = new UnityEditor.UIElements.Toolbar();
             this.toolbar = toolbar;
             {
                 var saveButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    this.logoLine.ThinkOnce();
+                    this.gradientAnimated.ThinkOnce();
                     this.graphView.SaveGraphToDisk();
                     this.hasUnsavedChanges = false;
                     this.ShowNotification(new GUIContent("Graph Saved"), 1f);
@@ -101,10 +101,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
         private void UpdateCompileButton() {
             if (this.isCompileDirty == true) {
                 this.compileButton.text = "Compile Graphs*";
-                this.logoLine.ThinkStart();
+                this.gradientAnimated.ThinkStart();
             } else {
                 this.compileButton.text = "Compile Graphs";
-                this.logoLine.ThinkEnd();
+                this.gradientAnimated.ThinkEnd();
             }
         }
 
@@ -301,7 +301,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
         }
         private const float maxOpacity = 1f;
 
-        private EditorUIUtils.LogoLine logoLine;
+        private GradientAnimated gradientAnimated;
         
         protected override void InitializeWindow(BaseGraph graph) {
             

@@ -20,7 +20,7 @@
     height: 51px;
     max-height: 30px;
     width: auto;
-    background-color: black;
+    background-color: rgba(0, 0, 0, 0);
     border-width: 1px;
     border-color: rgb(150, 150, 150);
     margin: 8px;
@@ -51,7 +51,7 @@
 GridBackground {
     --line-color: #5c5959;
     --thick-line-color: #5c5959;
-    /*--grid-background-color: rgb(30, 30, 30);*/
+    --grid-background-color: rgba(30, 30, 30, 0.5);
 }
 
 .timeline .min, .timeline .max {
