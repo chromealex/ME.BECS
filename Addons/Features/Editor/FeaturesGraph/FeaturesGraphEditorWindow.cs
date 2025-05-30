@@ -258,11 +258,15 @@ namespace ME.BECS.Editor.FeaturesGraph {
         protected override void InitializeWindow(BaseGraph graph) {
             
             var view = new FeaturesGraphView(this);
+            EditorUIUtils.ApplyDefaultStyles(view);
             view.isEditable = graph.builtInGraph == false;
             view.RegisterCallback<MouseMoveEvent>((evt) => {
                 this.OnTransformChanged(view);
             });
             this.wantsMouseMove = true;
+
+            EditorUIUtils.AddLogoLine(view);
+            
             var grid = new GridBackground();
             this.background = grid;
             view.Add(grid);
