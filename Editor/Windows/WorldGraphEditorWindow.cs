@@ -839,7 +839,7 @@ namespace ME.BECS.Editor {
                 }
 
                 if (this.graph != null && this.world.isCreated == true) {
-                    if (this.rootContainer != null) this.rootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
+                    if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                     if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                     this.DrawToolbar(this.toolbarContainer);
                     this.UpdateGraph(this.graph);
@@ -864,7 +864,7 @@ namespace ME.BECS.Editor {
 
             if (hasActiveWorlds == false) {
 
-                if (this.rootContainer != null) this.rootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
+                if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
                 if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
                 this.worldsSelectionContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                 this.DrawWorldsSelection(this.worldsSelectionContainer);
@@ -933,6 +933,7 @@ namespace ME.BECS.Editor {
         }
 
         private VisualElement rootContainer;
+        private VisualElement newRootContainer;
         private VisualElement toolbarContainer;
         private VisualElement worldsSelectionContainer;
         public void CreateGUI() {
@@ -966,7 +967,7 @@ namespace ME.BECS.Editor {
                 container.AddToClassList("stretch");
                 container.AddToClassList("background");
                 //this.rootVisualElement.Add(container);
-                EditorUIUtils.AddWindowContent(this.rootVisualElement, container);
+                this.newRootContainer = EditorUIUtils.AddWindowContent(this.rootVisualElement, container);
                 this.rootContainer = container;
                 var world = this.world;
                 var graph = this.CreateGraph();

@@ -41,13 +41,6 @@ GradientAnimated {
     margin: var(--toolbar-buttons-margin);
     border-width: var(--toolbar-buttons-border-width);
     border-radius: var(--toolbar-buttons-radius);
-}
-.unity-toolbar > Button,
-.unity-toolbar > ToolbarButton,
-.unity-toolbar > ToolbarToggle,
-.unity-toolbar > RepeatButton,
-.unity-toolbar > DropdownField,
-.unity-toolbar > DropdownField .unity-base-field__input {
     background-color: var(--toolbar-buttons-background-color);
     border-color: var(--toolbar-buttons-border-color);
 }

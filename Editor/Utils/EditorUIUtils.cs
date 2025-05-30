@@ -401,7 +401,7 @@ namespace ME.BECS.Editor {
             return logo;
         }
 
-        public static void AddWindowContent(VisualElement root, VisualElement currentContent) {
+        public static VisualElement AddWindowContent(VisualElement root, VisualElement currentContent) {
             var newRoot = new GradientAnimated();
             newRoot.AddToClassList("window-content-back");
             var newRootContent = new VisualElement();
@@ -409,6 +409,7 @@ namespace ME.BECS.Editor {
             newRootContent.AddToClassList("window-content");
             newRootContent.Add(currentContent);
             root.Add(newRoot);
+            return newRoot;
         }
 
     }
