@@ -11,15 +11,14 @@ namespace ME.BECS.Editor.Aspects {
             // TODO: Disabled for now because of Burst Compiler failed in Unity Cloud
             //if (this.editorAssembly == false) return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             
-            var contentItem = new System.Collections.Generic.List<string>();
             var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>().OrderBy(x => x.FullName).ToArray();
             foreach (var component in allComponents) {
 
+                var contentItem = new System.Collections.Generic.List<string>();
                 var type = component;
                 var strType = EditorUtils.GetTypeName(type);
                 if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(component, out var cacheData) == true) {
-                    contentItem.Clear();
                     contentItem.AddRange(cacheData);
                 } else {
 
@@ -27,7 +26,6 @@ namespace ME.BECS.Editor.Aspects {
                     if (this.IsValidTypeForAssembly(component) == false) continue;
 
                     var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).OrderBy(x => x.FieldType.FullName).ToArray();
-                    contentItem.Clear();
                     foreach (var field in fields) {
                         var fieldType = field.FieldType;
                         if (typeof(IUnmanagedList).IsAssignableFrom(fieldType) == true) {
@@ -52,7 +50,7 @@ namespace ME.BECS.Editor.Aspects {
                         }
                     }
 
-                    this.cache.Add(component, contentItem);
+                    if (contentItem.Count > 0) this.cache.Add(component, contentItem);
                 }
 
                 if (contentItem.Count > 0u) {
