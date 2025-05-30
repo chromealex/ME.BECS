@@ -80,12 +80,14 @@ namespace ME.BECS.Extensions.GraphProcessor
 
 		void InitializeRootView()
 		{
-			rootView = base.rootVisualElement;
+			rootView = this.CreateRootElement();
 
 			rootView.name = "graphRootView";
 
 			rootView.styleSheets.Add(Resources.Load<StyleSheet>(graphWindowStyle));
 		}
+
+        protected virtual VisualElement CreateRootElement() => this.rootVisualElement;
 
 		public void InitializeGraph(BaseGraph graph)
 		{

@@ -137,17 +137,17 @@ namespace ME.BECS.Editor.ComponentsViewer {
             };
 
             var root = this.rootVisualElement;
-            var container = new VisualElement();
+            var container = root;
             EditorUIUtils.ApplyDefaultStyles(container);
             container.styleSheets.Add(styleSheetBase);
             container.styleSheets.Add(styleSheet);
             container.styleSheets.Add(styleSheetTooltip);
-            root.Add(container);
             
             EditorUIUtils.AddLogoLine(container);
 
             var scrollView = new ScrollView();
-            container.Add(scrollView);
+            EditorUIUtils.AddWindowContent(container, scrollView);
+            //container.Add(scrollView);
 
             {
                 var componentsContainer = new Foldout();

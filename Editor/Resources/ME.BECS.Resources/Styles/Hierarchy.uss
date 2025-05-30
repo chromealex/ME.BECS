@@ -32,12 +32,8 @@
 }
 
 .toolbar-container {
-    height: 22px;
-    min-height: 22px;
-}
-
-.toolbar-container .unity-toolbar {
-    background-color: rgba(40, 40, 40, 1);
+    height: 20px;
+    min-height: 20px;
 }
 
 .search-container {
@@ -53,7 +49,6 @@
 .toolbar-container DropdownField {
     width: 40px;
     max-width: 40px;
-    margin: 0px;
 }
 .toolbar-container DropdownField .unity-base-field__input {
     min-width: 30px;
@@ -64,9 +59,7 @@
 
 .toolbar-container .filter-button {
     margin: 0px;
-    border-radius: 0px;
     border-width: 0px;
-    background-color: rgba(0, 0, 0, 0.3);
     margin-left: 1px;
     align-items: center;
     justify-content: center;
@@ -75,20 +68,6 @@
     align-self: center;
     width: 14px;
     height: 14px;
-}
-
-.toolbar-container Button:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-.toolbar-container DropdownField .unity-base-field__input {
-    border-radius: 0px;
-    border-width: 0px;
-    background-color: rgba(0, 0, 0, 0.3);
-    margin: 0px;
-}
-.toolbar-container DropdownField:hover .unity-base-field__input {
-    background-color: rgba(0, 0, 0, 0.1);
 }
 
 .h-root .h-element {

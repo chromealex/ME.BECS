@@ -321,8 +321,8 @@ namespace ME.BECS.Editor {
             this.rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
             
             EditorUIUtils.AddLogoLine(this.rootVisualElement);
-            
-            var root = new VisualElement();
+
+            var root = this.rootVisualElement;
             {
                 var toolbarContainer = new VisualElement();
                 root.Add(toolbarContainer);
@@ -386,9 +386,12 @@ namespace ME.BECS.Editor {
                 this.hierarchyRoot = new VisualElement();
                 this.hierarchyRoot.AddToClassList("h-root");
                 scrollView.Add(this.hierarchyRoot);
-                root.Add(scrollView);
+                EditorUIUtils.AddWindowContent(root, scrollView);
+            } else {
+                var lbl = new Label("World is not selected");
+                lbl.AddToClassList("empty-label");
+                EditorUIUtils.AddWindowContent(root, lbl);
             }
-            this.rootVisualElement.Add(root);
             
         }
 

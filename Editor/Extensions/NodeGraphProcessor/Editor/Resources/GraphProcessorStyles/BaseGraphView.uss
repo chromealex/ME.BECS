@@ -15,11 +15,13 @@
 
 .unity-toolbar ToolbarButton {
     -unity-text-align: middle-center;
-    border-left-width: 0px;
+    background-color: rgba(0, 0, 0, 0.3);
 }
 
 #graphRootView {
     background-color: #101010;
+    flex-grow: 1;
+    border-radius: 4px;
 }
 
 .button-selector {

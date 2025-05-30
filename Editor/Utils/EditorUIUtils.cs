@@ -422,20 +422,20 @@ namespace ME.BECS.Editor {
                 if (r.width < 0.01f || r.height < 0.01f) return;
 
                 vertices[0].tint = this.leftTop;
-                vertices[1].tint = this.leftBottom;
-                vertices[2].tint = this.leftBottom;
+                vertices[1].tint = this.leftTop;
+                vertices[2].tint = this.leftTop;
                 vertices[3].tint = this.leftTop;
 
-                animVertices[0].tint = this.leftTop;
-                animVertices[1].tint = this.leftBottom;
-                animVertices[2].tint = this.rightBottom;
-                animVertices[3].tint = this.rightTop;
+                animVertices[0].tint = this.leftBottom;
+                animVertices[1].tint = this.leftTop;
+                animVertices[2].tint = this.rightTop;
+                animVertices[3].tint = this.rightBottom;
                 
-                animVerticesBack[0].tint = this.rightTop;
-                animVerticesBack[1].tint = this.rightBottom;
-                animVerticesBack[2].tint = this.leftBottom;
-                animVerticesBack[3].tint = this.leftTop;
-
+                animVerticesBack[0].tint = this.rightBottom;
+                animVerticesBack[1].tint = this.rightTop;
+                animVerticesBack[2].tint = this.leftTop;
+                animVerticesBack[3].tint = this.leftBottom;
+                
                 float left = 0f;
                 float right = r.width;
                 float top = 0f;
@@ -488,6 +488,12 @@ namespace ME.BECS.Editor {
                 this.stopOnNext = false;
             }
             
+            public void ThinkOnce() {
+                if (this.animate == true) return;
+                this.ThinkStart();
+                this.ThinkEnd();
+            }
+
             private void Update(TimerState timer) {
                 this.offset += (timer.deltaTime / 1000f) * this.speed;
                 if (this.animate == false && this.stopOnNext == true) {
@@ -512,9 +518,23 @@ namespace ME.BECS.Editor {
         }
         
         public static LogoLine AddLogoLine(VisualElement root) {
-            var logo = new LogoLine();
-            root.Add(logo);
+            var logo = root.Q<LogoLine>(className: "top-line");
+            if (logo == null) {
+                logo = new LogoLine();
+                logo.AddToClassList("top-line");
+                root.Add(logo);
+            }
             return logo;
+        }
+
+        public static void AddWindowContent(VisualElement root, VisualElement currentContent) {
+            var newRoot = new LogoLine();
+            newRoot.AddToClassList("window-content-back");
+            var newRootContent = new VisualElement();
+            newRoot.Add(newRootContent);
+            newRootContent.AddToClassList("window-content");
+            newRootContent.Add(currentContent);
+            root.Add(newRoot);
         }
 
     }

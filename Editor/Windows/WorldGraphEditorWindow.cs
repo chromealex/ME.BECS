@@ -716,7 +716,6 @@ namespace ME.BECS.Editor {
                 this.isMouseDown = false;
             });
 
-            this.rootVisualElement = rootVisualElement;
             this.DrawBackground(Vector2.zero);
             var rect = rootVisualElement.parent.worldBound;
             var center = rect.center;
@@ -963,7 +962,8 @@ namespace ME.BECS.Editor {
                 var container = new VisualElement();
                 container.AddToClassList("stretch");
                 container.AddToClassList("background");
-                this.rootVisualElement.Add(container);
+                //this.rootVisualElement.Add(container);
+                EditorUIUtils.AddWindowContent(this.rootVisualElement, container);
                 this.rootContainer = container;
                 var world = this.world;
                 var graph = this.CreateGraph();

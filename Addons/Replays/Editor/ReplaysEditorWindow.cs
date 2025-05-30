@@ -444,7 +444,7 @@ namespace ME.BECS.Editor {
             
             this.UpdateWorlds();
             
-            var root = new VisualElement();
+            var root = this.rootVisualElement;
             EditorUIUtils.ApplyDefaultStyles(root);
             root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
@@ -537,12 +537,10 @@ namespace ME.BECS.Editor {
 
             var bar = new VisualElement();
             bar.AddToClassList("bar");
-            root.Add(bar);
+            EditorUIUtils.AddWindowContent(root, bar);
             {
                 this.hierarchyRoot = bar;
             }
-            
-            this.rootVisualElement.Add(root);
             
         }
 

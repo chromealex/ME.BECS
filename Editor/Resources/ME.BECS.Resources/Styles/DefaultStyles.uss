@@ -1,3 +1,7 @@
+:root {
+    --color-toolbar-button-border: rgba(0, 0, 0, 0.7);
+}
+
 .horizontal-group {
     align-items: stretch;
     flex-direction: row;
@@ -24,4 +28,87 @@ LogoLine {
     --left-color: #3c165c;
     --right-color: #981eff;
     --speed: 1000;
+}
+
+.unity-toolbar {
+    background-color: #3c165c;
+    border-width: 0px;
+    padding-left: 0px;
+    padding-right: 4px;
+}
+
+.unity-toolbar > Button,
+.unity-toolbar > ToolbarButton,
+.unity-toolbar > RepeatButton,
+.unity-toolbar > DropdownField {
+    margin: 0px;
+    margin-left: 4px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+.unity-toolbar > Button,
+.unity-toolbar > ToolbarButton,
+.unity-toolbar > RepeatButton,
+.unity-toolbar > DropdownField,
+.unity-toolbar > DropdownField .unity-base-field__input {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-width: 1px;
+    border-color: var(--color-toolbar-button-border);
+}
+.unity-toolbar > DropdownField .unity-base-field__input {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.unity-toolbar > Button:hover,
+.unity-toolbar > ToolbarButton:hover,
+.unity-toolbar > RepeatButton:hover,
+.unity-toolbar > DropdownField:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.unity-toolbar > Button:active,
+.unity-toolbar > ToolbarButton:active,
+.unity-toolbar > RepeatButton:active,
+.unity-toolbar > DropdownField:active {
+    border-width: 1px;
+}
+.unity-toolbar > Button:focus,
+.unity-toolbar > ToolbarButton:focus,
+.unity-toolbar > RepeatButton:focus,
+.unity-toolbar > DropdownField:focus {
+    border-width: 1px;
+}
+
+.unity-toolbar ToolbarSearchField {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.unity-toolbar ToolbarSearchField .unity-search-field-base__text-field__input {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+/*
+ CONTENT
+ */
+
+.window-content-back {
+    background-color: #3c165c;
+    flex-grow: 1;
+    --left-top-color: #3c165c;
+    --right-top-color: #3c165c;
+    --left-bottom-color: #1f0337;
+    --right-bottom-color: #1f0337;
+}
+.window-content {
+    flex-grow: 1;
+    margin: 2px;
+    border-width: 1px;
+    border-radius: 4px;
+    border-color: rgba(0, 0, 0, 0.3);
+    background-color: rgb(55, 55, 55);
+}
+.window-content > .empty-label {
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+    color: rgba(255, 255, 255, 0.5);
 }

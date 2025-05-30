@@ -1,7 +1,6 @@
 .main-container {
     font-size: 20px;
     padding: 5px;
-    background-color: rgba(0, 90, 128, 0.1);
     border-bottom-color: rgba(0, 90, 128, 0.1);
 }
 

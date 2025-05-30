@@ -50,6 +50,49 @@ namespace ME.BECS.Editor.FeaturesGraph {
         
         public System.Collections.Generic.List<BreadcrumbItem> breadcrumbs = new System.Collections.Generic.List<BreadcrumbItem>();
 
+        protected override VisualElement CreateRootElement() {
+            
+            EditorUIUtils.ApplyDefaultStyles(this.rootVisualElement);
+            this.logoLine = EditorUIUtils.AddLogoLine(this.rootVisualElement);
+
+            //if (this.toolbar != null && this.rootView.Contains(this.toolbar) == true) this.rootView.Remove(this.toolbar);
+            var toolbar = new UnityEditor.UIElements.Toolbar();
+            this.toolbar = toolbar;
+            {
+                var saveButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                    this.logoLine.ThinkOnce();
+                    this.graphView.SaveGraphToDisk();
+                    this.hasUnsavedChanges = false;
+                    this.ShowNotification(new GUIContent("Graph Saved"), 1f);
+                    this.UpdateToolbar();
+                });
+                saveButton.text = "Save Graph";
+                this.saveButton = saveButton;
+                toolbar.Add(saveButton);
+            }
+            {
+                var centerButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                    this.graphView.ResetPositionAndZoom();
+                });
+                centerButton.text = "Center Graph";
+                toolbar.Add(centerButton);
+            }
+            {
+                this.compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
+                    this.SetCompileDirty(false);
+                    CodeGenerator.RegenerateBurstAOT();
+                });
+                this.UpdateCompileButton();
+                toolbar.Add(this.compileButton);
+            }
+            this.rootVisualElement.Add(toolbar);
+            
+            var content = new VisualElement();
+            EditorUIUtils.AddWindowContent(this.rootVisualElement, content);
+            return content;
+            
+        }
+
         public void SetCompileDirty(bool value) {
             this.isCompileDirty = value;
             this.UpdateCompileButton();
@@ -58,8 +101,10 @@ namespace ME.BECS.Editor.FeaturesGraph {
         private void UpdateCompileButton() {
             if (this.isCompileDirty == true) {
                 this.compileButton.text = "Compile Graphs*";
+                this.logoLine.ThinkStart();
             } else {
                 this.compileButton.text = "Compile Graphs";
+                this.logoLine.ThinkEnd();
             }
         }
 
@@ -255,18 +300,18 @@ namespace ME.BECS.Editor.FeaturesGraph {
             set => UnityEditor.EditorPrefs.SetBool($"ME.BECS.{nameof(FeaturesGraphEditorWindow)}.isCompileDirty", value);
         }
         private const float maxOpacity = 1f;
+
+        private EditorUIUtils.LogoLine logoLine;
+        
         protected override void InitializeWindow(BaseGraph graph) {
             
             var view = new FeaturesGraphView(this);
-            EditorUIUtils.ApplyDefaultStyles(view);
             view.isEditable = graph.builtInGraph == false;
             view.RegisterCallback<MouseMoveEvent>((evt) => {
                 this.OnTransformChanged(view);
             });
             this.wantsMouseMove = true;
 
-            EditorUIUtils.AddLogoLine(view);
-            
             var grid = new GridBackground();
             this.background = grid;
             view.Add(grid);
@@ -296,37 +341,6 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen -= this.OnOpen;
             ME.BECS.Editor.Extensions.SubclassSelector.SubclassSelectorDrawer.onOpen += this.OnOpen;
-            
-            if (this.toolbar != null && this.rootView.Contains(this.toolbar) == true) this.rootView.Remove(this.toolbar);
-            var toolbar = new UnityEditor.UIElements.Toolbar();
-            this.toolbar = toolbar;
-            {
-                var saveButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    this.graphView.SaveGraphToDisk();
-                    this.hasUnsavedChanges = false;
-                    this.ShowNotification(new GUIContent("Graph Saved"), 1f);
-                    this.UpdateToolbar();
-                });
-                saveButton.text = "Save Graph";
-                this.saveButton = saveButton;
-                toolbar.Add(saveButton);
-            }
-            {
-                var centerButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    this.graphView.ResetPositionAndZoom();
-                });
-                centerButton.text = "Center Graph";
-                toolbar.Add(centerButton);
-            }
-            {
-                this.compileButton = new UnityEditor.UIElements.ToolbarButton(() => {
-                    this.SetCompileDirty(false);
-                    CodeGenerator.RegenerateBurstAOT();
-                });
-                this.UpdateCompileButton();
-                toolbar.Add(this.compileButton);
-            }
-            this.rootView.Add(toolbar);
             
             this.UpdateToolbar();
             if (this.graphView != null) this.OnTransformChanged(view, true);

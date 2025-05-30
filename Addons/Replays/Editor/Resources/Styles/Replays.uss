@@ -165,8 +165,8 @@ GridBackground {
 
 
 .toolbar-container {
-    height: 22px;
-    min-height: 22px;
+    height: 20px;
+    min-height: 20px;
 }
 
 .toolbar-container .toolbar-buttons {
@@ -177,13 +177,6 @@ GridBackground {
     flex-grow: 1;
 }
 
-.toolbar-container .unity-toolbar {
-    background-color: rgba(40, 40, 40, 1);
-}
-
-.toolbar-container DropdownField {
-    margin: 0px;
-}
 .toolbar-container DropdownField .unity-base-field__input {
     min-width: 30px;
 }
@@ -225,7 +218,6 @@ GridBackground {
 .toolbar-container DropdownField .unity-base-field__input {
     border-radius: 0px;
     border-width: 0px;
-    background-color: rgba(0, 0, 0, 0.3);
     margin: 0px;
 }
 .toolbar-container DropdownField:hover .unity-base-field__input {
