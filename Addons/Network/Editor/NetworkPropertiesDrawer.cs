@@ -22,8 +22,11 @@ namespace ME.BECS.Network.Editor {
             this.LoadStyle();
             var rootVisualElement = new VisualElement();
             rootVisualElement.Clear();
+            EditorUIUtils.ApplyDefaultStyles(rootVisualElement);
             rootVisualElement.styleSheets.Add(NetworkPropertiesDrawer.styleSheetBase);
 
+            EditorUIUtils.AddLogoLine(rootVisualElement);
+            
             this.DrawProperties(rootVisualElement, property);
             
             return rootVisualElement;

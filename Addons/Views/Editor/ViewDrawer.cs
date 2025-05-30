@@ -17,7 +17,7 @@ namespace ME.BECS.Views.Editor {
             var providerId = viewSource.FindPropertyRelative(nameof(View.viewSource.providerId));
             
             var container = new UnityEngine.UIElements.VisualElement();
-            container.styleSheets.Add(ME.BECS.Editor.EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/DefaultStyles.uss"));
+            ME.BECS.Editor.EditorUIUtils.ApplyDefaultStyles(container);
             container.AddToClassList("horizontal-group");
             {
                 var objectField = new ObjectField(property.displayName);

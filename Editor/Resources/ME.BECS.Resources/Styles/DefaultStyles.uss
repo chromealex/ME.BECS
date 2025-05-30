@@ -16,3 +16,12 @@
     min-width: 50px;
     width: 20%;
 }
+
+LogoLine {
+    width: 100%;
+    height: 1px;
+    min-height: 1px;
+    --left-color: #3c165c;
+    --right-color: #981eff;
+    --speed: 1000;
+}

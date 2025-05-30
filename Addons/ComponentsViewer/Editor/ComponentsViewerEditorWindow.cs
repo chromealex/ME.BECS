@@ -138,10 +138,13 @@ namespace ME.BECS.Editor.ComponentsViewer {
 
             var root = this.rootVisualElement;
             var container = new VisualElement();
+            EditorUIUtils.ApplyDefaultStyles(container);
             container.styleSheets.Add(styleSheetBase);
             container.styleSheets.Add(styleSheet);
             container.styleSheets.Add(styleSheetTooltip);
             root.Add(container);
+            
+            EditorUIUtils.AddLogoLine(container);
 
             var scrollView = new ScrollView();
             container.Add(scrollView);

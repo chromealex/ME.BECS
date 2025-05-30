@@ -21,8 +21,11 @@ namespace ME.BECS.Editor {
 
             this.LoadStyle();
             root.Clear();
+            EditorUIUtils.ApplyDefaultStyles(root);
             root.styleSheets.Add(this.styleSheet);
 
+            EditorUIUtils.AddLogoLine(root);
+            
             if (this.world.isCreated == true) {
                 
                 this.DrawAllocator(root, in this.world.state.ptr->allocator);

@@ -33,8 +33,12 @@ namespace ME.BECS.Editor {
         private void CreateGUI() {
 
             var root = new ScrollView(ScrollViewMode.Vertical);
+            EditorUIUtils.ApplyDefaultStyles(root);
             root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
+            
+            EditorUIUtils.AddLogoLine(root);
+            
             root.AddToClassList("filter-root");
             {
                 var header = new Label("Groups");
@@ -312,8 +316,11 @@ namespace ME.BECS.Editor {
             this.LoadSettings();
             this.LoadStyle();
             this.rootVisualElement.Clear();
+            EditorUIUtils.ApplyDefaultStyles(this.rootVisualElement);
             this.rootVisualElement.styleSheets.Add(this.styleSheet);
             this.rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
+            
+            EditorUIUtils.AddLogoLine(this.rootVisualElement);
             
             var root = new VisualElement();
             {

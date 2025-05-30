@@ -430,11 +430,16 @@ namespace ME.BECS.Editor {
 
         private void CreateGUI() {
 
+            this.LoadStyle();
+            
             this.UpdateWorlds();
             
             var root = new VisualElement();
+            EditorUIUtils.ApplyDefaultStyles(root);
             root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
+
+            EditorUIUtils.AddLogoLine(root);
             
             var toolbarContainer = new VisualElement();
             root.Add(toolbarContainer);

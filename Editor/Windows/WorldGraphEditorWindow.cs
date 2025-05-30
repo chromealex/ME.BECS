@@ -937,7 +937,10 @@ namespace ME.BECS.Editor {
 
             this.LoadStyle();
             this.rootVisualElement.Clear();
+            EditorUIUtils.ApplyDefaultStyles(this.rootVisualElement);
             this.rootVisualElement.styleSheets.Add(this.styleSheet);
+            
+            EditorUIUtils.AddLogoLine(this.rootVisualElement);
 
             {
                 var containerBack = new VisualElement();

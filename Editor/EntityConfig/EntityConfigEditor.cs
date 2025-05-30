@@ -29,10 +29,13 @@ namespace ME.BECS.Editor {
             this.LoadStyle();
             var rootVisualElement = new VisualElement();
             rootVisualElement.Clear();
+            EditorUIUtils.ApplyDefaultStyles(rootVisualElement);
             rootVisualElement.styleSheets.Add(this.styleSheetBase);
             rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
             rootVisualElement.styleSheets.Add(this.styleSheet);
 
+            EditorUIUtils.AddLogoLine(rootVisualElement);
+            
             var serializedObject = this.serializedObject;
             this.DrawComponents(rootVisualElement, serializedObject);
 

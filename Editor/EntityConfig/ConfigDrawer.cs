@@ -15,7 +15,7 @@ namespace ME.BECS.Views.Editor {
             EntityConfigsRegistry.Initialize();
             
             var container = new UnityEngine.UIElements.VisualElement();
-            container.styleSheets.Add(ME.BECS.Editor.EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/DefaultStyles.uss"));
+            ME.BECS.Editor.EditorUIUtils.ApplyDefaultStyles(container);
             {
                 var objectField = new ObjectField(property.displayName);
                 objectField.objectType = typeof(EntityConfig);

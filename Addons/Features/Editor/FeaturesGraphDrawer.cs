@@ -21,7 +21,7 @@ namespace ME.BECS.Editor {
             var rootVisualElement = new VisualElement();
             rootVisualElement.Clear();
             rootVisualElement.styleSheets.Add(FeaturesGraphDrawer.styleSheetBase);
-
+            
             this.DrawField(rootVisualElement, property);
             
             return rootVisualElement;
