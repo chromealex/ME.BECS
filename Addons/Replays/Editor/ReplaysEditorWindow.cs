@@ -154,7 +154,7 @@ namespace ME.BECS.Editor {
             return (float)(current / (double)size * this.timeline.localBound.width);
 
         }
-        
+
         private void DrawBar(VisualElement root) {
 
             if (this.selectedWorld.isCreated == true && this.selectedNetworkModule?.Status == TransportStatus.Connected) {
@@ -179,19 +179,8 @@ namespace ME.BECS.Editor {
                 
                 if (this.timeline == null) {
                     this.timeline = new VisualElement();
-                    this.timeline.RegisterCallback<MouseDownEvent>(evt => {
-                        var progress = evt.localMousePosition.x / this.timeline.localBound.width;
-                        var tick = (ulong)((this.targetTick - this.startTick) * progress) + this.startTick;
-                        if (tick <= this.targetTick - ticksAmount) {
-                            tick = this.targetTick - ticksAmount;
-                        }
-                        networkModule.RewindTo(tick);
-                        this.TrySync();
-                        //Debug.Log("evt: " + evt.localMousePosition + " :: " + progress + ", tick: " + tick + " => " + networkModule.GetCurrentTick() + ", currentTick: " + networkModule.GetCurrentTick());
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
-                        this.timelinePressed = true;
-                    });
-                    this.timeline.RegisterCallback<DragPerformEvent>(evt => {
+
+                    void OnMove(IMouseEvent evt) {
                         if (this.timelinePressed == true) {
                             var progress = evt.localMousePosition.x / this.timeline.localBound.width;
                             var tick = (ulong)((this.targetTick - this.startTick) * progress) + this.startTick;
@@ -200,20 +189,21 @@ namespace ME.BECS.Editor {
                             }
                             networkModule.RewindTo(tick);
                             this.TrySync();
-                            this.timelinePressed = true;
                         }
-                    });
+                    }
+                    this.timeline.RegisterCallback<MouseDownEvent>(evt => {
+                        if (evt.button != 0) return;
+                        this.timeline.CaptureMouse();
+                        evt.StopPropagation();
+                        this.timeline.RegisterCallback<MouseMoveEvent>(OnMove);
+                        OnMove(evt);
+                        this.timelinePressed = true;
+                    }, TrickleDown.TrickleDown);
                     this.timeline.RegisterCallback<MouseUpEvent>(evt => {
+                        this.timeline.UnregisterCallback<MouseMoveEvent>(OnMove);
+                        this.timeline.ReleaseMouse();
+                        OnMove(evt);
                         this.timelinePressed = false;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.None;
-                    });
-                    this.timeline.RegisterCallback<DragExitedEvent>(evt => {
-                        this.timelinePressed = false;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.None;
-                    });
-                    this.timeline.RegisterCallback<DragLeaveEvent>(evt => {
-                        this.timelinePressed = false;
-                        DragAndDrop.visualMode = DragAndDropVisualMode.None;
                     });
                     this.timeline.AddToClassList("timeline");
                     root.Add(this.timeline);
@@ -317,24 +307,23 @@ namespace ME.BECS.Editor {
                     string GetEventTooltip(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
                         str.Clear();
                         for (uint i = 0u; i < entry.value.Count; ++i) {
-                            var evt = entry.value[this.selectedNetworkModule.GetUnsafeModule().GetUnsafeData().ptr->networkWorld.state.ptr->allocator, i];
+                            var evt = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
                             str.AppendLine($"Player #{evt.playerId}");
                             str.AppendLine($"Size: {EditorUtils.BytesToString(evt.dataSize)}");
-                            var method = networkModule.GetUnsafeModule().GetUnsafeData().ptr->methodsStorage.GetMethodInfo(evt.methodId);
+                            var method = data.ptr->methodsStorage.GetMethodInfo(evt.methodId);
                             var func = System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer<NetworkMethodDelegate>((System.IntPtr)method.methodPtr);
                             str.AppendLine($"Method {func.Method.Name}");
                         }
                         return $"Events ({entry.value.Count}):\n{str.ToString()}";
                     }
 
-                    bool HasMultiplePlayers(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
-                        var prevId = uint.MaxValue;
+                    bool HasRemovePlayers(ULongDictionaryAuto<SortedNetworkPackageList>.Entry entry) {
+                        var localPlayerId = data.ptr->localPlayerId;
                         for (uint i = 0u; i < entry.value.Count; ++i) {
-                            var evt = entry.value[this.selectedNetworkModule.GetUnsafeModule().GetUnsafeData().ptr->networkWorld.state.ptr->allocator, i];
-                            if (prevId != uint.MaxValue && evt.playerId != prevId) {
+                            var evt = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
+                            if (localPlayerId != evt.playerId) {
                                 return true;
                             }
-                            if (prevId == uint.MaxValue) prevId = evt.playerId;
                         }
                         return false;
                     }
@@ -350,12 +339,33 @@ namespace ME.BECS.Editor {
                             dot.AddToClassList("dot");
                             step.Add(dot);
                             step.userData = EditorUIUtils.DrawTooltip(dot, GetEventTooltip(entry));
+                            step.AddManipulator(new ContextualMenuManipulator((ctx) => {
+                                if (entry.value.Count == 1u) {
+                                    ctx.menu.AppendAction("Remove", (evt) => {
+                                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                                            data.ptr->eventsStorage.RemoveEvent(entry.value[data.ptr->networkWorld.state.ptr->allocator, i]);
+                                        }
+                                    });
+                                } else {
+                                    ctx.menu.AppendAction("Remove All", (evt) => {
+                                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                                            data.ptr->eventsStorage.RemoveEvent(entry.value[data.ptr->networkWorld.state.ptr->allocator, i]);
+                                        }
+                                    });
+                                    {
+                                        for (uint i = 0u; i < entry.value.Count; ++i) {
+                                            var package = entry.value[data.ptr->networkWorld.state.ptr->allocator, i];
+                                            ctx.menu.AppendAction($"Remove {package.ToStringShort()}", (evt) => { data.ptr->eventsStorage.RemoveEvent(package); });
+                                        }
+                                    }
+                                }
+                            }));
                             this.timelineEvents.Add(step);
                         }
 
                         if (entry.value.Count > 0u && tick >= this.startTick && tick <= this.targetTick) {
                             step.RemoveFromClassList("remote");
-                            if (HasMultiplePlayers(entry) == true) {
+                            if (HasRemovePlayers(entry) == true) {
                                 step.AddToClassList("remote");
                             }
 
@@ -491,11 +501,11 @@ namespace ME.BECS.Editor {
                         });
                         void UpdateSyncModeButton() {
                             if (this.syncMode == true) {
-                                sync.text = "Sync Mode On";
+                                sync.text = "Sync Mode: On";
                                 sync.RemoveFromClassList("toggle-off");
                                 sync.AddToClassList("toggle-on");
                             } else {
-                                sync.text = "Sync Mode Off";
+                                sync.text = "Sync Mode: Off";
                                 sync.RemoveFromClassList("toggle-on");
                                 sync.AddToClassList("toggle-off");
                             }

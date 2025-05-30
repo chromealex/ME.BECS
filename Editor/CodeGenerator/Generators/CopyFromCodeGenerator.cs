@@ -33,7 +33,7 @@ namespace ME.BECS.Editor.Aspects {
                         if (typeof(IUnmanagedList).IsAssignableFrom(fieldType) == true) {
                             var gType = fieldType.GenericTypeArguments[0];
                             if (gType.IsVisible == false) continue;
-                            contentItem.Add("{");
+                            contentItem.Add("/*{");
                             contentItem.Add($"var source = ({strType}*)componentPtr;");
                             contentItem.Add($"ref var target = ref ent.Get<{strType}>();");
                             contentItem.Add(
@@ -48,7 +48,7 @@ namespace ME.BECS.Editor.Aspects {
                                 }
                             }
 
-                            contentItem.Add("}");
+                            contentItem.Add("}*/");
                         }
                     }
 

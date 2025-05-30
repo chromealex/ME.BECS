@@ -2,13 +2,15 @@
     "name": "ME.BECS.Editor.Replays",
     "rootNamespace": "",
     "references": [
-      "ME.BECS",
-      "ME.BECS.Editor",
-      "ME.BECS.Features",
-      "Unity.Collections",
-      "ME.BECS.Network"
+        "ME.BECS",
+        "ME.BECS.Editor",
+        "ME.BECS.Features",
+        "Unity.Collections",
+        "ME.BECS.Network"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,
