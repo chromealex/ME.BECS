@@ -39,13 +39,32 @@ ECS Hierarchy allows you to see the current entities in each world. With the hel
 and filter them using the search bar.
 <div></div>
 
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
 
 <img align="right" src="https://github.com/chromealex/chromealex.github.io/blob/main/Replays.png?raw=true" width="400" />
 
 ### Replays
 Replays window allows you to see local and remote input actions, remove them if it is nessesary, and allows you to choose ticks in a past or in the future at runtime.
 <div></div>
-
 
 <img align="right" src="https://github.com/chromealex/chromealex.github.io/blob/main/ComponentsViewer.png?raw=true" width="300" />
 
@@ -54,6 +73,11 @@ Components Viewer allows you to see all components and aspects in the project. T
 per field info.
 <div></div>
 
+<br>
+<br>
+<br>
+<br>
+<br>
 <br>
 <br>
 <br>
