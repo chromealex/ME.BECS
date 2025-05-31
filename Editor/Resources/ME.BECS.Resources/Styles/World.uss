@@ -15,6 +15,16 @@ BackgroundCircles Circle {
     position: absolute;
 }
 
+GridBackground {
+    --line-color: var(--grid-lines-color);
+    --thick-line-color: var(--grid-lines-thick-color);
+    --grid-background-color: rgba(0, 0, 0, 0);
+}
+
+.window-content {
+    overflow: hidden;
+}
+
 .full-screen {
     position: absolute;
     left: 0;
@@ -29,7 +39,7 @@ BackgroundCircles Circle {
 }
 
 .background {
-    background-color: rgba(40, 40, 40, 1);
+    background-color: rgba(40, 40, 40, 0);
 }
 
 .popup {
@@ -89,6 +99,7 @@ BackgroundCircles Circle {
     background-color: rgba(20, 20, 20, 1);
     justify-content: center;
     flex-grow: 1;
+    margin-top: 1px;
 }
 
 .worlds-selection-container {

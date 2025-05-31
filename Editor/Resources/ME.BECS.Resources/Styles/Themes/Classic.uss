@@ -15,4 +15,6 @@
     --toolbar-buttons-border-color: rgba(30, 30, 30, 1);
     --toolbar-buttons-background-color: rgb(47, 47, 47);
     --toolbar-buttons-background-color-hover: rgb(40, 40, 40);
+    --grid-lines-color: rgba(255, 255, 255, 0.1);
+    --grid-lines-thick-color: rgba(255, 255, 255, 0.2);
 }

@@ -384,6 +384,11 @@ namespace ME.BECS.Editor {
             var center = Vector2.zero;
             this.CalcScale(center, zoom);
             
+            if (this.rootVisualElement is ME.BECS.Extensions.GraphProcessor.GridBackground grid) {
+                grid.offset = offset;
+                grid.zoom = this.scale;
+            }
+
             this.DrawBackground(offset);
 
             foreach (var kv in this.cacheNodes) {
@@ -946,7 +951,10 @@ namespace ME.BECS.Editor {
             EditorUIUtils.AddLogoLine(this.rootVisualElement);
 
             {
-                var containerBack = new VisualElement();
+                var containerBack = new ME.BECS.Extensions.GraphProcessor.GridBackground();
+                containerBack.spacing = 10f;
+                containerBack.spacingY = 10f;
+                containerBack.offset = new Vector2(5f, 5f);
                 containerBack.AddToClassList("worlds-selection-background");
                 this.worldsSelectionContainer = containerBack;
                 this.rootVisualElement.Add(containerBack);
@@ -963,7 +971,10 @@ namespace ME.BECS.Editor {
             
             if (this.world.isCreated == true) {
 
-                var container = new VisualElement();
+                var container = new ME.BECS.Extensions.GraphProcessor.GridBackground();
+                container.spacing = 10f;
+                container.spacingY = 10f;
+                container.offset = new Vector2(5f, 5f);
                 container.AddToClassList("stretch");
                 container.AddToClassList("background");
                 //this.rootVisualElement.Add(container);

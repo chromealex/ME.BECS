@@ -38,7 +38,8 @@ namespace ME.BECS.Extensions.GraphProcessor
     public Vector2 offset;
 
     public float opacity = 1f;
-    
+    public float zoom = 1f;
+
     public ref float spacing => ref this.m_Spacing;
     public ref float spacingY => ref this.m_SpacingY;
 
@@ -155,29 +156,31 @@ namespace ME.BECS.Extensions.GraphProcessor
       vector3_3.y += layout2.y * vector3_1.y;
       float x = vector3_2.x;
       float y = vector3_2.y;
-      vector3_2.x = (float) ((double) vector3_2.x % ((double) this.spacing * (double) vector3_1.x) - (double) this.spacing * (double) vector3_1.x);
+      var spacingX = this.spacing * this.zoom;
+      var spacingY = this.spacingY * this.zoom;
+      vector3_2.x = (float) ((double) vector3_2.x % ((double) spacingX * (double) vector3_1.x) - (double) spacingX * (double) vector3_1.x);
       vector3_3.x = vector3_2.x;
       vector3_2.y = layout1.y;
       vector3_3.y = layout1.y + layout1.height;
       while ((double) vector3_2.x < (double) layout1.width)
       {
-        vector3_2.x += this.spacing * vector3_1.x;
-        vector3_3.x += this.spacing * vector3_1.x;
+        vector3_2.x += spacingX * vector3_1.x;
+        vector3_3.x += spacingX * vector3_1.x;
         GL.Begin(GL.LINES);
         GL.Color(this.lineColor);
         GL.Vertex(this.Clip(layout1, vector3_2));
         GL.Vertex(this.Clip(layout1, vector3_3));
         GL.End();
       }
-      float num1 = this.spacing * (float) this.thickLines;
-      for (vector3_2.x = vector3_3.x = (float) ((double) x % ((double) num1 * (double) vector3_1.x) - (double) num1 * (double) vector3_1.x); (double) vector3_2.x < (double) layout1.width + (double) num1; vector3_3.x += this.spacing * vector3_1.x * (float) this.thickLines)
+      float num1 = spacingX * (float) this.thickLines;
+      for (vector3_2.x = vector3_3.x = (float) ((double) x % ((double) num1 * (double) vector3_1.x) - (double) num1 * (double) vector3_1.x); (double) vector3_2.x < (double) layout1.width + (double) num1; vector3_3.x += spacingX * vector3_1.x * (float) this.thickLines)
       {
         GL.Begin(GL.LINES);
         GL.Color(this.thickLineColor);
         GL.Vertex(this.Clip(layout1, vector3_2));
         GL.Vertex(this.Clip(layout1, vector3_3));
         GL.End();
-        vector3_2.x += this.spacing * vector3_1.x * (float) this.thickLines;
+        vector3_2.x += spacingX * vector3_1.x * (float) this.thickLines;
       }
       vector3_2 = new Vector3(layout1.x, layout1.y, 0.0f);
       vector3_3 = new Vector3(layout1.x + layout1.width, layout1.y, 0.0f);
@@ -187,28 +190,28 @@ namespace ME.BECS.Extensions.GraphProcessor
       vector3_3.y += layout2.y * vector3_1.y;
       vector3_2 = matrix4x4.MultiplyPoint(vector3_2);
       vector3_3 = matrix4x4.MultiplyPoint(vector3_3);
-      vector3_2.y = vector3_3.y = (float) ((double) vector3_2.y % ((double) this.spacingY * (double) vector3_1.y) - (double) this.spacingY * (double) vector3_1.y);
+      vector3_2.y = vector3_3.y = (float) ((double) vector3_2.y % ((double) spacingY * (double) vector3_1.y) - (double) spacingY * (double) vector3_1.y);
       vector3_2.x = layout1.x;
       vector3_3.x = layout1.width;
       while ((double) vector3_2.y < (double) layout1.height)
       {
-        vector3_2.y += this.spacingY * vector3_1.y;
-        vector3_3.y += this.spacingY * vector3_1.y;
+        vector3_2.y += spacingY * vector3_1.y;
+        vector3_3.y += spacingY * vector3_1.y;
         GL.Begin(GL.LINES);
         GL.Color(this.lineColor);
         GL.Vertex(this.Clip(layout1, vector3_2));
         GL.Vertex(this.Clip(layout1, vector3_3));
         GL.End();
       }
-      float num2 = this.spacingY * (float) this.thickLines;
-      for (vector3_2.y = vector3_3.y = (float) ((double) y % ((double) num2 * (double) vector3_1.y) - (double) num2 * (double) vector3_1.y); (double) vector3_2.y < (double) layout1.height + (double) num2; vector3_3.y += this.spacingY * vector3_1.y * (float) this.thickLines)
+      float num2 = spacingY * (float) this.thickLines;
+      for (vector3_2.y = vector3_3.y = (float) ((double) y % ((double) num2 * (double) vector3_1.y) - (double) num2 * (double) vector3_1.y); (double) vector3_2.y < (double) layout1.height + (double) num2; vector3_3.y += spacingY * vector3_1.y * (float) this.thickLines)
       {
         GL.Begin(GL.LINES);
         GL.Color(this.thickLineColor);
         GL.Vertex(this.Clip(layout1, vector3_2));
         GL.Vertex(this.Clip(layout1, vector3_3));
         GL.End();
-        vector3_2.y += this.spacingY * vector3_1.y * (float) this.thickLines;
+        vector3_2.y += spacingY * vector3_1.y * (float) this.thickLines;
       }
     }
   }
