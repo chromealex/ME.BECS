@@ -88,6 +88,7 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.HashSet<World> disabledWorlds = new System.Collections.Generic.HashSet<World>();
         private readonly System.Collections.Generic.List<string> worldsSelection = new System.Collections.Generic.List<string>();
         private VisualElement hierarchyRoot;
+        private GradientAnimated logoLine;
 
         private void Update() {
 
@@ -299,6 +300,7 @@ namespace ME.BECS.Editor {
                                 this.events[i].RemoveFromHierarchy();
                             }
                         }
+                        this.logoLine.ThinkOnce();
 
                         System.Array.Resize(ref this.events, (int)capacity);
                     }
@@ -449,7 +451,7 @@ namespace ME.BECS.Editor {
             root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
 
-            EditorUIUtils.AddLogoLine(root);
+            this.logoLine = EditorUIUtils.AddLogoLine(root);
             
             var toolbarContainer = new VisualElement();
             root.Add(toolbarContainer);

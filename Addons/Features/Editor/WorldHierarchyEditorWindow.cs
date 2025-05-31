@@ -12,6 +12,7 @@ namespace ME.BECS.Editor {
         private StyleSheet styleSheet;
         private StyleSheet styleSheetTooltip;
         private WorldHierarchyEditorWindow src;
+        private GradientAnimated logoLine;
 
         public static void ShowWindow(WorldHierarchyEditorWindow src, Rect rect, Vector2 size) {
             var win = WorldHierarchyFilterEditorWindow.CreateInstance<WorldHierarchyFilterEditorWindow>();
@@ -37,7 +38,7 @@ namespace ME.BECS.Editor {
             root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
             
-            EditorUIUtils.AddLogoLine(root);
+            this.logoLine = EditorUIUtils.AddLogoLine(root);
             
             root.AddToClassList("filter-root");
             {
@@ -131,15 +132,23 @@ namespace ME.BECS.Editor {
             
             this.search = EditorPrefs.GetString("ME.BECS.WorldHierarchyEditorWindow.search", string.Empty);
 
-            var groups = EditorUtils.GetComponentGroups(false);
-            var count = EditorPrefs.GetInt("ME.BECS.WorldHierarchyEditorWindow.ignoreGroups.Count", 0);
-            for (int i = 0; i < count; ++i) {
-                var typeStr = EditorPrefs.GetString($"ME.BECS.WorldHierarchyEditorWindow.ignoreGroups[{i}]", string.Empty);
-                var type = System.Type.GetType(typeStr);
-                if (type != null) {
-                    var group = groups.FirstOrDefault(x => x.type == type);
-                    if (group.type != null) this.ignoredGroups.Add(group);
+            EditorUtility.DisplayProgressBar("Hierarchy", "Initialization", 0f);
+            try {
+                var groups = EditorUtils.GetComponentGroups(false);
+                var count = EditorPrefs.GetInt("ME.BECS.WorldHierarchyEditorWindow.ignoreGroups.Count", 0);
+                for (int i = 0; i < count; ++i) {
+                    EditorUtility.DisplayProgressBar("Hierarchy", "Initialization", i / (float)count);
+                    var typeStr = EditorPrefs.GetString($"ME.BECS.WorldHierarchyEditorWindow.ignoreGroups[{i}]", string.Empty);
+                    var type = System.Type.GetType(typeStr);
+                    if (type != null) {
+                        var group = groups.FirstOrDefault(x => x.type == type);
+                        if (group.type != null) this.ignoredGroups.Add(group);
+                    }
                 }
+            } catch (System.Exception ex) {
+                Debug.LogException(ex);
+            } finally {
+                EditorUtility.ClearProgressBar();
             }
 
         }
@@ -320,7 +329,7 @@ namespace ME.BECS.Editor {
             this.rootVisualElement.styleSheets.Add(this.styleSheet);
             this.rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
             
-            EditorUIUtils.AddLogoLine(this.rootVisualElement);
+            this.logoLine = EditorUIUtils.AddLogoLine(this.rootVisualElement);
 
             var root = this.rootVisualElement;
             {
@@ -829,6 +838,7 @@ namespace ME.BECS.Editor {
         
         private System.Collections.Generic.List<Ent> cache = new System.Collections.Generic.List<Ent>();
         private int tagsCount;
+        private GradientAnimated logoLine;
 
         private void DrawEntities(VisualElement root) {
             
@@ -913,6 +923,7 @@ namespace ME.BECS.Editor {
                     Element element;
                     if (k >= this.elements.Count) {
                         this.elements.Add(this.MakeElement(ent));
+                        this.logoLine.ThinkOnce();
                     }
 
                     {

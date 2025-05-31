@@ -9,6 +9,8 @@ namespace ME.BECS.Editor.ComponentsViewer {
 
     public class ComponentsViewerEditorWindow : EditorWindow {
 
+        private GradientAnimated logoLine;
+
         [MenuItem("ME.BECS/\u2631 Components Viewer...", priority = 10000)]
         public static void ShowWindow() {
 
@@ -143,260 +145,276 @@ namespace ME.BECS.Editor.ComponentsViewer {
             container.styleSheets.Add(styleSheet);
             container.styleSheets.Add(styleSheetTooltip);
             
-            EditorUIUtils.AddLogoLine(container);
+            this.logoLine = EditorUIUtils.AddLogoLine(container);
 
             var scrollView = new ScrollView();
             EditorUIUtils.AddWindowContent(container, scrollView);
             //container.Add(scrollView);
 
-            {
-                var componentsContainer = new Foldout();
-                componentsContainer.AddToClassList("main-container");
-                componentsContainer.text = "Components";
-                scrollView.Add(componentsContainer);
+            this.logoLine.ThinkStart();
+            EditorUtility.DisplayProgressBar("Components Viewer", "Initializing", 0f);
+            try {
+                {
+                    var componentsContainer = new Foldout();
+                    componentsContainer.AddToClassList("main-container");
+                    componentsContainer.text = "Components";
+                    scrollView.Add(componentsContainer);
 
-                var components = new VisualElement();
-                components.AddToClassList("container");
-                components.AddToClassList("fields-container");
-                componentsContainer.Add(components);
+                    var components = new VisualElement();
+                    components.AddToClassList("container");
+                    components.AddToClassList("fields-container");
+                    componentsContainer.Add(components);
 
-                var componentGroups = EditorUtils.GetComponentGroups().OrderBy(x => x.order).ThenBy(x => x.value).ToArray();
-                foreach (var group in componentGroups) {
+                    var idx = 0;
+                    var componentGroups = EditorUtils.GetComponentGroups().OrderBy(x => x.order).ThenBy(x => x.value).ToArray();
+                    foreach (var group in componentGroups) {
+                        
+                        EditorUtility.DisplayProgressBar("Components Viewer", "Groups", idx / (float)componentGroups.Length);
+                        ++idx;
+                        
+                        var groupFoldout = new Foldout();
+                        groupFoldout.text = group.value;
+                        groupFoldout.AddToClassList("container-group");
+                        groupFoldout.AddToClassList("aspect-component-container-field");
+                        components.Add(groupFoldout);
 
-                    var groupFoldout = new Foldout();
-                    groupFoldout.text = group.value;
-                    groupFoldout.AddToClassList("container-group");
-                    groupFoldout.AddToClassList("aspect-component-container-field");
-                    components.Add(groupFoldout);
-
-                    if (EditorUtils.TryGetGroupColor(group.type, out var color) == true) {
-                        color.a = 0.1f;
-                        groupFoldout.style.backgroundColor = new StyleColor(color);
-                    }
-
-                    {
-                        var header = new VisualElement();
-                        header.AddToClassList("header");
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("first-column");
-                            var headerLabel = new Label("Component Name");
-                            headerLabel.AddToClassList("main-label");
-                            column.Add(headerLabel);
-                            header.Add(column);
+                        if (EditorUtils.TryGetGroupColor(group.type, out var color) == true) {
+                            color.a = 0.1f;
+                            groupFoldout.style.backgroundColor = new StyleColor(color);
                         }
+
                         {
-                            foreach (var field in componentData) {
+                            var header = new VisualElement();
+                            header.AddToClassList("header");
+                            {
                                 var column = new VisualElement();
-                                column.AddToClassList("column");
-                                var headerLabel = new Label(field.caption);
+                                column.AddToClassList("first-column");
+                                var headerLabel = new Label("Component Name");
+                                headerLabel.AddToClassList("main-label");
                                 column.Add(headerLabel);
                                 header.Add(column);
                             }
-                        }
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var headerLabel = new Label("Size");
-                            column.Add(headerLabel);
-                            header.Add(column);
-                        }
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            column.AddToClassList("actions");
-                            var headerLabel = new Label("Actions");
-                            column.Add(headerLabel);
-                            header.Add(column);
-                        }
-                        groupFoldout.Add(header);
-                    }
-
-                    for (var index = 0; index < group.components.Count; ++index) {
-
-                        var component = group.components[index];
-                        var componentContainer = new VisualElement();
-                        componentContainer.AddToClassList("component-data");
-                        componentContainer.AddToClassList("aspect-component-container");
-                        groupFoldout.Add(componentContainer);
-
-                        var componentLabel = EditorUtils.GetComponentName(component.type);
-                        if (index == group.components.Count - 1) componentContainer.AddToClassList("last");
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("first-column");
-                            var mainLabel = new Label(componentLabel);
-                            mainLabel.AddToClassList("main-label");
-                            column.Add(mainLabel);
-                            componentContainer.Add(column);
-                            var tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.GetEditorComment());
-                            column.RegisterCallback<ClickEvent>(x => {
-                                if (x.clickCount == 2) {
-                                    ComponentMetadataEditorWindow.ShowWindow(column, component, () => {
-                                        if (tooltip == null) {
-                                            tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.GetEditorComment());
-                                        } else if (string.IsNullOrEmpty(component.GetEditorComment()) == true) {
-                                            EditorUIUtils.RemoveTooltip(tooltip.parent);
-                                        }
-
-                                        tooltip.text = component.GetEditorComment();
-                                        EditorUtils.SaveComponentGroups();
-                                    });
+                            {
+                                foreach (var field in componentData) {
+                                    var column = new VisualElement();
+                                    column.AddToClassList("column");
+                                    var headerLabel = new Label(field.caption);
+                                    column.Add(headerLabel);
+                                    header.Add(column);
                                 }
-                            });
+                            }
+                            {
+                                var column = new VisualElement();
+                                column.AddToClassList("column");
+                                var headerLabel = new Label("Size");
+                                column.Add(headerLabel);
+                                header.Add(column);
+                            }
+                            {
+                                var column = new VisualElement();
+                                column.AddToClassList("column");
+                                column.AddToClassList("actions");
+                                var headerLabel = new Label("Actions");
+                                column.Add(headerLabel);
+                                header.Add(column);
+                            }
+                            groupFoldout.Add(header);
                         }
 
-                        foreach (var field in componentData) {
+                        for (var index = 0; index < group.components.Count; ++index) {
 
-                            var isEnabled = field.componentType.Invoke(component.type);
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var text = field.tooltipOff;
-                            if (isEnabled == true) {
-                                text = field.tooltipOn;
-                            }
+                            var component = group.components[index];
+                            var componentContainer = new VisualElement();
+                            componentContainer.AddToClassList("component-data");
+                            componentContainer.AddToClassList("aspect-component-container");
+                            groupFoldout.Add(componentContainer);
 
-                            EditorUIUtils.DrawTooltip(column, text.Replace("{componentLabel}", componentLabel), new StyleLength(new Length(200f, LengthUnit.Pixel)));
-                            var toggle = new Toggle();
-                            toggle.SetEnabled(false);
-                            toggle.value = isEnabled;
-                            field.toggle = toggle;
-                            column.Add(toggle);
-                            componentContainer.Add(column);
+                            var componentLabel = EditorUtils.GetComponentName(component.type);
+                            if (index == group.components.Count - 1) componentContainer.AddToClassList("last");
+                            {
+                                var column = new VisualElement();
+                                column.AddToClassList("first-column");
+                                var mainLabel = new Label(componentLabel);
+                                mainLabel.AddToClassList("main-label");
+                                column.Add(mainLabel);
+                                componentContainer.Add(column);
+                                var tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.GetEditorComment());
+                                column.RegisterCallback<ClickEvent>(x => {
+                                    if (x.clickCount == 2) {
+                                        ComponentMetadataEditorWindow.ShowWindow(column, component, () => {
+                                            if (tooltip == null) {
+                                                tooltip = (Label)EditorUIUtils.DrawTooltip(column, component.GetEditorComment());
+                                            } else if (string.IsNullOrEmpty(component.GetEditorComment()) == true) {
+                                                EditorUIUtils.RemoveTooltip(tooltip.parent);
+                                            }
 
-                        }
-
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            var size = System.Runtime.InteropServices.Marshal.SizeOf(component.type);
-                            var sizeOf = GetSizeOf(component.type);
-                            var lbl = new Label();
-                            lbl.text = EditorUtils.BytesToString(size);
-                            if (size != sizeOf) {
-                                lbl.AddToClassList("field-size-warning");
-                            }
-
-                            var fields = component.GetFields();
-                            if (fields.Length > 0) {
-                                EditorUIUtils.DrawTooltip(column, () => {
-                                    var table = new VisualElement();
-                                    table.AddToClassList("tooltip-table");
-                                    for (var i = 0; i < fields.Length; ++i) {
-                                        var field = fields[i];
-                                        var tr = new VisualElement();
-                                        tr.AddToClassList("tooltip-table-tr");
-                                        if (i == fields.Length - 1) tr.AddToClassList("tooltip-table-tr-last");
-                                        table.Add(tr);
-                                        var fieldSize = 0;
-                                        var sizeOf = 0;
-                                        if (field.FieldType.IsEnum == true) {
-                                            fieldSize = 4;
-                                            sizeOf = 4;
-                                        } else {
-                                            fieldSize = System.Runtime.InteropServices.Marshal.SizeOf(field.FieldType);
-                                            sizeOf = GetSizeOf(field.FieldType);
-                                        }
-
-                                        var lblField = new Label(field.Name);
-                                        lblField.AddToClassList("tooltip-table-field");
-                                        if (fieldSize != sizeOf) {
-                                            lblField.AddToClassList("field-size-warning");
-                                        }
-
-                                        tr.Add(lblField);
-                                        var sizeField = new Label(EditorUtils.BytesToString(fieldSize));
-                                        sizeField.AddToClassList("tooltip-table-size");
-                                        tr.Add(sizeField);
-                                    }
-
-                                    return table;
-                                }, new StyleLength(new Length(200f, LengthUnit.Pixel)));
-                            }
-
-                            column.Add(lbl);
-                            componentContainer.Add(column);
-                        }
-
-                        {
-                            var column = new VisualElement();
-                            column.AddToClassList("column");
-                            column.AddToClassList("actions");
-                            if (component.isBuiltIn == true) {
-                                var label = new Label("Built-in");
-                                column.Add(label);
-                            } else {
-                                var open = new Button(() => {
-                                    if (component.fileIsReady == true && component.file != null) {
-                                        AssetDatabase.OpenAsset(component.file, component.lineNumber, component.columnNumber);
+                                            tooltip.text = component.GetEditorComment();
+                                            EditorUtils.SaveComponentGroups();
+                                        });
                                     }
                                 });
-                                open.text = "Open Script";
-                                open.SetEnabled(false);
-                                if (component.isBuiltIn == false && component.fileIsReady == false) {
-                                    component.onFileReady += (state) => { UpdateOnScriptLoad(); };
-                                } else {
-                                    UpdateOnScriptLoad();
-                                }
-
-                                column.Add(open);
-
-                                void UpdateOnScriptLoad() {
-                                    var hasFile = component.fileIsReady == true && component.file != null;
-                                    open.SetEnabled(hasFile);
-                                    column.tooltip = component.GetTooltip();
-
-                                    foreach (var field in componentData) {
-
-                                        var elem = field;
-                                        elem.toggle.SetEnabled(hasFile);
-                                        elem.toggle.RegisterCallback<ChangeEvent<bool>>((evt) => {
-                                            if (evt.newValue == true) {
-                                                elem.onAdd?.Invoke(component);
-                                            } else {
-                                                elem.onRemove?.Invoke(component);
-                                            }
-                                        });
-
-                                    }
-                                }
                             }
 
-                            componentContainer.Add(column);
+                            foreach (var field in componentData) {
 
+                                var isEnabled = field.componentType.Invoke(component.type);
+                                var column = new VisualElement();
+                                column.AddToClassList("column");
+                                var text = field.tooltipOff;
+                                if (isEnabled == true) {
+                                    text = field.tooltipOn;
+                                }
+
+                                EditorUIUtils.DrawTooltip(column, text.Replace("{componentLabel}", componentLabel), new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                                var toggle = new Toggle();
+                                toggle.SetEnabled(false);
+                                toggle.value = isEnabled;
+                                field.toggle = toggle;
+                                column.Add(toggle);
+                                componentContainer.Add(column);
+
+                            }
+
+                            {
+                                var column = new VisualElement();
+                                column.AddToClassList("column");
+                                var size = System.Runtime.InteropServices.Marshal.SizeOf(component.type);
+                                var sizeOf = GetSizeOf(component.type);
+                                var lbl = new Label();
+                                lbl.text = EditorUtils.BytesToString(size);
+                                if (size != sizeOf) {
+                                    lbl.AddToClassList("field-size-warning");
+                                }
+
+                                var fields = component.GetFields();
+                                if (fields.Length > 0) {
+                                    EditorUIUtils.DrawTooltip(column, () => {
+                                        var table = new VisualElement();
+                                        table.AddToClassList("tooltip-table");
+                                        for (var i = 0; i < fields.Length; ++i) {
+                                            var field = fields[i];
+                                            var tr = new VisualElement();
+                                            tr.AddToClassList("tooltip-table-tr");
+                                            if (i == fields.Length - 1) tr.AddToClassList("tooltip-table-tr-last");
+                                            table.Add(tr);
+                                            var fieldSize = 0;
+                                            var sizeOf = 0;
+                                            if (field.FieldType.IsEnum == true) {
+                                                fieldSize = 4;
+                                                sizeOf = 4;
+                                            } else {
+                                                fieldSize = System.Runtime.InteropServices.Marshal.SizeOf(field.FieldType);
+                                                sizeOf = GetSizeOf(field.FieldType);
+                                            }
+
+                                            var lblField = new Label(field.Name);
+                                            lblField.AddToClassList("tooltip-table-field");
+                                            if (fieldSize != sizeOf) {
+                                                lblField.AddToClassList("field-size-warning");
+                                            }
+
+                                            tr.Add(lblField);
+                                            var sizeField = new Label(EditorUtils.BytesToString(fieldSize));
+                                            sizeField.AddToClassList("tooltip-table-size");
+                                            tr.Add(sizeField);
+                                        }
+
+                                        return table;
+                                    }, new StyleLength(new Length(200f, LengthUnit.Pixel)));
+                                }
+
+                                column.Add(lbl);
+                                componentContainer.Add(column);
+                            }
+
+                            {
+                                var column = new VisualElement();
+                                column.AddToClassList("column");
+                                column.AddToClassList("actions");
+                                if (component.isBuiltIn == true) {
+                                    var label = new Label("Built-in");
+                                    column.Add(label);
+                                } else {
+                                    var open = new Button(() => {
+                                        if (component.fileIsReady == true && component.file != null) {
+                                            AssetDatabase.OpenAsset(component.file, component.lineNumber, component.columnNumber);
+                                        }
+                                    });
+                                    open.text = "Open Script";
+                                    open.SetEnabled(false);
+                                    if (component.isBuiltIn == false && component.fileIsReady == false) {
+                                        component.onFileReady += (state) => { UpdateOnScriptLoad(); };
+                                    } else {
+                                        UpdateOnScriptLoad();
+                                    }
+
+                                    column.Add(open);
+
+                                    void UpdateOnScriptLoad() {
+                                        var hasFile = component.fileIsReady == true && component.file != null;
+                                        open.SetEnabled(hasFile);
+                                        column.tooltip = component.GetTooltip();
+
+                                        foreach (var field in componentData) {
+
+                                            var elem = field;
+                                            elem.toggle.SetEnabled(hasFile);
+                                            elem.toggle.RegisterCallback<ChangeEvent<bool>>((evt) => {
+                                                if (evt.newValue == true) {
+                                                    elem.onAdd?.Invoke(component);
+                                                } else {
+                                                    elem.onRemove?.Invoke(component);
+                                                }
+                                            });
+
+                                        }
+                                    }
+                                }
+
+                                componentContainer.Add(column);
+
+                            }
                         }
+
                     }
+                }
+
+                {
+                    var componentsContainer = new Foldout();
+                    componentsContainer.AddToClassList("main-container");
+                    componentsContainer.text = "Aspects";
+                    scrollView.Add(componentsContainer);
+
+                    var components = new VisualElement();
+                    components.AddToClassList("container");
+                    components.AddToClassList("fields-container");
+                    componentsContainer.Add(components);
+
+                    EditorUtility.DisplayProgressBar("Components Viewer", "Collecting aspects", 1f);
+
+                    var aspects = EditorUtils.GetAspects();
+                    EditorUIUtils.DrawAspects(components, aspects, (visualElement, tooltip, item) => {
+                        ComponentMetadataEditorWindow.ShowWindow(visualElement, item.info, () => {
+                            if (tooltip == null) {
+                                tooltip = (Label)EditorUIUtils.DrawTooltip(visualElement, item.info.GetEditorComment());
+                            } else if (string.IsNullOrEmpty(item.info.GetEditorComment()) == true) {
+                                EditorUIUtils.RemoveTooltip(tooltip.parent);
+                            }
+
+                            tooltip.text = item.info.GetEditorComment();
+                            EditorUtils.SaveComponentGroups();
+                        });
+                    });
 
                 }
+            } catch (System.Exception ex) {
+                Debug.LogException(ex);
+            } finally {
+                EditorUtility.ClearProgressBar();
             }
 
-            {
-                var componentsContainer = new Foldout();
-                componentsContainer.AddToClassList("main-container");
-                componentsContainer.text = "Aspects";
-                scrollView.Add(componentsContainer);
-
-                var components = new VisualElement();
-                components.AddToClassList("container");
-                components.AddToClassList("fields-container");
-                componentsContainer.Add(components);
-
-                var aspects = EditorUtils.GetAspects();
-                EditorUIUtils.DrawAspects(components, aspects, (visualElement, tooltip, item) => {
-                    ComponentMetadataEditorWindow.ShowWindow(visualElement, item.info, () => {
-                        if (tooltip == null) {
-                            tooltip = (Label)EditorUIUtils.DrawTooltip(visualElement, item.info.GetEditorComment());
-                        } else if (string.IsNullOrEmpty(item.info.GetEditorComment()) == true) {
-                            EditorUIUtils.RemoveTooltip(tooltip.parent);
-                        }
-
-                        tooltip.text = item.info.GetEditorComment();
-                        EditorUtils.SaveComponentGroups();
-                    });
-                });
-
-            }
-
+            this.logoLine.ThinkEnd();
+            
         }
 
         private static readonly System.Reflection.MethodInfo getSizeOfMethodInfo = typeof(ComponentsViewerEditorWindow).GetMethod(nameof(GetSizeOfMethod));
