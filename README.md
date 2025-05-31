@@ -1,14 +1,9 @@
-<img src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
+<table align="center"><tr><td><img align="center" src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="294" /></td></tr></table>
 
-### ME.BECS
-##### Bursted Entity Component System
+<table align="center"><tr><td width="320"><b><samp>Bursted Entity Component System</samp></b></td></tr></table>
+
+### ME.BECS: Bursted Entity Component System
 ###### Recommened version Unity 6
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
 
 > [!IMPORTANT]
 > Currently ME.BECS is in beta version, if you need stable ECS with rollbacks use [ME.ECS](https://github.com/chromealex/ecs)
