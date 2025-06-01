@@ -1,16 +1,12 @@
-<img src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="200px" align="left" />
+<table align="center"><tr><td><img align="center" src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="294" /></td></tr></table>
 
-### ME.BECS
-##### Bursted Entity Component System
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
+<table align="center"><tr><td width="320"><b><samp>Bursted Entity Component System</samp></b></td></tr></table>
+
+### ME.BECS: Bursted Entity Component System
+###### Recommened version Unity 6
 
 > [!IMPORTANT]
-> Currently ME.BECS is in alpha version, if you need stable ECS with rollbacks use [ME.ECS](https://github.com/chromealex/ecs)
+> Currently ME.BECS is in beta version, if you need stable ECS with rollbacks use [ME.ECS](https://github.com/chromealex/ecs)
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
@@ -33,7 +29,102 @@
 - Players/Teams API
 - Effects API
 
-Tested in Unity 2022.3.39f1
+
+## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Editor Features
+
+<img align="left" src="https://github.com/chromealex/chromealex.github.io/blob/main/Hierarchy.png?raw=true" width="400" />
+
+### Hierarchy
+ECS Hierarchy allows you to see the current entities in each world. With the help of the hierarchy you can see how entities are nested inside each other
+and filter them using the search bar.
+<div></div>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<img align="right" src="https://github.com/chromealex/chromealex.github.io/blob/main/Replays.png?raw=true" width="400" />
+
+### Replays
+Replays window allows you to see local and remote input actions, remove them if it is nessesary, and allows you to choose ticks in a past or in the future at runtime.
+<div></div>
+
+<img align="right" src="https://github.com/chromealex/chromealex.github.io/blob/main/ComponentsViewer.png?raw=true" width="300" />
+
+### Components Viewer
+Components Viewer allows you to see all components and aspects in the project. This window shows type of components, allows you to leave editor comments for them and shows
+per field info.
+<div></div>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<img align="left" src="https://github.com/chromealex/chromealex.github.io/blob/main/Graph.png?raw=true" width="600" />
+
+### Graph Editor
+Graph Editor allows you to manage systems, their connections and data.
+<br>
+This is a main tool used by Code Generation to make all connections and dependencies run as fast as possible at runtime.
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<img align="left" src="https://github.com/chromealex/chromealex.github.io/blob/main/WorldsViewer.png?raw=true" width="600" />
+
+### Worlds Editor
+Worlds Viewer can give you an important information about memory usage, entities journal and archetypes.
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<table align="center"><tr><td><b><samp>READY TO JOIN?</samp></b></td></tr></table>
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Project Initialization
 - Create csc.rsp in Assets directory with this content:
