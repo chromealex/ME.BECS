@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection;
+using ME.BECS.Mono.Reflection;
 using Unity.Collections;
 
 namespace ME.BECS.Editor.Systems {
@@ -54,6 +55,7 @@ namespace ME.BECS.Editor.Systems {
                         var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
                         if (graph.isInnerGraph == true) continue;
                         var id = GetId(graph);
+                        var systemTypeToVar = new scg::Dictionary<System.Type, string>();
                         var baseName = $"Graph{EditorUtils.GetCodeName(graph.name)}";
                         var graphInitialize = new FileContent() {
                             filename = $"{baseName}.Initialize",
@@ -96,7 +98,8 @@ namespace ME.BECS.Editor.Systems {
                                 graphInitializeContent.Add($"// {graph.name}");
                                 graphInitializeContent.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
                                 graphInitializeContent.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
-                                InitializeGraph(this, graphInitializeContent, graph, id, 0);
+                                InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
+                                InitializeInjections(graphInitializeContent, systemTypeToVar);
                             }
                             graphInitializeContent.Add("}");
                         }
@@ -843,7 +846,7 @@ namespace ME.BECS.Editor.Systems {
             return index;
         }
 
-        public static int InitializeGraph(CustomCodeGenerator generator, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
+        public static int InitializeGraph(CustomCodeGenerator generator, scg::Dictionary<System.Type, string> systemTypeToVar, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
             for (int idx = 0; idx < graph.nodes.Count; ++idx) {
                 var node = graph.nodes[idx];
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
@@ -863,8 +866,10 @@ namespace ME.BECS.Editor.Systems {
                                     content.Add("{");
                                     content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
                                     content.Add($"*({systemTypeStr}*)item = {GetDefinition(graph, idx, System.Activator.CreateInstance(type), type)};");
+                                    var v = $"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}]";
+                                    systemTypeToVar.TryAdd(type, v);
                                     content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
-                                    content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
+                                    content.Add($"{v} = (System.IntPtr)item;");
                                     content.Add("}");
                                     ++index;
                                 }
@@ -874,14 +879,16 @@ namespace ME.BECS.Editor.Systems {
                             content.Add("{");
                             content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
                             content.Add($"*({systemTypeStr}*)item = {GetDefinition(graph, idx, systemNode.system)};");
+                            var v = $"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}]";
+                            systemTypeToVar.TryAdd(systemNode.system.GetType(), v);
                             content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
-                            content.Add($"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}] = (System.IntPtr)item;");
+                            content.Add($"{v} = (System.IntPtr)item;");
                             content.Add("}");
                             ++index;
                         }
                     }
                 } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                    index = InitializeGraph(generator, content, graphNode.graphValue, rootGraphId, index);
+                    index = InitializeGraph(generator, systemTypeToVar, content, graphNode.graphValue, rootGraphId, index);
                 }
             }
 
@@ -910,6 +917,105 @@ namespace ME.BECS.Editor.Systems {
             return cnt;
         }
 
+        
+        public static void InitializeInjections(scg::List<string> content, scg::Dictionary<System.Type, string> systemTypeToVar) {
+            content.Add("// Injections:");
+            foreach (var kv in systemTypeToVar) {
+                var type = kv.Key;
+                InjectDependencies(content, systemTypeToVar, type);
+            }
+        }
+
+        public static void InjectDependencies(scg::List<string> content, scg::Dictionary<System.Type, string> typeToVar, System.Type systemType) {
+            {
+                var variable = typeToVar[systemType];
+                var src = EditorUtils.GetTypeName(systemType);
+                var fields = systemType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (var field in fields) {
+                    if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
+                        var injectType = field.FieldType.GenericTypeArguments[0];
+                        if (injectType.IsVisible == false) continue;
+                        var t = EditorUtils.GetTypeName(injectType);
+                        var v = typeToVar[injectType];
+                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(systemType, field.Name);
+                        content.Add("{");
+                        content.Add($"var addr = (byte*)_addressPtr(ref *(({src}*){variable})) + {fieldOffset};");
+                        content.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
+                        content.Add("}");
+                        /*if (field.IsPublic == false) {
+                            content.Add($"typeof({src}).GetField(\"{field.Name}\").SetValue(*({src}*){variable}, new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
+                        } else {
+                            content.Add($"(({src}*){variable})->{field.Name} = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
+                        }*/
+                    }
+                }
+            }
+
+            // Find jobs
+            var types = new scg::HashSet<System.Type>();
+            var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
+            CollectJobsTypes(systemType.GetMethod(nameof(IAwake.OnAwake), flags), types);
+            CollectJobsTypes(systemType.GetMethod(nameof(IStart.OnStart), flags), types);
+            CollectJobsTypes(systemType.GetMethod(nameof(IUpdate.OnUpdate), flags), types);
+            CollectJobsTypes(systemType.GetMethod(nameof(IDestroy.OnDestroy), flags), types);
+            CollectJobsTypes(systemType.GetMethod(nameof(IDrawGizmos.OnDrawGizmos), flags), types);
+            foreach (var jobType in types) {
+                if (jobType.IsVisible == false) continue;
+                var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (var field in fields) {
+                    if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
+                        var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                        content.Add($"JobInject<{jobTypeStr}>.Init();");
+                        break;
+                    }
+                }
+            }
+
+            foreach (var jobType in types) {
+                if (jobType.IsVisible == false) continue;
+                var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                foreach (var field in fields) {
+                    if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
+                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
+                        var injectType = field.FieldType.GenericTypeArguments[0];
+                        var v = typeToVar[injectType];
+                        content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
+                    }
+                }
+            }
+        }
+
+        private static void CollectJobsTypes(MethodInfo root, scg::HashSet<System.Type> types) {
+            if (root == null) return;
+            var q = new scg::Queue<System.Reflection.MethodInfo>();
+            q.Enqueue(root);
+            var visited = new scg::HashSet<System.Reflection.MethodInfo>();
+            while (q.Count > 0) {
+                var body = q.Dequeue();
+                var instructions = body.GetInstructions();
+                foreach (var inst in instructions) {
+                    var continueTraverse = true;
+                    if (inst.Operand is MethodInfo methodInfo) {
+                        if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
+                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                                var jobType = methodInfo.GetGenericArguments()[0];
+                                types.Add(jobType);
+                            }
+                        }
+                    }
+
+                    if (continueTraverse == true && inst.Operand is System.Reflection.MethodInfo member) {
+                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                            if (member.GetMethodBody() != null) {
+                                q.Enqueue(member);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         private static string GetDefinition(SystemsGraph graph, int nodeIndex, object system, System.Type type = null) {
 
             if (type == null) type = system.GetType();

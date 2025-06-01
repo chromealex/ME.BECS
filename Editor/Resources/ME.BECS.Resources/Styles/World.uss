@@ -113,7 +113,7 @@ GridBackground {
     border-radius: 5px;
     border-width: 1px;
     border-color: rgba(50, 50, 50, 0.8);
-    background-color: rgba(80, 80, 80, 0.2);
+    background-color: var(--main-color);
     border-bottom-left-radius: 0px;
     border-bottom-right-radius: 0px;
     border-bottom-width: 0px;
@@ -127,7 +127,7 @@ GridBackground {
     border-top-left-radius: 0px;
     border-top-right-radius: 0px;
     border-top-width: 0px;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--main-background-color);
 }
 
 .worlds-selection-container .selection-container .world-button {
@@ -147,7 +147,6 @@ GridBackground {
     -unity-font-style: bold;
     align-self: stretch;
     -unity-text-align: middle-center;
-    background-color: rgba(30, 30, 30, 0.4);
     padding: 10px;
     font-size: 16px;
 }

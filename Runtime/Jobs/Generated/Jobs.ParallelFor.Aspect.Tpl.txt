@@ -57,6 +57,8 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {
             
+            JobInject<T>.Patch(ref jobData);
+            
             buffer->sync = false;
             void* data = null;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS

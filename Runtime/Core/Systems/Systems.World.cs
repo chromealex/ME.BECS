@@ -1,5 +1,6 @@
 namespace ME.BECS {
     
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Jobs;
     using static Cuts;
     using Unity.Collections;
@@ -19,6 +20,26 @@ namespace ME.BECS {
         }
         
     }
+    
+    public interface IInject {}
+
+    /// <summary>
+    /// Provides system injection into Systems and Jobs 
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public readonly struct InjectSystem<T> : IIsCreated, IInject where T : unmanaged {
+
+        private readonly SystemLink<T> link;
+
+        internal InjectSystem(SystemLink<T> link) {
+            this.link = link;
+        }
+        
+        public bool IsCreated => this.link.IsCreated;
+
+        public ref T Value => ref this.link.Value;
+
+    }
 
     public readonly unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
 
@@ -32,6 +53,7 @@ namespace ME.BECS {
         }
 
         public ref T Value {
+            [INLINE(256)]
             get {
                 E.IS_CREATED(this);
                 return ref *this.ptr;

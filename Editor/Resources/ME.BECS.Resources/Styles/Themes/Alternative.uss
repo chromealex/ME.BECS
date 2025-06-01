@@ -24,7 +24,8 @@
     border-color: var(--dark-color);
 }
 
-.h-root .h-element > Foldout > Toggle .unity-base-field__input .unity-toggle__text {
+.h-root .h-element > Foldout > Toggle .unity-base-field__input .unity-toggle__text,
+.h-root .h-element > Foldout > Toggle Label {
     font-size: 12px;
     padding-top: 4px;
     padding-bottom: 4px;

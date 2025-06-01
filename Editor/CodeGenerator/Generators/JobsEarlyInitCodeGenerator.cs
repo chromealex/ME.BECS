@@ -46,7 +46,7 @@ namespace ME.BECS.Editor.Jobs {
                 var content = new System.Collections.Generic.List<string>();
                 if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
                 } else if (jobType.IsGenericType == true) {
-                    throw new System.Exception($"Generic jobs are not supported: {jobType.FullName}.");
+                    throw new System.Exception($"[ CodeGenerator ] Generic jobs are not supported (job type {jobType.FullName}). Use generic systems instead.");
                 }
 
                 var jobTypeFullName = EditorUtils.GetTypeName(jobType);
@@ -212,8 +212,8 @@ namespace ME.BECS.Editor.Jobs {
                 var jobTypeFullName = EditorUtils.GetTypeName(jobType);
                 var aspects = new System.Collections.Generic.List<string>();
                 var components = new System.Collections.Generic.List<string>();
-                var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
-                var componentsType = new System.Collections.Generic.HashSet<System.Type>();
+                //var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
+                //var componentsType = new System.Collections.Generic.HashSet<System.Type>();
                 var interfaces = jobType.GetInterfaces();
                 System.Type workInterface = null;
                 foreach (var i in interfaces) {
@@ -222,13 +222,13 @@ namespace ME.BECS.Editor.Jobs {
                             if (typeof(T0).IsAssignableFrom(type) == true) {
                                 if (this.IsValidTypeForAssembly(type) == false) continue;
                                 components.Add(EditorUtils.GetDataTypeName(type));
-                                componentsType.Add(type);
+                                //componentsType.Add(type);
                             }
 
                             if (typeof(T1).IsAssignableFrom(type) == true) {
                                 if (this.IsValidTypeForAssembly(type) == false) continue;
                                 aspects.Add(EditorUtils.GetDataTypeName(type));
-                                aspectsType.Add(type);
+                                //aspectsType.Add(type);
                             }
                         }
 

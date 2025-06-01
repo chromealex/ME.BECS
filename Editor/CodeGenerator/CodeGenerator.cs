@@ -213,7 +213,7 @@ namespace ME.BECS.Editor {
     }
 
     public static class CodeGenerator {
-
+        
         public struct MethodDefinition {
 
             public string methodName;

@@ -16,12 +16,14 @@ namespace ME.BECS {
     [UnityEngine.Tooltip("Update entities with lifetime component (ent.Destroy(float lifetime) API).")]
     [BURST(CompileSynchronously = true)]
     public struct DestroyWithLifetimeSystem : IUpdate {
+
+        public InjectSystem<DestroyWithTicksSystem> test;
         
         [BURST(CompileSynchronously = true)]
         public struct LifetimeJob : IJobForComponents<DestroyWithLifetime> {
 
             public tfloat deltaTime;
-            
+
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithLifetime component) {
                 component.lifetime -= this.deltaTime;
                 if (component.lifetime <= 0f) {

@@ -36,6 +36,31 @@ namespace ME.BECS {
     }
     #endif
 
+    public unsafe struct JobInject<TJob> where TJob : struct {
+        
+        public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> data = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<JobInject<TJob>>();
+
+        public static void Init() {
+            if (data.Data.IsCreated == false) data.Data = new UnsafeHashMap<int, System.IntPtr>(10, Allocator.Domain);
+            data.Data.Clear();
+        }
+        
+        [INLINE(256)]
+        public static void Register(int offset, System.IntPtr systemPtr) {
+            data.Data.Add(offset, systemPtr);
+        }
+
+        [INLINE(256)]
+        public static void Patch(ref TJob instance) {
+            if (data.Data.IsCreated == false || data.Data.Count == 0) return;
+            foreach (var kv in data.Data) {
+                var addr = (byte*)_addressPtr(ref instance) + kv.Key;
+                *((System.IntPtr*)addr) = kv.Value;
+            }
+        }
+        
+    }
+    
     public struct JobInfo : IIsCreated {
 
         public uint count;
