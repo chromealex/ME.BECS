@@ -24,7 +24,7 @@ namespace ME.BECS.Network {
             WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.ViewsLoad);
             WorldStaticCallbacks.RegisterCallback<ViewsModuleData>(this.OnViewsUpdate, 1);
 
-            this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.Initialized, UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+            this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.Initialized, UpdateType.FIXED_UPDATE, 0u, this.previousFrameDependsOn);
             base.DoWorldAwake();
             
         }
@@ -33,7 +33,7 @@ namespace ME.BECS.Network {
 
             if (this.world.isCreated == true) {
 
-                this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.Initialized, UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
+                this.previousFrameDependsOn = State.SetWorldState(in this.world, WorldState.Initialized, UpdateType.FIXED_UPDATE, 0u, this.previousFrameDependsOn);
                 base.Start();
 
             }

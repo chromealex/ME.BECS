@@ -80,7 +80,7 @@ namespace ME.BECS.Jobs {
             }
             #endif
             
-            JobInject<T>.Patch(ref jobData);
+            JobInject<T>.Patch(ref jobData, buffer->worldId);
             
             E.IS_NULL(reflectionData, "Job is not created. Make sure the job is public.");
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS

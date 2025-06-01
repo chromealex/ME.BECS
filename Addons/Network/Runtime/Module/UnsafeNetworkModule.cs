@@ -993,14 +993,14 @@ namespace ME.BECS.Network {
                 for (ulong tick = currentTick; tick < targetTick; ++tick) {
                     
                     // Begin tick
-                    dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, dependsOn);
+                    dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, deltaTimeMs, dependsOn);
                     {
                         // Apply events for this tick
                         dependsOn = this.data.ptr->Tick(tick, deltaTimeMs, in world, dependsOn);
                     }
                     
                     dependsOn = world.TickWithoutWorldState(deltaTimeMs, UpdateType.FIXED_UPDATE, dependsOn);
-                    dependsOn = State.SetWorldState(in world, WorldState.EndTick, UpdateType.FIXED_UPDATE, dependsOn);
+                    dependsOn = State.SetWorldState(in world, WorldState.EndTick, UpdateType.FIXED_UPDATE, deltaTimeMs, dependsOn);
                     dependsOn.Complete();
                     // End tick
 

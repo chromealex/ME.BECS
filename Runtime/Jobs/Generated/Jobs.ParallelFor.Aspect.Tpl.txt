@@ -57,7 +57,7 @@ namespace ME.BECS.Jobs {
             {count( )[where T#i# : unmanaged, IAspect]}
             where T : struct, IJobParallelForAspects<{count(,)[T#i#]}> {
             
-            JobInject<T>.Patch(ref jobData);
+            JobInject<T>.Patch(ref jobData, buffer->worldId);
             
             buffer->sync = false;
             void* data = null;

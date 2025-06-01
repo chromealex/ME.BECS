@@ -112,6 +112,7 @@ namespace ME.BECS {
         private struct SetWorldStateJob : IJobSingle {
 
             public World world;
+            public uint deltaTimeMs;
             public WorldState worldState;
             public ushort updateType;
             
@@ -120,6 +121,7 @@ namespace ME.BECS {
                 this.world.state.ptr->WorldState = this.worldState;
                 this.world.state.ptr->tickCheck = 1;
                 this.world.state.ptr->updateType = this.updateType;
+                Worlds.SetWorldDeltaTime(this.world.id, this.deltaTimeMs);
             }
 
         }
@@ -153,11 +155,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static Unity.Jobs.JobHandle SetWorldState(in World world, WorldState worldState, ushort updateType, Unity.Jobs.JobHandle dependsOn) {
+        public static Unity.Jobs.JobHandle SetWorldState(in World world, WorldState worldState, ushort updateType, uint deltaTimeMs, Unity.Jobs.JobHandle dependsOn) {
             dependsOn = new SetWorldStateJob() {
                 world = world,
                 worldState = worldState,
                 updateType = updateType,
+                deltaTimeMs = deltaTimeMs,
             }.ScheduleSingle(dependsOn);
             return dependsOn;
         }

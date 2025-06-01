@@ -65,7 +65,7 @@ namespace ME.BECS.Jobs {
                         
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
-            JobInject<T>.Patch(ref jobData);
+            JobInject<T>.Patch(ref jobData, buffer->worldId);
             
             buffer->sync = false;
             void* data = null;

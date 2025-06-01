@@ -1,3 +1,9 @@
+#if FIXED_POINT
+using tfloat = sfloat;
+#else
+using tfloat = System.Single;
+#endif
+
 namespace ME.BECS {
     
     using static Cuts;
@@ -36,6 +42,18 @@ namespace ME.BECS {
     }
     #endif
 
+    public struct JobInjectDeltaTimeOffset<TJob> {
+
+        public static readonly Unity.Burst.SharedStatic<int> data = Unity.Burst.SharedStatic<int>.GetOrCreate<JobInjectDeltaTimeOffset<TJob>>();
+
+    }
+
+    public struct JobInjectDeltaTime<TJob> {
+
+        public static readonly Unity.Burst.SharedStatic<byte> data = Unity.Burst.SharedStatic<byte>.GetOrCreate<JobInjectDeltaTime<TJob>>();
+
+    }
+
     public unsafe struct JobInject<TJob> where TJob : struct {
         
         public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> data = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<JobInject<TJob>>();
@@ -51,7 +69,23 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Patch(ref TJob instance) {
+        public static void RegisterDeltaTime(int offset, byte fieldType) {
+            JobInjectDeltaTimeOffset<TJob>.data.Data = offset;
+            JobInjectDeltaTime<TJob>.data.Data = fieldType;
+        }
+
+        [INLINE(256)]
+        public static void Patch(ref TJob instance, ushort worldId) {
+            if (JobInjectDeltaTime<TJob>.data.Data > 0) {
+                var addr = (byte*)_addressPtr(ref instance) + JobInjectDeltaTimeOffset<TJob>.data.Data;
+                var dtMs = Worlds.GetWorldDeltaTime(worldId);
+                var systemContext = SystemContext.Create(dtMs, default, default);
+                if (JobInjectDeltaTime<TJob>.data.Data == 1) {
+                    *((tfloat*)addr) = systemContext.deltaTime;
+                } else if (JobInjectDeltaTime<TJob>.data.Data == 2) {
+                    *((uint*)addr) = systemContext.deltaTimeMs;
+                }
+            }
             if (data.Data.IsCreated == false || data.Data.Count == 0) return;
             foreach (var kv in data.Data) {
                 var addr = (byte*)_addressPtr(ref instance) + kv.Key;

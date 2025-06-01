@@ -976,11 +976,23 @@ namespace ME.BECS.Editor.Systems {
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var jobTypeStr = EditorUtils.GetTypeName(jobType);
                 foreach (var field in fields) {
+                    var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
-                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
                         var injectType = field.FieldType.GenericTypeArguments[0];
                         var v = typeToVar[injectType];
                         content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
+                    }
+                    var attr = field.GetCustomAttribute<InjectDeltaTimeAttribute>();
+                    if (attr != null) {
+                        byte fieldType = 0;
+                        if (field.FieldType == typeof(sfloat)) {
+                            fieldType = 1;
+                        } else if (field.FieldType == typeof(float)) {
+                            fieldType = 1;
+                        } else if (field.FieldType == typeof(uint)) {
+                            fieldType = 2;
+                        }
+                        content.Add($"JobInject<{jobTypeStr}>.RegisterDeltaTime({fieldOffset}, {fieldType});");
                     }
                 }
             }

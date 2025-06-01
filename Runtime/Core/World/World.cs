@@ -90,9 +90,9 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             
-            dependsOn = State.SetWorldState(in this, WorldState.BeginTick, updateType, dependsOn);
+            dependsOn = State.SetWorldState(in this, WorldState.BeginTick, updateType, deltaTimeMs, dependsOn);
             dependsOn = this.TickWithoutWorldState(deltaTimeMs, updateType, dependsOn);
-            dependsOn = State.SetWorldState(in this, WorldState.EndTick, updateType, dependsOn);
+            dependsOn = State.SetWorldState(in this, WorldState.EndTick, updateType, deltaTimeMs, dependsOn);
 
             return dependsOn;
 

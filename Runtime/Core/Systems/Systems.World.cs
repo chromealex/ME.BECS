@@ -23,6 +23,10 @@ namespace ME.BECS {
     
     public interface IInject {}
 
+    public class InjectDeltaTimeAttribute : System.Attribute {
+        
+    }
+    
     /// <summary>
     /// Provides system injection into Systems and Jobs 
     /// </summary>

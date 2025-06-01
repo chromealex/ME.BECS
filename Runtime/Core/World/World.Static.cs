@@ -201,6 +201,7 @@ namespace ME.BECS {
         public LockSpinner endTickHandlesLock;
         public Unity.Collections.LowLevel.Unsafe.UnsafeList<Unity.Jobs.JobHandle> endTickHandles;
         public Unity.Collections.FixedString64Bytes srcName;
+        public uint deltaTime;
 
         public void Dispose() {
             this.endTickHandles.Dispose();
@@ -419,6 +420,24 @@ namespace ME.BECS {
             
             ref var worldIds = ref WorldsIdStorage.worldIds;
             worldIds.Add(worldId);
+
+        }
+
+        [INLINE(256)]
+        public static void SetWorldDeltaTime(ushort worldId, uint deltaTimeMs) {
+            
+            ref var worldsStorage = ref WorldsStorage.worlds;
+            if (worldId >= worldsStorage.Length) return;
+            worldsStorage.Get(worldId).deltaTime = deltaTimeMs;
+
+        }
+
+        [INLINE(256)]
+        public static uint GetWorldDeltaTime(ushort worldId) {
+            
+            ref var worldsStorage = ref WorldsStorage.worlds;
+            if (worldId >= worldsStorage.Length) return default;
+            return worldsStorage.Get(worldId).deltaTime;
 
         }
 

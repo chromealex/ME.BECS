@@ -17,8 +17,6 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public struct DestroyWithLifetimeSystem : IUpdate {
 
-        public InjectSystem<DestroyWithTicksSystem> test;
-        
         [BURST(CompileSynchronously = true)]
         public struct LifetimeJob : IJobForComponents<DestroyWithLifetime> {
 

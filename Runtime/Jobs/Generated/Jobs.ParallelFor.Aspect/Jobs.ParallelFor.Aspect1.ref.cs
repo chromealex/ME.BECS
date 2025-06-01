@@ -57,7 +57,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect
             where T : struct, IJobParallelForAspects<T0> {
             
-            JobInject<T>.Patch(ref jobData);
+            JobInject<T>.Patch(ref jobData, buffer->worldId);
             
             buffer->sync = false;
             void* data = null;
