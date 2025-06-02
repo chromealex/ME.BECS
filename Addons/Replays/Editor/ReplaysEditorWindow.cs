@@ -130,7 +130,8 @@ namespace ME.BECS.Editor {
         }
         
         private void SelectWorld(World world) {
-            
+
+            this.maxTick = 0UL;
             this.selectedWorld = world;
             this.selectedNetworkModule = null;
             this.selectedInitializer = null;
