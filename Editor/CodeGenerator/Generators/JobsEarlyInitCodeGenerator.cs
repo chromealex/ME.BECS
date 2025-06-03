@@ -119,9 +119,13 @@ namespace ME.BECS.Editor.Jobs {
             Components,
             Combined,
         }
-        
-        public override FileContent[] AddFileContent() {
 
+        private System.Collections.Generic.List<System.Type> references;
+        
+        public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
+
+            this.references = references;
+            
             var files = new FileContent[4];
             var cacheBuilderFile = new FileContent() {
                 filename = "Debug.Cache",
@@ -187,6 +191,10 @@ namespace ME.BECS.Editor.Jobs {
             var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
+                if (jobType.IsValueType == false) continue;
+                if (jobType.IsVisible == false) continue;
+                if (this.IsValidTypeForAssembly(jobType) == false) continue;
+                this.references.Add(jobType);
                 if (this.cache.TryGetValue<Item>(jobType, out var item) == true) {
                     cacheBuilder.AppendLine(item.cacheBuilder);
                     funcBuilder.AppendLine(item.funcBuilder);
@@ -195,9 +203,6 @@ namespace ME.BECS.Editor.Jobs {
                     ++uniqueId;
                     continue;
                 }
-                if (jobType.IsValueType == false) continue;
-                if (jobType.IsVisible == false) continue;
-                if (this.IsValidTypeForAssembly(jobType) == false) continue;
 
                 if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
                 } else if (jobType.IsGenericType == true) {

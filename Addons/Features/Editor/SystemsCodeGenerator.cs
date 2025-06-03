@@ -29,7 +29,7 @@ namespace ME.BECS.Editor.Systems {
             content.Add("}");
         }
 
-        public override FileContent[] AddFileContent() {
+        public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
 
             var content = new scg::List<FileContent>();
             this.AddContent(content);

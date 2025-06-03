@@ -99,12 +99,12 @@ namespace ME.BECS {
             }
 
             var rData = data;
-            return SetShared(state, in ent, StaticTypes<T>.trackerIndex, _address(ref rData).ptr, TSize<T>.size, StaticTypes<T>.sharedTypeId, hash);
+            return SetShared(state, in ent, StaticTypes<T>.trackerIndex, _address(ref rData).ptr, TSize<T>.size, StaticTypes<T>.sharedTypeId, hash, out _);
             
         }
 
         [INLINE(256)]
-        public static bool SetShared(safe_ptr<State> state, in Ent ent, uint groupId, void* data, uint dataSize, uint sharedTypeId, uint hash) {
+        public static bool SetShared(safe_ptr<State> state, in Ent ent, uint groupId, void* data, uint dataSize, uint sharedTypeId, uint hash, out safe_ptr dataPtr) {
 
             // No custom hash provided - use data hash
             if (hash == Components.COMPONENT_SHARED_DEFAULT_HASH) {
@@ -120,7 +120,7 @@ namespace ME.BECS {
             // update data in storage
             ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
             var dataMemPtr = storage.data.ptr;
-            var dataPtr = state.ptr->allocator.GetUnsafePtr(in dataMemPtr);
+            dataPtr = state.ptr->allocator.GetUnsafePtr(in dataMemPtr);
             if (dataSize > 0u) _memcpy((safe_ptr)data, dataPtr, dataSize);
             var added = storage.entities.Add(ref state.ptr->allocator, ent.id);
             

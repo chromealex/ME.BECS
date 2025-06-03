@@ -149,7 +149,7 @@ namespace ME.BECS {
             return this;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public QueryBuilder AsJob() {
             E.IS_CREATED(this);
             E.QUERY_BUILDER_PARALLEL_FOR(this.parallelForBatch);
@@ -157,7 +157,7 @@ namespace ME.BECS {
             return this;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public QueryBuilder WithBurst() {
             E.IS_CREATED(this);
             this.withBurst = true;
@@ -371,7 +371,7 @@ namespace ME.BECS {
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public JobHandle ScheduleParallelFor<T>(T job) where T : struct, IJobParallelForCommandBuffer {
 
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
@@ -385,7 +385,7 @@ namespace ME.BECS {
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public JobHandle ScheduleParallelFor<T>() where T : struct, IJobParallelForCommandBuffer {
             
             T job = default;
@@ -398,7 +398,7 @@ namespace ME.BECS {
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public JobHandle ScheduleParallelForBatch<T>() where T : struct, IJobParallelForCommandBufferBatch {
             
             T job = default;
@@ -411,7 +411,7 @@ namespace ME.BECS {
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public JobHandle ScheduleParallelForBatch<T>(T job) where T : struct, IJobParallelForCommandBufferBatch {
 
             // Need to complete previous job and run SetEntities in sync mode
@@ -493,7 +493,7 @@ namespace ME.BECS {
         /// [ QUERY END POINT ]
         /// </summary>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public JobHandle ForEach(QueryDelegate forEach) {
 
             JobHandle handle = default;

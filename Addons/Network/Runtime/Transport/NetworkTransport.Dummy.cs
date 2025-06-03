@@ -6,6 +6,7 @@ namespace ME.BECS.Network {
 
         public TransportStatus Status { get; set; }
         public double ServerTime { get; private set; }
+        public ulong InputLagInTicks { get; private set; }
 
         public void OnAwake() {
             this.Status = TransportStatus.Unknown;

@@ -118,11 +118,10 @@ namespace ME.BECS {
                     var dataSize = StaticTypes.sizes.Get(typeId);
                     var sharedTypeId = StaticTypes.sharedTypeId.Get(typeId);
                     var hash = this.hashes[i];
-                    Batches.SetShared(in ent, groupId, data.ptr, dataSize, typeId, sharedTypeId, state, hash);
+                    Batches.SetShared(in ent, groupId, data.ptr, dataSize, typeId, sharedTypeId, state, hash, out var dataPtr);
                     var func = this.functionPointers[i];
                     if (func.IsValid() == true) {
-                        var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _, default);
-                        func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
+                        func.Call(in config, dataPtr, in ent);
                     }
                 }
 

@@ -43,7 +43,19 @@ namespace ME.BECS {
         [INLINE(256)]
         public static bool SetShared(in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, safe_ptr<State> state, uint hash) {
 
-            if (Components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash) == true) {
+            if (Components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash, out _) == true) {
+                Batches.Set_INTERNAL(typeId, in ent, state);
+                return true;
+            }
+
+            return false;
+
+        }
+
+        [INLINE(256)]
+        public static bool SetShared(in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, safe_ptr<State> state, uint hash, out safe_ptr dataPtr) {
+
+            if (Components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash, out dataPtr) == true) {
                 Batches.Set_INTERNAL(typeId, in ent, state);
                 return true;
             }

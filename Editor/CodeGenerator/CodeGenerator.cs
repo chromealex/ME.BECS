@@ -191,7 +191,7 @@ namespace ME.BECS.Editor {
             return string.Empty;
         }
 
-        public virtual FileContent[] AddFileContent() {
+        public virtual FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
             return null;
         }
 
@@ -692,7 +692,7 @@ namespace ME.BECS.Editor {
                         cache.SetMethod("AddPublicContent");
                         publicContent.Add(customCodeGenerator.AddPublicContent());
                         cache.SetMethod("AddFileContent");
-                        var files = customCodeGenerator.AddFileContent();
+                        var files = customCodeGenerator.AddFileContent(componentTypes);
                         if (files != null) filesContent.Add(files);
                         cache.SetMethod("AddMethods");
                         methods.AddRange(customCodeGenerator.AddMethods(componentTypes));

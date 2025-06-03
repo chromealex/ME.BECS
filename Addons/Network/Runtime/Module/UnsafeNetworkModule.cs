@@ -927,7 +927,7 @@ namespace ME.BECS.Network {
             var tick = moduleData.ptr->GetTargetTick() - negativeDeltaTicks;
             var localOrder = moduleData.ptr->eventsStorage.GetLocalOrder(playerId);
             var package = new NetworkPackage() {
-                tick = tick + moduleData.ptr->inputLag,
+                tick = tick + moduleData.ptr->inputLag + (networkTransport != null ? networkTransport.InputLagInTicks : 0UL),
                 playerId = playerId,
                 localOrder = localOrder,
                 methodId = methodId,

@@ -48,6 +48,7 @@ namespace ME.BECS.Network {
         Unity.Jobs.JobHandle Connect(in World world, NetworkModule module, Unity.Jobs.JobHandle dependsOn);
         TransportStatus Status { get; set; }
         EventsBehaviour EventsBehaviour { get; }
+        ulong InputLagInTicks { get; }
         double ServerTime { get; }
         void Send(byte[] bytes);
         byte[] Receive();

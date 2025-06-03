@@ -40,27 +40,7 @@ namespace ME.BECS.Tests {
             }
 
         }
-
-        [Test]
-        public void EntityGroupVersionUp() {
-
-            {
-                using var world = World.Create();
-                var ent = Ent.New(world);
-                Assert.AreEqual(1, ent.Version);
-                ent.Set(new TestComponent());
-                Assert.AreEqual(2, ent.Version);
-                Assert.AreEqual(1, ent.GetVersion(StaticTypes<TestComponent>.trackerIndex));
-                ent.Set(new Test2Component());
-                Assert.AreEqual(3, ent.Version);
-                Assert.AreEqual(1, ent.GetVersion(StaticTypes<TestComponent>.trackerIndex));
-                ++ent.Get<TestComponent>().data;
-                Assert.AreEqual(4, ent.Version);
-                Assert.AreEqual(2, ent.GetVersion(StaticTypes<TestComponent>.trackerIndex));
-            }
-
-        }
-
+        
     }
 
 }

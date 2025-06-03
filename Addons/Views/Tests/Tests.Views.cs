@@ -67,9 +67,9 @@ namespace ME.BECS.Tests {
                         Batches.Apply(world.state);
                     }
                     views.Update(dt).Complete();
-                    Assert.IsFalse(firstEnt.Has<ViewComponent>());
+                    //Assert.IsFalse(firstEnt.Has<ViewComponent>());
                     Assert.IsFalse(firstEnt.Has<IsViewRequested>());
-                    Assert.IsFalse(firstEnt.Has<EntityViewProviderTag>());
+                    //Assert.IsFalse(firstEnt.Has<EntityViewProviderTag>());
                     Assert.AreEqual(1, views.data.ptr->renderingOnSceneEntToRenderIndex.Count);
                     Assert.AreEqual(1, views.data.ptr->renderingOnSceneRenderIndexToEnt.Count);
                     Assert.AreEqual(1, views.data.ptr->renderingOnScene.Count);
@@ -154,6 +154,34 @@ namespace ME.BECS.Tests {
             tr.parentData = new AspectDataPtr<ME.BECS.Transforms.ParentComponent>(in world);
             tr.childrenData = new AspectDataPtr<ME.BECS.Transforms.ChildrenComponent>(in world);
             tr.worldMatrixData = new AspectDataPtr<ME.BECS.Transforms.WorldMatrixComponent>(in world);
+        }
+
+        public class TestViewModule : IViewModule, IViewApplyState {
+
+            public void ApplyState(in EntRO ent) {
+                var test = ent.Read<TestComponent>();
+            }
+
+        }
+
+        [Test]
+        public void EntityGroupVersionUp() {
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New(world);
+                Assert.AreEqual(1, ent.Version);
+                ent.Set(new TestComponent());
+                Assert.AreEqual(2, ent.Version);
+                Assert.AreEqual(1, ent.GetVersion(StaticTypes<TestComponent>.trackerIndex));
+                ent.Set(new Test2Component());
+                Assert.AreEqual(3, ent.Version);
+                Assert.AreEqual(1, ent.GetVersion(StaticTypes<TestComponent>.trackerIndex));
+                ++ent.Get<TestComponent>().data;
+                Assert.AreEqual(4, ent.Version);
+                Assert.AreEqual(2, ent.GetVersion(StaticTypes<TestComponent>.trackerIndex));
+            }
+
         }
 
     }

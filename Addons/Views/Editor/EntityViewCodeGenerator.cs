@@ -10,16 +10,12 @@ namespace ME.BECS.Editor.Aspects {
 
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             
-            if (this.editorAssembly == true) return;
-
             dataList.Add("EntityViewsStaticTracker.InitializeViewsTracker();");
             
         }
 
-        public override FileContent[] AddFileContent() {
+        public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
 
-            if (this.editorAssembly == true) return System.Array.Empty<FileContent>();
-            
             var fileContent = new FileContent();
             fileContent.filename = "EntityView";
             var str = new System.Text.StringBuilder();
@@ -43,6 +39,7 @@ namespace ME.BECS.Editor.Aspects {
                         if (viewType.IsAbstract == true) continue;
                         if (viewType.GenericTypeArguments.Length > 0) continue;
                         if (this.IsValidTypeForAssembly(viewType) == false) continue;
+                        references.Add(viewType);
                         str.AppendLine($"// ==============================");
                         str.AppendLine($"// {viewType.FullName}");
                         str.AppendLine("{");

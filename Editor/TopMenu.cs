@@ -62,7 +62,7 @@ namespace ME.BECS.Editor {
         
         public static readonly string DEFAULT = themes[0].style;
 
-        public override FileContent[] AddFileContent() {
+        public override FileContent[] AddFileContent(System.Collections.Generic.List<System.Type> references) {
 
             if (this.editorAssembly == false) return System.Array.Empty<FileContent>();
             
