@@ -38,6 +38,10 @@ namespace ME.BECS.Jobs {
         void Execute(in JobInfo jobInfo, in Ent ent);
     }
 
+    public interface IJobForEntity : IJobForComponents {
+        
+    }
+
     public static partial class EarlyInit {
         public static void DoComponents<T>()
             where T : struct, IJobForComponents => JobForComponentsExtensions.JobEarlyInitialize<T>();

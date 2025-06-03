@@ -714,7 +714,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        public struct ScheduleParallelJob : IJobForComponents {
+        public struct ScheduleParallelJob : IJobForEntity {
 
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Get<TestComponent>().data = 2;
@@ -920,7 +920,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job1 : IJobForComponents {
+        public struct Job1 : IJobForEntity {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test2Component());
@@ -929,7 +929,7 @@ namespace ME.BECS.Tests {
         }
 
         [Unity.Burst.BurstCompileAttribute]
-        public struct Job2 : IJobForComponents {
+        public struct Job2 : IJobForEntity {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Set(new Test3Component());

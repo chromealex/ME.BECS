@@ -108,7 +108,7 @@ namespace ME.BECS.Attack {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RemoveComebackAfterAttackComponentJob : IJobForComponents {
+        public struct RemoveComebackAfterAttackComponentJob : IJobForEntity {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
                 ent.Remove<ComebackAfterAttackComponent>();
