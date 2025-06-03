@@ -414,10 +414,12 @@ namespace ME.BECS.FixedPoint
             sfloat mn = min(min(forwardLengthSq, upLengthSq), tLengthSq);
             sfloat mx = max(max(forwardLengthSq, upLengthSq), tLengthSq);
 
-            const uint bigValue = 0x799a130c;
-            const uint smallValue = 0x0554ad2e;
+            //const uint bigValue = 0x799a130c;
+            //const uint smallValue = 0x0554ad2e;
+            var smallValue = sfloat.Epsilon;
+            var bigValue = sfloat.MaxValue;
 
-            bool accept = mn > sfloat.FromRaw(smallValue) && mx < sfloat.FromRaw(bigValue) && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
+            bool accept = mn > smallValue && mx < bigValue && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
             return float3x3(
                 select(float3(sfloat.One, sfloat.Zero, sfloat.Zero), t, accept),
                 select(float3(sfloat.Zero, sfloat.One, sfloat.Zero), cross(forward, t), accept),
@@ -962,8 +964,9 @@ namespace ME.BECS.FixedPoint
             sfloat lenU = math.length(u);
             sfloat lenV = math.length(v);
 
-            const uint smallValue = 0x0da24260;
-            sfloat epsilon = sfloat.FromRaw(smallValue);
+            var smallValue = sfloat.Epsilon;
+            //const uint smallValue = 0x0da24260;
+            sfloat epsilon = smallValue;
 
             bool c = lenU > epsilon && lenV > epsilon;
 

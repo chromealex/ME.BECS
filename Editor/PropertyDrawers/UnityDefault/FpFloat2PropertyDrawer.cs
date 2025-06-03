@@ -28,8 +28,11 @@ namespace ME.BECS.Editor {
             root.AddToClassList("vector-field");
             var field = new Label(property.displayName);
             root.Add(field);
+            FloatField _xField = null;
+            FloatField _yField = null;
             {
                 var xField = new FloatField("X:");
+                _xField = xField;
                 xField.value = value.x;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
@@ -42,6 +45,7 @@ namespace ME.BECS.Editor {
             }
             {
                 var xField = new FloatField("Y:");
+                _yField = xField;
                 xField.value = value.y;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
@@ -52,6 +56,21 @@ namespace ME.BECS.Editor {
                 });
                 root.Add(xField);
             }
+            root.AddManipulator(new ContextualMenuManipulator((evt) => {
+                evt.menu.AppendAction("From sfloat to F32", (action) => {
+                    var x = property.FindPropertyRelative("x").FindPropertyRelative("rawValue").uintValue;
+                    var y = property.FindPropertyRelative("y").FindPropertyRelative("rawValue").uintValue;
+                    unsafe {
+                        var valX = *(float*)&x;
+                        var valY = *(float*)&y;
+                        _xField.value = valX;
+                        _yField.value = valY;
+                        property.boxedValue = new float2(valX, valY);
+                        property.serializedObject.ApplyModifiedProperties();
+                        property.serializedObject.Update();
+                    }
+                });
+            }));
             return root;
 
         }

@@ -28,8 +28,12 @@ namespace ME.BECS.Editor {
             root.AddToClassList("vector-field");
             var field = new Label(property.displayName);
             root.Add(field);
+            FloatField _xField = null;
+            FloatField _yField = null;
+            FloatField _zField = null;
             {
                 var xField = new FloatField("X:");
+                _xField = xField;
                 xField.value = value.x;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
@@ -42,6 +46,7 @@ namespace ME.BECS.Editor {
             }
             {
                 var xField = new FloatField("Y:");
+                _yField = xField;
                 xField.value = value.y;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
@@ -54,6 +59,7 @@ namespace ME.BECS.Editor {
             }
             {
                 var xField = new FloatField("Z:");
+                _zField = xField;
                 xField.value = value.z;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
@@ -64,6 +70,24 @@ namespace ME.BECS.Editor {
                 });
                 root.Add(xField);
             }
+            root.AddManipulator(new ContextualMenuManipulator((evt) => {
+                evt.menu.AppendAction("From sfloat to F32", (action) => {
+                    var x = property.FindPropertyRelative("x").FindPropertyRelative("rawValue").uintValue;
+                    var y = property.FindPropertyRelative("y").FindPropertyRelative("rawValue").uintValue;
+                    var z = property.FindPropertyRelative("z").FindPropertyRelative("rawValue").uintValue;
+                    unsafe {
+                        var valX = *(float*)&x;
+                        var valY = *(float*)&y;
+                        var valZ = *(float*)&z;
+                        _xField.value = valX;
+                        _yField.value = valY;
+                        _zField.value = valZ;
+                        property.boxedValue = new float3(valX, valY, valZ);
+                        property.serializedObject.ApplyModifiedProperties();
+                        property.serializedObject.Update();
+                    }
+                });
+            }));
             return root;
 
         }

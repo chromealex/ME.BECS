@@ -97,7 +97,7 @@ namespace ME.BECS.FixedPoint
             float3 u = m.c0;
             float3 v = m.c1;
             float3 w = m.c2;
-
+            
             uint u_sign = (asuint(u.x) & 0x80000000);
             sfloat t = v.y + asfloat(asuint(w.z) ^ u_sign);
             uint4 u_mask = uint4((int)u_sign >> 31);
@@ -463,10 +463,12 @@ namespace ME.BECS.FixedPoint
             sfloat mn = min(min(forwardLengthSq, upLengthSq), tLengthSq);
             sfloat mx = max(max(forwardLengthSq, upLengthSq), tLengthSq);
 
-            const uint bigValue = 0x799a130c;
-            const uint smallValue = 0x0554ad2e;
+            //const uint bigValue = 0x799a130c;
+            //const uint smallValue = 0x0554ad2e;
+            var smallValue = sfloat.Epsilon;
+            var bigValue = sfloat.MaxValue;
 
-            bool accept = mn > sfloat.FromRaw(smallValue) && mx < sfloat.FromRaw(bigValue) && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
+            bool accept = mn > smallValue && mx < bigValue && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
             return quaternion(select(float4(sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One), quaternion(float3x3(t, cross(forward, t),forward)).value, accept));
         }
 
@@ -672,8 +674,9 @@ namespace ME.BECS.FixedPoint
                 q2.value = -q2.value;
             }
 
-            const uint almostOne = 0x3f7fdf3b;
-            if (dt < sfloat.FromRaw(almostOne))
+            //const uint almostOne = 0x3f7fdf3b;
+            var almostOne = sfloat.One;
+            if (dt < almostOne)
             {
                 sfloat angle = acos(dt);
                 sfloat s = rsqrt(sfloat.One - dt * dt);    // 1.0f / sin(angle)

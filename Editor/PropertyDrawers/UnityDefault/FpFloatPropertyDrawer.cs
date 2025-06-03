@@ -40,6 +40,19 @@ namespace ME.BECS.Editor {
             });
             root.Add(xField);
             
+            root.AddManipulator(new ContextualMenuManipulator((evt) => {
+                evt.menu.AppendAction("From sfloat to F32", (action) => {
+                    var x = property.FindPropertyRelative("rawValue").uintValue;
+                    unsafe {
+                        var valX = *(float*)&x;
+                        xField.value = valX;
+                        property.boxedValue = (sfloat)valX;
+                        property.serializedObject.ApplyModifiedProperties();
+                        property.serializedObject.Update();
+                    }
+                });
+            }));
+            
             return root;
 
         }
