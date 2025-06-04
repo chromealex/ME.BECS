@@ -13,14 +13,27 @@ namespace ME.BECS.Pathfinding {
     using Unity.Jobs;
     using ME.BECS.Jobs;
     using static Cuts;
-    
-    public struct ResultItem {
+
+    public struct ResultItem : System.IEquatable<ResultItem> {
 
         public uint length;
         public uint from;
         public uint to;
         public uint chunkIndex;
         public uint toChunkIndex;
+
+        public bool Equals(ResultItem other) {
+            return (this.from == other.from && this.to == other.to) ||
+                   (this.from == other.to && this.to == other.from);
+        }
+
+        public override bool Equals(object obj) {
+            return obj is ResultItem other && this.Equals(other);
+        }
+
+        public override int GetHashCode() {
+            return (int)(this.from ^ this.to);
+        }
 
     }
 
@@ -131,23 +144,32 @@ namespace ME.BECS.Pathfinding {
                 // calculate portals connections
                 var root = this.graph.Read<RootGraphComponent>();
                 var chunk = this.chunks[this.world.state, chunkIndex];
-                for (uint i = 0; i < chunk.portals.list.Count; ++i) {
+                var localMap = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<ResultItem>((int)(chunk.portals.list.Count * chunk.portals.list.Count), Constants.ALLOCATOR_TEMP);
+                for (uint i = 0u; i < chunk.portals.list.Count; ++i) {
                     var portal = chunk.portals.list[this.world.state, i];
-                    for (uint j = i + 1u; j < chunk.portals.list.Count; ++j) {
-                        var other = chunk.portals.list[this.world.state, j];
-                        var path = Graph.ChunkPath(this.world.state, in this.graph, chunkIndex, portal.position, other.position);
-                        if (path.pathState == PathState.Success) {
-                            // add local connection
-                            this.results.AddNoResize(new ResultItem() {
-                                chunkIndex = chunkIndex,
-                                toChunkIndex = chunkIndex,
-                                length = path.length,
-                                from = i,
-                                to = j,
-                            });
+                    
+                    { // local connections
+                        for (uint j = 0u; j < chunk.portals.list.Count; ++j) {
+                            if (i == j) continue;
+                            var other = chunk.portals.list[this.world.state, j];
+                            if (localMap.Contains(new ResultItem() { from = i, to = j, }) == false) {
+                                var path = Graph.ChunkPath(this.world.state, in this.graph, chunkIndex, portal.position, other.position);
+                                if (path.pathState == PathState.Success) {
+                                    var result = new ResultItem() {
+                                        chunkIndex = chunkIndex,
+                                        toChunkIndex = chunkIndex,
+                                        length = path.length,
+                                        from = i,
+                                        to = j,
+                                    };
+                                    localMap.Add(result);
+                                    // add local connection
+                                    this.results.AddNoResize(result);
+                                }
+                            }
                         }
                     }
-
+                    
                     { // remote connections
                         var neighbourChunkIdx = Graph.GetNeighbourChunkIndex(chunkIndex, portal.side, root.width, root.height);
                         if (neighbourChunkIdx == uint.MaxValue) continue;
@@ -163,6 +185,7 @@ namespace ME.BECS.Pathfinding {
                             });
                         }
                     }
+                    
                 }
             }
 
