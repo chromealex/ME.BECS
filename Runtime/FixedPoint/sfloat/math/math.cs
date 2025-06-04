@@ -216,6 +216,58 @@ namespace ME.BECS.FixedPoint {
             //return sfloat.FromRaw(Fixed32.Exp10Fast(x.rawValue));
         }
 
+        public const int TODEGREES = (int)(57.29577951308232 * 65536.0);
+        public const int TORADIANS = (int)(0.017453292519943296 * 65536.0);
+
+        /// <summary>Returns the result of converting a float value from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat radians(sfloat x) {
+            return x * sfloat.FromRaw(TORADIANS);
+        }
+
+        /// <summary>Returns the result of a componentwise conversion of a float2 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float2 radians(float2 x) {
+            return x * sfloat.FromRaw(TORADIANS);
+        }
+
+        /// <summary>Returns the result of a componentwise conversion of a float3 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float3 radians(float3 x) {
+            return x * sfloat.FromRaw(TORADIANS);
+        }
+
+        /// <summary>Returns the result of a componentwise conversion of a float4 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 radians(float4 x) {
+            return x * sfloat.FromRaw(TORADIANS);
+        }
+
+
+        /// <summary>Returns the result of converting a double value from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat degrees(sfloat x) {
+            return x * sfloat.FromRaw(TODEGREES);
+        }
+
+        /// <summary>Returns the result of a componentwise conversion of a double2 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float2 degrees(float2 x) {
+            return x * sfloat.FromRaw(TODEGREES);
+        }
+
+        /// <summary>Returns the result of a componentwise conversion of a double3 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float3 degrees(float3 x) {
+            return x * sfloat.FromRaw(TODEGREES);
+        }
+
+        /// <summary>Returns the result of a componentwise conversion of a double4 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 degrees(float4 x) {
+            return x * sfloat.FromRaw(TODEGREES);
+        }
+
     }
     #else
     public static partial class math {
@@ -368,6 +420,43 @@ namespace ME.BECS.FixedPoint {
         public static sfloat asfloat(int x) {
             return sfloat.FromRaw((uint)x);
         }
+
+        private const uint DEG2RAD = 0x3c8efa35;
+        private const uint RAD2DEG = 0x42652ee1;
+
+        /// <summary>Returns the result of converting a float value from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat radians(sfloat x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+        /// <summary>Returns the result of a componentwise conversion of a float2 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float2 radians(float2 x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+        /// <summary>Returns the result of a componentwise conversion of a float3 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float3 radians(float3 x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+        /// <summary>Returns the result of a componentwise conversion of a float4 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 radians(float4 x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+
+        /// <summary>Returns the result of converting a double value from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat degrees(sfloat x) { return x * sfloat.FromRaw(RAD2DEG); }
+
+        /// <summary>Returns the result of a componentwise conversion of a double2 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float2 degrees(float2 x) { return x * sfloat.FromRaw(RAD2DEG); }
+
+        /// <summary>Returns the result of a componentwise conversion of a double3 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float3 degrees(float3 x) { return x * sfloat.FromRaw(RAD2DEG); }
+
+        /// <summary>Returns the result of a componentwise conversion of a double4 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 degrees(float4 x) { return x * sfloat.FromRaw(RAD2DEG); }
+
 
     }
 
@@ -2780,43 +2869,6 @@ namespace ME.BECS.FixedPoint {
         public static int4 floorlog2(uint4 x) {
             return new int4(floorlog2(x.x), floorlog2(x.y), floorlog2(x.z), floorlog2(x.w));
         }
-
-        private const uint DEG2RAD = 0x3c8efa35;
-        private const uint RAD2DEG = 0x42652ee1;
-
-        /// <summary>Returns the result of converting a float value from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat radians(sfloat x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-        /// <summary>Returns the result of a componentwise conversion of a float2 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 radians(float2 x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-        /// <summary>Returns the result of a componentwise conversion of a float3 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 radians(float3 x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-        /// <summary>Returns the result of a componentwise conversion of a float4 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 radians(float4 x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-
-        /// <summary>Returns the result of converting a double value from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat degrees(sfloat x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-        /// <summary>Returns the result of a componentwise conversion of a double2 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 degrees(float2 x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-        /// <summary>Returns the result of a componentwise conversion of a double3 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 degrees(float3 x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-        /// <summary>Returns the result of a componentwise conversion of a double4 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 degrees(float4 x) { return x * sfloat.FromRaw(RAD2DEG); }
-
 
         /// <summary>Returns the minimum component of an int2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
