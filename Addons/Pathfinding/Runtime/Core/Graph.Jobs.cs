@@ -110,16 +110,16 @@ namespace ME.BECS.Pathfinding {
 
         public void Execute() {
 
-            var root = this.graph.Read<RootGraphComponent>();
+            ref var root = ref this.graph.Get<RootGraphComponent>();
             for (uint idx = 0u; idx < root.chunks.Length; ++idx) {
                 ref var chunk = ref this.chunks[this.world.state, idx];
                 Graph.UpdateChunk(in this.world, this.graph, idx, ref chunk, this.changedChunks);
             }
-            
+
             for (uint idx = 0u; idx < root.chunks.Length; ++idx) {
                 ref var chunk = ref this.chunks[this.world.state, idx];
                 if (this.changedChunks.IsCreated == true && this.changedChunks[(int)idx] != this.world.CurrentTick) continue;
-                Graph.BuildPortals(in this.graph, idx, ref chunk, in this.world);
+                Graph.BuildPortals(in this.graph, idx, ref chunk, in this.world, ref root.globalArea);
             }
 
         }
@@ -193,6 +193,68 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    [BURST(CompileSynchronously = true)]
+    public unsafe struct FloodFillPortalAreasJob : IJob {
+
+        public World world;
+        public Ent graph;
+        public Unity.Collections.NativeList<ResultItem> results;
+
+        public void Execute() {
+
+            var allocator = this.world.state.ptr->allocator;
+            var root = this.graph.Read<RootGraphComponent>();
+            var visited = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<ulong>((int)(root.chunks.Length * 4u), Constants.ALLOCATOR_TEMP);
+            foreach (var item in this.results) {
+                
+                var fromChunkIndex = item.chunkIndex;
+                var toChunkIndex = item.toChunkIndex;
+                var fromPortalIndex = item.from;
+                var toPortalIndex = item.to;
+
+                {
+                    var chunk = root.chunks[this.world.state, fromChunkIndex];
+                    FloodFillPortalArea(in allocator, in root, ref chunk.portals.list[this.world.state, fromPortalIndex], ref visited);
+                }
+                {
+                    var chunk = root.chunks[this.world.state, toChunkIndex];
+                    FloodFillPortalArea(in allocator, in root, ref chunk.portals.list[this.world.state, toPortalIndex], ref visited);
+                }
+
+            }
+            
+        }
+
+        [INLINE(256)]
+        private static void FloodFillPortalArea(in MemoryAllocator allocator, in RootGraphComponent root, ref Portal portal, ref Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<ulong> visited) {
+
+            var queue = new UnsafeQueue<Portal>(Constants.ALLOCATOR_TEMP);
+            queue.Enqueue(portal);
+            while (queue.Count > 0) {
+                var p = queue.Dequeue();
+                Traverse(in allocator, in root, in p, p.localNeighbours, ref queue);
+                Traverse(in allocator, in root, in p, p.remoteNeighbours, ref queue);
+            }
+
+        }
+
+        [INLINE(256)]
+        private static void Traverse(in MemoryAllocator allocator, in RootGraphComponent root, in Portal portal, ListAuto<Portal.Connection> neighbours, ref UnsafeQueue<Portal> queue) {
+
+            var targetArea = portal.globalArea;
+            for (uint i = 0u; i < neighbours.Count; ++i) {
+                var n = neighbours[i];
+                ref var nextPortal = ref root.chunks[n.portalInfo.chunkIndex].portals.list[in allocator, n.portalInfo.portalIndex];
+                if (nextPortal.globalArea < targetArea) {
+                    nextPortal.globalArea = targetArea;
+                    queue.Enqueue(nextPortal);
+                }
+            }
+            
+        }
+
+    }
+    
     [BURST(CompileSynchronously = true)]
     public unsafe struct AddConnectionsJob : IJob {
 
@@ -383,6 +445,9 @@ namespace ME.BECS.Pathfinding {
             highLevelPath.End();
             foreach (var hierarchyPath in hierarchyPathList) {
                 // build ff
+
+                to = hierarchyPath.to;
+                this.path.to = to;
 
                 // build ff for each chunk from the end to the beginning
                 var collectChunksMarker = new Unity.Profiling.ProfilerMarker("Collect Chunks");
@@ -583,10 +648,9 @@ namespace ME.BECS.Pathfinding {
                                             continue;
                                         }
 
-                                        tfloat coef = globalCoefficient;
-                                        
+                                        var coef = globalCoefficient;
                                         if (targetChunkIndex == neighbourTempNode.chunkIndex && this.path.isRecalculationRequired == 1) {
-                                            coef = 0;
+                                            coef = 0f;
                                         }
                                         
                                         var endNodeCost = coef + neighbor.cost + rootCost + 0.01f * math.lengthsq(targetNodePosition - Graph.GetPosition(in root, in chunk, neighbourTempNode.nodeIndex));

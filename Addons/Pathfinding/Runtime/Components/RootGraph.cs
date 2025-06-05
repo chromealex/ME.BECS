@@ -24,6 +24,8 @@ namespace ME.BECS.Pathfinding {
         public tfloat agentMaxSlope;
         public GraphProperties properties;
 
+        public uint globalArea;
+
     }
 
 }

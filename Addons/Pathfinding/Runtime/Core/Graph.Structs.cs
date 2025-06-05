@@ -229,10 +229,12 @@ namespace ME.BECS.Pathfinding {
 
         public bool walkable => this.cost < Graph.UNWALKABLE;
         public uint flags;
+        public tfloat height;
         public int cost;
         public ObstacleChannel obstacleChannel;
-        public tfloat height;
+        #if PATHFINDING_NORMALS
         public float3 normal;
+        #endif
 
     }
 
@@ -257,6 +259,7 @@ namespace ME.BECS.Pathfinding {
 
         public PortalInfo portalInfo;
         public uint area;
+        public uint globalArea;
         public float3 position;
         public uint rangeStart;
         public uint rangeStartNodeIndex;
@@ -271,12 +274,17 @@ namespace ME.BECS.Pathfinding {
 
     }
 
+    [StructLayout(LayoutKind.Explicit, Size = 8)]
     public struct PortalInfo {
 
+        [FieldOffset(0)]
         public uint chunkIndex;
+        [FieldOffset(4)]
         public uint portalIndex;
+        [FieldOffset(0)]
+        public ulong pack;
 
-        public static readonly PortalInfo Invalid = new PortalInfo() {chunkIndex = uint.MaxValue, portalIndex = uint.MaxValue};
+        public static readonly PortalInfo Invalid = new PortalInfo() { chunkIndex = uint.MaxValue, portalIndex = uint.MaxValue };
 
         public bool IsValid => this.chunkIndex != uint.MaxValue && this.portalIndex != uint.MaxValue;
 
@@ -296,6 +304,7 @@ namespace ME.BECS.Pathfinding {
 
         public Unity.Collections.NativeList<PortalInfo> nodes;
         public PathState pathState;
+        public float3 to;
 
         public override int GetHashCode() {
             int hash = 0;

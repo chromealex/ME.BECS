@@ -261,7 +261,7 @@ namespace ME.BECS {
                 snapshot = target;
                 stillMore = newValue > snapshot;
             } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target, newValue, snapshot) != snapshot);
-
+            
             return stillMore;
         }
 
