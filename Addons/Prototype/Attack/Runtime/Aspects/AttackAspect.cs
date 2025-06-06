@@ -1,13 +1,15 @@
 #if FIXED_POINT
 using tfloat = sfloat;
+using ME.BECS.FixedPoint;
 #else
 using tfloat = System.Single;
+using Unity.Mathematics;
 #endif
 
 namespace ME.BECS.Attack {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    using Unity.Mathematics;
+    using ME.BECS.Transforms;
 
     public struct AttackAspect : IAspect {
         
@@ -175,6 +177,38 @@ namespace ME.BECS.Attack {
                 return false;
             }
             return true;
+        }
+
+        [INLINE(256)]
+        public bool IsAnyTargetInSector() {
+
+            if (this.ent.TryRead(out AttackSectorComponent sectorComponent) == false) {
+                return true;
+            }
+
+            var tr = this.ent.GetAspect<TransformAspect>();
+            if (this.ent.TryRead(out AttackTargetsComponent attackTargetsComponent) == true) {
+
+                for (uint i = 0u; i < attackTargetsComponent.targets.Count; ++i) {
+                    var target = attackTargetsComponent.targets[i].GetAspect<TransformAspect>();
+                    if (IsTargetInSector(in tr, in target, in sectorComponent.sector) == true) return true;
+                }
+
+            } else {
+
+                var target = this.target.GetAspect<TransformAspect>();
+                if (IsTargetInSector(in tr, in target, in sectorComponent.sector) == true) return true;
+                
+            }
+
+            return false;
+
+        }
+
+        [INLINE(256)]
+        private static bool IsTargetInSector(in TransformAspect tr, in TransformAspect target, in Sector sector) {
+            var mathSector = new MathSector(tr.position, tr.rotation, sector.sector);
+            return mathSector.IsValid(target.position);
         }
 
     }

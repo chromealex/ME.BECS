@@ -1,5 +1,7 @@
 namespace ME.BECS {
 
+    public interface IConfigComponentBase : IComponentBase {}
+    
     public interface IComponentBase {}
 
     public interface IComponent : IComponentBase {}

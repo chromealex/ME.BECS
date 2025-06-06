@@ -46,7 +46,7 @@ namespace ME.BECS.Attack {
 
                 var unit = sensor.target;
                 if (unit.IsAlive() == true) {
-                    if (unit.GetAspect<UnitAspect>().IsPathFollow == true) return; 
+                    if (unit.GetAspect<UnitAspect>().IsPathFollow == false) return; 
                     transformAspect.rotation = quaternion.LookRotationSafe(unit.GetAspect<TransformAspect>().position - transformAspect.position, math.up());
                 }
 

@@ -1,7 +1,9 @@
 #if FIXED_POINT
 using tfloat = sfloat;
+using ME.BECS.FixedPoint;
 #else
 using tfloat = System.Single;
+using Unity.Mathematics;
 #endif
 
 namespace ME.BECS.Attack {
@@ -35,7 +37,14 @@ namespace ME.BECS.Attack {
                             rot = firePointTr.GetWorldMatrixRotation();
                         }
 
-                        AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, aspect.target, default, aspect.readComponentVisual.bulletConfig,
+                        var target = aspect.target;
+                        float3 targetPosition = default;
+                        if (aspect.componentRuntimeFire.targets.Length > 0u) {
+                            target = default;
+                            targetPosition = aspect.componentRuntimeFire.targets[0u];
+                        }
+
+                        AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                  aspect.readComponentVisual.muzzleView, jobInfo: jobInfo);
 
                         aspect.UseFire();
@@ -68,9 +77,19 @@ namespace ME.BECS.Attack {
                             rot = firePointTr.GetWorldMatrixRotation();
                         }
 
-                        foreach (var unit in aspect.targets) {
+                        for (uint i = 0u; i < aspect.targets.Count; ++i) {
+
+                            var unit = aspect.targets[i];
                             if (unit.IsAlive() == false) continue;
-                            AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, unit, default, aspect.readComponentVisual.bulletConfig,
+                            
+                            var target = unit;
+                            float3 targetPosition = default;
+                            if (aspect.componentRuntimeFire.targets.Length > 0u) {
+                                target = default;
+                                targetPosition = aspect.componentRuntimeFire.targets[i];
+                            }
+
+                            AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                      aspect.readComponentVisual.muzzleView, jobInfo: in jobInfo);
                         }
 

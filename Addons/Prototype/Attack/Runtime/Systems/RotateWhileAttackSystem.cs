@@ -35,21 +35,25 @@ namespace ME.BECS.Attack {
         }
 
         [BURST(CompileSynchronously = true)]
-        public struct RotateAttackSensorJob : IJobForAspects<AttackAspect, TransformAspect> {
+        public struct RotateAttackSensorJob : IJobFor2Aspects1Components<AttackAspect, TransformAspect, RotateAttackSensorComponent> {
 
             public tfloat dt;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect attack, ref TransformAspect transformAspect) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect attack, ref TransformAspect transformAspect, ref RotateAttackSensorComponent sensor) {
 
-                var speedFactor = attack.ent.Read<RotateAttackSensorComponent>().speedFactor;
+                var speedFactor = sensor.rotationSpeed;
                 if (attack.target.IsAlive() == true) {
                     var lookDir = attack.target.GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    transformAspect.rotation = math.slerp(transformAspect.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = quaternion.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
                 } else if (attack.targets.Count > 0u) {
                     var lookDir = attack.targets[0u].GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    transformAspect.rotation = math.slerp(transformAspect.rotation, quaternion.LookRotation(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = quaternion.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
                 } else {
-                    transformAspect.localRotation = math.slerp(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
+                    if (sensor.persistentRotationSpeed > 0f) {
+                        transformAspect.rotation = math.mul(transformAspect.rotation, quaternion.Euler(0f, math.radians(sensor.persistentRotationSpeed * this.dt), 0f));
+                    } else if (sensor.returnToDefault == true) {
+                        transformAspect.localRotation = quaternion.RotateTowards(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
+                    }
                 }
 
             }
@@ -66,9 +70,8 @@ namespace ME.BECS.Attack {
                                        dt = context.deltaTime,
                                    });
             var dependsOnAttackSensor = context.Query().AsParallel()
-                                   .With<RotateAttackSensorComponent>()
                                    .AsUnsafe()
-                                   .Schedule<RotateAttackSensorJob, AttackAspect, TransformAspect>(new RotateAttackSensorJob() {
+                                   .Schedule<RotateAttackSensorJob, AttackAspect, TransformAspect, RotateAttackSensorComponent>(new RotateAttackSensorJob() {
                                        dt = context.deltaTime,
                                    });
             context.SetDependency(dependsOn, dependsOnAttackSensor);

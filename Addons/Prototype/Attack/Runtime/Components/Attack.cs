@@ -64,6 +64,14 @@ namespace ME.BECS.Attack {
         public tfloat fireTimer;
         public tfloat fireRateTimer;
         public uint fireRateCount;
+        public MemArrayAuto<float3> targets;
+
+    }
+    
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct AttackSectorComponent : IConfigComponent {
+
+        public Sector sector;
 
     }
 
@@ -100,9 +108,17 @@ namespace ME.BECS.Attack {
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct RotateAttackSensorComponent : IConfigComponent {
 
-        public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { speedFactor = 1f };
+        public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { rotationSpeed = 1f };
         
-        public tfloat speedFactor;
+        /// <summary>
+        /// Degrees per second
+        /// </summary>
+        public tfloat rotationSpeed;
+        /// <summary>
+        /// Degrees per second 
+        /// </summary>
+        public tfloat persistentRotationSpeed;
+        public bbool returnToDefault;
 
     }
     

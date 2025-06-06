@@ -390,7 +390,7 @@ namespace ME.BECS.Editor.CsvImporter {
 
         public static void Parse(scg::List<ConfigFile> allConfigs, scg::List<ConfigFile> configFiles, scg::List<string[]> csv) {
             var offset = 2;
-            var components = TypeCache.GetTypesDerivedFrom<IComponentBase>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
+            var components = TypeCache.GetTypesDerivedFrom<IConfigComponentBase>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var aspects = TypeCache.GetTypesDerivedFrom<IAspect>().Where(x => EditorUtils.IsValidTypeForAssembly(false, x)).ToArray();
             var componentName = string.Empty;
             System.Type componentType = null;
@@ -400,7 +400,9 @@ namespace ME.BECS.Editor.CsvImporter {
                     // Read components and aspects
                     if (string.IsNullOrEmpty(line[0]) == false || string.IsNullOrEmpty(componentName) == true) {
                         componentName = line[0];
-                        componentType = components.FirstOrDefault(x => x.FullName.EndsWith(componentName));
+                        componentType = components.FirstOrDefault(x => x.FullName.EndsWith($".{componentName}"));
+                        if (componentType == null) componentType = aspects.FirstOrDefault(x => x.FullName.EndsWith($".{componentName}"));
+                        if (componentType == null) componentType = components.FirstOrDefault(x => x.FullName.EndsWith(componentName));
                         if (componentType == null) componentType = aspects.FirstOrDefault(x => x.FullName.EndsWith(componentName));
                     }
 
@@ -511,7 +513,7 @@ namespace ME.BECS.Editor.CsvImporter {
                             if (string.IsNullOrEmpty(field.Key) == true && comp.type.GetFields().Length == 0) {
                                 continue;
                             }
-                            Debug.LogWarning($"Key not found {field.Key} in component {comp.type.FullName}");
+                            Debug.LogWarning($"Key not found {field.Key} in component {comp.type.FullName} in config {config.fullPath}");
                             continue;
                         }
 

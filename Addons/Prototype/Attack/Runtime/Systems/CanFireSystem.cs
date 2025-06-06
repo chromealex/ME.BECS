@@ -1,3 +1,5 @@
+
+using ME.BECS.Transforms;
 #if FIXED_POINT
 using tfloat = sfloat;
 #else
@@ -21,6 +23,29 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
+                if (aspect.componentRuntimeFire.fireTimer <= 0f && aspect.IsAnyTargetInSector() == false) {
+                    return;
+                }
+
+                if (aspect.componentRuntimeFire.fireTimer <= 0f) {
+                    var bullet = aspect.readComponentVisual.bulletConfig;
+                    bullet.UnsafeConfig.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfig);
+                    if (bulletConfig.autoTarget == 0) {
+                        var sourceUnit = ent.GetParent();
+                        if (aspect.componentRuntimeFire.targets.IsCreated == true) aspect.componentRuntimeFire.targets.Dispose();
+                        aspect.componentRuntimeFire.targets = new MemArrayAuto<ME.BECS.FixedPoint.float3>(in ent, aspect.targets.Count > 0u ? aspect.targets.Count : 1u);
+                        if (aspect.targets.Count > 0u) {
+                            for (uint i = 0u; i < aspect.targets.Count; ++i) {
+                                aspect.componentRuntimeFire.targets[i] = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in aspect.targets[i]);
+                            }
+                        } else {
+                            aspect.componentRuntimeFire.targets[0u] = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, aspect.target);
+                        }
+                    } else {
+                        if (aspect.componentRuntimeFire.targets.IsCreated == true) aspect.componentRuntimeFire.targets.Dispose();
+                    }
+                }
+                
                 aspect.componentRuntimeFire.fireTimer += this.dt;
                 if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.fireTime) {
 
