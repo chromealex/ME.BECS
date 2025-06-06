@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace ME.BECS {
 
     public static class mathext {
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sfloat angle(ME.BECS.FixedPoint.float3 from, ME.BECS.FixedPoint.float3 to) {
             var num = ME.BECS.FixedPoint.math.sqrt(ME.BECS.FixedPoint.math.lengthsq(from) * ME.BECS.FixedPoint.math.lengthsq(to));
@@ -22,255 +22,50 @@ namespace ME.BECS {
 
 }
 
-namespace ME.BECS.FixedPoint {
+namespace ME.BECS.FixedPoint
+{
+    public static partial class math
+    {
+        /// <summary>Extrinsic rotation order. Specifies in which order rotations around the principal axes (x, y and z) are to be applied.</summary>
+        public enum RotationOrder : byte
+        {
+            /// <summary>Extrinsic rotation around the x axis, then around the y axis and finally around the z axis.</summary>
+            XYZ,
+            /// <summary>Extrinsic rotation around the x axis, then around the z axis and finally around the y axis.</summary>
+            XZY,
+            /// <summary>Extrinsic rotation around the y axis, then around the x axis and finally around the z axis.</summary>
+            YXZ,
+            /// <summary>Extrinsic rotation around the y axis, then around the z axis and finally around the x axis.</summary>
+            YZX,
+            /// <summary>Extrinsic rotation around the z axis, then around the x axis and finally around the y axis.</summary>
+            ZXY,
+            /// <summary>Extrinsic rotation around the z axis, then around the y axis and finally around the x axis.</summary>
+            ZYX,
+            /// <summary>Unity default rotation order. Extrinsic Rotation around the z axis, then around the x axis and finally around the y axis.</summary>
+            Default = ZXY
+        };
 
-    #if FIXED_POINT_F32
-    public static partial class math {
+        /// <summary>Specifies a shuffle component.</summary>
+        public enum ShuffleComponent : byte
+        {
+            /// <summary>Specified the x component of the left vector.</summary>
+            LeftX,
+            /// <summary>Specified the y component of the left vector.</summary>
+            LeftY,
+            /// <summary>Specified the z component of the left vector.</summary>
+            LeftZ,
+            /// <summary>Specified the w component of the left vector.</summary>
+            LeftW,
 
-        /// <summary>The smallest positive normal number representable in a float.</summary>
-        public static sfloat FLT_MIN_NORMAL => sfloat.Epsilon;
-
-        /// <summary>The mathematical constant e also known as Euler's number. Approximately 2.72.</summary>
-        public static sfloat E => sfloat.E;
-
-        /// <summary>The base 2 logarithm of e. Approximately 1.44.</summary>
-        public static sfloat LOG2E => sfloat.FromRaw(Fixed32.RCP_LOG2_E);
-
-        /// <summary>The base 10 logarithm of e. Approximately 0.43.</summary>
-        public static sfloat LOG10E => math.log10(sfloat.E);
-
-        /// <summary>The mathematical constant pi. Approximately 3.14.</summary>
-        public static sfloat PI => sfloat.FromRaw(Fixed32.Pi);
-
-        /// <summary>pi / 2. Approximately 1.57.</summary>
-        public static sfloat PI_HALF => sfloat.FromRaw(Fixed32.PiHalf);
-
-        /// <summary>pi / 4. Approximately 0.79.</summary>
-        public static sfloat PI_OVER_4 => sfloat.FromRaw(Fixed32.PiOver4);
-
-        /// <summary>pi * 2. Approximately 6.28.</summary>
-        public static sfloat TWO_PI => sfloat.FromRaw(Fixed32.Pi2);
-
-        /// <summary>The square root 2. Approximately 1.41.</summary>
-        public static sfloat SQRT2 => sfloat.FromRaw(Fixed32.Sqrt2);
-
-        /// <summary>
-        /// The difference between 1.0f and the next representable f32/single precision number.
-        ///
-        /// Beware:
-        /// This value is different from System.Single.Epsilon, which is the smallest, positive, denormalized f32/single.
-        /// </summary>
-        public static sfloat EPSILON => sfloat.Epsilon;
-
-        /// <summary>
-        /// Single precision constant for positive infinity.
-        /// </summary>
-        public static sfloat INFINITY => sfloat.PositiveInfinity;
-
-        /// <summary>
-        /// Single precision constant for Not a Number.
-        ///
-        /// NAN is considered unordered, which means all comparisons involving it are false except for not equal (operator !=).
-        /// As a consequence, NAN == NAN is false but NAN != NAN is true.
-        ///
-        /// Additionally, there are multiple bit representations for Not a Number, so if you must test if your value
-        /// is NAN, use isnan().
-        /// </summary>
-        public static sfloat NAN => sfloat.NaN;
-
-        /// <summary>Returns the bit pattern of a float as an int.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int asint(sfloat x) {
-            return Fixed32.AsInt(x.rawValue);
-        }
-
-        /// <summary>Returns the bit pattern of an int as a float.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat asfloat(int x) {
-            return Fixed32.AsFloat(x);
-        }
-
-        /// <summary>Returns the absolute value of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat abs(sfloat x) {
-            return sfloat.FromRaw(Fixed32.Abs(x.rawValue));
-        }
-
-        /// <summary>Returns the tangent of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat tan(sfloat x) {
-            return sfloat.FromRaw(Fixed32.TanFast(x.rawValue));
-        }
-
-        /// <summary>Returns the arctangent of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat atan(sfloat x) {
-            return sfloat.FromRaw(Fixed32.AtanFast(x.rawValue));
-        }
-
-        /// <summary>Returns the 2-argument arctangent of a pair of float values.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat atan2(sfloat y, sfloat x) {
-            return sfloat.FromRaw(Fixed32.Atan2Fast(y.rawValue, x.rawValue));
-        }
-
-        /// <summary>Returns the cosine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat cos(sfloat x) {
-            return sfloat.FromRaw(Fixed32.CosFast(x.rawValue));
-        }
-
-        /// <summary>Returns the arccosine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat acos(sfloat x) {
-            return sfloat.FromRaw(Fixed32.AcosFast(x.rawValue));
-        }
-
-        /// <summary>Returns the sine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat sin(sfloat x) {
-            return sfloat.FromRaw(Fixed32.SinFast(x.rawValue));
-        }
-
-        /// <summary>Returns the square root of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat sqrt(sfloat x) {
-            return sfloat.FromRaw(Fixed32.SqrtFast(x.rawValue));
-        }
-
-        /// <summary>Returns the natural logarithm of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat log(sfloat x) {
-            return sfloat.FromRaw(Fixed32.LogFast(x.rawValue));
-        }
-
-        /// <summary>Returns the base-10 logarithm of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat log10(sfloat x) {
-            throw new NotImplementedException();
-            //return sfloat.FromRaw(Fixed32.Log10Fast(x.rawValue));
-        }
-
-        /// <summary>Returns the base-2 logarithm of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat log2(sfloat x) {
-            return sfloat.FromRaw(Fixed32.Log2Fast(x.rawValue));
-        }
-
-        /// <summary>Returns the arcsine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat asin(sfloat x) {
-            return sfloat.FromRaw(Fixed32.AsinFast(x.rawValue));
-        }
-
-        /// <summary>Returns the result of rounding a float value up to the nearest integral value less or equal to the original value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat floor(sfloat x) {
-            return sfloat.FromRaw(Fixed32.Floor(x.rawValue));
-        }
-
-        /// <summary>Returns the result of rounding a float value up to the nearest integral value greater or equal to the original value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat ceil(sfloat x) {
-            return sfloat.FromRaw(Fixed32.Ceil(x.rawValue));
-        }
-
-        /// <summary>Returns the result of rounding a float value to the nearest integral value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat round(sfloat x) {
-            return sfloat.FromRaw(Fixed32.Round(x.rawValue));
-        }
-
-        /// <summary>Returns the result of truncating a float value to an integral float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat trunc(sfloat x) {
-            if (x.rawValue < 0) {
-                return sfloat.FromRaw(Fixed32.Ceil(-x.rawValue));
-            }
-
-            return sfloat.FromRaw(Fixed32.Floor(x.rawValue));
-        }
-
-        /// <summary>Returns x raised to the power y.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat pow(sfloat x, sfloat y) {
-            return sfloat.FromRaw(Fixed32.PowFast(x.rawValue, y.rawValue));
-        }
-
-        /// <summary>Returns the base-e exponential of x.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat exp(sfloat x) {
-            return sfloat.FromRaw(Fixed32.ExpFast(x.rawValue));
-        }
-
-        /// <summary>Returns the base-2 exponential of x.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat exp2(sfloat x) {
-            return sfloat.FromRaw(Fixed32.Exp2Fast(x.rawValue));
-        }
-
-        /// <summary>Returns the base-10 exponential of x.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat exp10(sfloat x) {
-            throw new NotImplementedException();
-            //return sfloat.FromRaw(Fixed32.Exp10Fast(x.rawValue));
-        }
-
-        public const int TODEGREES = (int)(57.29577951308232 * 65536.0);
-        public const int TORADIANS = (int)(0.017453292519943296 * 65536.0);
-
-        /// <summary>Returns the result of converting a float value from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat radians(sfloat x) {
-            return x * sfloat.FromRaw(TORADIANS);
-        }
-
-        /// <summary>Returns the result of a componentwise conversion of a float2 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 radians(float2 x) {
-            return x * sfloat.FromRaw(TORADIANS);
-        }
-
-        /// <summary>Returns the result of a componentwise conversion of a float3 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 radians(float3 x) {
-            return x * sfloat.FromRaw(TORADIANS);
-        }
-
-        /// <summary>Returns the result of a componentwise conversion of a float4 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 radians(float4 x) {
-            return x * sfloat.FromRaw(TORADIANS);
-        }
-
-
-        /// <summary>Returns the result of converting a double value from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat degrees(sfloat x) {
-            return x * sfloat.FromRaw(TODEGREES);
-        }
-
-        /// <summary>Returns the result of a componentwise conversion of a double2 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 degrees(float2 x) {
-            return x * sfloat.FromRaw(TODEGREES);
-        }
-
-        /// <summary>Returns the result of a componentwise conversion of a double3 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 degrees(float3 x) {
-            return x * sfloat.FromRaw(TODEGREES);
-        }
-
-        /// <summary>Returns the result of a componentwise conversion of a double4 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 degrees(float4 x) {
-            return x * sfloat.FromRaw(TODEGREES);
-        }
-
-    }
-    #else
-    public static partial class math {
+            /// <summary>Specified the x component of the right vector.</summary>
+            RightX,
+            /// <summary>Specified the y component of the right vector.</summary>
+            RightY,
+            /// <summary>Specified the z component of the right vector.</summary>
+            RightZ,
+            /// <summary>Specified the w component of the right vector.</summary>
+            RightW
+        };
 
         /// <summary>The smallest positive normal number representable in a float.</summary>
         public static sfloat FLT_MIN_NORMAL => sfloat.FromRaw(0x00800000);
@@ -328,202 +123,24 @@ namespace ME.BECS.FixedPoint {
         /// is NAN, use isnan().
         /// </summary>
         public static sfloat NAN => sfloat.NaN;
-
-        /// <summary>Returns the tangent of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat tan(sfloat x) { return libm.tanf(x); }
-
-        /// <summary>Returns the arctangent of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat atan(sfloat x) { return libm.atanf(x); }
-
-        /// <summary>Returns the 2-argument arctangent of a pair of float values.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat atan2(sfloat y, sfloat x) { return libm.atan2f(y, x); }
-
-        /// <summary>Returns the cosine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat cos(sfloat x) { return libm.cosf(x); }
-
-        /// <summary>Returns the arccosine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat acos(sfloat x) { return libm.acosf(x); }
-
-        /// <summary>Returns the sine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat sin(sfloat x) { return libm.sinf(x); }
-
-        /// <summary>Returns the arcsine of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat asin(sfloat x) { return libm.asinf(x); }
-
-        /// <summary>Returns the result of rounding a float value up to the nearest integral value less or equal to the original value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat floor(sfloat x) { return libm.floorf(x); }
-
-        /// <summary>Returns the result of rounding a float value up to the nearest integral value greater or equal to the original value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat ceil(sfloat x) { return libm.ceilf(x); }
-
-        /// <summary>Returns the result of rounding a float value to the nearest integral value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat round(sfloat x) { return libm.roundf(x); }
-
-        /// <summary>Returns the absolute value of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat abs(sfloat x) { return sfloat.Abs(x); }
-
-        /// <summary>Returns the result of truncating a float value to an integral float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat trunc(sfloat x) { return libm.truncf(x); }
-
-        /// <summary>Returns x raised to the power y.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat pow(sfloat x, sfloat y) { return libm.powf(x, y); }
-
-        /// <summary>Returns the base-e exponential of x.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat exp(sfloat x) { return libm.expf(x); }
-
-        /// <summary>Returns the base-2 exponential of x.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat exp2(sfloat x) { return libm.expf(x) * sfloat.FromRaw(0x3f317218); }
-
-        /// <summary>Returns the base-10 exponential of x.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat exp10(sfloat x) { return libm.expf(x) * sfloat.FromRaw(0x40135d8e); }
-
-        /// <summary>Returns the natural logarithm of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat log(sfloat x) { return libm.logf(x); }
-
-        /// <summary>Returns the base-2 logarithm of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat log2(sfloat x) { return libm.log2f(x); }
-
-        /// <summary>Returns the base-10 logarithm of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat log10(sfloat x) { return libm.logf(x) * LOG10E; }
-
-        /// <summary>Returns the square root of a float value.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat sqrt(sfloat x) { return libm.sqrtf(x); }
-
-        /// <summary>Returns the bit pattern of a float as an int.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int asint(sfloat x) {
-            return (int)x.RawValue;
-        }
-
-        /// <summary>Returns the bit pattern of an int as a float.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat asfloat(int x) {
-            return sfloat.FromRaw((uint)x);
-        }
-
-        private const uint DEG2RAD = 0x3c8efa35;
-        private const uint RAD2DEG = 0x42652ee1;
-
-        /// <summary>Returns the result of converting a float value from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat radians(sfloat x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-        /// <summary>Returns the result of a componentwise conversion of a float2 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 radians(float2 x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-        /// <summary>Returns the result of a componentwise conversion of a float3 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 radians(float3 x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-        /// <summary>Returns the result of a componentwise conversion of a float4 vector from degrees to radians.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 radians(float4 x) { return x * sfloat.FromRaw(DEG2RAD); }
-
-
-        /// <summary>Returns the result of converting a double value from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat degrees(sfloat x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-        /// <summary>Returns the result of a componentwise conversion of a double2 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 degrees(float2 x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-        /// <summary>Returns the result of a componentwise conversion of a double3 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 degrees(float3 x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-        /// <summary>Returns the result of a componentwise conversion of a double4 vector from radians to degrees.</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 degrees(float4 x) { return x * sfloat.FromRaw(RAD2DEG); }
-
-
-    }
-
-    #endif
-
-    public static partial class math {
-
-        /// <summary>Extrinsic rotation order. Specifies in which order rotations around the principal axes (x, y and z) are to be applied.</summary>
-        public enum RotationOrder : byte {
-
-            /// <summary>Extrinsic rotation around the x axis, then around the y axis and finally around the z axis.</summary>
-            XYZ,
-            /// <summary>Extrinsic rotation around the x axis, then around the z axis and finally around the y axis.</summary>
-            XZY,
-            /// <summary>Extrinsic rotation around the y axis, then around the x axis and finally around the z axis.</summary>
-            YXZ,
-            /// <summary>Extrinsic rotation around the y axis, then around the z axis and finally around the x axis.</summary>
-            YZX,
-            /// <summary>Extrinsic rotation around the z axis, then around the x axis and finally around the y axis.</summary>
-            ZXY,
-            /// <summary>Extrinsic rotation around the z axis, then around the y axis and finally around the x axis.</summary>
-            ZYX,
-            /// <summary>Unity default rotation order. Extrinsic Rotation around the z axis, then around the x axis and finally around the y axis.</summary>
-            Default = ZXY
-
-        };
-
-        /// <summary>Specifies a shuffle component.</summary>
-        public enum ShuffleComponent : byte {
-
-            /// <summary>Specified the x component of the left vector.</summary>
-            LeftX,
-            /// <summary>Specified the y component of the left vector.</summary>
-            LeftY,
-            /// <summary>Specified the z component of the left vector.</summary>
-            LeftZ,
-            /// <summary>Specified the w component of the left vector.</summary>
-            LeftW,
-
-            /// <summary>Specified the x component of the right vector.</summary>
-            RightX,
-            /// <summary>Specified the y component of the right vector.</summary>
-            RightY,
-            /// <summary>Specified the z component of the right vector.</summary>
-            RightZ,
-            /// <summary>Specified the w component of the right vector.</summary>
-            RightW
-
-        };
-
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sfloat angle(float3 from, float3 to) {
             var num = sqrt(lengthsq(from) * lengthsq(to));
             return (double)num < 1.0000000036274937E-15 ? 0.0f : acos(math.clamp(dot(from, to) / num, -1f, 1f)) * 57.29578f;
         }
-
+        
         /// <summary>Returns the angle in radians between two unit quaternions.</summary>
         /// <param name="q1">The first quaternion.</param>
         /// <param name="q2">The second quaternion.</param>
         /// <returns>The angle between two unit quaternions.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat angle(quaternion q1, quaternion q2) {
+        public static sfloat angle(quaternion q1, quaternion q2)
+        {
             var diff = asin(length(normalize(mul(conjugate(q1), q2)).value.xyz));
             return diff + diff;
         }
-
+        
         /// <summary>Returns the bit pattern of a uint as an int.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int asint(uint x) { return (int)x; }
@@ -540,6 +157,12 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int4 asint(uint4 x) { return int4((int)x.x, (int)x.y, (int)x.z, (int)x.w); }
 
+
+        /// <summary>Returns the bit pattern of a float as an int.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int asint(sfloat x) {
+            return (int)x.RawValue;
+        }
 
         /// <summary>Returns the bit pattern of a float2 as an int2.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -598,6 +221,13 @@ namespace ME.BECS.FixedPoint {
         public static ulong asulong(long x) { return (ulong)x; }
 
 
+        /// <summary>Returns the bit pattern of an int as a float.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat asfloat(int x)
+        {
+            return sfloat.FromRaw((uint)x);
+        }
+
         /// <summary>Returns the bit pattern of an int2 as a float2.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 asfloat(int2 x) { return float2(asfloat(x.x), asfloat(x.y)); }
@@ -638,7 +268,8 @@ namespace ME.BECS.FixedPoint {
         /// </summary>
         /// <param name="value">The input bool4 to calculate the bitmask for</param>
         /// <returns>A bitmask representation of the bool4, in LSB order</returns>
-        public static int bitmask(bool4 value) {
+        public static int bitmask(bool4 value)
+        {
             int mask = 0;
             if (value.x) mask |= 0x01;
             if (value.y) mask |= 0x02;
@@ -706,7 +337,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Integer input.</param>
         /// <returns>bool where true indicates that input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool ispow2(int x) {
+        public static bool ispow2(int x)
+        {
             return x > 0 && ((x & (x - 1)) == 0);
         }
 
@@ -717,7 +349,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int2"/> input</param>
         /// <returns><see cref="bool2"/> where true in a component indicates the same component in the input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool2 ispow2(int2 x) {
+        public static bool2 ispow2(int2 x)
+        {
             return new bool2(ispow2(x.x), ispow2(x.y));
         }
 
@@ -728,7 +361,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int3"/> input</param>
         /// <returns><see cref="bool3"/> where true in a component indicates the same component in the input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool3 ispow2(int3 x) {
+        public static bool3 ispow2(int3 x)
+        {
             return new bool3(ispow2(x.x), ispow2(x.y), ispow2(x.z));
         }
 
@@ -739,7 +373,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int4"/> input</param>
         /// <returns><see cref="bool4"/> where true in a component indicates the same component in the input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool4 ispow2(int4 x) {
+        public static bool4 ispow2(int4 x)
+        {
             return new bool4(ispow2(x.x), ispow2(x.y), ispow2(x.z), ispow2(x.w));
         }
 
@@ -750,7 +385,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Unsigned integer input.</param>
         /// <returns>bool where true indicates that input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool ispow2(uint x) {
+        public static bool ispow2(uint x)
+        {
             return x > 0 && ((x & (x - 1)) == 0);
         }
 
@@ -761,7 +397,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint2"/> input</param>
         /// <returns><see cref="bool2"/> where true in a component indicates the same component in the input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool2 ispow2(uint2 x) {
+        public static bool2 ispow2(uint2 x)
+        {
             return new bool2(ispow2(x.x), ispow2(x.y));
         }
 
@@ -772,7 +409,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint3"/> input</param>
         /// <returns><see cref="bool3"/> where true in a component indicates the same component in the input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool3 ispow2(uint3 x) {
+        public static bool3 ispow2(uint3 x)
+        {
             return new bool3(ispow2(x.x), ispow2(x.y), ispow2(x.z));
         }
 
@@ -783,7 +421,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint4"/> input</param>
         /// <returns><see cref="bool4"/> where true in a component indicates the same component in the input was a power of two.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool4 ispow2(uint4 x) {
+        public static bool4 ispow2(uint4 x)
+        {
             return new bool4(ispow2(x.x), ispow2(x.y), ispow2(x.z), ispow2(x.w));
         }
 
@@ -1137,6 +776,10 @@ namespace ME.BECS.FixedPoint {
         public static long abs(long x) { return max(-x, x); }
 
 
+        /// <summary>Returns the absolute value of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat abs(sfloat x) { return sfloat.Abs(x); }
+
         /// <summary>Returns the componentwise absolute value of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 abs(float2 x) { return new float2(abs(x.x), abs(x.y)); }
@@ -1201,6 +844,10 @@ namespace ME.BECS.FixedPoint {
         public static sfloat dot(float4 x, float4 y) { return x.x * y.x + x.y * y.y + x.z * y.z + x.w * y.w; }
 
 
+        /// <summary>Returns the tangent of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat tan(sfloat x) { return libm.tanf(x); }
+
         /// <summary>Returns the componentwise tangent of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 tan(float2 x) { return new float2(tan(x.x), tan(x.y)); }
@@ -1214,6 +861,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 tan(float4 x) { return new float4(tan(x.x), tan(x.y), tan(x.z), tan(x.w)); }
 
 
+        /// <summary>Returns the arctangent of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat atan(sfloat x) { return libm.atanf(x); }
+
         /// <summary>Returns the componentwise arctangent of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 atan(float2 x) { return new float2(atan(x.x), atan(x.y)); }
@@ -1225,6 +876,11 @@ namespace ME.BECS.FixedPoint {
         /// <summary>Returns the componentwise arctangent of a float4 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 atan(float4 x) { return new float4(atan(x.x), atan(x.y), atan(x.z), atan(x.w)); }
+
+
+        /// <summary>Returns the 2-argument arctangent of a pair of float values.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat atan2(sfloat y, sfloat x) { return libm.atan2f(y, x); }
 
         /// <summary>Returns the componentwise 2-argument arctangent of a pair of floats2 vectors.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1238,6 +894,11 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 atan2(float4 y, float4 x) { return new float4(atan2(y.x, x.x), atan2(y.y, x.y), atan2(y.z, x.z), atan2(y.w, x.w)); }
 
+
+        /// <summary>Returns the cosine of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat cos(sfloat x) { return libm.cosf(x); }
+
         /// <summary>Returns the componentwise cosine of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 cos(float2 x) { return new float2(cos(x.x), cos(x.y)); }
@@ -1249,6 +910,11 @@ namespace ME.BECS.FixedPoint {
         /// <summary>Returns the componentwise cosine of a float4 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 cos(float4 x) { return new float4(cos(x.x), cos(x.y), cos(x.z), cos(x.w)); }
+
+
+        /// <summary>Returns the arccosine of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat acos(sfloat x) { return libm.acosf(x); }
 
         /// <summary>Returns the componentwise arccosine of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1263,6 +929,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 acos(float4 x) { return new float4(acos(x.x), acos(x.y), acos(x.z), acos(x.w)); }
 
 
+        /// <summary>Returns the sine of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat sin(sfloat x) { return libm.sinf(x); }
+
         /// <summary>Returns the componentwise sine of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 sin(float2 x) { return new float2(sin(x.x), sin(x.y)); }
@@ -1275,6 +945,10 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 sin(float4 x) { return new float4(sin(x.x), sin(x.y), sin(x.z), sin(x.w)); }
 
+
+        /// <summary>Returns the arcsine of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat asin(sfloat x) { return libm.asinf(x); }
 
         /// <summary>Returns the componentwise arcsine of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1289,6 +963,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 asin(float4 x) { return new float4(asin(x.x), asin(x.y), asin(x.z), asin(x.w)); }
 
 
+        /// <summary>Returns the result of rounding a float value up to the nearest integral value less or equal to the original value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat floor(sfloat x) { return libm.floorf(x); }
+
         /// <summary>Returns the result of rounding each component of a float2 vector value down to the nearest value less or equal to the original value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 floor(float2 x) { return new float2(floor(x.x), floor(x.y)); }
@@ -1301,6 +979,10 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 floor(float4 x) { return new float4(floor(x.x), floor(x.y), floor(x.z), floor(x.w)); }
 
+
+        /// <summary>Returns the result of rounding a float value up to the nearest integral value greater or equal to the original value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat ceil(sfloat x) { return libm.ceilf(x); }
 
         /// <summary>Returns the result of rounding each component of a float2 vector value up to the nearest value greater or equal to the original value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1315,6 +997,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 ceil(float4 x) { return new float4(ceil(x.x), ceil(x.y), ceil(x.z), ceil(x.w)); }
 
 
+        /// <summary>Returns the result of rounding a float value to the nearest integral value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat round(sfloat x) { return libm.roundf(x); }
+
         /// <summary>Returns the result of rounding each component of a float2 vector value to the nearest integral value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 round(float2 x) { return new float2(round(x.x), round(x.y)); }
@@ -1327,6 +1013,10 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 round(float4 x) { return new float4(round(x.x), round(x.y), round(x.z), round(x.w)); }
 
+
+        /// <summary>Returns the result of truncating a float value to an integral float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat trunc(sfloat x) { return libm.truncf(x); }
 
         /// <summary>Returns the result of a componentwise truncation of a float2 value to an integral float2 value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1377,13 +1067,7 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the sign of a float value. -1.0f if it is less than zero, 0.0f if it is zero and 1.0f if it greater than zero.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat sign(sfloat x) {
-            return x > sfloat.Zero
-                       ? sfloat.One
-                       : x < sfloat.Zero
-                           ? -sfloat.One
-                           : sfloat.Zero;
-        }
+        public static sfloat sign(sfloat x) { return x > sfloat.Zero ? sfloat.One : x < sfloat.Zero ? -sfloat.One : sfloat.Zero; }
 
         /// <summary>Returns the componentwise sign of a float2 value. 1.0f for positive components, 0.0f for zero components and -1.0f for negative components.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1398,6 +1082,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 sign(float4 x) { return new float4(sign(x.x), sign(x.y), sign(x.z), sign(x.w)); }
 
 
+        /// <summary>Returns x raised to the power y.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat pow(sfloat x, sfloat y) { return libm.powf(x, y); }
+
         /// <summary>Returns the componentwise result of raising x to the power y.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 pow(float2 x, float2 y) { return new float2(pow(x.x, y.x), pow(x.y, y.y)); }
@@ -1410,6 +1098,10 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 pow(float4 x, float4 y) { return new float4(pow(x.x, y.x), pow(x.y, y.y), pow(x.z, y.z), pow(x.w, y.w)); }
 
+
+        /// <summary>Returns the base-e exponential of x.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat exp(sfloat x) { return libm.expf(x); }
 
         /// <summary>Returns the componentwise base-e exponential of x.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1424,6 +1116,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 exp(float4 x) { return new float4(exp(x.x), exp(x.y), exp(x.z), exp(x.w)); }
 
 
+        /// <summary>Returns the base-2 exponential of x.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat exp2(sfloat x) { return libm.expf(x) * sfloat.FromRaw(0x3f317218); }
+
         /// <summary>Returns the componentwise base-2 exponential of x.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 exp2(float2 x) { return new float2(exp2(x.x), exp2(x.y)); }
@@ -1436,6 +1132,10 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 exp2(float4 x) { return new float4(exp2(x.x), exp2(x.y), exp2(x.z), exp2(x.w)); }
 
+
+        /// <summary>Returns the base-10 exponential of x.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat exp10(sfloat x) { return libm.expf(x) * sfloat.FromRaw(0x40135d8e); }
 
         /// <summary>Returns the componentwise base-10 exponential of x.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1450,6 +1150,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 exp10(float4 x) { return new float4(exp10(x.x), exp10(x.y), exp10(x.z), exp10(x.w)); }
 
 
+        /// <summary>Returns the natural logarithm of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat log(sfloat x) { return libm.logf(x); }
+
         /// <summary>Returns the componentwise natural logarithm of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 log(float2 x) { return new float2(log(x.x), log(x.y)); }
@@ -1463,6 +1167,10 @@ namespace ME.BECS.FixedPoint {
         public static float4 log(float4 x) { return new float4(log(x.x), log(x.y), log(x.z), log(x.w)); }
 
 
+        /// <summary>Returns the base-2 logarithm of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat log2(sfloat x) { return libm.log2f(x); }
+
         /// <summary>Returns the componentwise base-2 logarithm of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float2 log2(float2 x) { return new float2(log2(x.x), log2(x.y)); }
@@ -1475,6 +1183,10 @@ namespace ME.BECS.FixedPoint {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float4 log2(float4 x) { return new float4(log2(x.x), log2(x.y), log2(x.z), log2(x.w)); }
 
+
+        /// <summary>Returns the base-10 logarithm of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat log10(sfloat x) { return libm.logf(x) * LOG10E; }
 
         /// <summary>Returns the componentwise base-10 logarithm of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1508,41 +1220,33 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Splits a float value into an integral part i and a fractional part that gets returned. Both parts take the sign of the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat modf(sfloat x, out sfloat i) {
-            i = trunc(x);
-            return x - i;
-        }
+        public static sfloat modf(sfloat x, out sfloat i) { i = trunc(x); return x - i; }
 
         /// <summary>
         /// Performs a componentwise split of a float2 vector into an integral part i and a fractional part that gets returned.
         /// Both parts take the sign of the corresponding input component.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 modf(float2 x, out float2 i) {
-            i = trunc(x);
-            return x - i;
-        }
+        public static float2 modf(float2 x, out float2 i) { i = trunc(x); return x - i; }
 
         /// <summary>
         /// Performs a componentwise split of a float3 vector into an integral part i and a fractional part that gets returned.
         /// Both parts take the sign of the corresponding input component.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 modf(float3 x, out float3 i) {
-            i = trunc(x);
-            return x - i;
-        }
+        public static float3 modf(float3 x, out float3 i) { i = trunc(x); return x - i; }
 
         /// <summary>
         /// Performs a componentwise split of a float4 vector into an integral part i and a fractional part that gets returned.
         /// Both parts take the sign of the corresponding input component.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 modf(float4 x, out float4 i) {
-            i = trunc(x);
-            return x - i;
-        }
+        public static float4 modf(float4 x, out float4 i) { i = trunc(x); return x - i; }
 
+
+        /// <summary>Returns the square root of a float value.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat sqrt(sfloat x) { return libm.sqrtf(x); }
 
         /// <summary>Returns the componentwise square root of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1592,7 +1296,8 @@ namespace ME.BECS.FixedPoint {
         /// Returns the given default value when 1 / length(x) does not produce a finite number.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static public float2 normalizesafe(float2 x, float2 defaultvalue = new float2()) {
+        static public float2 normalizesafe(float2 x, float2 defaultvalue = new float2())
+        {
             sfloat len = math.dot(x, x);
             return math.select(defaultvalue, x * math.rsqrt(len), len > FLT_MIN_NORMAL);
         }
@@ -1602,7 +1307,8 @@ namespace ME.BECS.FixedPoint {
         /// Returns the given default value when 1 / length(x) does not produce a finite number.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static public float3 normalizesafe(float3 x, float3 defaultvalue = new float3()) {
+        static public float3 normalizesafe(float3 x, float3 defaultvalue = new float3())
+        {
             sfloat len = math.dot(x, x);
             return math.select(defaultvalue, x * math.rsqrt(len), len > FLT_MIN_NORMAL);
         }
@@ -1612,7 +1318,8 @@ namespace ME.BECS.FixedPoint {
         /// Returns the given default value when 1 / length(x) does not produce a finite number.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static public float4 normalizesafe(float4 x, float4 defaultvalue = new float4()) {
+        static public float4 normalizesafe(float4 x, float4 defaultvalue = new float4())
+        {
             sfloat len = math.dot(x, x);
             return math.select(defaultvalue, x * math.rsqrt(len), len > FLT_MIN_NORMAL);
         }
@@ -1637,7 +1344,7 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the squared length of a float value. Equivalent to squaring the value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat lengthsq(sfloat x) { return x * x; }
+        public static sfloat lengthsq(sfloat x) { return x*x; }
 
         /// <summary>Returns the squared length of a float2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1671,10 +1378,7 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the distance between two float values.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat distancesq(sfloat x, sfloat y) {
-            sfloat ymx = y - x;
-            return ymx * ymx;
-        }
+        public static sfloat distancesq(sfloat x, sfloat y) { sfloat ymx = y - x; return ymx * ymx; }
 
         /// <summary>Returns the distance between two float2 vectors.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1696,28 +1400,32 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns a smooth Hermite interpolation between 0.0f and 1.0f when x is in [a, b].</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat smoothstep(sfloat a, sfloat b, sfloat x) {
+        public static sfloat smoothstep(sfloat a, sfloat b, sfloat x)
+        {
             var t = saturate((x - a) / (b - a));
             return t * t * ((sfloat)3.0f - ((sfloat)2.0f * t));
         }
 
         /// <summary>Returns a componentwise smooth Hermite interpolation between 0.0f and 1.0f when x is in [a, b].</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 smoothstep(float2 a, float2 b, float2 x) {
+        public static float2 smoothstep(float2 a, float2 b, float2 x)
+        {
             var t = saturate((x - a) / (b - a));
             return t * t * ((sfloat)3.0f - ((sfloat)2.0f * t));
         }
 
         /// <summary>Returns a componentwise smooth Hermite interpolation between 0.0f and 1.0f when x is in [a, b].</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 smoothstep(float3 a, float3 b, float3 x) {
+        public static float3 smoothstep(float3 a, float3 b, float3 x)
+        {
             var t = saturate((x - a) / (b - a));
             return t * t * ((sfloat)3.0f - ((sfloat)2.0f * t));
         }
 
         /// <summary>Returns a componentwise smooth Hermite interpolation between 0.0f and 1.0f when x is in [a, b].</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 smoothstep(float4 a, float4 b, float4 x) {
+        public static float4 smoothstep(float4 a, float4 b, float4 x)
+        {
             var t = saturate((x - a) / (b - a));
             return t * t * ((sfloat)3.0f - ((sfloat)2.0f * t));
         }
@@ -1829,7 +1537,7 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns b if c is true, a otherwise.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int select(int a, int b, bool c) { return c ? b : a; }
+        public static int select(int a, int b, bool c)    { return c ? b : a; }
 
         /// <summary>Returns b if c is true, a otherwise.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1916,7 +1624,7 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns b if c is true, a otherwise.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static sfloat select(sfloat a, sfloat b, bool c) { return c ? b : a; }
+        public static sfloat select(sfloat a, sfloat b, bool c)    { return c ? b : a; }
 
         /// <summary>Returns b if c is true, a otherwise.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1985,7 +1693,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the refraction vector given the incident vector i, the normal vector n and the refraction index eta.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 refract(float2 i, float2 n, sfloat eta) {
+        public static float2 refract(float2 i, float2 n, sfloat eta)
+        {
             sfloat ni = dot(n, i);
             sfloat k = sfloat.One - eta * eta * (sfloat.One - ni * ni);
             return select(sfloat.Zero, eta * i - (eta * ni + sqrt(k)) * n, k >= sfloat.Zero);
@@ -1993,7 +1702,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the refraction vector given the incident vector i, the normal vector n and the refraction index eta.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 refract(float3 i, float3 n, sfloat eta) {
+        public static float3 refract(float3 i, float3 n, sfloat eta)
+        {
             sfloat ni = dot(n, i);
             sfloat k = sfloat.One - eta * eta * (sfloat.One - ni * ni);
             return select(sfloat.Zero, eta * i - (eta * ni + sqrt(k)) * n, k >= sfloat.Zero);
@@ -2001,7 +1711,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the refraction vector given the incident vector i, the normal vector n and the refraction index eta.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 refract(float4 i, float4 n, sfloat eta) {
+        public static float4 refract(float4 i, float4 n, sfloat eta)
+        {
             sfloat ni = dot(n, i);
             sfloat k = sfloat.One - eta * eta * (sfloat.One - ni * ni);
             return select(sfloat.Zero, eta * i - (eta * ni + sqrt(k)) * n, k >= sfloat.Zero);
@@ -2021,7 +1732,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="b">Non-zero vector to project onto.</param>
         /// <returns>Vector projection of a onto b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 project(float2 a, float2 b) {
+        public static float2 project(float2 a, float2 b)
+        {
             return (dot(a, b) / dot(b, b)) * b;
         }
 
@@ -2038,7 +1750,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="b">Non-zero vector to project onto.</param>
         /// <returns>Vector projection of a onto b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 project(float3 a, float3 b) {
+        public static float3 project(float3 a, float3 b)
+        {
             return (dot(a, b) / dot(b, b)) * b;
         }
 
@@ -2055,7 +1768,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="b">Non-zero vector to project onto.</param>
         /// <returns>Vector projection of a onto b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 project(float4 a, float4 b) {
+        public static float4 project(float4 a, float4 b)
+        {
             return (dot(a, b) / dot(b, b)) * b;
         }
 
@@ -2073,7 +1787,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="defaultValue">Default value to return if projection is not finite.</param>
         /// <returns>Vector projection of a onto b or the default value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 projectsafe(float2 a, float2 b, float2 defaultValue = new float2()) {
+        public static float2 projectsafe(float2 a, float2 b, float2 defaultValue = new float2())
+        {
             var proj = project(a, b);
 
             return select(defaultValue, proj, all(isfinite(proj)));
@@ -2093,7 +1808,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="defaultValue">Default value to return if projection is not finite.</param>
         /// <returns>Vector projection of a onto b or the default value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 projectsafe(float3 a, float3 b, float3 defaultValue = new float3()) {
+        public static float3 projectsafe(float3 a, float3 b, float3 defaultValue = new float3())
+        {
             var proj = project(a, b);
 
             return select(defaultValue, proj, all(isfinite(proj)));
@@ -2113,7 +1829,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="defaultValue">Default value to return if projection is not finite.</param>
         /// <returns>Vector projection of a onto b or the default value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4 projectsafe(float4 a, float4 b, float4 defaultValue = new float4()) {
+        public static float4 projectsafe(float4 a, float4 b, float4 defaultValue = new float4())
+        {
             var proj = project(a, b);
 
             return select(defaultValue, proj, all(isfinite(proj)));
@@ -2135,31 +1852,19 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the sine and cosine of the input float value x through the out parameters s and c.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void sincos(sfloat x, out sfloat s, out sfloat c) {
-            s = sin(x);
-            c = cos(x);
-        }
+        public static void sincos(sfloat x, out sfloat s, out sfloat c) { s = sin(x); c = cos(x); }
 
         /// <summary>Returns the componentwise sine and cosine of the input float2 vector x through the out parameters s and c.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void sincos(float2 x, out float2 s, out float2 c) {
-            s = sin(x);
-            c = cos(x);
-        }
+        public static void sincos(float2 x, out float2 s, out float2 c) { s = sin(x); c = cos(x); }
 
         /// <summary>Returns the componentwise sine and cosine of the input float3 vector x through the out parameters s and c.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void sincos(float3 x, out float3 s, out float3 c) {
-            s = sin(x);
-            c = cos(x);
-        }
+        public static void sincos(float3 x, out float3 s, out float3 c) { s = sin(x); c = cos(x); }
 
         /// <summary>Returns the componentwise sine and cosine of the input float4 vector x through the out parameters s and c.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void sincos(float4 x, out float4 s, out float4 c) {
-            s = sin(x);
-            c = cos(x);
-        }
+        public static void sincos(float4 x, out float4 s, out float4 c) { s = sin(x); c = cos(x); }
 
 
         /// <summary>Returns number of 1-bits in the binary representation of an int value. Also known as the Hamming weight, popcnt on x86, and vcnt on ARM.</summary>
@@ -2191,7 +1896,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Number in which to count bits.</param>
         /// <returns>Number of bits set to 1 within x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int countbits(uint x) {
+        public static int countbits(uint x)
+        {
             x = x - ((x >> 1) & 0x55555555);
             x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
             return (int)((((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24);
@@ -2201,7 +1907,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Number in which to count bits.</param>
         /// <returns>int2 containing number of bits set to 1 within each component of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int2 countbits(uint2 x) {
+        public static int2 countbits(uint2 x)
+        {
             x = x - ((x >> 1) & 0x55555555);
             x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
             return int2((((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24);
@@ -2211,7 +1918,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Number in which to count bits.</param>
         /// <returns>int3 containing number of bits set to 1 within each component of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 countbits(uint3 x) {
+        public static int3 countbits(uint3 x)
+        {
             x = x - ((x >> 1) & 0x55555555);
             x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
             return int3((((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24);
@@ -2221,7 +1929,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Number in which to count bits.</param>
         /// <returns>int4 containing number of bits set to 1 within each component of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 countbits(uint4 x) {
+        public static int4 countbits(uint4 x)
+        {
             x = x - ((x >> 1) & 0x55555555);
             x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
             return int4((((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24);
@@ -2231,7 +1940,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Number in which to count bits.</param>
         /// <returns>Number of bits set to 1 within x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int countbits(ulong x) {
+        public static int countbits(ulong x)
+        {
             x = x - ((x >> 1) & 0x5555555555555555);
             x = (x & 0x3333333333333333) + ((x >> 2) & 0x3333333333333333);
             return (int)((((x + (x >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101) >> 56);
@@ -2261,15 +1971,18 @@ namespace ME.BECS.FixedPoint {
         public static int4 lzcnt(int4 x) { return int4(lzcnt(x.x), lzcnt(x.y), lzcnt(x.z), lzcnt(x.w)); }
 
 
-        private static readonly int[] debruijn32 = new int[32] {
+        private static readonly int[] debruijn32 = new int[32]
+        {
             0, 31, 9, 30, 3, 8, 13, 29, 2, 5, 7, 21, 12, 24, 28, 19,
             1, 10, 4, 14, 6, 22, 25, 20, 11, 15, 23, 26, 16, 27, 17, 18
         };
 
         /// <summary>Returns number of leading zeros in the binary representations of a uint value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int lzcnt(uint x) {
-            if (x == 0) {
+        public static int lzcnt(uint x)
+        {
+            if (x == 0)
+            {
                 return 32;
             }
 
@@ -2302,20 +2015,22 @@ namespace ME.BECS.FixedPoint {
         public static int lzcnt(long x) { return lzcnt((ulong)x); }
 
         private static readonly int[] debruijn64 = new int[64] {
-            63, 0, 58, 1, 59, 47, 53, 2,
-            60, 39, 48, 27, 54, 33, 42, 3,
+            63,  0, 58,  1, 59, 47, 53,  2,
+            60, 39, 48, 27, 54, 33, 42,  3,
             61, 51, 37, 40, 49, 18, 28, 20,
-            55, 30, 34, 11, 43, 14, 22, 4,
+            55, 30, 34, 11, 43, 14, 22,  4,
             62, 57, 46, 52, 38, 26, 32, 41,
             50, 36, 17, 19, 29, 10, 13, 21,
-            56, 45, 25, 31, 35, 16, 9, 12,
-            44, 24, 15, 8, 23, 7, 6, 5
+            56, 45, 25, 31, 35, 16,  9, 12,
+            44, 24, 15,  8, 23,  7,  6,  5
         };
 
         /// <summary>Returns number of leading zeros in the binary representations of a ulong value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int lzcnt(ulong x) {
-            if (x == 0) {
+        public static int lzcnt(ulong x)
+        {
+            if (x == 0)
+            {
                 return 64;
             }
 
@@ -2347,14 +2062,16 @@ namespace ME.BECS.FixedPoint {
 
 
 
-        private static readonly int[] debruijn_ctz32 = new int[32] {
+        private static readonly int[] debruijn_ctz32 = new int[32]
+        {
             31, 0, 27, 1, 28, 13, 23, 2, 29, 21, 19, 14, 24, 16, 3, 7,
             30, 26, 12, 22, 20, 18, 15, 6, 25, 11, 17, 5, 10, 4, 9, 8
         };
 
         /// <summary>Returns number of trailing zeros in the binary representations of a uint value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int tzcnt(uint x) {
+        public static int tzcnt(uint x)
+        {
             return (x == 0 ? 1 : 0) + debruijn_ctz32[((uint)((int)x & -(int)x) * 0x0EF96A62u) >> 27];
         }
 
@@ -2376,7 +2093,8 @@ namespace ME.BECS.FixedPoint {
         public static int tzcnt(long x) { return tzcnt((ulong)x); }
 
 
-        private static readonly int[] debruijn_ctz64 = new int[64] {
+        private static readonly int[] debruijn_ctz64 = new int[64]
+        {
             63, 0, 1, 52, 2, 6, 53, 26, 3, 37, 40, 7, 33, 54, 47, 27,
             61, 4, 38, 45, 43, 41, 21, 8, 23, 34, 58, 55, 48, 17, 28, 10,
             62, 51, 5, 25, 36, 39, 32, 46, 60, 44, 42, 20, 22, 57, 16, 9,
@@ -2385,7 +2103,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns number of trailing zeros in the binary representations of a ulong value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int tzcnt(ulong x) {
+        public static int tzcnt(ulong x)
+        {
             return (x == 0 ? 1 : 0) + debruijn_ctz64[((ulong)((long)x & -(long)x) * 0x045FBAC7992A70DAul) >> 58];
         }
 
@@ -2419,7 +2138,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of performing a componentwise reversal of the bit pattern of an uint2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint2 reversebits(uint2 x) {
+        public static uint2 reversebits(uint2 x)
+        {
             x = ((x >> 1) & 0x55555555) | ((x & 0x55555555) << 1);
             x = ((x >> 2) & 0x33333333) | ((x & 0x33333333) << 2);
             x = ((x >> 4) & 0x0F0F0F0F) | ((x & 0x0F0F0F0F) << 4);
@@ -2429,7 +2149,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of performing a componentwise reversal of the bit pattern of an uint3 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint3 reversebits(uint3 x) {
+        public static uint3 reversebits(uint3 x)
+        {
             x = ((x >> 1) & 0x55555555) | ((x & 0x55555555) << 1);
             x = ((x >> 2) & 0x33333333) | ((x & 0x33333333) << 2);
             x = ((x >> 4) & 0x0F0F0F0F) | ((x & 0x0F0F0F0F) << 4);
@@ -2439,7 +2160,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of performing a componentwise reversal of the bit pattern of an uint4 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint4 reversebits(uint4 x) {
+        public static uint4 reversebits(uint4 x)
+        {
             x = ((x >> 1) & 0x55555555) | ((x & 0x55555555) << 1);
             x = ((x >> 2) & 0x33333333) | ((x & 0x33333333) << 2);
             x = ((x >> 4) & 0x0F0F0F0F) | ((x & 0x0F0F0F0F) << 4);
@@ -2455,7 +2177,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of performing a reversal of the bit pattern of a ulong value.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong reversebits(ulong x) {
+        public static ulong reversebits(ulong x)
+        {
             x = ((x >> 1) & 0x5555555555555555ul) | ((x & 0x5555555555555555ul) << 1);
             x = ((x >> 2) & 0x3333333333333333ul) | ((x & 0x3333333333333333ul) << 2);
             x = ((x >> 4) & 0x0F0F0F0F0F0F0F0Ful) | ((x & 0x0F0F0F0F0F0F0F0Ful) << 4);
@@ -2555,7 +2278,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ceilpow2(int x) {
+        public static int ceilpow2(int x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2567,7 +2291,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of a componentwise calculation of the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int2 ceilpow2(int2 x) {
+        public static int2 ceilpow2(int2 x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2579,7 +2304,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of a componentwise calculation of the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 ceilpow2(int3 x) {
+        public static int3 ceilpow2(int3 x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2591,7 +2317,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of a componentwise calculation of the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 ceilpow2(int4 x) {
+        public static int4 ceilpow2(int4 x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2604,7 +2331,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ceilpow2(uint x) {
+        public static uint ceilpow2(uint x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2616,7 +2344,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of a componentwise calculation of the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint2 ceilpow2(uint2 x) {
+        public static uint2 ceilpow2(uint2 x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2628,7 +2357,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of a componentwise calculation of the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint3 ceilpow2(uint3 x) {
+        public static uint3 ceilpow2(uint3 x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2640,7 +2370,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the result of a componentwise calculation of the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint4 ceilpow2(uint4 x) {
+        public static uint4 ceilpow2(uint4 x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2653,7 +2384,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long ceilpow2(long x) {
+        public static long ceilpow2(long x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2667,7 +2399,8 @@ namespace ME.BECS.FixedPoint {
 
         /// <summary>Returns the smallest power of two greater than or equal to the input.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong ceilpow2(ulong x) {
+        public static ulong ceilpow2(ulong x)
+        {
             x -= 1;
             x |= x >> 1;
             x |= x >> 2;
@@ -2687,7 +2420,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Integer to be used as input.</param>
         /// <returns>Ceiling of the base-2 logarithm of x, as an integer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ceillog2(int x) {
+        public static int ceillog2(int x)
+        {
             return 32 - lzcnt((uint)x - 1);
         }
 
@@ -2700,7 +2434,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int2"/> to be used as input.</param>
         /// <returns>Componentwise ceiling of the base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int2 ceillog2(int2 x) {
+        public static int2 ceillog2(int2 x)
+        {
             return new int2(ceillog2(x.x), ceillog2(x.y));
         }
 
@@ -2713,7 +2448,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int3"/> to be used as input.</param>
         /// <returns>Componentwise ceiling of the base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 ceillog2(int3 x) {
+        public static int3 ceillog2(int3 x)
+        {
             return new int3(ceillog2(x.x), ceillog2(x.y), ceillog2(x.z));
         }
 
@@ -2726,7 +2462,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int4"/> to be used as input.</param>
         /// <returns>Componentwise ceiling of the base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 ceillog2(int4 x) {
+        public static int4 ceillog2(int4 x)
+        {
             return new int4(ceillog2(x.x), ceillog2(x.y), ceillog2(x.z), ceillog2(x.w));
         }
 
@@ -2739,7 +2476,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Unsigned integer to be used as input.</param>
         /// <returns>Ceiling of the base-2 logarithm of x, as an integer.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ceillog2(uint x) {
+        public static int ceillog2(uint x)
+        {
             return 32 - lzcnt(x - 1);
         }
 
@@ -2752,7 +2490,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint2"/> to be used as input.</param>
         /// <returns>Componentwise ceiling of the base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int2 ceillog2(uint2 x) {
+        public static int2 ceillog2(uint2 x)
+        {
             return new int2(ceillog2(x.x), ceillog2(x.y));
         }
 
@@ -2765,7 +2504,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint3"/> to be used as input.</param>
         /// <returns>Componentwise ceiling of the base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 ceillog2(uint3 x) {
+        public static int3 ceillog2(uint3 x)
+        {
             return new int3(ceillog2(x.x), ceillog2(x.y), ceillog2(x.z));
         }
 
@@ -2778,7 +2518,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint4"/> to be used as input.</param>
         /// <returns>Componentwise ceiling of the base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 ceillog2(uint4 x) {
+        public static int4 ceillog2(uint4 x)
+        {
             return new int4(ceillog2(x.x), ceillog2(x.y), ceillog2(x.z), ceillog2(x.w));
         }
 
@@ -2789,7 +2530,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Integer to be used as input.</param>
         /// <returns>Floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int floorlog2(int x) {
+        public static int floorlog2(int x)
+        {
             return 31 - lzcnt((uint)x);
         }
 
@@ -2800,7 +2542,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int2"/> to be used as input.</param>
         /// <returns>Componentwise floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int2 floorlog2(int2 x) {
+        public static int2 floorlog2(int2 x)
+        {
             return new int2(floorlog2(x.x), floorlog2(x.y));
         }
 
@@ -2811,7 +2554,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int3"/> to be used as input.</param>
         /// <returns>Componentwise floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 floorlog2(int3 x) {
+        public static int3 floorlog2(int3 x)
+        {
             return new int3(floorlog2(x.x), floorlog2(x.y), floorlog2(x.z));
         }
 
@@ -2822,7 +2566,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="int4"/> to be used as input.</param>
         /// <returns>Componentwise floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 floorlog2(int4 x) {
+        public static int4 floorlog2(int4 x)
+        {
             return new int4(floorlog2(x.x), floorlog2(x.y), floorlog2(x.z), floorlog2(x.w));
         }
 
@@ -2833,7 +2578,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x">Unsigned integer to be used as input.</param>
         /// <returns>Floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int floorlog2(uint x) {
+        public static int floorlog2(uint x)
+        {
             return 31 - lzcnt(x);
         }
 
@@ -2844,7 +2590,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint2"/> to be used as input.</param>
         /// <returns>Componentwise floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int2 floorlog2(uint2 x) {
+        public static int2 floorlog2(uint2 x)
+        {
             return new int2(floorlog2(x.x), floorlog2(x.y));
         }
 
@@ -2855,7 +2602,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint3"/> to be used as input.</param>
         /// <returns>Componentwise floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int3 floorlog2(uint3 x) {
+        public static int3 floorlog2(uint3 x)
+        {
             return new int3(floorlog2(x.x), floorlog2(x.y), floorlog2(x.z));
         }
 
@@ -2866,9 +2614,47 @@ namespace ME.BECS.FixedPoint {
         /// <param name="x"><see cref="uint4"/> to be used as input.</param>
         /// <returns>Componentwise floor of base-2 logarithm of x.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int4 floorlog2(uint4 x) {
+        public static int4 floorlog2(uint4 x)
+        {
             return new int4(floorlog2(x.x), floorlog2(x.y), floorlog2(x.z), floorlog2(x.w));
         }
+
+        private const uint DEG2RAD = 0x3c8efa35;
+        private const uint RAD2DEG = 0x42652ee1;
+
+        /// <summary>Returns the result of converting a float value from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat radians(sfloat x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+        /// <summary>Returns the result of a componentwise conversion of a float2 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float2 radians(float2 x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+        /// <summary>Returns the result of a componentwise conversion of a float3 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float3 radians(float3 x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+        /// <summary>Returns the result of a componentwise conversion of a float4 vector from degrees to radians.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 radians(float4 x) { return x * sfloat.FromRaw(DEG2RAD); }
+
+
+        /// <summary>Returns the result of converting a double value from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat degrees(sfloat x) { return x * sfloat.FromRaw(RAD2DEG); }
+
+        /// <summary>Returns the result of a componentwise conversion of a double2 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float2 degrees(float2 x) { return x * sfloat.FromRaw(RAD2DEG); }
+
+        /// <summary>Returns the result of a componentwise conversion of a double3 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float3 degrees(float3 x) { return x * sfloat.FromRaw(RAD2DEG); }
+
+        /// <summary>Returns the result of a componentwise conversion of a double4 vector from radians to degrees.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float4 degrees(float4 x) { return x * sfloat.FromRaw(RAD2DEG); }
+
 
         /// <summary>Returns the minimum component of an int2 vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3002,11 +2788,16 @@ namespace ME.BECS.FixedPoint {
         /// <param name="mask">Mask indicating which components are enabled.</param>
         /// <returns>Index to element after the last one stored.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int compress(int* output, int index, int4 val, bool4 mask) {
-            if (mask.x) output[index++] = val.x;
-            if (mask.y) output[index++] = val.y;
-            if (mask.z) output[index++] = val.z;
-            if (mask.w) output[index++] = val.w;
+        public static unsafe int compress(int* output, int index, int4 val, bool4 mask)
+        {
+            if (mask.x)
+                output[index++] = val.x;
+            if (mask.y)
+                output[index++] = val.y;
+            if (mask.z)
+                output[index++] = val.z;
+            if (mask.w)
+                output[index++] = val.w;
 
             return index;
         }
@@ -3026,7 +2817,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="mask">Mask indicating which components are enabled.</param>
         /// <returns>Index to element after the last one stored.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int compress(uint* output, int index, uint4 val, bool4 mask) {
+        public static unsafe int compress(uint* output, int index, uint4 val, bool4 mask)
+        {
             return compress((int*)output, index, *(int4*)&val, mask);
         }
 
@@ -3045,7 +2837,8 @@ namespace ME.BECS.FixedPoint {
         /// <param name="mask">Mask indicating which components are enabled.</param>
         /// <returns>Index to element after the last one stored.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int compress(float* output, int index, float4 val, bool4 mask) {
+        public static unsafe int compress(float* output, int index, float4 val, bool4 mask)
+        {
             return compress((int*)output, index, *(int4*)&val, mask);
         }
 
@@ -3054,8 +2847,10 @@ namespace ME.BECS.FixedPoint {
         /// <param name="pBuffer">A pointer to the beginning of the data.</param>
         /// <param name="numBytes">Number of bytes to hash.</param>
         /// <param name="seed">Starting seed value.</param>
-        public static unsafe uint hash(void* pBuffer, int numBytes, uint seed = 0) {
-            unchecked {
+        public static unsafe uint hash(void* pBuffer, int numBytes, uint seed = 0)
+        {
+            unchecked
+            {
                 const uint Prime1 = 2654435761;
                 const uint Prime2 = 2246822519;
                 const uint Prime3 = 3266489917;
@@ -3064,11 +2859,13 @@ namespace ME.BECS.FixedPoint {
 
                 uint4* p = (uint4*)pBuffer;
                 uint hash = seed + Prime5;
-                if (numBytes >= 16) {
+                if (numBytes >= 16)
+                {
                     uint4 state = new uint4(Prime1 + Prime2, Prime2, 0, (uint)-Prime1) + seed;
 
                     int count = numBytes >> 4;
-                    for (int i = 0; i < count; ++i) {
+                    for (int i = 0; i < count; ++i)
+                    {
                         state += *p++ * Prime2;
                         state = (state << 13) | (state >> 19);
                         state *= Prime1;
@@ -3080,13 +2877,15 @@ namespace ME.BECS.FixedPoint {
                 hash += (uint)numBytes;
 
                 uint* puint = (uint*)p;
-                for (int i = 0; i < ((numBytes >> 2) & 3); ++i) {
+                for (int i = 0; i < ((numBytes >> 2) & 3); ++i)
+                {
                     hash += *puint++ * Prime3;
                     hash = rol(hash, 17) * Prime4;
                 }
 
                 byte* pbyte = (byte*)puint;
-                for (int i = 0; i < ((numBytes) & 3); ++i) {
+                for (int i = 0; i < ((numBytes) & 3); ++i)
+                {
                     hash += (*pbyte++) * Prime5;
                     hash = rol(hash, 11) * Prime1;
                 }
@@ -3107,7 +2906,7 @@ namespace ME.BECS.FixedPoint {
         /// <remarks>Matches [https://docs.unity3d.com/ScriptReference/Vector3-up.html](https://docs.unity3d.com/ScriptReference/Vector3-up.html)</remarks>
         /// <returns>The up axis.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3 up() { return new float3(sfloat.Zero, sfloat.One, sfloat.Zero); } // for compatibility
+        public static float3 up() { return new float3(sfloat.Zero, sfloat.One, sfloat.Zero); }  // for compatibility
 
         /// <summary>
         /// Unity's down axis (0, -1, 0).
@@ -3154,27 +2953,29 @@ namespace ME.BECS.FixedPoint {
 
         // SSE shuffles
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static float4 unpacklo(float4 a, float4 b) {
+        internal static float4 unpacklo(float4 a, float4 b)
+        {
             return shuffle(a, b, ShuffleComponent.LeftX, ShuffleComponent.RightX, ShuffleComponent.LeftY, ShuffleComponent.RightY);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static float4 unpackhi(float4 a, float4 b) {
+        internal static float4 unpackhi(float4 a, float4 b)
+        {
             return shuffle(a, b, ShuffleComponent.LeftZ, ShuffleComponent.RightZ, ShuffleComponent.LeftW, ShuffleComponent.RightW);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static float4 movelh(float4 a, float4 b) {
+        internal static float4 movelh(float4 a, float4 b)
+        {
             return shuffle(a, b, ShuffleComponent.LeftX, ShuffleComponent.LeftY, ShuffleComponent.RightX, ShuffleComponent.RightY);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static float4 movehl(float4 a, float4 b) {
+        internal static float4 movehl(float4 a, float4 b)
+        {
             return shuffle(b, a, ShuffleComponent.LeftZ, ShuffleComponent.LeftW, ShuffleComponent.RightZ, ShuffleComponent.RightW);
         }
-
     }
-
 }
