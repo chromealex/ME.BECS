@@ -30,7 +30,7 @@ namespace ME.BECS.Attack {
                 if (aspect.componentRuntimeFire.fireTimer <= 0f) {
                     var bullet = aspect.readComponentVisual.bulletConfig;
                     bullet.UnsafeConfig.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfig);
-                    if (bulletConfig.autoTarget == 0) {
+                    if (bulletConfig.autoTarget == false) {
                         var sourceUnit = ent.GetParent();
                         if (aspect.componentRuntimeFire.targets.IsCreated == true) aspect.componentRuntimeFire.targets.Dispose();
                         aspect.componentRuntimeFire.targets = new MemArrayAuto<ME.BECS.FixedPoint.float3>(in ent, aspect.targets.Count > 0u ? aspect.targets.Count : 1u);

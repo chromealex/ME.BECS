@@ -32,7 +32,7 @@ namespace ME.BECS.Bullets {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect aspect, ref TransformAspect tr) {
 
-                if (aspect.readConfig.autoTarget == 1 && aspect.readComponent.targetEnt.IsAlive() == true) {
+                if (aspect.readConfig.autoTarget == true && aspect.readComponent.targetEnt.IsAlive() == true) {
                     aspect.component.targetWorldPos = aspect.readComponent.targetEnt.GetAspect<TransformAspect>().GetWorldMatrixPosition();
                 }
 

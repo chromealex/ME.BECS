@@ -36,7 +36,7 @@ namespace ME.BECS.Bullets {
         /// <summary>
         /// If set - bullet will move towards target point if it moves
         /// </summary>
-        public byte autoTarget;
+        public bbool autoTarget;
 
     }
 
