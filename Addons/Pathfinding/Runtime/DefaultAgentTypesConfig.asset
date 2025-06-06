@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7db85d1bccfc541c8b148e24ba8e0c40, type: 3}
+  m_Name: DefaultAgentTypesConfig
+  m_EditorClassIdentifier: 
+  graphProperties:
+    position:
+      x:
+        rawValue: 0
+      y:
+        rawValue: 0
+      z:
+        rawValue: 0
+    chunkWidth: 20
+    chunkHeight: 20
+    nodeSize:
+      rawValue: 1065353216
+    chunksCountX: 10
+    chunksCountY: 10
+  agentTypes:
+  - typeId: 0
+    radius:
+      rawValue: 0
+    avoidanceRange:
+      rawValue: 1084227584
+    maxSlope:
+      rawValue: 1119092736
+    height:
+      rawValue: 0
+  - typeId: 0
+    radius:
+      rawValue: 1065353216
+    avoidanceRange:
+      rawValue: 1084227584
+    maxSlope:
+      rawValue: 1119092736
+    height:
+      rawValue: 1077936128
+  - typeId: 0
+    radius:
+      rawValue: 1073741824
+    avoidanceRange:
+      rawValue: 1084227584
+    maxSlope:
+      rawValue: 1119092736
+    height:
+      rawValue: 1077936128

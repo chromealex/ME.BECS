@@ -1,4 +1,4 @@
-#if !FIXED_POINT_F32
+
 public static partial class libm
 {
     /// <summary>
@@ -524,4 +524,3 @@ public static partial class libm
         return sfloat.FromRaw((uint)ix);
     }
 }
-#endif

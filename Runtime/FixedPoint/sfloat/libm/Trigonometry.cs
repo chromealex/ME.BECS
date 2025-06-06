@@ -1,4 +1,4 @@
-#if !FIXED_POINT_F32
+
 public static partial class libm
 {
     const uint pi = 0x40490fdb; // 3.1415926535897932384626433832795
@@ -467,4 +467,3 @@ public static partial class libm
     /// </summary>
     public static sfloat asinf(sfloat x) => sfloat.FromRaw(half_pi) - acosf(x);
 }
-#endif
