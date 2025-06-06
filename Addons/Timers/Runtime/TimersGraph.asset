@@ -1,0 +1,396 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
+  m_Name: TimersGraph
+  m_EditorClassIdentifier: 
+  id: 40
+  builtInGraph: 1
+  isInnerGraph: 1
+  serializedNodes: []
+  nodes:
+  - rid: 3699021144449876420
+  - rid: 3699021144449876421
+  - rid: 3699021144449876422
+  - rid: 3699021144449876428
+  - rid: 3699021144449876430
+  - rid: 3699021144449876432
+  edges:
+  - GUID: e57c2d8c-5bda-4b98-8673-458a8de6fac5
+    owner: {fileID: 11400000}
+    inputNodeGUID: d2b399c4-6747-43c5-9ce6-03d088ab8559
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: a6c34cf1-c33d-4ac9-9173-72d418ba7a34
+    owner: {fileID: 11400000}
+    inputNodeGUID: 36d1736f-1dbb-4dc2-8fe2-f54d487d5418
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: b10f0425-b581-42a4-a07b-25231b768794
+    owner: {fileID: 11400000}
+    inputNodeGUID: 6f6308b7-4963-4570-923c-2e29244805f0
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 7145c687-404a-45de-8823-363c57e8fccb
+    owner: {fileID: 11400000}
+    inputNodeGUID: a2310ae1-a0bb-4a77-8021-f963b4f69a8f
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 64e74080-e975-45d1-8f39-04571a79d377
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: a2310ae1-a0bb-4a77-8021-f963b4f69a8f
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: b8cdf39d-cfd5-479b-b031-958ce617cf42
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: d2b399c4-6747-43c5-9ce6-03d088ab8559
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: efccad81-9d48-40e6-bc0c-5eb80f642df9
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 36d1736f-1dbb-4dc2-8fe2-f54d487d5418
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 7c6fb887-a38f-4a9f-89d6-fe9eeab92021
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: 6f6308b7-4963-4570-923c-2e29244805f0
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  groups: []
+  stackNodes: []
+  pinnedElements: []
+  exposedParameters: []
+  serializedParameterList: []
+  stickyNotes: []
+  nodeInspectorReference: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 3699021144449876420
+      type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 0
+        syncPoint: 0
+        syncCount: 1
+        nodeCustomName: 
+        GUID: StartNode
+        groupGUID: 
+        computeOrder: 0
+        position:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 100
+          height: 100
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 3699021144449876421
+      type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: EndNode
+        groupGUID: 
+        computeOrder: 5
+        position:
+          serializedVersion: 2
+          x: 652
+          y: 0
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 3699021144449876422
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 3
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: d2b399c4-6747-43c5-9ce6-03d088ab8559
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 203
+          y: -125
+          width: 300
+          height: 141.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 3699021144449876427
+    - rid: 3699021144449876427
+      type: {class: 'TimersUpdateSystem`1[[ME.BECS.Timers.DefaultTimerComponent, ME.BECS.Timers]]',
+        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      data: 
+    - rid: 3699021144449876428
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 3
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: 36d1736f-1dbb-4dc2-8fe2-f54d487d5418
+        groupGUID: 
+        computeOrder: 3
+        position:
+          serializedVersion: 2
+          x: 199
+          y: 77
+          width: 300
+          height: 141.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 3699021144449876429
+    - rid: 3699021144449876429
+      type: {class: 'TimersMsUpdateSystem`1[[ME.BECS.Timers.DefaultTimerMsComponent, ME.BECS.Timers]]',
+        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      data: 
+    - rid: 3699021144449876430
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 3
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: 6f6308b7-4963-4570-923c-2e29244805f0
+        groupGUID: 
+        computeOrder: 4
+        position:
+          serializedVersion: 2
+          x: 205
+          y: 301
+          width: 300
+          height: 141.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 3699021144449876431
+    - rid: 3699021144449876431
+      type: {class: 'TimersAutoDestroyUpdateSystem`1[[ME.BECS.Timers.DefaultTimerAutoDestroyComponent, ME.BECS.Timers]]',
+        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      data: 
+    - rid: 3699021144449876432
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 3
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: a2310ae1-a0bb-4a77-8021-f963b4f69a8f
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 199
+          y: -298
+          width: 300
+          height: 141.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 3699021144449876433
+    - rid: 3699021144449876433
+      type: {class: 'TimersMsAutoDestroyUpdateSystem`1[[ME.BECS.Timers.DefaultTimerMsAutoDestroyComponent, ME.BECS.Timers]]',
+        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      data: 
