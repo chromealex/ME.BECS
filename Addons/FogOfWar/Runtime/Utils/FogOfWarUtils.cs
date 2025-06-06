@@ -719,7 +719,8 @@ namespace ME.BECS.FogOfWar {
             });
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             var pos = FogOfWarUtils.FogMapToWorldPosition(in props, rect.position);
-            entTr.position = new float3(pos.x, 0f, pos.z);
+            var size = FogOfWarUtils.FogMapToWorldPosition(in props, rect.size);
+            entTr.position = new float3(pos.x, 0f, pos.z) + new float3(size.x, 0f, size.z) * 0.5f;
             entTr.rotation = quaternion.identity;
             for (byte partIndex = 0; partIndex < 4; ++partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
