@@ -154,7 +154,8 @@ Optional defines:
     "com.unity.collections": "2.5.2",
     "com.unity.burst": "1.8.19",
     "com.unity.mathematics": "1.3.2",
-    "com.unity.profiling.core": "1.0.2"
+    "com.unity.profiling.core": "1.0.2",
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
   },
 ```
 
