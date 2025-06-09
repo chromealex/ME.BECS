@@ -44,15 +44,15 @@ namespace ME.BECS.Attack {
                 var speedFactor = sensor.rotationSpeed;
                 if (attack.target.IsAlive() == true) {
                     var lookDir = attack.target.GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    transformAspect.rotation = quaternion.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
                 } else if (attack.targets.Count > 0u) {
                     var lookDir = attack.targets[0u].GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    transformAspect.rotation = quaternion.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
                 } else {
                     if (sensor.persistentRotationSpeed > 0f) {
                         transformAspect.rotation = math.mul(transformAspect.rotation, quaternion.Euler(0f, math.radians(sensor.persistentRotationSpeed * this.dt), 0f));
                     } else if (sensor.returnToDefault == true) {
-                        transformAspect.localRotation = quaternion.RotateTowards(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
+                        transformAspect.localRotation = quaternionext.RotateTowards(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
                     }
                 }
 

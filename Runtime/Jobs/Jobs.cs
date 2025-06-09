@@ -1,3 +1,5 @@
+
+using ME.BECS.Jobs;
 #if FIXED_POINT
 using tfloat = sfloat;
 #else
@@ -54,6 +56,49 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoLoopCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoLoopCount<TJob>>();
+
+    }
+
+    public struct JobStaticInfoInlineCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoInlineCount<TJob>>();
+
+    }
+
+    public unsafe struct JobStaticInfo<TJob> where TJob : struct {
+
+        public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
+        public static ref uint inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
+        public static bool IsParallelSupport => loopCount == 0u;
+        
+        [INLINE(256)]
+        public static JobHandle SchedulePatch(ref JobInfo jobInfo, CommandBuffer* buffer, ScheduleMode scheduleMode, JobHandle dependsOn) {
+
+            if (scheduleMode == ScheduleMode.Parallel) {
+                if (IsParallelSupport == false) {
+                    E.THROW_ENT_NEW();
+                } else if (inlineCount > 0u) {
+                    jobInfo.itemsPerCall = inlineCount;
+                    if (inlineCount > 1u) {
+                        // if we have more than 1 entity to create per iteration
+                        // we need to be sure that we have free entities to supply
+                        dependsOn = new StartParallelJob() {
+                            buffer = buffer,
+                            jobInfo = jobInfo,
+                        }.ScheduleSingle(dependsOn);
+                    }
+                }
+            }
+
+            return dependsOn;
+
+        }
+
+    }
+    
     public unsafe struct JobInject<TJob> where TJob : struct {
         
         public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> data = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<JobInject<TJob>>();
@@ -95,21 +140,37 @@ namespace ME.BECS {
         
     }
     
-    public struct JobInfo : IIsCreated {
+    public unsafe struct JobInfo : IIsCreated {
 
         public uint count;
         public volatile uint index;
-        public volatile uint itemsPerThread;
+        public volatile uint itemsPerCall;
+        public safe_ptr<uint> localOffset;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;
 
-        public uint Offset => this.index * this.itemsPerThread;
+        public uint Offset => this.index * this.itemsPerCall + *this.localOffset.ptr;
+
+        [INLINE(256)]
+        public void CreateLocalCounter() {
+            this.localOffset = _makeDefault<uint>(0u, Constants.ALLOCATOR_TEMP);
+        }
+        
+        [INLINE(256)]
+        public void ResetLocalCounter() {
+            *this.localOffset.ptr = 0u;
+        }
+
+        [INLINE(256)]
+        public readonly void IncrementLocalCounter() {
+            ++*this.localOffset.ptr;
+        }
 
         [INLINE(256)]
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
-                itemsPerThread = 1u,
+                itemsPerCall = 1u,
                 worldId = worldId,
             };
         }

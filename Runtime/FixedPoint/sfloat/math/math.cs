@@ -20,6 +20,54 @@ namespace ME.BECS {
 
     }
 
+    public static class quaternionext {
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Unity.Mathematics.quaternion RotateTowards(
+            Unity.Mathematics.quaternion from,
+            Unity.Mathematics.quaternion to,
+            float maxDegreesDelta) {
+            float num = from.Angle(to);
+            return num < float.Epsilon ? to : Unity.Mathematics.math.slerp(from, to, Unity.Mathematics.math.min(1f, maxDegreesDelta / num));
+        }
+     
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Unity.Mathematics.quaternion FromToRotation(Unity.Mathematics.float3 from , Unity.Mathematics.float3 to)
+            => Unity.Mathematics.quaternion.AxisAngle(
+                angle: Unity.Mathematics.math.acos( Unity.Mathematics.math.clamp(Unity.Mathematics.math.dot(Unity.Mathematics.math.normalize(from),Unity.Mathematics.math.normalize(to)),-1f,1f) ) ,
+                axis:  Unity.Mathematics.math.normalize( Unity.Mathematics.math.cross(from,to) )
+            );
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float Angle(this Unity.Mathematics.quaternion q, Unity.Mathematics.quaternion q2) {
+            var dot    = Unity.Mathematics.math.dot(q, q2);
+            return !(dot > 0.999998986721039f) ? (Unity.Mathematics.math.acos(Unity.Mathematics.math.min(Unity.Mathematics.math.abs(dot), 1f)) * 2.0f) : 0.0f;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ME.BECS.FixedPoint.quaternion RotateTowards(
+            ME.BECS.FixedPoint.quaternion from,
+            ME.BECS.FixedPoint.quaternion to,
+            sfloat maxDegreesDelta) {
+            sfloat num = from.Angle(to);
+            return num < sfloat.Epsilon ? to : ME.BECS.FixedPoint.math.slerp(from, to, ME.BECS.FixedPoint.math.min(1f, maxDegreesDelta / num));
+        }
+     
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ME.BECS.FixedPoint.quaternion FromToRotation(ME.BECS.FixedPoint.float3 from , ME.BECS.FixedPoint.float3 to)
+            => ME.BECS.FixedPoint.quaternion.AxisAngle(
+                angle: ME.BECS.FixedPoint.math.acos( ME.BECS.FixedPoint.math.clamp(ME.BECS.FixedPoint.math.dot(ME.BECS.FixedPoint.math.normalize(from),ME.BECS.FixedPoint.math.normalize(to)),-1f,1f) ) ,
+                axis:  ME.BECS.FixedPoint.math.normalize( ME.BECS.FixedPoint.math.cross(from,to) )
+            );
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sfloat Angle(this ME.BECS.FixedPoint.quaternion q, ME.BECS.FixedPoint.quaternion q2) {
+            var dot    = ME.BECS.FixedPoint.math.dot(q, q2);
+            return !(dot > 0.999998986721039f) ? (sfloat)(ME.BECS.FixedPoint.math.acos(ME.BECS.FixedPoint.math.min(ME.BECS.FixedPoint.math.abs(dot), 1f)) * 2.0f) : 0.0f;
+        }
+
+    }
+
 }
 
 namespace ME.BECS.FixedPoint

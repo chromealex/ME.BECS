@@ -36,6 +36,14 @@ namespace ME.BECS {
 
         }
 
+        [Conditional(COND.EXCEPTIONS_THREAD_SAFE)]
+        [HIDE_CALLSTACK]
+        public static void THROW_ENT_NEW() {
+            
+            throw new System.Exception("AsParallel could not be processed because job code contains Ent.New(), but it could not be counted (used in loops).");
+            
+        }
+
     }
 
 }

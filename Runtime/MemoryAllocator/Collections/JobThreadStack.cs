@@ -3,14 +3,15 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
 
-    public unsafe struct JobThreadStack<T> where T : unmanaged {
+    public unsafe struct JobThreadStack<T> : IIsCreated where T : unmanaged {
 
         private const uint DEFAULT_CAPACITY = 4u;
 
         private MemArray<T> array;
+        private List<uint> toRemove;
         //private BitArray bits;
-        private volatile uint size;
-        public bool isCreated => this.array.IsCreated;
+        private uint size;
+        public bool IsCreated => this.array.IsCreated;
 
         public readonly uint Count => this.size;
 
@@ -18,18 +19,21 @@ namespace ME.BECS {
         public JobThreadStack(ref MemoryAllocator allocator, uint capacity) {
             this = default;
             this.array = new MemArray<T>(ref allocator, capacity);
+            this.toRemove = new List<uint>(ref allocator, capacity);
             //this.bits = new BitArray(ref allocator, capacity);
         }
 
         [INLINE(256)]
-        public void Apply(ref MemoryAllocator allocator) {
+        public void Apply(in MemoryAllocator allocator) {
             E.THREAD_CHECK("Apply");
-            /*for (int i = (int)this.array.Length - 1; i >= 0; --i) {
-                if (this.bits.IsSet(in allocator, i) == true) {
-                    --this.size;
-                    this.bits.Set(in allocator, i, false);
-                }
-            }*/
+            for (uint i = 0u; i < this.toRemove.Count; ++i) {
+                var idx = this.toRemove[in allocator, i];
+                var last = this.array[in allocator, --this.size];
+                this.array[in allocator, idx] = last;
+            }
+
+            this.toRemove.Clear();
+            //this.bits.Clear(in allocator);
         }
 
         [INLINE(256)]
@@ -51,36 +55,42 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public T Pop(in MemoryAllocator allocator, in JobInfo jobInfo) {
-            /*var offset = jobInfo.Offset;
-            while (true) {
-                E.RANGE(offset, 0u, this.size);
-
-                var idx = (int)offset;
-                if (jobInfo.isCreated == true && this.bits.IsSet(in allocator, idx) == false) {
-                    offset += jobInfo.itemsPerThread;
-                    continue;
-                }
+        public T Pop(ref MemoryAllocator allocator, in JobInfo jobInfo) {
+            E.IS_EMPTY(this.size);
+            if (jobInfo.IsCreated == false) {
+                var idx = --this.size;
                 var item = this.array[in allocator, idx];
                 this.array[in allocator, idx] = default;
-                this.bits.Set(in allocator, idx, false);
                 return item;
-            }*/
-            E.IS_EMPTY(this.size);
-            var idx = --this.size;
-            var item = this.array[in allocator, idx];
-            this.array[in allocator, idx] = default;
-            return item;
+            }
+
+            {
+                var idx = this.size - 1u - jobInfo.Offset;
+                E.RANGE(idx, 0u, this.size);
+                /*while (true) {
+                    if (this.toRemove.Contains(in allocator, idx) == true) {
+                        --idx;
+                        continue;
+                    }
+                    break;
+                }*/
+
+                var item = this.array[in allocator, idx];
+                this.array[in allocator, idx] = default;
+                this.toRemove.Add(ref allocator, idx);
+                jobInfo.IncrementLocalCounter();
+                //this.bits.Set(in allocator, (int)idx, true);
+                return item;
+            }
         }
 
         [INLINE(256)]
         public void Push(ref MemoryAllocator allocator, T item) {
             if (this.size == this.array.Length) {
                 this.array.Resize(ref allocator, this.array.Length == 0 ? JobThreadStack<T>.DEFAULT_CAPACITY : 2 * this.array.Length, 2);
-                //this.bits.Resize(ref allocator, this.bits.Length == 0 ? JobThreadStack<T>.DEFAULT_CAPACITY : 2 * this.bits.Length);
+                //this.bits.Resize(ref allocator, this.array.Length);
             }
 
-            //this.bits.Set(in allocator, (int)this.size, true);
             this.array[in allocator, this.size++] = item;
         }
 
@@ -90,6 +100,7 @@ namespace ME.BECS {
             if (list.Count >= freeItems) {
                 var delta = list.Count - freeItems;
                 this.array.Resize(ref allocator, this.array.Length + delta, growFactor: 1);
+                //this.bits.Resize(ref allocator, this.array.Length);
             }
 
             _memcpy(list.GetUnsafePtr(in allocator), (safe_ptr<byte>)this.array.GetUnsafePtr(in allocator) + TSize<T>.size * this.size, TSize<T>.size * list.Count);

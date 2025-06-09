@@ -150,28 +150,6 @@ namespace ME.BECS.FixedPoint
             return quaternion(float4(axis * sina, cosa));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static quaternion RotateTowards(
-            quaternion from,
-            quaternion to,
-            sfloat maxDegreesDelta) {
-            sfloat num = from.Angle(to);
-            return num < sfloat.Epsilon ? to : math.slerp(from, to, math.min(1f, maxDegreesDelta / num));
-        }
-     
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static quaternion FromToRotation ( float3 from , float3 to )
-            => quaternion.AxisAngle(
-                angle: math.acos( math.clamp(math.dot(math.normalize(from),math.normalize(to)),-1f,1f) ) ,
-                axis:  math.normalize( math.cross(from,to) )
-            );
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public sfloat Angle(quaternion q2) {
-            var dot    = math.dot(this, q2);
-            return !(dot > 0.999998986721039f) ? (sfloat)(math.acos(math.min(math.abs(dot), 1f)) * 2.0f) : 0.0f;
-        }
-        
         /// <summary>
         /// Returns a quaternion constructed by first performing a rotation around the x-axis, then the y-axis and finally the z-axis.
         /// All rotation angles are in radians and clockwise when looking along the rotation axis towards the origin.

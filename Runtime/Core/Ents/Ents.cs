@@ -162,18 +162,25 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             const ushort version = 1;
-            
+
             var idx = 0u;
             var cnt = state.ptr->entities.free.Count;
-            if (cnt > jobInfo.Offset) {
+            uint val;
+            if (jobInfo.itemsPerCall > 0u) {
+                val = jobInfo.itemsPerCall - 1u;
+            } else {
+                val = 0u;
+            }
+            
+            if (cnt > val) {
                 state.ptr->entities.popLock.Lock();
                 cnt = state.ptr->entities.free.Count;
-                if (cnt > jobInfo.Offset) {
-                    idx = state.ptr->entities.free.Pop(in state.ptr->allocator, in jobInfo);
+                if (cnt > val) {
+                    idx = state.ptr->entities.free.Pop(ref state.ptr->allocator, in jobInfo);
                 }
                 state.ptr->entities.popLock.Unlock();
             }
-            
+
             if (cnt > 0u) {
 
                 reused = true;
@@ -190,8 +197,6 @@ namespace ME.BECS {
 
             } else {
 
-                E.THREAD_CHECK("Add entity");
-                
                 reused = false;
                 const ushort gen = 1;
                 JobUtils.Increment(ref state.ptr->entities.aliveCount);

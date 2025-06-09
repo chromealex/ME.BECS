@@ -50,42 +50,46 @@ namespace ME.BECS {
         /// Create new entity from Context.world
         /// </summary>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
         public static Ent New(in FixedString32Bytes editorName = default) {
             return Ent.New(Context.world.id, default, in editorName);
         }
         
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
         public static Ent New(in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
             return Ent.New(jobInfo.worldId, in jobInfo, in editorName);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
         public static Ent New(in World world, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return Ent.New(world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
         public static Ent New(in SystemContext systemContext, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return Ent.New(systemContext.world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
         public static Ent New(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
+            return NewEnt_INTERNAL(worldId, in jobInfo, in editorName);
+        }
 
-            if (JobUtils.IsInParallelJob() == true) {
+        [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
+        internal static Ent NewEnt_INTERNAL(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
+            
+            if (JobUtils.IsInParallelJob() == true || jobInfo.itemsPerCall > 0u) {
                 // Create entity with offset because we are in parallel mode
                 // so we need JobInfo struct to be provided
                 E.IS_CREATED(jobInfo);
-                throw new System.NotImplementedException();
-                //return New_INTERNAL(worldId, in jobInfo, in editorName);
+                return New_INTERNAL(worldId, in jobInfo, in editorName);
             } else {
                 return New_INTERNAL(worldId, default, in editorName);
             }
 
         }
-        
-        [INLINE(256)]
+
+        [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
         internal static Ent New_INTERNAL(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
@@ -93,7 +97,7 @@ namespace ME.BECS {
             
             Ent newEnt;
             {
-                newEnt = Ents.Add(world.state, worldId, out var reused, jobInfo);
+                newEnt = Ents.Add(world.state, worldId, out var reused, in jobInfo);
                 if (reused == false) {
                     Ents.Lock(world.state, in newEnt);
                     Components.OnEntityAdd(world.state, newEnt.id);

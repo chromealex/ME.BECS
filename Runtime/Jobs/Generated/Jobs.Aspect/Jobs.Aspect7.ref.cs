@@ -55,6 +55,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect
             where T : struct, IJobForAspects<T0,T1,T2,T3,T4,T5,T6> {
             
+            var jobInfo = JobInfo.Create(buffer->worldId);
+            dependsOn = JobStaticInfo<T>.SchedulePatch(ref jobInfo, buffer, scheduleMode, dependsOn);
+            
             buffer->sync = true;
             var flags = ScheduleFlags.Single;
             if (scheduleMode == ScheduleMode.Parallel) {
@@ -62,9 +65,6 @@ namespace ME.BECS.Jobs {
                 flags |= ScheduleFlags.Parallel;
                 
                 buffer->sync = false;
-                //dependsOn = new StartParallelJob() {
-                //                buffer = buffer,
-                //            }.ScheduleSingle(dependsOn);
                             
                 if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
@@ -90,6 +90,7 @@ namespace ME.BECS.Jobs {
             var dataVal = new JobData<T, T0,T1,T2,T3,T4,T5,T6>() {
                 scheduleFlags = flags,
                 jobData = jobData,
+                jobInfo = jobInfo,
                 buffer = buffer,
                 a0 = buffer->state.ptr->aspectsStorage.Initialize<T0>(buffer->state),a1 = buffer->state.ptr->aspectsStorage.Initialize<T1>(buffer->state),a2 = buffer->state.ptr->aspectsStorage.Initialize<T2>(buffer->state),a3 = buffer->state.ptr->aspectsStorage.Initialize<T3>(buffer->state),a4 = buffer->state.ptr->aspectsStorage.Initialize<T4>(buffer->state),a5 = buffer->state.ptr->aspectsStorage.Initialize<T5>(buffer->state),a6 = buffer->state.ptr->aspectsStorage.Initialize<T6>(buffer->state),
             };
@@ -108,6 +109,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect
             where T : struct {
             public ScheduleFlags scheduleFlags;
+            public JobInfo jobInfo;
             [NativeDisableUnsafePtrRestriction]
             public T jobData;
             [NativeDisableUnsafePtrRestriction]
@@ -135,7 +137,8 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0,T1,T2,T3,T4,T5,T6> jobData, System.IntPtr additionalData, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
                 
-                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
+                var jobInfo = jobData.jobInfo;
+                jobInfo.CreateLocalCounter();
                 jobInfo.count = jobData.buffer->count;
                 var aspect0 = jobData.a0;var aspect1 = jobData.a1;var aspect2 = jobData.a2;var aspect3 = jobData.a3;var aspect4 = jobData.a4;var aspect5 = jobData.a5;var aspect6 = jobData.a6;
                 
@@ -144,6 +147,7 @@ namespace ME.BECS.Jobs {
                         jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                         for (uint i = (uint)begin; i < end; ++i) {
                             jobInfo.index = i;
+                            jobInfo.ResetLocalCounter();
                             var entId = *(jobData.buffer->entities + i);
                             var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                             var ent = new Ent(entId, gen, jobData.buffer->worldId);
@@ -157,6 +161,7 @@ namespace ME.BECS.Jobs {
                     jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                     for (uint i = 0u; i < jobData.buffer->count; ++i) {
                         jobInfo.index = i;
+                        jobInfo.ResetLocalCounter();
                         var entId = *(jobData.buffer->entities + i);
                         var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                         var ent = new Ent(entId, gen, jobData.buffer->worldId);

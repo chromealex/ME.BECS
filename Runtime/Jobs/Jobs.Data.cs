@@ -3,7 +3,7 @@ namespace ME.BECS {
     using Unity.Burst;
     using Unity.Jobs.LowLevel.Unsafe;
 
-    public unsafe delegate void* CompiledJobCallback(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags);
+    public unsafe delegate void* CompiledJobCallback(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags, in JobInfo jobInfo);
 
     public unsafe class CompiledJobs<TJob> where TJob : struct {
 
@@ -16,8 +16,8 @@ namespace ME.BECS {
             getTypeFunction = getType;
         }
 
-        public static void* Get(void* jobDataAddr, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {
-            return jobDataFunction.Data.Invoke(jobDataAddr, buffer, unsafeMode, scheduleFlags);
+        public static void* Get(void* jobDataAddr, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags, in JobInfo jobInfo) {
+            return jobDataFunction.Data.Invoke(jobDataAddr, buffer, unsafeMode, scheduleFlags, in jobInfo);
         }
 
         public static System.Type GetJobType(bool unsafeMode) {

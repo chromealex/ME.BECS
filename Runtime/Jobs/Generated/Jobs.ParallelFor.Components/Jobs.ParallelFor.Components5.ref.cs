@@ -59,10 +59,9 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase
             where T : struct, IJobParallelForComponents<T0,T1,T2,T3,T4> {
             
-            //dependsOn = new StartParallelJob() {
-            //                buffer = buffer,
-            //            }.ScheduleSingle(dependsOn);
-                        
+            var jobInfo = JobInfo.Create(buffer->worldId);
+            dependsOn = JobStaticInfo<T>.SchedulePatch(ref jobInfo, buffer, ScheduleMode.Parallel, dependsOn);
+            
             if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
             JobInject<T>.Patch(ref jobData, buffer->worldId);
@@ -76,6 +75,7 @@ namespace ME.BECS.Jobs {
             var dataVal = new JobData<T, T0,T1,T2,T3,T4>() {
                 scheduleMode = ScheduleMode.Parallel,
                 jobData = jobData,
+                jobInfo = jobInfo,
                 buffer = buffer,
                 c0 = buffer->state.ptr->components.GetRW<T0>(buffer->state, buffer->worldId),c1 = buffer->state.ptr->components.GetRW<T1>(buffer->state, buffer->worldId),c2 = buffer->state.ptr->components.GetRW<T2>(buffer->state, buffer->worldId),c3 = buffer->state.ptr->components.GetRW<T3>(buffer->state, buffer->worldId),c4 = buffer->state.ptr->components.GetRW<T4>(buffer->state, buffer->worldId),
             };
@@ -91,6 +91,7 @@ namespace ME.BECS.Jobs {
             where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase where T2 : unmanaged, IComponentBase where T3 : unmanaged, IComponentBase where T4 : unmanaged, IComponentBase
             where T : struct {
             public ScheduleMode scheduleMode;
+            public JobInfo jobInfo;
             [NativeDisableUnsafePtrRestriction]
             public T jobData;
             [NativeDisableUnsafePtrRestriction]
@@ -118,13 +119,15 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, T0,T1,T2,T3,T4> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
 
-                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
+                var jobInfo = jobData.jobInfo;
+                jobInfo.CreateLocalCounter();
                 jobInfo.count = jobData.buffer->count;
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                     for (uint i = (uint)begin; i < end; ++i) {
                         jobInfo.index = i;
+                        jobInfo.ResetLocalCounter();
                         var entId = *(jobData.buffer->entities + i);
                         var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                         var ent = new Ent(entId, gen, jobData.buffer->worldId);
