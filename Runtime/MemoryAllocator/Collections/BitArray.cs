@@ -17,7 +17,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(BitArrayDebugView))]
-    public unsafe struct BitArray {
+    public unsafe struct BitArray : IIsCreated {
 
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;
 
@@ -25,7 +25,7 @@ namespace ME.BECS {
         public uint Length;
         private safe_ptr<ulong> cachedPtr;
 
-        public bool isCreated => this.ptr.IsValid();
+        public bool IsCreated => this.ptr.IsValid();
 
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
@@ -150,7 +150,7 @@ namespace ME.BECS {
         public void Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (newLength > this.Length) {
-                this.ptr = allocator.ReAllocArray(in this.ptr, Bitwise.AlignULongBits(this.Length), out this.cachedPtr);
+                this.ptr = allocator.ReAllocArray(in this.ptr, Bitwise.AlignULongBits(newLength), out this.cachedPtr);
                 if (clearOptions == ClearOptions.ClearMemory) {
                     var clearSize = Bitwise.AlignULongBits(newLength - this.Length);
                     _memclear(this.cachedPtr.Cast<byte>() + Bitwise.AlignULongBits(this.Length), clearSize);
@@ -162,7 +162,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
-            if (state == true && this.isCreated == true) {
+            if (state == true && this.IsCreated == true) {
                 this.cachedPtr = (safe_ptr<ulong>)allocator.GetUnsafePtr(this.ptr);
             } else {
                 this.cachedPtr = default;

@@ -27,16 +27,16 @@ namespace ME.BECS.Editor.Jobs {
         }
 
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
-            
+
             this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
             var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
 
-                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
+                /*if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
                     dataList.AddRange(list);
                     continue;
-                }
+                }*/
                 
                 if (jobType.IsValueType == false) continue;
                 if (jobType.IsVisible == false) continue;
@@ -71,6 +71,12 @@ namespace ME.BECS.Editor.Jobs {
                         workInterface = i;
                         break;
                     }
+                }
+
+                var entsInfo = GetJobEntInfo(jobType);
+                if (entsInfo.count > 0 || entsInfo.brCount > 0) {
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
                 }
 
                 if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
@@ -254,7 +260,7 @@ namespace ME.BECS.Editor.Jobs {
                 tempFuncBuilder.AppendLine($"{{ // {jobType.FullName}");
                 tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
                 tempFuncBuilder.AppendLine($"[BurstCompile]");
-                tempFuncBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags) {{");
+                tempFuncBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags, in JobInfo jobInfo) {{");
                 tempFuncBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
                 tempFuncBuilder.AppendLine($"if (data == null) {{");
                 tempFuncBuilder.AppendLine($"if (unsafeMode == true) {{");
@@ -265,6 +271,7 @@ namespace ME.BECS.Editor.Jobs {
                 tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = (System.IntPtr)data;");
                 tempFuncBuilder.AppendLine($"}}");
                 tempFuncBuilder.AppendLine($"data->scheduleFlags = scheduleFlags;");
+                tempFuncBuilder.AppendLine($"data->jobInfo = jobInfo;");
                 tempFuncBuilder.AppendLine($"data->jobData = *({jobTypeFullName}*)jobData;");
                 tempFuncBuilder.AppendLine($"data->buffer = buffer;");
                 tempStructBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
@@ -342,7 +349,7 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
-        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true) {
+        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, System.Predicate<Instruction> onInstruction = null) {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
@@ -357,12 +364,13 @@ namespace ME.BECS.Editor.Jobs {
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
             var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
-            var visited = new System.Collections.Generic.HashSet<System.Reflection.MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
                     var continueTraverse = true;
+                    if (onInstruction?.Invoke(inst) == true) continue;
                     {
                         if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
                             continue;
@@ -409,7 +417,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (continueTraverse == true && traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }
                     }
@@ -418,10 +426,72 @@ namespace ME.BECS.Editor.Jobs {
 
             return uniqueTypes;
         }
+
+        public struct NewEntInfo {
+
+            public int count;
+            public int brCount;
+
+        }
         
-        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType) {
+        public static NewEntInfo GetJobEntInfo(System.Type jobType) {
+            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var root = jobType.GetMethod("Execute");
-            return GetMethodTypesInfo(root);
+            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var instructions = root.GetInstructions().ToList();
+            var brOpen = 0;
+            var count = 0;
+            var brCount = 0;
+            for (int i = 0; i < instructions.Count; ++i) {
+                var inst = instructions[i];
+                if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Br_S ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue_S ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse_S) &&
+                    ((Instruction)inst.Operand).Offset < inst.Offset) {
+                    // jump to previous instruction - make it open
+                    ++((Instruction)inst.Operand).loopInfo.openCount;
+                    ++inst.loopInfo.closeCount;
+                }
+                if (inst.Operand is System.Reflection.MethodInfo member) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if (member.GetMethodBody() != null) {
+                            instructions.InsertRange(i + 1, member.GetInstructions());
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < instructions.Count; ++i) {
+                var inst = instructions[i];
+                if (inst.loopInfo.openCount > 0) {
+                    brOpen += inst.loopInfo.openCount;
+                }
+                if (inst.loopInfo.closeCount > 0) {
+                    brOpen -= inst.loopInfo.closeCount;
+                }
+                if (inst.Operand is MethodInfo methodInfo) {
+                    if (methodInfo == newEntMethod) {
+                        if (brOpen > 0) {
+                            ++brCount;
+                        } else {
+                            ++count;
+                        }
+                    }
+                }
+            }
+
+            return new NewEntInfo() {
+                count = count,
+                brCount = brCount,
+            };
+        }
+        
+        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Predicate<Instruction> onInstruction = null) {
+            var root = jobType.GetMethod("Execute");
+            return GetMethodTypesInfo(root, onInstruction: onInstruction);
         }
 
         public static void UpdateDeps(System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo> uniqueTypes) {

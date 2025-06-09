@@ -32,11 +32,23 @@ using System.Text;
 
 namespace ME.BECS.Mono.Reflection {
 
+    public struct LoopInfo {
+
+        public int openCount;
+        public int closeCount;
+
+        public bool IsLoop => this.openCount > 0 || this.closeCount > 0;
+
+        public override string ToString() => $"o:{this.openCount}/c:{this.closeCount}";
+
+    }
+    
     public sealed class Instruction {
 
         private int offset;
         private OpCode opcode;
         private object operand;
+        public LoopInfo loopInfo;
 
         private Instruction previous;
         private Instruction next;

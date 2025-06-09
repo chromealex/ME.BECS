@@ -106,13 +106,13 @@ namespace ME.BECS {
                         var typeIdPair = this.query.withAny[i];
                         if (typeIdPair.Key > 0u && typeIdPair.Key < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                             var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeIdPair.Key];
-                            if (list.isCreated == true) {
+                            if (list.IsCreated == true) {
                                 temp.Union(in this.state.ptr->allocator, list);
                             }
                         }
                         if (typeIdPair.Value > 0u && typeIdPair.Value < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                             var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeIdPair.Value];
-                            if (list.isCreated == true) {
+                            if (list.IsCreated == true) {
                                 temp.Union(in this.state.ptr->allocator, list);
                             }
                         }
@@ -248,28 +248,28 @@ namespace ME.BECS {
                 var temp = new TempBitArray(this.state.ptr->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
                 if (this.typeId1 > 0u && this.typeId1 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
-                    if (list.isCreated == true) {
+                    if (list.IsCreated == true) {
                         temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
                 
                 if (this.typeId2 > 0u && this.typeId2 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId2];
-                    if (list.isCreated == true) {
+                    if (list.IsCreated == true) {
                         temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
 
                 if (this.typeId3 > 0u && this.typeId3 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId3];
-                    if (list.isCreated == true) {
+                    if (list.IsCreated == true) {
                         temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
 
                 if (this.typeId4 > 0u && this.typeId4 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId4];
-                    if (list.isCreated == true) {
+                    if (list.IsCreated == true) {
                         temp.Union(in this.state.ptr->allocator, list);
                     }
                 }
@@ -314,7 +314,7 @@ namespace ME.BECS {
                 }
                 
                 ref var bits = ref arch.archetypesWithTypeIdBits[this.state, this.typeId];
-                if (bits.isCreated == true) {
+                if (bits.IsCreated == true) {
                     this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, in bits);
                 } else {
                     this.queryData.ptr->archetypesBits.Clear();
@@ -343,7 +343,7 @@ namespace ME.BECS {
                     }
 
                     var bits = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeId];
-                    if (bits.isCreated == true) {
+                    if (bits.IsCreated == true) {
                         this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, bits);
                     } else {
                         this.queryData.ptr->archetypesBits.Clear();
@@ -374,7 +374,7 @@ namespace ME.BECS {
                     }
 
                     var bits = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeId];
-                    if (bits.isCreated == true) {
+                    if (bits.IsCreated == true) {
                         this.queryData.ptr->archetypesBits.Remove(in this.state.ptr->allocator, bits);
                     }
 
@@ -408,7 +408,7 @@ namespace ME.BECS {
                 if (this.typeId >= this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) return;
 
                 var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId];
-                if (list.isCreated == true) {
+                if (list.IsCreated == true) {
                     this.queryData.ptr->archetypesBits.Remove(in this.state.ptr->allocator, list);
                 }
                 

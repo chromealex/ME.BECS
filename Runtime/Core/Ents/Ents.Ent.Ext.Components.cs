@@ -11,6 +11,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         public static bool IsEnabled<T>(in this Ent ent) where T : unmanaged, IComponent {
             
             var world = ent.World;
@@ -22,6 +23,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadWrite)] public static bool Enable<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -36,6 +38,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadWrite)] public static bool Disable<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -50,6 +53,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadWrite)] public static bool Set<T>(in this Ent ent, in T data) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -62,6 +66,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadWrite)] public static bool Remove<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -74,6 +79,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadWrite)] public static ref T Get<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -85,6 +91,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadOnly)] public static bool Has<T>(in this Ent ent, bool checkEnabled = true) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -96,6 +103,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadOnly)] public static ref readonly T Read<T>(in this Ent ent) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -107,6 +115,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadOnly)] public static ref readonly T TryRead<T>(in this Ent ent, out bool exists) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -118,6 +127,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadOnly)] public static bool TryRead<T>(in this Ent ent, out T component) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -130,6 +140,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadWrite)] public static void SetTag<T>(in this Ent ent, bool value) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
@@ -145,6 +156,7 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadOnly)] public static bool HasTag<T>(in this Ent ent, bool value) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

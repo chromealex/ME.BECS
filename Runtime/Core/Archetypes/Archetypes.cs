@@ -242,7 +242,7 @@ namespace ME.BECS {
                         MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                         ref var list = ref state.ptr->archetypes.archetypesWithTypeIdBits[in allocator, cId];
                         MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
-                        if (list.isCreated == false) list = new BitArray(ref allocator, len);
+                        if (list.IsCreated == false) list = new BitArray(ref allocator, len);
                         list.Resize(ref allocator, len);
                         MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                         list.Set(in allocator, (int)idx, true);

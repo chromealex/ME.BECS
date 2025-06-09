@@ -19,17 +19,18 @@ namespace ME.BECS {
             private readonly ListAuto<T> list;
             private uint index;
 
-            [INLINE(256)]
+            [INLINE(256)][CodeGeneratorIgnore]
             internal Enumerator(in ListAuto<T> list) {
                 this.list = list;
                 this.index = 0u;
             }
 
-            [INLINE(256)]
+            [INLINE(256)][CodeGeneratorIgnore]
             public bool MoveNext() {
                 return this.index++ < this.list.Count;
             }
 
+            [CodeGeneratorIgnore]
             public ref T Current => ref this.list[this.index - 1u];
 
         }
@@ -182,7 +183,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnore]
         public readonly Enumerator GetEnumerator() {
 
             if (this.IsCreated == false) return default;

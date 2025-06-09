@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Unity.Jobs;
 using ME.BECS.Jobs;
+using ME.BECS.Transforms;
 using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
@@ -1040,6 +1041,95 @@ namespace ME.BECS.Tests {
             }
 
             world.Dispose();
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public struct EntityCreateJob : IJobForComponents<TestComponent> {
+            
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent test) {
+                {
+                    var obj = Ent.New(jobInfo);
+                    obj.Set(new Test1Component() { data = test.data });
+                    obj.SetParent(ent);
+                }
+                {
+                    var obj = Ent.New(jobInfo);
+                    obj.Set(new Test1Component() { data = test.data });
+                    obj.SetParent(ent);
+                }
+            }
+
+        }
+
+        [Test]
+        public void EntityCreateInParallelJob() {
+
+            World world1;
+            World world2;
+            
+            var amount = 1000;
+            var arr1 = new Unity.Collections.NativeArray<Ent>(amount, Unity.Collections.Allocator.Temp);
+            var arr2 = new Unity.Collections.NativeArray<Ent>(amount, Unity.Collections.Allocator.Temp);
+            {
+                var world = World.Create();
+                world1 = world;
+
+                for (int i = 0; i < amount; ++i) {
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent() {
+                        data = i,
+                    });
+                    arr1[i] = ent;
+                }
+
+                // sync point
+                Batches.Apply(world.state);
+
+                var handle = API.Query(world).AsParallel().Schedule<EntityCreateJob, TestComponent>();
+                handle.Complete();
+
+                for (int i = 0; i < amount; ++i) {
+                    var e = arr1[i];
+                    Assert.AreEqual(e.Read<TestComponent>().data, e.Read<ChildrenComponent>().list[0].Read<Test1Component>().data);
+                }
+                
+            }
+            {
+                var world = World.Create();
+                world2 = world;
+
+                for (int i = 0; i < amount; ++i) {
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent() {
+                        data = i,
+                    });
+                    arr2[i] = ent;
+                }
+
+                // sync point
+                Batches.Apply(world.state);
+
+                var handle = API.Query(world).AsParallel().Schedule<EntityCreateJob, TestComponent>();
+                handle.Complete();
+
+                for (int i = 0; i < amount; ++i) {
+                    var e = arr2[i];
+                    Assert.AreEqual(e.Read<TestComponent>().data, e.Read<ChildrenComponent>().list[0].Read<Test1Component>().data);
+                }
+
+            }
+
+            for (int i = 0; i < amount; ++i) {
+                var e1 = arr1[i];
+                var e2 = arr2[i];
+                Assert.AreEqual(e1.id, e2.id);
+                Assert.AreEqual(e1.Read<ChildrenComponent>().list[0].id, e2.Read<ChildrenComponent>().list[0].id);
+                Assert.AreEqual(e1.Read<ChildrenComponent>().list[1].id, e2.Read<ChildrenComponent>().list[1].id);
+            }
+            
+            world1.Dispose();
+            world2.Dispose();
 
         }
 

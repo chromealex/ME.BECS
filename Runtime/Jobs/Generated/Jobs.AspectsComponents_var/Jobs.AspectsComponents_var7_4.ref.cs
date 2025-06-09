@@ -59,6 +59,9 @@ namespace ME.BECS.Jobs {
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase where C3 : unmanaged, IComponentBase
             where T : struct, IJobFor7Aspects4Components<A0,A1,A2,A3,A4,A5,A6, C0,C1,C2,C3> {
             
+            var jobInfo = JobInfo.Create(buffer->worldId);
+            dependsOn = JobStaticInfo<T>.SchedulePatch(ref jobInfo, buffer, scheduleMode, dependsOn);
+            
             buffer->sync = true;
             var flags = ScheduleFlags.Single;
             if (scheduleMode == ScheduleMode.Parallel) {
@@ -66,9 +69,6 @@ namespace ME.BECS.Jobs {
                 flags |= ScheduleFlags.Parallel;
                 
                 buffer->sync = false;
-                //dependsOn = new StartParallelJob() {
-                //                buffer = buffer,
-                //            }.ScheduleSingle(dependsOn);
                             
                 if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
 
@@ -94,6 +94,7 @@ namespace ME.BECS.Jobs {
             var dataVal = new JobData<T, A0,A1,A2,A3,A4,A5,A6, C0,C1,C2,C3>() {
                 scheduleFlags = flags,
                 jobData = jobData,
+                jobInfo = jobInfo,
                 buffer = buffer,
                 a0 = buffer->state.ptr->aspectsStorage.Initialize<A0>(buffer->state),a1 = buffer->state.ptr->aspectsStorage.Initialize<A1>(buffer->state),a2 = buffer->state.ptr->aspectsStorage.Initialize<A2>(buffer->state),a3 = buffer->state.ptr->aspectsStorage.Initialize<A3>(buffer->state),a4 = buffer->state.ptr->aspectsStorage.Initialize<A4>(buffer->state),a5 = buffer->state.ptr->aspectsStorage.Initialize<A5>(buffer->state),a6 = buffer->state.ptr->aspectsStorage.Initialize<A6>(buffer->state),
                 c0 = buffer->state.ptr->components.GetRW<C0>(buffer->state, buffer->worldId),c1 = buffer->state.ptr->components.GetRW<C1>(buffer->state, buffer->worldId),c2 = buffer->state.ptr->components.GetRW<C2>(buffer->state, buffer->worldId),c3 = buffer->state.ptr->components.GetRW<C3>(buffer->state, buffer->worldId),
@@ -114,6 +115,7 @@ namespace ME.BECS.Jobs {
             where C0 : unmanaged, IComponentBase where C1 : unmanaged, IComponentBase where C2 : unmanaged, IComponentBase where C3 : unmanaged, IComponentBase
             where T : struct {
             public ScheduleFlags scheduleFlags;
+            public JobInfo jobInfo;
             [NativeDisableUnsafePtrRestriction]
             public T jobData;
             [NativeDisableUnsafePtrRestriction]
@@ -143,7 +145,8 @@ namespace ME.BECS.Jobs {
 
             private static void Execute(ref JobData<T, A0,A1,A2,A3,A4,A5,A6, C0,C1,C2,C3> jobData, System.IntPtr bufferPtr, System.IntPtr bufferRangePatchData, ref JobRanges ranges, int jobIndex) {
 
-                var jobInfo = JobInfo.Create(jobData.buffer->worldId);
+                var jobInfo = jobData.jobInfo;
+                jobInfo.CreateLocalCounter();
                 jobInfo.count = jobData.buffer->count;
                 var aspect0 = jobData.a0;var aspect1 = jobData.a1;var aspect2 = jobData.a2;var aspect3 = jobData.a3;var aspect4 = jobData.a4;var aspect5 = jobData.a5;var aspect6 = jobData.a6;
                 
@@ -153,6 +156,7 @@ namespace ME.BECS.Jobs {
                             jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                             for (uint i = (uint)begin; i < end; ++i) {
                                 jobInfo.index = i;
+                                jobInfo.ResetLocalCounter();
                                 var entId = *(jobData.buffer->entities + i);
                                 var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                                 var ent = new Ent(entId, gen, jobData.buffer->worldId);
@@ -166,6 +170,7 @@ namespace ME.BECS.Jobs {
                         jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                         for (uint i = 0u; i < jobData.buffer->count; ++i) {
                             jobInfo.index = i;
+                            jobInfo.ResetLocalCounter();
                             var entId = *(jobData.buffer->entities + i);
                             var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                             var ent = new Ent(entId, gen, jobData.buffer->worldId);
@@ -181,6 +186,7 @@ namespace ME.BECS.Jobs {
                             jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
                             for (uint i = (uint)begin; i < end; ++i) {
                                 jobInfo.index = i;
+                                jobInfo.ResetLocalCounter();
                                 var entId = *(jobData.buffer->entities + i);
                                 var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                                 var ent = new Ent(entId, gen, jobData.buffer->worldId);
@@ -194,6 +200,7 @@ namespace ME.BECS.Jobs {
                         jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                         for (uint i = 0u; i < jobData.buffer->count; ++i) {
                             jobInfo.index = i;
+                            jobInfo.ResetLocalCounter();
                             var entId = *(jobData.buffer->entities + i);
                             var gen = Ents.GetGeneration(jobData.buffer->state, entId);
                             var ent = new Ent(entId, gen, jobData.buffer->worldId);

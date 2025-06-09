@@ -1,10 +1,12 @@
-
-using ME.BECS.Transforms;
 #if FIXED_POINT
 using tfloat = sfloat;
+using ME.BECS.FixedPoint;
 #else
 using tfloat = System.Single;
+using Unity.Mathematics;
 #endif
+
+using ME.BECS.Transforms;
 
 namespace ME.BECS.Attack {
     
@@ -33,7 +35,7 @@ namespace ME.BECS.Attack {
                     if (bulletConfig.autoTarget == false) {
                         var sourceUnit = ent.GetParent();
                         if (aspect.componentRuntimeFire.targets.IsCreated == true) aspect.componentRuntimeFire.targets.Dispose();
-                        aspect.componentRuntimeFire.targets = new MemArrayAuto<ME.BECS.FixedPoint.float3>(in ent, aspect.targets.Count > 0u ? aspect.targets.Count : 1u);
+                        aspect.componentRuntimeFire.targets = new MemArrayAuto<float3>(in ent, aspect.targets.Count > 0u ? aspect.targets.Count : 1u);
                         if (aspect.targets.Count > 0u) {
                             for (uint i = 0u; i < aspect.targets.Count; ++i) {
                                 aspect.componentRuntimeFire.targets[i] = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in aspect.targets[i]);

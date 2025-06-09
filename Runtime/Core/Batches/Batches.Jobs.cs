@@ -14,7 +14,7 @@ namespace ME.BECS {
         public void Execute() {
 
             Batches.ApplyFromJob(this.state);
-            this.state.ptr->entities.free.Apply(ref this.state.ptr->allocator);
+            this.state.ptr->entities.free.Apply(in this.state.ptr->allocator);
             Ents.ApplyDestroyed(this.state);
 
         }
@@ -26,11 +26,12 @@ namespace ME.BECS {
 
         [NativeDisableUnsafePtrRestriction]
         public CommandBuffer* buffer;
-            
+        public JobInfo jobInfo;
+
         [INLINE(256)]
         public void Execute() {
 
-            Ents.EnsureFree(this.buffer->state, this.buffer->worldId, this.buffer->count);
+            Ents.EnsureFree(this.buffer->state, this.buffer->worldId, this.buffer->count * this.jobInfo.itemsPerThread);
             
         }
 
