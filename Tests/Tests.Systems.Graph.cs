@@ -177,13 +177,14 @@ namespace ME.BECS.Tests {
             handle.Complete();
 
             {
-                API.Query(world, handle).With<TestComponent>().ForEach((in CommandBufferJob buffer) => {
-                    if (buffer.ent.id <= count / 2) {
-                        Assert.AreEqual(4, buffer.Read<TestComponent>().data);
+                var arr = API.Query(world, handle).With<TestComponent>().ToArray();
+                foreach (var ent in arr) {
+                    if (ent.id <= count / 2) {
+                        Assert.AreEqual(4, ent.Read<TestComponent>().data);
                     } else {
-                        Assert.AreEqual(5, buffer.Read<TestComponent>().data);
+                        Assert.AreEqual(5, ent.Read<TestComponent>().data);
                     }
-                });
+                }
             }
             
             world.Dispose();
@@ -204,16 +205,16 @@ namespace ME.BECS.Tests {
 
             public int count;
             
-            public struct Job : IJobParallelForCommandBuffer {
+            public struct Job : IJobForEntity {
                 
-                public void Execute(in CommandBufferJobParallel commandBuffer) {
-                    commandBuffer.Get<TestComponent>().data = 1;
+                public void Execute(in JobInfo jobInfo, in Ent ent) {
+                    ent.Get<TestComponent>().data = 1;
                 }
 
             }
             
             public void OnUpdate(ref SystemContext context) {
-                var handle = this.Query(context).With<TestComponent>().ScheduleParallelFor<Job>();
+                var handle = this.Query(context).With<TestComponent>().AsParallel().Schedule<Job>();
                 context.SetDependency(handle);
             }
 
@@ -239,16 +240,16 @@ namespace ME.BECS.Tests {
 
         public struct TestSystem2_1 : IUpdate {
 
-            public struct Job : IJobParallelForCommandBuffer {
+            public struct Job : IJobForEntity {
                 
-                public void Execute(in CommandBufferJobParallel commandBuffer) {
-                    commandBuffer.Get<TestComponent>().data = 2;
+                public void Execute(in JobInfo jobInfo, in Ent ent) {
+                    ent.Get<TestComponent>().data = 2;
                 }
 
             }
 
             public void OnUpdate(ref SystemContext context) {
-                var handle = this.Query(context).With<Test2Component>().ScheduleParallelFor<Job>();
+                var handle = this.Query(context).With<Test2Component>().AsParallel().Schedule<Job>();
                 context.SetDependency(handle);
             }
             
@@ -256,16 +257,16 @@ namespace ME.BECS.Tests {
 
         public struct TestSystem2_2 : IUpdate {
 
-            public struct Job : IJobParallelForCommandBuffer {
+            public struct Job : IJobForEntity {
                 
-                public void Execute(in CommandBufferJobParallel commandBuffer) {
-                    commandBuffer.Get<TestComponent>().data = 3;
+                public void Execute(in JobInfo jobInfo, in Ent ent) {
+                    ent.Get<TestComponent>().data = 3;
                 }
 
             }
 
             public void OnUpdate(ref SystemContext context) {
-                var handle = this.Query(context).With<Test3Component>().ScheduleParallelFor<Job>();
+                var handle = this.Query(context).With<Test3Component>().AsParallel().Schedule<Job>();
                 context.SetDependency(handle);
             }
 
@@ -273,20 +274,20 @@ namespace ME.BECS.Tests {
 
         public struct TestSystem3 : IUpdate {
 
-            public struct Job : IJobParallelForCommandBuffer {
+            public struct Job : IJobForEntity {
                 
-                public void Execute(in CommandBufferJobParallel commandBuffer) {
-                    if (commandBuffer.Read<TestComponent>().data == 2) {
-                        commandBuffer.Get<TestComponent>().data = 4;
-                    } else if (commandBuffer.Read<TestComponent>().data == 3) {
-                        commandBuffer.Get<TestComponent>().data = 5;
+                public void Execute(in JobInfo jobInfo, in Ent ent) {
+                    if (ent.Read<TestComponent>().data == 2) {
+                        ent.Get<TestComponent>().data = 4;
+                    } else if (ent.Read<TestComponent>().data == 3) {
+                        ent.Get<TestComponent>().data = 5;
                     }
                 }
 
             }
 
             public void OnUpdate(ref SystemContext context) {
-                var handle = this.Query(context).With<TestComponent>().ScheduleParallelFor<Job>();
+                var handle = this.Query(context).With<TestComponent>().AsParallel().Schedule<Job>();
                 context.SetDependency(handle);
             }
         }

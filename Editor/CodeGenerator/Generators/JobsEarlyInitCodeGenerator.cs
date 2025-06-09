@@ -33,10 +33,10 @@ namespace ME.BECS.Editor.Jobs {
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
 
-                /*if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
+                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
                     dataList.AddRange(list);
                     continue;
-                }*/
+                }
                 
                 if (jobType.IsValueType == false) continue;
                 if (jobType.IsVisible == false) continue;

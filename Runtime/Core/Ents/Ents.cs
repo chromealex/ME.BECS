@@ -166,8 +166,8 @@ namespace ME.BECS {
             var idx = 0u;
             var cnt = state.ptr->entities.free.Count;
             uint val;
-            if (jobInfo.itemsPerThread > 0u) {
-                val = jobInfo.itemsPerThread - 1u;
+            if (jobInfo.itemsPerCall > 0u) {
+                val = jobInfo.itemsPerCall - 1u;
             } else {
                 val = 0u;
             }

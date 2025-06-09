@@ -81,7 +81,7 @@ namespace ME.BECS {
                 if (IsParallelSupport == false) {
                     E.THROW_ENT_NEW();
                 } else if (inlineCount > 0u) {
-                    jobInfo.itemsPerThread = inlineCount;
+                    jobInfo.itemsPerCall = inlineCount;
                     if (inlineCount > 1u) {
                         // if we have more than 1 entity to create per iteration
                         // we need to be sure that we have free entities to supply
@@ -144,13 +144,13 @@ namespace ME.BECS {
 
         public uint count;
         public volatile uint index;
-        public volatile uint itemsPerThread;
+        public volatile uint itemsPerCall;
         public safe_ptr<uint> localOffset;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;
 
-        public uint Offset => this.index * this.itemsPerThread + *this.localOffset.ptr;
+        public uint Offset => this.index * this.itemsPerCall + *this.localOffset.ptr;
 
         [INLINE(256)]
         public void CreateLocalCounter() {
@@ -170,7 +170,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
-                itemsPerThread = 1u,
+                itemsPerCall = 1u,
                 worldId = worldId,
             };
         }

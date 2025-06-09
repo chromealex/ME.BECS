@@ -609,7 +609,15 @@ namespace ME.BECS.FogOfWar {
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = position;
             entTr.rotation = quaternion.identity;
-            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+            CreatePart(in jobInfo, in ent, in owner, 0);
+            CreatePart(in jobInfo, in ent, in owner, 1);
+            CreatePart(in jobInfo, in ent, in owner, 2);
+            CreatePart(in jobInfo, in ent, in owner, 3);
+            if (lifetime != null) ent.Destroy(lifetime.Value);
+            return ent;
+            
+            [INLINE(256)]
+            static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
                 part.Set<TransformAspect>();
@@ -619,8 +627,6 @@ namespace ME.BECS.FogOfWar {
                     part = partIndex,
                 });
             }
-            if (lifetime != null) ent.Destroy(lifetime.Value);
-            return ent;
         }
 
         [INLINE(256)]
@@ -638,7 +644,15 @@ namespace ME.BECS.FogOfWar {
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = position;
             entTr.rotation = quaternion.identity;
-            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+            CreatePart(in jobInfo, in ent, in owner, 0);
+            CreatePart(in jobInfo, in ent, in owner, 1);
+            CreatePart(in jobInfo, in ent, in owner, 2);
+            CreatePart(in jobInfo, in ent, in owner, 3);
+            if (lifetime != null) ent.Destroy(lifetime.Value);
+            return ent;
+            
+            [INLINE(256)]
+            static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
                 part.Set<TransformAspect>();
@@ -649,8 +663,6 @@ namespace ME.BECS.FogOfWar {
                 });
                 part.Set(new FogOfWarRevealerIsSectorTag());
             }
-            if (lifetime != null) ent.Destroy(lifetime.Value);
-            return ent;
         }
 
         [INLINE(256)]
@@ -666,7 +678,15 @@ namespace ME.BECS.FogOfWar {
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = position;
             entTr.rotation = quaternion.identity;
-            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+            CreatePart(in jobInfo, in ent, in owner, 0);
+            CreatePart(in jobInfo, in ent, in owner, 1);
+            CreatePart(in jobInfo, in ent, in owner, 2);
+            CreatePart(in jobInfo, in ent, in owner, 3);
+            if (lifetime != null) ent.Destroy(lifetime.Value);
+            return ent;
+            
+            [INLINE(256)]
+            static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
                 part.Set<TransformAspect>();
@@ -676,8 +696,6 @@ namespace ME.BECS.FogOfWar {
                     part = partIndex,
                 });
             }
-            if (lifetime != null) ent.Destroy(lifetime.Value);
-            return ent;
         }
 
         [INLINE(256)]
@@ -688,7 +706,15 @@ namespace ME.BECS.FogOfWar {
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.position = new float3(rect.center.x, 0f, rect.center.y);
             entTr.rotation = quaternion.identity;
-            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 0);
+            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 1);
+            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 2);
+            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 3);
+            if (lifetime != null) ent.Destroy(lifetime.Value);
+            return ent;
+
+            [INLINE(256)]
+            static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, in FogOfWarStaticComponent props, in Rect rect, tfloat? height, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
                 part.Set<TransformAspect>();
@@ -703,8 +729,6 @@ namespace ME.BECS.FogOfWar {
                     part = partIndex,
                 });
             }
-            if (lifetime != null) ent.Destroy(lifetime.Value);
-            return ent;
         }
 
         [INLINE(256)]
@@ -722,7 +746,15 @@ namespace ME.BECS.FogOfWar {
             var size = FogOfWarUtils.FogMapToWorldPosition(in props, rect.size);
             entTr.position = new float3(pos.x, 0f, pos.z) + new float3(size.x, 0f, size.z) * 0.5f;
             entTr.rotation = quaternion.identity;
-            for (byte partIndex = 0; partIndex < 4; ++partIndex) {
+            CreatePart(in jobInfo, in ent, in owner, 0);
+            CreatePart(in jobInfo, in ent, in owner, 1);
+            CreatePart(in jobInfo, in ent, in owner, 2);
+            CreatePart(in jobInfo, in ent, in owner, 3);
+            if (lifetime != null) ent.Destroy(lifetime.Value);
+            return ent;
+
+            [INLINE(256)]
+            static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner,  byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
                 part.Set<TransformAspect>();
@@ -732,8 +764,6 @@ namespace ME.BECS.FogOfWar {
                     part = partIndex,
                 });
             }
-            if (lifetime != null) ent.Destroy(lifetime.Value);
-            return ent;
         }
 
         [INLINE(256)]

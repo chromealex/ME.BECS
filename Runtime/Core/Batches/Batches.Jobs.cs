@@ -31,7 +31,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Execute() {
 
-            Ents.EnsureFree(this.buffer->state, this.buffer->worldId, this.buffer->count * this.jobInfo.itemsPerThread);
+            Ents.EnsureFree(this.buffer->state, this.buffer->worldId, this.buffer->count * this.jobInfo.itemsPerCall);
             
         }
 
