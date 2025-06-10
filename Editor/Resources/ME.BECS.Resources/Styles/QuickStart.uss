@@ -1,0 +1,12 @@
+.container {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    align-self: center;
+    padding: 20px;
+}
+
+Button {
+    width: 280px;
+    height: 200px;
+}

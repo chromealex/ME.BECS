@@ -346,6 +346,8 @@ namespace ME.BECS {
 
         public static void Initialize() {
 
+            StartParallelJob.safetyHandler.Data = AtomicSafetyHandle.Create();
+            
             #if UNITY_EDITOR
             UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeEditorChanged;
             UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeEditorChanged;
@@ -370,6 +372,8 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
+            AtomicSafetyHandle.Release(StartParallelJob.safetyHandler.Data);
+            
             WorldsPersistentAllocator.Dispose();
             WorldsDomainAllocator.Dispose();
             

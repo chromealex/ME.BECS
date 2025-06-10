@@ -85,10 +85,7 @@ namespace ME.BECS {
                     if (inlineCount > 1u) {
                         // if we have more than 1 entity to create per iteration
                         // we need to be sure that we have free entities to supply
-                        dependsOn = new StartParallelJob() {
-                            buffer = buffer,
-                            jobInfo = jobInfo,
-                        }.ScheduleSingle(dependsOn);
+                        dependsOn = new StartParallelJob(buffer, in jobInfo).ScheduleSingle(dependsOn);
                     }
                 }
             }

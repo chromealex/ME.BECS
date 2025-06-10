@@ -168,10 +168,10 @@ namespace ME.BECS.Editor.Jobs {
             structUnsafeBuilder.AppendLine($"#endif");
             cacheBuilder.AppendLine($"#endif");
             
-            cacheBuilderFile.content = $"public static unsafe class DebugJobsCache {{\n{cacheBuilder}\n}}";
-            funcBuilderFile.content = $"public static unsafe class DebugJobsFunc {{\n{funcBuilder}\n}}";
-            structBuilderFile.content = $"public static unsafe class DebugJobsStruct {{\n{structBuilder}\n}}";
-            structUnsafeBuilderFile.content = $"public static unsafe class DebugJobsStructUnsafe {{\n{structUnsafeBuilder}\n}}";
+            cacheBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{cacheBuilder}\n}}";
+            funcBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{funcBuilder}\n}}";
+            structBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{structBuilder}\n}}";
+            structUnsafeBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{structUnsafeBuilder}\n}}";
 
             files[0] = cacheBuilderFile;
             files[1] = funcBuilderFile;
@@ -278,10 +278,12 @@ namespace ME.BECS.Editor.Jobs {
                 tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
                 tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                 tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
+                tempStructBuilder.AppendLine($"public JobInfo jobInfo;");
                 tempStructUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
+                tempStructUnsafeBuilder.AppendLine($"public JobInfo jobInfo;");
                 if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
 
                     {
