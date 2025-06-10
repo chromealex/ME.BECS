@@ -362,38 +362,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle Open(JobHandle jobHandle, safe_ptr<State> state) {
-            var job = new OpenJob() {
-                state = state,
-            };
-            return job.ScheduleSingle(jobHandle);
-        }
-
-        [INLINE(256)]
-        public static JobHandle Close(JobHandle jobHandle, safe_ptr<State> state) {
-            var job = new CloseJob() {
-                state = state,
-            };
-            return job.ScheduleSingle(jobHandle);
-        }
-
-        [INLINE(256)]
-        public static JobHandle Open(JobHandle jobHandle, in World world) {
-            var job = new OpenJob() {
-                state = world.state,
-            };
-            return job.ScheduleSingle(jobHandle);
-        }
-
-        [INLINE(256)]
-        public static JobHandle Close(JobHandle jobHandle, in World world) {
-            var job = new CloseJob() {
-                state = world.state,
-            };
-            return job.ScheduleSingle(jobHandle);
-        }
-
-        [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.lockReadWrite.BurstMode(in allocator, state);
             this.items.BurstMode(in allocator, state);

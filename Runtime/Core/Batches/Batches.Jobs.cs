@@ -37,33 +37,4 @@ namespace ME.BECS {
 
     }
 
-    [BURST(CompileSynchronously = true)]
-    public struct OpenJob : IJobSingle {
-
-        public safe_ptr<State> state;
-            
-        [INLINE(256)]
-        public void Execute() {
-
-            Batches.OpenFromJob(this.state);
-            
-        }
-
-    }
-
-    [BURST(CompileSynchronously = true)]
-    public struct CloseJob : IJobSingle {
-
-        [NativeDisableUnsafePtrRestriction]
-        public safe_ptr<State> state;
-            
-        [INLINE(256)]
-        public void Execute() {
-
-            Batches.CloseFromJob(this.state);
-            
-        }
-
-    }
-
 }
