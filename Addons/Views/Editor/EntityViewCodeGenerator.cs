@@ -116,7 +116,7 @@ namespace ME.BECS.Editor.Aspects {
         }
 
         public static void AddMethod(System.Text.StringBuilder str, scg::HashSet<JobsEarlyInitCodeGenerator.TypeInfo> types, scg::HashSet<System.Type> ignoreTypes, System.Type obj, string methodName, ref uint idx) {
-            var methodInfo = obj.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(x => x.Name == methodName && x.GetBaseDefinition().DeclaringType != x.DeclaringType);
+            var methodInfo = obj.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (methodInfo == null) {
                 str.AppendLine($"// {methodName} not found");
                 return;
