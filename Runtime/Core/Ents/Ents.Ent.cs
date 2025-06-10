@@ -89,7 +89,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
+        [CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
         internal static Ent New_INTERNAL(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
