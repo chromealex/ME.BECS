@@ -24,9 +24,9 @@ namespace ME.BECS {
     [BURST(CompileSynchronously = true)]
     public unsafe struct StartParallelJob : IJobSingle {
         
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         public static readonly Unity.Burst.SharedStatic<AtomicSafetyHandle> safetyHandler = Unity.Burst.SharedStatic<AtomicSafetyHandle>.GetOrCreate<StartParallelJob>();
 
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         private AtomicSafetyHandle m_Safety;
         private int m_Length;
         private int m_MinIndex;

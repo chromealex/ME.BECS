@@ -345,9 +345,10 @@ namespace ME.BECS {
         public static uint MaxWorldId => counter;
 
         public static void Initialize() {
-
-            StartParallelJob.safetyHandler.Data = AtomicSafetyHandle.Create();
             
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            StartParallelJob.safetyHandler.Data = AtomicSafetyHandle.Create();
+            #endif
             #if UNITY_EDITOR
             UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeEditorChanged;
             UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeEditorChanged;
@@ -372,8 +373,9 @@ namespace ME.BECS {
 
         public static void Dispose() {
 
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             AtomicSafetyHandle.Release(StartParallelJob.safetyHandler.Data);
-            
+            #endif
             WorldsPersistentAllocator.Dispose();
             WorldsDomainAllocator.Dispose();
             
