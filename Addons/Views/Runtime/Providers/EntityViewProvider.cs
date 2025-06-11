@@ -506,12 +506,12 @@ namespace ME.BECS.Views {
 
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            var mainMarker = new Unity.Profiling.ProfilerMarker(instanceObj.name);
+            var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyState");
             mainMarker.Begin();
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
-                    var marker = new Unity.Profiling.ProfilerMarker("ApplyState");
+                    var marker = new Unity.Profiling.ProfilerMarker("DoApplyState");
                     marker.Begin();
                     instanceObj.DoApplyState(in entRo);
                     marker.End();
@@ -528,10 +528,10 @@ namespace ME.BECS.Views {
             
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            var mainMarker = new Unity.Profiling.ProfilerMarker(instanceObj.name);
+            var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdate");
             mainMarker.Begin();
             {
-                var marker = new Unity.Profiling.ProfilerMarker("OnUpdate");
+                var marker = new Unity.Profiling.ProfilerMarker("DoOnUpdate");
                 marker.Begin();
                 instanceObj.DoOnUpdate(in entRo, dt);
                 marker.End();
