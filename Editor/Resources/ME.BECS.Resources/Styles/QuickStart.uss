@@ -1,4 +1,6 @@
 .container {
+    background-color: rgba(0, 0, 0, 0.3);
+    flex-grow: 1;
     flex-direction: row;
     align-items: flex-start;
     flex-wrap: wrap;
@@ -6,7 +8,123 @@
     padding: 20px;
 }
 
-Button {
-    width: 280px;
-    height: 200px;
+.tutorial-item {
+    width: 410px;
+    height: 300px;
+    margin: 10px;
+    cursor: link;
+    overflow: hidden;
+    justify-content: center;
+}
+
+.tutorial-item .label-number {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    border-bottom-right-radius: 10px;
+    background-color: var(--main-color);
+}
+
+.tutorial-item Button {
+    transition-property: border-color;
+    transition-duration: 0.2s;
+    width: 100%;
+    height: 100%;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.5);
+    border-radius: 0px;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0px;
+    margin: 0px;
+    cursor: link;
+}
+
+.tutorial-item Button Image {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    --unity-image-size: stretch-to-parent;
+}
+
+.tutorial-item Button TextElement {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+}
+
+.tutorial-item:hover Button {
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.tutorial-item .label {
+    transition-property: bottom;
+    transition-duration: 1s;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+}
+
+.tutorial-item .label-container {
+    transition-property: top, bottom, border-bottom-color, border-top-color, border-left-color, border-right-color;
+    transition-duration: 0.2s;
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 100%;
+    bottom: -100%;
+    justify-content: flex-end;
+    border-color: rgba(255, 255, 255, 0.8);
+    border-width: 1px;
+    border-top-width: 0px;
+}
+
+.tutorial-item:hover .label-container {
+    top: 0%;
+    bottom: 0%;
+}
+
+.tutorial-item .label .caption,
+.tutorial-item .label .description {
+    white-space: normal;
+}
+
+.tutorial-item .label .caption {
+    -unity-font-style: bold;
+    padding-bottom: 2px;
+    font-size: 16px;
+}
+
+.tutorial-item .label .description {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.play-icon {
+    transition-property: width, height, background-color, color;
+    transition-duration: 0.2s;
+    position: absolute;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.4);
+    align-self: center;
+    color: rgba(0, 0, 0, 0.8);
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+    -unity-text-align: middle-center;
+}
+
+.tutorial-item:hover .play-icon {
+    width: 80px;
+    height: 40px;
+    font-size: 15px;
+    background-color: rgba(205, 15, 15, 0.8);
+    color: rgba(255, 255, 255, 1);
 }

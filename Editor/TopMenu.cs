@@ -13,6 +13,13 @@ namespace ME.BECS.Editor {
             
         }
 
+        [MenuItem("ME.BECS/✪ Quick Start...", priority = 300)]
+        public static void ShowQuickStart() {
+            
+            QuickStartEditorWindow.ShowWindow();
+            
+        }
+
         [MenuItem("ME.BECS/Regenerate Assemblies", priority = 100)]
         public static void CodeGeneratorRegenerateAsms() {
 

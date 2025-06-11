@@ -8,6 +8,15 @@ namespace ME.BECS.Editor {
 
     public class QuickStartEditorWindow : EditorWindow {
 
+        public struct TutorialInfo {
+
+            public string caption;
+            public string description;
+            public string url;
+            public Texture2D texture;
+            
+        }
+        
         private StyleSheet styleSheet;
         
         public static void ShowWindow() {
@@ -28,6 +37,33 @@ namespace ME.BECS.Editor {
 
             this.LoadStyle();
 
+            var tutorials = new TutorialInfo[] {
+                new TutorialInfo() {
+                    caption = "Project Initialization",
+                    description = "How to initialize project.",
+                    url = "https://youtu.be/PCdhnXEjRQI",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-1.jpg"),
+                },
+                new TutorialInfo() {
+                    caption = "Basics",
+                    description = "Core API, entities API, how to read and write data.",
+                    url = "https://youtu.be/5clulSSIrco",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-2.jpg"),
+                },
+                new TutorialInfo() {
+                    caption = "Views",
+                    description = "How to create and use views.",
+                    url = "https://youtu.be/PWGOLubeh3k",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-3.jpg"),
+                },
+                new TutorialInfo() {
+                    caption = "Network Events, Jobs, Queries",
+                    description = "How to send network events through transport, how to schedule queries and jobs.",
+                    url = "https://youtu.be/dzUZorAW_uI",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-4.jpg"),
+                },
+            };
+
             var root = this.rootVisualElement;
             EditorUIUtils.ApplyDefaultStyles(root);
             root.styleSheets.Add(this.styleSheet);
@@ -37,41 +73,42 @@ namespace ME.BECS.Editor {
             var container = new VisualElement();
             container.AddToClassList("container");
             root.Add(container);
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
-            }
-            {
-                var button = new Button();
-                container.Add(button);
+            var number = 1;
+            foreach (var tutorial in tutorials) {
+                var info = tutorial;
+                var item = new VisualElement();
+                item.pickingMode = PickingMode.Position;
+                item.AddToClassList("tutorial-item");
+                var button = new Button(() => {
+                    Application.OpenURL(info.url);
+                });
+                item.Add(button);
+                var lbl = new Label($"#{number}");
+                lbl.AddToClassList("label-number");
+                item.Add(lbl);
+                button.iconImage = Background.FromTexture2D(info.texture);
+                var labelContainer = new VisualElement();
+                labelContainer.pickingMode = PickingMode.Ignore;
+                labelContainer.AddToClassList("label-container");
+                item.Add(labelContainer);
+                var label = new VisualElement();
+                labelContainer.Add(label);
+                label.AddToClassList("label");
+                {
+                    var caption = new Label(info.caption);
+                    caption.pickingMode = PickingMode.Ignore;
+                    caption.AddToClassList("caption");
+                    label.Add(caption);
+                    var description = new Label(info.description);
+                    description.pickingMode = PickingMode.Ignore;
+                    description.AddToClassList("description");
+                    label.Add(description);
+                }
+                var play = new Label("\u25B6");
+                item.Add(play);
+                play.AddToClassList("play-icon");
+                container.Add(item);
+                ++number;
             }
 
         }
