@@ -115,6 +115,10 @@
     background-color: rgba(21, 122, 189, 0.4);
 }
 
+.h-root .h-element.inactive {
+    opacity: 0.5;
+}
+
 .h-root .h-element .name {
     flex-grow: 1;
 }

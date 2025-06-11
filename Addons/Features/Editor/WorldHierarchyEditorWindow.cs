@@ -557,6 +557,14 @@ namespace ME.BECS.Editor {
                     versionChanged = true;
                 }
 
+                if (this.value.IsActive() == true) {
+                    this.container.RemoveFromClassList("inactive");
+                    this.container.AddToClassList("active");
+                } else {
+                    this.container.RemoveFromClassList("active");
+                    this.container.AddToClassList("inactive");
+                }
+                
                 if (versionChanged == true) {
                     this.foldout.text = this.value.ToString(withWorld: false, withVersion: false, withGen: false).ToString();
                     this.versionLabel.text = this.value.Version.ToString();
