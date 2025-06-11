@@ -265,7 +265,10 @@ namespace ME.BECS {
                         ignoreSelf = ignoreSelf,
                         ignore = selfEnt,
                     };
+                    var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
+                    marker.Begin();
                     tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
+                    marker.End();
                     if (visitor.found == true) {
                         heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, math.lengthsq(worldPos - visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                     }
@@ -305,7 +308,10 @@ namespace ME.BECS {
                             ignoreSelf = ignoreSelf,
                             ignore = selfEnt,
                         };
+                        var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
+                        marker.Begin();
                         tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
+                        marker.End();
                         foreach (var item in visitor.results) {
                             heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                         }
@@ -339,7 +345,10 @@ namespace ME.BECS {
                             ignore = selfEnt,
                         };
                         var range = math.sqrt(rangeSqr);
+                        var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
+                        marker.Begin();
                         tree.Range(new NativeTrees.AABB(worldPos - range, worldPos + range), ref visitor);
+                        marker.End();
                         heap.EnsureCapacity((uint)visitor.results.Count);
                         foreach (var item in visitor.results) {
                             if (item.IsAlive() == false) continue;
