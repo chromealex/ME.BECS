@@ -286,7 +286,8 @@ namespace ME.BECS.Pathfinding {
             var root = graph.Read<RootGraphComponent>();
             var portalInfo = GetNearestPortal(state, in root, from, from, PortalInfo.Invalid, out _);
             var toPortalInfo = GetNearestPortal(state, in root, from, to, in portalInfo, out var localChunk);
-            if (localChunk == false) {
+            /*if (localChunk == false)*/
+            if (portalInfo.pack != toPortalInfo.pack) {
                 to = Raycast(state, in root, root.chunks[toPortalInfo.chunkIndex].portals.list[state, toPortalInfo.portalIndex].position, to, filter);
             }
             
@@ -395,9 +396,10 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static float3 Raycast(safe_ptr<State> state, in RootGraphComponent root, float3 from, float3 to, in Filter filter) {
 
-            var dirStep = math.normalizesafe(to - from) * (root.nodeSize * 0.5f);
+            var step = (root.nodeSize * 0.5f);
+            var dirStep = mathext.normalizesafe(to, from, out var dist) * step;
             var pos = from;
-            while (true) {
+            for (tfloat d = 0f; d <= dist; d += step) {
                 var chunkIndex = GetChunkIndex(in root, pos);
                 if (chunkIndex == uint.MaxValue) break;
                 var chunk = root.chunks[chunkIndex];

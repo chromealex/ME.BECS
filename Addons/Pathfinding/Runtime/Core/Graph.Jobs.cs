@@ -492,8 +492,6 @@ namespace ME.BECS.Pathfinding {
                                 data.flowField[this.world.state, i].bestCost = Graph.UNWALKABLE_COST;
                             }
                             setDefaultMarker.End();
-                        } else {
-                            
                         }
 
                         this.path.chunks[this.world.state, portalInfo.chunkIndex] = data;
@@ -518,7 +516,6 @@ namespace ME.BECS.Pathfinding {
                             var targetChunk = root.chunks[this.world.state, targetChunkIndex];
                             targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, to, true);
                             targetNodePosition = Graph.GetPosition(in root, in targetChunk, targetNodeIndex);
-                            this.path.chunks[this.world.state, targetChunkIndex].flowField[this.world.state, targetNodeIndex].hasLineOfSight = 1;
                         }
 
                         for (int i = 0; i < chunksToUpdate.Length; ++i) {
@@ -538,6 +535,7 @@ namespace ME.BECS.Pathfinding {
                                 if (chunkPortalInfo.chunkIndex == targetChunkIndex) {
                                     // reset cost for node if it is a target chunk
                                     gridChunk.flowField[this.world.state, nodeIndex].bestCost = 0f;
+                                    gridChunk.flowField[this.world.state, nodeIndex].hasLineOfSight = true;
                                     if (chunk.nodes[this.world.state, nodeIndex].walkable == false) {
                                         gridChunk.flowField[this.world.state, nodeIndex].bestCost = Graph.UNWALKABLE_COST;
                                         targetSet = false;
@@ -630,7 +628,7 @@ namespace ME.BECS.Pathfinding {
                                     }
 
                                     if (this.CalculateLOS(in root, ref item, in curTempNode, new Graph.TempNode() { chunkIndex = targetChunkIndex, nodeIndex = targetNodeIndex, }) == 1) {
-                                        item.hasLineOfSight = 1;
+                                        item.hasLineOfSight = true;
                                     }
                                     
                                     for (uint j = 0; j < 4u; ++j) {
@@ -669,7 +667,7 @@ namespace ME.BECS.Pathfinding {
                                 for (int p = 0; p < nodes.Length; ++p) {
                                     var srcPortalInfo = nodes[p];
                                     var pathChunk = this.path.chunks[this.world.state, srcPortalInfo.chunkIndex];
-                                    if (pathChunk.hasLineOfSight == 1) continue;
+                                    if (pathChunk.hasLineOfSight == true) continue;
                                     ref var chunkData = ref root.chunks[this.world.state, srcPortalInfo.chunkIndex];
                                     if (p < nodes.Length - 1) {
                                         var nextPortalInfo = nodes[p + 1];
@@ -700,12 +698,12 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        private byte CalculateLOS(in RootGraphComponent root, ref Path.Chunk chunk, in Graph.TempNode node, in Graph.TempNode targetNode) {
+        private bbool CalculateLOS(in RootGraphComponent root, ref Path.Chunk chunk, in Graph.TempNode node, in Graph.TempNode targetNode) {
 
             [INLINE(256)]
-            static byte GetState(safe_ptr<State> state, in Path path, in Graph.TempNode node) {
+            static bbool GetState(safe_ptr<State> state, in Path path, in Graph.TempNode node) {
                 var chunk = path.chunks[state, node.chunkIndex];
-                if (chunk.flowField.IsCreated == false) return 0;
+                if (chunk.flowField.IsCreated == false) return false;
                 return chunk.flowField[state, node.nodeIndex].hasLineOfSight;
             }
 
@@ -719,14 +717,14 @@ namespace ME.BECS.Pathfinding {
             var at = Graph.GetGlobalCoord(node.chunkIndex, node.nodeIndex, root.chunkWidth, root.chunkHeight, root.width);
             
             // do not calculate los if any neighbour is unwalkable
-            if (IsWalkable(this.world.state, new int2(at.x + 1, at.y), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x + 1, at.y - 1), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x, at.y - 1), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x - 1, at.y - 1), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x - 1, at.y), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x - 1, at.y + 1), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x, at.y + 1), in root) == false) return 0;
-            if (IsWalkable(this.world.state, new int2(at.x + 1, at.y + 1), in root) == false) return 0;
+            if (IsWalkable(this.world.state, new int2(at.x + 1, at.y), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x + 1, at.y - 1), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x, at.y - 1), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x - 1, at.y - 1), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x - 1, at.y), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x - 1, at.y + 1), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x, at.y + 1), in root) == false) return false;
+            if (IsWalkable(this.world.state, new int2(at.x + 1, at.y + 1), in root) == false) return false;
             
             var pathEnd = Graph.GetGlobalCoord(targetNode.chunkIndex, targetNode.nodeIndex, root.chunkWidth, root.chunkHeight, root.width);
 
@@ -750,7 +748,7 @@ namespace ME.BECS.Pathfinding {
                 yOffset = 0;
             }
             
-            byte hasLos = 0;
+            bbool hasLos = false;
             var info = Graph.GetCoordInfo(at.x + xOffset, at.y + yOffset, root.chunkWidth, root.chunkHeight, root.width, root.height);
             if (info.IsValid() == true) {
                 hasLos = GetState(this.world.state, in this.path, in info);
@@ -758,7 +756,7 @@ namespace ME.BECS.Pathfinding {
             
             var currentNodeInfo = Graph.GetCoordInfo(at.x, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
             if (currentNodeInfo.IsValid() == false || root.chunks[this.world.state, currentNodeInfo.chunkIndex].nodes[this.world.state, currentNodeInfo.nodeIndex].cost > 1) {
-                hasLos = 0;
+                hasLos = false;
             }
 
             chunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = hasLos;

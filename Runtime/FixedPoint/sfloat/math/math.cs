@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace ME.BECS {
 
-    public static class mathext {
+    public static partial class mathext {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static sfloat angle(ME.BECS.FixedPoint.float3 from, ME.BECS.FixedPoint.float3 to) {
@@ -16,6 +16,28 @@ namespace ME.BECS {
         public static float angle(Unity.Mathematics.float3 from, Unity.Mathematics.float3 to) {
             var num = Unity.Mathematics.math.sqrt(Unity.Mathematics.math.lengthsq(from) * Unity.Mathematics.math.lengthsq(to));
             return (double)num < 1.0000000036274937E-15 ? 0.0f : Unity.Mathematics.math.acos(Unity.Mathematics.math.clamp(Unity.Mathematics.math.dot(from, to) / num, -1f, 1f)) * 57.29578f;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Unity.Mathematics.float3 normalizesafe(Unity.Mathematics.float3 x, Unity.Mathematics.float3 y, out float distance, Unity.Mathematics.float3 defaultvalue = new Unity.Mathematics.float3()) {
+            var dir = x - y;
+            var len = Unity.Mathematics.math.dot(dir, dir);
+            distance = Unity.Mathematics.math.sqrt(len);
+            var n = Unity.Mathematics.math.select(defaultvalue, dir * 1f / distance, len > Unity.Mathematics.math.FLT_MIN_NORMAL);
+            return n;
+        }
+
+    }
+    
+    public static partial class mathext {
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ME.BECS.FixedPoint.float3 normalizesafe(ME.BECS.FixedPoint.float3 x, ME.BECS.FixedPoint.float3 y, out sfloat distance, ME.BECS.FixedPoint.float3 defaultvalue = new ME.BECS.FixedPoint.float3()) {
+            var dir = x - y;
+            var len = ME.BECS.FixedPoint.math.dot(dir, dir);
+            distance = ME.BECS.FixedPoint.math.sqrt(len);
+            var n = ME.BECS.FixedPoint.math.select(defaultvalue, dir * 1f / distance, len > ME.BECS.FixedPoint.math.FLT_MIN_NORMAL);
+            return n;
         }
 
     }

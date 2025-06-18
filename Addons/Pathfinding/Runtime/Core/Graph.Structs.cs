@@ -323,14 +323,14 @@ namespace ME.BECS.Pathfinding {
             public struct Item {
 
                 public byte direction;
-                public byte hasLineOfSight;
+                public bbool hasLineOfSight;
                 public tfloat bestCost;
 
             }
 
             public uint index;
             public MemArray<Item> flowField;
-            public byte hasLineOfSight;
+            public bbool hasLineOfSight;
 
             [INLINE(256)]
             public readonly Chunk Clone(ref MemoryAllocator allocator) {
