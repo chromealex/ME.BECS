@@ -16,14 +16,14 @@ namespace ME.BECS.Pathfinding {
         public tfloat height;
         public uint heightsSizeX;
         public ObstacleChannel obstacleChannel;
-        public byte ignoreGraphRadius;
+        public bbool ignoreGraphRadius;
         public byte cost;
         public int graphMask;
 
         public void OnInitialize(in Ent ent) {
 
             var tr = ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
-            GraphUtils.CreateGraphMask(in ent, tr.position, tr.rotation, this.size, this.cost, this.height, this.obstacleChannel, this.ignoreGraphRadius == 1);
+            GraphUtils.CreateGraphMask(in ent, tr.position, tr.rotation, this.size, this.cost, this.height, this.obstacleChannel, this.ignoreGraphRadius);
 
         }
 

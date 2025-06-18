@@ -169,7 +169,7 @@ namespace ME.BECS.Pathfinding {
                 offset = float2.zero,
                 size = size,
                 heightsSizeX = heightsSizeX,
-                ignoreGraphRadius = (byte)(ignoreGraphRadius == true ? 1 : 0),
+                ignoreGraphRadius = ignoreGraphRadius,
                 cost = cost,
                 obstacleChannel = obstacleChannel,
                 graphMask = graphMask,

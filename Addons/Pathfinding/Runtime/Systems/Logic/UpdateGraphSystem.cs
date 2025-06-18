@@ -72,7 +72,7 @@ namespace ME.BECS.Pathfinding {
                     var graph = this.graphSystem.graphs[ent.World.state, g];
                     var root = graph.Read<RootGraphComponent>();
                     var agentRadius = root.agentRadius;
-                    if (obstacle.ignoreGraphRadius == 1) {
+                    if (obstacle.ignoreGraphRadius == true) {
                         agentRadius = 0f;
                     }
                     var obstacleSizeOffset = new float2(agentRadius * 2f);
