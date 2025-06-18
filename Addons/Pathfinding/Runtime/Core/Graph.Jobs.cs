@@ -338,6 +338,7 @@ namespace ME.BECS.Pathfinding {
 
                 var chunkIndex = this.chunks[(int)index];
                 var gridChunk = this.path.chunks[this.world.state, chunkIndex];
+                if (gridChunk.flowField.IsCreated == false) continue;
 
                 var targetChunkIndex = Graph.GetChunkIndex(in root, this.path.to, true);
                 var targetChunk = root.chunks[this.world.state, targetChunkIndex];
@@ -617,12 +618,19 @@ namespace ME.BECS.Pathfinding {
                                     }
 
                                     ref var item = ref this.path.chunks[this.world.state, curTempNode.chunkIndex];
-                                    var rootCost = item.flowField[this.world.state, curTempNode.nodeIndex].bestCost;
+                                    var rootCost = tfloat.MaxValue;
+                                    if (item.flowField.IsCreated == true) {
+                                        rootCost = item.flowField[this.world.state, curTempNode.nodeIndex].bestCost;
+                                    }
                                     if (targetSet == false) {
                                         chunk = root.chunks[this.world.state, curTempNode.chunkIndex];
                                         var node = chunk.nodes[this.world.state, curTempNode.nodeIndex];
                                         if (node.walkable == true) {
-                                            rootCost = item.flowField[this.world.state, curTempNode.nodeIndex].bestCost = 0f;
+                                            if (item.flowField.IsCreated == true) {
+                                                rootCost = item.flowField[this.world.state, curTempNode.nodeIndex].bestCost = 0f;
+                                            } else {
+                                                rootCost = 0f;
+                                            }
                                             targetSet = true;
                                         }
                                     }
@@ -641,6 +649,7 @@ namespace ME.BECS.Pathfinding {
 
                                         chunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
                                         gridChunk = this.path.chunks[this.world.state, neighbourTempNode.chunkIndex];
+                                        if (gridChunk.flowField.IsCreated == false) continue;
                                         var neighbor = chunk.nodes[this.world.state, neighbourTempNode.nodeIndex];
                                         if (this.filter.IsValid(new NodeInfo(neighbor, neighbourTempNode.chunkIndex, neighbourTempNode.nodeIndex), in root) == false) {
                                             continue;

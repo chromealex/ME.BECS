@@ -284,10 +284,14 @@ namespace ME.BECS.Pathfinding {
             
             var pathState = PathState.NotCalculated;
             var root = graph.Read<RootGraphComponent>();
-            var portalInfo = GetNearestPortal(state, in root, from, from, PortalInfo.Invalid, out _);
-            var toPortalInfo = GetNearestPortal(state, in root, from, to, in portalInfo, out var localChunk);
-            /*if (localChunk == false)*/
-            if (portalInfo.pack != toPortalInfo.pack) {
+            var fromPortalInfo = GetNearestPortal(state, in root, from, from, PortalInfo.Invalid);
+            var toPortalInfo = GetNearestPortal(state, in root, from, to, in fromPortalInfo);
+            
+            var srcArea = root.chunks[fromPortalInfo.chunkIndex].portals.list[state, fromPortalInfo.portalIndex].globalArea;
+            var nearestPortalToTarget = GetNearestPortal(state, in root, from, to, PortalInfo.Invalid);
+            var targetArea = root.chunks[nearestPortalToTarget.chunkIndex].portals.list[state, nearestPortalToTarget.portalIndex].globalArea;
+            
+            if (fromPortalInfo.pack != toPortalInfo.pack && srcArea != targetArea) {
                 to = Raycast(state, in root, root.chunks[toPortalInfo.chunkIndex].portals.list[state, toPortalInfo.portalIndex].position, to, filter);
             }
             
@@ -302,7 +306,7 @@ namespace ME.BECS.Pathfinding {
                 count += chunk.portals.list.Count;
             }
 
-            var portalInfoIndex = chunkPortalsCount[(int)portalInfo.chunkIndex] + portalInfo.portalIndex;
+            var portalInfoIndex = chunkPortalsCount[(int)fromPortalInfo.chunkIndex] + fromPortalInfo.portalIndex;
             var toPortalInfoIndex = chunkPortalsCount[(int)toPortalInfo.chunkIndex] + toPortalInfo.portalIndex;
             
             /*{
@@ -317,7 +321,7 @@ namespace ME.BECS.Pathfinding {
             }*/
             var toPortalNodeArea = root.chunks[state, toPortalInfo.chunkIndex].portals.list[state, toPortalInfo.portalIndex].area;
             Unity.Collections.NativeArray<TempNodeData> temp = default;
-            if (portalInfo.IsValid == true && toPortalInfo.IsValid == true) {
+            if (fromPortalInfo.IsValid == true && toPortalInfo.IsValid == true) {
 
                 temp = new Unity.Collections.NativeArray<TempNodeData>(graphNodes.Length, Unity.Collections.Allocator.Temp);
                 {
@@ -371,7 +375,7 @@ namespace ME.BECS.Pathfinding {
                     endNodeIndex = temp[(int)endNodeIndex].parent - 1u;
                     nodes.Add(graphNodes[(int)n].portalInfo);
                 }
-                nodes.Add(portalInfo);
+                nodes.Add(fromPortalInfo);
                 var offset = new float3(0f, 0f, 0f);
                 for (uint i = 1; i < nodes.Length; ++i) {
                     var n1 = nodes[(int)i - 1];
@@ -425,15 +429,14 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        private static PortalInfo GetNearestPortal(safe_ptr<State> state, in RootGraphComponent root, float3 position, float3 target, in PortalInfo sourcePortalInfo, out bool localChunk) {
+        private static PortalInfo GetNearestPortal(safe_ptr<State> state, in RootGraphComponent root, float3 position, float3 target, in PortalInfo sourcePortalInfo) {
 
-            var targetArea = 0u;
+            var srcArea = 0u;
             if (sourcePortalInfo.IsValid == true) {
                 var srcPortal = root.chunks[sourcePortalInfo.chunkIndex].portals.list[state, sourcePortalInfo.portalIndex];
-                targetArea = srcPortal.globalArea;
+                srcArea = srcPortal.globalArea;
             }
 
-            localChunk = true;
             var chunkIndex = GetChunkIndex(in root, target);
             if (chunkIndex == uint.MaxValue) return PortalInfo.Invalid;
 
@@ -450,7 +453,8 @@ namespace ME.BECS.Pathfinding {
 
                 var chunk = root.chunks[state, chunkIndexLocal];
                 for (uint i = 0; i < chunk.portals.list.Count; ++i) {
-                    if (targetArea > 0u && chunk.portals.list[state, i].globalArea != targetArea) continue;
+                    var area = chunk.portals.list[state, i].globalArea;
+                    if (srcArea > 0u && area != srcArea) continue;
                     var pos = GetPortalPosition(state, in root, chunkIndexLocal, i);
                     var d = math.lengthsq(pos - target) + math.lengthsq(pos - position);
                     //UnityEngine.Debug.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)target, UnityEngine.Color.red, 10f);
@@ -465,7 +469,7 @@ namespace ME.BECS.Pathfinding {
 
                 if (portalIndex == uint.MaxValue) {
                     // Portal not found - seems like it is not a local chunk portal
-                    if (targetArea > 0u) {
+                    if (srcArea > 0u) {
                         {
                             var nextChunk = GetNeighbourChunkIndex(chunkIndexLocal, Side.Down, root.properties.chunksCountX, root.properties.chunksCountY);
                             if (nextChunk != uint.MaxValue && visited.Contains(nextChunk) == false) queue.Enqueue(nextChunk);
@@ -489,8 +493,6 @@ namespace ME.BECS.Pathfinding {
                 
             }
 
-            if (resultChunkIndex != chunkIndex) localChunk = false;
-            
             return new PortalInfo() {
                 chunkIndex = resultChunkIndex,
                 portalIndex = portalIndex,
