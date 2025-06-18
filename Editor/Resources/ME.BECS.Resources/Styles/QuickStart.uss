@@ -1,17 +1,22 @@
 .container {
     background-color: rgba(0, 0, 0, 0.3);
+    width: 100%;
     flex-grow: 1;
+    align-self: center;
+    padding: 20px;
     flex-direction: row;
     align-items: flex-start;
     flex-wrap: wrap;
-    align-self: center;
-    padding: 20px;
+    
+    background-image: resource("ME.BECS.Resources/QuickStart/Background");
+    background-repeat: repeat;
+    background-size: 100px 100px;
 }
 
 .tutorial-item {
-    width: 410px;
+    width: 400px;
     height: 300px;
-    margin: 10px;
+    margin: 11px;
     cursor: link;
     overflow: hidden;
     justify-content: center;
@@ -28,6 +33,7 @@
     -unity-text-align: middle-center;
     border-bottom-right-radius: 10px;
     background-color: var(--main-color);
+    color: var(--highlight-color);
 }
 
 .tutorial-item Button {
@@ -62,7 +68,7 @@
 }
 
 .tutorial-item:hover Button {
-    border-color: rgba(255, 255, 255, 0.8);
+    border-color: var(--highlight-color);
 }
 
 .tutorial-item .label {
@@ -70,6 +76,7 @@
     transition-duration: 1s;
     background-color: rgba(0, 0, 0, 0.8);
     padding: 10px;
+    color: var(--highlight-text-color);
 }
 
 .tutorial-item .label-container {
@@ -81,7 +88,7 @@
     top: 100%;
     bottom: -100%;
     justify-content: flex-end;
-    border-color: rgba(255, 255, 255, 0.8);
+    border-color: var(--highlight-color);
     border-width: 1px;
     border-top-width: 0px;
 }
@@ -104,7 +111,8 @@
 
 .tutorial-item .label .description {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--highlight-text-color);
+    opacity: 0.7;
 }
 
 .play-icon {
@@ -112,9 +120,9 @@
     transition-duration: 0.2s;
     position: absolute;
     border-radius: 10px;
-    background-color: rgba(255, 255, 255, 0.4);
+    background-color: var(--main-color);
     align-self: center;
-    color: rgba(0, 0, 0, 0.8);
+    color: var(--dark-color);
     width: 30px;
     height: 30px;
     font-size: 13px;

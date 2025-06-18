@@ -62,6 +62,12 @@ namespace ME.BECS.Editor {
                     url = "https://youtu.be/dzUZorAW_uI",
                     texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-4.jpg"),
                 },
+                new TutorialInfo() {
+                    caption = "Entity Configs",
+                    description = "How to use Entity Configs with different joins.",
+                    url = "https://youtu.be/vItAprfcc0A",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-5.jpg"),
+                },
             };
 
             var root = this.rootVisualElement;
@@ -69,10 +75,13 @@ namespace ME.BECS.Editor {
             root.styleSheets.Add(this.styleSheet);
             
             EditorUIUtils.AddLogoLine(root);
-
+            
+            var scrollView = new ScrollView();
+            root.Add(scrollView);
+            
             var container = new VisualElement();
             container.AddToClassList("container");
-            root.Add(container);
+            scrollView.Add(container);
             var number = 1;
             foreach (var tutorial in tutorials) {
                 var info = tutorial;
@@ -107,6 +116,7 @@ namespace ME.BECS.Editor {
                 var play = new Label("\u25B6");
                 item.Add(play);
                 play.AddToClassList("play-icon");
+                play.pickingMode = PickingMode.Ignore;
                 container.Add(item);
                 ++number;
             }

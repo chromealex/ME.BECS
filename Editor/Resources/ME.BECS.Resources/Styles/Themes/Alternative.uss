@@ -36,3 +36,25 @@
     height: 8px;
     max-height: 8px;
 }
+
+.unity-scroller #unity-low-button,
+.unity-scroller #unity-high-button {
+    display: none;
+}
+
+#unity-slider {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.unity-scroller #unity-low-button {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    -unity-background-image-tint-color: var(--main-color);
+}
+
+.unity-scroller #unity-high-button {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    -unity-background-image-tint-color: var(--main-color);
+}
