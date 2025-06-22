@@ -16,6 +16,30 @@
 .bar ScrollView {
 }
 
+.replay-mode {
+    display: none;
+    width: 120px;
+    padding-left: 4px;
+    padding-right: 4px;
+    margin-left: 4px;
+    -unity-text-align: middle-center;
+    background-color: rgba(0, 0, 0, 0.1);
+    color: darkgoldenrod;
+    border-radius: 8px;
+}
+
+:root {
+    overflow: visible;
+}
+
+.replay-mode .tooltip-text {
+    font-size: 10px;
+    padding: 2px;
+    color: #bfbfbf;
+    width: 700px;
+    left: 0px;
+}
+
 .timeline {
     height: 51px;
     max-height: 30px;
