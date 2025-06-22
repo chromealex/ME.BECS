@@ -603,8 +603,6 @@ namespace ME.BECS.Network {
             }
 
             public void Clear() {
-                this.resetState.ptr->Dispose();
-                this.resetState = default;
                 this.entries.Clear();
                 this.rover = 0u;
             }
@@ -1065,6 +1063,7 @@ namespace ME.BECS.Network {
                 uint count = 0u;
                 ulong startTick = 0UL;
                 reader.Read(ref startTick);
+                this.GetResetState().ptr->tick = startTick;
                 reader.Read(ref count);
                 for (uint i = 0u; i < count; ++i) {
                     var package = NetworkPackage.Create(ref reader);
