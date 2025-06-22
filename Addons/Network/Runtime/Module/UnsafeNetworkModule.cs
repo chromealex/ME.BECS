@@ -1057,16 +1057,21 @@ namespace ME.BECS.Network {
 
         public bool DeserializeAllEvents(byte[] bytes) {
             try {
-                this.data.ptr->eventsStorage.Clear();
-                this.data.ptr->statesStorage.Clear();
                 var reader = new StreamBufferReader(bytes);
                 uint count = 0u;
                 ulong startTick = 0UL;
                 reader.Read(ref startTick);
-                this.GetResetState().ptr->tick = startTick;
                 reader.Read(ref count);
+                var events = new Unity.Collections.NativeList<NetworkPackage>(Constants.ALLOCATOR_TEMP);
                 for (uint i = 0u; i < count; ++i) {
                     var package = NetworkPackage.Create(ref reader);
+                    events.Add(package);
+                }
+                this.RewindTo(startTick);
+                this.data.ptr->eventsStorage.Clear();
+                this.data.ptr->statesStorage.Clear();
+                this.GetResetState().ptr->tick = startTick;
+                foreach (var package in events) {
                     this.data.ptr->eventsStorage.Add(package, package.tick);
                 }
                 this.SetServerStartTime(startTick * this.properties.tickTime, in this.data.ptr->connectedWorld);
