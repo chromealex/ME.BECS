@@ -193,6 +193,14 @@ namespace ME.BECS.Network {
             return this.network;
         }
 
+        public byte[] SerializeAllEvents() {
+            return this.network.SerializeAllEvents();
+        }
+
+        public bool DeserializeAllEvents(byte[] bytes) {
+            return this.network.DeserializeAllEvents(bytes);
+        }
+
     }
 
 }

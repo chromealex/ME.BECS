@@ -419,6 +419,15 @@ namespace ME.BECS.Network {
                 }
             }
 
+            public void Clear() {
+                foreach (var entry in this.eventsByTick) {
+                    for (uint i = 0u; i < entry.value.Count; ++i) {
+                        entry.value[this.state.ptr->allocator, i].Dispose();
+                    }
+                }
+                this.eventsByTick.Clear();
+            }
+
         }
 
         public struct StatesStorage {
@@ -591,6 +600,13 @@ namespace ME.BECS.Network {
                 } else {
                     this.resetState.ptr->CopyFrom(in *this.connectedWorldState.ptr);
                 }
+            }
+
+            public void Clear() {
+                this.resetState.ptr->Dispose();
+                this.resetState = default;
+                this.entries.Clear();
+                this.rover = 0u;
             }
 
         }
@@ -1019,6 +1035,48 @@ namespace ME.BECS.Network {
 
             return dependsOn;
 
+        }
+
+        public byte[] SerializeAllEvents() {
+            var events = this.GetEvents();
+            var cnt = 0u;
+            foreach (var e in events) {
+                cnt += e.value.Count;
+            }
+            var stream = new StreamBufferWriter(cnt * 24u); // avg bytes per package
+            stream.Write(this.GetResetState().ptr->tick);
+            stream.Write(cnt);
+            foreach (var e in events) {
+                for (uint i = 0u; i < e.value.Count; ++i) {
+                    var evt = e.value[this.data.ptr->networkWorld.state.ptr->allocator, i];
+                    evt.Serialize(ref stream);
+                }
+            }
+            var bytes = stream.ToArray();
+            stream.Dispose();
+            return bytes;
+        }
+
+        public bool DeserializeAllEvents(byte[] bytes) {
+            try {
+                this.data.ptr->eventsStorage.Clear();
+                this.data.ptr->statesStorage.Clear();
+                var reader = new StreamBufferReader(bytes);
+                uint count = 0u;
+                ulong startTick = 0UL;
+                reader.Read(ref startTick);
+                reader.Read(ref count);
+                for (uint i = 0u; i < count; ++i) {
+                    var package = NetworkPackage.Create(ref reader);
+                    this.data.ptr->eventsStorage.Add(package, package.tick);
+                }
+                this.SetServerStartTime(startTick * this.properties.tickTime, in this.data.ptr->connectedWorld);
+                this.SetServerTime(startTick * this.properties.tickTime);
+            } catch (System.Exception ex) {
+                UnityEngine.Debug.LogException(ex);
+                return false;
+            }
+            return true;
         }
 
     }

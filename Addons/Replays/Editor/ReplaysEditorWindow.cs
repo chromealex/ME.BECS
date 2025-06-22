@@ -496,6 +496,43 @@ namespace ME.BECS.Editor {
                     toolbarButtons.AddToClassList("toolbar-buttons");
                     this.toolbarButtons = toolbarButtons;
                     toolbar.Add(toolbarButtons);
+                    { // Replays
+                        Button commands = null;
+                        commands = new Button(() => {
+                            var menu = new GenericMenu();
+                            menu.AddItem(new GUIContent("Save replay..."), false, () => {
+                                var ts = System.DateTime.UtcNow.ToFileTime();
+                                var filepath = EditorUtility.SaveFilePanel("ME.BECS Replays", "", $"replay-{ts}.rep", "rep");
+                                if (string.IsNullOrEmpty(filepath) == false) {
+                                    var networkModule = this.selectedNetworkModule;
+                                    var bytes = networkModule.SerializeAllEvents();
+                                    System.IO.File.WriteAllBytes(filepath, bytes);
+                                }
+                            });
+                            menu.AddItem(new GUIContent("Load replay..."), false, () => {
+                                var filepath = EditorUtility.OpenFilePanel("ME.BECS Replays", "", "rep");
+                                if (System.IO.File.Exists(filepath) == true) {
+                                    var bytes = System.IO.File.ReadAllBytes(filepath);
+                                    var networkModule = this.selectedNetworkModule;
+                                    if (networkModule.DeserializeAllEvents(bytes) == false) {
+                                        Debug.LogError("Failed to deserialize replay file. Seems like data is corrupted.");
+                                    } else {
+                                        this.maxTick = 0UL;
+                                    }
+                                }
+                            });
+                            menu.DropDown(commands.worldBound);
+                        });
+                        commands.AddToClassList("unity-base-popup-field__input");
+                        var text = new Label("Tools");
+                        text.AddToClassList("unity-base-popup-field__text");
+                        text.AddToClassList("unity-text-element");
+                        commands.Add(text);
+                        var arrow = new VisualElement();
+                        arrow.AddToClassList("unity-base-popup-field__arrow");
+                        commands.Add(arrow);
+                        toolbarButtons.Add(commands);
+                    }
                     {
                         Button sync = null;
                         sync = new Button(() => {

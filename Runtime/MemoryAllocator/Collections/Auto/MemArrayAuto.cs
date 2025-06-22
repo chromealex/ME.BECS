@@ -392,14 +392,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Clear() {
+        public readonly void Clear() {
 
             this.Clear(0u, this.Length);
 
         }
 
         [INLINE(256)]
-        public void Clear(uint index, uint length) {
+        public readonly void Clear(uint index, uint length) {
 
             E.IS_CREATED(this);
 
