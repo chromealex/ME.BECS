@@ -839,11 +839,11 @@ namespace ME.BECS.Pathfinding {
                 hasLos = false;
             }
 
-            if (hasLos == true) {
+            /*if (hasLos == true) {
                 var direction = Graph.GetCoordDirection(xDifOne, yDifOne);
                 var dir = Graph.GetCommonNeighbourSumDir(in this.world, info, (uint)direction, root.chunkWidth, root.chunkHeight, this.path.chunks, root.width, root.height);
                 chunk.flowField[this.world.state, node.nodeIndex].direction = dir;
-            }
+            }*/
 
             chunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = hasLos;
             return hasLos;

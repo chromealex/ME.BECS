@@ -237,11 +237,11 @@ namespace ME.BECS.Pathfinding {
             }
             var item = chunk.flowField[world.state, nodeIndex];
             complete = (item.direction == Graph.TARGET_BYTE);
-            /*if (item.hasLineOfSight == true) {
-                var to = path.to;
+            if (item.hasLineOfSight == true) {
+                var to = path.to.center;
                 to.y = position.y;
                 return math.normalizesafe(to - position);
-            }*/
+            }
             return GetDirection(item.direction);
 
         }
