@@ -553,13 +553,6 @@ namespace ME.BECS.Pathfinding {
                                 var targetChunk = root.chunks[this.world.state, targetChunkIndex];
                                 targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in to.center, true);
                                 targetNodePosition = Graph.GetPosition(in root, in targetChunk, targetNodeIndex);
-                                if (gridChunk.flowField.IsCreated == false) {
-                                    gridChunk.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state.ptr->allocator, chunk.nodes.Length);
-                                    for (int i = 0; i < chunk.nodes.Length; ++i) {
-                                        gridChunk.flowField[this.world.state, i].bestCost = Graph.UNWALKABLE_COST;
-                                    }
-                                    chunksToUpdate.Add(node.chunkIndex);
-                                }
                             }
                         }
 
