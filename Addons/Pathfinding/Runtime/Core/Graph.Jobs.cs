@@ -492,7 +492,6 @@ namespace ME.BECS.Pathfinding {
 
                             var createMarker = new Unity.Profiling.ProfilerMarker("Create");
                             createMarker.Begin();
-                            data.index = portalInfo.chunkIndex;
                             data.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state.ptr->allocator, chunk.nodes.Length);
                             chunksToUpdate.Add(portalInfo.chunkIndex);
                             createMarker.End();

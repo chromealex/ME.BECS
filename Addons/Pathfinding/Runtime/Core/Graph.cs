@@ -1360,7 +1360,8 @@ namespace ME.BECS.Pathfinding {
             var cellSize = path.graph.Read<RootGraphComponent>().nodeSize;
             for (uint i = 0; i < path.chunks.Length; ++i) {
                 var chunk = path.chunks[world.state, i];
-                var chunkIndex = chunk.index;
+                if (chunk.flowField.IsCreated == false) continue;
+                var chunkIndex = i;
                 for (uint j = 0; j < chunk.flowField.Length; ++j) {
                     var nodeIndex = j;
                     var item = chunk.flowField[world.state, j];
@@ -1379,13 +1380,15 @@ namespace ME.BECS.Pathfinding {
                             UnityEngine.Gizmos.color = UnityEngine.Color.green;
                             UnityEngine.Gizmos.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)(pos + math.up() * 5f));
                             UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)pos, new UnityEngine.Vector3((float)cellSize, 0f, (float)cellSize) * 0.9f);
-                            continue;
                         } else if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == true) {
                             UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                            var dir3d = math.normalizesafe(path.to.center - pos);
+                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                            Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
                         } else {
                             UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
+                            Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(Graph.GetDirection(item.direction) * 0.25f * cellSize), (UnityEngine.Vector3)Graph.GetDirection(item.direction) * 0.5f, scale: (float)cellSize);
                         }
-                        Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(Graph.GetDirection(item.direction) * 0.25f * cellSize), (UnityEngine.Vector3)Graph.GetDirection(item.direction) * 0.5f, scale: (float)cellSize);
                     }
                     
                     /*if (Unity.Mathematics.math.lengthsq(pos - root.chunks[world.state, chunkIndex].center) <= 100f) {

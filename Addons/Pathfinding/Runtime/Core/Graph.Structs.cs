@@ -330,14 +330,12 @@ namespace ME.BECS.Pathfinding {
 
             }
 
-            public uint index;
             public MemArray<Item> flowField;
             public bbool hasLineOfSight;
 
             [INLINE(256)]
             public readonly Chunk Clone(ref MemoryAllocator allocator) {
                 var chunk = new Chunk {
-                    index = this.index,
                     flowField = new MemArray<Item>(ref allocator, this.flowField),
                 };
                 return chunk;
