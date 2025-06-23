@@ -553,6 +553,13 @@ namespace ME.BECS.Pathfinding {
                                 var targetChunk = root.chunks[this.world.state, targetChunkIndex];
                                 targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in to.center, true);
                                 targetNodePosition = Graph.GetPosition(in root, in targetChunk, targetNodeIndex);
+                                if (gridChunk.flowField.IsCreated == false) {
+                                    gridChunk.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state.ptr->allocator, chunk.nodes.Length);
+                                    for (int i = 0; i < chunk.nodes.Length; ++i) {
+                                        gridChunk.flowField[this.world.state, i].bestCost = Graph.UNWALKABLE_COST;
+                                    }
+                                    chunksToUpdate.Add(node.chunkIndex);
+                                }
                             }
                         }
 
@@ -780,19 +787,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private bbool CalculateLOS(in RootGraphComponent root, ref Path.Chunk chunk, in Graph.TempNode node, in Graph.TempNode targetNode) {
 
-            [INLINE(256)]
-            static bbool GetState(safe_ptr<State> state, in Path path, in Graph.TempNode node) {
-                var chunk = path.chunks[state, node.chunkIndex];
-                if (chunk.flowField.IsCreated == false) return false;
-                return chunk.flowField[state, node.nodeIndex].hasLineOfSight;
-            }
-
-            [INLINE(256)]
-            static bool IsWalkable(safe_ptr<State> state, int2 at, in RootGraphComponent root) {
-                var p = Graph.GetCoordInfo(at.x, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
-                if (p.IsValid() == false) return false;
-                return root.chunks[state, p.chunkIndex].nodes[state, p.nodeIndex].walkable;
-            }
+            if (chunk.flowField.IsCreated == false) return false;
             
             var at = Graph.GetGlobalCoord(node.chunkIndex, node.nodeIndex, root.chunkWidth, root.chunkHeight, root.width);
             
@@ -847,6 +842,20 @@ namespace ME.BECS.Pathfinding {
 
             chunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = hasLos;
             return hasLos;
+
+            [INLINE(256)]
+            static bbool GetState(safe_ptr<State> state, in Path path, in Graph.TempNode node) {
+                var chunk = path.chunks[state, node.chunkIndex];
+                if (chunk.flowField.IsCreated == false) return false;
+                return chunk.flowField[state, node.nodeIndex].hasLineOfSight;
+            }
+
+            [INLINE(256)]
+            static bool IsWalkable(safe_ptr<State> state, int2 at, in RootGraphComponent root) {
+                var p = Graph.GetCoordInfo(at.x, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
+                if (p.IsValid() == false) return false;
+                return root.chunks[state, p.chunkIndex].nodes[state, p.nodeIndex].walkable;
+            }
 
         }
 
