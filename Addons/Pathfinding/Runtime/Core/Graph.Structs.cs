@@ -400,8 +400,8 @@ namespace ME.BECS.Pathfinding {
                         var width = math.max(1u, (uint)math.round((this.size.x + agentRadius * 2f) / root.nodeSize));
                         var height = math.max(1u, (uint)math.round((this.size.y + agentRadius * 2f) / root.nodeSize));
                         var corner = this.center - new float3((this.size.x + agentRadius * 2f) * 0.5f, 0f, (this.size.y + agentRadius * 2f) * 0.5f);
-                        for (uint x = 0u; x <= width; ++x) {
-                            for (uint y = 0u; y <= height; ++y) {
+                        for (uint x = 0u; x < width; ++x) {
+                            for (uint y = 0u; y < height; ++y) {
                                 var pos = corner + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
                                 var targetChunkIndex = Graph.GetChunkIndex(in root, in pos, true);
                                 var targetChunk = root.chunks[state, targetChunkIndex];
@@ -420,8 +420,8 @@ namespace ME.BECS.Pathfinding {
                         var height = math.max(1u, (uint)math.round((this.radius + agentRadius * 2f) / root.nodeSize));
                         var corner = this.center - new float3((this.radius + agentRadius * 2f) * 0.5f, 0f, (this.radius + agentRadius * 2f) * 0.5f);
                         var radiusSq = this.radius * this.radius;
-                        for (uint x = 0u; x <= width; ++x) {
-                            for (uint y = 0u; y <= height; ++y) {
+                        for (uint x = 0u; x < width; ++x) {
+                            for (uint y = 0u; y < height; ++y) {
                                 var pos = corner + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
                                 var dist = math.distancesq(pos, this.center);
                                 if (dist > radiusSq) continue;
@@ -452,8 +452,8 @@ namespace ME.BECS.Pathfinding {
                     }
 
                     case TargetType.Rect: {
-                        var width = math.max(1u, (uint)(this.size.x / root.nodeSize));
-                        var height = math.max(1u, (uint)(this.size.y / root.nodeSize));
+                        var width = math.max(1u, (uint)math.round(this.size.x / root.nodeSize));
+                        var height = math.max(1u, (uint)math.round(this.size.y / root.nodeSize));
                         for (uint x = 0u; x < width; ++x) {
                             for (uint y = 0u; y < height; ++y) {
                                 var pos = this.center - new float3(this.size.x * 0.5f, 0f, this.size.y * 0.5f) + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
@@ -465,8 +465,8 @@ namespace ME.BECS.Pathfinding {
                     }
 
                     case TargetType.Radius: {
-                        var width = math.max(1u, (uint)(this.radius / root.nodeSize));
-                        var height = math.max(1u, (uint)(this.radius / root.nodeSize));
+                        var width = math.max(1u, (uint)math.round(this.radius / root.nodeSize));
+                        var height = math.max(1u, (uint)math.round(this.radius / root.nodeSize));
                         var radiusSq = this.radius * this.radius;
                         for (uint x = 0u; x < width; ++x) {
                             for (uint y = 0u; y < height; ++y) {
