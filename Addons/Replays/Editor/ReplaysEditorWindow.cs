@@ -141,6 +141,7 @@ namespace ME.BECS.Editor {
                 var networkModule = initializer.GetModule<NetworkModule>();
                 if (networkModule != null) {
                     this.selectedNetworkModule = networkModule;
+                    this.selectedNetworkModule.SetReplayMode(false);
                 }
             }
 
@@ -191,6 +192,7 @@ namespace ME.BECS.Editor {
                             }
                             networkModule.RewindTo(tick);
                             this.TrySync();
+                            this.NotifyReplayMode();
                         }
                     }
                     this.timeline.RegisterCallback<MouseDownEvent>(evt => {
@@ -435,12 +437,20 @@ namespace ME.BECS.Editor {
             
         }
 
+        private void NotifyReplayMode() {
+            if (this.selectedNetworkModule.IsInReplayMode() == false) {
+                this.selectedNetworkModule.SetReplayMode(true);
+                this.replayModeContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
+            }
+        }
+
         private void TrySync() {
             if (this.syncMode == true) {
                 this.selectedInitializer.SyncRewind();
             }
         }
 
+        private VisualElement replayModeContainer;
         private void CreateGUI() {
 
             this.LoadStyle();
@@ -448,9 +458,10 @@ namespace ME.BECS.Editor {
             this.UpdateWorlds();
             
             var root = this.rootVisualElement;
+            root.style.overflow = new StyleEnum<Overflow>(Overflow.Visible);
             EditorUIUtils.ApplyDefaultStyles(root);
-            root.styleSheets.Add(this.styleSheet);
             root.styleSheets.Add(this.styleSheetTooltip);
+            root.styleSheets.Add(this.styleSheet);
 
             this.logoLine = EditorUIUtils.AddLogoLine(root);
             
@@ -487,6 +498,13 @@ namespace ME.BECS.Editor {
                     toolbar.Add(selection);
                 }
                 {
+                    var replayMode = new Label("\u26A0 Replay mode");
+                    EditorUIUtils.DrawTooltip(replayMode, "Network module state has been changed to Replay Mode. That means network module doesn't use transport's server time. To reset this behaviour, re-select world from list.");
+                    this.replayModeContainer = replayMode;
+                    replayMode.AddToClassList("replay-mode");
+                    toolbar.Add(replayMode);
+                }
+                {
                     var space = new VisualElement();
                     space.AddToClassList("space");
                     toolbar.Add(space);
@@ -496,6 +514,45 @@ namespace ME.BECS.Editor {
                     toolbarButtons.AddToClassList("toolbar-buttons");
                     this.toolbarButtons = toolbarButtons;
                     toolbar.Add(toolbarButtons);
+                    { // Replays
+                        Button commands = null;
+                        commands = new Button(() => {
+                            var menu = new GenericMenu();
+                            menu.AddItem(new GUIContent("Save replay..."), false, () => {
+                                var ts = System.DateTime.UtcNow.ToFileTime();
+                                var filepath = EditorUtility.SaveFilePanel("ME.BECS Replays", "", $"replay-{ts}.rep", "rep");
+                                if (string.IsNullOrEmpty(filepath) == false) {
+                                    this.NotifyReplayMode();
+                                    var networkModule = this.selectedNetworkModule;
+                                    var bytes = networkModule.SerializeAllEvents();
+                                    System.IO.File.WriteAllBytes(filepath, bytes);
+                                }
+                            });
+                            menu.AddItem(new GUIContent("Load replay..."), false, () => {
+                                var filepath = EditorUtility.OpenFilePanel("ME.BECS Replays", "", "rep");
+                                if (System.IO.File.Exists(filepath) == true) {
+                                    var bytes = System.IO.File.ReadAllBytes(filepath);
+                                    this.NotifyReplayMode();
+                                    var networkModule = this.selectedNetworkModule;
+                                    if (networkModule.DeserializeAllEvents(bytes) == false) {
+                                        Debug.LogError("Failed to deserialize replay file. Seems like data is corrupted.");
+                                    } else {
+                                        this.maxTick = 0UL;
+                                    }
+                                }
+                            });
+                            menu.DropDown(commands.worldBound);
+                        });
+                        commands.AddToClassList("unity-base-popup-field__input");
+                        var text = new Label("Tools");
+                        text.AddToClassList("unity-base-popup-field__text");
+                        text.AddToClassList("unity-text-element");
+                        commands.Add(text);
+                        var arrow = new VisualElement();
+                        arrow.AddToClassList("unity-base-popup-field__arrow");
+                        commands.Add(arrow);
+                        toolbarButtons.Add(commands);
+                    }
                     {
                         Button sync = null;
                         sync = new Button(() => {

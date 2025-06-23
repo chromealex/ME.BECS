@@ -81,9 +81,21 @@ namespace ME.BECS.Network {
     
     [UnityEngine.CreateAssetMenu(menuName = "ME.BECS/Network Module")]
     public unsafe class NetworkModule : Module {
+
+        private enum NetworkState {
+            /// <summary>
+            /// In normal mode transport's server time will affect current network time as expected.
+            /// </summary>
+            Normal = 0,
+            /// <summary>
+            /// In replay mode transport's server time doesn't affect current network time.
+            /// </summary>
+            Replay = 1,
+        }
         
         public NetworkModuleProperties properties = NetworkModuleProperties.Default;
         private UnsafeNetworkModule network;
+        private NetworkState networkState;
 
         public TransportStatus Status => this.network.networkTransport.Status;
         
@@ -111,7 +123,7 @@ namespace ME.BECS.Network {
             
             {
                 var serverTime = this.network.networkTransport.ServerTime;
-                if (serverTime > this.GetCurrentTime()) {
+                if (serverTime > this.GetCurrentTime() && this.networkState == NetworkState.Normal) {
                     this.SetServerTime(serverTime);
                 } else {
                     this.SetServerTime(this.GetCurrentTime() + dtMs);
@@ -191,6 +203,24 @@ namespace ME.BECS.Network {
 
         public UnsafeNetworkModule GetUnsafeModule() {
             return this.network;
+        }
+
+        public void SetReplayMode(bool replayMode) {
+            if (replayMode == true) {
+                this.networkState = NetworkState.Replay;
+            } else {
+                this.networkState = NetworkState.Normal;
+            }
+        }
+        
+        public bool IsInReplayMode() => this.networkState == NetworkState.Replay;
+
+        public byte[] SerializeAllEvents() {
+            return this.network.SerializeAllEvents();
+        }
+
+        public bool DeserializeAllEvents(byte[] bytes) {
+            return this.network.DeserializeAllEvents(bytes);
         }
 
     }
