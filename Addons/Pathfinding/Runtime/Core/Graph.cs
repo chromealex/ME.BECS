@@ -297,6 +297,7 @@ namespace ME.BECS.Pathfinding {
             
             var srcArea = root.chunks[fromPortalInfo.chunkIndex].portals.list[state, fromPortalInfo.portalIndex].globalArea;
             var nearestPortalToTarget = GetNearestPortal(state, in root, from, to, PortalInfo.Invalid);
+            if (nearestPortalToTarget.IsValid == false) nearestPortalToTarget = GetNearestPortal(state, in root, from, to, in fromPortalInfo);
             var targetArea = root.chunks[nearestPortalToTarget.chunkIndex].portals.list[state, nearestPortalToTarget.portalIndex].globalArea;
             
             if (fromPortalInfo.pack != toPortalInfo.pack && srcArea != targetArea) {
@@ -1354,6 +1355,9 @@ namespace ME.BECS.Pathfinding {
 
             if (path.IsCreated == false) return;
 
+            var gizmosStyle = new UnityEngine.GUIStyle();
+            gizmosStyle.richText = true;
+
             var world = path.graph.World;
             
             var offset = new float3(0f, 0.02f, 0f);
@@ -1373,7 +1377,8 @@ namespace ME.BECS.Pathfinding {
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
                     } else*/
                     #if UNITY_EDITOR
-                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"{item.bestCost}");
+                    UnityEditor.Handles.color = new UnityEngine.Color(1f, 1f, 1f, 0.3f);
+                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"<color=gray>{item.bestCost}</color>", gizmosStyle);
                     #endif
                     {
                         if (item.direction == Graph.TARGET_BYTE) {
@@ -1383,7 +1388,6 @@ namespace ME.BECS.Pathfinding {
                         } else if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == true) {
                             UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                             var dir3d = math.normalizesafe(path.to.center - pos);
-                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                             Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
                         } else {
                             UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
@@ -1401,6 +1405,9 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public static void DrawGizmos(Ent graph, GizmosParameters parameters) {
+
+            var gizmosStyle = new UnityEngine.GUIStyle();
+            gizmosStyle.richText = true;
 
             var offset = (UnityEngine.Vector3)new float3(0f, 0.05f, 0f);
             var root = graph.Read<RootGraphComponent>();
@@ -1432,7 +1439,7 @@ namespace ME.BECS.Pathfinding {
                         
                         #if UNITY_EDITOR
                         UnityEditor.Handles.color = UnityEngine.Color.magenta;
-                        UnityEditor.Handles.Label((UnityEngine.Vector3)portal.position + offset, $"{portal.area}\n{portal.globalArea}");
+                        UnityEditor.Handles.Label((UnityEngine.Vector3)portal.position + offset, $"<color=magenta>{portal.area}\n{portal.globalArea}</color>", gizmosStyle);
                         #endif
                     }
 
@@ -1472,14 +1479,17 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static void DrawGizmosLevel(safe_ptr<State> state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
 
+            var gizmosStyle = new UnityEngine.GUIStyle();
+            gizmosStyle.richText = true;
+
             {
                 var x = rootGraph.chunkWidth * rootGraph.nodeSize;
                 var y = rootGraph.chunkHeight * rootGraph.nodeSize;
-                UnityEngine.Gizmos.color = UnityEngine.Color.gray;
+                UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                 UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)chunk.center, new UnityEngine.Vector3((float)x, 0f, (float)y));
                 #if UNITY_EDITOR
                 UnityEditor.Handles.color = UnityEngine.Color.cyan;
-                UnityEditor.Handles.Label((UnityEngine.Vector3)chunk.center, chunkIndex.ToString());
+                UnityEditor.Handles.Label((UnityEngine.Vector3)chunk.center, $"<color=cyan>{chunkIndex}</color>", gizmosStyle);
                 #endif
             }
 

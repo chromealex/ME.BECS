@@ -85,9 +85,9 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         private static void Calculate(ref SystemContext context) {
 
-            var clearCurrenTick = context.Query().AsParallel().With<ParentComponent>().Schedule<ClearJob, TransformAspect>();
+            var clearCurrenTick = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<ClearJob, TransformAspect>();
             // Calculate local matrix
-            var localMatrixHandle = context.Query().AsParallel().Schedule<CalculateLocalMatrixJob, TransformAspect>();
+            var localMatrixHandle = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().Schedule<CalculateLocalMatrixJob, TransformAspect>();
             // Update roots
             var rootsHandle = context.Query(localMatrixHandle).AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<ParentComponent>().Schedule<CalculateRootsJob, TransformAspect>();
             var rootsWithChildrenHandle = context.Query(Unity.Jobs.JobHandle.CombineDependencies(rootsHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();

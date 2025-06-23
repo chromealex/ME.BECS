@@ -87,7 +87,7 @@ namespace ME.BECS.Pathfinding {
                             UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)pathTarget.center, (float)math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)) + (float)pathTarget.radius);
                         } else if (pathTarget.type == Path.Target.TargetType.Rect) {
                             {
-                                var r = math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent));
+                                var r = math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect));
                                 UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)pathTarget.center, (UnityEngine.Vector3)new float3(pathTarget.size.x + r, 0f, pathTarget.size.y + r));
                             }
                             UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
