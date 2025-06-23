@@ -1370,8 +1370,10 @@ namespace ME.BECS.Pathfinding {
                         var dir3d = math.normalizesafe(path.to - pos);
                         UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
-                    } else*/ 
+                    } else*/
+                    #if UNITY_EDITOR
                     UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"{item.bestCost}");
+                    #endif
                     {
                         if (item.direction == Graph.TARGET_BYTE) {
                             UnityEngine.Gizmos.color = UnityEngine.Color.green;
