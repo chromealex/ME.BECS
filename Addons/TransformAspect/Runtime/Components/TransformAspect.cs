@@ -34,6 +34,11 @@ namespace ME.BECS.Transforms {
 
         public readonly bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
 
+        public bool IsStatic {
+            [INLINE(256)] get => this.ent.Has<IsTransformStaticComponent>();
+            [INLINE(256)] set => this.ent.SetTag<IsTransformStaticComponent>(value);
+        }
+
         public readonly float3 forward {
             [INLINE(256)] get => math.mul(this.rotation, math.forward());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.forward(), value); 

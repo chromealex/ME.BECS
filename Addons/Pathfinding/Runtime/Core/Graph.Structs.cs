@@ -1,9 +1,11 @@
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
 #endif
 
 namespace ME.BECS.Pathfinding {
@@ -343,11 +345,197 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        public struct Target {
+
+            public enum TargetType : byte {
+                Point  = 0,
+                Rect   = 1,
+                Radius = 2,
+            }
+            
+            public TargetType type;
+            public float3 center;
+            public float2 size;
+
+            public tfloat radius {
+                [INLINE(256)] get => this.size.x;
+                [INLINE(256)] set => this.size.x = value;
+            }
+
+            public int Capacity {
+                [INLINE(256)]
+                get {
+                    if (this.type == TargetType.Point) return 1;
+                    if (this.type == TargetType.Radius) {
+                        return (int)(this.radius * this.radius);
+                    }
+                    // TargetType.Rect
+                    return (int)(this.size.x * this.size.y);
+                }
+            }
+
+            [INLINE(256)]
+            public Target(Target other) {
+                this.type = other.type;
+                this.center = other.center;
+                this.size = other.size;
+            }
+
+            [INLINE(256)]
+            public void FillNodes(in RootGraphComponent root, safe_ptr<State> state, ref Unity.Collections.NativeHashSet<Graph.TempNode> set, tfloat agentRadius) {
+                
+                switch (this.type) {
+                    case TargetType.Point: {
+                        var targetChunkIndex = Graph.GetChunkIndex(in root, in this.center, true);
+                        var targetChunk = root.chunks[state, targetChunkIndex];
+                        var targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in this.center, false);
+                        set.Add(new Graph.TempNode() {
+                            chunkIndex = targetChunkIndex,
+                            nodeIndex = targetNodeIndex,
+                        });
+                        return;
+                    }
+
+                    case TargetType.Rect: {
+                        var width = math.max(1u, (uint)math.round((this.size.x + agentRadius * 2f) / root.nodeSize));
+                        var height = math.max(1u, (uint)math.round((this.size.y + agentRadius * 2f) / root.nodeSize));
+                        var corner = this.center - new float3((this.size.x + agentRadius * 2f) * 0.5f, 0f, (this.size.y + agentRadius * 2f) * 0.5f);
+                        for (uint x = 0u; x <= width; ++x) {
+                            for (uint y = 0u; y <= height; ++y) {
+                                var pos = corner + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
+                                var targetChunkIndex = Graph.GetChunkIndex(in root, in pos, true);
+                                var targetChunk = root.chunks[state, targetChunkIndex];
+                                var targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in pos, false);
+                                set.Add(new Graph.TempNode() {
+                                    chunkIndex = targetChunkIndex,
+                                    nodeIndex = targetNodeIndex,
+                                });
+                            }
+                        }
+                        return;
+                    }
+
+                    case TargetType.Radius: {
+                        var width = math.max(1u, (uint)math.round((this.radius + agentRadius * 2f) / root.nodeSize));
+                        var height = math.max(1u, (uint)math.round((this.radius + agentRadius * 2f) / root.nodeSize));
+                        var corner = this.center - new float3((this.radius + agentRadius * 2f) * 0.5f, 0f, (this.radius + agentRadius * 2f) * 0.5f);
+                        var radiusSq = this.radius * this.radius;
+                        for (uint x = 0u; x <= width; ++x) {
+                            for (uint y = 0u; y <= height; ++y) {
+                                var pos = corner + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
+                                var dist = math.distancesq(pos, this.center);
+                                if (dist > radiusSq) continue;
+                                var targetChunkIndex = Graph.GetChunkIndex(in root, in pos, true);
+                                var targetChunk = root.chunks[state, targetChunkIndex];
+                                var targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in pos, false);
+                                set.Add(new Graph.TempNode() {
+                                    chunkIndex = targetChunkIndex,
+                                    nodeIndex = targetNodeIndex,
+                                });
+                            }
+                        }
+
+                        break;
+                    }
+                }
+
+            }
+
+            [INLINE(256)]
+            public void FillChunks(in RootGraphComponent root, safe_ptr<State> state, ref Unity.Collections.NativeHashSet<uint> set) {
+                
+                switch (this.type) {
+                    case TargetType.Point: {
+                        var targetChunkIndex = Graph.GetChunkIndex(in root, in this.center, true);
+                        set.Add(targetChunkIndex);
+                        return;
+                    }
+
+                    case TargetType.Rect: {
+                        var width = math.max(1u, (uint)(this.size.x / root.nodeSize));
+                        var height = math.max(1u, (uint)(this.size.y / root.nodeSize));
+                        for (uint x = 0u; x < width; ++x) {
+                            for (uint y = 0u; y < height; ++y) {
+                                var pos = this.center - new float3(this.size.x * 0.5f, 0f, this.size.y * 0.5f) + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
+                                var targetChunkIndex = Graph.GetChunkIndex(in root, in pos, true);
+                                set.Add(targetChunkIndex);
+                            }
+                        }
+                        return;
+                    }
+
+                    case TargetType.Radius: {
+                        var width = math.max(1u, (uint)(this.radius / root.nodeSize));
+                        var height = math.max(1u, (uint)(this.radius / root.nodeSize));
+                        var radiusSq = this.radius * this.radius;
+                        for (uint x = 0u; x < width; ++x) {
+                            for (uint y = 0u; y < height; ++y) {
+                                var pos = this.center - new float3(this.radius * 0.5f, 0f, this.radius * 0.5f) + new float3(x * root.nodeSize, 0f, y * root.nodeSize);
+                                var dist = math.distancesq(pos, this.center);
+                                if (dist > radiusSq) continue;
+                                var targetChunkIndex = Graph.GetChunkIndex(in root, in pos, true);
+                                set.Add(targetChunkIndex);
+                            }
+                        }
+
+                        break;
+                    }
+                }
+                
+            }
+
+            [INLINE(256)]
+            public bool Contains(float3 position, sfloat radiusSq) {
+                switch (this.type) {
+                    case TargetType.Point:
+                        return math.lengthsq(position - this.center) <= radiusSq;
+
+                    case TargetType.Radius: {
+                        var r = math.sqrt(radiusSq) + this.radius;
+                        return math.lengthsq(position - this.center) <= r * r;
+                    }
+
+                    case TargetType.Rect: {
+                        var r = math.sqrt(radiusSq);
+                        return new Rect(this.center.xz, new float2(this.size.x + r * 2f, this.size.y + r * 2f)).Contains(position.xz);
+                    }
+                }
+                return false;
+            }
+
+            [INLINE(256)]
+            public static Target Create(in float3 position) {
+                return new Target() {
+                    type = TargetType.Point,
+                    center = position,
+                };
+            }
+            
+            [INLINE(256)]
+            public static Target Create(in Bounds rect) {
+                return new Target() {
+                    type = TargetType.Rect,
+                    center = rect.center,
+                    size = new float2(rect.size.x, rect.size.z),
+                };
+            }
+            
+            [INLINE(256)]
+            public static Target Create(in float3 position, tfloat radius) {
+                return new Target() {
+                    type = TargetType.Radius,
+                    center = position,
+                    radius = radius,
+                };
+            }
+
+        }
+        
         public Ent graph;
         public MemArray<Chunk> chunks;
         public MemAllocatorPtr<List<float3>> from;
+        public Target to;
         public MemAllocatorPtr<int> hierarchyPathHash;
-        public float3 to;
         public Filter filter;
         public byte isRecalculationRequired;
 

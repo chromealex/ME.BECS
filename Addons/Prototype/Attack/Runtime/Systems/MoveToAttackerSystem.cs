@@ -100,7 +100,11 @@ namespace ME.BECS.Attack {
                 
                 var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos, in this.buildGraphSystem);
                 if (result == AttackUtils.ReactionType.MoveToTarget) {
-                    PathUtils.UpdateTarget(in this.buildGraphSystem, group, pos, in jobInfo);
+                    if (command.target.TryRead(out UnitQuadSizeComponent unitQuadSizeComponent) == true) {
+                        PathUtils.UpdateTarget(in this.buildGraphSystem, group, Path.Target.Create(new Bounds(command.target.GetAspect<TransformAspect>().position, new float3(unitQuadSizeComponent.size.x, 0f, unitQuadSizeComponent.size.y))), in jobInfo);
+                    } else {
+                        PathUtils.UpdateTarget(in this.buildGraphSystem, group, Path.Target.Create(pos), in jobInfo);
+                    }
                 }
 
             }

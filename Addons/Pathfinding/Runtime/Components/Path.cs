@@ -37,7 +37,7 @@ namespace ME.BECS.Pathfinding {
     [ComponentGroup(typeof(PathfindingComponentGroup))]
     public struct TargetInfoComponent : IComponent {
         
-        public float3 position;
+        public Path.Target target;
         public uint volume;
 
     }

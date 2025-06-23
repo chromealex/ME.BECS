@@ -76,9 +76,26 @@ namespace ME.BECS.Pathfinding {
                         Graph.DrawGizmos(path, new Graph.GizmosParameters() { drawNormals = this.drawNormals, });
                         
                         UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
-                        UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)target.Read<TargetPathComponent>().path.to, (float)math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)));
-                        UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
-                        UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)target.Read<TargetPathComponent>().path.to, (float)math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)));
+                        var pathTarget = target.Read<TargetPathComponent>().path.to;
+                        if (pathTarget.type == Path.Target.TargetType.Point) {
+                            UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)pathTarget.center, (float)math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)));
+                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                            UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)pathTarget.center, (float)math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)));
+                        } else if (pathTarget.type == Path.Target.TargetType.Radius) {
+                            UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)pathTarget.center, (float)math.sqrt(PathUtils.GetGroupRadiusSqr(in groupAspect)) + (float)pathTarget.radius);
+                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                            UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)pathTarget.center, (float)math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent)) + (float)pathTarget.radius);
+                        } else if (pathTarget.type == Path.Target.TargetType.Rect) {
+                            {
+                                var r = math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent));
+                                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)pathTarget.center, (UnityEngine.Vector3)new float3(pathTarget.size.x + r, 0f, pathTarget.size.y + r));
+                            }
+                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                            {
+                                var r = math.sqrt(PathUtils.GetTargetRadiusSqr(in targetComponent));
+                                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)pathTarget.center, (UnityEngine.Vector3)new float3(pathTarget.size.x + r, 0f, pathTarget.size.y + r));
+                            }
+                        }
 
                     }
 

@@ -46,7 +46,7 @@ namespace ME.BECS.Pathfinding {
         public const float UNWALKABLE_COST = float.MaxValue * 0.5f;
         
         [System.Serializable]
-        public struct TempNode {
+        public struct TempNode : System.IEquatable<TempNode> {
 
             public static TempNode Invalid => new TempNode() { chunkIndex = uint.MaxValue, nodeIndex = uint.MaxValue };
 
@@ -54,10 +54,18 @@ namespace ME.BECS.Pathfinding {
             public uint nodeIndex;
 
             [INLINE(256)]
-            public bool IsValid() {
+            public bool IsValid() => this.chunkIndex != uint.MaxValue && this.nodeIndex != uint.MaxValue;
 
-                return this.chunkIndex != uint.MaxValue && this.nodeIndex != uint.MaxValue;
+            public bool Equals(TempNode other) {
+                return this.chunkIndex == other.chunkIndex && this.nodeIndex == other.nodeIndex;
+            }
 
+            public override bool Equals(object obj) {
+                return obj is TempNode other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return System.HashCode.Combine(this.chunkIndex, this.nodeIndex);
             }
 
         }
@@ -103,7 +111,7 @@ namespace ME.BECS.Pathfinding {
             
             var root = graph.Read<RootGraphComponent>();
 
-            var toPoint = path.to;
+            var toPoint = path.to.center;
 
             // collect all different unique areas in this chunk
             path.from.As(in world.state.ptr->allocator).Clear();
@@ -150,15 +158,15 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static void SetTarget(ref Path path, float3 position, in Filter filter) {
+        public static void SetTarget(ref Path path, in Path.Target target, in Filter filter) {
             
-            path.to = Graph.ClampPosition(in path.graph, position);
-            path.to = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to, filter);
+            path.to = Graph.ClampPosition(in path.graph, in target);
+            //path.to = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to, filter);
 
         }
 
         [INLINE(256)]
-        public static void MakePath(in World world, out Path path, in Ent graph, in float3 to, in Filter filter) {
+        public static void MakePath(in World world, out Path path, in Ent graph, in Path.Target to, in Filter filter) {
 
             var root = graph.Read<RootGraphComponent>();
             path = new Path() {
@@ -229,11 +237,11 @@ namespace ME.BECS.Pathfinding {
             }
             var item = chunk.flowField[world.state, nodeIndex];
             complete = (item.direction == Graph.TARGET_BYTE);
-            if (item.hasLineOfSight == 1) {
+            /*if (item.hasLineOfSight == true) {
                 var to = path.to;
                 to.y = position.y;
                 return math.normalizesafe(to - position);
-            }
+            }*/
             return GetDirection(item.direction);
 
         }
@@ -732,6 +740,22 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
+        public static Direction GetCoordDirection(int x, int y) {
+
+            if (x == -1 && y == -1) return Direction.DownLeft;
+            if (x == -1 && y == 0)  return Direction.Left;
+            if (x == -1 && y == 1)  return Direction.UpLeft;
+            if (x == 0  && y == 1)  return Direction.Up;
+            if (x == 1  && y == 1)  return Direction.UpRight;
+            if (x == 1  && y == 0)  return Direction.Right;
+            if (x == 1  && y == -1) return Direction.DownRight;
+            if (x == 0  && y == -1) return Direction.Down;
+            
+            return Direction.UpRight;
+
+        }
+
+        [INLINE(256)]
         internal static TempNode GetNeighbourIndex(in World world, TempNode node, uint direction, uint width, uint height, MemArray<Path.Chunk> gridChunks, uint chunksX, uint chunksY) {
 
             /*
@@ -921,19 +945,22 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static float3 ClampPosition(in Ent graphEnt, float3 position) {
+        public static Path.Target ClampPosition(in Ent graphEnt, in Path.Target target) {
 
             var root = graphEnt.Read<RootGraphComponent>();
             var fullWidth = root.width * root.chunkWidth * root.nodeSize;
             var fullHeight = root.height * root.chunkHeight * root.nodeSize;
             var offset = new float3(root.chunkWidth * 0.5f, 0f, root.chunkHeight * 0.5f);
 
-            return new float3(math.clamp(position.x, root.position.x - offset.x, fullWidth + root.position.x - offset.x - root.nodeSize), 0f, math.clamp(position.z, root.position.z - offset.z, fullHeight + root.position.z - offset.z - root.nodeSize));
+            var result = new Path.Target(target);
+            var point = new float3(math.clamp(target.center.x, root.position.x - offset.x, fullWidth + root.position.x - offset.x - root.nodeSize), 0f, math.clamp(target.center.z, root.position.z - offset.z, fullHeight + root.position.z - offset.z - root.nodeSize));
+            result.center = point;
+            return result;
             
         }
 
         [INLINE(256)]
-        public static uint GetChunkIndex(in RootGraphComponent root, float3 position, bool clamp = true) {
+        public static uint GetChunkIndex(in RootGraphComponent root, in float3 position, bool clamp = true) {
             
             var offset = new float3(root.nodeSize * 0.5f);
             offset.y = 0f;
@@ -972,12 +999,12 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, float3 pos, float3 rotPoint, quaternion rotation, bool clamp = true) {
+        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, in float3 rotPoint, in quaternion rotation, bool clamp = true) {
             return GetNodeIndex(in root, in chunk, math.mul(rotation, pos - rotPoint) + rotPoint, clamp);
         }
 
         [INLINE(256)]
-        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, float3 pos, bool clamp = true) {
+        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, bool clamp = true) {
 
             var offset = new float3(root.nodeSize * 0.5f);
             offset.y = 0f;
@@ -1339,16 +1366,26 @@ namespace ME.BECS.Pathfinding {
                     var item = chunk.flowField[world.state, j];
                     var pos = Graph.GetPosition(world.state, in path.graph, chunkIndex, nodeIndex) + offset;
                     pos.y = path.graph.Read<RootGraphComponent>().chunks[chunkIndex].nodes[world.state, nodeIndex].height + offset.y;
-                    if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == 1) {
+                    /*if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == true) {
                         var dir3d = math.normalizesafe(path.to - pos);
                         UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
-                    } else {
-                        UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
+                    } else*/ 
+                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"{item.bestCost}");
+                    {
+                        if (item.direction == Graph.TARGET_BYTE) {
+                            UnityEngine.Gizmos.color = UnityEngine.Color.green;
+                            UnityEngine.Gizmos.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)(pos + math.up() * 5f));
+                            UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)pos, new UnityEngine.Vector3((float)cellSize, 0f, (float)cellSize) * 0.9f);
+                            continue;
+                        } else if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == true) {
+                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                        } else {
+                            UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
+                        }
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(Graph.GetDirection(item.direction) * 0.25f * cellSize), (UnityEngine.Vector3)Graph.GetDirection(item.direction) * 0.5f, scale: (float)cellSize);
                     }
                     
-                    // UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"{item.bestCost}");
                     /*if (Unity.Mathematics.math.lengthsq(pos - root.chunks[world.state, chunkIndex].center) <= 100f) {
                         var node = path.chunks[world.state, chunkIndex].bestCost[world.state, nodeIndex];
                     }*/

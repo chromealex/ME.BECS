@@ -316,12 +316,13 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST(CompileSynchronously = true)]
-    public unsafe struct PathDirectionsJob : IJob {
+    public struct PathDirectionsJob : IJob {
 
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeReference<byte> needToRepath;
         [Unity.Collections.ReadOnlyAttribute]
         public Unity.Collections.NativeList<uint> chunks;
+        public Unity.Collections.NativeHashSet<Graph.TempNode> targetNodes;
         public Path path;
         public World world;
         public Filter filter;
@@ -340,10 +341,6 @@ namespace ME.BECS.Pathfinding {
                 var gridChunk = this.path.chunks[this.world.state, chunkIndex];
                 if (gridChunk.flowField.IsCreated == false) continue;
 
-                var targetChunkIndex = Graph.GetChunkIndex(in root, this.path.to, true);
-                var targetChunk = root.chunks[this.world.state, targetChunkIndex];
-                var targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, this.path.to, false);
-
                 for (uint n = 0u, size = root.chunkWidth * root.chunkHeight; n < size; ++n) {
                     var item = gridChunk.flowField[this.world.state, (int)n];
                     var minCost = item.bestCost;
@@ -354,35 +351,41 @@ namespace ME.BECS.Pathfinding {
                     };
 
                     var dir = Graph.TARGET_BYTE;
-                    if (targetChunkIndex == curTempNode.chunkIndex &&
-                        targetNodeIndex == curTempNode.nodeIndex) {
+                    if (this.targetNodes.Contains(curTempNode) == true) {
                         
-                    } else if (item.hasLineOfSight == 0) {
+                    } else if (item.hasLineOfSight == false) {
+
+                        var foundDir = false;
+                        var idx = 0u;
                         for (uint j = 0; j < 8u; ++j) {
 
                             var neighbourTempNode = Graph.GetNeighbourIndex(in this.world, curTempNode, j, root.chunkWidth, root.chunkHeight, this.path.chunks, root.width, root.height);
                             if (neighbourTempNode.chunkIndex == uint.MaxValue) continue;
 
-                            var localChunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
+                            /*var localChunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
                             var node = localChunk.nodes[this.world.state, neighbourTempNode.nodeIndex];
                             if (this.filter.IsValid(new NodeInfo(node, neighbourTempNode.chunkIndex, neighbourTempNode.nodeIndex), in root) == false) {
                                 continue;
-                            }
+                            }*/
 
                             var localGridChunk = this.path.chunks[this.world.state, neighbourTempNode.chunkIndex];
                             var cost = localGridChunk.flowField[this.world.state, (int)neighbourTempNode.nodeIndex].bestCost;
                             if (cost <= minCost) {
 
-                                dir = Graph.GetCommonNeighbourSumDir(in this.world, curTempNode, j, root.chunkWidth, root.chunkHeight, this.path.chunks, root.width, root.height);
+                                foundDir = true;
+                                idx = j;
                                 minCost = cost;
-
+                                
                             }
 
                         }
+                        
+                        if (foundDir == true) dir = Graph.GetCommonNeighbourSumDir(in this.world, curTempNode, idx, root.chunkWidth, root.chunkHeight, this.path.chunks, root.width, root.height);
+                        
                     } else {
                         dir = Graph.LOS_BYTE;
                     }
-
+                    
                     gridChunk.flowField[this.world.state, n].direction = dir;
                 }
 
@@ -418,10 +421,10 @@ namespace ME.BECS.Pathfinding {
             highLevelPath.Begin();
             var list = this.path.from.As(in this.world.state.ptr->allocator);
             var nodesCount = 0;
-            var hierarchyPathList = new Unity.Collections.LowLevel.Unsafe.UnsafeList<PathInfo>((int)list.Count, Unity.Collections.Allocator.Temp);
+            var hierarchyPathList = new Unity.Collections.LowLevel.Unsafe.UnsafeList<PathInfo>((int)list.Count, Constants.ALLOCATOR_TEMP);
             int hierarchyPathHash = 0;
             for (uint i = 0; i < list.Count; ++i) {
-                var hierarchyPath = Graph.HierarchyPath(this.world.state, in this.graph, list[this.world.state, i], to, this.filter, root.nodeSize);
+                var hierarchyPath = Graph.HierarchyPath(this.world.state, in this.graph, list[this.world.state, i], to.center, this.filter, root.nodeSize);
                 if (hierarchyPath.pathState == PathState.Success) {
                     hierarchyPathList.Add(hierarchyPath);
                     hierarchyPathHash += hierarchyPath.GetHashCode();
@@ -441,23 +444,29 @@ namespace ME.BECS.Pathfinding {
                 hash = hierarchyPathHash;
             }
 
-            var chunks = new Unity.Collections.NativeList<uint>(nodesCount, Unity.Collections.Allocator.Temp);
+            var targetNodes = new Unity.Collections.NativeHashSet<Graph.TempNode>(to.Capacity, Constants.ALLOCATOR_TEMP);
+            var chunks = new Unity.Collections.NativeList<uint>(nodesCount, Constants.ALLOCATOR_TEMP);
 
             highLevelPath.End();
             foreach (var hierarchyPath in hierarchyPathList) {
                 // build ff
-
-                to = hierarchyPath.to;
-                this.path.to = to;
+                
+                if (this.path.to.type == Path.Target.TargetType.Point) {
+                    to.center = hierarchyPath.to;
+                    this.path.to = to;
+                }
 
                 // build ff for each chunk from the end to the beginning
                 var collectChunksMarker = new Unity.Profiling.ProfilerMarker("Collect Chunks");
                 collectChunksMarker.Begin();
+                
+                var queue = new NativeQueue<Graph.TempNode>(4 * 4, Unity.Collections.Allocator.Temp);
+                
                 // 1. collect chunks
                 var nodes = hierarchyPath.nodes;
-                var chunksToUpdate = new Unity.Collections.NativeList<PortalInfo>(nodes.Length, Unity.Collections.Allocator.Temp);
+                var chunksToUpdate = new Unity.Collections.NativeList<uint>(nodes.Length, Constants.ALLOCATOR_TEMP);
                 {
-                    var chunksVisited = new TempBitArray(root.chunks.Length, allocator: Unity.Collections.Allocator.Temp);
+                    var chunksVisited = new TempBitArray(root.chunks.Length, allocator: Constants.ALLOCATOR_TEMP);
                     for (int k = 0; k < nodes.Length; ++k) {
 
                         var portalInfo = nodes[k];
@@ -485,7 +494,7 @@ namespace ME.BECS.Pathfinding {
                             createMarker.Begin();
                             data.index = portalInfo.chunkIndex;
                             data.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state.ptr->allocator, chunk.nodes.Length);
-                            chunksToUpdate.Add(portalInfo);
+                            chunksToUpdate.Add(portalInfo.chunkIndex);
                             createMarker.End();
                             var setDefaultMarker = new Unity.Profiling.ProfilerMarker("Set Default");
                             setDefaultMarker.Begin();
@@ -501,39 +510,117 @@ namespace ME.BECS.Pathfinding {
                 }
                 collectChunksMarker.End();
 
-                // 2. update flow field for each chunk
+                // 2. reset target nodes
+                {
+                    to.FillNodes(in root, this.world.state, ref targetNodes, root.agentRadius);
+
+                    foreach (var node in targetNodes) {
+                        var chunk = root.chunks[this.world.state, node.chunkIndex];
+                        ref var gridChunk = ref this.path.chunks[this.world.state, node.chunkIndex];
+                        if (gridChunk.flowField.IsCreated == false) {
+                            gridChunk.flowField = new MemArray<Path.Chunk.Item>(ref this.world.state.ptr->allocator, chunk.nodes.Length);
+                            for (int i = 0; i < chunk.nodes.Length; ++i) {
+                                gridChunk.flowField[this.world.state, i].bestCost = Graph.UNWALKABLE_COST;
+                            }
+                            chunksToUpdate.Add(node.chunkIndex);
+                        }
+                        gridChunk.flowField[this.world.state, node.nodeIndex].bestCost = 0f;
+                        gridChunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = true;
+                        gridChunk.flowField[this.world.state, node.nodeIndex].direction = Graph.TARGET_BYTE;
+                        UnityEngine.Debug.DrawLine((UnityEngine.Vector3)Graph.GetPosition(in root, in chunk, node.nodeIndex), (UnityEngine.Vector3)(Graph.GetPosition(in root, in chunk, node.nodeIndex) + new float3(0f, 30f, 0f)), UnityEngine.Color.magenta, 10f);
+                        /*if (chunk.nodes[this.world.state, node.nodeIndex].walkable == false) {
+                            gridChunk.flowField[this.world.state, node.nodeIndex].bestCost = Graph.UNWALKABLE_COST;
+                        }*/
+                    }
+                }
+                
+                // 3. update flow field for each chunk
                 if (chunksToUpdate.Length > 0) {
-                    var chunksVisited = new TempBitArray(root.chunks.Length, allocator: Unity.Collections.Allocator.Temp);
+                    var targetChunks = new Unity.Collections.NativeHashSet<uint>(to.Capacity, Constants.ALLOCATOR_TEMP);
+                    var chunksVisited = new TempBitArray(root.chunks.Length, allocator: Constants.ALLOCATOR_TEMP);
                     var costFieldMarker = new Unity.Profiling.ProfilerMarker("Create cost field");
                     costFieldMarker.Begin();
                     { // Creating cost field
 
                         float3 targetNodePosition;
-                        uint targetNodeIndex;
                         uint targetChunkIndex;
+                        uint targetNodeIndex;
                         {
                             // get target chunk
-                            targetChunkIndex = Graph.GetChunkIndex(in root, to, true);
-                            var targetChunk = root.chunks[this.world.state, targetChunkIndex];
-                            targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, to, true);
-                            targetNodePosition = Graph.GetPosition(in root, in targetChunk, targetNodeIndex);
+                            to.FillChunks(in root, this.world.state, ref targetChunks);
+                            {
+                                targetChunkIndex = Graph.GetChunkIndex(in root, in to.center, true);
+                                var targetChunk = root.chunks[this.world.state, targetChunkIndex];
+                                targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in to.center, true);
+                                targetNodePosition = Graph.GetPosition(in root, in targetChunk, targetNodeIndex);
+                            }
                         }
 
-                        for (int i = 0; i < chunksToUpdate.Length; ++i) {
-                            var chunkPortalInfo = chunksToUpdate[i];
-                            var chunk = root.chunks[this.world.state, chunkPortalInfo.chunkIndex];
+                        //for (int i = 0; i < chunksToUpdate.Length; ++i)
+                        {
+                            //var chunkIndex = chunksToUpdate[i];
+                            //var chunk = root.chunks[this.world.state, chunkIndex];
 
-                            var queue = new NativeQueue<Graph.TempNode>(4 * 4, Unity.Collections.Allocator.Temp);
-                            var nodeIndex = Graph.GetNodeIndex(in root, in chunk, to, true);
-                            if (nodeIndex != uint.MaxValue) {
+                            queue.Clear();
+                            foreach (var node in targetNodes) {
+                                queue.Enqueue(node);
+                            }
 
-                                var curTempNode = new Graph.TempNode() {
+                            //var nodeIndex = Graph.GetNodeIndex(in root, in chunk, to.center, true);
+                            //if (nodeIndex != uint.MaxValue) 
+                            {
+
+                                //var targetSet = true;
+                                {
+                                    for (int i = 0; i < chunksToUpdate.Length; ++i) {
+                                        var chunkIndex = chunksToUpdate[i];
+                                        var chunk = root.chunks[this.world.state, chunkIndex];
+                                        // looking for temp node with current chunk on the nodes path
+                                        for (int n = 0; n < nodes.Length; ++n) {
+                                            var node = nodes[n];
+                                            if (node.chunkIndex == chunkIndex) {
+                                                var portal = chunk.portals.list[this.world.state, node.portalIndex];
+                                                //curTempNode.nodeIndex = portal.rangeStartNodeIndex;
+                                                for (uint r = 0u; r < portal.remoteNeighbours.Count; ++r) {
+                                                    var remote = portal.remoteNeighbours[this.world.state, r];
+                                                    var tempNode = new Graph.TempNode() {
+                                                        chunkIndex = remote.portalInfo.chunkIndex,
+                                                        nodeIndex = root.chunks[this.world.state, remote.portalInfo.chunkIndex].portals
+                                                                        .list[this.world.state, remote.portalInfo.portalIndex].rangeStartNodeIndex,
+                                                    };
+                                                    queue.Enqueue(tempNode);
+                                                }
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                for (int p = 0; p < nodes.Length; ++p) {
+                                    var srcPortalInfo = nodes[p];
+                                    if (p < nodes.Length - 1) {
+                                        var nextPortalInfo = nodes[p + 1];
+                                        if (targetChunks.Contains(nextPortalInfo.chunkIndex) == false) {
+                                            // reset cost for all nodes in this portal
+                                            var portalChunk = root.chunks[this.world.state, srcPortalInfo.chunkIndex];
+                                            var portalInfo = portalChunk.portals.list[this.world.state, srcPortalInfo.portalIndex];
+                                            var idx = portalInfo.rangeStartNodeIndex;
+                                            for (uint k = 0u; k <= portalInfo.size; ++k) {
+                                                queue.Enqueue(new Graph.TempNode() {
+                                                    chunkIndex = srcPortalInfo.chunkIndex,
+                                                    nodeIndex = idx,
+                                                });
+                                                idx = Graph.GetNeighbourIndex(idx, (int2)portalInfo.axis, root.chunkWidth, root.chunkHeight);
+                                            }
+                                        }
+                                    }
+                                }
+                                /*var curTempNode = new Graph.TempNode() {
                                     nodeIndex = nodeIndex,
-                                    chunkIndex = chunkPortalInfo.chunkIndex,
+                                    chunkIndex = chunkIndex,
                                 };
-                                var targetSet = true;
-                                var gridChunk = this.path.chunks[this.world.state, chunkPortalInfo.chunkIndex];
-                                if (chunkPortalInfo.chunkIndex == targetChunkIndex) {
+                                var gridChunk = this.path.chunks[this.world.state, chunkIndex];
+                                if (targetChunks.Contains(chunkIndex) == true) {
                                     // reset cost for node if it is a target chunk
                                     gridChunk.flowField[this.world.state, nodeIndex].bestCost = 0f;
                                     gridChunk.flowField[this.world.state, nodeIndex].hasLineOfSight = true;
@@ -547,7 +634,7 @@ namespace ME.BECS.Pathfinding {
                                         // looking for temp node with current chunk on the nodes path
                                         for (int n = 0; n < nodes.Length; ++n) {
                                             var node = nodes[n];
-                                            if (node.chunkIndex == chunkPortalInfo.chunkIndex) {
+                                            if (node.chunkIndex == chunkIndex) {
                                                 var portal = chunk.portals.list[this.world.state, node.portalIndex];
                                                 curTempNode.nodeIndex = portal.rangeStartNodeIndex;
                                                 for (uint r = 0u; r < portal.remoteNeighbours.Count; ++r) {
@@ -566,22 +653,9 @@ namespace ME.BECS.Pathfinding {
                                     }
                                     for (int p = 0; p < nodes.Length; ++p) {
                                         var srcPortalInfo = nodes[p];
-                                        //var toPortalNode = root.portalConnections.nodes[this.world.state, portalIndex];
                                         if (p < nodes.Length - 1) {
                                             var nextPortalInfo = nodes[p + 1];
-                                            /*{
-                                                var p11 = root.chunks[this.world.state, nextPortalInfo.chunkIndex].portals
-                                                              .list[this.world.state, nextPortalInfo.portalIndex].position;
-                                                var p21 = p11 + new float3(0f, 20f, 0f);
-                                                UnityEngine.Debug.DrawLine(p11, p21, UnityEngine.Color.red);
-                                            }
-                                            {
-                                                var p11 = root.chunks[this.world.state, srcPortalInfo.chunkIndex].portals
-                                                              .list[this.world.state, srcPortalInfo.portalIndex].position;
-                                                var p21 = p11 + new float3(0f, 20f, 0f);
-                                                UnityEngine.Debug.DrawLine(p11, p21, UnityEngine.Color.cyan);
-                                            }*/
-                                            if (nextPortalInfo.chunkIndex != targetChunkIndex) {
+                                            if (targetChunks.Contains(nextPortalInfo.chunkIndex) == false) {
                                                 // reset cost for all nodes in this portal
                                                 var portalChunk = root.chunks[this.world.state, srcPortalInfo.chunkIndex];
                                                 var portalInfo = portalChunk.portals.list[this.world.state, srcPortalInfo.portalIndex];
@@ -591,27 +665,16 @@ namespace ME.BECS.Pathfinding {
                                                         chunkIndex = srcPortalInfo.chunkIndex,
                                                         nodeIndex = idx,
                                                     });
-                                                    /*{
-                                                        var p1 = Graph.GetPosition(root.chunks[this.world.state, srcPortalInfo.chunkIndex], idx);
-                                                        var p2 = p1 + new float3(0f, 5f, 0f);
-                                                        UnityEngine.Debug.DrawLine(p1, p2, UnityEngine.Color.yellow);
-                                                    }*/
                                                     idx = Graph.GetNeighbourIndex(idx, (int2)portalInfo.axis, root.chunkWidth, root.chunkHeight);
                                                 }
-
-                                                /*{
-                                                    var p1 = root.chunks[this.world.state, neighbourTempNode.chunkIndex].portals.list[this.world.state, portalInfo.portalInfo.portalIndex].position;
-                                                    var p2 = p1 + new float3(0f, 10f, 0f);
-                                                    UnityEngine.Debug.DrawLine(p1, p2, UnityEngine.Color.yellow);
-                                                }*/
                                             }
                                         }
                                     }
-                                }
+                                }*/
 
                                 while (queue.Count > 0) {
 
-                                    curTempNode = queue.Dequeue();
+                                    var curTempNode = queue.Dequeue();
                                     if (chunksVisited.IsSet((int)curTempNode.chunkIndex) == false) {
                                         chunksVisited.Set((int)curTempNode.chunkIndex, true);
                                         chunks.Add(curTempNode.chunkIndex);
@@ -622,8 +685,8 @@ namespace ME.BECS.Pathfinding {
                                     if (item.flowField.IsCreated == true) {
                                         rootCost = item.flowField[this.world.state, curTempNode.nodeIndex].bestCost;
                                     }
-                                    if (targetSet == false) {
-                                        chunk = root.chunks[this.world.state, curTempNode.chunkIndex];
+                                    /*if (targetSet == false) {
+                                        var chunk = root.chunks[this.world.state, curTempNode.chunkIndex];
                                         var node = chunk.nodes[this.world.state, curTempNode.nodeIndex];
                                         if (node.walkable == true) {
                                             if (item.flowField.IsCreated == true) {
@@ -633,12 +696,19 @@ namespace ME.BECS.Pathfinding {
                                             }
                                             targetSet = true;
                                         }
-                                    }
+                                    }*/
 
-                                    if (this.CalculateLOS(in root, ref item, in curTempNode, new Graph.TempNode() { chunkIndex = targetChunkIndex, nodeIndex = targetNodeIndex, }) == 1) {
-                                        item.hasLineOfSight = true;
+                                    if (this.path.to.type == Path.Target.TargetType.Point) {
+                                        if (this.CalculateLOS(in root, ref item, in curTempNode, new Graph.TempNode() { chunkIndex = targetChunkIndex, nodeIndex = targetNodeIndex }) == true) {
+                                            item.hasLineOfSight = true;
+                                        }
                                     }
-                                    
+                                    /*foreach (var targetNode in targetNodes) {
+                                        if (this.CalculateLOS(in root, ref item, in curTempNode, targetNode) == true) {
+                                            item.hasLineOfSight = true;
+                                        }
+                                    }*/
+
                                     for (uint j = 0; j < 4u; ++j) {
 
                                         var localDir = Graph.GetCoordDirection(j);
@@ -647,8 +717,8 @@ namespace ME.BECS.Pathfinding {
                                         if (neighbourTempNode.chunkIndex == uint.MaxValue) continue;
                                         // if (chunksVisited.IsSet((int)neighbourTempNode.chunkIndex) == false) continue;
 
-                                        chunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
-                                        gridChunk = this.path.chunks[this.world.state, neighbourTempNode.chunkIndex];
+                                        var chunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
+                                        var gridChunk = this.path.chunks[this.world.state, neighbourTempNode.chunkIndex];
                                         if (gridChunk.flowField.IsCreated == false) continue;
                                         var neighbor = chunk.nodes[this.world.state, neighbourTempNode.nodeIndex];
                                         if (this.filter.IsValid(new NodeInfo(neighbor, neighbourTempNode.chunkIndex, neighbourTempNode.nodeIndex), in root) == false) {
@@ -656,10 +726,10 @@ namespace ME.BECS.Pathfinding {
                                         }
 
                                         var coef = globalCoefficient;
-                                        if (targetChunkIndex == neighbourTempNode.chunkIndex && this.path.isRecalculationRequired == 1) {
+                                        if (targetChunks.Contains(neighbourTempNode.chunkIndex) == true && this.path.isRecalculationRequired == 1) {
                                             coef = 0f;
                                         }
-                                        
+
                                         var endNodeCost = coef + neighbor.cost + rootCost + 0.01f * math.lengthsq(targetNodePosition - Graph.GetPosition(in root, in chunk, neighbourTempNode.nodeIndex));
                                         ref var ffItem = ref gridChunk.flowField[this.world.state, neighbourTempNode.nodeIndex];
                                         if (endNodeCost < ffItem.bestCost) {
@@ -671,7 +741,7 @@ namespace ME.BECS.Pathfinding {
                                 }
                             }
 
-                            if (chunkPortalInfo.chunkIndex != targetChunkIndex) {
+                            /*if (targetChunks.Contains(chunkIndex) == false) {
                                 // Update cache for this chunk
                                 for (int p = 0; p < nodes.Length; ++p) {
                                     var srcPortalInfo = nodes[p];
@@ -688,7 +758,7 @@ namespace ME.BECS.Pathfinding {
                                         }
                                     }
                                 }
-                            }
+                            }*/
                         }
                     }
                     costFieldMarker.End();
@@ -700,6 +770,7 @@ namespace ME.BECS.Pathfinding {
                 filter = this.filter,
                 graph = this.graph,
                 needToRepath = this.needToRepath,
+                targetNodes = targetNodes,
                 path = this.path,
                 world = this.world,
             }.Execute();
@@ -766,6 +837,12 @@ namespace ME.BECS.Pathfinding {
             var currentNodeInfo = Graph.GetCoordInfo(at.x, at.y, root.chunkWidth, root.chunkHeight, root.width, root.height);
             if (currentNodeInfo.IsValid() == false || root.chunks[this.world.state, currentNodeInfo.chunkIndex].nodes[this.world.state, currentNodeInfo.nodeIndex].cost > 1) {
                 hasLos = false;
+            }
+
+            if (hasLos == true) {
+                var direction = Graph.GetCoordDirection(xDifOne, yDifOne);
+                var dir = Graph.GetCommonNeighbourSumDir(in this.world, info, (uint)direction, root.chunkWidth, root.chunkHeight, this.path.chunks, root.width, root.height);
+                chunk.flowField[this.world.state, node.nodeIndex].direction = dir;
             }
 
             chunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = hasLos;

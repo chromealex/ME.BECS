@@ -16,6 +16,14 @@ namespace ME.BECS.Pathfinding {
 
         }
 
+        public void Clear() {
+            
+            this.Count = 0;
+            this.head = -1;
+            this.last = -1;
+            
+        }
+
         public T Dequeue() {
                 
             var data = this.arr[this.head];

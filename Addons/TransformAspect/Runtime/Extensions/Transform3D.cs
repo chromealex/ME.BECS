@@ -87,7 +87,8 @@ namespace ME.BECS.Transforms {
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
             ent.worldMatrix = math.mul(parent.readWorldMatrix, ent.readLocalMatrix);
-
+            if (ent.IsStatic == true) ent.ent.SetTag<IsTransformStaticCalculatedComponent>(true);
+            
         }
 
         [INLINE(256)]
