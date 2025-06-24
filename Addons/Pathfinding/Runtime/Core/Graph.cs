@@ -161,7 +161,9 @@ namespace ME.BECS.Pathfinding {
         public static void SetTarget(ref Path path, in Path.Target target, in Filter filter) {
             
             path.to = Graph.ClampPosition(in path.graph, in target);
-            //path.to = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to, filter);
+            if (path.to.type == Path.Target.TargetType.Point) {
+                path.to.center = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to.center, filter);
+            }
 
         }
 
@@ -1378,7 +1380,7 @@ namespace ME.BECS.Pathfinding {
                     } else*/
                     #if UNITY_EDITOR
                     UnityEditor.Handles.color = new UnityEngine.Color(1f, 1f, 1f, 0.3f);
-                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"<color=gray>{item.bestCost}</color>", gizmosStyle);
+                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"<color=grey>{item.bestCost}</color>", gizmosStyle);
                     #endif
                     {
                         if (item.direction == Graph.TARGET_BYTE) {
