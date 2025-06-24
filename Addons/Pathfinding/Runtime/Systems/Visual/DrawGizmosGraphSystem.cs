@@ -18,6 +18,7 @@ namespace ME.BECS.Pathfinding {
         public bool drawPath;
         public bool drawNormals;
         public bool drawNodes;
+        public bool drawPortals;
 
         private int drawIndex;
 
@@ -49,7 +50,7 @@ namespace ME.BECS.Pathfinding {
                 if (this.drawIndex == idx) {
 
                     drawGraphEnt = graphEnt;
-                    if (this.drawGraph == true) Graph.DrawGizmos(graphEnt, new Graph.GizmosParameters() { drawNormals = this.drawNormals, drawNodes = this.drawNodes });
+                    if (this.drawGraph == true) Graph.DrawGizmos(graphEnt, new Graph.GizmosParameters() { drawNormals = this.drawNormals, drawNodes = this.drawNodes, drawPortals = this.drawPortals, });
                     
                 }
 

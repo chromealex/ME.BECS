@@ -1328,7 +1328,7 @@ namespace ME.BECS.Pathfinding {
                 if ((node.walkable == false || x == length - 1u) && rangeStarted == true) {
                     // close range
                     var middlePoint = (x + rangeStart) / 2u;
-                    var size = x - rangeStart + 1u;
+                    var size = x - rangeStart + (node.walkable == false ? 0u : 1u);
                     var rangeIdx = GetNodeIndex(in root, xMultiplier * middlePoint + yMultiplier * axisOffset, yMultiplier * middlePoint + xMultiplier * axisOffset);
                     var pos = GetPosition(in root, in chunkComponent, rangeIdx);
                     chunkComponent.portals.list.Add(ref world.state.ptr->allocator, new Portal() {
@@ -1354,6 +1354,7 @@ namespace ME.BECS.Pathfinding {
 
             public bool drawNormals;
             public bool drawNodes;
+            public bool drawPortals;
 
         }
 
@@ -1418,6 +1419,7 @@ namespace ME.BECS.Pathfinding {
 
             var offset = (UnityEngine.Vector3)new float3(0f, 0.05f, 0f);
             var root = graph.Read<RootGraphComponent>();
+            var nodeSize = (float)root.nodeSize;
             var state = graph.World.state;
             for (uint i = 0; i < root.chunks.Length; ++i) {
 
@@ -1427,54 +1429,66 @@ namespace ME.BECS.Pathfinding {
                 UnityEngine.Gizmos.color = color;
                 DrawGizmosLevel(state, graph, i, in chunk, in root, color, (float3)offset, parameters);
 
-                var portals = chunk.portals;
-                for (uint j = 0; j < portals.list.Count; ++j) {
-                    var portal = portals.list[state, j];
-                    {
-                        var xMultiplier = portal.axis.x;
-                        var yMultiplier = portal.axis.y;
-                        var size = portal.size;
-                        var c = UnityEngine.Color.yellow;
-                        c.a = 0.3f;
-                        UnityEngine.Gizmos.color = c;
-                        UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, new UnityEngine.Vector3(xMultiplier * size, 2f, yMultiplier * size));
-                        
-                        c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
-                        c.a = 0.3f;
-                        UnityEngine.Gizmos.color = c;
-                        UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, UnityEngine.Vector3.one);
-                        
-                        #if UNITY_EDITOR
-                        UnityEditor.Handles.color = UnityEngine.Color.magenta;
-                        UnityEditor.Handles.Label((UnityEngine.Vector3)portal.position + offset, $"<color=magenta>{portal.area}\n{portal.globalArea}</color>", gizmosStyle);
-                        #endif
-                    }
+                if (parameters.drawPortals == true) {
 
-                    // draw hierarchy graph
-                    {
-                        // local connections
-                        for (uint n = 0u; n < portal.localNeighbours.Count; ++n) {
-                            var neighbour = portal.localNeighbours[n];
-                            var info = neighbour.portalInfo;
-                            var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
-                            var c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
-                            c.a = 1f;
+                    var portals = chunk.portals;
+                    for (uint j = 0; j < portals.list.Count; ++j) {
+                        var portal = portals.list[state, j];
+                        {
+                            var xMultiplier = portal.axis.x;
+                            var yMultiplier = portal.axis.y;
+                            var size = portal.size;
+                            var c = UnityEngine.Color.yellow;
+                            c.a = 0.3f;
                             UnityEngine.Gizmos.color = c;
-                            var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
-                            var dirNorm = (UnityEngine.Vector3)math.normalizesafe((float3)dir);
-                            DrawGizmosArrow((UnityEngine.Vector3)portal.position + dirNorm * 1f + offset, dir - dirNorm * 2f + offset);
-                        }
-                        
-                        // remote connections
-                        for (uint n = 0u; n < portal.remoteNeighbours.Count; ++n) {
-                            var neighbour = portal.remoteNeighbours[n];
-                            var info = neighbour.portalInfo;
-                            var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
-                            var c = UnityEngine.Color.white;
+                            UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, new UnityEngine.Vector3(xMultiplier * size * nodeSize, 2f, yMultiplier * size * nodeSize));
+
+                            c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
+                            c.a = 0.3f;
                             UnityEngine.Gizmos.color = c;
-                            var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
-                            DrawGizmosArrow((UnityEngine.Vector3)portal.position + offset, dir + offset);
+                            UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, UnityEngine.Vector3.one);
+
+                            #if UNITY_EDITOR
+                            UnityEditor.Handles.color = UnityEngine.Color.magenta;
+                            UnityEditor.Handles.Label((UnityEngine.Vector3)portal.position + offset, $"<color=magenta>A:{portal.area}/{portal.globalArea}\nR:{portal.rangeStart}/{portal.size}</color>", gizmosStyle);
+                            #endif
                         }
+
+                        // draw hierarchy graph
+                        {
+                            // local connections
+                            for (uint n = 0u; n < portal.localNeighbours.Count; ++n) {
+                                var neighbour = portal.localNeighbours[n];
+                                var info = neighbour.portalInfo;
+                                var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
+                                var c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
+                                c.a = 1f;
+                                UnityEngine.Gizmos.color = c;
+                                var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
+                                var dirNorm = (UnityEngine.Vector3)math.normalizesafe((float3)dir);
+                                DrawGizmosArrow((UnityEngine.Vector3)portal.position + dirNorm * 1f + offset, dir - dirNorm * 2f + offset);
+                                #if UNITY_EDITOR
+                                UnityEditor.Handles.color = c;
+                                UnityEditor.Handles.Label((UnityEngine.Vector3)(portal.position + targetPortal.position) * 0.5f + offset, $"<color=white>L:{neighbour.length}</color>", gizmosStyle);
+                                #endif
+                            }
+
+                            // remote connections
+                            for (uint n = 0u; n < portal.remoteNeighbours.Count; ++n) {
+                                var neighbour = portal.remoteNeighbours[n];
+                                var info = neighbour.portalInfo;
+                                var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
+                                var c = UnityEngine.Color.white;
+                                UnityEngine.Gizmos.color = c;
+                                var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
+                                DrawGizmosArrow((UnityEngine.Vector3)portal.position + offset, dir + offset);
+                                #if UNITY_EDITOR
+                                UnityEditor.Handles.color = c;
+                                UnityEditor.Handles.Label((UnityEngine.Vector3)(portal.position + targetPortal.position) * 0.5f + offset, $"<color=white>L:{neighbour.length}</color>", gizmosStyle);
+                                #endif
+                            }
+                        }
+
                     }
 
                 }
