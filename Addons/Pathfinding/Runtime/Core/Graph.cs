@@ -46,7 +46,7 @@ namespace ME.BECS.Pathfinding {
         public const float UNWALKABLE_COST = float.MaxValue * 0.5f;
         
         [System.Serializable]
-        public struct TempNode {
+        public struct TempNode : System.IEquatable<TempNode> {
 
             public static TempNode Invalid => new TempNode() { chunkIndex = uint.MaxValue, nodeIndex = uint.MaxValue };
 
@@ -54,10 +54,18 @@ namespace ME.BECS.Pathfinding {
             public uint nodeIndex;
 
             [INLINE(256)]
-            public bool IsValid() {
+            public bool IsValid() => this.chunkIndex != uint.MaxValue && this.nodeIndex != uint.MaxValue;
 
-                return this.chunkIndex != uint.MaxValue && this.nodeIndex != uint.MaxValue;
+            public bool Equals(TempNode other) {
+                return this.chunkIndex == other.chunkIndex && this.nodeIndex == other.nodeIndex;
+            }
 
+            public override bool Equals(object obj) {
+                return obj is TempNode other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return System.HashCode.Combine(this.chunkIndex, this.nodeIndex);
             }
 
         }
@@ -103,7 +111,7 @@ namespace ME.BECS.Pathfinding {
             
             var root = graph.Read<RootGraphComponent>();
 
-            var toPoint = path.to;
+            var toPoint = path.to.center;
 
             // collect all different unique areas in this chunk
             path.from.As(in world.state.ptr->allocator).Clear();
@@ -150,15 +158,17 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static void SetTarget(ref Path path, float3 position, in Filter filter) {
+        public static void SetTarget(ref Path path, in Path.Target target, in Filter filter) {
             
-            path.to = Graph.ClampPosition(in path.graph, position);
-            path.to = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to, filter);
+            path.to = Graph.ClampPosition(in path.graph, in target);
+            if (path.to.type == Path.Target.TargetType.Point) {
+                path.to.center = GraphUtils.GetNearestNodeByFilter(in path.graph, in path.to.center, filter);
+            }
 
         }
 
         [INLINE(256)]
-        public static void MakePath(in World world, out Path path, in Ent graph, in float3 to, in Filter filter) {
+        public static void MakePath(in World world, out Path path, in Ent graph, in Path.Target to, in Filter filter) {
 
             var root = graph.Read<RootGraphComponent>();
             path = new Path() {
@@ -229,8 +239,8 @@ namespace ME.BECS.Pathfinding {
             }
             var item = chunk.flowField[world.state, nodeIndex];
             complete = (item.direction == Graph.TARGET_BYTE);
-            if (item.hasLineOfSight == 1) {
-                var to = path.to;
+            if (item.hasLineOfSight == true) {
+                var to = path.to.center;
                 to.y = position.y;
                 return math.normalizesafe(to - position);
             }
@@ -289,6 +299,7 @@ namespace ME.BECS.Pathfinding {
             
             var srcArea = root.chunks[fromPortalInfo.chunkIndex].portals.list[state, fromPortalInfo.portalIndex].globalArea;
             var nearestPortalToTarget = GetNearestPortal(state, in root, from, to, PortalInfo.Invalid);
+            if (nearestPortalToTarget.IsValid == false) nearestPortalToTarget = GetNearestPortal(state, in root, from, to, in fromPortalInfo);
             var targetArea = root.chunks[nearestPortalToTarget.chunkIndex].portals.list[state, nearestPortalToTarget.portalIndex].globalArea;
             
             if (fromPortalInfo.pack != toPortalInfo.pack && srcArea != targetArea) {
@@ -456,7 +467,12 @@ namespace ME.BECS.Pathfinding {
                     var area = chunk.portals.list[state, i].globalArea;
                     if (srcArea > 0u && area != srcArea) continue;
                     var pos = GetPortalPosition(state, in root, chunkIndexLocal, i);
-                    var d = math.lengthsq(pos - target) + math.lengthsq(pos - position);
+                    sfloat d = 0f;
+                    if (sourcePortalInfo.IsValid == false) {
+                        d = math.lengthsq(pos - target) + math.lengthsq(pos - position);
+                    } else {
+                        d = math.lengthsq(pos - target);
+                    }
                     //UnityEngine.Debug.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)target, UnityEngine.Color.red, 10f);
                     //UnityEngine.Debug.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)pos + UnityEngine.Vector3.up * 3f, UnityEngine.Color.red, 10f);
                     if (d < dist) {
@@ -732,6 +748,22 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
+        public static Direction GetCoordDirection(int x, int y) {
+
+            if (x == -1 && y == -1) return Direction.DownLeft;
+            if (x == -1 && y == 0)  return Direction.Left;
+            if (x == -1 && y == 1)  return Direction.UpLeft;
+            if (x == 0  && y == 1)  return Direction.Up;
+            if (x == 1  && y == 1)  return Direction.UpRight;
+            if (x == 1  && y == 0)  return Direction.Right;
+            if (x == 1  && y == -1) return Direction.DownRight;
+            if (x == 0  && y == -1) return Direction.Down;
+            
+            return Direction.UpRight;
+
+        }
+
+        [INLINE(256)]
         internal static TempNode GetNeighbourIndex(in World world, TempNode node, uint direction, uint width, uint height, MemArray<Path.Chunk> gridChunks, uint chunksX, uint chunksY) {
 
             /*
@@ -921,19 +953,22 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static float3 ClampPosition(in Ent graphEnt, float3 position) {
+        public static Path.Target ClampPosition(in Ent graphEnt, in Path.Target target) {
 
             var root = graphEnt.Read<RootGraphComponent>();
             var fullWidth = root.width * root.chunkWidth * root.nodeSize;
             var fullHeight = root.height * root.chunkHeight * root.nodeSize;
             var offset = new float3(root.chunkWidth * 0.5f, 0f, root.chunkHeight * 0.5f);
 
-            return new float3(math.clamp(position.x, root.position.x - offset.x, fullWidth + root.position.x - offset.x - root.nodeSize), 0f, math.clamp(position.z, root.position.z - offset.z, fullHeight + root.position.z - offset.z - root.nodeSize));
+            var result = new Path.Target(target);
+            var point = new float3(math.clamp(target.center.x, root.position.x - offset.x, fullWidth + root.position.x - offset.x - root.nodeSize), 0f, math.clamp(target.center.z, root.position.z - offset.z, fullHeight + root.position.z - offset.z - root.nodeSize));
+            result.center = point;
+            return result;
             
         }
 
         [INLINE(256)]
-        public static uint GetChunkIndex(in RootGraphComponent root, float3 position, bool clamp = true) {
+        public static uint GetChunkIndex(in RootGraphComponent root, in float3 position, bool clamp = true) {
             
             var offset = new float3(root.nodeSize * 0.5f);
             offset.y = 0f;
@@ -972,12 +1007,12 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, float3 pos, float3 rotPoint, quaternion rotation, bool clamp = true) {
+        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, in float3 rotPoint, in quaternion rotation, bool clamp = true) {
             return GetNodeIndex(in root, in chunk, math.mul(rotation, pos - rotPoint) + rotPoint, clamp);
         }
 
         [INLINE(256)]
-        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, float3 pos, bool clamp = true) {
+        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, bool clamp = true) {
 
             var offset = new float3(root.nodeSize * 0.5f);
             offset.y = 0f;
@@ -1293,7 +1328,7 @@ namespace ME.BECS.Pathfinding {
                 if ((node.walkable == false || x == length - 1u) && rangeStarted == true) {
                     // close range
                     var middlePoint = (x + rangeStart) / 2u;
-                    var size = x - rangeStart + 1u;
+                    var size = x - rangeStart + (node.walkable == false ? 0u : 1u);
                     var rangeIdx = GetNodeIndex(in root, xMultiplier * middlePoint + yMultiplier * axisOffset, yMultiplier * middlePoint + xMultiplier * axisOffset);
                     var pos = GetPosition(in root, in chunkComponent, rangeIdx);
                     chunkComponent.portals.list.Add(ref world.state.ptr->allocator, new Portal() {
@@ -1319,6 +1354,7 @@ namespace ME.BECS.Pathfinding {
 
             public bool drawNormals;
             public bool drawNodes;
+            public bool drawPortals;
 
         }
 
@@ -1327,28 +1363,46 @@ namespace ME.BECS.Pathfinding {
 
             if (path.IsCreated == false) return;
 
+            var gizmosStyle = new UnityEngine.GUIStyle();
+            gizmosStyle.richText = true;
+
             var world = path.graph.World;
             
             var offset = new float3(0f, 0.02f, 0f);
             var cellSize = path.graph.Read<RootGraphComponent>().nodeSize;
             for (uint i = 0; i < path.chunks.Length; ++i) {
                 var chunk = path.chunks[world.state, i];
-                var chunkIndex = chunk.index;
+                if (chunk.flowField.IsCreated == false) continue;
+                var chunkIndex = i;
                 for (uint j = 0; j < chunk.flowField.Length; ++j) {
                     var nodeIndex = j;
                     var item = chunk.flowField[world.state, j];
                     var pos = Graph.GetPosition(world.state, in path.graph, chunkIndex, nodeIndex) + offset;
                     pos.y = path.graph.Read<RootGraphComponent>().chunks[chunkIndex].nodes[world.state, nodeIndex].height + offset.y;
-                    if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == 1) {
+                    /*if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == true) {
                         var dir3d = math.normalizesafe(path.to - pos);
                         UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
-                    } else {
-                        UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
-                        Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(Graph.GetDirection(item.direction) * 0.25f * cellSize), (UnityEngine.Vector3)Graph.GetDirection(item.direction) * 0.5f, scale: (float)cellSize);
+                    } else*/
+                    #if UNITY_EDITOR
+                    UnityEditor.Handles.color = new UnityEngine.Color(1f, 1f, 1f, 0.3f);
+                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"<color=grey>{item.bestCost}</color>", gizmosStyle);
+                    #endif
+                    {
+                        if (item.direction == Graph.TARGET_BYTE) {
+                            UnityEngine.Gizmos.color = UnityEngine.Color.green;
+                            UnityEngine.Gizmos.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)(pos + math.up() * 5f));
+                            UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)pos, new UnityEngine.Vector3((float)cellSize, 0f, (float)cellSize) * 0.9f);
+                        } else if (item.direction == Graph.LOS_BYTE && item.hasLineOfSight == true) {
+                            UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                            var dir3d = math.normalizesafe(path.to.center - pos);
+                            Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
+                        } else {
+                            UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
+                            Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(Graph.GetDirection(item.direction) * 0.25f * cellSize), (UnityEngine.Vector3)Graph.GetDirection(item.direction) * 0.5f, scale: (float)cellSize);
+                        }
                     }
                     
-                    // UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"{item.bestCost}");
                     /*if (Unity.Mathematics.math.lengthsq(pos - root.chunks[world.state, chunkIndex].center) <= 100f) {
                         var node = path.chunks[world.state, chunkIndex].bestCost[world.state, nodeIndex];
                     }*/
@@ -1360,8 +1414,12 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static void DrawGizmos(Ent graph, GizmosParameters parameters) {
 
+            var gizmosStyle = new UnityEngine.GUIStyle();
+            gizmosStyle.richText = true;
+
             var offset = (UnityEngine.Vector3)new float3(0f, 0.05f, 0f);
             var root = graph.Read<RootGraphComponent>();
+            var nodeSize = (float)root.nodeSize;
             var state = graph.World.state;
             for (uint i = 0; i < root.chunks.Length; ++i) {
 
@@ -1371,54 +1429,66 @@ namespace ME.BECS.Pathfinding {
                 UnityEngine.Gizmos.color = color;
                 DrawGizmosLevel(state, graph, i, in chunk, in root, color, (float3)offset, parameters);
 
-                var portals = chunk.portals;
-                for (uint j = 0; j < portals.list.Count; ++j) {
-                    var portal = portals.list[state, j];
-                    {
-                        var xMultiplier = portal.axis.x;
-                        var yMultiplier = portal.axis.y;
-                        var size = portal.size;
-                        var c = UnityEngine.Color.yellow;
-                        c.a = 0.3f;
-                        UnityEngine.Gizmos.color = c;
-                        UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, new UnityEngine.Vector3(xMultiplier * size, 2f, yMultiplier * size));
-                        
-                        c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
-                        c.a = 0.3f;
-                        UnityEngine.Gizmos.color = c;
-                        UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, UnityEngine.Vector3.one);
-                        
-                        #if UNITY_EDITOR
-                        UnityEditor.Handles.color = UnityEngine.Color.magenta;
-                        UnityEditor.Handles.Label((UnityEngine.Vector3)portal.position + offset, $"{portal.area}\n{portal.globalArea}");
-                        #endif
-                    }
+                if (parameters.drawPortals == true) {
 
-                    // draw hierarchy graph
-                    {
-                        // local connections
-                        for (uint n = 0u; n < portal.localNeighbours.Count; ++n) {
-                            var neighbour = portal.localNeighbours[n];
-                            var info = neighbour.portalInfo;
-                            var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
-                            var c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
-                            c.a = 1f;
+                    var portals = chunk.portals;
+                    for (uint j = 0; j < portals.list.Count; ++j) {
+                        var portal = portals.list[state, j];
+                        {
+                            var xMultiplier = portal.axis.x;
+                            var yMultiplier = portal.axis.y;
+                            var size = portal.size;
+                            var c = UnityEngine.Color.yellow;
+                            c.a = 0.3f;
                             UnityEngine.Gizmos.color = c;
-                            var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
-                            var dirNorm = (UnityEngine.Vector3)math.normalizesafe((float3)dir);
-                            DrawGizmosArrow((UnityEngine.Vector3)portal.position + dirNorm * 1f + offset, dir - dirNorm * 2f + offset);
-                        }
-                        
-                        // remote connections
-                        for (uint n = 0u; n < portal.remoteNeighbours.Count; ++n) {
-                            var neighbour = portal.remoteNeighbours[n];
-                            var info = neighbour.portalInfo;
-                            var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
-                            var c = UnityEngine.Color.white;
+                            UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, new UnityEngine.Vector3(xMultiplier * size * nodeSize, 2f, yMultiplier * size * nodeSize));
+
+                            c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
+                            c.a = 0.3f;
                             UnityEngine.Gizmos.color = c;
-                            var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
-                            DrawGizmosArrow((UnityEngine.Vector3)portal.position + offset, dir + offset);
+                            UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)portal.position + offset, UnityEngine.Vector3.one);
+
+                            #if UNITY_EDITOR
+                            UnityEditor.Handles.color = UnityEngine.Color.magenta;
+                            UnityEditor.Handles.Label((UnityEngine.Vector3)portal.position + offset, $"<color=magenta>A:{portal.area}/{portal.globalArea}\nR:{portal.rangeStart}/{portal.size}</color>", gizmosStyle);
+                            #endif
                         }
+
+                        // draw hierarchy graph
+                        {
+                            // local connections
+                            for (uint n = 0u; n < portal.localNeighbours.Count; ++n) {
+                                var neighbour = portal.localNeighbours[n];
+                                var info = neighbour.portalInfo;
+                                var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
+                                var c = UnityEngine.Color.HSVToRGB((float)Random.CreateFromIndex(portal.area).NextFloat(), 1f, 1f);
+                                c.a = 1f;
+                                UnityEngine.Gizmos.color = c;
+                                var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
+                                var dirNorm = (UnityEngine.Vector3)math.normalizesafe((float3)dir);
+                                DrawGizmosArrow((UnityEngine.Vector3)portal.position + dirNorm * 1f + offset, dir - dirNorm * 2f + offset);
+                                #if UNITY_EDITOR
+                                UnityEditor.Handles.color = c;
+                                UnityEditor.Handles.Label((UnityEngine.Vector3)(portal.position + targetPortal.position) * 0.5f + offset, $"<color=white>L:{neighbour.length}</color>", gizmosStyle);
+                                #endif
+                            }
+
+                            // remote connections
+                            for (uint n = 0u; n < portal.remoteNeighbours.Count; ++n) {
+                                var neighbour = portal.remoteNeighbours[n];
+                                var info = neighbour.portalInfo;
+                                var targetPortal = root.chunks[state, info.chunkIndex].portals.list[state, info.portalIndex];
+                                var c = UnityEngine.Color.white;
+                                UnityEngine.Gizmos.color = c;
+                                var dir = (UnityEngine.Vector3)(targetPortal.position - portal.position);
+                                DrawGizmosArrow((UnityEngine.Vector3)portal.position + offset, dir + offset);
+                                #if UNITY_EDITOR
+                                UnityEditor.Handles.color = c;
+                                UnityEditor.Handles.Label((UnityEngine.Vector3)(portal.position + targetPortal.position) * 0.5f + offset, $"<color=white>L:{neighbour.length}</color>", gizmosStyle);
+                                #endif
+                            }
+                        }
+
                     }
 
                 }
@@ -1430,14 +1500,18 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static void DrawGizmosLevel(safe_ptr<State> state, in Ent graph, uint chunkIndex, in ChunkComponent chunk, in RootGraphComponent rootGraph, UnityEngine.Color color, float3 offsetBase, GizmosParameters parameters) {
 
+            var gizmosStyle = new UnityEngine.GUIStyle();
+            gizmosStyle.richText = true;
+
             {
                 var x = rootGraph.chunkWidth * rootGraph.nodeSize;
                 var y = rootGraph.chunkHeight * rootGraph.nodeSize;
-                UnityEngine.Gizmos.color = UnityEngine.Color.gray;
-                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)chunk.center, new UnityEngine.Vector3((float)x, 0f, (float)y));
+                UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                var size = new UnityEngine.Vector3((float)x, 0f, (float)y);
+                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)chunk.center + size * 0.5f - new UnityEngine.Vector3((float)rootGraph.nodeSize * 0.5f, 0f, (float)rootGraph.nodeSize * 0.5f), size);
                 #if UNITY_EDITOR
                 UnityEditor.Handles.color = UnityEngine.Color.cyan;
-                UnityEditor.Handles.Label((UnityEngine.Vector3)chunk.center, chunkIndex.ToString());
+                UnityEditor.Handles.Label((UnityEngine.Vector3)chunk.center, $"<color=cyan>{chunkIndex}</color>", gizmosStyle);
                 #endif
             }
 

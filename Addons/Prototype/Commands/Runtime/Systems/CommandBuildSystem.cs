@@ -6,11 +6,11 @@ namespace ME.BECS.Commands {
     using Units;
     using Transforms;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CommandBuildSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;

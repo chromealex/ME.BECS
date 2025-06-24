@@ -18,7 +18,7 @@ namespace ME.BECS.UnitsHealthBars {
     using ME.BECS.FogOfWar;
     using ME.BECS.Players;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Drawing health bars via GL API")]
     public struct DrawHealthBarsSystem : IAwake, IUpdate, IDestroy {
 
@@ -64,7 +64,7 @@ namespace ME.BECS.UnitsHealthBars {
         private Ent cameraEnt;
         private ClassPtr<UnityEngine.Camera> cameraObject;
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<UnitAspect> {
 
             public SystemLink<CreateSystem> fow;

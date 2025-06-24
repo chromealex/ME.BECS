@@ -6,7 +6,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public static unsafe class ArchetypeQueries {
 
         public struct QueryCompose {
@@ -64,7 +64,7 @@ namespace ME.BECS {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ComposeJob : IJob {
 
             public QueryCompose query;
@@ -232,7 +232,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct WithAnyJob : IJob {
 
             public uint typeId1;
@@ -297,7 +297,7 @@ namespace ME.BECS {
             
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct WithJob : IJob {
 
             public uint typeId;
@@ -324,7 +324,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct WithArrJob : IJob {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
@@ -355,7 +355,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct WithoutArrJob : IJob {
 
             public ME.BECS.Internal.Array<uint> typeIdArr;
@@ -395,7 +395,7 @@ namespace ME.BECS {
             
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct WithoutJob : IJob {
 
             public uint typeId;

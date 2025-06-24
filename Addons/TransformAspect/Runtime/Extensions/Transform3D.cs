@@ -87,13 +87,35 @@ namespace ME.BECS.Transforms {
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
             ent.worldMatrix = math.mul(parent.readWorldMatrix, ent.readLocalMatrix);
-
+            if (ent.IsStatic == true) ent.ent.SetTag<IsTransformStaticCalculatedComponent>(true);
+            
         }
 
         [INLINE(256)]
         public static void CalculateLocalMatrix(in TransformAspect ent) {
 
-            ent.localMatrix = float4x4.TRS(ent.readLocalPosition, ent.readLocalRotation, ent.readLocalScale);
+            var t = ent.readLocalPosition;
+            var s = ent.readLocalScale;
+            var r = ent.readLocalRotation.value;
+            ref var matrix = ref ent.localMatrix;
+            matrix.c0.x = (1.0f - 2.0f * (r.y * r.y + r.z * r.z)) * s.x;
+            matrix.c0.y = (r.x * r.y + r.z * r.w) * s.x * 2.0f;
+            matrix.c0.z = (r.x * r.z - r.y * r.w) * s.x * 2.0f;
+            matrix.c0.w = 0.0f;
+            matrix.c1.x = (r.x * r.y - r.z * r.w) * s.y * 2.0f;
+            matrix.c1.y = (1.0f - 2.0f * (r.x * r.x + r.z * r.z)) * s.y;
+            matrix.c1.z = (r.y * r.z + r.x * r.w) * s.y * 2.0f;
+            matrix.c1.w = 0.0f;
+            matrix.c2.x = (r.x * r.z + r.y * r.w) * s.z * 2.0f;
+            matrix.c2.y = (r.y * r.z - r.x * r.w) * s.z * 2.0f;
+            matrix.c2.z = (1.0f - 2.0f * (r.x * r.x + r.y * r.y)) * s.z;
+            matrix.c2.w = 0.0f;
+            matrix.c3.x = t.x;
+            matrix.c3.y = t.y;
+            matrix.c3.z = t.z;
+            matrix.c3.w = 1.0f;
+            
+            //ent.localMatrix = (float4x4)UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)ent.readLocalPosition, (UnityEngine.Quaternion)ent.readLocalRotation, (UnityEngine.Vector3)ent.readLocalScale); //float4x4.TRS(ent.readLocalPosition, ent.readLocalRotation, ent.readLocalScale);
 
         }
 

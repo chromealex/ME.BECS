@@ -18,12 +18,12 @@ namespace ME.BECS.Attack {
     using ME.BECS.Commands;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Move unit if it was damaged and is not attacking and without hold")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct MoveToAttackerSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct MoveToAttackerJob : IJobFor2Aspects1Components<UnitAspect, TransformAspect, DamageTookEvent> {
 
             public BuildGraphSystem buildGraphSystem;
@@ -59,7 +59,7 @@ namespace ME.BECS.Attack {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct StopOnTargetJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackCommandComponent> {
 
             public BuildGraphSystem buildGraphSystem;
@@ -89,7 +89,7 @@ namespace ME.BECS.Attack {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
 
             public BuildGraphSystem buildGraphSystem;
@@ -100,14 +100,18 @@ namespace ME.BECS.Attack {
                 
                 var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos, in this.buildGraphSystem);
                 if (result == AttackUtils.ReactionType.MoveToTarget) {
-                    PathUtils.UpdateTarget(in this.buildGraphSystem, group, pos, in jobInfo);
+                    if (command.target.TryRead(out UnitQuadSizeComponent unitQuadSizeComponent) == true) {
+                        PathUtils.UpdateTarget(in this.buildGraphSystem, group, Path.Target.Create(new Bounds(command.target.GetAspect<TransformAspect>().position, new float3(unitQuadSizeComponent.size.x, 0f, unitQuadSizeComponent.size.y))), in jobInfo);
+                    } else {
+                        PathUtils.UpdateTarget(in this.buildGraphSystem, group, Path.Target.Create(pos), in jobInfo);
+                    }
                 }
 
             }
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RemoveComebackAfterAttackComponentJob : IJobForEntity {
             
             public void Execute(in JobInfo jobInfo, in Ent ent) {
@@ -116,7 +120,7 @@ namespace ME.BECS.Attack {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ComebackAfterAttackJob : IJobFor2Aspects1Components<TransformAspect, UnitAspect, ComebackAfterAttackComponent> {
 
             public BuildGraphSystem buildGraphSystem;

@@ -592,6 +592,7 @@ namespace ME.BECS.Editor {
                                 child.RegisterValueChangeCallback((evt) => {
 
                                     if (evt.target == null) return;
+                                    if (world.isCreated == false || entity.IsAlive() == false) return;
                                     var userData = ((PropertyField)evt.target).userData;
                                     if (userData == null) return;
                                     var idx = (int)userData;

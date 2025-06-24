@@ -5,7 +5,7 @@ namespace ME.BECS.Players {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Network;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Initialize default players")]
     public struct PlayersSystem : IAwake {
 

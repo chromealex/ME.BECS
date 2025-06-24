@@ -6,11 +6,11 @@ namespace ME.BECS.FogOfWar {
     using Transforms;
     using Unity.Jobs;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(CreateSystem))]
     public struct UpdateSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RevealRectJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
@@ -27,7 +27,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RevealRangeJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
@@ -44,7 +44,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RevealRectPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
@@ -62,7 +62,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RevealRangePartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;
@@ -80,7 +80,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RevealRangeSectorJob : IJobForComponents<FogOfWarRevealerComponent, OwnerComponent, FogOfWarSectorRevealerComponent> {
 
             public FogOfWarStaticComponent props;
@@ -98,7 +98,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RevealRangeSectorPartialJob : IJobForComponents<ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent> {
 
             public FogOfWarStaticComponent props;

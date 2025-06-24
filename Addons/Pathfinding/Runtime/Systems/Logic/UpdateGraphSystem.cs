@@ -20,12 +20,12 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Transforms;
     using static Cuts;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Schedule update a pathfinding graph.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct UpdateGraphSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public unsafe struct ResetPathJob : IJobForComponents<TargetPathComponent> {
 
             public Ent graph;
@@ -49,7 +49,7 @@ namespace ME.BECS.Pathfinding {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public unsafe struct UpdateGraphMaskJob : IJobForComponents<GraphMaskComponent, GraphMaskRuntimeComponent> {
 
             public BuildGraphSystem graphSystem;

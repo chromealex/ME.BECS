@@ -30,10 +30,15 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position, in JobInfo jobInfo = default) {
-            
+        public static void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in float3 position, in JobInfo jobInfo = default) {
+            UpdateTarget(in buildGraphSystem, in unitCommandGroup, Path.Target.Create(position), in jobInfo);
+        }
+
+        [INLINE(256)]
+        public static unsafe void UpdateTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, in Path.Target pathTarget, in JobInfo jobInfo = default) {
+
             unitCommandGroup.ent.Set(new ME.BECS.Transforms.LocalPositionComponent() {
-                value = position,
+                value = pathTarget.center,
             });
             
             unitCommandGroup.Lock();
@@ -46,16 +51,16 @@ namespace ME.BECS.Pathfinding {
             }
             
             // clamp position for each graph to find middle point
-            var middlePoint = float3.zero;
-            if (typeIds.Count > 0) {
+            var middlePoint = pathTarget;
+            if (typeIds.Count > 0 && pathTarget.type == Path.Target.TargetType.Point) {
+                var midPoint = float3.zero;
                 foreach (var typeId in typeIds) {
                     var graph = buildGraphSystem.GetGraphByTypeId(typeId);
-                    var pos = GraphUtils.GetNearestNodeByFilter(in graph, position, new Filter());
-                    middlePoint += pos;
+                    var pos = GraphUtils.GetNearestNodeByFilter(in graph, pathTarget.center, new Filter());
+                    midPoint += pos;
                 }
-                middlePoint /= typeIds.Count;
-            } else {
-                middlePoint = position;
+                midPoint /= typeIds.Count;
+                middlePoint.center = midPoint;
             }
             
             // Update only last chunk if target chunk is equal with previous
@@ -69,20 +74,20 @@ namespace ME.BECS.Pathfinding {
                     var target = unitCommandGroup.targets[typeId];
                     if (target.IsAlive() == true && target.Has<TargetPathComponent>() == true) {
                         var root = buildGraphSystem.GetGraphByTypeId(typeId).Read<RootGraphComponent>();
-                        var chunkIndex = Graph.GetChunkIndex(in root, middlePoint);
+                        var chunkIndex = Graph.GetChunkIndex(in root, middlePoint.center);
                         ref var prevPath = ref target.Get<TargetPathComponent>().path;
                         var prevRoot = prevPath.graph.Read<RootGraphComponent>();
                         var wasCreated = prevPath.chunks[state, chunkIndex].flowField.IsCreated;
                         prevPath.chunks[state, chunkIndex].flowField.Dispose(ref state.ptr->allocator);
-                        var prevChunkIndex = Graph.GetChunkIndex(in prevRoot, prevPath.to);
+                        var prevChunkIndex = Graph.GetChunkIndex(in prevRoot, prevPath.to.center);
                         if (chunkIndex != prevChunkIndex) {
                             // chunk changed - repath
                             chunkChanged = true;
                             nodeChanged = true;
                             break;
                         }
-                        var nodeIndex = Graph.GetNodeIndex(in root, in root.chunks[state, chunkIndex], position);
-                        var prevNodeIndex = Graph.GetNodeIndex(in prevRoot, in prevRoot.chunks[state, prevChunkIndex], prevPath.to);
+                        var nodeIndex = Graph.GetNodeIndex(in root, in root.chunks[state, chunkIndex], pathTarget.center);
+                        var prevNodeIndex = Graph.GetNodeIndex(in prevRoot, in prevRoot.chunks[state, prevChunkIndex], prevPath.to.center);
                         if (nodeIndex != prevNodeIndex) {
                             nodeChanged = true;
                             if (wasCreated == true) {
@@ -106,7 +111,7 @@ namespace ME.BECS.Pathfinding {
                     foreach (var typeId in typeIds) {
                         var target = unitCommandGroup.targets[typeId];
                         if (target.IsAlive() == true) {
-                            target.Read<TargetComponent>().target.Get<TargetInfoComponent>().position = middlePoint;
+                            target.Read<TargetComponent>().target.Get<TargetInfoComponent>().target = middlePoint;
                             ref var prevPath = ref target.Get<TargetPathComponent>().path;
                             prevPath.to = middlePoint;
                         }
@@ -177,10 +182,10 @@ namespace ME.BECS.Pathfinding {
         }
         
         [INLINE(256)]
-        public static Ent CreateTargetInfo(in float3 position, in JobInfo jobInfo) {
+        public static Ent CreateTargetInfo(in Path.Target target, in JobInfo jobInfo) {
             var ent = Ent.New(in jobInfo);
             ent.Set(new TargetInfoComponent() {
-                position = position,
+                target = target,
                 volume = (uint)(DEFAULT_VOLUME_RADIUS * UnitUtils.FLOAT_TO_UINT),
             });
             return ent;
@@ -202,7 +207,7 @@ namespace ME.BECS.Pathfinding {
             var targetComponent = group.targets[unit.typeId].Read<TargetComponent>();
             var target = targetComponent.target.Read<TargetInfoComponent>();
             var targetRadiusSqr = GetTargetRadiusSqr(in targetComponent);
-            return math.lengthsq(target.position - tr.position) <= targetRadiusSqr;
+            return target.target.Contains(tr.position, targetRadiusSqr);
 
         }
 

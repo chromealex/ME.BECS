@@ -13,7 +13,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Players;
     using ME.BECS.Pathfinding;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct DrawGizmosSystem : IDrawGizmos {
 
         public bool drawGizmos;

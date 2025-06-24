@@ -48,7 +48,7 @@ namespace ME.BECS.Pathfinding {
         
         public UnityEngine.Texture2D GetTexture() => this.texture.Value;
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ClearTextureJob : IJob {
 
             public Unity.Collections.NativeArray<UnityEngine.Color32> buffer;
@@ -59,7 +59,7 @@ namespace ME.BECS.Pathfinding {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct UpdateTextureJob : Unity.Jobs.IJobParallelFor {
 
             public World world;

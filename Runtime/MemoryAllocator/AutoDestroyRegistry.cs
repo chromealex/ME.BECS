@@ -5,10 +5,10 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public static unsafe class AutoDestroyRegistryStatic<T> where T : unmanaged, IComponentDestroy {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         [AOT.MonoPInvokeCallback(typeof(AutoDestroyRegistry.DestroyDelegate))]
         public static void Destroy(byte* comp) {
 

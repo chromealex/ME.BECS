@@ -29,11 +29,11 @@ namespace ME.BECS {
 
     }
 
-    [BURST(FloatPrecision.High, FloatMode.Deterministic, CompileSynchronously = true, Debug = false)]
+    [BURST(FloatPrecision.High, FloatMode.Deterministic, Debug = false)]
     internal static unsafe class BurstCompileOnStart<T> where T : unmanaged, IStart {
    
         [Preserve]
-        [BURST(FloatPrecision.High, FloatMode.Deterministic, CompileSynchronously = true, Debug = false)]
+        [BURST(FloatPrecision.High, FloatMode.Deterministic, Debug = false)]
         [AOT.MonoPInvokeCallbackAttribute(typeof(FunctionPointerDelegate))]
         public static void Call(void* systemData, ref SystemContext context) {
 

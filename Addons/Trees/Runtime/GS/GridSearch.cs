@@ -217,7 +217,7 @@ namespace ME.BECS.Trees {
             this.dataWriter.Add(data);
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         public struct InitializeJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
@@ -377,7 +377,7 @@ namespace ME.BECS.Trees {
         }
 
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct GetminmaxJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
@@ -418,7 +418,7 @@ namespace ME.BECS.Trees {
 
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct AssignHashJob : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
@@ -442,7 +442,7 @@ namespace ME.BECS.Trees {
         }
 
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct MemsetCellStartJob : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
@@ -457,7 +457,7 @@ namespace ME.BECS.Trees {
 
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct SortCellJob : IJob {
 
             [NativeDisableUnsafePtrRestriction]
@@ -503,7 +503,7 @@ namespace ME.BECS.Trees {
 
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct ClosestPointExecute {
 
             public float maxRangeSqr;
@@ -638,7 +638,7 @@ namespace ME.BECS.Trees {
 
         }
         
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct FindWithinExecute {
 
             [ReadOnly]
@@ -732,7 +732,7 @@ namespace ME.BECS.Trees {
         }
 
         //--------- Fast sort stuff
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct PopulateEntryJob : IJobParallelForDefer {
 
             [NativeDisableParallelForRestriction]
@@ -746,7 +746,7 @@ namespace ME.BECS.Trees {
 
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         private struct DePopulateEntryJob : IJobParallelForDefer {
 
             [NativeDisableUnsafePtrRestriction]
@@ -863,7 +863,7 @@ namespace ME.BECS.Trees {
 
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         public struct Merge<T> : IJob where T : unmanaged, System.IComparable<T> {
 
             [NativeDisableContainerSafetyRestriction]
@@ -920,7 +920,7 @@ namespace ME.BECS.Trees {
 
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile]
         public struct QuicksortJob<T> : IJob where T : unmanaged, System.IComparable<T> {
 
             [NativeDisableContainerSafetyRestriction]

@@ -6,7 +6,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(ShadowCopySystem))]
     public struct ShadowCopyUpdateSystem : IUpdate {
 
@@ -64,7 +64,7 @@ namespace ME.BECS.FogOfWar {
             
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct UpdatePointsJob : IJobForComponents<FogOfWarShadowCopyComponent> {
 
             public CreateSystem fow;
@@ -78,7 +78,7 @@ namespace ME.BECS.FogOfWar {
             
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct UpdateRectJob : IJobForComponents<FogOfWarShadowCopyComponent, FogOfWarShadowCopyPointsComponent> {
 
             public CreateSystem fow;

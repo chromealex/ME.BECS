@@ -17,7 +17,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CreateSystem : IAwake, IUpdate {
 
@@ -28,7 +28,7 @@ namespace ME.BECS.FogOfWar {
 
         public readonly Ent GetHeights() => this.heights;
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CreateJob : IJobForAspects<TeamAspect> {
 
             public uint2 fowSize;
@@ -45,7 +45,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CleanUpJob : IJobForAspects<TeamAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TeamAspect player) {
@@ -57,7 +57,7 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public unsafe struct UpdateHeightJob : IJobParallelFor {
 
             public MemArrayAuto<ulong> dirtyChunks;

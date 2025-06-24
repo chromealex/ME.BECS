@@ -213,11 +213,11 @@ namespace ME.BECS {
         }
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(QuadTreeInsertSystem))]
     public struct QuadTreeQuerySystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<QuadTreeQueryAspect, TransformAspect> {
 
             public QuadTreeInsertSystem system;

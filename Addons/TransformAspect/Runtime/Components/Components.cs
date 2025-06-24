@@ -33,6 +33,13 @@ namespace ME.BECS.Transforms {
         public float3 value;
 
     }
+    
+    [EditorComment("Is this transform is static?")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct IsTransformStaticComponent : IConfigComponent { }
+    
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct IsTransformStaticCalculatedComponent : IComponent { }
 
     [EditorComment("Current calculated world matrix")]
     [ComponentGroup(typeof(TransformMatrixComponentGroup))]

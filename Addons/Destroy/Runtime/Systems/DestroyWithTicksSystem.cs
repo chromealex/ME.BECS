@@ -6,10 +6,10 @@ namespace ME.BECS {
     using Jobs;
     
     [UnityEngine.Tooltip("Update entities with ticks component (ent.Destroy(ulong ticks) API).")]
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct DestroyWithTicksSystem : IUpdate {
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForComponents<DestroyWithTicks> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DestroyWithTicks component) {

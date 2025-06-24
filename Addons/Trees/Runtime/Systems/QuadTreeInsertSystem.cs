@@ -78,7 +78,7 @@ namespace ME.BECS {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy {
         
         public static QuadTreeInsertSystem Default => new QuadTreeInsertSystem() {
@@ -91,7 +91,7 @@ namespace ME.BECS {
         private UnsafeList<safe_ptr> quadTrees;
         public readonly uint treesCount => (uint)this.quadTrees.Length;
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> quadTrees;
@@ -114,7 +114,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> quadTrees;
@@ -137,7 +137,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> quadTrees;
@@ -151,7 +151,7 @@ namespace ME.BECS {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ClearJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> quadTrees;

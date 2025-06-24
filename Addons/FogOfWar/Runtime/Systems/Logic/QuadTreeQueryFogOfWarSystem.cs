@@ -4,11 +4,11 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(CreateSystem), typeof(QuadTreeInsertSystem))]
     public struct QuadTreeQueryFogOfWarSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobFor2Aspects1Components<QuadTreeQueryAspect, TransformAspect, QuadTreeQueryFogOfWarFilter> {
 
             public QuadTreeInsertSystem system;

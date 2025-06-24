@@ -184,14 +184,14 @@ namespace ME.BECS {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct DisposeJob : IJob {
         public MemPtr ptr;
         public ushort worldId;
         public void Execute() => Worlds.GetWorld(this.worldId).state.ptr->allocator.Free(this.ptr);
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct DisposeAutoJob : IJob {
         public MemPtr ptr;
         public Ent ent;
@@ -205,14 +205,14 @@ namespace ME.BECS {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct DisposePtrJob : IJob {
         [NativeDisableUnsafePtrRestriction]
         public safe_ptr ptr;
         public void Execute() => _free(ref this.ptr);
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct DisposeWithAllocatorPtrJob : IJob {
 
         public AllocatorManager.AllocatorHandle allocator;

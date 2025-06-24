@@ -10,8 +10,8 @@ public static partial class libm
     /// <summary>
     /// Returns the sine of x
     /// </summary>
-    public static sfloat sinf(sfloat x)
-    {
+    public static sfloat sinf(sfloat x) {
+        return (float)System.Math.Sin((float)x);
         const uint pi_squared_times_five = 0x42456460; // 49.348022005446793094172454999381
 
         // https://en.wikipedia.org/wiki/Bhaskara_I%27s_sine_approximation_formula

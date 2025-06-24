@@ -7,10 +7,10 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Transforms;
     using ME.BECS.Views;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct ShadowCopySystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CreateJob : IJobForComponents<OwnerComponent, FogOfWarShadowCopyRequiredRuntimeComponent> {
 
             public Players.PlayersSystem playersSystem;

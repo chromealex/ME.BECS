@@ -147,7 +147,7 @@ namespace ME.BECS {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe partial struct Batches {
 
         [StructLayout(LayoutKind.Sequential)]
@@ -337,7 +337,7 @@ namespace ME.BECS {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         [INLINE(256)]
         public static void Apply(in safe_ptr<State> state) {
             new ApplyJob() {

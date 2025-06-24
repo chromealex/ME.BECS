@@ -17,7 +17,7 @@ namespace ME.BECS.Units {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Steering behaviour for units.")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public struct SteeringSystem : IUpdate, IDrawGizmos {
@@ -33,7 +33,7 @@ namespace ME.BECS.Units {
         public bool calculateAlignment;
         public bool drawGizmos;
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
 
             public SteeringSystem system;

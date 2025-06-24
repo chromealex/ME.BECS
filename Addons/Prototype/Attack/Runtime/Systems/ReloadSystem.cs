@@ -11,11 +11,11 @@ namespace ME.BECS.Attack {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Reload system")]
     public struct ReloadSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ReloadJob : IJobForAspects<AttackAspect> {
 
             public tfloat dt;

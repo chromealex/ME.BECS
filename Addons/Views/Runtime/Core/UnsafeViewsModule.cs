@@ -447,7 +447,7 @@ namespace ME.BECS.Views {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct UnsafeViewsModule<TEntityView> where TEntityView : IView {
 
         public safe_ptr<ViewsModuleData> data;

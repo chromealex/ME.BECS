@@ -13,12 +13,12 @@ namespace ME.BECS.Attack {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Search Target system")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public struct SearchTargetSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public World world;
@@ -56,7 +56,7 @@ namespace ME.BECS.Attack {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct SearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent> {
 
             public World world;

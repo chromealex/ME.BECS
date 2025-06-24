@@ -48,7 +48,7 @@ namespace ME.BECS {
 
     public static unsafe class API {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct BuilderArchetypesJob : IJob {
 
             public safe_ptr<State> state;

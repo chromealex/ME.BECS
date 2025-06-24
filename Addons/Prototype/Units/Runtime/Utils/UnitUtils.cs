@@ -103,7 +103,7 @@ namespace ME.BECS.Units {
             var lookDir = target - tr.position;
             if (math.lengthsq(lookDir) >= math.EPSILON) {
                 var speed = unit.rotationSpeed;
-                tr.rotation = math.slerp(tr.rotation, quaternion.LookRotation(lookDir, math.up()), dt * speed);
+                tr.rotation = math.slerp(tr.rotation, quaternion.LookRotationSafe(lookDir, math.up()), dt * speed);
             }
 
         }

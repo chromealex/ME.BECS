@@ -9,7 +9,7 @@ namespace ME.BECS {
 
     public partial struct OneShotTasks {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct ResolveTasksParallelJob : IJobParallelFor {
 
             public safe_ptr<State> state;

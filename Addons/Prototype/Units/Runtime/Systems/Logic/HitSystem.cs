@@ -6,11 +6,11 @@ namespace ME.BECS.Units {
     using ME.BECS.Transforms;
     using ME.BECS.Effects;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Apply damage from DamageTookComponent")]
     public struct HitSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForComponents<DamageTookComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref DamageTookComponent damageComponent) {

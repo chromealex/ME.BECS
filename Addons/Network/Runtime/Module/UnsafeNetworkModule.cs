@@ -158,7 +158,7 @@ namespace ME.BECS.Network {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct CopyStatePrepareJob : IJobSingle {
         
         public safe_ptr<UnsafeNetworkModule.Data> data;
@@ -175,7 +175,7 @@ namespace ME.BECS.Network {
         
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct CopyStateCompleteJob : IJobParallelFor {
         
         public safe_ptr<UnsafeNetworkModule.Data> data;

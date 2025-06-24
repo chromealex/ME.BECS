@@ -18,11 +18,11 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Stop unit while attacking")]
     public struct StopWhileAttackSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobSet : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parent) {
@@ -39,7 +39,7 @@ namespace ME.BECS.Attack {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobRemove : IJobForAspects<AttackAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor) {

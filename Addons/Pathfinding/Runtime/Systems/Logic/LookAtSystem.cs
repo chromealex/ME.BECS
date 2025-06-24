@@ -13,11 +13,11 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Look at target system")]
     public struct LookAtSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
             public tfloat dt;
@@ -31,7 +31,7 @@ namespace ME.BECS.Pathfinding {
                 
                 this.buildGraphSystem.ReadHeights().GetHeight(pos, out var unitNormal);
                 var rot = tr.rotation;
-                var toRot = quaternion.LookRotation(dir, unitNormal);
+                var toRot = quaternion.LookRotationSafe(dir, unitNormal);
                 var targetRot = toRot;
                 var maxDegreesDelta = this.dt * unit.readRotationSpeed;
                 var qAngle = math.angle(rot, toRot);

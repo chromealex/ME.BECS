@@ -36,9 +36,11 @@ namespace ME.BECS.FogOfWar {
 
             this.crossFadeMaterial.EnableKeyword("CROSS_FADE");
             this.propertyBlock = new UnityEngine.MaterialPropertyBlock();
-            
-        }
+            this.targetState = this.IsVisible();
+            this.crossFadeTimer = 1f;
 
+        }
+        
         public override void OnBecomeVisible(in EntRO ent) {
             
             base.OnBecomeVisible(in ent);

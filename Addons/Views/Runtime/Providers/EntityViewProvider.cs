@@ -40,7 +40,7 @@ namespace ME.BECS.Views {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct EntityViewProvider : IViewProvider<EntityView> {
 
         private const int BATCH_PER_ROOT = 256;

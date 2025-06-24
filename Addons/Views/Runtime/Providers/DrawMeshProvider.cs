@@ -17,7 +17,7 @@ namespace ME.BECS.Views {
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct DrawMeshProviderTag : IComponent {}
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct DrawMeshProvider : IViewProvider<EntityView> {
 
         public struct Info : System.IEquatable<Info> {
@@ -111,7 +111,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct UpdateMatricesJob : IJobParallelFor {
 
             public NativeList<UnityEngine.Matrix4x4>.ParallelWriter matrices;
