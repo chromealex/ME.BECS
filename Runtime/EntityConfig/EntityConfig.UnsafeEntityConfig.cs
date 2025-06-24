@@ -108,11 +108,20 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Apply(in UnsafeEntityConfig config, in Ent ent) {
+            public void Apply(in UnsafeEntityConfig config, in Ent ent, Config.JoinOptions options) {
 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
                     var typeId = this.typeIds[i];
+                    if (options == Config.JoinOptions.LeftJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == false) {
+                            continue;
+                        }
+                    } else if (options == Config.JoinOptions.RightJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == true) {
+                            continue;
+                        }
+                    }
                     var data = this.data + this.offsets[i];
                     var groupId = StaticTypes.tracker.Get(typeId);
                     var dataSize = StaticTypes.sizes.Get(typeId);
@@ -405,10 +414,20 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public void Apply(in UnsafeEntityConfig config, in Ent ent) {
+            public void Apply(in UnsafeEntityConfig config, in Ent ent, Config.JoinOptions options) {
 
+                var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
                     var typeId = this.typeIds[i];
+                    if (options == Config.JoinOptions.LeftJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == false) {
+                            continue;
+                        }
+                    } else if (options == Config.JoinOptions.RightJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == true) {
+                            continue;
+                        }
+                    }
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
                     this.functionPointers[i].Call(in config, data.ptr, in ent);
@@ -601,11 +620,20 @@ namespace ME.BECS {
             }
             
             [INLINE(256)]
-            public void Apply(in UnsafeEntityConfig config, in Ent ent) {
+            public void Apply(in UnsafeEntityConfig config, in Ent ent, Config.JoinOptions options) {
                 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
                     var typeId = this.typeIds[i];
+                    if (options == Config.JoinOptions.LeftJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == false) {
+                            continue;
+                        }
+                    } else if (options == Config.JoinOptions.RightJoin) {
+                        if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == true) {
+                            continue;
+                        }
+                    }
                     Batches.Set_INTERNAL(typeId, in ent, state);
                 }
                 
@@ -725,9 +753,9 @@ namespace ME.BECS {
 
             this.aspects.Apply(in ent);
             this.data.Apply(in this, in ent, options);
-            this.staticData.Apply(in this, in ent);
-            this.dataShared.Apply(in this, in ent);
-            this.dataInitialize.Apply(in this, in ent);
+            this.staticData.Apply(in this, in ent, options);
+            this.dataShared.Apply(in this, in ent, options);
+            this.dataInitialize.Apply(in this, in ent, options);
             
         }
 
