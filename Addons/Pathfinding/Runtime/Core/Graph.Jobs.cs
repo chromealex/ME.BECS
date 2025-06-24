@@ -526,7 +526,9 @@ namespace ME.BECS.Pathfinding {
                         gridChunk.flowField[this.world.state, node.nodeIndex].bestCost = 0f;
                         gridChunk.flowField[this.world.state, node.nodeIndex].hasLineOfSight = true;
                         gridChunk.flowField[this.world.state, node.nodeIndex].direction = Graph.TARGET_BYTE;
+                        #if UNITY_EDITOR
                         UnityEngine.Debug.DrawLine((UnityEngine.Vector3)Graph.GetPosition(in root, in chunk, node.nodeIndex), (UnityEngine.Vector3)(Graph.GetPosition(in root, in chunk, node.nodeIndex) + new float3(0f, 30f, 0f)), UnityEngine.Color.magenta, 10f);
+                        #endif
                         /*if (chunk.nodes[this.world.state, node.nodeIndex].walkable == false) {
                             gridChunk.flowField[this.world.state, node.nodeIndex].bestCost = Graph.UNWALKABLE_COST;
                         }*/
@@ -714,7 +716,7 @@ namespace ME.BECS.Pathfinding {
                                         var neighbourTempNode = Graph.GetNeighbourIndex(in this.world, curTempNode, localDir, root.chunkWidth, root.chunkHeight, this.path.chunks,
                                                                                         root.width, root.height);
                                         if (neighbourTempNode.chunkIndex == uint.MaxValue) continue;
-                                        // if (chunksVisited.IsSet((int)neighbourTempNode.chunkIndex) == false) continue;
+                                        //if (chunksVisited.IsSet((int)neighbourTempNode.chunkIndex) == false) continue;
 
                                         var chunk = root.chunks[this.world.state, neighbourTempNode.chunkIndex];
                                         var gridChunk = this.path.chunks[this.world.state, neighbourTempNode.chunkIndex];
