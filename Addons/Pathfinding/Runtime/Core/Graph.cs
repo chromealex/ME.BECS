@@ -467,7 +467,12 @@ namespace ME.BECS.Pathfinding {
                     var area = chunk.portals.list[state, i].globalArea;
                     if (srcArea > 0u && area != srcArea) continue;
                     var pos = GetPortalPosition(state, in root, chunkIndexLocal, i);
-                    var d = math.lengthsq(pos - target) + math.lengthsq(pos - position);
+                    sfloat d = 0f;
+                    if (sourcePortalInfo.IsValid == false) {
+                        d = math.lengthsq(pos - target) + math.lengthsq(pos - position);
+                    } else {
+                        d = math.lengthsq(pos - target);
+                    }
                     //UnityEngine.Debug.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)target, UnityEngine.Color.red, 10f);
                     //UnityEngine.Debug.DrawLine((UnityEngine.Vector3)pos, (UnityEngine.Vector3)pos + UnityEngine.Vector3.up * 3f, UnityEngine.Color.red, 10f);
                     if (d < dist) {
@@ -1488,7 +1493,8 @@ namespace ME.BECS.Pathfinding {
                 var x = rootGraph.chunkWidth * rootGraph.nodeSize;
                 var y = rootGraph.chunkHeight * rootGraph.nodeSize;
                 UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
-                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)chunk.center, new UnityEngine.Vector3((float)x, 0f, (float)y));
+                var size = new UnityEngine.Vector3((float)x, 0f, (float)y);
+                UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)chunk.center + size * 0.5f - new UnityEngine.Vector3((float)rootGraph.nodeSize * 0.5f, 0f, (float)rootGraph.nodeSize * 0.5f), size);
                 #if UNITY_EDITOR
                 UnityEditor.Handles.color = UnityEngine.Color.cyan;
                 UnityEditor.Handles.Label((UnityEngine.Vector3)chunk.center, $"<color=cyan>{chunkIndex}</color>", gizmosStyle);
