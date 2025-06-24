@@ -9,7 +9,7 @@ namespace ME.BECS.FogOfWar {
     using ME.BECS.Jobs;
     using static Cuts;
 
-    //[BURST(CompileSynchronously = true)]
+    //[BURST]
     [RequiredDependencies(typeof(CreateTextureSystem))]
     public unsafe struct UpdateTextureSystem : IUpdate {
 

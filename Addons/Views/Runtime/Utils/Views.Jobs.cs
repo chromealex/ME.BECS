@@ -20,10 +20,10 @@ namespace ME.BECS.Views {
     using ME.BECS.Jobs;
     using static CutsPool;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct Jobs {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobSpawnViews : IJob {
 
             public World connectedWorld;
@@ -75,7 +75,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobDespawnViews : IJob {
 
             public World viewsWorld;
@@ -137,7 +137,7 @@ namespace ME.BECS.Views {
 
         }
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobUpdateTransforms : IJobParallelForTransform {
 
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
@@ -153,7 +153,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
 
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
@@ -190,7 +190,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobAssignViews : IJobForComponents<AssignViewComponent> {
 
             public World viewsWorld;
@@ -254,7 +254,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobRemoveFromScene : IJobForComponents<ViewComponent> {
 
             public safe_ptr<ViewsModuleData> viewsModuleData;
@@ -287,7 +287,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobRemoveEntitiesFromScene : IJobParallelFor {
 
             public World world;
@@ -316,7 +316,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct JobAddToScene : IJobForComponents<IsViewRequested> {
 
             public safe_ptr<State> state;
@@ -363,7 +363,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CompleteJob : IJob {
 
             public safe_ptr<ViewsModuleData> viewsModuleData;
@@ -387,7 +387,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct PrepareJob : IJob {
 
             public World connectedWorld;
@@ -421,7 +421,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct UpdateCullingApplyStateJob : IJobParallelForDefer {
 
             public safe_ptr<State> state;
@@ -444,7 +444,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct UpdateCullingUpdateJob : IJobParallelForDefer {
             
             public safe_ptr<State> state;

@@ -5,11 +5,11 @@
     using Pathfinding;
     using Units;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CommandAttackCleanSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RemoveJob : IJobForComponents<UnitAttackCommandComponent> {
 
 

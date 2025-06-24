@@ -13,12 +13,12 @@ namespace ME.BECS.Pathfinding {
     using Unity.Collections;
     using static Cuts;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct BuildPathSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public unsafe struct UpdatePathJob : IJobForComponents<TargetComponent> {
 
             public World world;

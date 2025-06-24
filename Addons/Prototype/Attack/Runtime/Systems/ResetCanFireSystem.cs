@@ -5,12 +5,12 @@ namespace ME.BECS.Attack {
     using ME.BECS.Units;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Reset Can Fire system")]
     [RequiredDependencies(typeof(StopWhileAttackSystem))]
     public struct ResetCanFireSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<AttackAspect, TransformAspect> {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr) {

@@ -13,12 +13,12 @@ namespace ME.BECS.Attack {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Can Fire system")]
     [RequiredDependencies(typeof(ReloadSystem))]
     public struct CanFireSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<AttackAspect> {
 
             public tfloat dt;

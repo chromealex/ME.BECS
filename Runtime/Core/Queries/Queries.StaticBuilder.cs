@@ -9,7 +9,7 @@ namespace ME.BECS {
 
     public unsafe struct QueryBuilderDisposable {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct DisposeJob : IJob {
 
             public QueryBuilderDisposable builder;

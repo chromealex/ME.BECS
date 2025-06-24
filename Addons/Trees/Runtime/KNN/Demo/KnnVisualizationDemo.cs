@@ -57,7 +57,7 @@ public class KnnVisualizationDemo : MonoBehaviour {
 		m_queryColors.Dispose();
 	}
 
-	// [BurstCompile(CompileSynchronously = true)]
+	// [BurstCompile]
 	struct ParticleJob : IParticleSystemJob {
 		[ReadOnly] public NativeArray<int> KnnResults;
 		public NativeArray<float3> Points;

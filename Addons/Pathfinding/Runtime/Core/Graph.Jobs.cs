@@ -37,7 +37,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct BuildSlopeJob : IJob {
 
         public Ent graph;
@@ -74,7 +74,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct BuildChunksJob : IJob {
 
         public Ent graph;
@@ -99,7 +99,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct UpdateChunksJob : IJob {
 
         public Ent graph;
@@ -126,7 +126,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct CalculateConnectionsJob : Unity.Jobs.IJobParallelFor {
 
         public World world;
@@ -193,7 +193,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct FloodFillPortalAreasJob : IJob {
 
         public World world;
@@ -255,7 +255,7 @@ namespace ME.BECS.Pathfinding {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct AddConnectionsJob : IJob {
 
         public World world;
@@ -315,7 +315,7 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct PathDirectionsJob : IJob {
 
         [Unity.Collections.ReadOnlyAttribute]
@@ -396,7 +396,7 @@ namespace ME.BECS.Pathfinding {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct PathJob : IJob {
 
         [Unity.Collections.ReadOnlyAttribute]

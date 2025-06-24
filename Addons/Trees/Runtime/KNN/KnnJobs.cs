@@ -9,7 +9,7 @@ using UnityEngine;
 using ME.BECS.NativeCollections;
 
 namespace KNN.Jobs {
-	[BurstCompile(CompileSynchronously = true)]
+	[BurstCompile]
 	public struct QueryKNearestJob : IJob {
 		[ReadOnly] KnnContainer<ME.BECS.Ent> m_container;
 		[WriteOnly] NativeSlice<ME.BECS.Ent> m_result;
@@ -27,7 +27,7 @@ namespace KNN.Jobs {
 		}
 	}
 
-	[BurstCompile(CompileSynchronously = true)]
+	[BurstCompile]
 	public struct QueryRangeJob : IJob {
 		[ReadOnly] KnnContainer<ME.BECS.Ent> m_container;
 		[WriteOnly] NativeList<int> m_result;
@@ -48,7 +48,7 @@ namespace KNN.Jobs {
 	}
 
 
-	[BurstCompile(CompileSynchronously = true)]
+	[BurstCompile]
 	public struct QueryKNearestBatchJob : IJobParallelForBatch {
 		[ReadOnly] KnnContainer<ME.BECS.Ent> m_container;
 		[ReadOnly] NativeSlice<float3> m_queryPositions;
@@ -119,7 +119,7 @@ namespace KNN.Jobs {
 	}
 
 
-	[BurstCompile(CompileSynchronously = true)]
+	[BurstCompile]
 	public struct QueryRangeBatchJob : IJobParallelForBatch {
 		[ReadOnly] KnnContainer<ME.BECS.Ent> m_container;
 		[ReadOnly] NativeSlice<float3> m_queryPositions;
@@ -149,7 +149,7 @@ namespace KNN.Jobs {
 		}
 	}
 
-	[BurstCompile(CompileSynchronously = true)]
+	[BurstCompile]
 	public struct KnnRebuildJob : IJob {
 		KnnContainer<ME.BECS.Ent> m_container;
 

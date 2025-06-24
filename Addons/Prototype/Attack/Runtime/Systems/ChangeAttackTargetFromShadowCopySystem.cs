@@ -13,11 +13,11 @@ namespace ME.BECS.Attack {
     using ME.BECS.Players;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("If target is shadow copy - we need to change it to original if it is visible")]
     public struct ChangeAttackTargetFromShadowCopySystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct TargetJob : IJobForAspects<AttackAspect> {
 
             public CreateSystem createSystem;
@@ -36,7 +36,7 @@ namespace ME.BECS.Attack {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct TargetsJob : IJobForAspects<AttackAspect> {
 
             public CreateSystem createSystem;

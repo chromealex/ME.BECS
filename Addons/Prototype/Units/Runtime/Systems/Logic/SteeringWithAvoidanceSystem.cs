@@ -15,7 +15,7 @@ namespace ME.BECS.Units {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Steering behaviour for units.")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public struct SteeringWithAvoidanceSystem : IUpdate, IDrawGizmos {
@@ -37,7 +37,7 @@ namespace ME.BECS.Units {
         public tfloat maxAgentRadius;
         public bool drawGizmos;
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {
 
             public SteeringWithAvoidanceSystem system;

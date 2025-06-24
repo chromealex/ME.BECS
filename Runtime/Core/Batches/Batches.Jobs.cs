@@ -5,7 +5,7 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct ApplyJob : IJobSingle {
 
         public safe_ptr<State> state;
@@ -21,7 +21,7 @@ namespace ME.BECS {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct StartParallelJob : IJobSingle {
         
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS

@@ -5,10 +5,10 @@ namespace {{NAMESPACE}} {
     using ME.BECS;
     using ME.BECS.Jobs;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct {{NAME}} : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJob{{PARALLEL}} {
 
             public SystemContext systemContext;

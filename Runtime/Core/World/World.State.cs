@@ -7,7 +7,7 @@ namespace ME.BECS {
     using Jobs;
 
     [Unity.Collections.GenerateTestsForBurstCompatibility]
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct State {
 
         public MemoryAllocator allocator;
@@ -108,7 +108,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct SetWorldStateJob : IJobSingle {
 
             public World world;
@@ -126,7 +126,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct NextTickJob : IJobSingle {
 
             public safe_ptr<State> state;
@@ -137,7 +137,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct BurstModeJob : IJobSingle {
 
             public safe_ptr<State> state;

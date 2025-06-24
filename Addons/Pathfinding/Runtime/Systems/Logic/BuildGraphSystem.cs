@@ -12,7 +12,7 @@ namespace ME.BECS.Pathfinding {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
-    //[BURST(CompileSynchronously = true)]
+    //[BURST]
     [UnityEngine.Tooltip("Schedule building a pathfinding graph.")]
     public unsafe struct BuildGraphSystem : IAwake, IDestroy {
 

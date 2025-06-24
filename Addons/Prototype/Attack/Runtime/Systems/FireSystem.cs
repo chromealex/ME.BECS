@@ -13,11 +13,11 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Bullets;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Fire system")]
     public struct FireSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;
@@ -57,7 +57,7 @@ namespace ME.BECS.Attack {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
 
             public tfloat dt;

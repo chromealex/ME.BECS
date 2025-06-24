@@ -6,11 +6,11 @@ namespace ME.BECS.Units {
     using ME.BECS.Transforms;
     using ME.BECS.Effects;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Destroy units with health <= 0")]
     public struct DestroySystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct DestroyJob : IJobForAspects<UnitAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit) {

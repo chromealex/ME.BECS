@@ -14,7 +14,7 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Units;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Schedule building a path.")]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct FollowPathWithAvoidanceSystem : IUpdate {
@@ -35,7 +35,7 @@ namespace ME.BECS.Pathfinding {
         public tfloat alignmentForce;
         public tfloat movementForce;
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
 
             public World world;
@@ -159,7 +159,7 @@ namespace ME.BECS.Pathfinding {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct SpeedDownOnHoldJob : IJobForAspects<UnitAspect> {
 
             public tfloat dt;

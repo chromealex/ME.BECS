@@ -7,12 +7,12 @@ namespace ME.BECS.Bullets {
     using ME.BECS.Effects;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Bullets hit target")]
     [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public struct DestroySystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct DestroyJob : IJobForAspects<BulletAspect, QuadTreeQueryAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect bullet, ref QuadTreeQueryAspect query, ref TransformAspect tr) {

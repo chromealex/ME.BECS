@@ -5,11 +5,11 @@ namespace ME.BECS.Commands {
     using Pathfinding;
     using Units;
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct CommandMoveSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<UnitCommandGroupAspect> {
 
             public BuildGraphSystem buildGraphSystem;

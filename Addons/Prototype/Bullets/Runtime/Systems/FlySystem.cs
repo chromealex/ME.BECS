@@ -17,13 +17,13 @@ namespace ME.BECS.Bullets {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Bullet fly system")]
     public struct FlySystem : IUpdate {
         
         public bool continuousTargetCheck;
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public unsafe struct FlyJob : IJobForAspects<BulletAspect, TransformAspect> {
             
             public bool continuousTargetCheck;

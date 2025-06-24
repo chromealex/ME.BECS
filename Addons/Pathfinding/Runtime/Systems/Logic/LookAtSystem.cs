@@ -13,11 +13,11 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Look at target system")]
     public struct LookAtSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct Job : IJobForAspects<TransformAspect, UnitAspect> {
 
             public tfloat dt;

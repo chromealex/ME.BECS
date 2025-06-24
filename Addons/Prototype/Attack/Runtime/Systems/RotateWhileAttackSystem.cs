@@ -14,11 +14,11 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Units;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [UnityEngine.Tooltip("Rotate unit while attacking")]
     public struct RotateWhileAttackSystem : IUpdate {
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct IdleJob : IJobForAspects<UnitAspect, TransformAspect> {
 
             public tfloat dt;
@@ -34,7 +34,7 @@ namespace ME.BECS.Attack {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct RotateAttackSensorJob : IJobFor2Aspects1Components<AttackAspect, TransformAspect, RotateAttackSensorComponent> {
 
             public tfloat dt;

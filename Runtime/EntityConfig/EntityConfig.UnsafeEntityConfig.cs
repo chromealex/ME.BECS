@@ -759,7 +759,7 @@ namespace ME.BECS {
             
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct ConfigDisposeJob : Unity.Jobs.IJob {
 
             public UnsafeEntityConfig config;

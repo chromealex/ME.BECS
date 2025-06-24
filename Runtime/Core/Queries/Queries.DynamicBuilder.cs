@@ -33,7 +33,7 @@ namespace ME.BECS {
 
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe ref struct QueryBuilder {
         
         internal safe_ptr<CommandBuffer> commandBuffer;
@@ -51,7 +51,7 @@ namespace ME.BECS {
         
         public ushort WorldId => this.commandBuffer.ptr->worldId;
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct DisposeJob : IJob {
 
             public safe_ptr<QueryData> queryData;
@@ -256,7 +256,7 @@ namespace ME.BECS {
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct JobBurst : IJobCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJob commandBuffer) => this.functionPointer.Invoke(in commandBuffer);
@@ -270,7 +270,7 @@ namespace ME.BECS {
             }
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct JobParallelForBurst : IJobParallelForCommandBuffer {
             public CallbackBurst functionPointer;
             public void Execute(in CommandBufferJobParallel commandBuffer) {
@@ -568,7 +568,7 @@ namespace ME.BECS {
             return handle;
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct FromQueryDataJob : IJob {
 
             public safe_ptr<State> state;
@@ -601,7 +601,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct FillTrueBitsJob : IJobParallelForDefer {
 
             public safe_ptr<QueryData> queryData;
@@ -614,7 +614,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct FillArchetypesJob : IJob {
 
             public safe_ptr<QueryData> queryData;
@@ -629,7 +629,7 @@ namespace ME.BECS {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         private struct SetEntitiesJob : IJob {
 
             public ArchetypeQueries.ComposeJob composeJob;

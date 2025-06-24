@@ -5,10 +5,10 @@ namespace ME.BECS.Transforms {
     using Jobs;
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct TransformWorldMatrixUpdateSystem : IAwake, IStart, IUpdate {
         
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CalculateLocalMatrixJob : IJobForAspects<TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
@@ -19,7 +19,7 @@ namespace ME.BECS.Transforms {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CalculateRootsJob : IJobForAspects<TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
@@ -31,7 +31,7 @@ namespace ME.BECS.Transforms {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CalculateRootsWithChildrenJob : IJobFor1Aspects2Components<TransformAspect, ParentComponent, IsFirstLevelComponent> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect, ref ParentComponent parent, ref IsFirstLevelComponent isFirstLevelComponent) {
@@ -42,7 +42,7 @@ namespace ME.BECS.Transforms {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct ClearJob : IJobForAspects<TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
@@ -53,7 +53,7 @@ namespace ME.BECS.Transforms {
 
         }
 
-        [BURST(CompileSynchronously = true)]
+        [BURST]
         public struct CalculateJob : IJobForAspects<TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {

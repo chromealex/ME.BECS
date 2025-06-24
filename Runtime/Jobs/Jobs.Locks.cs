@@ -6,7 +6,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using static Cuts;
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public unsafe struct ReadWriteNativeSpinner : IIsCreated {
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
@@ -126,7 +126,7 @@ namespace ME.BECS {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
 
@@ -266,7 +266,7 @@ namespace ME.BECS {
 
     }
     
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct Spinner {
         
         private int lockIndex;
@@ -331,7 +331,7 @@ namespace ME.BECS {
         }
     }
 
-    [BURST(CompileSynchronously = true)]
+    [BURST]
     public struct LockSpinner {
 
         public const int SIZE = sizeof(int);
