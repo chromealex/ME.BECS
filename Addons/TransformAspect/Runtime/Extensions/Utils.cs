@@ -34,7 +34,7 @@ namespace ME.BECS.Transforms {
             float3 forward = matrix.c2.xyz;
             float3 upwards = matrix.c1.xyz;
             //if (forward.x * forward.y * forward.z == 0f && upwards.x * upwards.y * upwards.z == 0f) return quaternion.identity;
-            return quaternion.LookRotation(forward, upwards);
+            return quaternion.LookRotationSafe(forward, upwards);
         }
         
         [INLINE(256)]

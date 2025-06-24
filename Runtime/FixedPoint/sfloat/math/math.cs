@@ -266,7 +266,7 @@ namespace ME.BECS.FixedPoint
 
         /// <summary>Returns the bit pattern of a float as a uint.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint asuint(sfloat x) { return (uint)asint(x); }
+        public static uint asuint(sfloat x) { return x.RawValue; }
 
         /// <summary>Returns the bit pattern of a float2 as a uint2.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
