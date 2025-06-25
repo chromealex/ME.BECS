@@ -13,6 +13,7 @@ namespace ME.BECS.Network
     public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
     public TransportStatus Status { get; set; }
     public double ServerTime { get; private set; }
+    public ulong InputLagInTicks { get; private set; }
 
     private System.Collections.Generic.Queue<byte[]> _bytesQueue;
     

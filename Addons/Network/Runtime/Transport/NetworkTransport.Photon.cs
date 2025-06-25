@@ -7,6 +7,7 @@ namespace ME.BECS.Network {
     public class PhotonTransport : INetworkTransport, Photon.Realtime.IConnectionCallbacks, Photon.Realtime.IInRoomCallbacks, Photon.Realtime.IOnEventCallback, Photon.Realtime.IMatchmakingCallbacks, Photon.Realtime.ILobbyCallbacks {
 
         public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
+        public ulong InputLagInTicks { get; private set; }
 
         public TransportStatus Status { get; set; }
         public double ServerTime { get; private set; }
