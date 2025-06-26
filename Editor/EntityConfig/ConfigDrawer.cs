@@ -35,6 +35,35 @@ namespace ME.BECS.Views.Editor {
             return container;
             
         }
+        
+        public override void OnGUI(UnityEngine.Rect position, SerializedProperty property, UnityEngine.GUIContent label) {
+
+            var sourceId = property.FindPropertyRelative(nameof(Config.sourceId));
+            if (sourceId == null) {
+                EditorGUI.LabelField(position, label.text, "sourceId not found");
+                return;
+            }
+
+            EntityConfigsRegistry.Initialize();
+            
+            var currentConfig = EntityConfigsRegistry.GetEntityConfigBySourceId(sourceId.uintValue);
+
+            EditorGUI.BeginProperty(position, label, property);
+            EditorGUI.BeginChangeCheck();
+            
+            var newConfig = EditorGUI.ObjectField(position, label, currentConfig, typeof(EntityConfig), false) as EntityConfig;
+
+            if (EditorGUI.EndChangeCheck()) {
+                var previousId = sourceId.uintValue;
+                
+                var newId = ME.BECS.Editor.ObjectReferenceRegistryUtils.Assign(currentConfig, newConfig);
+                sourceId.uintValue = newId;
+
+                property.serializedObject.ApplyModifiedProperties();
+            }
+
+            EditorGUI.EndProperty();
+        }
 
     }
 
