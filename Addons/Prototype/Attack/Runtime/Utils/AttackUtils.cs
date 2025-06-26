@@ -243,6 +243,7 @@ namespace ME.BECS.Attack {
                 config.Apply(ent);
                 var attack = ent.GetOrCreateAspect<QuadTreeQueryAspect>();
                 attack.query.treeMask = targetsMask; // Search for targets in this tree
+                attack.query.ignoreY = true;
                 attack.query.rangeSqr = math.max(1f, ent.Read<BulletConfigComponent>().hitRangeSqr);
                 var tr = ent.GetOrCreateAspect<TransformAspect>();
                 tr.position = position;
