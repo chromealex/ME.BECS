@@ -235,10 +235,10 @@ namespace ME.BECS {
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
 
             if (q.nearestCount == 1u) {
-                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false, in subFilter);
+                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, in subFilter);
                 if (nearest.IsAlive() == true) query.results.results.Add(nearest);
             } else {
-                this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf == 1 ? true : false, q.ignoreY == 1 ? true : false, in subFilter);
+                this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, in subFilter);
             }
             
         }
@@ -347,7 +347,12 @@ namespace ME.BECS {
                         var range = math.sqrt(rangeSqr);
                         var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
                         marker.Begin();
-                        tree.Range(new NativeTrees.AABB(worldPos - range, worldPos + range), ref visitor);
+                        var bounds = new NativeTrees.AABB(worldPos - range, worldPos + range);
+                        if (ignoreY == true) {
+                            bounds.min.y = tfloat.MinValue;
+                            bounds.max.y = tfloat.MaxValue;
+                        }
+                        tree.Range(bounds, ref visitor);
                         marker.End();
                         heap.EnsureCapacity((uint)visitor.results.Count);
                         foreach (var item in visitor.results) {
