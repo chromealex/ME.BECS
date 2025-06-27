@@ -131,6 +131,23 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
 
+            if (unit.unitCommandGroup.IsAlive() == true) {
+                var group = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
+                var pathTarget = group.targets[unit.typeId];
+                if (pathTarget.IsAlive() == true) {
+                    var targetComponent = pathTarget.Read<ME.BECS.Pathfinding.TargetComponent>();
+                    if (targetComponent.target.IsAlive() == true) {
+                        var targetPathComponent = pathTarget.Read<ME.BECS.Pathfinding.TargetPathComponent>();
+                        var path = targetPathComponent.path;
+                        if (path.IsCreated == true) {
+                            position = unit.ent.GetAspect<TransformAspect>().position;
+                            ME.BECS.Pathfinding.Graph.GetDirection(in unit.ent.World, position, in path, out var complete);
+                            if (complete == true) return ReactionType.None;
+                        }
+                    }
+                }
+            }
+
             position = default;
             var owner = unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>();
             var unitTr = unit.ent.GetAspect<TransformAspect>();

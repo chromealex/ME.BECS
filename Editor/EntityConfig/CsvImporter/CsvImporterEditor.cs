@@ -185,6 +185,7 @@ namespace ME.BECS.Editor.CsvImporter {
                     }
 
                     { // add project configs
+                        ObjectReferenceValidate.Validate();
                         foreach (var item in ObjectReferenceRegistry.data.items) {
                             var obj = new ObjectItem(item);
                             if (obj.Is<EntityConfig>() == true) {
