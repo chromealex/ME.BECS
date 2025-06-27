@@ -166,10 +166,26 @@ namespace ME.BECS.Views {
                 
                 var entityData = this.renderingOnSceneEnts[index];
                 var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                var sourceData = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
+                var interpolate = true;
+                ME.BECS.Transforms.WorldMatrixComponent sourceData;
+                if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
+                    sourceData = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
+                    if (sourceData.isTickCalculated == false) {
+                        interpolate = false;
+                    }
+                } else {
+                    sourceData = default;
+                    interpolate = false;
+                }
                 var pos = tr.GetWorldMatrixPosition();
                 var rot = tr.GetWorldMatrixRotation();
 
+                if (interpolate == false) {
+                    transform.SetPositionAndRotation((UnityEngine.Vector3)pos, (UnityEngine.Quaternion)rot);
+                    transform.localScale = (UnityEngine.Vector3)tr.readLocalScale;
+                    return;
+                }
+                
                 var prevTick = this.beginFrameState.ptr->tick;
                 var currentTick = this.currentTick;
                 var tickTime = (double)this.tickTime;
