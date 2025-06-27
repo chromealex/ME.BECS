@@ -467,7 +467,7 @@ namespace ME.BECS.Pathfinding {
                     var area = chunk.portals.list[state, i].globalArea;
                     if (srcArea > 0u && area != srcArea) continue;
                     var pos = GetPortalPosition(state, in root, chunkIndexLocal, i);
-                    sfloat d = 0f;
+                    tfloat d = 0f;
                     if (sourcePortalInfo.IsValid == false) {
                         d = math.lengthsq(pos - target) + math.lengthsq(pos - position);
                     } else {

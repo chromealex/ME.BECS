@@ -2,10 +2,12 @@
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
 #endif
 
 namespace ME.BECS.Pathfinding {
@@ -483,7 +485,7 @@ namespace ME.BECS.Pathfinding {
             }
 
             [INLINE(256)]
-            public bool Contains(float3 position, sfloat radiusSq) {
+            public bool Contains(float3 position, tfloat radiusSq) {
                 switch (this.type) {
                     case TargetType.Point:
                         return math.lengthsq(position - this.center) <= radiusSq;
