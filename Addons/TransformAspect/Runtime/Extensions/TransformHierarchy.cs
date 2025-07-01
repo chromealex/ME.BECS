@@ -6,7 +6,7 @@ namespace ME.BECS.Transforms {
         
         /// <summary>
         /// Include (true) or exclude (false) entity from any filters with hierarchy.
-        /// By default all entities are included.
+        /// By default, all entities are included.
         /// </summary>
         /// <param name="ent">Entity</param>
         /// <param name="state">State</param>
