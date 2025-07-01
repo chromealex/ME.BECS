@@ -11,6 +11,16 @@ namespace ME.BECS.Players {
     public static class PlayerUtils {
 
         [INLINE(256)]
+        public static uint GetTeamIndex(uint teamId) {
+            return teamId - 1u;
+        }
+
+        [INLINE(256)]
+        public static uint GetTeamIndex(in Ent team) {
+            return GetTeamIndex(team.Read<TeamComponent>().id);
+        }
+
+        [INLINE(256)]
         public static PlayerAspect GetActivePlayer() {
             return GetActivePlayer(JobInfo.Create(Context.world.id));
         }
