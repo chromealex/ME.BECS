@@ -93,7 +93,7 @@ namespace ME.BECS {
 
             if (WorldStaticCallbacksTypes<T>.callbacks.TryGetValue(subId, out var callbackDelegate) == true) {
                 
-                callbackDelegate.Invoke(ref data);
+                if (callbackDelegate != null) callbackDelegate.Invoke(ref data);
                 
             }
             
