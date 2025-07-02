@@ -82,8 +82,8 @@ namespace ME.BECS.Jobs {
             
             JobInject<T>.Patch(ref jobData, buffer->worldId);
             
-            E.IS_NULL(reflectionData, "Job is not created. Make sure the job is public.");
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            E.IS_NULL(reflectionData, "Job is not created. Make sure the job is public.");
             data = CompiledJobs<T>.Get(_addressPtr(ref jobData), buffer, unsafeMode, flags, in jobInfo);
             var parameters = new JobsUtility.JobScheduleParameters(data, reflectionData, dependsOn, scheduleMode);
             #else
