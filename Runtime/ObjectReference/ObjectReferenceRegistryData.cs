@@ -245,6 +245,10 @@ namespace ME.BECS {
 
         }
 
+        public uint GetSourceId() {
+            return this.sourceId;
+        }
+
     }
 
 }

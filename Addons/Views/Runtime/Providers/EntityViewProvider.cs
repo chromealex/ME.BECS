@@ -592,7 +592,7 @@ namespace ME.BECS.Views {
         
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
 
-            viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.sourceId);
+            viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.GetSourceId());
             foreach (var item in data.items) {
                 var objectItem = new ObjectItem(item);
                 if (objectItem.IsValid() == true && objectItem.Is<EntityView>() == true) {
