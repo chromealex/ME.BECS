@@ -16,7 +16,7 @@ namespace ME.BECS.FogOfWar {
     using Players;
     using Units;
 
-    public class ForOfWarCrossFadeViewModule : FogOfWarViewModule, IViewUpdate {
+    public class ForOfWarCrossFadeViewModule : FogOfWarViewModule {
 
         private static readonly int lodFade = UnityEngine.Shader.PropertyToID("_LODFade");
 
@@ -68,7 +68,7 @@ namespace ME.BECS.FogOfWar {
             
         }
 
-        public void OnUpdate(in EntRO ent, float dt) {
+        public override void OnUpdate(in EntRO ent, float dt) {
 
             if (this.crossFade == true) {
                 this.crossFadeTimer += dt / this.crossFadeDuration;
@@ -95,7 +95,7 @@ namespace ME.BECS.FogOfWar {
 
     }
     
-    public class FogOfWarViewModule : CollectRenderers, IViewApplyState, IViewInitialize, IViewIgnoreTracker {
+    public class FogOfWarViewModule : CollectRenderers, IViewUpdate, IViewInitialize, IViewIgnoreTracker {
         
         private bool isVisible;
         protected CreateSystem fow;
@@ -160,7 +160,7 @@ namespace ME.BECS.FogOfWar {
             }
         }
         
-        public virtual void ApplyState(in EntRO ent) {
+        public virtual void OnUpdate(in EntRO ent, float dt) {
             
             this.UpdateVisibility(in ent, false);
             
