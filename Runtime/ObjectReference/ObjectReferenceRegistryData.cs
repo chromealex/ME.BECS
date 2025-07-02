@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace ME.BECS {
 
     public readonly struct ObjectItem {
@@ -134,6 +136,17 @@ namespace ME.BECS {
         public uint sourceId;
         public ItemInfo[] items = System.Array.Empty<ItemInfo>();
 
+        private readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
+        
+        public void Initialize() {
+            this.itemLookup.Clear();
+            foreach (var item in this.items) {
+                if (this.itemLookup.TryAdd(item.sourceId, item) == true) {
+                    UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId}");
+                }
+            }
+        }
+
         public void CleanUpLoadedAssets() {
             foreach (var item in this.items) {
                 item.CleanUpLoadedAssets();
@@ -141,15 +154,10 @@ namespace ME.BECS {
         }
         
         public ObjectItem GetObjectBySourceId(uint sourceId) {
-
-            for (int i = 0; i < this.items.Length; ++i) {
-                if (this.items[i].sourceId == sourceId) {
-                    return new ObjectItem(this.items[i]);
-                }
+            if (this.itemLookup.TryGetValue(sourceId, out ItemInfo item) == true) {
+                return new ObjectItem(item);
             }
-
             return default;
-
         }
 
         public uint Add(UnityEngine.Object source, out bool isNew) {

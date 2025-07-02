@@ -61,6 +61,7 @@ namespace ME.BECS {
             }
 
             ObjectReferenceRegistry.data = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
+            ObjectReferenceRegistry.data.Initialize();
 
         }
 
