@@ -956,7 +956,7 @@ namespace ME.BECS.Editor.Systems {
                 }
 
                 if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored.");
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {
                     content.AddRange(localContent);
                 }
@@ -989,7 +989,7 @@ namespace ME.BECS.Editor.Systems {
                 }
                 
                 if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored.");
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {
                     content.AddRange(localContent);
                 }
@@ -1025,7 +1025,7 @@ namespace ME.BECS.Editor.Systems {
                     }
                 }
                 if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored.");
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {
                     content.AddRange(localContent);
                 }
