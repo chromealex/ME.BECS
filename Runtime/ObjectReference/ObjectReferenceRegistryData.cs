@@ -193,8 +193,6 @@ namespace ME.BECS {
             #if UNITY_EDITOR
             var path = UnityEditor.AssetDatabase.GetAssetPath(source);
             var guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
-            var key = $"{UnityEditor.CloudProjectSettings.userId}:{UnityEditor.CloudProjectSettings.userName}";
-            guid = $"{guid}{key}";
             var md5Hasher = System.Security.Cryptography.MD5.Create();
             var hashed = md5Hasher.ComputeHash(System.Text.Encoding.UTF8.GetBytes(guid));
             var hashId = (uint)System.BitConverter.ToInt32(hashed, 0);
