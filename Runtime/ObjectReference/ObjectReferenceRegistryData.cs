@@ -162,6 +162,11 @@ namespace ME.BECS {
             if (this.itemLookup.TryGetValue(sourceId, out ItemInfo item) == true) {
                 return new ObjectItem(item);
             }
+            for (int i = 0; i < this.items.Length; ++i) {
+                if (this.items[i].sourceId == sourceId) {
+                    return new ObjectItem(this.items[i]);
+                }
+            }
             return default;
         }
 
