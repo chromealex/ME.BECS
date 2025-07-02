@@ -142,7 +142,7 @@ namespace ME.BECS {
             this.itemLookup.Clear();
             this.sourceId = 0u;
             foreach (var item in this.items) {
-                if (this.itemLookup.TryAdd(item.sourceId, item) == true) {
+                if (this.itemLookup.TryAdd(item.sourceId, item) == false) {
                     UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId}");
                 }
                 if (item.sourceId > this.sourceId) this.sourceId = item.sourceId;
