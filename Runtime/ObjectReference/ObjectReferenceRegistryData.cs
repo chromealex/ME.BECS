@@ -133,17 +133,19 @@ namespace ME.BECS {
 
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
 
-        public uint sourceId;
         public ItemInfo[] items = System.Array.Empty<ItemInfo>();
 
+        internal uint sourceId;
         private readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
         
         public void Initialize() {
             this.itemLookup.Clear();
+            this.sourceId = 0u;
             foreach (var item in this.items) {
                 if (this.itemLookup.TryAdd(item.sourceId, item) == true) {
                     UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId}");
                 }
+                if (item.sourceId > this.sourceId) this.sourceId = item.sourceId;
             }
         }
 
@@ -212,7 +214,6 @@ namespace ME.BECS {
                 if (has == false) break;
             }
 
-            if (hashId > this.sourceId) this.sourceId = hashId;
             return hashId;
             #else
             var nextId = ++this.sourceId;
