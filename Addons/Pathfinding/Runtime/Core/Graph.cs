@@ -65,7 +65,7 @@ namespace ME.BECS.Pathfinding {
             }
 
             public override int GetHashCode() {
-                return System.HashCode.Combine(this.chunkIndex, this.nodeIndex);
+                return (int)(31 * this.chunkIndex + this.nodeIndex);
             }
 
         }
