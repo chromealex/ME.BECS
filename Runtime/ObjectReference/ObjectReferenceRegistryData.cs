@@ -143,7 +143,7 @@ namespace ME.BECS {
             this.sourceId = 0u;
             foreach (var item in this.items) {
                 if (this.itemLookup.TryAdd(item.sourceId, item) == false) {
-                    UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId}");
+                    UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId} {item.source}");
                 }
                 if (item.sourceId > this.sourceId) this.sourceId = item.sourceId;
             }
