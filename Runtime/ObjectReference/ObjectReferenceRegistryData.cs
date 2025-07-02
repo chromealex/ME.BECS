@@ -156,6 +156,9 @@ namespace ME.BECS {
         }
         
         public ObjectItem GetObjectBySourceId(uint sourceId) {
+            if (this.itemLookup.Count == 0) {
+                this.Initialize();
+            }
             if (this.itemLookup.TryGetValue(sourceId, out ItemInfo item) == true) {
                 return new ObjectItem(item);
             }
