@@ -927,21 +927,26 @@ namespace ME.BECS.Editor.Systems {
         }
 
         public static void InjectDependencies(scg::List<string> content, scg::Dictionary<System.Type, string> typeToVar, System.Type systemType) {
+            var localContent = new scg::List<string>();
             {
                 var variable = typeToVar[systemType];
                 var src = EditorUtils.GetTypeName(systemType);
                 var fields = systemType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var containsBool = false;
                 foreach (var field in fields) {
+                    if (field.FieldType == typeof(bool)) {
+                        containsBool = true;
+                    }
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
                         if (injectType.IsVisible == false) continue;
                         var t = EditorUtils.GetTypeName(injectType);
                         var v = typeToVar[injectType];
                         var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(systemType, field.Name);
-                        content.Add("{");
-                        content.Add($"var addr = (byte*)_addressPtr(ref *(({src}*){variable})) + {fieldOffset};");
-                        content.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
-                        content.Add("}");
+                        localContent.Add("{");
+                        localContent.Add($"var addr = (byte*)_addressPtr(ref *(({src}*){variable})) + {fieldOffset};");
+                        localContent.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
+                        localContent.Add("}");
                         /*if (field.IsPublic == false) {
                             content.Add($"typeof({src}).GetField(\"{field.Name}\").SetValue(*({src}*){variable}, new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
                         } else {
@@ -949,8 +954,16 @@ namespace ME.BECS.Editor.Systems {
                         }*/
                     }
                 }
+
+                if (containsBool == true && localContent.Count > 0) {
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
+                } else {
+                    content.AddRange(localContent);
+                }
             }
 
+            localContent.Clear();
+            
             // Find jobs
             var types = new scg::HashSet<System.Type>();
             var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
@@ -962,12 +975,23 @@ namespace ME.BECS.Editor.Systems {
             foreach (var jobType in types) {
                 if (jobType.IsVisible == false) continue;
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                var containsBool = false;
+                localContent.Clear();
                 foreach (var field in fields) {
+                    if (field.FieldType == typeof(bool)) {
+                        containsBool = true;
+                    }
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var jobTypeStr = EditorUtils.GetTypeName(jobType);
-                        content.Add($"JobInject<{jobTypeStr}>.Init();");
+                        localContent.Add($"JobInject<{jobTypeStr}>.Init();");
                         break;
                     }
+                }
+                
+                if (containsBool == true && localContent.Count > 0) {
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
+                } else {
+                    content.AddRange(localContent);
                 }
             }
 
@@ -975,7 +999,12 @@ namespace ME.BECS.Editor.Systems {
                 if (jobType.IsVisible == false) continue;
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                var containsBool = false;
+                localContent.Clear();
                 foreach (var field in fields) {
+                    if (field.FieldType == typeof(bool)) {
+                        containsBool = true;
+                    }
                     var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
@@ -995,6 +1024,11 @@ namespace ME.BECS.Editor.Systems {
                         content.Add($"JobInject<{jobTypeStr}>.RegisterDeltaTime({fieldOffset}, {fieldType});");
                     }
                 }
+                if (containsBool == true && localContent.Count > 0) {
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
+                } else {
+                    content.AddRange(localContent);
+                }
             }
         }
 
@@ -1007,9 +1041,8 @@ namespace ME.BECS.Editor.Systems {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
-                    var continueTraverse = true;
                     if (inst.Operand is MethodInfo methodInfo) {
-                        if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
+                        if ((methodInfo.Name == "Schedule" || methodInfo.Name == "ScheduleSingleWithInject" || methodInfo.Name == "ScheduleSingleWithInjectByRef") && methodInfo.IsGenericMethod == true) {
                             if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                                 var jobType = methodInfo.GetGenericArguments()[0];
                                 types.Add(jobType);
@@ -1017,7 +1050,7 @@ namespace ME.BECS.Editor.Systems {
                         }
                     }
 
-                    if (continueTraverse == true && inst.Operand is System.Reflection.MethodInfo member) {
+                    if (inst.Operand is System.Reflection.MethodInfo member) {
                         if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) {
                                 q.Enqueue(member);

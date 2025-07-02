@@ -123,7 +123,11 @@ namespace ME.BECS {
             if (WorldStaticCallbacksTypes<T>.callbacks.TryGetValue(subId, out var callbacks) == true) {
 
                 callbacks -= callback;
-                WorldStaticCallbacksTypes<T>.callbacks[subId] = callbacks;
+                if (callbacks == null) {
+                    WorldStaticCallbacksTypes<T>.callbacks.Remove(subId);
+                } else {
+                    WorldStaticCallbacksTypes<T>.callbacks[subId] = callbacks;
+                }
 
             }
             

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace ME.BECS {
 
     public readonly struct ObjectItem {
@@ -84,10 +86,10 @@ namespace ME.BECS {
         public bool isGameObject;
         public string sourceType;
         public uint sourceId;
-
+        
         [UnityEngine.SerializeReference]
         public IObjectItemData customData;
-
+        
         public void CleanUpLoadedAssets() {
             if (this.sourceReference.IsValid() == true) this.sourceReference.ReleaseAsset();
         }
@@ -131,8 +133,21 @@ namespace ME.BECS {
 
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
 
-        public uint sourceId;
         public ItemInfo[] items = System.Array.Empty<ItemInfo>();
+
+        internal uint sourceId;
+        private readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
+        
+        public void Initialize() {
+            this.itemLookup.Clear();
+            this.sourceId = 0u;
+            foreach (var item in this.items) {
+                if (this.itemLookup.TryAdd(item.sourceId, item) == false) {
+                    UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId} {item.source}");
+                }
+                if (item.sourceId > this.sourceId) this.sourceId = item.sourceId;
+            }
+        }
 
         public void CleanUpLoadedAssets() {
             foreach (var item in this.items) {
@@ -141,15 +156,18 @@ namespace ME.BECS {
         }
         
         public ObjectItem GetObjectBySourceId(uint sourceId) {
-
+            if (this.itemLookup.Count == 0) {
+                this.Initialize();
+            }
+            if (this.itemLookup.TryGetValue(sourceId, out ItemInfo item) == true) {
+                return new ObjectItem(item);
+            }
             for (int i = 0; i < this.items.Length; ++i) {
                 if (this.items[i].sourceId == sourceId) {
                     return new ObjectItem(this.items[i]);
                 }
             }
-
             return default;
-
         }
 
         public uint Add(UnityEngine.Object source, out bool isNew) {
@@ -174,6 +192,10 @@ namespace ME.BECS {
                 };
                 System.Array.Resize(ref this.items, this.items.Length + 1);
                 this.items[this.items.Length - 1] = item;
+                if (this.itemLookup.Count == 0) {
+                    this.Initialize();
+                }
+                this.itemLookup.Add(nextId, item);
                 return nextId;
             }
 
@@ -183,11 +205,10 @@ namespace ME.BECS {
             #if UNITY_EDITOR
             var path = UnityEditor.AssetDatabase.GetAssetPath(source);
             var guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
-            var hashId = 0u;
-            for (int i = 0; i < guid.Length; ++i) {
-                hashId ^= (uint)(guid[i] + 31);
-            }
-
+            guid = $"{guid}P{path}";
+            var md5Hasher = System.Security.Cryptography.MD5.Create();
+            var hashed = md5Hasher.ComputeHash(System.Text.Encoding.UTF8.GetBytes(guid));
+            var hashId = (uint)System.BitConverter.ToInt32(hashed, 0);
             if (hashId == 0u) hashId = 1u;
 
             while (true) {
@@ -204,7 +225,6 @@ namespace ME.BECS {
                 if (has == false) break;
             }
 
-            if (hashId > this.sourceId) this.sourceId = hashId;
             return hashId;
             #else
             var nextId = ++this.sourceId;
@@ -234,6 +254,10 @@ namespace ME.BECS {
 
             return false;
 
+        }
+
+        public uint GetSourceId() {
+            return this.sourceId;
         }
 
     }

@@ -3,7 +3,7 @@ namespace ME.BECS.Attack {
     using Views;
     using ME.BECS.Units;
     
-    public class AnimatorAttackViewModule : IViewApplyState {
+    public class AnimatorAttackViewModule : IViewApplyState, IViewIgnoreTracker {
 
         public UnityEngine.Animator animator;
         

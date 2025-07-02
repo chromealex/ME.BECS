@@ -20,6 +20,24 @@ namespace ME.BECS.Jobs {
             return reflectionData;
         }
 
+        public static JobHandle ScheduleSingleWithInject<T>(this T jobData, ushort worldId, JobHandle inputDeps = default) where T : struct, IJobSingle {
+            
+            JobInject<T>.Patch(ref jobData, worldId);
+            
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
+            return JobsUtility.Schedule(ref parameters);
+            
+        }
+
+        public static JobHandle ScheduleSingleWithInjectByRef<T>(this ref T jobData, ushort worldId, JobHandle inputDeps = default) where T : struct, IJobSingle {
+            
+            JobInject<T>.Patch(ref jobData, worldId);
+            
+            var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
+            return JobsUtility.Schedule(ref parameters);
+            
+        }
+
         public static JobHandle ScheduleSingle<T>(this T jobData, JobHandle inputDeps = default) where T : struct, IJobSingle {
             
             var parameters = new JobsUtility.JobScheduleParameters(_addressPtr(ref jobData), GetReflectionData<T>(), inputDeps, ScheduleMode.Single);
