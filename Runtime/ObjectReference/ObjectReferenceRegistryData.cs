@@ -87,7 +87,7 @@ namespace ME.BECS {
 
         [UnityEngine.SerializeReference]
         public IObjectItemData customData;
-
+        
         public void CleanUpLoadedAssets() {
             if (this.sourceReference.IsValid() == true) this.sourceReference.ReleaseAsset();
         }
@@ -183,11 +183,11 @@ namespace ME.BECS {
             #if UNITY_EDITOR
             var path = UnityEditor.AssetDatabase.GetAssetPath(source);
             var guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
-            var hashId = 0u;
-            for (int i = 0; i < guid.Length; ++i) {
-                hashId ^= (uint)(guid[i] + 31);
-            }
-
+            var key = $"{UnityEditor.CloudProjectSettings.userId}:{UnityEditor.CloudProjectSettings.userName}";
+            guid = $"{guid}{key}";
+            var md5Hasher = System.Security.Cryptography.MD5.Create();
+            var hashed = md5Hasher.ComputeHash(System.Text.Encoding.UTF8.GetBytes(guid));
+            var hashId = (uint)System.BitConverter.ToInt32(hashed, 0);
             if (hashId == 0u) hashId = 1u;
 
             while (true) {
