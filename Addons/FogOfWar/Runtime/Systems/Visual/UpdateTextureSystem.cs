@@ -102,9 +102,11 @@ namespace ME.BECS.FogOfWar {
         public struct ApplyTextureJob : IJobMainThread {
 
             public CreateTextureSystem system;
+            public NativeArray<byte> colorBuffer;
             
             public void Execute() {
                 
+                this.system.GetTexture().SetPixelData(this.colorBuffer, 0);
                 this.system.GetTexture().Apply(false);
                 
             }
@@ -118,7 +120,6 @@ namespace ME.BECS.FogOfWar {
             
             var createTexture = context.world.GetSystem<CreateTextureSystem>();
             
-            context.dependsOn.Complete();
             var buffer = createTexture.GetBuffer();
             var bufferPtr = (UnityEngine.Color32*)buffer.GetUnsafePtr();
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
@@ -150,9 +151,11 @@ namespace ME.BECS.FogOfWar {
                 currentBuffer = bufferPtr,
             }.Schedule(buffer.Length / 4, JobUtils.GetScheduleBatchCount(buffer.Length), context.dependsOn);
             
-            handle = new ApplyTextureJob() {
+            handle.Complete();
+            new ApplyTextureJob() {
                 system = createTexture,
-            }.Schedule(handle);
+                colorBuffer = buffer,
+            }.Execute();
             context.SetDependency(handle);
             
         }

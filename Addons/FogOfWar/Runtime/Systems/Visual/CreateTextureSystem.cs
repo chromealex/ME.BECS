@@ -20,6 +20,7 @@ namespace ME.BECS.FogOfWar {
         
         private ClassPtr<UnityEngine.Texture2D> texture;
         private Ent camera;
+        private Unity.Collections.NativeArray<byte> textureBuffer;
 
         public bool IsCreated => this.texture.IsValid;
 
@@ -45,6 +46,8 @@ namespace ME.BECS.FogOfWar {
                 FogOfWarUtils.CleanUpTexture(tex.GetPixelData<byte>(0));
                 tex.Apply();
                 this.texture = new ClassPtr<UnityEngine.Texture2D>(tex);
+                var buffer = this.texture.Value.GetPixelData<byte>(0);
+                this.textureBuffer = new Unity.Collections.NativeArray<byte>(buffer.Length, Constants.ALLOCATOR_PERSISTENT);
             }
 
             var render = Ent.New(in context, editorName: "FOW Renderer");
@@ -58,12 +61,13 @@ namespace ME.BECS.FogOfWar {
 
         }
 
-        public Unity.Collections.NativeArray<byte> GetBuffer() => this.texture.Value.GetPixelData<byte>(0);
+        public Unity.Collections.NativeArray<byte> GetBuffer() => this.textureBuffer;
 
         public UnityEngine.Texture2D GetTexture() => this.texture.Value;
 
         [WithoutBurst]
         public void OnDestroy(ref SystemContext context) {
+            this.textureBuffer.Dispose();
             UnityEngine.Object.DestroyImmediate(this.texture.Value);
             this.texture.Dispose();
         }

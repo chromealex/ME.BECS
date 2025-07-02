@@ -70,6 +70,8 @@ namespace ME.BECS.FogOfWar {
 
         public override void OnUpdate(in EntRO ent, float dt) {
 
+            base.OnUpdate(in ent, dt);
+            
             if (this.crossFade == true) {
                 this.crossFadeTimer += dt / this.crossFadeDuration;
                 this.material.EnableKeyword("CROSS_FADE");
