@@ -93,7 +93,7 @@ namespace ME.BECS {
 
             if (WorldStaticCallbacksTypes<T>.callbacks.TryGetValue(subId, out var callbackDelegate) == true) {
                 
-                if (callbackDelegate != null) callbackDelegate.Invoke(ref data);
+                callbackDelegate.Invoke(ref data);
                 
             }
             
@@ -123,7 +123,11 @@ namespace ME.BECS {
             if (WorldStaticCallbacksTypes<T>.callbacks.TryGetValue(subId, out var callbacks) == true) {
 
                 callbacks -= callback;
-                WorldStaticCallbacksTypes<T>.callbacks[subId] = callbacks;
+                if (callbacks == null) {
+                    WorldStaticCallbacksTypes<T>.callbacks.Remove(subId);
+                } else {
+                    WorldStaticCallbacksTypes<T>.callbacks[subId] = callbacks;
+                }
 
             }
             
