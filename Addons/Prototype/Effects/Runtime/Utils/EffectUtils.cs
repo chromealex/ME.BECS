@@ -34,13 +34,13 @@ namespace ME.BECS.Effects {
             if (effect.config.IsValid == false) return default;
             
             var ent = Ent.New(in jobInfo);
+            var tr = ent.GetOrCreateAspect<TransformAspect>();
+            tr.position = position;
+            tr.rotation = rotation;
             effect.config.Apply(ent);
             if (owner.ent != default) {
                 ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             }
-            var tr = ent.GetOrCreateAspect<TransformAspect>();
-            tr.position = position;
-            tr.rotation = rotation;
             ent.Destroy(effect.lifetime);
             return ent.GetOrCreateAspect<EffectAspect>();
 
