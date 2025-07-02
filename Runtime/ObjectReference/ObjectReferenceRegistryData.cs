@@ -86,7 +86,7 @@ namespace ME.BECS {
         public bool isGameObject;
         public string sourceType;
         public uint sourceId;
-
+        
         [UnityEngine.SerializeReference]
         public IObjectItemData customData;
         
@@ -193,6 +193,7 @@ namespace ME.BECS {
             #if UNITY_EDITOR
             var path = UnityEditor.AssetDatabase.GetAssetPath(source);
             var guid = UnityEditor.AssetDatabase.AssetPathToGUID(path);
+            guid = $"{guid}P{path}";
             var md5Hasher = System.Security.Cryptography.MD5.Create();
             var hashed = md5Hasher.ComputeHash(System.Text.Encoding.UTF8.GetBytes(guid));
             var hashId = (uint)System.BitConverter.ToInt32(hashed, 0);
