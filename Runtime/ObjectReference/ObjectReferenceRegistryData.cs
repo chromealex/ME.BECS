@@ -192,6 +192,10 @@ namespace ME.BECS {
                 };
                 System.Array.Resize(ref this.items, this.items.Length + 1);
                 this.items[this.items.Length - 1] = item;
+                if (this.itemLookup.Count == 0) {
+                    this.Initialize();
+                }
+                this.itemLookup.Add(nextId, item);
                 return nextId;
             }
 
