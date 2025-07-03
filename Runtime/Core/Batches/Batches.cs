@@ -154,7 +154,6 @@ namespace ME.BECS {
         public struct ThreadItem {
 
             public List<uint> items;
-            public uint Count;
             public LockSpinner lockSpinner;
 
             public uint GetReservedSizeInBytes() {
@@ -199,7 +198,6 @@ namespace ME.BECS {
             for (uint i = 0u; i < batches.items.Length; ++i) {
                 ref var item = ref batches.items[state, i];
                 item.items = new List<uint>(ref state.ptr->allocator, entitiesCapacity);
-                item.Count = 0u;
             }
             return batches;
         }
@@ -300,13 +298,13 @@ namespace ME.BECS {
         private static void ApplyFromJobThread(safe_ptr<State> state, uint threadIndex, ref UnsafeList<uint> list) {
 
             ref var threadItem = ref state.ptr->batches.items[state, threadIndex];
-            if (threadItem.Count == 0u) {
+            if (threadItem.items.Count == 0u) {
                 return;
             }
             
             JobUtils.Lock(ref threadItem.lockSpinner);
             
-            var count = threadItem.Count;
+            var count = threadItem.items.Count;
             if (count == 0u) {
                 JobUtils.Unlock(ref threadItem.lockSpinner);
                 return;
@@ -330,7 +328,6 @@ namespace ME.BECS {
                 
             }*/
             
-            threadItem.Count = 0u;
             threadItem.items.Clear();
             
             JobUtils.Unlock(ref threadItem.lockSpinner);
@@ -385,7 +382,7 @@ namespace ME.BECS {
             Batches.OnEntityAddThreadItem(state, entId);
 
         }
-        
+
         [INLINE(256)]
         internal static void Set_INTERNAL(uint typeId, in Ent ent, safe_ptr<State> state) {
             
@@ -403,9 +400,7 @@ namespace ME.BECS {
                 {
                     var wasCount = item.Count;
                     {
-                        threadItem.Count -= item.Count;
                         item.Add(typeId);
-                        threadItem.Count += item.Count;
                     }
                     if (wasCount == 0u && item.Count > 0u) {
                         threadItem.items.Add(ref state.ptr->allocator, ent.id);
@@ -435,9 +430,7 @@ namespace ME.BECS {
                 {
                     var wasCount = item.Count;
                     {
-                        threadItem.Count -= item.Count;
                         item.Remove(typeId);
-                        threadItem.Count += item.Count;
                     }
                     if (wasCount == 0u && item.Count > 0u) {
                         threadItem.items.Add(ref state.ptr->allocator, ent.id);

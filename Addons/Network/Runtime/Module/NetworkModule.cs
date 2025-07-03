@@ -97,7 +97,7 @@ namespace ME.BECS.Network {
         private UnsafeNetworkModule network;
         private NetworkState networkState;
 
-        public TransportStatus Status => this.network.networkTransport.Status;
+        public TransportStatus Status => this.network.networkTransport?.Status ?? TransportStatus.Unknown;
         
         public uint LocalPlayerId  => this.network.data.ptr->localPlayerId;
 

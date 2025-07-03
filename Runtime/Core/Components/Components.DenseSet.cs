@@ -308,6 +308,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool Has(safe_ptr<State> state, uint entityId, ushort entityGen, bool checkEnabled) {
             var pageIndex = _pageIndex(entityId);
+            if (pageIndex >= this.dataPages.Length) {
+                return false;
+            }
             this.readWriteSpinner.ReadBegin(state);
             var page = this.dataPages[state, pageIndex];
             if (page.IsCreated == false) {
