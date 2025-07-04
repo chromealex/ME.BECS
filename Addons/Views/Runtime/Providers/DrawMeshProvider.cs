@@ -211,9 +211,9 @@ namespace ME.BECS.Views {
                 };
                 if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == false) {
                     objectsPerInfo = new ObjectsPerInfo() {
-                        matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
-                        entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
-                        prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT),
+                        matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                        entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                        prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
                     };
                     this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
                 }

@@ -31,6 +31,7 @@ namespace ME.BECS.FogOfWar {
 
         protected override void OnInitialize(in EntRO ent) {
             
+            var pathfinding = ent.World.parent.GetSystem<ME.BECS.Pathfinding.BuildGraphSystem>();
             var fowSystem = ent.World.parent.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
             var heightResolution = fowSystem.resolution;
@@ -41,8 +42,9 @@ namespace ME.BECS.FogOfWar {
             this.material.SetTexture(fogTex, system.GetTexture());
             this.material.SetFloat(resolution, (float)heightResolution);
 
-            this.worldSize = fowSystem.mapSize;
+            this.worldSize = fowSystem.mapSize * pathfinding.GetNodeSize();
             this.SetScale();
+            
         }
 
         protected override void OnUpdate(in EntRO ent, float dt) {

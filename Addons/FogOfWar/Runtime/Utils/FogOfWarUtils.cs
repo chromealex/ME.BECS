@@ -26,11 +26,17 @@ namespace ME.BECS.FogOfWar {
         private readonly bool checkSector;
         
         [INLINE(256)]
-        public FowMathSector(in FogOfWarStaticComponent props, in float3 position, in quaternion rotation, tfloat sector) {
+        public FowMathSector(in float3 position, in quaternion rotation, tfloat sector) {
+            this.checkSector = sector > 0 && sector < 360;
+            if (this.checkSector == false) {
+                this.sector = default;
+                this.position = default;
+                this.lookDirection = default;
+                return;
+            }
+            this.sector = math.radians(sector);
             this.position = position.xz;
             this.lookDirection = math.normalize(math.mul(rotation, math.forward())).xz;
-            this.sector = math.radians(sector);
-            this.checkSector = sector > 0 && sector < 360;
         }
 
         [INLINE(256)]
@@ -70,7 +76,7 @@ namespace ME.BECS.FogOfWar {
             var fowRange = WorldToFogMapValue(in props, math.sqrt(unit.readSightRangeSqr));
             var fowRangeMin = WorldToFogMapValue(in props, math.sqrt(unit.readMinSightRangeSqr));
             var height = worldPos.y + unit.readHeight;
-            var sector = new FowMathSector(in props, worldPos, unitTr.GetWorldMatrixRotation(), unit.readSector);
+            var sector = new FowMathSector(worldPos, unitTr.GetWorldMatrixRotation(), unit.readSector);
             SetVisibleRange(in props, in fow, (int)pos.x, (int)pos.y, fowRangeMin, fowRange, height, in sector);
 
         }
@@ -246,9 +252,9 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static float3 FogMapToWorldPosition(in FogOfWarStaticComponent props, in uint2 position) {
-            
-            var xf = (position.x - props.mapPosition.x * 0.5f) / (tfloat)props.size.x * props.worldSize.x;
-            var yf = (position.y - props.mapPosition.y * 0.5f) / (tfloat)props.size.y * props.worldSize.y;
+
+            var xf = position.x * props.nodeSize + props.mapPosition.x;
+            var yf = position.y * props.nodeSize + props.mapPosition.y;
             var h = props.heights[position.y * props.size.x + position.x];
             return new float3(xf, h, yf);
 
@@ -256,10 +262,10 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static uint2 WorldToFogMapPosition(in FogOfWarStaticComponent props, in float3 position) {
-            
-            var xf = (position.x - props.mapPosition.x * 0.5f) / props.worldSize.x * props.size.x;
-            var yf = (position.z - props.mapPosition.y * 0.5f) / props.worldSize.y * props.size.y;
 
+            var xf = (position.x - props.mapPosition.x) / props.nodeSize;
+            var yf = (position.z - props.mapPosition.y) / props.nodeSize;
+            
             //fast round to int (int)(x + 0.5f)
             var x = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
             var y = yf >= 0u ? (uint)(yf + 0.5f) : 0u;
@@ -274,17 +280,15 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static int WorldToFogMapValue(in FogOfWarStaticComponent props, in tfloat value) {
             
-            var xf = value / props.worldSize.x * props.size.x;
-            var x = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
-            if (x >= props.size.x) x = props.size.x - 1u;
-            return (int)x;
+            var xf = value / props.nodeSize;
+            return xf >= 0u ? (int)(xf + 0.5f) : 0;
             
         }
 
         [INLINE(256)]
         public static uint WorldToFogMapUValue(in FogOfWarStaticComponent props, in tfloat value) {
             
-            var xf = value / props.worldSize.x * props.size.x;
+            var xf = value / props.nodeSize;
             var x = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
             if (x >= props.size.x) x = props.size.x - 1u;
             return x;
@@ -301,20 +305,22 @@ namespace ME.BECS.FogOfWar {
                 map.explored[idx] = 255;
                 return;
             }
-            var rMin = (uint)math.max(0, x0);
-            var rMax = (uint)math.min(x0 + sizeX, props.size.x);
-            var yMin = (uint)math.max(0, y0);
-            var yMax = (uint)math.min(y0 + sizeY, props.size.y);
+            var propSizeX = (int)props.size.x;
+            var propSizeY = (int)props.size.y;
+            var rMin = math.max(0, x0);
+            var rMax = math.min(x0 + sizeX, propSizeX);
+            var yMin = math.max(0, y0);
+            var yMax = math.min(y0 + sizeY, propSizeY);
             if (height > 0f) {
                 var src = FogOfWarData.fill255.Data.GetPtr();
                 var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
                 var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
-                    var s = y * props.size.x;
+                    var s = y * propSizeX;
                     var fromIdx = s + rMin;
                     var toIdx = s + rMax;
                     var checkHeight = true;
-                    for (uint h = fromIdx; h < toIdx; ++h) {
+                    for (int h = fromIdx; h < toIdx; ++h) {
                         if (height > 0f && props.heights[toIdx - fromIdx] > height) {
                             checkHeight = false;
                             break;
@@ -330,7 +336,7 @@ namespace ME.BECS.FogOfWar {
                 var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
                 var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
-                    var s = y * props.size.x;
+                    var s = y * propSizeX;
                     var fromIdx = s + rMin;
                     var toIdx = s + rMax;
                     var count = (toIdx - fromIdx) * BYTES_PER_NODE;
@@ -344,10 +350,12 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static void SetVisibleRectPartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int sizeX, int sizeY, tfloat height, byte part) {
 
-            var rMin = (uint)math.max(0, x0);
-            var rMax = (uint)math.min(x0 + sizeX, props.size.x);
-            var yMin = (uint)math.max(0, y0);
-            var yMax = (uint)math.min(y0 + sizeY, props.size.y);
+            var propSizeX = (int)props.size.x;
+            var propSizeY = (int)props.size.y;
+            var rMin = math.max(0, x0);
+            var rMax = math.min(x0 + sizeX, propSizeX);
+            var yMin = math.max(0, y0);
+            var yMax = math.min(y0 + sizeY, propSizeY);
             if (part == 0) {
                 /*
                  * + -
@@ -382,11 +390,11 @@ namespace ME.BECS.FogOfWar {
                 var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
                 var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
-                    var s = y * props.size.x;
+                    var s = y * propSizeX;
                     var fromIdx = s + rMin;
                     var toIdx = s + rMax;
                     var checkHeight = true;
-                    for (uint h = fromIdx; h < toIdx; ++h) {
+                    for (int h = fromIdx; h < toIdx; ++h) {
                         if (height > 0f && props.heights[toIdx - fromIdx] > height) {
                             checkHeight = false;
                             break;
@@ -402,7 +410,7 @@ namespace ME.BECS.FogOfWar {
                 var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
                 var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
-                    var s = y * props.size.x;
+                    var s = y * propSizeX;
                     var fromIdx = s + rMin;
                     var toIdx = s + rMax;
                     var count = (toIdx - fromIdx) * BYTES_PER_NODE;
@@ -418,22 +426,25 @@ namespace ME.BECS.FogOfWar {
 
             var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
+            
+            var propSizeX = (int)props.size.x;
+            var propSizeY = (int)props.size.y;
             var rMin = math.min(radius, x0);
-            var rMax = math.min(radius, (int)props.size.x);
+            var rMax = math.min(radius, propSizeX);
             var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
             for (var r = -rMin; r < rMax; ++r) {
 
                 var x = x0 + r;
                 if (x < 0 || x >= props.size.x) continue;
 
-                var hh = (int)math.sqrt(radiusSqr - r * r);
+                var hh = Math.SqrtInt(radiusSqr - r * r);
                 var yMin = math.max(0, y0 - hh);
-                var yMax = math.min(props.size.y, (uint)(y0 + hh));
+                var yMax = math.min(propSizeY, y0 + hh);
                 for (var y = yMin; y < yMax; ++y) {
 
-                    if (y < 0 || y >= props.size.y) continue;
+                    if (y < 0 || y >= propSizeY) continue;
                     // IsVisible
-                    var index = y * (int)props.size.x + x;
+                    var index = y * propSizeX + x;
                     if (nodesPtr[index] > 0) {
                         continue;
                     }
@@ -453,10 +464,12 @@ namespace ME.BECS.FogOfWar {
             }
             
         }
-
+        
         [INLINE(256)]
         public static void SetVisibleRangePartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector, byte part) {
 
+            var propSizeX = (int)props.size.x;
+            var propSizeY = (int)props.size.y;
             var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
             int rMin = 0;
@@ -474,7 +487,7 @@ namespace ME.BECS.FogOfWar {
                  * - +
                  */
                 rMin = 0;
-                rMax = math.min(radius, (int)props.size.x);
+                rMax = math.min(radius, propSizeX);
             }
 
             var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
@@ -482,10 +495,10 @@ namespace ME.BECS.FogOfWar {
 
                 var x = x0 + r;
                 if (x < 0 || x >= props.size.x) continue;
-
-                var hh = (int)math.sqrt(radiusSqr - r * r);
+                
+                var hh = Math.SqrtInt(radiusSqr - r * r);
                 var yMin = math.max(0, y0 - hh);
-                var yMax = (int)math.min(props.size.y, (uint)(y0 + hh));
+                var yMax = math.min(propSizeY, y0 + hh);
                 if (part == 0) {
                     /*
                      * - -
@@ -513,9 +526,9 @@ namespace ME.BECS.FogOfWar {
                 }
                 for (var y = yMin; y < yMax; ++y) {
 
-                    if (y < 0 || y >= props.size.y) continue;
+                    if (y < 0 || y >= propSizeY) continue;
                     // IsVisible
-                    var index = y * (int)props.size.x + x;
+                    var index = y * propSizeX + x;
                     if (nodesPtr[index] > 0) {
                         continue;
                     }
@@ -570,9 +583,8 @@ namespace ME.BECS.FogOfWar {
                 var py = (steep == true ? x : y);
                 if (px < 0 || px >= props.size.x) return false;
                 if (py < 0 || py >= props.size.y) return false;
-            
-                var height = GetHeight(in props, (uint)px, (uint)py);
-                if (height > terrainHeight) {
+
+                if (GetHeight(in props, (uint)px, (uint)py) > terrainHeight) {
                     return false;
                 }
 

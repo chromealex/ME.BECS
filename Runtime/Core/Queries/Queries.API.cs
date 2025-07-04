@@ -46,22 +46,7 @@ namespace ME.BECS {
 
     }
 
-    public static unsafe class API {
-
-        [BURST]
-        private struct BuilderArchetypesJob : IJob {
-
-            public safe_ptr<State> state;
-            public safe_ptr<QueryData> queryData;
-            public Unity.Collections.Allocator allocator;
-            
-            public void Execute() {
-
-                this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
-
-            }
-
-        }
+    public static class API {
 
         public static QueryBuilder Query(in World world, JobHandle dependsOn = default) {
             return API.Query(QueryContext.Create(in world), dependsOn);
@@ -77,9 +62,6 @@ namespace ME.BECS {
 
         public static QueryBuilder Query(in QueryContext queryContext, JobHandle dependsOn = default) {
 
-            //dependsOn = Batches.Apply(dependsOn, queryContext.state);
-            //dependsOn = Batches.Open(dependsOn, queryContext.state);
-
             var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
             var builder = new QueryBuilder {
                 queryData = _makeDefault(new QueryData(), allocator),
@@ -91,15 +73,8 @@ namespace ME.BECS {
                 isCreated = true,
                 allocator = allocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
+                builderDependsOn = dependsOn,
             };
-            
-            /*var job = new BuilderArchetypesJob() {
-                state = queryContext.state,
-                queryData = builder.queryData,
-                allocator = allocator,
-            };
-            dependsOn = job.Schedule(dependsOn);*/
-            builder.builderDependsOn = dependsOn;//Batches.Close(dependsOn, queryContext.state);
             builder.Without<IsInactive>();
             
             return builder;
@@ -108,19 +83,16 @@ namespace ME.BECS {
 
         internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
 
-            //dependsOn = Batches.Apply(dependsOn, queryContext.state);
-            //dependsOn = Batches.Open(dependsOn, queryContext.state);
-
             var builder = new QueryBuilder {
-                queryData = _makeDefault(new QueryData(), Constants.ALLOCATOR_PERSISTENT),
+                queryData = _makeDefault(new QueryData(), Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
                 commandBuffer = _makeDefault(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
-                }, Constants.ALLOCATOR_PERSISTENT),
-                compose = new ArchetypeQueries.QueryCompose().Initialize(Constants.ALLOCATOR_PERSISTENT),
+                }, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                compose = new ArchetypeQueries.QueryCompose().Initialize(Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
                 isCreated = true,
-                builderDependsOn = dependsOn,//Batches.Close(dependsOn, queryContext.state),
-                allocator = Constants.ALLOCATOR_PERSISTENT,
+                builderDependsOn = dependsOn,
+                allocator = Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             builder.Without<IsInactive>();

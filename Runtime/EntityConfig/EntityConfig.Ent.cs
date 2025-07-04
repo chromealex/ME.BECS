@@ -1,6 +1,18 @@
 namespace ME.BECS {
 
+    using Unity.Collections;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+
+    public partial struct Ent {
+
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        public static Ent New(in Config config, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
+            var ent = Ent.New(in jobInfo, editorName);
+            config.UnsafeConfig.Apply(in ent);
+            return ent;
+        }
+
+    }
     
     public static class EntityConfigEntExt {
 

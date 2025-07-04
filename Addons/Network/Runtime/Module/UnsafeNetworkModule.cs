@@ -214,7 +214,7 @@ namespace ME.BECS.Network {
 
                 this.state = networkWorld.state;
                 this.properties = properties;
-                var ent = Ent.New(in networkWorld);
+                var ent = Ent.New(in networkWorld, editorName: "MethodsStorage");
                 this.methods = new MemArrayAuto<Method>(in ent, properties.capacity);
                 this.methodPtrs = new EquatableDictionaryAuto<System.IntPtr, ushort>(in ent, properties.capacity);
                 this.index = 0;
@@ -451,7 +451,7 @@ namespace ME.BECS.Network {
                 this.connectedWorldState = connectedWorld.state;
                 this.networkState = networkWorld.state;
                 this.properties = properties;
-                var ent = Ent.New(in networkWorld);
+                var ent = Ent.New(in networkWorld, editorName: "StatesStorage");
                 this.entries = new MemArrayAuto<Entry>(in ent, this.properties.capacity);
                 this.rover = 0u;
                 this.resetState = default;

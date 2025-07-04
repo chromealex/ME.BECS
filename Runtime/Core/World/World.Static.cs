@@ -235,9 +235,9 @@ namespace ME.BECS {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorDomain = new Unity.Collections.AllocatorHelper<DomainAllocator>(Constants.ALLOCATOR_PERSISTENT);
+            allocatorDomain = new Unity.Collections.AllocatorHelper<DomainAllocator>(Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
             allocatorDomain.Allocator.Initialize(100);
-            allocatorDomainValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
+            allocatorDomainValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 
             return allocatorDomain;

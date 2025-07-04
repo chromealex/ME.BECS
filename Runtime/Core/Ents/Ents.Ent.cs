@@ -8,7 +8,7 @@ namespace ME.BECS {
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
     [StructLayout(LayoutKind.Explicit, Size = 8)]
-    public unsafe partial struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
+    public partial struct Ent : System.IEquatable<Ent>, System.IComparable<Ent> {
 
         public static Ent Null => new Ent();
 

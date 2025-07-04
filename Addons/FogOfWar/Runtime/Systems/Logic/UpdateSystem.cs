@@ -91,7 +91,7 @@ namespace ME.BECS.FogOfWar {
                 if (tr.IsCalculated == false) return;
                 
                 var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
-                var sector = new FowMathSector(in this.props, tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), sectorComponent.value);
+                var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), sectorComponent.value);
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, in sector);
                 
             }
@@ -106,12 +106,14 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
-                if (tr.IsCalculated == false) return;
-                
+                if (tr.readIsWorldMatrixTickCalculated == false) return;
                 ref readonly var revealer = ref parent.value.Read<FogOfWarRevealerComponent>();
                 var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
-                var sector = new FowMathSector(in this.props, tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parent.value.Read<FogOfWarSectorRevealerComponent>().value);
+                var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parent.value.Read<FogOfWarSectorRevealerComponent>().value);
+                var marker = new Unity.Profiling.ProfilerMarker("WriteRange");
+                marker.Begin();
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, part.part, in sector);
+                marker.End();
 
             }
 

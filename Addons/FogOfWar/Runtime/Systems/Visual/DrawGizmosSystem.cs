@@ -28,20 +28,23 @@ namespace ME.BECS.FogOfWar {
             var playersSystem = logicWorld.GetSystem<PlayersSystem>();
             var activePlayer = playersSystem.GetActivePlayer();
             var fow = activePlayer.readTeam.Read<FogOfWarComponent>();
-            var props = logicWorld.GetSystem<CreateSystem>().heights.Read<FogOfWarStaticComponent>();
+            var fowSystem = logicWorld.GetSystem<CreateSystem>();
+            var props = fowSystem.heights.Read<FogOfWarStaticComponent>();
             var notExplored = UnityEngine.Color.black;
             notExplored.a = 0.8f;
             var explored = UnityEngine.Color.black;
             explored.a = 0.3f;
-            for (uint x = 0u; x < props.size.x; ++x) {
-                for (uint y = 0u; y < props.size.y; ++y) {
-                    var cubeSize = new float3(props.worldSize.x / props.size.x, 0.2f, props.worldSize.x / props.size.x) * 0.8f;
-                    var worldPos = FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(x, y));
-                    var isVisible = FogOfWarUtils.IsVisible(in props, in fow, x, y) == true;
-                    var isExplored = FogOfWarUtils.IsExplored(in props, in fow, x, y) == true;
-                    UnityEngine.Gizmos.color = UnityEngine.Color.Lerp(UnityEngine.Color.Lerp(UnityEngine.Color.clear, explored, isVisible == true ? 0f: 1f), notExplored, isExplored == true ? 0f : 1f);
-                    UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)worldPos, (UnityEngine.Vector3)cubeSize);
-                }
+            var nodeSize = logicWorld.GetSystem<Pathfinding.BuildGraphSystem>().GetNodeSize();
+            for (uint i = 0; i < props.heights.Length; ++i) {
+                var x = i % props.size.x;
+                var y = i / props.size.x;
+                var cubeSize = new float3(nodeSize / fowSystem.resolution) * 0.8f;
+                cubeSize.y = FogOfWarUtils.GetHeight(in props, x, y);
+                var worldPos = FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(x, y));
+                var isVisible = FogOfWarUtils.IsVisible(in props, in fow, x, y) == true;
+                var isExplored = FogOfWarUtils.IsExplored(in props, in fow, x, y) == true;
+                UnityEngine.Gizmos.color = UnityEngine.Color.Lerp(UnityEngine.Color.Lerp(UnityEngine.Color.clear, explored, isVisible == true ? 0f: 1f), notExplored, isExplored == true ? 0f : 1f);
+                UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)worldPos, (UnityEngine.Vector3)cubeSize);
             }
 
         }

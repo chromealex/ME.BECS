@@ -12,6 +12,7 @@ namespace ME.BECS.FogOfWar {
     using Unity.Collections.LowLevel.Unsafe;
     using Transforms;
     using Views;
+    using Unity.Collections;
     using static Cuts;
 
     public struct CreateTextureSystem : IAwake, IDestroy {
@@ -47,7 +48,7 @@ namespace ME.BECS.FogOfWar {
                 tex.Apply();
                 this.texture = new ClassPtr<UnityEngine.Texture2D>(tex);
                 var buffer = this.texture.Value.GetPixelData<byte>(0);
-                this.textureBuffer = new Unity.Collections.NativeArray<byte>(buffer.Length, Constants.ALLOCATOR_PERSISTENT);
+                this.textureBuffer = CollectionHelper.CreateNativeArray<byte>(buffer.Length, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
             }
 
             var render = Ent.New(in context, editorName: "FOW Renderer");
@@ -67,7 +68,7 @@ namespace ME.BECS.FogOfWar {
 
         [WithoutBurst]
         public void OnDestroy(ref SystemContext context) {
-            this.textureBuffer.Dispose();
+            CollectionHelper.DisposeNativeArray(this.textureBuffer, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
             UnityEngine.Object.DestroyImmediate(this.texture.Value);
             this.texture.Dispose();
         }

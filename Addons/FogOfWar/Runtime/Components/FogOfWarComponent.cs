@@ -35,10 +35,10 @@ namespace ME.BECS.FogOfWar {
     public struct FogOfWarStaticComponent : IComponent {
 
         public float2 mapPosition;
-        public float2 worldSize;
         public uint2 size;
         public MemArrayAuto<tfloat> heights;
         public tfloat maxHeight;
+        public sfloat nodeSize;
 
     }
 
