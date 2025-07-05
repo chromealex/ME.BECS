@@ -134,8 +134,8 @@ namespace ME.BECS {
 
             if (obj == null) return 0u;
             
-            foreach (var item in ObjectReferenceRegistry.data.items) {
-                if (item.Is(obj) == true) return item.sourceId;
+            foreach (var item in ObjectReferenceRegistry.data.objects) {
+                if (item.data.Is(obj) == true) return item.data.sourceId;
             }
 
             foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {

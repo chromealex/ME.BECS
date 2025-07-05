@@ -27,14 +27,14 @@ namespace ME.BECS {
 
             try {
 
-                configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.items.Length, Constants.ALLOCATOR_DOMAIN);
+                configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.objects.Length, Constants.ALLOCATOR_DOMAIN);
                 if (isEditor == false) {
-                    foreach (var item in ObjectReferenceRegistry.data.items) {
-                        if (item.Is<EntityConfig>() == true) {
-                            var obj = new ObjectItem(item);
+                    foreach (var item in ObjectReferenceRegistry.data.objects) {
+                        if (item.data.Is<EntityConfig>() == true) {
+                            var obj = new ObjectItem(item.data);
                             var unsafeConfig = obj.Load<EntityConfig>().AsUnsafeConfig();
                             if (unsafeConfig.IsValid() == false) continue;
-                            configs.Data.TryAdd(item.sourceId, unsafeConfig);
+                            configs.Data.TryAdd(item.data.sourceId, unsafeConfig);
                         }
                     }
                 }

@@ -17,7 +17,7 @@ namespace ME.BECS.Editor.JSON {
             if (str.StartsWith(protocol) == true) {
                 var configObj = EditorUtils.GetAssetByPathPart<T>(str.Substring(protocol.Length));
                 ObjectReferenceRegistry.data.Add(configObj, out var isNew);
-                if (isNew == true) ObjectReferenceValidate.Validate(ObjectReferenceRegistry.data.items.Length - 1, 1);
+                if (isNew == true) ObjectReferenceValidate.Validate(ObjectReferenceRegistry.data.objects.Length - 1, 1);
                 return this.Deserialize(ObjectReferenceRegistry.GetId(configObj), configObj, customData);
             } else {
                 return null;

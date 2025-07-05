@@ -19,7 +19,7 @@ namespace ME.BECS.Editor {
                 ObjectReferenceRegistry.LoadForced();
             }
 
-            var items = ObjectReferenceRegistry.data.items;
+            var items = ObjectReferenceRegistry.data.objects;
             Validate(0, items.Length);
         }
         
@@ -29,9 +29,9 @@ namespace ME.BECS.Editor {
             }
 
             var isDirty = false;
-            var items = ObjectReferenceRegistry.data.items;
+            var items = ObjectReferenceRegistry.data.objects;
             for (int i = offset; i < (count < items.Length ? offset + count : items.Length); ++i) {
-                var item = items[i];
+                var item = items[i].data;
                 var asset = item.source != null ? item.source : item.sourceReference?.editorAsset;
                 var type = string.IsNullOrEmpty(item.sourceType) == true ? null : System.Type.GetType(item.sourceType);
                 if (type == null && item.source != null) {
@@ -75,15 +75,15 @@ namespace ME.BECS.Editor {
                     item.isGameObject = asset is UnityEngine.Component || asset is UnityEngine.GameObject;
                 }
 
-                if (isDirty == true || items[i].Equals(item) == false) {
-                    items[i] = item;
+                if (isDirty == true || items[i].data.Equals(item) == false) {
+                    items[i].data = item;
                     isDirty = true;
                 }
             }
 
             if (isDirty == true) {
-                items = items.Where(x => x.source != null || x.sourceReference.editorAsset != null).ToArray();
-                ObjectReferenceRegistry.data.items = items;
+                items = items.Where(x => x.data.source != null || x.data.sourceReference.editorAsset != null).ToArray();
+                ObjectReferenceRegistry.data.objects = items;
                 EditorUtility.SetDirty(ObjectReferenceRegistry.data);
             }
             

@@ -186,8 +186,8 @@ namespace ME.BECS.Editor.CsvImporter {
 
                     { // add project configs
                         ObjectReferenceValidate.Validate();
-                        foreach (var item in ObjectReferenceRegistry.data.items) {
-                            var obj = new ObjectItem(item);
+                        foreach (var item in ObjectReferenceRegistry.data.objects) {
+                            var obj = new ObjectItem(item.data);
                             if (obj.Is<EntityConfig>() == true) {
                                 configs.Add(new ConfigFile(obj.Load<EntityConfig>()));
                             }
@@ -208,7 +208,7 @@ namespace ME.BECS.Editor.CsvImporter {
                         foreach (var config in configs) {
                             ObjectReferenceRegistry.data.Add(config.instance, out var isNew);
                             if (isNew == true) {
-                                if (startIndex == -1) startIndex = ObjectReferenceRegistry.data.items.Length - 1;
+                                if (startIndex == -1) startIndex = ObjectReferenceRegistry.data.objects.Length - 1;
                                 ++count;
                             }
                         }

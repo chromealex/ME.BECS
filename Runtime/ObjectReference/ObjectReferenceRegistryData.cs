@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ME.BECS {
 
@@ -134,24 +135,77 @@ namespace ME.BECS {
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
 
         public ItemInfo[] items = System.Array.Empty<ItemInfo>();
+        public ObjectReferenceRegistryItem[] objects = System.Array.Empty<ObjectReferenceRegistryItem>();
 
         internal uint sourceId;
         private readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
+
+        [UnityEngine.ContextMenu("Call OnValidate")]
+        public void OnValidate() {
+
+            var newObjects = new System.Collections.Generic.List<ItemInfo>();
+            {
+                var list = this.objects.ToList();
+                list.RemoveAll(x => x == null);
+                this.objects = list.ToArray();
+            }
+            foreach (var item in this.items) {
+                var found = false;
+                foreach (var obj in this.objects) {
+                    if (obj.data.Equals(item) == true) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found == false) {
+                    newObjects.Add(item);
+                }
+            }
+            this.items = System.Array.Empty<ItemInfo>();
+            
+            #if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () => {
+                var curDir = System.IO.Path.GetDirectoryName(UnityEditor.AssetDatabase.GetAssetPath(this));
+                var dir = $"{curDir}/ObjectReferenceRegistry";
+                if (System.IO.Directory.Exists(dir) == false) {
+                    System.IO.Directory.CreateDirectory(dir);
+                }
+
+                foreach (var obj in newObjects) {
+                    var instance = UnityEngine.ScriptableObject.CreateInstance<ObjectReferenceRegistryItem>();
+                    instance.name = obj.sourceId.ToString();
+                    instance.data = obj;
+                    var path = $"{dir}/{instance.name}.asset";
+                    UnityEditor.AssetDatabase.CreateAsset(instance, path);
+                    UnityEditor.AssetDatabase.ImportAsset(path);
+                }
+
+                var items = UnityEditor.AssetDatabase.FindAssets("t:ObjectReferenceRegistryItem", new string[] { dir });
+                this.objects = new ObjectReferenceRegistryItem[items.Length];
+                var index = 0;
+                foreach (var guid in items) {
+                    var item = UnityEditor.AssetDatabase.LoadAssetAtPath<ObjectReferenceRegistryItem>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                    this.objects[index++] = item;
+                }
+            };
+            #endif
+
+        }
         
         public void Initialize() {
             this.itemLookup.Clear();
             this.sourceId = 0u;
-            foreach (var item in this.items) {
-                if (this.itemLookup.TryAdd(item.sourceId, item) == false) {
-                    UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.sourceId} {item.source}");
+            foreach (var item in this.objects) {
+                if (this.itemLookup.TryAdd(item.data.sourceId, item.data) == false) {
+                    UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.data.sourceId} {item.data.source}");
                 }
-                if (item.sourceId > this.sourceId) this.sourceId = item.sourceId;
+                if (item.data.sourceId > this.sourceId) this.sourceId = item.data.sourceId;
             }
         }
 
         public void CleanUpLoadedAssets() {
-            foreach (var item in this.items) {
-                item.CleanUpLoadedAssets();
+            foreach (var item in this.objects) {
+                item.data.CleanUpLoadedAssets();
             }
         }
         
@@ -159,12 +213,12 @@ namespace ME.BECS {
             if (this.itemLookup.Count == 0) {
                 this.Initialize();
             }
-            if (this.itemLookup.TryGetValue(sourceId, out ItemInfo item) == true) {
+            if (this.itemLookup.TryGetValue(sourceId, out var item) == true) {
                 return new ObjectItem(item);
             }
-            for (int i = 0; i < this.items.Length; ++i) {
-                if (this.items[i].sourceId == sourceId) {
-                    return new ObjectItem(this.items[i]);
+            for (int i = 0; i < this.objects.Length; ++i) {
+                if (this.objects[i]?.data.sourceId == sourceId) {
+                    return new ObjectItem(this.objects[i].data);
                 }
             }
             return default;
@@ -175,9 +229,9 @@ namespace ME.BECS {
             isNew = false;
             if (source == null) return 0u;
 
-            for (int i = 0; i < this.items.Length; ++i) {
-                if (this.items[i].Is(source) == true) {
-                    ref var item = ref this.items[i];
+            for (int i = 0; i < this.objects.Length; ++i) {
+                if (this.objects[i].data.Is(source) == true) {
+                    ref var item = ref this.objects[i].data;
                     return item.sourceId;
                 }
             }
@@ -196,6 +250,9 @@ namespace ME.BECS {
                     this.Initialize();
                 }
                 this.itemLookup.Add(nextId, item);
+                #if UNITY_EDITOR
+                this.OnValidate();
+                #endif
                 return nextId;
             }
 
@@ -214,8 +271,8 @@ namespace ME.BECS {
             while (true) {
                 // Set unique next id
                 var has = false;
-                for (int i = 0; i < this.items.Length; ++i) {
-                    ref var item = ref this.items[i];
+                for (int i = 0; i < this.objects.Length; ++i) {
+                    ref var item = ref this.objects[i].data;
                     if (item.sourceId == hashId) {
                         ++hashId;
                         has = true;
@@ -234,9 +291,9 @@ namespace ME.BECS {
 
         public bool Remove(UnityEngine.Object source) {
             
-            for (int i = 0; i < this.items.Length; ++i) {
-                if (this.items[i].source == source) {
-                    ref var item = ref this.items[i];
+            /*for (int i = 0; i < this.objects.Length; ++i) {
+                if (this.objects[i].data.source == source) {
+                    //ref var item = ref this.objects[i];
                     //if (item.referencesCount == 0u) return false;
                     //--item.referencesCount;
                     // if (item.references == 0u) {
@@ -250,7 +307,7 @@ namespace ME.BECS {
                     //     return true;
                     // }
                 }
-            }
+            }*/
 
             return false;
 
