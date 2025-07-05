@@ -13,6 +13,21 @@
     background-size: 100px 100px;
 }
 
+.showonstartup {
+    background-color: var(--main-background-color);
+    flex-direction: row-reverse;
+    padding: 10px;
+    border-top-width: 1px;
+    border-color: var(--main-color);
+}
+.showonstartup .unity-toggle__input {
+    flex-grow: 0;
+}
+.showonstartup Label {
+    flex-grow: 1;
+    padding-left: 10px;
+}
+
 .tutorial-item {
     width: 400px;
     height: 300px;

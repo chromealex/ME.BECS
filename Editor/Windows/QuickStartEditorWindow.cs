@@ -5,6 +5,20 @@ using UnityEngine;
 namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
+    
+    [InitializeOnLoad]
+    public static class QuickStartEditorWindowStartUp {
+        static QuickStartEditorWindowStartUp() {
+            if (SessionState.GetBool("ME.BECS.Editor.QuickStartEditorWindowStartUp", false) == false) {
+                if (QuickStartEditorWindow.IsShowOnStartUp() == true) {
+                    EditorApplication.delayCall += () => {
+                        QuickStartEditorWindow.ShowWindow();
+                    };
+                }
+                SessionState.SetBool("ME.BECS.Editor.QuickStartEditorWindowStartUp", true);
+            }
+        }
+    }
 
     public class QuickStartEditorWindow : EditorWindow {
 
@@ -19,6 +33,14 @@ namespace ME.BECS.Editor {
         
         private StyleSheet styleSheet;
         
+        public static void SetShowOnStartUp(bool state) {
+            EditorPrefs.SetBool("ME.BECS.Editor.QuickStartEditorWindow.ShowOnStartUp", state);
+        }
+
+        public static bool IsShowOnStartUp() {
+            return EditorPrefs.GetBool("ME.BECS.Editor.QuickStartEditorWindow.ShowOnStartUp", true);
+        }
+
         public static void ShowWindow() {
             var win = WorldEntityEditorWindow.CreateInstance<QuickStartEditorWindow>();
             win.titleContent = new GUIContent("Quick Start", EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/icon-quickstart.png"));
@@ -68,6 +90,12 @@ namespace ME.BECS.Editor {
                     url = "https://youtu.be/vItAprfcc0A",
                     texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-5.jpg"),
                 },
+                new TutorialInfo() {
+                    caption = "Addressables and Global Events",
+                    description = "When and where addressables will be used. How to use Global Events.",
+                    url = "https://youtu.be/4mbOPXLfArM",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-6.jpg"),
+                },
             };
 
             var root = this.rootVisualElement;
@@ -78,6 +106,14 @@ namespace ME.BECS.Editor {
             
             var scrollView = new ScrollView();
             root.Add(scrollView);
+
+            var showOnStartup = new Toggle("Show on startup");
+            showOnStartup.AddToClassList("showonstartup");
+            showOnStartup.value = IsShowOnStartUp();
+            showOnStartup.RegisterValueChangedCallback((evt) => {
+                QuickStartEditorWindow.SetShowOnStartUp(evt.newValue);
+            });
+            root.Add(showOnStartup);
             
             var container = new VisualElement();
             container.AddToClassList("container");
