@@ -211,7 +211,7 @@ namespace ME.BECS.Editor {
         }
 
     }
-
+    
     public static class CodeGenerator {
         
         public struct MethodDefinition {
@@ -369,9 +369,9 @@ namespace ME.BECS.Editor {
             }
         }
 
-        public static void RegenerateBurstAOT() {
+        public static void RegenerateBurstAOT(bool forced = false) {
 
-            if (UnityEngine.Application.isBatchMode == true) return;
+            if (UnityEngine.Application.isBatchMode == true && forced == false) return;
 
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
 
