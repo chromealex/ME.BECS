@@ -23,7 +23,7 @@ namespace ME.BECS.Editor {
         [MenuItem("ME.BECS/Regenerate Assemblies", priority = 100)]
         public static void CodeGeneratorRegenerateAsms() {
 
-            CodeGenerator.RegenerateBurstAOT();
+            CodeGenerator.RegenerateBurstAOT(true);
 
         }
 
