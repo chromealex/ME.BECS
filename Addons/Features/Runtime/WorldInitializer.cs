@@ -28,6 +28,7 @@ namespace ME.BECS {
 
         public void Update() {
 
+            if (this.featuresGraph == null) return;
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             this.previousFrameDependsOn.Complete();
@@ -36,6 +37,7 @@ namespace ME.BECS {
 
         public void FixedUpdate() {
 
+            if (this.featuresGraphFixedUpdate == null) return;
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
             this.previousFrameDependsOn.Complete();
@@ -44,8 +46,10 @@ namespace ME.BECS {
 
         protected override void LateUpdate() {
 
-            this.previousFrameDependsOn.Complete();
-            this.previousFrameDependsOn = this.DoUpdate(UpdateType.LATE_UPDATE, this.previousFrameDependsOn);
+            if (this.featuresGraphLateUpdate != null) {
+                this.previousFrameDependsOn.Complete();
+                this.previousFrameDependsOn = this.DoUpdate(UpdateType.LATE_UPDATE, this.previousFrameDependsOn);
+            }
 
             if (this.world.isCreated == true) {
                 // Update modules
