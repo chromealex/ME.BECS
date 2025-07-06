@@ -38,6 +38,7 @@ namespace ME.BECS.Attack {
             attackSensor.Set<AttackAspect>();
             attackSensor.Set<TransformAspect>();
             var trSensor = attackSensor.GetAspect<TransformAspect>();
+            trSensor.IsStaticLocal = true;
             trSensor.localPosition = float3.zero;
             trSensor.localRotation = quaternion.identity;
             var attackAspect = attackSensor.GetAspect<AttackAspect>();

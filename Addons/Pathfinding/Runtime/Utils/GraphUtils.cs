@@ -179,6 +179,7 @@ namespace ME.BECS.Pathfinding {
                 nodes = new ListAuto<GraphNodeMemory>(in ent, size.x * size.y),
             };
             var obstacleTr = ent.GetOrCreateAspect<TransformAspect>();
+            obstacleTr.IsStaticLocal = true;
             obstacleTr.position = position;
             obstacleTr.rotation = rotation;
             ent.Set(obstacle);

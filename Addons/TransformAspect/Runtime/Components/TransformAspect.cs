@@ -37,16 +37,28 @@ namespace ME.BECS.Transforms {
         /// <summary>
         /// Is this transform static?
         /// Static transforms doesn't recalculate localMatrix and worldMatrix at all.
+        /// So, if you need to move current object - you do not need to use this flag.
+        /// </summary>
+        public bool IsStaticLocal {
+            [INLINE(256)] get => this.ent.Has<IsTransformStaticLocalComponent>();
+            [INLINE(256)] set => this.ent.SetTag<IsTransformStaticLocalComponent>(value);
+        }
+
+        /// <summary>
+        /// Is this transform static?
+        /// Static transforms doesn't recalculate localMatrix and worldMatrix at all.
         /// So, if you need to move parent object or current object - you do not need to use this flag.
         /// </summary>
         public bool IsStatic {
             [INLINE(256)] get => this.ent.Has<IsTransformStaticComponent>();
-            [INLINE(256)] set => this.ent.SetTag<IsTransformStaticComponent>(value);
+            [INLINE(256)] set {
+                this.ent.SetTag<IsTransformStaticLocalComponent>(false);
+                this.ent.SetTag<IsTransformStaticComponent>(value);
+            }
         }
 
-        /// <summary>
-        /// Returns true if all parent objects and current object has IsStatic as true 
-        /// </summary>
+        /// <get>Returns true if all parent objects and current object has IsStatic as true.</get>
+        /// <set>Set current object and all children IsStatic as true.</set>
         public bool IsStaticHierarchy {
             [INLINE(256)] get {
                 if (this.parent.IsAlive() == true) {
@@ -58,37 +70,28 @@ namespace ME.BECS.Transforms {
                 }
                 return true;
             }
+            [INLINE(256)] set {
+                this.IsStatic = value;
+                if (this.ent.Has<ChildrenComponent>() == true) {
+                    var queue = new UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
+                    queue.Enqueue(this.ent);
+                    while (queue.Count > 0) {
+                        var child = queue.Dequeue();
+                        var nodes = child.Read<ChildrenComponent>();
+                        for (uint i = 0u; i < nodes.list.Count; ++i) {
+                            var node = nodes.list[i];
+                            queue.Enqueue(node);
+                        }
+                        if (child.Has<LocalPositionComponent>() == true && child.Has<LocalRotationComponent>() == true) {
+                            var tr = child.GetAspect<TransformAspect>();
+                            tr.IsStatic = value;
+                        }
+                    }
+                    queue.Dispose();
+                }
+            }
         }
         
-        /// <summary>
-        /// Set current object and all children IsStatic as true
-        /// </summary>
-        /// <param name="state"></param>
-        [INLINE(256)]
-        public void SetStaticHierarchy(bool state) {
-            
-            this.IsStatic = state;
-            
-            if (this.ent.Has<ChildrenComponent>() == true) {
-                var queue = new UnsafeQueue<Ent>(Constants.ALLOCATOR_TEMP);
-                queue.Enqueue(this.ent);
-                while (queue.Count > 0) {
-                    var child = queue.Dequeue();
-                    var nodes = child.Read<ChildrenComponent>();
-                    for (uint i = 0u; i < nodes.list.Count; ++i) {
-                        var node = nodes.list[i];
-                        queue.Enqueue(node);
-                    }
-                    if (child.Has<LocalPositionComponent>() == true && child.Has<LocalRotationComponent>() == true) {
-                        var tr = child.GetAspect<TransformAspect>();
-                        tr.IsStatic = state;
-                    }
-                }
-                queue.Dispose();
-            }
-            
-        }
-
         public readonly float3 forward {
             [INLINE(256)] get => math.mul(this.rotation, math.forward());
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.forward(), value); 

@@ -14,6 +14,7 @@ namespace ME.BECS.Transforms {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateLocalMatrix(in aspect);
+                if (aspect.IsStaticLocal == true) ent.SetTag<IsTransformStaticLocalCalculatedComponent>(true);
 
             }
 
@@ -87,7 +88,7 @@ namespace ME.BECS.Transforms {
 
             var clearCurrenTick = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<ClearJob, TransformAspect>();
             // Calculate local matrix
-            var localMatrixHandle = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().Schedule<CalculateLocalMatrixJob, TransformAspect>();
+            var localMatrixHandle = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<IsTransformStaticLocalCalculatedComponent>().Schedule<CalculateLocalMatrixJob, TransformAspect>();
             // Update roots
             var rootsHandle = context.Query(localMatrixHandle).AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<ParentComponent>().Schedule<CalculateRootsJob, TransformAspect>();
             var rootsWithChildrenHandle = context.Query(Unity.Jobs.JobHandle.CombineDependencies(rootsHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();

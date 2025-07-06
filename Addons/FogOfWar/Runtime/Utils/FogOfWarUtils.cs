@@ -619,6 +619,7 @@ namespace ME.BECS.FogOfWar {
                 height = height != null ? height.Value : (tfloat)(-1f),
             });
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.IsStaticLocal = true;
             entTr.position = position;
             entTr.rotation = quaternion.identity;
             CreatePart(in jobInfo, in ent, in owner, 0);
@@ -632,7 +633,8 @@ namespace ME.BECS.FogOfWar {
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
-                part.Set<TransformAspect>();
+                var tr = part.Set<TransformAspect>();
+                tr.IsStaticLocal = true;
                 ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
                 part.Set(new FogOfWarRevealerIsRangeTag());
                 part.Set(new FogOfWarRevealerPartialComponent() {
@@ -654,6 +656,7 @@ namespace ME.BECS.FogOfWar {
                 value = sector.sector,
             });
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.IsStaticLocal = true;
             entTr.position = position;
             entTr.rotation = quaternion.identity;
             CreatePart(in jobInfo, in ent, in owner, 0);
@@ -667,7 +670,8 @@ namespace ME.BECS.FogOfWar {
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
-                part.Set<TransformAspect>();
+                var tr = part.Set<TransformAspect>();
+                tr.IsStaticLocal = true;
                 ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
                 part.Set(new FogOfWarRevealerIsRangeTag());
                 part.Set(new FogOfWarRevealerPartialComponent() {
@@ -688,6 +692,7 @@ namespace ME.BECS.FogOfWar {
                 height = height != null ? height.Value : (tfloat)(-1f),
             });
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.IsStaticLocal = true;
             entTr.position = position;
             entTr.rotation = quaternion.identity;
             CreatePart(in jobInfo, in ent, in owner, 0);
@@ -701,7 +706,8 @@ namespace ME.BECS.FogOfWar {
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
-                part.Set<TransformAspect>();
+                var tr = part.Set<TransformAspect>();
+                tr.IsStaticLocal = true;
                 ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
                 part.Set(new FogOfWarRevealerIsRectTag());
                 part.Set(new FogOfWarRevealerPartialComponent() {
@@ -716,6 +722,7 @@ namespace ME.BECS.FogOfWar {
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             ent.Set(new FogOfWarRevealerIsPartialTag());
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.IsStaticLocal = true;
             entTr.position = new float3(rect.center.x, 0f, rect.center.y);
             entTr.rotation = quaternion.identity;
             CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 0);
@@ -729,7 +736,8 @@ namespace ME.BECS.FogOfWar {
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, in FogOfWarStaticComponent props, in Rect rect, tfloat? height, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
-                part.Set<TransformAspect>();
+                var tr = part.Set<TransformAspect>();
+                tr.IsStaticLocal = true;
                 ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
                 part.Set(new FogOfWarRevealerComponent() {
                     range = FogOfWarUtils.WorldToFogMapUValue(in props, rect.width),
@@ -754,6 +762,7 @@ namespace ME.BECS.FogOfWar {
                 height = height != null ? height.Value : (tfloat)(-1f),
             });
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
+            entTr.IsStaticLocal = true;
             var pos = FogOfWarUtils.FogMapToWorldPosition(in props, rect.position);
             var size = FogOfWarUtils.FogMapToWorldPosition(in props, rect.size);
             entTr.position = new float3(pos.x, 0f, pos.z) + new float3(size.x, 0f, size.z) * 0.5f;
@@ -769,7 +778,8 @@ namespace ME.BECS.FogOfWar {
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner,  byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
-                part.Set<TransformAspect>();
+                var tr = part.Set<TransformAspect>();
+                tr.IsStaticLocal = true;
                 ME.BECS.Players.PlayerUtils.SetOwner(in part, in owner);
                 part.Set(new FogOfWarRevealerIsRectTag());
                 part.Set(new FogOfWarRevealerPartialComponent() {

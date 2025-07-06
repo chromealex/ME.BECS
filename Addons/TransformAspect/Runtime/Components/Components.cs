@@ -37,9 +37,16 @@ namespace ME.BECS.Transforms {
     [EditorComment("Is this transform is static?")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct IsTransformStaticComponent : IConfigComponent { }
-    
+
+    [EditorComment("Is this transform is static local?")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct IsTransformStaticLocalComponent : IConfigComponent { }
+
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct IsTransformStaticCalculatedComponent : IComponent { }
+
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct IsTransformStaticLocalCalculatedComponent : IComponent { }
 
     [EditorComment("Current calculated world matrix")]
     [ComponentGroup(typeof(TransformMatrixComponentGroup))]
