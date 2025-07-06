@@ -36,8 +36,7 @@ namespace ME.BECS.Attack {
             config.Apply(in attackSensor);
             attackSensor.Set<QuadTreeQueryAspect>();
             attackSensor.Set<AttackAspect>();
-            attackSensor.Set<TransformAspect>();
-            var trSensor = attackSensor.GetAspect<TransformAspect>();
+            var trSensor = attackSensor.Set<TransformAspect>();
             trSensor.IsStaticLocal = true;
             trSensor.localPosition = float3.zero;
             trSensor.localRotation = quaternion.identity;
@@ -248,6 +247,7 @@ namespace ME.BECS.Attack {
             if (muzzleView.IsValid == true) {
                 var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
+                tr.IsStaticLocal = true;
                 tr.position = position;
                 tr.rotation = rotation;
                 muzzleEnt.InstantiateView(muzzleView);

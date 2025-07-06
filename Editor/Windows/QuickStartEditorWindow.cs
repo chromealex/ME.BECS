@@ -96,6 +96,12 @@ namespace ME.BECS.Editor {
                     url = "https://youtu.be/4mbOPXLfArM",
                     texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-6.jpg"),
                 },
+                new TutorialInfo() {
+                    caption = "Players and Teams",
+                    description = "How to use PlayersSystem and initialize and change teams.",
+                    url = "https://youtu.be/6syQWOWxUwY",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-7.jpg"),
+                },
             };
 
             var root = this.rootVisualElement;

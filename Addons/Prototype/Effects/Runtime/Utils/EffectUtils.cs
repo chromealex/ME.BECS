@@ -34,7 +34,8 @@ namespace ME.BECS.Effects {
             if (effect.config.IsValid == false) return default;
             
             var ent = Ent.New(in jobInfo);
-            var tr = ent.GetOrCreateAspect<TransformAspect>();
+            var tr = ent.Set<TransformAspect>();
+            tr.IsStaticLocal = true;
             tr.position = position;
             tr.rotation = rotation;
             effect.config.Apply(ent);

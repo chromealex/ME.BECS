@@ -106,7 +106,7 @@ namespace ME.BECS.FogOfWar {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
-                if (tr.readIsWorldMatrixTickCalculated == false) return;
+                if (tr.IsWorldMatrixTickCalculated == false) return;
                 ref readonly var revealer = ref parent.value.Read<FogOfWarRevealerComponent>();
                 var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parent.value.Read<FogOfWarSectorRevealerComponent>().value);

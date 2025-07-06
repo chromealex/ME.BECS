@@ -123,7 +123,7 @@ namespace ME.BECS.Transforms {
         public static void CalculateWorldMatrix(in TransformAspect ent) {
 
             ent.worldMatrix = ent.readLocalMatrix;
-            ent.isWorldMatrixTickCalculated = true;
+            ent.IsWorldMatrixTickCalculated = true;
 
         }
 
@@ -165,24 +165,24 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void Clear(in TransformAspect ent) {
 
-            ent.isWorldMatrixTickCalculated = false;
+            ent.IsWorldMatrixTickCalculated = false;
 
         }
 
         [INLINE(256)]
         public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
             
-            if (parent.readIsWorldMatrixTickCalculated == false) {
+            if (parent.IsWorldMatrixTickCalculated == false) {
                 // Calculate parent matrix
                 if (ent.ent.worldId != parent.ent.worldId) return;
                 if (parent.parent.IsAlive() == true) CalculateWorldMatrixParent(parent.parent.GetAspect<TransformAspect>(), in parent);
             }
 
-            if (ent.readIsWorldMatrixTickCalculated == false) {
+            if (ent.IsWorldMatrixTickCalculated == false) {
                 ent.LockWorldMatrix();
-                if (ent.readIsWorldMatrixTickCalculated == false) {
+                if (ent.IsWorldMatrixTickCalculated == false) {
                     CalculateMatrix(in parent, in ent);
-                    ent.isWorldMatrixTickCalculated = true;
+                    ent.IsWorldMatrixTickCalculated = true;
                 }
                 ent.UnlockWorldMatrix();
             }

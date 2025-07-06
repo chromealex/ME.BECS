@@ -21,7 +21,8 @@ namespace ME.BECS.Bullets {
         public static Ent RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, in JobInfo jobInfo) {
 
             var point = Ent.New(in jobInfo, editorName: "FirePoint");
-            var tr = point.GetOrCreateAspect<TransformAspect>();
+            var tr = point.Set<TransformAspect>();
+            tr.IsStaticLocal = true;
             point.SetParent(in root);
             tr.position = position;
             tr.rotation = rotation;
