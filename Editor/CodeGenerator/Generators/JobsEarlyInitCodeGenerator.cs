@@ -24,6 +24,10 @@ namespace ME.BECS.Editor.Jobs {
                 return System.HashCode.Combine(this.type, (int)this.op);
             }
 
+            public override string ToString() {
+                return $"{this.type} {this.op} {this.isArg}";
+            }
+
         }
 
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
@@ -276,14 +280,14 @@ namespace ME.BECS.Editor.Jobs {
                 tempFuncBuilder.AppendLine($"data->buffer = buffer;");
                 tempStructBuilder.AppendLine($"public struct {structName} {{ // {jobType.FullName}");
                 tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
+                tempStructBuilder.AppendLine($"public JobInfo jobInfo;");
                 tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                 tempStructBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                tempStructBuilder.AppendLine($"public JobInfo jobInfo;");
                 tempStructUnsafeBuilder.AppendLine($"public struct {structName}Unsafe {{ // {jobType.FullName}");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public ScheduleFlags scheduleFlags;");
+                tempStructUnsafeBuilder.AppendLine($"public JobInfo jobInfo;");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public {jobTypeFullName} jobData;");
                 tempStructUnsafeBuilder.AppendLine($"[NativeDisableUnsafePtrRestriction] public CommandBuffer* buffer;");
-                tempStructUnsafeBuilder.AppendLine($"public JobInfo jobInfo;");
                 if (workInterface != null && (components.Count + aspects.Count) == workInterface.GenericTypeArguments.Length) {
 
                     {

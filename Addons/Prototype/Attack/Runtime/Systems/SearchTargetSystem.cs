@@ -98,10 +98,10 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var searchTarget = context.Query().AsParallel().Without<AttackTargetsCountComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
+            var searchTarget = context.Query().AsParallel().AsUnsafe().Without<AttackTargetsCountComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
                 world = context.world,
             });
-            var searchTargets = context.Query().AsParallel().Schedule<SearchTargetsJob, AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent>(new SearchTargetsJob() {
+            var searchTargets = context.Query().AsParallel().AsUnsafe().Schedule<SearchTargetsJob, AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent>(new SearchTargetsJob() {
                 world = context.world,
             });
             context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(searchTarget, searchTargets));
