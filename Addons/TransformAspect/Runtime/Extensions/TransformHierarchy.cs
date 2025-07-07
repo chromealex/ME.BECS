@@ -37,7 +37,7 @@ namespace ME.BECS.Transforms {
         /// Destroy entity with all children entities
         /// </summary>
         /// <param name="entity"></param>
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnore]
         public static void DestroyHierarchy(this in Ent entity) {
 
             if (entity.Has<ParentComponent>() == true) {
