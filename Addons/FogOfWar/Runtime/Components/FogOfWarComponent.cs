@@ -38,7 +38,7 @@ namespace ME.BECS.FogOfWar {
         public uint2 size;
         public MemArrayAuto<tfloat> heights;
         public tfloat maxHeight;
-        public sfloat nodeSize;
+        public tfloat nodeSize;
 
     }
 
