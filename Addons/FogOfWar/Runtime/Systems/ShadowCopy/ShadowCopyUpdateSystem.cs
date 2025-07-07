@@ -30,6 +30,7 @@ namespace ME.BECS.FogOfWar {
             marker.End();
             FogOfWarUtils.ClearQuadTree(in ent);
             var tr = ent.GetAspect<TransformAspect>();
+            tr.IsStaticHierarchy = false;
             tr.position = pos;
             tr.rotation = rot;
             ent.SetTag<IsViewRequested>(false);

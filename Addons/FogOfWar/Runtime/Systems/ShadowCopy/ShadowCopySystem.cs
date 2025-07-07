@@ -33,6 +33,7 @@ namespace ME.BECS.FogOfWar {
                     sc.shadowCopy[i] = copyEnt;
                     copyEnt.EditorName = ent.EditorName;
                     var tr = copyEnt.GetOrCreateAspect<TransformAspect>();
+                    tr.IsStaticHierarchy = false;
                     tr.position = pos;
                     tr.rotation = rot;
                     copyEnt.Set(new FogOfWarShadowCopyComponent() {
