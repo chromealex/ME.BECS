@@ -1012,7 +1012,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        internal static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, bool clamp = true) {
+        public static uint GetNodeIndex(in RootGraphComponent root, in ChunkComponent chunk, in float3 pos, bool clamp = true) {
 
             var offset = new float3(root.nodeSize * 0.5f);
             offset.y = 0f;

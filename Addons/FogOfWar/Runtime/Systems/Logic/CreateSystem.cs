@@ -24,6 +24,7 @@ namespace ME.BECS.FogOfWar {
         public float2 mapPosition;
         public float2 mapSize;
         public tfloat resolution;
+        public uint pathfindingGraphId;
         internal Ent heights;
 
         [INLINE(256)]
@@ -65,24 +66,27 @@ namespace ME.BECS.FogOfWar {
             public BuildGraphSystem pathfinding;
             public World world;
             public Ent heights;
+            public Ent graph;
 
             public void Execute(int index) {
                 
-                if (this.dirtyChunks.IsCreated == true && this.dirtyChunks[index] != this.world.CurrentTick) return;
+                if (this.dirtyChunks.IsCreated == true && this.dirtyChunks[index] != this.world.CurrentTick && this.dirtyChunks[index] != this.world.CurrentTick + 1u && this.dirtyChunks[index] != this.world.CurrentTick - 1u) return;
 
+                var graphData = this.graph.Read<RootGraphComponent>();
+                var chunk = graphData.chunks[index];
                 ref var fow = ref this.heights.Get<FogOfWarStaticComponent>();
                 tfloat maxHeight = 0f;
-                for (uint i = 0; i < fow.heights.Length; ++i) {
-                    var x = i % fow.size.x;
-                    var y = i / fow.size.x;
-                    var worldPos = FogOfWarUtils.FogMapToWorldPosition(in fow, new uint2(x, y));
-                    var height = this.pathfinding.ReadHeights().GetHeight(worldPos);
-                    fow.heights[i] = height;
+                for (uint i = 0; i < chunk.nodes.Length; ++i) {
+                    var worldPos = Graph.GetPosition(in graphData, in chunk, i);
+                    var xy = FogOfWarUtils.WorldToFogMapPosition(in fow, worldPos);
+                    var height = Graph.GetPosition(in graphData, in chunk, i).y;
+                    var idx = xy.y * fow.size.x + xy.x;
+                    fow.heights[idx] = height;
                     if (height > maxHeight) {
                         maxHeight = height;
                     }
                 }
-
+                
                 JobUtils.SetIfGreater(ref fow.maxHeight, maxHeight);
 
             }
@@ -107,11 +111,12 @@ namespace ME.BECS.FogOfWar {
                 fowSize = fowSize,
             });
             
-            var firstGraph = pathfinding.GetGraphByTypeId(0u).Read<RootGraphComponent>();
+            var firstGraph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId).Read<RootGraphComponent>();
             var updateHeightHandle = new UpdateHeightJob() {
                 pathfinding = pathfinding,
                 world = context.world,
                 heights = this.heights,
+                graph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId),
             }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), dependsOn);
             context.SetDependency(updateHeightHandle);
             
@@ -122,7 +127,7 @@ namespace ME.BECS.FogOfWar {
         public void OnUpdate(ref SystemContext context) {
 
             var pathfinding = context.world.GetSystem<BuildGraphSystem>();
-            var firstGraph = pathfinding.GetGraphByTypeId(0u).Read<RootGraphComponent>();
+            var firstGraph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId).Read<RootGraphComponent>();
             
             var cleanUpHandle = context.Query().AsParallel().Schedule<CleanUpJob, TeamAspect>();
             var updateHeightHandle = new UpdateHeightJob() {
@@ -130,6 +135,7 @@ namespace ME.BECS.FogOfWar {
                 pathfinding = pathfinding,
                 world = context.world,
                 heights = this.heights,
+                graph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId),
             }.Schedule((int)firstGraph.chunks.Length, (int)JobUtils.GetScheduleBatchCount(firstGraph.chunks.Length), context.dependsOn);
             context.SetDependency(JobHandle.CombineDependencies(cleanUpHandle, updateHeightHandle));
 

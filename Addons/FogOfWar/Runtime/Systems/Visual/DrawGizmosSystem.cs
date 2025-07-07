@@ -39,7 +39,7 @@ namespace ME.BECS.FogOfWar {
                 var x = i % props.size.x;
                 var y = i / props.size.x;
                 var cubeSize = new float3(nodeSize / fowSystem.resolution) * 0.8f;
-                cubeSize.y = FogOfWarUtils.GetHeight(in props, x, y);
+                cubeSize.y = 0.1f;
                 var worldPos = FogOfWarUtils.FogMapToWorldPosition(in props, new uint2(x, y));
                 var isVisible = FogOfWarUtils.IsVisible(in props, in fow, x, y) == true;
                 var isExplored = FogOfWarUtils.IsExplored(in props, in fow, x, y) == true;
