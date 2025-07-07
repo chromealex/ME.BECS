@@ -45,11 +45,40 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    public enum ObstacleChannel : uint {
+    public readonly struct ObstacleChannel : System.IEquatable<ObstacleChannel> {
 
-        Obstacle = 0u,
-        Building = 1u,
-        Slope = 2u,
+        public static readonly ObstacleChannel Obstacle = 0u;
+        public static readonly ObstacleChannel Building = 1u;
+        public static readonly ObstacleChannel Slope = 2u;
+
+        private readonly uint value;
+
+        private ObstacleChannel(uint value) {
+            this.value = value;
+        }
+        
+        public static implicit operator uint(ObstacleChannel c) => c.value;
+        public static implicit operator int(ObstacleChannel c) => (int)c.value;
+        public static implicit operator ObstacleChannel(uint c) => new ObstacleChannel(c);
+        public static bool operator ==(ObstacleChannel a, ObstacleChannel b) {
+            return a.value == b.value;
+        }
+
+        public static bool operator !=(ObstacleChannel a, ObstacleChannel b) {
+            return !(a == b);
+        }
+
+        public bool Equals(ObstacleChannel other) {
+            return this.value == other.value;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is ObstacleChannel other && this.Equals(other);
+        }
+
+        public override int GetHashCode() {
+            return (int)this.value;
+        }
 
     }
 
