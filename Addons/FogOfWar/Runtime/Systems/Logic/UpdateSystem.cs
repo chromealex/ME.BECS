@@ -107,13 +107,11 @@ namespace ME.BECS.FogOfWar {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsWorldMatrixTickCalculated == false) return;
-                ref readonly var revealer = ref parent.value.Read<FogOfWarRevealerComponent>();
+                var parentEnt = parent.value;
                 var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
-                var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parent.value.Read<FogOfWarSectorRevealerComponent>().value);
-                var marker = new Unity.Profiling.ProfilerMarker("WriteRange");
-                marker.Begin();
+                var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parentEnt.Read<FogOfWarSectorRevealerComponent>().value);
+                ref readonly var revealer = ref parentEnt.Read<FogOfWarRevealerComponent>();
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, part.part, in sector);
-                marker.End();
 
             }
 
@@ -140,7 +138,7 @@ namespace ME.BECS.FogOfWar {
             var dependsOnRangePartialSector = context.Query().AsParallel().With<FogOfWarRevealerIsSectorTag>().With<FogOfWarRevealerIsRangeTag>().WithAspect<TransformAspect>().Schedule<RevealRangeSectorPartialJob, ParentComponent, FogOfWarRevealerPartialComponent, OwnerComponent>(new RevealRangeSectorPartialJob() {
                 props = fowStaticData,
             });
-            context.SetDependency(JobHandle.CombineDependencies(JobHandle.CombineDependencies(dependsOnRectFull, dependsOnRangeFull), JobHandle.CombineDependencies(dependsOnRectPartial, dependsOnRangePartial), JobHandle.CombineDependencies(dependsOnRangeFullSector, dependsOnRangePartialSector)));
+            context.SetDependency(dependsOnRectFull, dependsOnRangeFull, dependsOnRectPartial, dependsOnRangePartial, dependsOnRangeFullSector, dependsOnRangePartialSector);
 
         }
 
