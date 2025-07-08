@@ -19,8 +19,9 @@ namespace ME.BECS.FogOfWar {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
-                
-                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
+
+                var ownerEnt = owner.ent;
+                var fow = ownerEnt.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 FogOfWarUtils.WriteRect(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY);
 
             }
@@ -37,7 +38,8 @@ namespace ME.BECS.FogOfWar {
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
                 
-                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
+                var ownerEnt = owner.ent;
+                var fow = ownerEnt.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY);
                 
             }
@@ -53,9 +55,11 @@ namespace ME.BECS.FogOfWar {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
-                
-                ref readonly var revealer = ref parent.value.Read<FogOfWarRevealerComponent>();
-                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
+
+                var parentValue = parent.value;
+                ref readonly var revealer = ref parentValue.Read<FogOfWarRevealerComponent>();
+                var ownerEnt = owner.ent;
+                var fow = ownerEnt.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 FogOfWarUtils.WriteRect(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, part.part);
                 
             }
@@ -72,8 +76,10 @@ namespace ME.BECS.FogOfWar {
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
                 
-                ref readonly var revealer = ref parent.value.Read<FogOfWarRevealerComponent>();
-                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
+                var parentValue = parent.value;
+                ref readonly var revealer = ref parentValue.Read<FogOfWarRevealerComponent>();
+                var ownerEnt = owner.ent;
+                var fow = ownerEnt.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, part.part);
 
             }
@@ -90,7 +96,8 @@ namespace ME.BECS.FogOfWar {
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
                 
-                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
+                var ownerEnt = owner.ent;
+                var fow = ownerEnt.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), sectorComponent.value);
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, in sector);
                 
@@ -107,6 +114,7 @@ namespace ME.BECS.FogOfWar {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsWorldMatrixTickCalculated == false) return;
+                
                 var parentEnt = parent.value;
                 var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parentEnt.Read<FogOfWarSectorRevealerComponent>().value);

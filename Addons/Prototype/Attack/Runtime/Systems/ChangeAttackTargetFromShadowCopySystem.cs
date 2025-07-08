@@ -62,10 +62,10 @@ namespace ME.BECS.Attack {
         public void OnUpdate(ref SystemContext context) {
 
             var system = context.world.GetSystem<CreateSystem>();
-            var dependsOnTarget = context.Query().AsParallel().With<AttackTargetComponent>().Schedule<TargetJob, AttackAspect>(new TargetJob() {
+            var dependsOnTarget = context.Query().AsParallel().AsUnsafe().With<AttackTargetComponent>().Schedule<TargetJob, AttackAspect>(new TargetJob() {
                 createSystem = system,
             });
-            var dependsOnTargets = context.Query().AsParallel().With<AttackTargetsComponent>().Schedule<TargetsJob, AttackAspect>(new TargetsJob() {
+            var dependsOnTargets = context.Query().AsParallel().AsUnsafe().With<AttackTargetsComponent>().Schedule<TargetsJob, AttackAspect>(new TargetsJob() {
                 createSystem = system,
             });
             context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(dependsOnTarget, dependsOnTargets));

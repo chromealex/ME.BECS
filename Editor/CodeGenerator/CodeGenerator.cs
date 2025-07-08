@@ -175,7 +175,7 @@ namespace ME.BECS.Editor {
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
         public System.Collections.Generic.List<System.Type> systems;
 
-        public bool IsValidTypeForAssembly(System.Type type, bool runtimeInEditor = true) {
+        public bool IsValidTypeForAssembly(System.Type type, bool runtimeInEditor = false) {
 
             return EditorUtils.IsValidTypeForAssembly(this.editorAssembly, type, this.asms, runtimeInEditor);
 

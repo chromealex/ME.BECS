@@ -192,11 +192,11 @@ namespace ME.BECS {
             };
             var clearJobHandle = clearJob.Schedule(this.quadTrees.Length, 1, context.dependsOn);
             
-            var handle = context.Query(clearJobHandle).Without<QuadTreeElementRect>().AsParallel().Schedule<CollectJob, QuadTreeAspect, TransformAspect>(new CollectJob() {
+            var handle = context.Query(clearJobHandle).Without<QuadTreeElementRect>().AsParallel().AsUnsafe().Schedule<CollectJob, QuadTreeAspect, TransformAspect>(new CollectJob() {
                 quadTrees = this.quadTrees,
             });
             
-            var handleRect = context.Query(clearJobHandle).With<QuadTreeElementRect>().AsParallel().Schedule<CollectRectJob, QuadTreeAspect, TransformAspect>(new CollectRectJob() {
+            var handleRect = context.Query(clearJobHandle).With<QuadTreeElementRect>().AsParallel().AsUnsafe().Schedule<CollectRectJob, QuadTreeAspect, TransformAspect>(new CollectRectJob() {
                 quadTrees = this.quadTrees,
             });
 

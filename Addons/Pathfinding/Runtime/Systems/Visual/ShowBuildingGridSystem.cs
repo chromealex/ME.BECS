@@ -79,7 +79,7 @@ namespace ME.BECS.Pathfinding {
                 var info = ME.BECS.Pathfinding.Graph.GetCoordInfo(in root, x, y);
                 if (info.chunkIndex == uint.MaxValue) return;
                 var node = root.chunks[info.chunkIndex].nodes[this.world.state, info.nodeIndex];
-                this.currentBuffer[index][(int)node.obstacleChannel] = node.walkable == true ? (byte)0 : (byte)255;
+                this.currentBuffer[index][node.obstacleChannel] = node.walkable == true ? (byte)0 : (byte)255;
                 if (x >= this.objBottomLeft.x && x < this.objBottomLeft.x + this.objSize.x &&
                     y >= this.objBottomLeft.y && y < this.objBottomLeft.y + this.objSize.y) {
                     this.currentBuffer[index].a = (byte)255;
