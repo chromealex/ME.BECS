@@ -19,6 +19,11 @@ namespace ME.BECS.Editor {
                 ObjectReferenceRegistry.LoadForced();
             }
 
+            if (ObjectReferenceRegistry.data == null) {
+                UnityEngine.Debug.LogWarning("Object Reference registry not found.");
+                return;
+            }
+
             var items = ObjectReferenceRegistry.data.items;
             Validate(0, items.Length);
         }
