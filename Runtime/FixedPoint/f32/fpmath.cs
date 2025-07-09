@@ -1,108 +1,131 @@
-
 #if FIXED_POINT_F32
 namespace ME.BECS {
-    
+
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System;
     using System.Text;
-    
+
     public struct FixConst {
-		public static explicit operator double (FixConst f) {
-			return (double)(f.raw >> 32) + ((uint)(f.raw) / (uint.MaxValue + 1.0));
-		}
 
-		public static implicit operator FixConst (double value) {
-			if (value < int.MinValue || value >= int.MaxValue + 1L)
-				throw new OverflowException();
+        [INLINE(256)]
+        public static explicit operator double(FixConst f) {
+            return (double)(f.raw >> 32) + (uint)f.raw / (uint.MaxValue + 1.0);
+        }
 
-			var floor = System.Math.Floor(value);
-			return new FixConst(((long)floor << 32) + (long)((value - floor) * (uint.MaxValue + 1.0) + 0.5));
-		}
+        [INLINE(256)]
+        public static implicit operator FixConst(double value) {
+            if (value < int.MinValue || value >= int.MaxValue + 1L) {
+                throw new OverflowException();
+            }
 
-		public static implicit operator sfloat (FixConst value) {
-			return new sfloat((int)((value.Raw + (1 << (32 - sfloat.FRACTIONAL_BITS - 1))) >> (32 - sfloat.FRACTIONAL_BITS)));
-		}
+            var floor = System.Math.Floor(value);
+            return new FixConst(((long)floor << 32) + (long)((value - floor) * (uint.MaxValue + 1.0) + 0.5));
+        }
 
-		public static explicit operator int (FixConst value) {
-			if (value.raw > 0)
-				return (int)(value.raw >> 32);
-			else
-				return (int)((value.raw + uint.MaxValue) >> 32);
-		}
+        [INLINE(256)]
+        public static implicit operator sfloat(FixConst value) {
+            return new sfloat((int)((value.Raw + (1 << (32 - sfloat.FRACTIONAL_BITS - 1))) >> (32 - sfloat.FRACTIONAL_BITS)));
+        }
 
-		public static implicit operator FixConst (int value) {
-			return new FixConst((long)value << 32);
-		}
+        [INLINE(256)]
+        public static explicit operator int(FixConst value) {
+            if (value.raw > 0) {
+                return (int)(value.raw >> 32);
+            } else {
+                return (int)((value.raw + uint.MaxValue) >> 32);
+            }
+        }
 
-		public static bool operator == (FixConst lhs, FixConst rhs) {
-			return lhs.raw == rhs.raw;
-		}
+        [INLINE(256)]
+        public static implicit operator FixConst(int value) {
+            return new FixConst((long)value << 32);
+        }
 
-		public static bool operator != (FixConst lhs, FixConst rhs) {
-			return lhs.raw != rhs.raw;
-		}
+        [INLINE(256)]
+        public static bool operator ==(FixConst lhs, FixConst rhs) {
+            return lhs.raw == rhs.raw;
+        }
 
-		public static bool operator > (FixConst lhs, FixConst rhs) {
-			return lhs.raw > rhs.raw;
-		}
+        [INLINE(256)]
+        public static bool operator !=(FixConst lhs, FixConst rhs) {
+            return lhs.raw != rhs.raw;
+        }
 
-		public static bool operator >= (FixConst lhs, FixConst rhs) {
-			return lhs.raw >= rhs.raw;
-		}
+        [INLINE(256)]
+        public static bool operator >(FixConst lhs, FixConst rhs) {
+            return lhs.raw > rhs.raw;
+        }
 
-		public static bool operator < (FixConst lhs, FixConst rhs) {
-			return lhs.raw < rhs.raw;
-		}
+        [INLINE(256)]
+        public static bool operator >=(FixConst lhs, FixConst rhs) {
+            return lhs.raw >= rhs.raw;
+        }
 
-		public static bool operator <= (FixConst lhs, FixConst rhs) {
-			return lhs.raw <= rhs.raw;
-		}
+        [INLINE(256)]
+        public static bool operator <(FixConst lhs, FixConst rhs) {
+            return lhs.raw < rhs.raw;
+        }
 
-		public static FixConst operator + (FixConst value) {
-			return value;
-		}
+        [INLINE(256)]
+        public static bool operator <=(FixConst lhs, FixConst rhs) {
+            return lhs.raw <= rhs.raw;
+        }
 
-		public static FixConst operator - (FixConst value) {
-			return new FixConst(-value.raw);
-		}
+        [INLINE(256)]
+        public static FixConst operator +(FixConst value) {
+            return value;
+        }
 
-		long raw;
+        [INLINE(256)]
+        public static FixConst operator -(FixConst value) {
+            return new FixConst(-value.raw);
+        }
 
-		public FixConst (long raw) {
-			this.raw = raw;
-		}
+        private long raw;
 
-		public long Raw { get { return this.raw; } }
+        [INLINE(256)]
+        public FixConst(long raw) {
+            this.raw = raw;
+        }
 
-		public override bool Equals (object obj) {
-			return (obj is FixConst && ((FixConst)obj) == this);
-		}
+        public long Raw => this.raw;
 
-		public override int GetHashCode () {
-			return Raw.GetHashCode();
-		}
+        [INLINE(256)]
+        public override bool Equals(object obj) {
+            return obj is FixConst && (FixConst)obj == this;
+        }
 
-		public override string ToString () {
-			var sb = new StringBuilder();
-			if (this.raw < 0)
-				sb.Append(System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NegativeSign);
-			long abs = (int)this;
-			abs = abs < 0 ? -abs : abs;
-			sb.Append(abs.ToString());
-			ulong fraction = (ulong)(this.raw & uint.MaxValue);
-			if (fraction == 0)
-				return sb.ToString();
+        [INLINE(256)]
+        public override int GetHashCode() {
+            return this.Raw.GetHashCode();
+        }
 
-			fraction = this.raw < 0 ? (uint.MaxValue + 1L) - fraction : fraction;
-			fraction *= 1000000000L;
-			fraction += (uint.MaxValue + 1L) >> 1;
-			fraction >>= 32;
+        public override string ToString() {
+            var sb = new StringBuilder();
+            if (this.raw < 0) {
+                sb.Append(System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NegativeSign);
+            }
 
-			sb.Append(System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator);
-			sb.Append(fraction.ToString("D9").TrimEnd('0'));
-			return sb.ToString();
-		}
-	}
-    
+            long abs = (int)this;
+            abs = abs < 0 ? -abs : abs;
+            sb.Append(abs.ToString());
+            var fraction = (ulong)(this.raw & uint.MaxValue);
+            if (fraction == 0) {
+                return sb.ToString();
+            }
+
+            fraction = this.raw < 0 ? uint.MaxValue + 1L - fraction : fraction;
+            fraction *= 1000000000L;
+            fraction += (uint.MaxValue + 1L) >> 1;
+            fraction >>= 32;
+
+            sb.Append(System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator);
+            sb.Append(fraction.ToString("D9").TrimEnd('0'));
+            return sb.ToString();
+        }
+
+    }
+
     public static partial class FixMath {
 
         public static readonly sfloat ALMOST_ONE;
@@ -114,17 +137,17 @@ namespace ME.BECS {
         public static readonly sfloat RAD2DEG;
 
         public static readonly sfloat PI;
-		public static readonly sfloat E;
+        public static readonly sfloat E;
         public static readonly sfloat LOG2E;
         public static readonly sfloat LOG10E;
         public static readonly sfloat LOG2_10;
         public static readonly sfloat LN2;
         public static readonly sfloat LN10;
         public static readonly sfloat LOG10_2;
-		static sfloat[] quarterSine;
-		static sfloat[] cordicAngles;
-		static sfloat[] cordicGains;
-        
+        private static sfloat[] quarterSine;
+        private static sfloat[] cordicAngles;
+        private static sfloat[] cordicGains;
+
         public static readonly sfloat PI_HALF;
         public static readonly sfloat PI_OVER_4;
         public static readonly sfloat TWO_PI;
@@ -135,24 +158,28 @@ namespace ME.BECS {
         public static readonly sfloat NaN;
 
         public static readonly sfloat FLT_MIN_NORMAL;
-        
+
         public static readonly sfloat EXP_2;
         public static readonly sfloat EXP_10;
 
-		static FixMath () {
-			if (QUARTER_SINE_RES_POWER >= sfloat.FRACTIONAL_BITS)
-				throw new System.Exception("_quarterSineResPower must be less than Fix.FractionalBits.");
-			if (quarterSineConsts.Length !=  90 * (1 << QUARTER_SINE_RES_POWER) + 1)
-				throw new System.Exception("_quarterSineConst.Length must be 90 * 2^(_quarterSineResPower) + 1."); 
+        [INLINE(256)]
+        static FixMath() {
+            if (QUARTER_SINE_RES_POWER >= sfloat.FRACTIONAL_BITS) {
+                throw new System.Exception("_quarterSineResPower must be less than Fix.FractionalBits.");
+            }
 
-			PI = piConst;
-			E = eConst;
-			LOG2E = log2EConst;
+            if (quarterSineConsts.Length != 90 * (1 << QUARTER_SINE_RES_POWER) + 1) {
+                throw new System.Exception("_quarterSineConst.Length must be 90 * 2^(_quarterSineResPower) + 1.");
+            }
+
+            PI = piConst;
+            E = eConst;
+            LOG2E = log2EConst;
             LOG10E = (FixConst)0.43;
-			LOG2_10 = log210Const;
-			LN2 = ln2Const;
-			LN10 = (FixConst)2.30;
-			LOG10_2 = log102Const;
+            LOG2_10 = log210Const;
+            LN2 = ln2Const;
+            LN10 = (FixConst)2.30;
+            LOG10_2 = log102Const;
             PI_HALF = PI / 2;
             PI_OVER_4 = PI / 4;
             TWO_PI = PI * 2;
@@ -174,446 +201,501 @@ namespace ME.BECS {
             PositiveInfinity = new sfloat(int.MaxValue);
             NegativeInfinity = new sfloat(int.MinValue + 1);
 
-			quarterSine = Array.ConvertAll(quarterSineConsts, c => (sfloat)c);
-			cordicAngles = Array.ConvertAll(cordicAngleConsts, c => (sfloat)c);
-			cordicGains = Array.ConvertAll(cordicGainConsts, c => (sfloat)c);
-		}
+            quarterSine = Array.ConvertAll(quarterSineConsts, c => (sfloat)c);
+            cordicAngles = Array.ConvertAll(cordicAngleConsts, c => (sfloat)c);
+            cordicGains = Array.ConvertAll(cordicGainConsts, c => (sfloat)c);
+        }
 
-		public static sfloat Abs (sfloat value) {
-			return value.RawValue < 0 ? new sfloat(-value.RawValue) : value;
-		}
+        [INLINE(256)]
+        public static sfloat Abs(sfloat value) {
+            return value.RawValue < 0 ? new sfloat(-value.RawValue) : value;
+        }
 
-		public static sfloat Sign (sfloat value) {
-			if (value < 0)
-				return -1;
-			else if (value > 0)
-				return 1;
-			else
-				return 0;
-		}
+        [INLINE(256)]
+        public static sfloat Sign(sfloat value) {
+            if (value < 0) {
+                return -1;
+            } else if (value > 0) {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
 
-		public static sfloat Ceiling (sfloat value) {
-			return new sfloat((value.RawValue + sfloat.FRACTION_MASK) & sfloat.INTEGER_MASK);
-		}
+        [INLINE(256)]
+        public static sfloat Ceiling(sfloat value) {
+            return new sfloat((value.RawValue + sfloat.FRACTION_MASK) & sfloat.INTEGER_MASK);
+        }
 
-		public static sfloat Floor (sfloat value) {
-			return new sfloat(value.RawValue & sfloat.INTEGER_MASK);
-		}
+        [INLINE(256)]
+        public static sfloat Floor(sfloat value) {
+            return new sfloat(value.RawValue & sfloat.INTEGER_MASK);
+        }
 
-		public static sfloat Truncate (sfloat value) {
-			if (value < 0)
-				return new sfloat((value.RawValue + sfloat.FRACTION_RANGE) & sfloat.INTEGER_MASK);
-			else
-				return new sfloat(value.RawValue & sfloat.INTEGER_MASK);
-		}
+        [INLINE(256)]
+        public static sfloat Truncate(sfloat value) {
+            if (value < 0) {
+                return new sfloat((value.RawValue + sfloat.FRACTION_RANGE) & sfloat.INTEGER_MASK);
+            } else {
+                return new sfloat(value.RawValue & sfloat.INTEGER_MASK);
+            }
+        }
 
-		public static sfloat Round (sfloat value) {
-			return new sfloat((value.RawValue + (sfloat.FRACTION_RANGE >> 1)) & ~sfloat.FRACTION_MASK);
-		}
+        [INLINE(256)]
+        public static sfloat Round(sfloat value) {
+            return new sfloat((value.RawValue + (sfloat.FRACTION_RANGE >> 1)) & ~sfloat.FRACTION_MASK);
+        }
 
-		public static sfloat Min (sfloat v1, sfloat v2) {
-			return v1 < v2 ? v1 : v2;
-		}
+        [INLINE(256)]
+        public static sfloat Min(sfloat v1, sfloat v2) {
+            return v1 < v2 ? v1 : v2;
+        }
 
-		public static sfloat Max (sfloat v1, sfloat v2) {
-			return v1 > v2 ? v1 : v2;
-		}
+        [INLINE(256)]
+        public static sfloat Max(sfloat v1, sfloat v2) {
+            return v1 > v2 ? v1 : v2;
+        }
 
-		public static sfloat Sqrt (sfloat value) {
-            if (value.RawValue < 0) return NaN;
-			if (value.RawValue == 0)
-				return 0;
+        [INLINE(256)]
+        public static sfloat Sqrt(sfloat value) {
+            if (value.RawValue < 0) {
+                return NaN;
+            }
 
-			return new sfloat((int)(SqrtULong((ulong)value.RawValue << (sfloat.FRACTIONAL_BITS + 2)) + 1) >> 1);
-		}
+            if (value.RawValue == 0) {
+                return 0;
+            }
 
-		internal static uint SqrtULong (ulong n) {
-			ulong x = 1L << ((31 + (sfloat.FRACTIONAL_BITS + 2) + 1) / 2);
-			while (true) {
-				ulong y = (x + n / x) >> 1;
-				if (y >= x)
-					return (uint)x;
-				x = y;
-			}
-		}
+            return new sfloat((int)(SqrtULong((ulong)value.RawValue << (sfloat.FRACTIONAL_BITS + 2)) + 1) >> 1);
+        }
 
-		public static sfloat Sin (sfloat degrees) {
-            return (sfloat)System.Math.Sin((float)degrees);
-			return CosRaw(degrees.RawValue - (90 << sfloat.FRACTIONAL_BITS));
-		}
+        [INLINE(256)]
+        internal static uint SqrtULong(ulong n) {
+            ulong x = 1L << ((31 + sfloat.FRACTIONAL_BITS + 2 + 1) / 2);
+            while (true) {
+                var y = (x + n / x) >> 1;
+                if (y >= x) {
+                    return (uint)x;
+                }
 
-		public static sfloat Cos (sfloat degrees) {
-            return (sfloat)System.Math.Cos((float)degrees);
-			return CosRaw(degrees.RawValue);
-		}
+                x = y;
+            }
+        }
 
-		static sfloat CosRaw (int raw) {
-			raw = raw < 0 ? -raw : raw;
-			int t = raw & ((1 << (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER)) - 1);
-			raw = (raw >> (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER));
+        [INLINE(256)]
+        public static sfloat Sin(sfloat radians) {
+            var degrees = radians * FixMath.RAD2DEG;
+            return CosRaw(degrees.RawValue - (90 << sfloat.FRACTIONAL_BITS));
+            //return (sfloat)System.Math.Sin((double)radians);
+        }
 
-			if (t == 0)
-				return CosRawLookup(raw);
+        [INLINE(256)]
+        public static sfloat Cos(sfloat radians) {
+            //return (sfloat)System.Math.Cos((float)degrees);
+            var degrees = radians * FixMath.RAD2DEG;
+            return CosRaw(degrees.RawValue);
+        }
 
-			sfloat v1 = CosRawLookup(raw);
-			sfloat v2 = CosRawLookup(raw + 1);
+        [INLINE(256)]
+        private static sfloat CosRaw(int raw) {
+            raw = raw < 0 ? -raw : raw;
+            var t = raw & ((1 << (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER)) - 1);
+            raw = raw >> (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER);
 
-			return new sfloat(
-				(int)(
-					(
-						(long)v1.RawValue * ((1 << (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER)) - t)
-						+ (long)v2.RawValue * t
-						+ (1 << (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER - 1))
-					)
-					>> (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER)
-				)
-			);
-		}
+            if (t == 0) {
+                return CosRawLookup(raw);
+            }
 
-		static sfloat CosRawLookup (int raw) {
-			raw %= 360 * (1 << QUARTER_SINE_RES_POWER);
+            var v1 = CosRawLookup(raw);
+            var v2 = CosRawLookup(raw + 1);
 
-			if (raw < 90 * (1 << QUARTER_SINE_RES_POWER)) {
-				return quarterSine[90 * (1 << QUARTER_SINE_RES_POWER) - raw];
-			} else if (raw < 180 * (1 << QUARTER_SINE_RES_POWER)) {
-				raw -= 90 * (1 << QUARTER_SINE_RES_POWER);
-				return -quarterSine[raw];
-			} else if (raw < 270 * (1 << QUARTER_SINE_RES_POWER)) {
-				raw -= 180 * (1 << QUARTER_SINE_RES_POWER);
-				return -quarterSine[90 * (1 << QUARTER_SINE_RES_POWER) - raw];
-			} else {
-				raw -= 270 * (1 << QUARTER_SINE_RES_POWER);
-				return quarterSine[raw];
-			}
-		}
+            return new sfloat(
+                (int)(
+                         (
+                             (long)v1.RawValue * ((1 << (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER)) - t)
+                             + (long)v2.RawValue * t
+                             + (1 << (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER - 1))
+                         )
+                         >> (sfloat.FRACTIONAL_BITS - QUARTER_SINE_RES_POWER)
+                     )
+            );
+        }
 
-		public static sfloat Tan (sfloat degrees) {
-			return Sin(degrees) / Cos(degrees);
-		}
+        [INLINE(256)]
+        private static sfloat CosRawLookup(int raw) {
+            raw %= 360 * (1 << QUARTER_SINE_RES_POWER);
 
-		public static sfloat Asin (sfloat value) {
-			return Atan2(value, Sqrt((1 + value) * (1 - value)));
-		}
+            if (raw < 90 * (1 << QUARTER_SINE_RES_POWER)) {
+                return quarterSine[90 * (1 << QUARTER_SINE_RES_POWER) - raw];
+            } else if (raw < 180 * (1 << QUARTER_SINE_RES_POWER)) {
+                raw -= 90 * (1 << QUARTER_SINE_RES_POWER);
+                return -quarterSine[raw];
+            } else if (raw < 270 * (1 << QUARTER_SINE_RES_POWER)) {
+                raw -= 180 * (1 << QUARTER_SINE_RES_POWER);
+                return -quarterSine[90 * (1 << QUARTER_SINE_RES_POWER) - raw];
+            } else {
+                raw -= 270 * (1 << QUARTER_SINE_RES_POWER);
+                return quarterSine[raw];
+            }
+        }
 
-		public static sfloat Acos (sfloat value) {
-			return Atan2(Sqrt((1 + value) * (1 - value)), value);
-		}
+        [INLINE(256)]
+        public static sfloat Tan(sfloat degrees) {
+            return Sin(degrees) / Cos(degrees);
+        }
 
-		public static sfloat Atan (sfloat value) {
-			return Atan2(value, 1);
-		}
+        [INLINE(256)]
+        public static sfloat Asin(sfloat value) {
+            return Atan2(value, Sqrt((1 + value) * (1 - value)));
+        }
 
-		public static sfloat Atan2 (sfloat y, sfloat x) {
-            return (sfloat)System.Math.Atan2((float)y, (float)x);
-			if (x == 0 && y == 0)
-				throw new ArgumentOutOfRangeException("y and x cannot both be 0.");
+        [INLINE(256)]
+        public static sfloat Acos(sfloat value) {
+            return Atan2(Sqrt((1 + value) * (1 - value)), value);
+        }
 
-			sfloat angle = 0;
-			sfloat xNew, yNew;
+        [INLINE(256)]
+        public static sfloat Atan(sfloat value) {
+            return Atan2(value, 1);
+        }
 
-			if (x < 0) {
-				if (y < 0) {
-					xNew = -y;
-					yNew = x;
-					angle = -90;
-				} else if (y > 0) {
-					xNew = y;
-					yNew = -x;
-					angle = 90;
-				} else {
-					xNew = x;
-					yNew = y;
-					angle = 180;
-				}
-				x = xNew;
-				y = yNew;
-			}
+        [INLINE(256)]
+        public static sfloat Atan2(sfloat y, sfloat x) {
+            y *= FixMath.RAD2DEG;
+            x *= FixMath.RAD2DEG;
+            if (x == 0 && y == 0) {
+                throw new ArgumentOutOfRangeException("y and x cannot both be 0.");
+            }
 
-			for (int i = 0; i < sfloat.FRACTIONAL_BITS + 2; i++) {
-				if (y > 0) {
-					xNew = x + (y >> i);
-					yNew = y - (x >> i);
-					angle += cordicAngles[i];
-				} else if (y < 0) {
-					xNew = x - (y >> i);
-					yNew = y + (x >> i);
-					angle -= cordicAngles[i];
-				} else
-					break;
+            sfloat angle = 0;
+            sfloat xNew, yNew;
 
-				x = xNew;
-				y = yNew;
-			}
+            if (x < 0) {
+                if (y < 0) {
+                    xNew = -y;
+                    yNew = x;
+                    angle = -90;
+                } else if (y > 0) {
+                    xNew = y;
+                    yNew = -x;
+                    angle = 90;
+                } else {
+                    xNew = x;
+                    yNew = y;
+                    angle = 180;
+                }
 
-			return angle;
-		}
+                x = xNew;
+                y = yNew;
+            }
 
-		public static sfloat Exp (sfloat value) {
-			return Pow(E, value);
-		}
+            for (var i = 0; i < sfloat.FRACTIONAL_BITS + 2; i++) {
+                if (y > 0) {
+                    xNew = x + (y >> i);
+                    yNew = y - (x >> i);
+                    angle += cordicAngles[i];
+                } else if (y < 0) {
+                    xNew = x - (y >> i);
+                    yNew = y + (x >> i);
+                    angle -= cordicAngles[i];
+                } else {
+                    break;
+                }
 
+                x = xNew;
+                y = yNew;
+            }
+
+            return angle * FixMath.DEG2RAD;
+        }
+
+        [INLINE(256)]
+        public static sfloat Exp(sfloat value) {
+            return Pow(E, value);
+        }
+
+        [INLINE(256)]
         public static sfloat Exp2(sfloat value) {
-            return Exp(value * FixMath.EXP_2);
+            return Exp(value * EXP_2);
         }
 
+        [INLINE(256)]
         public static sfloat Exp10(sfloat value) {
-            return Exp(value * FixMath.EXP_10);
+            return Exp(value * EXP_10);
         }
 
-		public static sfloat Pow (sfloat b, sfloat exp) {
-			if (b == 1 || exp == 0)
-				return 1;
+        [INLINE(256)]
+        public static sfloat Pow(sfloat b, sfloat exp) {
+            if (b == 1 || exp == 0) {
+                return 1;
+            }
 
-			int intPow;
-			sfloat intFactor;
-			if ((exp.RawValue & sfloat.FRACTION_MASK) == 0) {
-				intPow = (int)((exp.RawValue + (sfloat.FRACTION_RANGE >> 1)) >> sfloat.FRACTIONAL_BITS);
-				sfloat t;
-				int p;
-				if (intPow < 0) {
-					t = 1 / b;
-					p = -intPow;
-				} else {
-					t = b;
-					p = intPow;
-				}
+            int intPow;
+            sfloat intFactor;
+            if ((exp.RawValue & sfloat.FRACTION_MASK) == 0) {
+                intPow = (int)((exp.RawValue + (sfloat.FRACTION_RANGE >> 1)) >> sfloat.FRACTIONAL_BITS);
+                sfloat t;
+                int p;
+                if (intPow < 0) {
+                    t = 1 / b;
+                    p = -intPow;
+                } else {
+                    t = b;
+                    p = intPow;
+                }
 
-				intFactor = 1;
-				while (p > 0) {
-					if ((p & 1) != 0)
-						intFactor *= t;
-					t *= t;
-					p >>= 1;
-				}
+                intFactor = 1;
+                while (p > 0) {
+                    if ((p & 1) != 0) {
+                        intFactor *= t;
+                    }
 
-				return intFactor;
-			}
+                    t *= t;
+                    p >>= 1;
+                }
 
-			exp *= Log(b, 2);
-			b = 2;
-			intPow = (int)((exp.RawValue + (sfloat.FRACTION_RANGE >> 1)) >> sfloat.FRACTIONAL_BITS);
-			intFactor = intPow < 0 ? sfloat.One >> -intPow : sfloat.One << intPow;
+                return intFactor;
+            }
 
-			long x = (
-				((exp.RawValue - (intPow << sfloat.FRACTIONAL_BITS)) * ln2Const.Raw)
-				+ (sfloat.FRACTION_RANGE >> 1)
-				) >> sfloat.FRACTIONAL_BITS;
-			if (x == 0)
-				return intFactor;
+            exp *= Log(b, 2);
+            b = 2;
+            intPow = (int)((exp.RawValue + (sfloat.FRACTION_RANGE >> 1)) >> sfloat.FRACTIONAL_BITS);
+            intFactor = intPow < 0 ? sfloat.One >> -intPow : sfloat.One << intPow;
 
-			long fracFactor = x;
-			long xa = x;
-			for (int i = 2; i < invFactConsts.Length; i++) {
-				if (xa == 0)
-					break;
-				xa *= x;
-				xa += (1L << (32 - 1));
-				xa >>= 32;
-				long p = xa * invFactConsts[i].Raw;
-				p += (1L << (32 - 1));
-				p >>= 32;
-				fracFactor += p;
-			}
+            var x = (
+                        (exp.RawValue - (intPow << sfloat.FRACTIONAL_BITS)) * ln2Const.Raw
+                        + (sfloat.FRACTION_RANGE >> 1)
+                    ) >> sfloat.FRACTIONAL_BITS;
+            if (x == 0) {
+                return intFactor;
+            }
 
-			return new sfloat((int)((((long)intFactor.RawValue * fracFactor + (1L << (32 - 1))) >> 32) + intFactor.RawValue));
-		}
+            var fracFactor = x;
+            var xa = x;
+            for (var i = 2; i < invFactConsts.Length; i++) {
+                if (xa == 0) {
+                    break;
+                }
 
-		public static sfloat Log (sfloat value) {
-			return Log2(value) * LN2;
-		}
+                xa *= x;
+                xa += 1L << (32 - 1);
+                xa >>= 32;
+                var p = xa * invFactConsts[i].Raw;
+                p += 1L << (32 - 1);
+                p >>= 32;
+                fracFactor += p;
+            }
 
-		public static sfloat Log (sfloat value, sfloat b) {
-			if (b == 2)
-				return Log2(value);
-			else if (b == E)
-				return Log(value);
-			else if (b == 10)
-				return Log10(value);
-			else
-				return Log2(value) / Log2(b);
-		}
+            return new sfloat((int)((((long)intFactor.RawValue * fracFactor + (1L << (32 - 1))) >> 32) + intFactor.RawValue));
+        }
 
-		public static sfloat Log10 (sfloat value) {
-			return Log2(value) * LOG10_2;
-		}
+        [INLINE(256)]
+        public static sfloat Log(sfloat value) {
+            return Log2(value) * LN2;
+        }
 
-		public static sfloat Log2 (sfloat value) {
-            if (value <= 0) return NaN;
+        [INLINE(256)]
+        public static sfloat Log(sfloat value, sfloat b) {
+            if (b == 2) {
+                return Log2(value);
+            } else if (b == E) {
+                return Log(value);
+            } else if (b == 10) {
+                return Log10(value);
+            } else {
+                return Log2(value) / Log2(b);
+            }
+        }
 
-			uint x = (uint)value.RawValue;
-			uint b = 1U << (sfloat.FRACTIONAL_BITS - 1);
-			uint y = 0;
+        [INLINE(256)]
+        public static sfloat Log10(sfloat value) {
+            return Log2(value) * LOG10_2;
+        }
 
-			while (x < 1U << sfloat.FRACTIONAL_BITS) {
-				x <<= 1;
-				y -= 1U << sfloat.FRACTIONAL_BITS;
-			}
+        [INLINE(256)]
+        public static sfloat Log2(sfloat value) {
+            if (value <= 0) {
+                return NaN;
+            }
 
-			while (x >= 2U << sfloat.FRACTIONAL_BITS) {
-				x >>= 1;
-				y += 1U << sfloat.FRACTIONAL_BITS;
-			}
+            var x = (uint)value.RawValue;
+            var b = 1U << (sfloat.FRACTIONAL_BITS - 1);
+            uint y = 0;
 
-			ulong z = x;
+            while (x < 1U << sfloat.FRACTIONAL_BITS) {
+                x <<= 1;
+                y -= 1U << sfloat.FRACTIONAL_BITS;
+            }
 
-			for (int i = 0; i < sfloat.FRACTIONAL_BITS; i++) {
-				z = z * z >> sfloat.FRACTIONAL_BITS;
-				if (z >= 2U << sfloat.FRACTIONAL_BITS) {
-					z >>= 1;
-					y += b;
-				}
-				b >>= 1;
-			}
+            while (x >= 2U << sfloat.FRACTIONAL_BITS) {
+                x >>= 1;
+                y += 1U << sfloat.FRACTIONAL_BITS;
+            }
 
-			return new sfloat((int)y);
-		}
+            ulong z = x;
+
+            for (var i = 0; i < sfloat.FRACTIONAL_BITS; i++) {
+                z = (z * z) >> sfloat.FRACTIONAL_BITS;
+                if (z >= 2U << sfloat.FRACTIONAL_BITS) {
+                    z >>= 1;
+                    y += b;
+                }
+
+                b >>= 1;
+            }
+
+            return new sfloat((int)y);
+        }
 
     }
-    
+
     public static partial class FixMath {
-		static FixConst piConst = new FixConst(13493037705);
-		static FixConst eConst = new FixConst(11674931555);
-		static FixConst log2EConst = new FixConst(6196328019);
-		static FixConst log210Const = new FixConst(14267572527);
-		static FixConst ln2Const = new FixConst(2977044472);
-		static FixConst log102Const = new FixConst(1292913986);
 
-		const int QUARTER_SINE_RES_POWER = 2;
-		#region Sine Table
-		static FixConst[] quarterSineConsts = {
-			new FixConst(0), new FixConst(18740271), new FixConst(37480185), new FixConst(56219385), 
-			new FixConst(74957515), new FixConst(93694218), new FixConst(112429137), new FixConst(131161916), 
-			new FixConst(149892197), new FixConst(168619625), new FixConst(187343842), new FixConst(206064493), 
-			new FixConst(224781220), new FixConst(243493669), new FixConst(262201481), new FixConst(280904301), 
-			new FixConst(299601773), new FixConst(318293542), new FixConst(336979250), new FixConst(355658543), 
-			new FixConst(374331065), new FixConst(392996460), new FixConst(411654373), new FixConst(430304448), 
-			new FixConst(448946331), new FixConst(467579667), new FixConst(486204101), new FixConst(504819278), 
-			new FixConst(523424844), new FixConst(542020445), new FixConst(560605727), new FixConst(579180335), 
-			new FixConst(597743917), new FixConst(616296119), new FixConst(634836587), new FixConst(653364969), 
-			new FixConst(671880911), new FixConst(690384062), new FixConst(708874069), new FixConst(727350581), 
-			new FixConst(745813244), new FixConst(764261708), new FixConst(782695622), new FixConst(801114635), 
-			new FixConst(819518395), new FixConst(837906553), new FixConst(856278758), new FixConst(874634661), 
-			new FixConst(892973913), new FixConst(911296163), new FixConst(929601063), new FixConst(947888266), 
-			new FixConst(966157422), new FixConst(984408183), new FixConst(1002640203), new FixConst(1020853134), 
-			new FixConst(1039046630), new FixConst(1057220343), new FixConst(1075373929), new FixConst(1093507041), 
-			new FixConst(1111619334), new FixConst(1129710464), new FixConst(1147780085), new FixConst(1165827855), 
-			new FixConst(1183853429), new FixConst(1201856464), new FixConst(1219836617), new FixConst(1237793546), 
-			new FixConst(1255726910), new FixConst(1273636366), new FixConst(1291521575), new FixConst(1309382194), 
-			new FixConst(1327217885), new FixConst(1345028307), new FixConst(1362813122), new FixConst(1380571991), 
-			new FixConst(1398304576), new FixConst(1416010539), new FixConst(1433689544), new FixConst(1451341253), 
-			new FixConst(1468965330), new FixConst(1486561441), new FixConst(1504129249), new FixConst(1521668421), 
-			new FixConst(1539178623), new FixConst(1556659521), new FixConst(1574110783), new FixConst(1591532075), 
-			new FixConst(1608923068), new FixConst(1626283428), new FixConst(1643612827), new FixConst(1660910933), 
-			new FixConst(1678177418), new FixConst(1695411953), new FixConst(1712614210), new FixConst(1729783862), 
-			new FixConst(1746920580), new FixConst(1764024040), new FixConst(1781093915), new FixConst(1798129881), 
-			new FixConst(1815131613), new FixConst(1832098787), new FixConst(1849031081), new FixConst(1865928172), 
-			new FixConst(1882789739), new FixConst(1899615460), new FixConst(1916405015), new FixConst(1933158084), 
-			new FixConst(1949874349), new FixConst(1966553491), new FixConst(1983195193), new FixConst(1999799137), 
-			new FixConst(2016365009), new FixConst(2032892491), new FixConst(2049381270), new FixConst(2065831032), 
-			new FixConst(2082241464), new FixConst(2098612252), new FixConst(2114943086), new FixConst(2131233655), 
-			new FixConst(2147483648), new FixConst(2163692756), new FixConst(2179860670), new FixConst(2195987083), 
-			new FixConst(2212071688), new FixConst(2228114178), new FixConst(2244114248), new FixConst(2260071593), 
-			new FixConst(2275985909), new FixConst(2291856895), new FixConst(2307684246), new FixConst(2323467662), 
-			new FixConst(2339206844), new FixConst(2354901489), new FixConst(2370551301), new FixConst(2386155981), 
-			new FixConst(2401715233), new FixConst(2417228758), new FixConst(2432696264), new FixConst(2448117454), 
-			new FixConst(2463492036), new FixConst(2478819716), new FixConst(2494100203), new FixConst(2509333207), 
-			new FixConst(2524518436), new FixConst(2539655602), new FixConst(2554744416), new FixConst(2569784592), 
-			new FixConst(2584775843), new FixConst(2599717883), new FixConst(2614610429), new FixConst(2629453196), 
-			new FixConst(2644245902), new FixConst(2658988265), new FixConst(2673680006), new FixConst(2688320843), 
-			new FixConst(2702910498), new FixConst(2717448694), new FixConst(2731935154), new FixConst(2746369601), 
-			new FixConst(2760751762), new FixConst(2775081362), new FixConst(2789358128), new FixConst(2803581789), 
-			new FixConst(2817752074), new FixConst(2831868713), new FixConst(2845931437), new FixConst(2859939978), 
-			new FixConst(2873894071), new FixConst(2887793449), new FixConst(2901637847), new FixConst(2915427003), 
-			new FixConst(2929160652), new FixConst(2942838535), new FixConst(2956460391), new FixConst(2970025959), 
-			new FixConst(2983534983), new FixConst(2996987204), new FixConst(3010382368), new FixConst(3023720217), 
-			new FixConst(3037000500), new FixConst(3050222962), new FixConst(3063387353), new FixConst(3076493421), 
-			new FixConst(3089540917), new FixConst(3102529593), new FixConst(3115459201), new FixConst(3128329495), 
-			new FixConst(3141140230), new FixConst(3153891163), new FixConst(3166582050), new FixConst(3179212649), 
-			new FixConst(3191782722), new FixConst(3204292027), new FixConst(3216740327), new FixConst(3229127385), 
-			new FixConst(3241452965), new FixConst(3253716833), new FixConst(3265918754), new FixConst(3278058497), 
-			new FixConst(3290135830), new FixConst(3302150525), new FixConst(3314102350), new FixConst(3325991081), 
-			new FixConst(3337816489), new FixConst(3349578350), new FixConst(3361276439), new FixConst(3372910535), 
-			new FixConst(3384480416), new FixConst(3395985861), new FixConst(3407426651), new FixConst(3418802568), 
-			new FixConst(3430113397), new FixConst(3441358921), new FixConst(3452538927), new FixConst(3463653201), 
-			new FixConst(3474701533), new FixConst(3485683711), new FixConst(3496599527), new FixConst(3507448772), 
-			new FixConst(3518231241), new FixConst(3528946727), new FixConst(3539595028), new FixConst(3550175940), 
-			new FixConst(3560689261), new FixConst(3571134792), new FixConst(3581512334), new FixConst(3591821689), 
-			new FixConst(3602062661), new FixConst(3612235055), new FixConst(3622338677), new FixConst(3632373336), 
-			new FixConst(3642338838), new FixConst(3652234996), new FixConst(3662061621), new FixConst(3671818526), 
-			new FixConst(3681505524), new FixConst(3691122431), new FixConst(3700669065), new FixConst(3710145244), 
-			new FixConst(3719550787), new FixConst(3728885515), new FixConst(3738149250), new FixConst(3747341816), 
-			new FixConst(3756463039), new FixConst(3765512743), new FixConst(3774490758), new FixConst(3783396912), 
-			new FixConst(3792231035), new FixConst(3800992960), new FixConst(3809682520), new FixConst(3818299548), 
-			new FixConst(3826843882), new FixConst(3835315358), new FixConst(3843713815), new FixConst(3852039094), 
-			new FixConst(3860291035), new FixConst(3868469481), new FixConst(3876574278), new FixConst(3884605270), 
-			new FixConst(3892562305), new FixConst(3900445232), new FixConst(3908253899), new FixConst(3915988159), 
-			new FixConst(3923647864), new FixConst(3931232868), new FixConst(3938743028), new FixConst(3946178199), 
-			new FixConst(3953538241), new FixConst(3960823014), new FixConst(3968032378), new FixConst(3975166196), 
-			new FixConst(3982224333), new FixConst(3989206654), new FixConst(3996113026), new FixConst(4002943318), 
-			new FixConst(4009697400), new FixConst(4016375143), new FixConst(4022976420), new FixConst(4029501105), 
-			new FixConst(4035949075), new FixConst(4042320205), new FixConst(4048614376), new FixConst(4054831467), 
-			new FixConst(4060971360), new FixConst(4067033938), new FixConst(4073019085), new FixConst(4078926688), 
-			new FixConst(4084756634), new FixConst(4090508812), new FixConst(4096183113), new FixConst(4101779428), 
-			new FixConst(4107297652), new FixConst(4112737678), new FixConst(4118099404), new FixConst(4123382727), 
-			new FixConst(4128587547), new FixConst(4133713764), new FixConst(4138761282), new FixConst(4143730003), 
-			new FixConst(4148619834), new FixConst(4153430681), new FixConst(4158162453), new FixConst(4162815059), 
-			new FixConst(4167388412), new FixConst(4171882423), new FixConst(4176297008), new FixConst(4180632082), 
-			new FixConst(4184887562), new FixConst(4189063369), new FixConst(4193159422), new FixConst(4197175643), 
-			new FixConst(4201111956), new FixConst(4204968286), new FixConst(4208744559), new FixConst(4212440704), 
-			new FixConst(4216056650), new FixConst(4219592328), new FixConst(4223047672), new FixConst(4226422614), 
-			new FixConst(4229717092), new FixConst(4232931042), new FixConst(4236064403), new FixConst(4239117116), 
-			new FixConst(4242089121), new FixConst(4244980364), new FixConst(4247790788), new FixConst(4250520341), 
-			new FixConst(4253168970), new FixConst(4255736624), new FixConst(4258223255), new FixConst(4260628816), 
-			new FixConst(4262953261), new FixConst(4265196545), new FixConst(4267358626), new FixConst(4269439463), 
-			new FixConst(4271439016), new FixConst(4273357246), new FixConst(4275194119), new FixConst(4276949597), 
-			new FixConst(4278623649), new FixConst(4280216242), new FixConst(4281727345), new FixConst(4283156931), 
-			new FixConst(4284504972), new FixConst(4285771441), new FixConst(4286956316), new FixConst(4288059574), 
-			new FixConst(4289081193), new FixConst(4290021154), new FixConst(4290879439), new FixConst(4291656032), 
-			new FixConst(4292350918), new FixConst(4292964084), new FixConst(4293495518), new FixConst(4293945210), 
-			new FixConst(4294313152), new FixConst(4294599336), new FixConst(4294803757), new FixConst(4294926411), 
-			new FixConst(4294967296),
-		};
-		#endregion
+        private static FixConst piConst = new(13493037705);
+        private static FixConst eConst = new(11674931555);
+        private static FixConst log2EConst = new(6196328019);
+        private static FixConst log210Const = new(14267572527);
+        private static FixConst ln2Const = new(2977044472);
+        private static FixConst log102Const = new(1292913986);
 
-		#region CORDIC Tables
-		static FixConst[] cordicAngleConsts = {
-			new FixConst(193273528320), new FixConst(114096026022), new FixConst(60285206653), new FixConst(30601712202), 
-			new FixConst(15360239180), new FixConst(7687607525), new FixConst(3844741810), new FixConst(1922488225), 
-			new FixConst(961258780), new FixConst(480631223), new FixConst(240315841), new FixConst(120157949), 
-			new FixConst(60078978), new FixConst(30039490), new FixConst(15019745), new FixConst(7509872), 
-			new FixConst(3754936), new FixConst(1877468), new FixConst(938734), new FixConst(469367), 
-			new FixConst(234684), new FixConst(117342), new FixConst(58671), new FixConst(29335), 
-		};
+        private const int QUARTER_SINE_RES_POWER = 2;
 
-		static FixConst[] cordicGainConsts = {
-			new FixConst(3037000500), new FixConst(2716375826), new FixConst(2635271635), new FixConst(2614921743), 
-			new FixConst(2609829388), new FixConst(2608555990), new FixConst(2608237621), new FixConst(2608158028), 
-			new FixConst(2608138129), new FixConst(2608133154), new FixConst(2608131911), new FixConst(2608131600), 
-			new FixConst(2608131522), new FixConst(2608131503), new FixConst(2608131498), new FixConst(2608131497), 
-			new FixConst(2608131496), new FixConst(2608131496), new FixConst(2608131496), new FixConst(2608131496), 
-			new FixConst(2608131496), new FixConst(2608131496), new FixConst(2608131496), new FixConst(2608131496), 
-		};
-		#endregion
+        #region Sine Table
+        private static FixConst[] quarterSineConsts = {
+            new(0), new(18740271), new(37480185), new(56219385),
+            new(74957515), new(93694218), new(112429137), new(131161916),
+            new(149892197), new(168619625), new(187343842), new(206064493),
+            new(224781220), new(243493669), new(262201481), new(280904301),
+            new(299601773), new(318293542), new(336979250), new(355658543),
+            new(374331065), new(392996460), new(411654373), new(430304448),
+            new(448946331), new(467579667), new(486204101), new(504819278),
+            new(523424844), new(542020445), new(560605727), new(579180335),
+            new(597743917), new(616296119), new(634836587), new(653364969),
+            new(671880911), new(690384062), new(708874069), new(727350581),
+            new(745813244), new(764261708), new(782695622), new(801114635),
+            new(819518395), new(837906553), new(856278758), new(874634661),
+            new(892973913), new(911296163), new(929601063), new(947888266),
+            new(966157422), new(984408183), new(1002640203), new(1020853134),
+            new(1039046630), new(1057220343), new(1075373929), new(1093507041),
+            new(1111619334), new(1129710464), new(1147780085), new(1165827855),
+            new(1183853429), new(1201856464), new(1219836617), new(1237793546),
+            new(1255726910), new(1273636366), new(1291521575), new(1309382194),
+            new(1327217885), new(1345028307), new(1362813122), new(1380571991),
+            new(1398304576), new(1416010539), new(1433689544), new(1451341253),
+            new(1468965330), new(1486561441), new(1504129249), new(1521668421),
+            new(1539178623), new(1556659521), new(1574110783), new(1591532075),
+            new(1608923068), new(1626283428), new(1643612827), new(1660910933),
+            new(1678177418), new(1695411953), new(1712614210), new(1729783862),
+            new(1746920580), new(1764024040), new(1781093915), new(1798129881),
+            new(1815131613), new(1832098787), new(1849031081), new(1865928172),
+            new(1882789739), new(1899615460), new(1916405015), new(1933158084),
+            new(1949874349), new(1966553491), new(1983195193), new(1999799137),
+            new(2016365009), new(2032892491), new(2049381270), new(2065831032),
+            new(2082241464), new(2098612252), new(2114943086), new(2131233655),
+            new(2147483648), new(2163692756), new(2179860670), new(2195987083),
+            new(2212071688), new(2228114178), new(2244114248), new(2260071593),
+            new(2275985909), new(2291856895), new(2307684246), new(2323467662),
+            new(2339206844), new(2354901489), new(2370551301), new(2386155981),
+            new(2401715233), new(2417228758), new(2432696264), new(2448117454),
+            new(2463492036), new(2478819716), new(2494100203), new(2509333207),
+            new(2524518436), new(2539655602), new(2554744416), new(2569784592),
+            new(2584775843), new(2599717883), new(2614610429), new(2629453196),
+            new(2644245902), new(2658988265), new(2673680006), new(2688320843),
+            new(2702910498), new(2717448694), new(2731935154), new(2746369601),
+            new(2760751762), new(2775081362), new(2789358128), new(2803581789),
+            new(2817752074), new(2831868713), new(2845931437), new(2859939978),
+            new(2873894071), new(2887793449), new(2901637847), new(2915427003),
+            new(2929160652), new(2942838535), new(2956460391), new(2970025959),
+            new(2983534983), new(2996987204), new(3010382368), new(3023720217),
+            new(3037000500), new(3050222962), new(3063387353), new(3076493421),
+            new(3089540917), new(3102529593), new(3115459201), new(3128329495),
+            new(3141140230), new(3153891163), new(3166582050), new(3179212649),
+            new(3191782722), new(3204292027), new(3216740327), new(3229127385),
+            new(3241452965), new(3253716833), new(3265918754), new(3278058497),
+            new(3290135830), new(3302150525), new(3314102350), new(3325991081),
+            new(3337816489), new(3349578350), new(3361276439), new(3372910535),
+            new(3384480416), new(3395985861), new(3407426651), new(3418802568),
+            new(3430113397), new(3441358921), new(3452538927), new(3463653201),
+            new(3474701533), new(3485683711), new(3496599527), new(3507448772),
+            new(3518231241), new(3528946727), new(3539595028), new(3550175940),
+            new(3560689261), new(3571134792), new(3581512334), new(3591821689),
+            new(3602062661), new(3612235055), new(3622338677), new(3632373336),
+            new(3642338838), new(3652234996), new(3662061621), new(3671818526),
+            new(3681505524), new(3691122431), new(3700669065), new(3710145244),
+            new(3719550787), new(3728885515), new(3738149250), new(3747341816),
+            new(3756463039), new(3765512743), new(3774490758), new(3783396912),
+            new(3792231035), new(3800992960), new(3809682520), new(3818299548),
+            new(3826843882), new(3835315358), new(3843713815), new(3852039094),
+            new(3860291035), new(3868469481), new(3876574278), new(3884605270),
+            new(3892562305), new(3900445232), new(3908253899), new(3915988159),
+            new(3923647864), new(3931232868), new(3938743028), new(3946178199),
+            new(3953538241), new(3960823014), new(3968032378), new(3975166196),
+            new(3982224333), new(3989206654), new(3996113026), new(4002943318),
+            new(4009697400), new(4016375143), new(4022976420), new(4029501105),
+            new(4035949075), new(4042320205), new(4048614376), new(4054831467),
+            new(4060971360), new(4067033938), new(4073019085), new(4078926688),
+            new(4084756634), new(4090508812), new(4096183113), new(4101779428),
+            new(4107297652), new(4112737678), new(4118099404), new(4123382727),
+            new(4128587547), new(4133713764), new(4138761282), new(4143730003),
+            new(4148619834), new(4153430681), new(4158162453), new(4162815059),
+            new(4167388412), new(4171882423), new(4176297008), new(4180632082),
+            new(4184887562), new(4189063369), new(4193159422), new(4197175643),
+            new(4201111956), new(4204968286), new(4208744559), new(4212440704),
+            new(4216056650), new(4219592328), new(4223047672), new(4226422614),
+            new(4229717092), new(4232931042), new(4236064403), new(4239117116),
+            new(4242089121), new(4244980364), new(4247790788), new(4250520341),
+            new(4253168970), new(4255736624), new(4258223255), new(4260628816),
+            new(4262953261), new(4265196545), new(4267358626), new(4269439463),
+            new(4271439016), new(4273357246), new(4275194119), new(4276949597),
+            new(4278623649), new(4280216242), new(4281727345), new(4283156931),
+            new(4284504972), new(4285771441), new(4286956316), new(4288059574),
+            new(4289081193), new(4290021154), new(4290879439), new(4291656032),
+            new(4292350918), new(4292964084), new(4293495518), new(4293945210),
+            new(4294313152), new(4294599336), new(4294803757), new(4294926411),
+            new(4294967296),
+        };
+        #endregion
 
-		#region Inverse Factorial Table
-		static FixConst[] invFactConsts = {
-			new FixConst(4294967296),
-			new FixConst(4294967296),
-			new FixConst(2147483648),
-			new FixConst(715827883),
-			new FixConst(178956971),
-			new FixConst(35791394),
-			new FixConst(5965232),
-			new FixConst(852176),
-			new FixConst(106522),
-			new FixConst(11836),
-			new FixConst(1184),
-			new FixConst(108),
-			new FixConst(9),
-			new FixConst(1),
-		};
-		#endregion
-	}
-    
+        #region CORDIC Tables
+        private static FixConst[] cordicAngleConsts = {
+            new(193273528320), new(114096026022), new(60285206653), new(30601712202),
+            new(15360239180), new(7687607525), new(3844741810), new(1922488225),
+            new(961258780), new(480631223), new(240315841), new(120157949),
+            new(60078978), new(30039490), new(15019745), new(7509872),
+            new(3754936), new(1877468), new(938734), new(469367),
+            new(234684), new(117342), new(58671), new(29335),
+        };
+
+        private static FixConst[] cordicGainConsts = {
+            new(3037000500), new(2716375826), new(2635271635), new(2614921743),
+            new(2609829388), new(2608555990), new(2608237621), new(2608158028),
+            new(2608138129), new(2608133154), new(2608131911), new(2608131600),
+            new(2608131522), new(2608131503), new(2608131498), new(2608131497),
+            new(2608131496), new(2608131496), new(2608131496), new(2608131496),
+            new(2608131496), new(2608131496), new(2608131496), new(2608131496),
+        };
+        #endregion
+
+        #region Inverse Factorial Table
+        private static FixConst[] invFactConsts = {
+            new(4294967296),
+            new(4294967296),
+            new(2147483648),
+            new(715827883),
+            new(178956971),
+            new(35791394),
+            new(5965232),
+            new(852176),
+            new(106522),
+            new(11836),
+            new(1184),
+            new(108),
+            new(9),
+            new(1),
+        };
+        #endregion
+
+    }
+
 }
 #endif

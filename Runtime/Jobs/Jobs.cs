@@ -357,7 +357,7 @@ namespace ME.BECS {
             do {
                 snapshot = target;
                 stillMore = newValue > snapshot;
-            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target.rawValue, newValue.rawValue, snapshot.rawValue) != snapshot.rawValue);
+            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target.rawValueInt, newValue.rawValueInt, snapshot.rawValueInt) != snapshot.rawValueInt);
 
             return stillMore;
         }
@@ -405,7 +405,7 @@ namespace ME.BECS {
             do {
                 initialValue = value;
                 computedValue = initialValue + count;
-            } while (initialValue.rawValue != System.Threading.Interlocked.CompareExchange(ref value.rawValue, computedValue.rawValue, initialValue.rawValue));
+            } while (initialValue.rawValue != System.Threading.Interlocked.CompareExchange(ref value.rawValueInt, computedValue.rawValueInt, initialValue.rawValueInt));
         }
 
         [INLINE(256)]

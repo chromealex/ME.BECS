@@ -30,13 +30,17 @@ using System.Runtime.CompilerServices;
 #if !FIXED_POINT_F32
 [DebuggerDisplay("{ToStringInv()}")]
 [System.Serializable]
+[System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Explicit)]
 public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFormattable
 {
     /// <summary>
     /// Raw byte representation of an sfloat number
     /// </summary>
+    [System.Runtime.InteropServices.FieldOffsetAttribute(0)]
     public uint rawValue;
-
+    [System.Runtime.InteropServices.FieldOffsetAttribute(0)]
+	internal int rawValueInt;
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private sfloat(uint raw)
     {

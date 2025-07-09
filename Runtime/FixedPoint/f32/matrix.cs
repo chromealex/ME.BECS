@@ -2,69 +2,64 @@ using System.Runtime.CompilerServices;
 using static ME.BECS.FixedPoint.math;
 
 #if FIXED_POINT_F32
-namespace ME.BECS.FixedPoint
-{
-    public partial struct float2x2
-    {
+namespace ME.BECS.FixedPoint {
+
+    public partial struct float2x2 {
+
         /// <summary>Returns a float2x2 matrix representing a counter-clockwise rotation of angle degrees.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2x2 Rotate(sfloat angle)
-        {
+        public static float2x2 Rotate(sfloat angle) {
             sfloat s, c;
             sincos(angle, out s, out c);
             return float2x2(c, -s,
-                            s,  c);
+                            s, c);
         }
 
         /// <summary>Returns a float2x2 matrix representing a uniform scaling of both axes by s.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2x2 Scale(sfloat s)
-        {
-            return float2x2(s,    sfloat.Zero,
+        public static float2x2 Scale(sfloat s) {
+            return float2x2(s, sfloat.Zero,
                             sfloat.Zero, s);
         }
 
         /// <summary>Returns a float2x2 matrix representing a non-uniform axis scaling by x and y.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2x2 Scale(sfloat x, sfloat y)
-        {
+        public static float2x2 Scale(sfloat x, sfloat y) {
             return float2x2(x, sfloat.Zero,
                             sfloat.Zero, y);
         }
 
         /// <summary>Returns a float2x2 matrix representing a non-uniform axis scaling by the components of the float2 vector v.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2x2 Scale(float2 v)
-        {
+        public static float2x2 Scale(float2 v) {
             return Scale(v.x, v.y);
         }
+
     }
 
-    public partial struct float3x3
-    {
+    public partial struct float3x3 {
+
         /// <summary>
         /// Constructs a float3x3 from the upper left 3x3 of a float4x4.
         /// </summary>
         /// <param name="f4x4"><see cref="float4x4"/> to extract a float3x3 from.</param>
-        public float3x3(float4x4 f4x4)
-        {
-            c0 = f4x4.c0.xyz;
-            c1 = f4x4.c1.xyz;
-            c2 = f4x4.c2.xyz;
+        public float3x3(float4x4 f4x4) {
+            this.c0 = f4x4.c0.xyz;
+            this.c1 = f4x4.c1.xyz;
+            this.c2 = f4x4.c2.xyz;
         }
 
         /// <summary>Constructs a float3x3 matrix from a unit quaternion.</summary>
-        public float3x3(quaternion q)
-        {
-            float4 v = q.value;
-            float4 v2 = v + v;
+        public float3x3(quaternion q) {
+            var v = q.value;
+            var v2 = v + v;
 
-            uint3 npn = uint3(0x80000000, 0x00000000, 0x80000000);
-            uint3 nnp = uint3(0x80000000, 0x80000000, 0x00000000);
-            uint3 pnn = uint3(0x00000000, 0x80000000, 0x80000000);
-            c0 = v2.y * asfloat(asuint(v.yxw) ^ npn) - v2.z * asfloat(asuint(v.zwx) ^ pnn) + float3(sfloat.One, sfloat.Zero, sfloat.Zero);
-            c1 = v2.z * asfloat(asuint(v.wzy) ^ nnp) - v2.x * asfloat(asuint(v.yxw) ^ npn) + float3(sfloat.Zero, sfloat.One, sfloat.Zero);
-            c2 = v2.x * asfloat(asuint(v.zwx) ^ pnn) - v2.y * asfloat(asuint(v.wzy) ^ nnp) + float3(sfloat.Zero, sfloat.Zero, sfloat.One);
+            var npn = uint3(0x80000000, 0x00000000, 0x80000000);
+            var nnp = uint3(0x80000000, 0x80000000, 0x00000000);
+            var pnn = uint3(0x00000000, 0x80000000, 0x80000000);
+            this.c0 = v2.y * asfloat(asuint(v.yxw) ^ npn) - v2.z * asfloat(asuint(v.zwx) ^ pnn) + float3(sfloat.One, sfloat.Zero, sfloat.Zero);
+            this.c1 = v2.z * asfloat(asuint(v.wzy) ^ nnp) - v2.x * asfloat(asuint(v.yxw) ^ npn) + float3(sfloat.Zero, sfloat.One, sfloat.Zero);
+            this.c2 = v2.x * asfloat(asuint(v.zwx) ^ pnn) - v2.y * asfloat(asuint(v.wzy) ^ nnp) + float3(sfloat.Zero, sfloat.Zero, sfloat.One);
         }
 
         /// <summary>
@@ -72,26 +67,25 @@ namespace ME.BECS.FixedPoint
         /// The rotation direction is clockwise when looking along the rotation axis towards the origin.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 AxisAngle(float3 axis, sfloat angle)
-        {
+        public static float3x3 AxisAngle(float3 axis, sfloat angle) {
             sfloat sina, cosa;
-            math.sincos(angle, out sina, out cosa);
+            sincos(angle, out sina, out cosa);
 
-            float3 u = axis;
-            float3 u_yzx = u.yzx;
-            float3 u_zxy = u.zxy;
-            float3 u_inv_cosa = u - u * cosa;  // u * (1.0f - cosa);
-            float4 t = float4(u * sina, cosa);
+            var u = axis;
+            var u_yzx = u.yzx;
+            var u_zxy = u.zxy;
+            var u_inv_cosa = u - u * cosa; // u * (1.0f - cosa);
+            var t = float4(u * sina, cosa);
 
-            uint3 ppn = uint3(0x00000000, 0x00000000, 0x80000000);
-            uint3 npp = uint3(0x80000000, 0x00000000, 0x00000000);
-            uint3 pnp = uint3(0x00000000, 0x80000000, 0x00000000);
+            var ppn = uint3(0x00000000, 0x00000000, 0x80000000);
+            var npp = uint3(0x80000000, 0x00000000, 0x00000000);
+            var pnp = uint3(0x00000000, 0x80000000, 0x00000000);
 
             return float3x3(
                 u.x * u_inv_cosa + asfloat(asuint(t.wzy) ^ ppn),
                 u.y * u_inv_cosa + asfloat(asuint(t.zwx) ^ npp),
                 u.z * u_inv_cosa + asfloat(asuint(t.yxw) ^ pnp)
-                );
+            );
             /*
             return float3x3(
                 cosa + u.x * u.x * (1.0f - cosa),       u.y * u.x * (1.0f - cosa) - u.z * sina, u.z * u.x * (1.0f - cosa) + u.y * sina,
@@ -107,16 +101,15 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerXYZ(float3 xyz)
-        {
+        public static float3x3 EulerXYZ(float3 xyz) {
             // return mul(rotateZ(xyz.z), mul(rotateY(xyz.y), rotateX(xyz.x)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float3x3(
-                c.y * c.z,  c.z * s.x * s.y - c.x * s.z,    c.x * c.z * s.y + s.x * s.z,
-                c.y * s.z,  c.x * c.z + s.x * s.y * s.z,    c.x * s.y * s.z - c.z * s.x,
-                -s.y,       c.y * s.x,                      c.x * c.y
-                );
+                c.y * c.z, c.z * s.x * s.y - c.x * s.z, c.x * c.z * s.y + s.x * s.z,
+                c.y * s.z, c.x * c.z + s.x * s.y * s.z, c.x * s.y * s.z - c.z * s.x,
+                -s.y, c.y * s.x, c.x * c.y
+            );
         }
 
         /// <summary>
@@ -125,16 +118,15 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerXZY(float3 xyz)
-        {
+        public static float3x3 EulerXZY(float3 xyz) {
             // return mul(rotateY(xyz.y), mul(rotateZ(xyz.z), rotateX(xyz.x))); }
             float3 s, c;
             sincos(xyz, out s, out c);
             return float3x3(
-                c.y * c.z,  s.x * s.y - c.x * c.y * s.z,    c.x * s.y + c.y * s.x * s.z,
-                s.z,        c.x * c.z,                      -c.z * s.x,
-                -c.z * s.y, c.y * s.x + c.x * s.y * s.z,    c.x * c.y - s.x * s.y * s.z
-                );
+                c.y * c.z, s.x * s.y - c.x * c.y * s.z, c.x * s.y + c.y * s.x * s.z,
+                s.z, c.x * c.z, -c.z * s.x,
+                -c.z * s.y, c.y * s.x + c.x * s.y * s.z, c.x * c.y - s.x * s.y * s.z
+            );
         }
 
         /// <summary>
@@ -143,16 +135,15 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerYXZ(float3 xyz)
-        {
+        public static float3x3 EulerYXZ(float3 xyz) {
             // return mul(rotateZ(xyz.z), mul(rotateX(xyz.x), rotateY(xyz.y)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float3x3(
-                c.y * c.z - s.x * s.y * s.z,    -c.x * s.z, c.z * s.y + c.y * s.x * s.z,
-                c.z * s.x * s.y + c.y * s.z,    c.x * c.z,  s.y * s.z - c.y * c.z * s.x,
-                -c.x * s.y,                     s.x,        c.x * c.y
-                );
+                c.y * c.z - s.x * s.y * s.z, -c.x * s.z, c.z * s.y + c.y * s.x * s.z,
+                c.z * s.x * s.y + c.y * s.z, c.x * c.z, s.y * s.z - c.y * c.z * s.x,
+                -c.x * s.y, s.x, c.x * c.y
+            );
         }
 
         /// <summary>
@@ -161,16 +152,15 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerYZX(float3 xyz)
-        {
+        public static float3x3 EulerYZX(float3 xyz) {
             // return mul(rotateX(xyz.x), mul(rotateZ(xyz.z), rotateY(xyz.y)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float3x3(
-                c.y * c.z,                      -s.z,       c.z * s.y,
-                s.x * s.y + c.x * c.y * s.z,    c.x * c.z,  c.x * s.y * s.z - c.y * s.x,
-                c.y * s.x * s.z - c.x * s.y,    c.z * s.x,  c.x * c.y + s.x * s.y * s.z
-                );
+                c.y * c.z, -s.z, c.z * s.y,
+                s.x * s.y + c.x * c.y * s.z, c.x * c.z, c.x * s.y * s.z - c.y * s.x,
+                c.y * s.x * s.z - c.x * s.y, c.z * s.x, c.x * c.y + s.x * s.y * s.z
+            );
         }
 
         /// <summary>
@@ -180,16 +170,15 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerZXY(float3 xyz)
-        {
+        public static float3x3 EulerZXY(float3 xyz) {
             // return mul(rotateY(xyz.y), mul(rotateX(xyz.x), rotateZ(xyz.z)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float3x3(
-                c.y * c.z + s.x * s.y * s.z,    c.z * s.x * s.y - c.y * s.z,    c.x * s.y,
-                c.x * s.z,                      c.x * c.z,                      -s.x,
-                c.y * s.x * s.z - c.z * s.y,    c.y * c.z * s.x + s.y * s.z,    c.x * c.y
-                );
+                c.y * c.z + s.x * s.y * s.z, c.z * s.x * s.y - c.y * s.z, c.x * s.y,
+                c.x * s.z, c.x * c.z, -s.x,
+                c.y * s.x * s.z - c.z * s.y, c.y * c.z * s.x + s.y * s.z, c.x * c.y
+            );
         }
 
         /// <summary>
@@ -198,16 +187,15 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerZYX(float3 xyz)
-        {
+        public static float3x3 EulerZYX(float3 xyz) {
             // return mul(rotateX(xyz.x), mul(rotateY(xyz.y), rotateZ(xyz.z)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float3x3(
-                c.y * c.z,                      -c.y * s.z,                     s.y,
-                c.z * s.x * s.y + c.x * s.z,    c.x * c.z - s.x * s.y * s.z,    -c.y * s.x,
-                s.x * s.z - c.x * c.z * s.y,    c.z * s.x + c.x * s.y * s.z,    c.x * c.y
-                );
+                c.y * c.z, -c.y * s.z, s.y,
+                c.z * s.x * s.y + c.x * s.z, c.x * c.z - s.x * s.y * s.z, -c.y * s.x,
+                s.x * s.z - c.x * c.z * s.y, c.z * s.x + c.x * s.y * s.z, c.x * c.y
+            );
         }
 
         /// <summary>
@@ -218,7 +206,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerXYZ(sfloat x, sfloat y, sfloat z) { return EulerXYZ(float3(x, y, z)); }
+        public static float3x3 EulerXYZ(sfloat x, sfloat y, sfloat z) {
+            return EulerXYZ(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float3x3 rotation matrix constructed by first performing a rotation around the x-axis, then the z-axis and finally the y-axis.
@@ -228,7 +218,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerXZY(sfloat x, sfloat y, sfloat z) { return EulerXZY(float3(x, y, z)); }
+        public static float3x3 EulerXZY(sfloat x, sfloat y, sfloat z) {
+            return EulerXZY(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float3x3 rotation matrix constructed by first performing a rotation around the y-axis, then the x-axis and finally the z-axis.
@@ -238,7 +230,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerYXZ(sfloat x, sfloat y, sfloat z) { return EulerYXZ(float3(x, y, z)); }
+        public static float3x3 EulerYXZ(sfloat x, sfloat y, sfloat z) {
+            return EulerYXZ(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float3x3 rotation matrix constructed by first performing a rotation around the y-axis, then the z-axis and finally the x-axis.
@@ -248,7 +242,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerYZX(sfloat x, sfloat y, sfloat z) { return EulerYZX(float3(x, y, z)); }
+        public static float3x3 EulerYZX(sfloat x, sfloat y, sfloat z) {
+            return EulerYZX(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float3x3 rotation matrix constructed by first performing a rotation around the z-axis, then the x-axis and finally the y-axis.
@@ -259,7 +255,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerZXY(sfloat x, sfloat y, sfloat z) { return EulerZXY(float3(x, y, z)); }
+        public static float3x3 EulerZXY(sfloat x, sfloat y, sfloat z) {
+            return EulerZXY(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float3x3 rotation matrix constructed by first performing a rotation around the z-axis, then the y-axis and finally the x-axis.
@@ -269,7 +267,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 EulerZYX(sfloat x, sfloat y, sfloat z) { return EulerZYX(float3(x, y, z)); }
+        public static float3x3 EulerZYX(sfloat x, sfloat y, sfloat z) {
+            return EulerZYX(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float3x3 rotation matrix constructed by first performing 3 rotations around the principal axes in a given order.
@@ -280,24 +280,28 @@ namespace ME.BECS.FixedPoint
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         /// <param name="order">The order in which the rotations are applied.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 Euler(float3 xyz, RotationOrder order = RotationOrder.Default)
-        {
-            switch (order)
-            {
+        public static float3x3 Euler(float3 xyz, RotationOrder order = RotationOrder.Default) {
+            switch (order) {
                 case RotationOrder.XYZ:
                     return EulerXYZ(xyz);
+
                 case RotationOrder.XZY:
                     return EulerXZY(xyz);
+
                 case RotationOrder.YXZ:
                     return EulerYXZ(xyz);
+
                 case RotationOrder.YZX:
                     return EulerYZX(xyz);
+
                 case RotationOrder.ZXY:
                     return EulerZXY(xyz);
+
                 case RotationOrder.ZYX:
                     return EulerZYX(xyz);
+
                 default:
-                    return float3x3.identity;
+                    return identity;
             }
         }
 
@@ -312,29 +316,26 @@ namespace ME.BECS.FixedPoint
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         /// <param name="order">The order in which the rotations are applied.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 Euler(sfloat x, sfloat y, sfloat z, RotationOrder order = RotationOrder.Default)
-        {
+        public static float3x3 Euler(sfloat x, sfloat y, sfloat z, RotationOrder order = RotationOrder.Default) {
             return Euler(float3(x, y, z), order);
         }
 
         /// <summary>Returns a float4x4 matrix that rotates around the x-axis by a given number of radians.</summary>
         /// <param name="angle">The clockwise rotation angle when looking along the x-axis towards the origin in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 RotateX(sfloat angle)
-        {
+        public static float3x3 RotateX(sfloat angle) {
             // {{1, 0, 0}, {0, c_0, -s_0}, {0, s_0, c_0}}
             sfloat s, c;
             sincos(angle, out s, out c);
             return float3x3(sfloat.One, sfloat.Zero, sfloat.Zero,
-                            sfloat.Zero, c,    -s,
-                            sfloat.Zero, s,    c);
+                            sfloat.Zero, c, -s,
+                            sfloat.Zero, s, c);
         }
 
         /// <summary>Returns a float4x4 matrix that rotates around the y-axis by a given number of radians.</summary>
         /// <param name="angle">The clockwise rotation angle when looking along the y-axis towards the origin in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 RotateY(sfloat angle)
-        {
+        public static float3x3 RotateY(sfloat angle) {
             // {{c_1, 0, s_1}, {0, 1, 0}, {-s_1, 0, c_1}}
             sfloat s, c;
             sincos(angle, out s, out c);
@@ -346,20 +347,18 @@ namespace ME.BECS.FixedPoint
         /// <summary>Returns a float4x4 matrix that rotates around the z-axis by a given number of radians.</summary>
         /// <param name="angle">The clockwise rotation angle when looking along the z-axis towards the origin in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 RotateZ(sfloat angle)
-        {
+        public static float3x3 RotateZ(sfloat angle) {
             // {{c_2, -s_2, 0}, {s_2, c_2, 0}, {0, 0, 1}}
             sfloat s, c;
             sincos(angle, out s, out c);
-            return float3x3(c,    -s, sfloat.Zero,
-                            s,    c, sfloat.Zero,
+            return float3x3(c, -s, sfloat.Zero,
+                            s, c, sfloat.Zero,
                             sfloat.Zero, sfloat.Zero, sfloat.One);
         }
 
         //<summary>Returns a float3x3 matrix representing a uniform scaling of all axes by s.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 Scale(sfloat s)
-        {
+        public static float3x3 Scale(sfloat s) {
             return float3x3(s, sfloat.Zero, sfloat.Zero,
                             sfloat.Zero, s, sfloat.Zero,
                             sfloat.Zero, sfloat.Zero, s);
@@ -367,8 +366,7 @@ namespace ME.BECS.FixedPoint
 
         /// <summary>Returns a float3x3 matrix representing a non-uniform axis scaling by x, y and z.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 Scale(sfloat x, sfloat y, sfloat z)
-        {
+        public static float3x3 Scale(sfloat x, sfloat y, sfloat z) {
             return float3x3(x, sfloat.Zero, sfloat.Zero,
                             sfloat.Zero, y, sfloat.Zero,
                             sfloat.Zero, sfloat.Zero, z);
@@ -376,8 +374,7 @@ namespace ME.BECS.FixedPoint
 
         /// <summary>Returns a float3x3 matrix representing a non-uniform axis scaling by the components of the float3 vector v.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 Scale(float3 v)
-        {
+        public static float3x3 Scale(float3 v) {
             return Scale(v.x, v.y, v.z);
         }
 
@@ -387,9 +384,8 @@ namespace ME.BECS.FixedPoint
         /// If these assumptions are not met use float3x3.LookRotationSafe instead.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 LookRotation(float3 forward, float3 up)
-        {
-            float3 t = normalize(cross(up, forward));
+        public static float3x3 LookRotation(float3 forward, float3 up) {
+            var t = normalize(cross(up, forward));
             return float3x3(t, cross(forward, t), forward);
         }
 
@@ -400,60 +396,59 @@ namespace ME.BECS.FixedPoint
         /// the identity will be returned instead.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 LookRotationSafe(float3 forward, float3 up)
-        {
-            sfloat forwardLengthSq = dot(forward, forward);
-            sfloat upLengthSq = dot(up, up);
+        public static float3x3 LookRotationSafe(float3 forward, float3 up) {
+            var forwardLengthSq = dot(forward, forward);
+            var upLengthSq = dot(up, up);
 
             forward *= rsqrt(forwardLengthSq);
             up *= rsqrt(upLengthSq);
 
-            float3 t = cross(up, forward);
-            sfloat tLengthSq = dot(t, t);
+            var t = cross(up, forward);
+            var tLengthSq = dot(t, t);
             t *= rsqrt(tLengthSq);
 
-            sfloat mn = min(min(forwardLengthSq, upLengthSq), tLengthSq);
-            sfloat mx = max(max(forwardLengthSq, upLengthSq), tLengthSq);
+            var mn = min(min(forwardLengthSq, upLengthSq), tLengthSq);
+            var mx = max(max(forwardLengthSq, upLengthSq), tLengthSq);
 
-            bool accept = mn > FixMath.SMALL_VALUE && mx < FixMath.BIG_VALUE && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
+            var accept = mn > FixMath.SMALL_VALUE && mx < FixMath.BIG_VALUE && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
             return float3x3(
                 select(float3(sfloat.One, sfloat.Zero, sfloat.Zero), t, accept),
                 select(float3(sfloat.Zero, sfloat.One, sfloat.Zero), cross(forward, t), accept),
                 select(float3(sfloat.Zero, sfloat.Zero, sfloat.One), forward, accept));
         }
 
-        public static explicit operator float3x3(float4x4 f4x4) => new float3x3(f4x4);
+        public static explicit operator float3x3(float4x4 f4x4) {
+            return new float3x3(f4x4);
+        }
+
     }
 
-    public partial struct float4x4
-    {
+    public partial struct float4x4 {
+
         /// <summary>Constructs a float4x4 from a float3x3 rotation matrix and a float3 translation vector.</summary>
-        public float4x4(float3x3 rotation, float3 translation)
-        {
-            c0 = float4(rotation.c0, sfloat.Zero);
-            c1 = float4(rotation.c1, sfloat.Zero);
-            c2 = float4(rotation.c2, sfloat.Zero);
-            c3 = float4(translation, sfloat.One);
+        public float4x4(float3x3 rotation, float3 translation) {
+            this.c0 = float4(rotation.c0, sfloat.Zero);
+            this.c1 = float4(rotation.c1, sfloat.Zero);
+            this.c2 = float4(rotation.c2, sfloat.Zero);
+            this.c3 = float4(translation, sfloat.One);
         }
 
         /// <summary>Constructs a float4x4 from a quaternion and a float3 translation vector.</summary>
-        public float4x4(quaternion rotation, float3 translation)
-        {
-            float3x3 rot = float3x3(rotation);
-            c0 = float4(rot.c0, sfloat.Zero);
-            c1 = float4(rot.c1, sfloat.Zero);
-            c2 = float4(rot.c2, sfloat.Zero);
-            c3 = float4(translation, sfloat.One);
+        public float4x4(quaternion rotation, float3 translation) {
+            var rot = float3x3(rotation);
+            this.c0 = float4(rot.c0, sfloat.Zero);
+            this.c1 = float4(rot.c1, sfloat.Zero);
+            this.c2 = float4(rot.c2, sfloat.Zero);
+            this.c3 = float4(translation, sfloat.One);
         }
 
         /// <summary>Constructs a float4x4 from a RigidTransform.</summary>
-        public float4x4(RigidTransform transform)
-        {
-            float3x3 rot = float3x3(transform.rot);
-            c0 = float4(rot.c0, sfloat.Zero);
-            c1 = float4(rot.c1, sfloat.Zero);
-            c2 = float4(rot.c2, sfloat.Zero);
-            c3 = float4(transform.pos, sfloat.One);
+        public float4x4(RigidTransform transform) {
+            var rot = float3x3(transform.rot);
+            this.c0 = float4(rot.c0, sfloat.Zero);
+            this.c1 = float4(rot.c1, sfloat.Zero);
+            this.c2 = float4(rot.c2, sfloat.Zero);
+            this.c3 = float4(transform.pos, sfloat.One);
         }
 
         /// <summary>
@@ -461,28 +456,27 @@ namespace ME.BECS.FixedPoint
         /// The rotation direction is clockwise when looking along the rotation axis towards the origin.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 AxisAngle(float3 axis, sfloat angle)
-        {
+        public static float4x4 AxisAngle(float3 axis, sfloat angle) {
             sfloat sina, cosa;
-            math.sincos(angle, out sina, out cosa);
+            sincos(angle, out sina, out cosa);
 
-            float4 u = float4(axis, sfloat.Zero);
-            float4 u_yzx = u.yzxx;
-            float4 u_zxy = u.zxyx;
-            float4 u_inv_cosa = u - u * cosa;  // u * (1.0f - cosa);
-            float4 t = float4(u.xyz * sina, cosa);
+            var u = float4(axis, sfloat.Zero);
+            var u_yzx = u.yzxx;
+            var u_zxy = u.zxyx;
+            var u_inv_cosa = u - u * cosa; // u * (1.0f - cosa);
+            var t = float4(u.xyz * sina, cosa);
 
-            uint4 ppnp = uint4(0x00000000, 0x00000000, 0x80000000, 0x00000000);
-            uint4 nppp = uint4(0x80000000, 0x00000000, 0x00000000, 0x00000000);
-            uint4 pnpp = uint4(0x00000000, 0x80000000, 0x00000000, 0x00000000);
-            uint4 mask = uint4(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000);
+            var ppnp = uint4(0x00000000, 0x00000000, 0x80000000, 0x00000000);
+            var nppp = uint4(0x80000000, 0x00000000, 0x00000000, 0x00000000);
+            var pnpp = uint4(0x00000000, 0x80000000, 0x00000000, 0x00000000);
+            var mask = uint4(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000);
 
             return float4x4(
                 u.x * u_inv_cosa + asfloat((asuint(t.wzyx) ^ ppnp) & mask),
                 u.y * u_inv_cosa + asfloat((asuint(t.zwxx) ^ nppp) & mask),
                 u.z * u_inv_cosa + asfloat((asuint(t.yxwx) ^ pnpp) & mask),
                 float4(sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One)
-                );
+            );
 
         }
 
@@ -492,17 +486,16 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerXYZ(float3 xyz)
-        {
+        public static float4x4 EulerXYZ(float3 xyz) {
             // return mul(rotateZ(xyz.z), mul(rotateY(xyz.y), rotateX(xyz.x)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float4x4(
-                c.y * c.z,  c.z * s.x * s.y - c.x * s.z,    c.x * c.z * s.y + s.x * s.z,    sfloat.Zero,
-                c.y * s.z,  c.x * c.z + s.x * s.y * s.z,    c.x * s.y * s.z - c.z * s.x,    sfloat.Zero,
-                -s.y,       c.y * s.x,                      c.x * c.y,                      sfloat.Zero,
-                sfloat.Zero,sfloat.Zero,                    sfloat.Zero,                    sfloat.One
-                );
+                c.y * c.z, c.z * s.x * s.y - c.x * s.z, c.x * c.z * s.y + s.x * s.z, sfloat.Zero,
+                c.y * s.z, c.x * c.z + s.x * s.y * s.z, c.x * s.y * s.z - c.z * s.x, sfloat.Zero,
+                -s.y, c.y * s.x, c.x * c.y, sfloat.Zero,
+                sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
+            );
         }
 
         /// <summary>
@@ -511,17 +504,16 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerXZY(float3 xyz)
-        {
+        public static float4x4 EulerXZY(float3 xyz) {
             // return mul(rotateY(xyz.y), mul(rotateZ(xyz.z), rotateX(xyz.x))); }
             float3 s, c;
             sincos(xyz, out s, out c);
             return float4x4(
-                c.y * c.z,  s.x * s.y - c.x * c.y * s.z,    c.x * s.y + c.y * s.x * s.z,    sfloat.Zero,
-                s.z,        c.x * c.z,                      -c.z * s.x,                     sfloat.Zero,
-                -c.z * s.y, c.y * s.x + c.x * s.y * s.z,    c.x * c.y - s.x * s.y * s.z,    sfloat.Zero,
-                sfloat.Zero,sfloat.Zero,                    sfloat.Zero,                    sfloat.One
-                );
+                c.y * c.z, s.x * s.y - c.x * c.y * s.z, c.x * s.y + c.y * s.x * s.z, sfloat.Zero,
+                s.z, c.x * c.z, -c.z * s.x, sfloat.Zero,
+                -c.z * s.y, c.y * s.x + c.x * s.y * s.z, c.x * c.y - s.x * s.y * s.z, sfloat.Zero,
+                sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
+            );
         }
 
         /// <summary>
@@ -530,17 +522,16 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerYXZ(float3 xyz)
-        {
+        public static float4x4 EulerYXZ(float3 xyz) {
             // return mul(rotateZ(xyz.z), mul(rotateX(xyz.x), rotateY(xyz.y)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float4x4(
-                c.y * c.z - s.x * s.y * s.z,    -c.x * s.z, c.z * s.y + c.y * s.x * s.z,    sfloat.Zero,
-                c.z * s.x * s.y + c.y * s.z,    c.x * c.z,  s.y * s.z - c.y * c.z * s.x,    sfloat.Zero,
-                -c.x * s.y,                     s.x,        c.x * c.y,                      sfloat.Zero,
-                sfloat.Zero,                    sfloat.Zero,sfloat.Zero,                    sfloat.One
-                );
+                c.y * c.z - s.x * s.y * s.z, -c.x * s.z, c.z * s.y + c.y * s.x * s.z, sfloat.Zero,
+                c.z * s.x * s.y + c.y * s.z, c.x * c.z, s.y * s.z - c.y * c.z * s.x, sfloat.Zero,
+                -c.x * s.y, s.x, c.x * c.y, sfloat.Zero,
+                sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
+            );
         }
 
         /// <summary>
@@ -549,17 +540,16 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerYZX(float3 xyz)
-        {
+        public static float4x4 EulerYZX(float3 xyz) {
             // return mul(rotateX(xyz.x), mul(rotateZ(xyz.z), rotateY(xyz.y)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float4x4(
-                c.y * c.z,                      -s.z,       c.z * s.y,                      sfloat.Zero,
-                s.x * s.y + c.x * c.y * s.z,    c.x * c.z,  c.x * s.y * s.z - c.y * s.x,    sfloat.Zero,
-                c.y * s.x * s.z - c.x * s.y,    c.z * s.x,  c.x * c.y + s.x * s.y * s.z,    sfloat.Zero,
-                sfloat.Zero,                    sfloat.Zero,sfloat.Zero,                    sfloat.One
-                );
+                c.y * c.z, -s.z, c.z * s.y, sfloat.Zero,
+                s.x * s.y + c.x * c.y * s.z, c.x * c.z, c.x * s.y * s.z - c.y * s.x, sfloat.Zero,
+                c.y * s.x * s.z - c.x * s.y, c.z * s.x, c.x * c.y + s.x * s.y * s.z, sfloat.Zero,
+                sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
+            );
         }
 
         /// <summary>
@@ -569,17 +559,16 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerZXY(float3 xyz)
-        {
+        public static float4x4 EulerZXY(float3 xyz) {
             // return mul(rotateY(xyz.y), mul(rotateX(xyz.x), rotateZ(xyz.z)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float4x4(
-                c.y * c.z + s.x * s.y * s.z,    c.z * s.x * s.y - c.y * s.z,    c.x * s.y,  sfloat.Zero,
-                c.x * s.z,                      c.x * c.z,                      -s.x,       sfloat.Zero,
-                c.y * s.x * s.z - c.z * s.y,    c.y * c.z * s.x + s.y * s.z,    c.x * c.y,  sfloat.Zero,
-                sfloat.Zero,                    sfloat.Zero,                    sfloat.Zero,sfloat.One
-                );
+                c.y * c.z + s.x * s.y * s.z, c.z * s.x * s.y - c.y * s.z, c.x * s.y, sfloat.Zero,
+                c.x * s.z, c.x * c.z, -s.x, sfloat.Zero,
+                c.y * s.x * s.z - c.z * s.y, c.y * c.z * s.x + s.y * s.z, c.x * c.y, sfloat.Zero,
+                sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
+            );
         }
 
         /// <summary>
@@ -588,17 +577,16 @@ namespace ME.BECS.FixedPoint
         /// </summary>
         /// <param name="xyz">A float3 vector containing the rotation angles around the x-, y- and z-axis measures in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerZYX(float3 xyz)
-        {
+        public static float4x4 EulerZYX(float3 xyz) {
             // return mul(rotateX(xyz.x), mul(rotateY(xyz.y), rotateZ(xyz.z)));
             float3 s, c;
             sincos(xyz, out s, out c);
             return float4x4(
-                c.y * c.z,                      -c.y * s.z,                     s.y,        sfloat.Zero,
-                c.z * s.x * s.y + c.x * s.z,    c.x * c.z - s.x * s.y * s.z,    -c.y * s.x, sfloat.Zero,
-                s.x * s.z - c.x * c.z * s.y,    c.z * s.x + c.x * s.y * s.z,    c.x * c.y,  sfloat.Zero,
-                sfloat.Zero,                    sfloat.Zero,                    sfloat.Zero,sfloat.One
-                );
+                c.y * c.z, -c.y * s.z, s.y, sfloat.Zero,
+                c.z * s.x * s.y + c.x * s.z, c.x * c.z - s.x * s.y * s.z, -c.y * s.x, sfloat.Zero,
+                s.x * s.z - c.x * c.z * s.y, c.z * s.x + c.x * s.y * s.z, c.x * c.y, sfloat.Zero,
+                sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
+            );
         }
 
         /// <summary>
@@ -609,7 +597,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerXYZ(sfloat x, sfloat y, sfloat z) { return EulerXYZ(float3(x, y, z)); }
+        public static float4x4 EulerXYZ(sfloat x, sfloat y, sfloat z) {
+            return EulerXYZ(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float4x4 rotation matrix constructed by first performing a rotation around the x-axis, then the z-axis and finally the y-axis.
@@ -619,7 +609,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerXZY(sfloat x, sfloat y, sfloat z) { return EulerXZY(float3(x, y, z)); }
+        public static float4x4 EulerXZY(sfloat x, sfloat y, sfloat z) {
+            return EulerXZY(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float4x4 rotation matrix constructed by first performing a rotation around the y-axis, then the x-axis and finally the z-axis.
@@ -629,7 +621,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerYXZ(sfloat x, sfloat y, sfloat z) { return EulerYXZ(float3(x, y, z)); }
+        public static float4x4 EulerYXZ(sfloat x, sfloat y, sfloat z) {
+            return EulerYXZ(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float4x4 rotation matrix constructed by first performing a rotation around the y-axis, then the z-axis and finally the x-axis.
@@ -639,7 +633,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerYZX(sfloat x, sfloat y, sfloat z) { return EulerYZX(float3(x, y, z)); }
+        public static float4x4 EulerYZX(sfloat x, sfloat y, sfloat z) {
+            return EulerYZX(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float4x4 rotation matrix constructed by first performing a rotation around the z-axis, then the x-axis and finally the y-axis.
@@ -650,7 +646,9 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerZXY(sfloat x, sfloat y, sfloat z) { return EulerZXY(float3(x, y, z)); }
+        public static float4x4 EulerZXY(sfloat x, sfloat y, sfloat z) {
+            return EulerZXY(float3(x, y, z));
+        }
 
         /// <summary>
         /// Returns a float4x4 rotation matrix constructed by first performing a rotation around the z-axis, then the y-axis and finally the x-axis.
@@ -660,27 +658,33 @@ namespace ME.BECS.FixedPoint
         /// <param name="y">The rotation angle around the y-axis in radians.</param>
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 EulerZYX(sfloat x, sfloat y, sfloat z) { return EulerZYX(float3(x, y, z)); }
+        public static float4x4 EulerZYX(sfloat x, sfloat y, sfloat z) {
+            return EulerZYX(float3(x, y, z));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Euler(float3 xyz, RotationOrder order = RotationOrder.Default)
-        {
-            switch (order)
-            {
+        public static float4x4 Euler(float3 xyz, RotationOrder order = RotationOrder.Default) {
+            switch (order) {
                 case RotationOrder.XYZ:
                     return EulerXYZ(xyz);
+
                 case RotationOrder.XZY:
                     return EulerXZY(xyz);
+
                 case RotationOrder.YXZ:
                     return EulerYXZ(xyz);
+
                 case RotationOrder.YZX:
                     return EulerYZX(xyz);
+
                 case RotationOrder.ZXY:
                     return EulerZXY(xyz);
+
                 case RotationOrder.ZYX:
                     return EulerZYX(xyz);
+
                 default:
-                    return float4x4.identity;
+                    return identity;
             }
         }
 
@@ -695,16 +699,14 @@ namespace ME.BECS.FixedPoint
         /// <param name="z">The rotation angle around the z-axis in radians.</param>
         /// <param name="order">The order in which the rotations are applied.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Euler(sfloat x, sfloat y, sfloat z, RotationOrder order = RotationOrder.Default)
-        {
+        public static float4x4 Euler(sfloat x, sfloat y, sfloat z, RotationOrder order = RotationOrder.Default) {
             return Euler(float3(x, y, z), order);
         }
 
         /// <summary>Returns a float4x4 matrix that rotates around the x-axis by a given number of radians.</summary>
         /// <param name="angle">The clockwise rotation angle when looking along the x-axis towards the origin in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 RotateX(sfloat angle)
-        {
+        public static float4x4 RotateX(sfloat angle) {
             // {{1, 0, 0}, {0, c_0, -s_0}, {0, s_0, c_0}}
             sfloat s, c;
             sincos(angle, out s, out c);
@@ -718,8 +720,7 @@ namespace ME.BECS.FixedPoint
         /// <summary>Returns a float4x4 matrix that rotates around the y-axis by a given number of radians.</summary>
         /// <param name="angle">The clockwise rotation angle when looking along the y-axis towards the origin in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 RotateY(sfloat angle)
-        {
+        public static float4x4 RotateY(sfloat angle) {
             // {{c_1, 0, s_1}, {0, 1, 0}, {-s_1, 0, c_1}}
             sfloat s, c;
             sincos(angle, out s, out c);
@@ -733,8 +734,7 @@ namespace ME.BECS.FixedPoint
         /// <summary>Returns a float4x4 matrix that rotates around the z-axis by a given number of radians.</summary>
         /// <param name="angle">The clockwise rotation angle when looking along the z-axis towards the origin in radians.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 RotateZ(sfloat angle)
-        {
+        public static float4x4 RotateZ(sfloat angle) {
             // {{c_2, -s_2, 0}, {s_2, c_2, 0}, {0, 0, 1}}
             sfloat s, c;
             sincos(angle, out s, out c);
@@ -747,8 +747,7 @@ namespace ME.BECS.FixedPoint
 
         /// <summary>Returns a float4x4 scale matrix given 3 axis scales.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Scale(sfloat s)
-        {
+        public static float4x4 Scale(sfloat s) {
             return float4x4(s, sfloat.Zero, sfloat.Zero, sfloat.Zero,
                             sfloat.Zero, s, sfloat.Zero, sfloat.Zero,
                             sfloat.Zero, sfloat.Zero, s, sfloat.Zero,
@@ -757,8 +756,7 @@ namespace ME.BECS.FixedPoint
 
         /// <summary>Returns a float4x4 scale matrix given a float3 vector containing the 3 axis scales.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Scale(sfloat x, sfloat y, sfloat z)
-        {
+        public static float4x4 Scale(sfloat x, sfloat y, sfloat z) {
             return float4x4(x, sfloat.Zero, sfloat.Zero, sfloat.Zero,
                             sfloat.Zero, y, sfloat.Zero, sfloat.Zero,
                             sfloat.Zero, sfloat.Zero, z, sfloat.Zero,
@@ -767,15 +765,13 @@ namespace ME.BECS.FixedPoint
 
         /// <summary>Returns a float4x4 scale matrix given a float3 vector containing the 3 axis scales.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Scale(float3 scales)
-        {
+        public static float4x4 Scale(float3 scales) {
             return Scale(scales.x, scales.y, scales.z);
         }
 
         /// <summary>Returns a float4x4 translation matrix given a float3 translation vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Translate(float3 vector)
-        {
+        public static float4x4 Translate(float3 vector) {
             return float4x4(float4(sfloat.One, sfloat.Zero, sfloat.Zero, sfloat.Zero),
                             float4(sfloat.Zero, sfloat.One, sfloat.Zero, sfloat.Zero),
                             float4(sfloat.Zero, sfloat.Zero, sfloat.One, sfloat.Zero),
@@ -789,9 +785,8 @@ namespace ME.BECS.FixedPoint
         /// If these assumptions are not met use float4x4.LookRotationSafe instead.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 LookAt(float3 eye, float3 target, float3 up)
-        {
-            float3x3 rot = float3x3.LookRotation(normalize(target - eye), up);
+        public static float4x4 LookAt(float3 eye, float3 target, float3 up) {
+            var rot = float3x3.LookRotation(normalize(target - eye), up);
 
             float4x4 matrix;
             matrix.c0 = float4(rot.c0, sfloat.Zero);
@@ -809,18 +804,17 @@ namespace ME.BECS.FixedPoint
         /// <param name="near">The distance to the near plane.</param>
         /// <param name="far">The distance to the far plane.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 Ortho(sfloat width, sfloat height, sfloat near, sfloat far)
-        {
-            sfloat rcpdx = sfloat.One / width;
-            sfloat rcpdy = sfloat.One / height;
-            sfloat rcpdz = sfloat.One / (far - near);
+        public static float4x4 Ortho(sfloat width, sfloat height, sfloat near, sfloat far) {
+            var rcpdx = sfloat.One / width;
+            var rcpdy = sfloat.One / height;
+            var rcpdz = sfloat.One / (far - near);
 
             return float4x4(
                 (sfloat)2.0f * rcpdx, sfloat.Zero, sfloat.Zero, sfloat.Zero,
                 sfloat.Zero, (sfloat)2.0f * rcpdy, sfloat.Zero, sfloat.Zero,
                 sfloat.Zero, sfloat.Zero, (sfloat)(-2.0f) * rcpdz, -(far + near) * rcpdz,
                 sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
-                );
+            );
         }
 
         /// <summary>
@@ -833,18 +827,17 @@ namespace ME.BECS.FixedPoint
         /// <param name="near">The distance to the near plane.</param>
         /// <param name="far">The distance to the far plane.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 OrthoOffCenter(sfloat left, sfloat right, sfloat bottom, sfloat top, sfloat near, sfloat far)
-        {
-            sfloat rcpdx = sfloat.One / (right - left);
-            sfloat rcpdy = sfloat.One / (top - bottom);
-            sfloat rcpdz = sfloat.One / (far - near);
+        public static float4x4 OrthoOffCenter(sfloat left, sfloat right, sfloat bottom, sfloat top, sfloat near, sfloat far) {
+            var rcpdx = sfloat.One / (right - left);
+            var rcpdy = sfloat.One / (top - bottom);
+            var rcpdz = sfloat.One / (far - near);
 
             return float4x4(
                 (sfloat)2.0f * rcpdx, sfloat.Zero, sfloat.Zero, -(right + left) * rcpdx,
                 sfloat.Zero, (sfloat)2.0f * rcpdy, sfloat.Zero, -(top + bottom) * rcpdy,
                 sfloat.Zero, sfloat.Zero, (sfloat)(-2.0f) * rcpdz, -(far + near) * rcpdz,
                 sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One
-                );
+            );
         }
 
         /// <summary>
@@ -855,17 +848,16 @@ namespace ME.BECS.FixedPoint
         /// <param name="near">Distance to near plane. Must be greater than zero.</param>
         /// <param name="far">Distance to far plane. Must be greater than zero.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 PerspectiveFov(sfloat verticalFov, sfloat aspect, sfloat near, sfloat far)
-        {
-            sfloat cotangent = sfloat.One / tan(verticalFov * (sfloat)0.5f);
-            sfloat rcpdz = sfloat.One / (near - far);
+        public static float4x4 PerspectiveFov(sfloat verticalFov, sfloat aspect, sfloat near, sfloat far) {
+            var cotangent = sfloat.One / tan(verticalFov * (sfloat)0.5f);
+            var rcpdz = sfloat.One / (near - far);
 
             return float4x4(
                 cotangent / aspect, sfloat.Zero, sfloat.Zero, sfloat.Zero,
                 sfloat.Zero, cotangent, sfloat.Zero, sfloat.Zero,
                 sfloat.Zero, sfloat.Zero, (far + near) * rcpdz, (sfloat)2.0f * near * far * rcpdz,
                 sfloat.Zero, sfloat.Zero, -sfloat.One, sfloat.Zero
-                );
+            );
         }
 
         /// <summary>
@@ -878,18 +870,17 @@ namespace ME.BECS.FixedPoint
         /// <param name="near">Distance to the near plane. Must be greater than zero.</param>
         /// <param name="far">Distance to the far plane. Must be greater than zero.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 PerspectiveOffCenter(sfloat left, sfloat right, sfloat bottom, sfloat top, sfloat near, sfloat far)
-        {
-            sfloat rcpdz = sfloat.One / (near - far);
-            sfloat rcpWidth = sfloat.One / (right - left);
-            sfloat rcpHeight = sfloat.One / (top - bottom);
+        public static float4x4 PerspectiveOffCenter(sfloat left, sfloat right, sfloat bottom, sfloat top, sfloat near, sfloat far) {
+            var rcpdz = sfloat.One / (near - far);
+            var rcpWidth = sfloat.One / (right - left);
+            var rcpHeight = sfloat.One / (top - bottom);
 
             return float4x4(
                 (sfloat)2.0f * near * rcpWidth, sfloat.Zero, (left + right) * rcpWidth, sfloat.Zero,
                 sfloat.Zero, (sfloat)2.0f * near * rcpHeight, (bottom + top) * rcpHeight, sfloat.Zero,
                 sfloat.Zero, sfloat.Zero, (far + near) * rcpdz, (sfloat)2.0f * near * far * rcpdz,
                 sfloat.Zero, sfloat.Zero, -sfloat.One, sfloat.Zero
-                );
+            );
         }
 
         /// <summary>
@@ -897,79 +888,75 @@ namespace ME.BECS.FixedPoint
         /// Equivalent to mul(translationTransform, mul(rotationTransform, scaleTransform)).
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 TRS(float3 translation, quaternion rotation, float3 scale)
-        {
-            float3x3 r = float3x3(rotation);
-            return float4x4(  float4(r.c0 * scale.x, sfloat.Zero),
-                              float4(r.c1 * scale.y, sfloat.Zero),
-                              float4(r.c2 * scale.z, sfloat.Zero),
-                              float4(translation, sfloat.One));
+        public static float4x4 TRS(float3 translation, quaternion rotation, float3 scale) {
+            var r = float3x3(rotation);
+            return float4x4(float4(r.c0 * scale.x, sfloat.Zero),
+                            float4(r.c1 * scale.y, sfloat.Zero),
+                            float4(r.c2 * scale.z, sfloat.Zero),
+                            float4(translation, sfloat.One));
         }
+
     }
 
-    partial class math
-    {
+    partial class math {
+
         /// <summary>
         /// Extracts a float3x3 from the upper left 3x3 of a float4x4.
         /// </summary>
         /// <param name="f4x4"><see cref="float4x4"/> to extract a float3x3 from.</param>
         /// <returns>Upper left 3x3 matrix as float3x3.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 float3x3(float4x4 f4x4)
-        {
+        public static float3x3 float3x3(float4x4 f4x4) {
             return new float3x3(f4x4);
         }
 
         /// <summary>Returns a float3x3 matrix constructed from a quaternion.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 float3x3(quaternion rotation)
-        {
+        public static float3x3 float3x3(quaternion rotation) {
             return new float3x3(rotation);
         }
 
         /// <summary>Returns a float4x4 constructed from a float3x3 rotation matrix and a float3 translation vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 float4x4(float3x3 rotation, float3 translation)
-        {
+        public static float4x4 float4x4(float3x3 rotation, float3 translation) {
             return new float4x4(rotation, translation);
         }
 
         /// <summary>Returns a float4x4 constructed from a quaternion and a float3 translation vector.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 float4x4(quaternion rotation, float3 translation)
-        {
+        public static float4x4 float4x4(quaternion rotation, float3 translation) {
             return new float4x4(rotation, translation);
         }
 
         /// <summary>Returns a float4x4 constructed from a RigidTransform.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float4x4 float4x4(RigidTransform transform)
-        {
+        public static float4x4 float4x4(RigidTransform transform) {
             return new float4x4(transform);
         }
 
         /// <summary>Returns an orthonormalized version of a float3x3 matrix.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float3x3 orthonormalize(float3x3 i)
-        {
+        public static float3x3 orthonormalize(float3x3 i) {
             float3x3 o;
 
-            float3 u = i.c0;
-            float3 v = i.c1 - i.c0 * math.dot(i.c1, i.c0);
+            var u = i.c0;
+            var v = i.c1 - i.c0 * dot(i.c1, i.c0);
 
-            sfloat lenU = math.length(u);
-            sfloat lenV = math.length(v);
+            var lenU = length(u);
+            var lenV = length(v);
 
-            sfloat epsilon = FixMath.SMALL_VALUE;
+            var epsilon = FixMath.SMALL_VALUE;
 
-            bool c = lenU > epsilon && lenV > epsilon;
+            var c = lenU > epsilon && lenV > epsilon;
 
-            o.c0 = math.select(float3(sfloat.One, sfloat.Zero, sfloat.Zero), u / lenU, c);
-            o.c1 = math.select(float3(sfloat.Zero, sfloat.One, sfloat.Zero), v / lenV, c);
-            o.c2 = math.cross(o.c0, o.c1);
+            o.c0 = select(float3(sfloat.One, sfloat.Zero, sfloat.Zero), u / lenU, c);
+            o.c1 = select(float3(sfloat.Zero, sfloat.One, sfloat.Zero), v / lenV, c);
+            o.c2 = cross(o.c0, o.c1);
 
             return o;
         }
+
     }
+
 }
 #endif
