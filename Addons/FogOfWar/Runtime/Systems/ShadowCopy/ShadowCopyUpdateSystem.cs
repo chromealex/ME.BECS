@@ -55,8 +55,8 @@ namespace ME.BECS.FogOfWar {
                 isVisibilityStateJustChanged = wasVisible == true;
             }
             
-            //if visibility state has not changed or shadow copy was and currently is visible - do not change anything
-            if (isVisibilityStateJustChanged == false || shouldBeVisible == true && wasVisible == true) return;
+            // if visibility state has not changed or shadow copy was and currently is visible - do not change anything
+            if ((isVisibilityStateJustChanged == false || shouldBeVisible == true) && wasVisible == true) return;
                 
             if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
                 ent.SetTag<IsViewRequested>(currentVisibilityState);
