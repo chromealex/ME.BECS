@@ -1,4 +1,6 @@
 
+
+#if !FIXED_POINT_F32
 public static partial class libm
 {
     private static sfloat scalbnf(sfloat x, int n)
@@ -672,3 +674,4 @@ public static partial class libm
         return sn * z;
     }
 }
+#endif

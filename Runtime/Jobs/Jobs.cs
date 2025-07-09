@@ -357,7 +357,7 @@ namespace ME.BECS {
             do {
                 snapshot = target;
                 stillMore = newValue > snapshot;
-            } while (stillMore && (sfloat)System.Threading.Interlocked.CompareExchange(ref _as<sfloat, float>(ref target), (float)newValue, (float)snapshot) != snapshot);
+            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref target.rawValue, newValue.rawValue, snapshot.rawValue) != snapshot.rawValue);
 
             return stillMore;
         }
@@ -398,17 +398,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Increment(ref float value, float count) {
-            E.ADDR_4(ref value);
-            float initialValue;
-            float computedValue;
-            do {
-                initialValue = value;
-                computedValue = initialValue + count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
-        }
-
-        [INLINE(256)]
         public static void Increment(ref sfloat value, sfloat count) {
             E.ADDR_4(ref value);
             sfloat initialValue;
@@ -416,7 +405,7 @@ namespace ME.BECS {
             do {
                 initialValue = value;
                 computedValue = initialValue + count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<sfloat, float>(ref value), (float)computedValue, (float)initialValue));
+            } while (initialValue.rawValue != System.Threading.Interlocked.CompareExchange(ref value.rawValue, computedValue.rawValue, initialValue.rawValue));
         }
 
         [INLINE(256)]
@@ -446,17 +435,6 @@ namespace ME.BECS {
             E.ADDR_4(ref value);
             int initialValue;
             int computedValue;
-            do {
-                initialValue = value;
-                computedValue = initialValue - count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
-        }
-
-        [INLINE(256)]
-        public static void Decrement(ref float value, float count) {
-            E.ADDR_4(ref value);
-            float initialValue;
-            float computedValue;
             do {
                 initialValue = value;
                 computedValue = initialValue - count;

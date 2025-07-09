@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using static ME.BECS.FixedPoint.math;
 
-#if !FIXED_POINT_F32
+#if FIXED_POINT_F32
 namespace ME.BECS {
     
     using ME.BECS.FixedPoint;
@@ -93,50 +93,72 @@ namespace ME.BECS.FixedPoint
         public static implicit operator quaternion(float4 v) { return new quaternion(v); }
 
         /// <summary>Constructs a unit quaternion from a float3x3 rotation matrix. The matrix must be orthonormal.</summary>
-        public quaternion(float3x3 m)
-        {
-            float3 u = m.c0;
-            float3 v = m.c1;
-            float3 w = m.c2;
+        public quaternion(float3x3 m) {
+            var c0 = m.c0;
+            var c1 = m.c1;
+            var c2 = m.c2;
+            if (c0.x + c1.y + c2.z > 0f) {
+                this = quat(3, 1f + c0.x + c1.y + c2.z, c1.z - c2.y, c2.x - c0.z, c0.y - c1.x);
+                return;
+            }
 
-            uint u_sign = (asuint(u.x) & 0x80000000);
-            sfloat t = v.y + asfloat(asuint(w.z) ^ u_sign);
-            uint4 u_mask = uint4((int)u_sign >> 31);
-            uint4 t_mask = uint4(asint(t) >> 31);
+            if (c0.x >= c1.y && c0.x >= c2.z) {
+                this = quat(0, 1f + c0.x - c1.y - c2.z, c0.y + c1.x, c0.z + c2.x, c1.z - c2.y);
+                return;
+            }
 
-            sfloat tr = sfloat.One + abs(u.x);
+            if (c1.y > c2.z) {
+                this = quat(1, 1f - c0.x + c1.y - c2.z, c1.x + c0.y, c2.y + c1.z, c2.x - c0.z);
+                return;
+            }
+            
+            this = quat(2, 1f - c0.x - c1.y + c2.z, c2.x + c0.z, c2.y + c1.z, c0.y - c1.x);
 
-            uint4 sign_flips = uint4(0x00000000, 0x80000000, 0x80000000, 0x80000000) ^ (u_mask & uint4(0x00000000, 0x80000000, 0x00000000, 0x80000000)) ^ (t_mask & uint4(0x80000000, 0x80000000, 0x80000000, 0x00000000));
-
-            value = float4(tr, u.y, w.x, v.z) + asfloat(asuint(float4(t, v.x, u.z, w.y)) ^ sign_flips);   // +---, +++-, ++-+, +-++
-
-            value = asfloat((asuint(value) & ~u_mask) | (asuint(value.zwxy) & u_mask));
-            value = asfloat((asuint(value.wzyx) & ~t_mask) | (asuint(value) & t_mask));
-            value = normalize(value);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static quaternion quat(int index, sfloat t, sfloat a, sfloat b, sfloat c) {
+                var s = 0.5f / sqrt(t);
+                return index switch {
+                    3 => new(a * s, b * s, c * s, t * s),
+                    2 => new(a * s, b * s, t * s, c * s),
+                    1 => new(a * s, t * s, b * s, c * s),
+                    _ => new(t * s, a * s, b * s, c * s)
+                };
+            }
         }
 
         /// <summary>Constructs a unit quaternion from an orthonormal float4x4 matrix.</summary>
         public quaternion(float4x4 m)
         {
-            float4 u = m.c0;
-            float4 v = m.c1;
-            float4 w = m.c2;
+            var c0 = m.c0;
+            var c1 = m.c1;
+            var c2 = m.c2;
+            if (c0.x + c1.y + c2.z > 0f) {
+                this = quat(3, 1f + c0.x + c1.y + c2.z, c1.z - c2.y, c2.x - c0.z, c0.y - c1.x);
+                return;
+            }
 
-            uint u_sign = (asuint(u.x) & 0x80000000);
-            sfloat t = v.y + asfloat(asuint(w.z) ^ u_sign);
-            uint4 u_mask = uint4((int)u_sign >> 31);
-            uint4 t_mask = uint4(asint(t) >> 31);
+            if (c0.x >= c1.y && c0.x >= c2.z) {
+                this = quat(0, 1f + c0.x - c1.y - c2.z, c0.y + c1.x, c0.z + c2.x, c1.z - c2.y);
+                return;
+            }
 
-            sfloat tr = sfloat.One + abs(u.x);
+            if (c1.y > c2.z) {
+                this = quat(1, 1f - c0.x + c1.y - c2.z, c1.x + c0.y, c2.y + c1.z, c2.x - c0.z);
+                return;
+            }
+            
+            this = quat(2, 1f - c0.x - c1.y + c2.z, c2.x + c0.z, c2.y + c1.z, c0.y - c1.x);
 
-            uint4 sign_flips = uint4(0x00000000, 0x80000000, 0x80000000, 0x80000000) ^ (u_mask & uint4(0x00000000, 0x80000000, 0x00000000, 0x80000000)) ^ (t_mask & uint4(0x80000000, 0x80000000, 0x80000000, 0x00000000));
-
-            value = float4(tr, u.y, w.x, v.z) + asfloat(asuint(float4(t, v.x, u.z, w.y)) ^ sign_flips);   // +---, +++-, ++-+, +-++
-
-            value = asfloat((asuint(value) & ~u_mask) | (asuint(value.zwxy) & u_mask));
-            value = asfloat((asuint(value.wzyx) & ~t_mask) | (asuint(value) & t_mask));
-
-            value = normalize(value);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static quaternion quat(int index, sfloat t, sfloat a, sfloat b, sfloat c) {
+                var s = 0.5f / sqrt(t);
+                return index switch {
+                    3 => new(a * s, b * s, c * s, t * s),
+                    2 => new(a * s, b * s, t * s, c * s),
+                    1 => new(a * s, t * s, b * s, c * s),
+                    _ => new(t * s, a * s, b * s, c * s)
+                };
+            }
         }
 
         /// <summary>
@@ -442,10 +464,7 @@ namespace ME.BECS.FixedPoint
             sfloat mn = min(min(forwardLengthSq, upLengthSq), tLengthSq);
             sfloat mx = max(max(forwardLengthSq, upLengthSq), tLengthSq);
 
-            const uint bigValue = 0x799a130c;
-            const uint smallValue = 0x0554ad2e;
-
-            bool accept = mn > sfloat.FromRaw(smallValue) && mx < sfloat.FromRaw(bigValue) && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
+            bool accept = mn > FixMath.SMALL_VALUE && mx < FixMath.BIG_VALUE && isfinite(forwardLengthSq) && isfinite(upLengthSq) && isfinite(tLengthSq);
             return quaternion(select(float4(sfloat.Zero, sfloat.Zero, sfloat.Zero, sfloat.One), quaternion(float3x3(t, cross(forward, t),forward)).value, accept));
         }
 
@@ -651,8 +670,7 @@ namespace ME.BECS.FixedPoint
                 q2.value = -q2.value;
             }
 
-            const uint almostOne = 0x3f7fdf3b;
-            if (dt < sfloat.FromRaw(almostOne))
+            if (dt < FixMath.ALMOST_ONE)
             {
                 sfloat angle = acos(dt);
                 sfloat s = rsqrt(sfloat.One - dt * dt);    // 1.0f / sin(angle)
@@ -663,7 +681,7 @@ namespace ME.BECS.FixedPoint
             else
             {
                 // if the angle is small, use linear interpolation
-                return nlerp(q1, q2, t);
+                return normalize(quaternion(lerp(q1.value, q2.value, t)));
             }
         }
 

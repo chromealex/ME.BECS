@@ -43,7 +43,7 @@ namespace ME.BECS.Pathfinding {
         public const byte TARGET_BYTE = 255;
         public const byte LOS_BYTE = 254;
         public const byte UNWALKABLE = 255;
-        public const float UNWALKABLE_COST = float.MaxValue * 0.5f;
+        public static readonly tfloat UNWALKABLE_COST = 100_000f;
         
         [System.Serializable]
         public struct TempNode : System.IEquatable<TempNode> {

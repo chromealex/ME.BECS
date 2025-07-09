@@ -27,6 +27,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 // Internal representation is identical to IEEE binary32 floating point numbers
+#if !FIXED_POINT_F32
 [DebuggerDisplay("{ToStringInv()}")]
 [System.Serializable]
 public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFormattable
@@ -994,3 +995,4 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
         }
     }
 }
+#endif

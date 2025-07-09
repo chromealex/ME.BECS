@@ -682,7 +682,7 @@ namespace ME.BECS.Pathfinding {
                                     }
 
                                     ref var item = ref this.path.chunks[this.world.state, curTempNode.chunkIndex];
-                                    var rootCost = tfloat.MaxValue;
+                                    tfloat rootCost = Graph.UNWALKABLE_COST;
                                     if (item.flowField.IsCreated == true) {
                                         rootCost = item.flowField[this.world.state, curTempNode.nodeIndex].bestCost;
                                     }
