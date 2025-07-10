@@ -81,7 +81,7 @@ namespace ME.BECS {
             return new FixConst(-value.raw);
         }
 
-        private long raw;
+        private readonly long raw;
 
         [INLINE(256)]
         public FixConst(long raw) {
@@ -144,8 +144,8 @@ namespace ME.BECS {
         public static readonly sfloat LN2;
         public static readonly sfloat LN10;
         public static readonly sfloat LOG10_2;
-        private static sfloat[] quarterSine;
-        private static sfloat[] cordicAngles;
+        private static readonly sfloat[] quarterSine;
+        private static readonly sfloat[] cordicAngles;
         private static sfloat[] cordicGains;
 
         public static readonly sfloat PI_HALF;
@@ -551,17 +551,17 @@ namespace ME.BECS {
 
     public static partial class FixMath {
 
-        private static FixConst piConst = new(13493037705);
-        private static FixConst eConst = new(11674931555);
-        private static FixConst log2EConst = new(6196328019);
-        private static FixConst log210Const = new(14267572527);
-        private static FixConst ln2Const = new(2977044472);
-        private static FixConst log102Const = new(1292913986);
+        private static readonly FixConst piConst = new(13493037705);
+        private static readonly FixConst eConst = new(11674931555);
+        private static readonly FixConst log2EConst = new(6196328019);
+        private static readonly FixConst log210Const = new(14267572527);
+        private static readonly FixConst ln2Const = new(2977044472);
+        private static readonly FixConst log102Const = new(1292913986);
 
         private const int QUARTER_SINE_RES_POWER = 2;
 
         #region Sine Table
-        private static FixConst[] quarterSineConsts = {
+        private static readonly FixConst[] quarterSineConsts = {
             new(0), new(18740271), new(37480185), new(56219385),
             new(74957515), new(93694218), new(112429137), new(131161916),
             new(149892197), new(168619625), new(187343842), new(206064493),
@@ -657,7 +657,7 @@ namespace ME.BECS {
         #endregion
 
         #region CORDIC Tables
-        private static FixConst[] cordicAngleConsts = {
+        private static readonly FixConst[] cordicAngleConsts = {
             new(193273528320), new(114096026022), new(60285206653), new(30601712202),
             new(15360239180), new(7687607525), new(3844741810), new(1922488225),
             new(961258780), new(480631223), new(240315841), new(120157949),
@@ -666,7 +666,7 @@ namespace ME.BECS {
             new(234684), new(117342), new(58671), new(29335),
         };
 
-        private static FixConst[] cordicGainConsts = {
+        private static readonly FixConst[] cordicGainConsts = {
             new(3037000500), new(2716375826), new(2635271635), new(2614921743),
             new(2609829388), new(2608555990), new(2608237621), new(2608158028),
             new(2608138129), new(2608133154), new(2608131911), new(2608131600),
@@ -677,7 +677,7 @@ namespace ME.BECS {
         #endregion
 
         #region Inverse Factorial Table
-        private static FixConst[] invFactConsts = {
+        private static readonly FixConst[] invFactConsts = {
             new(4294967296),
             new(4294967296),
             new(2147483648),
