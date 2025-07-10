@@ -5,7 +5,7 @@ namespace ME.BECS {
     using System;
     using System.Text;
 
-    public struct FixConst {
+    public readonly struct FixConst : IEquatable<FixConst> {
 
         [INLINE(256)]
         public static explicit operator double(FixConst f) {
@@ -124,51 +124,100 @@ namespace ME.BECS {
             return sb.ToString();
         }
 
+        public bool Equals(FixConst other) {
+            return this.raw == other.raw;
+        }
+
     }
 
+    public class FixMathSinTable {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<sfloat>> value = Unity.Burst.SharedStatic<Internal.Array<sfloat>>.GetOrCreate<FixMathSinTable>();
+
+    }
+
+    public class FixMathCordicTable {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<sfloat>> value = Unity.Burst.SharedStatic<Internal.Array<sfloat>>.GetOrCreate<FixMathCordicTable>();
+
+    }
+
+    public class FixMathCordicGainTable {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<sfloat>> value = Unity.Burst.SharedStatic<Internal.Array<sfloat>>.GetOrCreate<FixMathCordicGainTable>();
+
+    }
+
+    public class FixMathFactTable {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<FixConst>> value = Unity.Burst.SharedStatic<Internal.Array<FixConst>>.GetOrCreate<FixMathFactTable>();
+
+    }
+
+    public class FixMathValues_ALMOST_ONE { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_ALMOST_ONE>(); }
+    public class FixMathValues_SMALL_VALUE { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_SMALL_VALUE>(); }
+    public class FixMathValues_BIG_VALUE { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_BIG_VALUE>(); }
+    public class FixMathValues_DEG2RAD { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_DEG2RAD>(); }
+    public class FixMathValues_RAD2DEG { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_RAD2DEG>(); }
+    public class FixMathValues_PI { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_PI>(); }
+    public class FixMathValues_E { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_E>(); }
+    public class FixMathValues_LOG2E { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_LOG2E>(); }
+    public class FixMathValues_LOG10E { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_LOG10E>(); }
+    public class FixMathValues_LOG2_10 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_LOG2_10>(); }
+    public class FixMathValues_LN2 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_LN2>(); }
+    public class FixMathValues_LN10 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_LN10>(); }
+    public class FixMathValues_LOG10_2 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_LOG10_2>(); }
+    public class FixMathValues_PI_HALF { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_PI_HALF>(); }
+    public class FixMathValues_PI_OVER_4 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_PI_OVER_4>(); }
+    public class FixMathValues_TWO_PI { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_TWO_PI>(); }
+    public class FixMathValues_SQRT_2 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_SQRT_2>(); }
+    public class FixMathValues_PositiveInfinity { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_PositiveInfinity>(); }
+    public class FixMathValues_NegativeInfinity { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_NegativeInfinity>(); }
+    public class FixMathValues_NaN { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_NaN>(); }
+    public class FixMathValues_FLT_MIN_NORMAL { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_FLT_MIN_NORMAL>(); }
+    public class FixMathValues_EXP_2 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_EXP_2>(); }
+    public class FixMathValues_EXP_10 { public static readonly Unity.Burst.SharedStatic<sfloat> value = Unity.Burst.SharedStatic<sfloat>.GetOrCreate<FixMathValues_EXP_10>(); }
+    
     public static partial class FixMath {
 
-        public static readonly sfloat ALMOST_ONE;
+        public static ref sfloat ALMOST_ONE => ref FixMathValues_ALMOST_ONE.value.Data;
 
-        public static readonly sfloat SMALL_VALUE;
-        public static readonly sfloat BIG_VALUE;
+        public static ref sfloat SMALL_VALUE => ref FixMathValues_SMALL_VALUE.value.Data;
+        public static ref sfloat BIG_VALUE => ref FixMathValues_BIG_VALUE.value.Data;
 
-        public static readonly sfloat DEG2RAD;
-        public static readonly sfloat RAD2DEG;
+        public static ref sfloat DEG2RAD => ref FixMathValues_DEG2RAD.value.Data;
+        public static ref sfloat RAD2DEG => ref FixMathValues_RAD2DEG.value.Data;
 
-        public static readonly sfloat PI;
-        public static readonly sfloat E;
-        public static readonly sfloat LOG2E;
-        public static readonly sfloat LOG10E;
-        public static readonly sfloat LOG2_10;
-        public static readonly sfloat LN2;
-        public static readonly sfloat LN10;
-        public static readonly sfloat LOG10_2;
-        private static readonly sfloat[] quarterSine;
-        private static readonly sfloat[] cordicAngles;
-        private static sfloat[] cordicGains;
+        public static ref sfloat PI => ref FixMathValues_PI.value.Data;
+        public static ref sfloat E => ref FixMathValues_E.value.Data;
+        public static ref sfloat LOG2E => ref FixMathValues_LOG2E.value.Data;
+        public static ref sfloat LOG10E => ref FixMathValues_LOG10E.value.Data;
+        public static ref sfloat LOG2_10 => ref FixMathValues_LOG2_10.value.Data;
+        public static ref sfloat LN2 => ref FixMathValues_LN2.value.Data;
+        public static ref sfloat LN10 => ref FixMathValues_LN10.value.Data;
+        public static ref sfloat LOG10_2 => ref FixMathValues_LOG10_2.value.Data;
 
-        public static readonly sfloat PI_HALF;
-        public static readonly sfloat PI_OVER_4;
-        public static readonly sfloat TWO_PI;
-        public static readonly sfloat SQRT_2;
+        public static ref sfloat PI_HALF => ref FixMathValues_PI_HALF.value.Data;
+        public static ref sfloat PI_OVER_4 => ref FixMathValues_PI_OVER_4.value.Data;
+        public static ref sfloat TWO_PI => ref FixMathValues_TWO_PI.value.Data;
+        public static ref sfloat SQRT_2 => ref FixMathValues_SQRT_2.value.Data;
 
-        public static readonly sfloat PositiveInfinity;
-        public static readonly sfloat NegativeInfinity;
-        public static readonly sfloat NaN;
+        public static ref sfloat PositiveInfinity => ref FixMathValues_PositiveInfinity.value.Data;
+        public static ref sfloat NegativeInfinity => ref FixMathValues_NegativeInfinity.value.Data;
+        public static ref sfloat NaN => ref FixMathValues_NaN.value.Data;
 
-        public static readonly sfloat FLT_MIN_NORMAL;
+        public static ref sfloat FLT_MIN_NORMAL => ref FixMathValues_FLT_MIN_NORMAL.value.Data;
 
-        public static readonly sfloat EXP_2;
-        public static readonly sfloat EXP_10;
+        public static ref sfloat EXP_2 => ref FixMathValues_EXP_2.value.Data;
+        public static ref sfloat EXP_10 => ref FixMathValues_EXP_10.value.Data;
 
-        [INLINE(256)]
-        static FixMath() {
+        [UnityEngine.RuntimeInitializeOnLoadMethodAttribute]
+        public static void Initialize() {
             if (QUARTER_SINE_RES_POWER >= sfloat.FRACTIONAL_BITS) {
                 throw new System.Exception("_quarterSineResPower must be less than Fix.FractionalBits.");
             }
 
-            if (quarterSineConsts.Length != 90 * (1 << QUARTER_SINE_RES_POWER) + 1) {
+            if (FixMathTables.quarterSineConsts.Length != 90 * (1 << QUARTER_SINE_RES_POWER) + 1) {
                 throw new System.Exception("_quarterSineConst.Length must be 90 * 2^(_quarterSineResPower) + 1.");
             }
 
@@ -201,9 +250,17 @@ namespace ME.BECS {
             PositiveInfinity = new sfloat(int.MaxValue);
             NegativeInfinity = new sfloat(int.MinValue + 1);
 
-            quarterSine = Array.ConvertAll(quarterSineConsts, c => (sfloat)c);
-            cordicAngles = Array.ConvertAll(cordicAngleConsts, c => (sfloat)c);
-            cordicGains = Array.ConvertAll(cordicGainConsts, c => (sfloat)c);
+            var quarterSine = Array.ConvertAll(FixMathTables.quarterSineConsts, c => (sfloat)c);
+            FixMathSinTable.value.Data.Resize((uint)quarterSine.Length);
+            for (int i = 0; i < quarterSine.Length; ++i) FixMathSinTable.value.Data.Get(i) = quarterSine[i];
+            var cordicAngles = Array.ConvertAll(FixMathTables.cordicAngleConsts, c => (sfloat)c);
+            FixMathCordicTable.value.Data.Resize((uint)cordicAngles.Length);
+            for (int i = 0; i < cordicAngles.Length; ++i) FixMathSinTable.value.Data.Get(i) = cordicAngles[i];
+            var cordicGains = Array.ConvertAll(FixMathTables.cordicGainConsts, c => (sfloat)c);
+            FixMathCordicGainTable.value.Data.Resize((uint)cordicGains.Length);
+            for (int i = 0; i < cordicGains.Length; ++i) FixMathSinTable.value.Data.Get(i) = cordicGains[i];
+            FixMathFactTable.value.Data.Resize((uint)FixMathTables.invFactConsts.Length);
+            for (int i = 0; i < FixMathTables.invFactConsts.Length; ++i) FixMathSinTable.value.Data.Get(i) = FixMathTables.invFactConsts[i];
         }
 
         [INLINE(256)]
@@ -326,16 +383,16 @@ namespace ME.BECS {
             raw %= 360 * (1 << QUARTER_SINE_RES_POWER);
 
             if (raw < 90 * (1 << QUARTER_SINE_RES_POWER)) {
-                return quarterSine[90 * (1 << QUARTER_SINE_RES_POWER) - raw];
+                return FixMathSinTable.value.Data.Get(90 * (1 << QUARTER_SINE_RES_POWER) - raw);
             } else if (raw < 180 * (1 << QUARTER_SINE_RES_POWER)) {
                 raw -= 90 * (1 << QUARTER_SINE_RES_POWER);
-                return -quarterSine[raw];
+                return -FixMathSinTable.value.Data.Get(raw);
             } else if (raw < 270 * (1 << QUARTER_SINE_RES_POWER)) {
                 raw -= 180 * (1 << QUARTER_SINE_RES_POWER);
-                return -quarterSine[90 * (1 << QUARTER_SINE_RES_POWER) - raw];
+                return -FixMathSinTable.value.Data.Get(90 * (1 << QUARTER_SINE_RES_POWER) - raw);
             } else {
                 raw -= 270 * (1 << QUARTER_SINE_RES_POWER);
-                return quarterSine[raw];
+                return FixMathSinTable.value.Data.Get(raw);
             }
         }
 
@@ -393,11 +450,11 @@ namespace ME.BECS {
                 if (y > 0) {
                     xNew = x + (y >> i);
                     yNew = y - (x >> i);
-                    angle += cordicAngles[i];
+                    angle += FixMathCordicTable.value.Data.Get(i);
                 } else if (y < 0) {
                     xNew = x - (y >> i);
                     yNew = y + (x >> i);
-                    angle -= cordicAngles[i];
+                    angle -= FixMathCordicTable.value.Data.Get(i);
                 } else {
                     break;
                 }
@@ -472,7 +529,7 @@ namespace ME.BECS {
 
             var fracFactor = x;
             var xa = x;
-            for (var i = 2; i < invFactConsts.Length; i++) {
+            for (var i = 2; i < FixMathFactTable.value.Data.Length; i++) {
                 if (xa == 0) {
                     break;
                 }
@@ -480,7 +537,7 @@ namespace ME.BECS {
                 xa *= x;
                 xa += 1L << (32 - 1);
                 xa >>= 32;
-                var p = xa * invFactConsts[i].Raw;
+                var p = xa * FixMathFactTable.value.Data.Get(i).Raw;
                 p += 1L << (32 - 1);
                 p >>= 32;
                 fracFactor += p;
@@ -549,19 +606,10 @@ namespace ME.BECS {
 
     }
 
-    public static partial class FixMath {
-
-        private static readonly FixConst piConst = new(13493037705);
-        private static readonly FixConst eConst = new(11674931555);
-        private static readonly FixConst log2EConst = new(6196328019);
-        private static readonly FixConst log210Const = new(14267572527);
-        private static readonly FixConst ln2Const = new(2977044472);
-        private static readonly FixConst log102Const = new(1292913986);
-
-        private const int QUARTER_SINE_RES_POWER = 2;
-
+    public static class FixMathTables {
+        
         #region Sine Table
-        private static readonly FixConst[] quarterSineConsts = {
+        public static readonly FixConst[] quarterSineConsts = {
             new(0), new(18740271), new(37480185), new(56219385),
             new(74957515), new(93694218), new(112429137), new(131161916),
             new(149892197), new(168619625), new(187343842), new(206064493),
@@ -657,7 +705,7 @@ namespace ME.BECS {
         #endregion
 
         #region CORDIC Tables
-        private static readonly FixConst[] cordicAngleConsts = {
+        public static readonly FixConst[] cordicAngleConsts = {
             new(193273528320), new(114096026022), new(60285206653), new(30601712202),
             new(15360239180), new(7687607525), new(3844741810), new(1922488225),
             new(961258780), new(480631223), new(240315841), new(120157949),
@@ -666,7 +714,7 @@ namespace ME.BECS {
             new(234684), new(117342), new(58671), new(29335),
         };
 
-        private static readonly FixConst[] cordicGainConsts = {
+        public static readonly FixConst[] cordicGainConsts = {
             new(3037000500), new(2716375826), new(2635271635), new(2614921743),
             new(2609829388), new(2608555990), new(2608237621), new(2608158028),
             new(2608138129), new(2608133154), new(2608131911), new(2608131600),
@@ -677,7 +725,7 @@ namespace ME.BECS {
         #endregion
 
         #region Inverse Factorial Table
-        private static readonly FixConst[] invFactConsts = {
+        public static readonly FixConst[] invFactConsts = {
             new(4294967296),
             new(4294967296),
             new(2147483648),
@@ -694,6 +742,19 @@ namespace ME.BECS {
             new(1),
         };
         #endregion
+
+    }
+
+    public static partial class FixMath {
+
+        private static FixConst piConst => new(13493037705);
+        private static FixConst eConst => new(11674931555);
+        private static FixConst log2EConst => new(6196328019);
+        private static FixConst log210Const => new(14267572527);
+        private static FixConst ln2Const => new(2977044472);
+        private static FixConst log102Const => new(1292913986);
+
+        private const int QUARTER_SINE_RES_POWER = 2;
 
     }
 
