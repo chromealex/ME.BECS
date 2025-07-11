@@ -18,8 +18,8 @@ public struct sfloat : IComparable<sfloat> {
 
     public static readonly sfloat Zero = new(0);
     public static readonly sfloat One = new(FRACTION_RANGE);
-    public static readonly sfloat MinValue = new(int.MinValue);
-    public static readonly sfloat MaxValue = new(int.MaxValue);
+    public static readonly sfloat MinValue = new(int.MinValue + 1);
+    public static readonly sfloat MaxValue = new(int.MaxValue - 1);
     public static readonly sfloat Epsilon = new(1);
 
     public static sfloat PositiveInfinity => ME.BECS.FixMath.PositiveInfinity;
