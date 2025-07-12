@@ -128,6 +128,7 @@ namespace ME.BECS {
         [Conditional(COND.LEAK_DETECTION)]
         public static void IsAlive(safe_ptr ptr) {
             
+            if (ptr.LowBound == null || ptr.HiBound == null) return;
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
             var result = LeakDetectorData.tracked.Data.Contains(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, withStackTrace: false));

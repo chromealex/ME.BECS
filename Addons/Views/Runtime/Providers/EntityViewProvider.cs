@@ -511,10 +511,7 @@ namespace ME.BECS.Views {
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
-                    var marker = new Unity.Profiling.ProfilerMarker("DoApplyState");
-                    marker.Begin();
                     instanceObj.DoApplyState(in entRo);
-                    marker.End();
                     //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in entRo);
                 }
             }
@@ -531,10 +528,7 @@ namespace ME.BECS.Views {
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdate");
             mainMarker.Begin();
             {
-                var marker = new Unity.Profiling.ProfilerMarker("DoOnUpdate");
-                marker.Begin();
                 instanceObj.DoOnUpdate(in entRo, dt);
-                marker.End();
                 //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
             }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
