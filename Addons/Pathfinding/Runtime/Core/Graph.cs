@@ -943,6 +943,31 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
+        public static tfloat GetHeight(in RootGraphComponent root, in ChunkComponent chunk, uint nodeIndex) {
+            return GetPosition(in root, in chunk, nodeIndex).y;
+        }
+
+        [INLINE(256)]
+        public static tfloat GetMinHeight(in RootGraphComponent root, uint chunkIndex, uint nodeIndex, bool checkNeighbours = false) {
+            var nodeHeight = GetPosition(in root, in root.chunks[chunkIndex], nodeIndex).y;
+            if (checkNeighbours == false) {
+                return nodeHeight;
+            }
+
+            var minHeight = nodeHeight;
+            for (uint i = 0; i < 8; ++i) {
+                var n = GetNeighbourIndex(default, new TempNode() {
+                    chunkIndex = chunkIndex,
+                    nodeIndex = nodeIndex,
+                }, i, root.chunkWidth, root.chunkHeight, default, root.properties.chunksCountX, root.properties.chunksCountY);
+                if (n.chunkIndex == uint.MaxValue || n.nodeIndex == uint.MaxValue) continue;
+                var h = GetHeight(in root, in root.chunks[n.chunkIndex], n.nodeIndex);
+                if (h < nodeHeight) minHeight = h;
+            }
+            return minHeight;
+        }
+
+        [INLINE(256)]
         internal static float3 GetLocalPosition(in RootGraphComponent root, uint index) {
 
             var x = index % root.chunkWidth;

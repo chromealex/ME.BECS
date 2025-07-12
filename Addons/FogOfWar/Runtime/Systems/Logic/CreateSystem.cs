@@ -63,7 +63,6 @@ namespace ME.BECS.FogOfWar {
         public struct UpdateHeightJob : IJobParallelFor {
 
             public MemArrayAuto<ulong> dirtyChunks;
-            public BuildGraphSystem pathfinding;
             public World world;
             public Ent heights;
             public Ent graph;
@@ -79,11 +78,11 @@ namespace ME.BECS.FogOfWar {
                 for (uint i = 0; i < chunk.nodes.Length; ++i) {
                     var worldPos = Graph.GetPosition(in graphData, in chunk, i);
                     var xy = FogOfWarUtils.WorldToFogMapPosition(in fow, worldPos);
-                    var height = Graph.GetPosition(in graphData, in chunk, i).y;
+                    var currentHeight = Graph.GetMinHeight(in graphData, (uint)index, i, checkNeighbours: true);
                     var idx = xy.y * fow.size.x + xy.x;
-                    fow.heights[idx] = height;
-                    if (height > maxHeight) {
-                        maxHeight = height;
+                    fow.heights[idx] = currentHeight;
+                    if (currentHeight > maxHeight) {
+                        maxHeight = currentHeight;
                     }
                 }
                 
@@ -113,7 +112,6 @@ namespace ME.BECS.FogOfWar {
             
             var firstGraph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId).Read<RootGraphComponent>();
             var updateHeightHandle = new UpdateHeightJob() {
-                pathfinding = pathfinding,
                 world = context.world,
                 heights = this.heights,
                 graph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId),
@@ -132,7 +130,6 @@ namespace ME.BECS.FogOfWar {
             var cleanUpHandle = context.Query().AsParallel().Schedule<CleanUpJob, TeamAspect>();
             var updateHeightHandle = new UpdateHeightJob() {
                 dirtyChunks = firstGraph.changedChunks,
-                pathfinding = pathfinding,
                 world = context.world,
                 heights = this.heights,
                 graph = pathfinding.GetGraphByTypeId(this.pathfindingGraphId),
