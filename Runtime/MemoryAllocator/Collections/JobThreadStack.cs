@@ -26,6 +26,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Apply(in MemoryAllocator allocator) {
             E.THREAD_CHECK("Apply");
+            if (this.toRemove.Count == 0u) return;
             for (uint i = 0u; i < this.toRemove.Count; ++i) {
                 var idx = this.toRemove[in allocator, i];
                 var last = this.array[in allocator, --this.size];

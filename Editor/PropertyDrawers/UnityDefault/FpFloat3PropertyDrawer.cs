@@ -70,6 +70,7 @@ namespace ME.BECS.Editor {
                 });
                 root.Add(xField);
             }
+            #if FIXED_POINT_F32
             root.AddManipulator(new ContextualMenuManipulator((evt) => {
                 evt.menu.AppendAction("From sfloat to F32", (action) => {
                     var x = property.FindPropertyRelative("x").FindPropertyRelative("rawValue").uintValue;
@@ -88,6 +89,7 @@ namespace ME.BECS.Editor {
                     }
                 });
             }));
+            #endif
             return root;
 
         }

@@ -84,13 +84,16 @@ namespace ME.BECS.Editor.Aspects {
                         ++fieldsCount;
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        types.Add($"aspect.{field.Name} = new {EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>(in world);");
+                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
+                        var t = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
+                        types.Add($"*(({t}*)(addr + {fieldOffset})) = new ME.BECS.AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
                     }
                 }
 
-                if (fieldsCount > 0 && fieldsCount == types.Count) {
+                if (fieldsCount > 0) {
                     var str = $@"{{
 ref var aspect = ref world.InitializeAspect<{strType}>();
+var addr = (byte*)_addressPtr(ref aspect);
 {string.Join("\n", types)}
 }}";
                     content.Add(str);
