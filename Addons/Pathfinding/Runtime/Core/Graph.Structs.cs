@@ -45,13 +45,14 @@ namespace ME.BECS.Pathfinding {
 
     }
 
-    public readonly struct ObstacleChannel : System.IEquatable<ObstacleChannel> {
+    [System.Serializable]
+    public struct ObstacleChannel : System.IEquatable<ObstacleChannel> {
 
         public static readonly ObstacleChannel Obstacle = 0u;
         public static readonly ObstacleChannel Building = 1u;
         public static readonly ObstacleChannel Slope = 2u;
 
-        private readonly uint value;
+        public uint value;
 
         private ObstacleChannel(uint value) {
             this.value = value;
