@@ -235,23 +235,23 @@ namespace ME.BECS {
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
 
             if (q.nearestCount == 1u) {
-                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, in subFilter);
+                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, q.ignoreSorting, in subFilter);
                 if (nearest.IsAlive() == true) query.results.results.Add(nearest);
             } else {
-                this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, in subFilter);
+                this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, q.ignoreSorting, in subFilter);
             }
             
         }
         
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
-                                            tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default) {
-            return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, new AlwaysTrueSubFilter());
+                                            tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = false) {
+            return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueSubFilter());
         }
 
-        public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, in T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISubFilter<Ent> {
 
             const uint nearestCount = 1u;
-            var heap = new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
+            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
             // for each tree
             for (int i = 0; i < this.treesCount; ++i) {
                 if ((mask & (1 << i)) == 0) {
@@ -270,12 +270,13 @@ namespace ME.BECS {
                     tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
                     marker.End();
                     if (visitor.found == true) {
+                        if (ignoreSorting == true) return visitor.nearest;
                         heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, math.lengthsq(worldPos - visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                     }
                 }
             }
             
-            {
+            if (ignoreSorting == false) {
                 var max = math.min(nearestCount, heap.Count);
                 if (max > 0u) return heap[heap.Pop()].data;
             }
@@ -284,15 +285,16 @@ namespace ME.BECS {
 
         }
 
-        public readonly void GetNearest(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY) {
-            this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, new AlwaysTrueSubFilter());
+        public readonly void GetNearest(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
+            this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueSubFilter());
         }
 
-        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, in T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting, in T subFilter = default) where T : struct, ISubFilter<Ent> {
             
             if (nearestCount > 0u) {
 
-                var heap = new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
+                var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
+                var resultsTemp = new UnsafeHashSet<Ent>(nearestCount, Constants.ALLOCATOR_TEMP);
                 // for each tree
                 for (int i = 0; i < this.treesCount; ++i) {
                     if ((mask & (1 << i)) == 0) {
@@ -300,10 +302,11 @@ namespace ME.BECS {
                     }
                     ref var tree = ref *this.GetTree(i).ptr;
                     {
+                        resultsTemp.Clear();
                         var visitor = new OctreeKNearestAABBVisitor<Ent, T>() {
                             subFilter = subFilter,
                             sector = sector,
-                            results = new UnsafeHashSet<Ent>(nearestCount, Constants.ALLOCATOR_TEMP),
+                            results = resultsTemp,
                             max = nearestCount,
                             ignoreSelf = ignoreSelf,
                             ignore = selfEnt,
@@ -312,22 +315,33 @@ namespace ME.BECS {
                         marker.Begin();
                         tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
                         marker.End();
-                        foreach (var item in visitor.results) {
-                            heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                        if (ignoreSorting == true) {
+                            foreach (var item in visitor.results) {
+                                results.Add(item);
+                            }
+                        } else { 
+                            foreach (var item in visitor.results) {
+                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                            }
                         }
-                        visitor.results.Dispose();
+
                     }
                 }
+                resultsTemp.Dispose();
 
-                var max = math.min(nearestCount, heap.Count);
-                for (uint i = 0u; i < max; ++i) {
-                    results.Add(heap[heap.Pop()].data);
+                if (ignoreSorting == false) {
+                    var max = math.min((uint)nearestCount, heap.Count);
+                    results.EnsureCapacity(max);
+                    for (uint i = 0u; i < max; ++i) {
+                        results.Add(heap[heap.Pop()].data);
+                    }
                 }
 
             } else {
                 
                 // select all units
-                var heap = new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
+                var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
+                var resultsTemp = new UnsafeHashSet<Ent>((int)this.treesCount, Constants.ALLOCATOR_TEMP);
                 // for each tree
                 for (int i = 0; i < this.treesCount; ++i) {
                     if ((mask & (1 << i)) == 0) {
@@ -335,10 +349,11 @@ namespace ME.BECS {
                     }
                     ref var tree = ref *this.GetTree(i).ptr;
                     {
+                        resultsTemp.Clear();
                         var visitor = new RangeAABBUniqueVisitor<Ent, T>() {
                             subFilter = subFilter,
                             sector = sector,
-                            results = new UnsafeHashSet<Ent>(nearestCount, Constants.ALLOCATOR_TEMP),
+                            results = resultsTemp,
                             rangeSqr = rangeSqr,
                             max = nearestCount,
                             ignoreSelf = ignoreSelf,
@@ -354,19 +369,28 @@ namespace ME.BECS {
                         }
                         tree.Range(bounds, ref visitor);
                         marker.End();
-                        heap.EnsureCapacity((uint)visitor.results.Count);
-                        foreach (var item in visitor.results) {
-                            if (item.IsAlive() == false) continue;
-                            heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                        if (ignoreSorting == true) {
+                            results.EnsureCapacity(results.Count + (uint)visitor.results.Count);
+                            foreach (var item in visitor.results) {
+                                results.Add(item);
+                            }
+                        } else {
+                            heap.EnsureCapacity((uint)visitor.results.Count);
+                            foreach (var item in visitor.results) {
+                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                            }
                         }
-                        visitor.results.Dispose();
+                    }
+                }
+                resultsTemp.Dispose();
+
+                if (ignoreSorting == false) {
+                    results.EnsureCapacity(heap.Count);
+                    for (uint i = 0u; i < heap.Count; ++i) {
+                        results.Add(heap[heap.Pop()].data);
                     }
                 }
 
-                for (uint i = 0u; i < heap.Count; ++i) {
-                    results.Add(heap[heap.Pop()].data);
-                }
-                
             }
 
         }

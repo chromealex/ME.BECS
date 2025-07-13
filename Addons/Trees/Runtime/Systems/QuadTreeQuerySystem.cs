@@ -53,9 +53,13 @@ namespace ME.BECS {
         /// </summary>
         public bbool ignoreY;
         /// <summary>
-        /// Ignore self
+        /// Ignore self ent
         /// </summary>
         public bbool ignoreSelf;
+        /// <summary>
+        /// If set select will be a bit faster, but results will be unsorted
+        /// </summary>
+        public bbool ignoreSorting;
 
     }
     

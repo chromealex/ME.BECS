@@ -82,6 +82,8 @@ namespace ME.BECS.Editor.Jobs {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
                 }
+                var weightsInfo = GetJobWeightsInfo(jobType);
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.opsWeight = {weightsInfo.weight}u;");
 
                 if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
 
@@ -492,6 +494,85 @@ namespace ME.BECS.Editor.Jobs {
             return new NewEntInfo() {
                 count = count,
                 brCount = brCount,
+            };
+        }
+
+        public struct WeightsInfo {
+
+            public uint weight;
+
+        }
+
+        private struct MethodWeightInfo {
+
+            public MethodInfo[] methods;
+            public uint weight;
+
+        }
+        
+        public static WeightsInfo GetJobWeightsInfo(System.Type jobType) {
+            var config = new System.Collections.Generic.List<MethodWeightInfo>();
+            config.Add(new MethodWeightInfo() {
+                methods = new [] { typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public) },
+                weight = 10u,
+            });
+            config.Add(new MethodWeightInfo() {
+                methods = typeof(EntExt).GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(EntExt.Read) || x.Name == nameof(EntExt.Has) || x.Name == nameof(EntExt.TryRead)).ToArray(),
+                weight = 1u,
+            });
+            config.Add(new MethodWeightInfo() {
+                methods = typeof(EntExt).GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(EntExt.Get) || x.Name == nameof(EntExt.Set) || x.Name == nameof(EntExt.Remove) || x.Name == nameof(EntExt.SetTag)).ToArray(),
+                weight = 2u,
+            });
+            config.Add(new MethodWeightInfo() {
+                methods = typeof(EntityConfigEntExt).GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(EntityConfigEntExt.ReadStatic) || x.Name == nameof(EntityConfigEntExt.HasStatic) || x.Name == nameof(EntityConfigEntExt.TryReadStatic)).ToArray(),
+                weight = 4u,
+            });
+            config.Add(new MethodWeightInfo() {
+                methods = typeof(UnsafeEntityConfig).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(UnsafeEntityConfig.ReadStatic)).ToArray(),
+                weight = 3u,
+            });
+            config.Add(new MethodWeightInfo() {
+                methods = typeof(Components).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(Components.GetUnknownType) || x.Name == nameof(Components.RemoveUnknownType)).ToArray(),
+                weight = 2u,
+            });
+            config.Add(new MethodWeightInfo() {
+                methods = typeof(Components).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Where(x => x.Name == nameof(Components.ReadUnknownType) || x.Name == nameof(Components.HasUnknownType)).ToArray(),
+                weight = 1u,
+            });
+            var root = jobType.GetMethod("Execute");
+            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var instructions = root.GetInstructions().ToList();
+            for (int i = 0; i < instructions.Count; ++i) {
+                var inst = instructions[i];
+                if (inst.Operand is System.Reflection.MethodInfo member) {
+                    if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if (member.GetMethodBody() != null) {
+                            instructions.InsertRange(i + 1, member.GetInstructions());
+                        }
+                    }
+                }
+            }
+
+            var weight = (uint)jobType.GetInterfaces().Sum(x => x.GenericTypeArguments.Length);
+            for (int i = 0; i < instructions.Count; ++i) {
+                var inst = instructions[i];
+                if (inst.Operand is MethodInfo methodInfo) {
+                    if (methodInfo.IsGenericMethod == true) {
+                        methodInfo = methodInfo.GetGenericMethodDefinition();
+                    }
+                    foreach (var item in config) {
+                        if (System.Array.IndexOf(item.methods, methodInfo) >= 0) {
+                            weight += item.weight;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return new WeightsInfo() {
+                weight = weight,
             };
         }
         

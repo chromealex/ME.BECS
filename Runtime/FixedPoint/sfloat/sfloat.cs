@@ -249,6 +249,7 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static sfloat operator -(sfloat f) => new sfloat(f.rawValue ^ 0x80000000);
 
+    [ME.BECS.CodeGeneratorIgnore]
     private static sfloat InternalAdd(sfloat f1, sfloat f2)
     {
         byte rawExp1 = f1.RawExponent;
@@ -349,14 +350,18 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
         }
     }
 
+    [ME.BECS.CodeGeneratorIgnore]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static sfloat operator +(sfloat f1, sfloat f2)
     {
         return f1.RawExponent - f2.RawExponent >= 0 ? InternalAdd(f1, f2) : InternalAdd(f2, f1);
     }
 
+    [ME.BECS.CodeGeneratorIgnore]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static sfloat operator -(sfloat f1, sfloat f2) => f1 + (-f2);
 
+    [ME.BECS.CodeGeneratorIgnore]
     public static sfloat operator *(sfloat f1, sfloat f2)
     {
         int man1;
@@ -572,6 +577,7 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
         return new sfloat(raw);
     }
 
+    [ME.BECS.CodeGeneratorIgnore]
     public static sfloat operator /(sfloat f1, sfloat f2)
     {
         if (f1.IsNaN() || f2.IsNaN())

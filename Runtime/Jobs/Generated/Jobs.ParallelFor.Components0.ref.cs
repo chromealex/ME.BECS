@@ -11,7 +11,6 @@ namespace ME.BECS.Jobs {
         public static JobHandle Schedule<T>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents {
             builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
             builder.builderDependsOn = job.Schedule<T>(in builder.commandBuffer.ptr, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
-            builder.builderDependsOn = builder.Dispose(builder.builderDependsOn);
             return builder.builderDependsOn;
         }
         
@@ -63,7 +62,7 @@ namespace ME.BECS.Jobs {
                 
                 buffer->sync = false;
                             
-                if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
+                if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount<T>(buffer->count);
 
             }
             

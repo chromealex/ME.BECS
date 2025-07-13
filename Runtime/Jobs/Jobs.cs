@@ -68,10 +68,17 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoWeights<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoWeights<TJob>>();
+
+    }
+
     public unsafe struct JobStaticInfo<TJob> where TJob : struct {
 
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
         public static ref uint inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
+        public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
         public static bool IsParallelSupport => loopCount == 0u;
         
         [INLINE(256)]
@@ -253,23 +260,28 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static int GetScheduleBatchCount(int count) => (int)GetScheduleBatchCount((uint)count);
+        public static int GetScheduleBatchCount(int count) => (int)GetScheduleBatchCount<TNull>((uint)count);
 
         [INLINE(256)]
-        public static uint GetScheduleBatchCount(uint count) {
+        public static uint GetScheduleBatchCount(uint count) => GetScheduleBatchCount<TNull>(count);
 
-            const uint batch = 64u;
+        [INLINE(256)]
+        public static uint GetScheduleBatchCount<T>(uint count) where T : struct {
+
+            const uint weightPerBatch = 64u;
+            
+            uint batch = 64u;
+            var opsWeight = JobStaticInfo<T>.opsWeight;
+            if (opsWeight > 0u) {
+                batch = weightPerBatch / opsWeight;
+                if (batch == 0u) batch = 1u;
+            }
 
             var batchCount = count / batch;
             if (batchCount == 0u) batchCount = 1u;
             if (count <= 10u && batchCount == 1u) {
-
-                return batchCount;
-
             } else if (batchCount == 1u) {
-
                 batchCount = 2u;
-
             }
 
             return batchCount;

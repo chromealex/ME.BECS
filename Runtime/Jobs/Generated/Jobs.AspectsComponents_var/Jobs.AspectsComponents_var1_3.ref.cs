@@ -70,7 +70,7 @@ namespace ME.BECS.Jobs {
                 
                 buffer->sync = false;
                             
-                if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount(buffer->count);
+                if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount<T>(buffer->count);
 
             }
             

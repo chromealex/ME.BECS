@@ -86,7 +86,7 @@ namespace ME.BECS {
             if (capacity <= 0u) capacity = 1u;
             this = default;
             this.arr = new MemArrayAuto<T>(in ent, capacity);
-            this.EnsureCapacity(in ent, capacity);
+            this.EnsureCapacity(capacity);
 
         }
 
@@ -224,7 +224,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private bool EnsureCapacity(in Ent ent, uint capacity) {
+        public bool EnsureCapacity(uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
             return this.arr.Resize(capacity, 2, ClearOptions.UninitializedMemory);
@@ -236,7 +236,7 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             ++this.Count;
-            this.EnsureCapacity(this.ent, this.Count);
+            this.EnsureCapacity(this.Count);
 
             var state = this.ent.World.state;
             this.arr[in state.ptr->allocator, this.Count - 1u] = obj;
@@ -365,7 +365,7 @@ namespace ME.BECS {
             var srcOffset = fromIdx;
             var count = toIdx - fromIdx;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = sizeof(T);
                 if (index < this.Count) {
                     state.ptr->allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
@@ -391,7 +391,7 @@ namespace ME.BECS {
             var index = this.Count;
             var count = (uint)collection.Length;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = TSize<T>.size;
                 _memcpy((safe_ptr)collection.Ptr, (safe_ptr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
                 this.Count += count;
@@ -406,7 +406,7 @@ namespace ME.BECS {
             var index = this.Count;
             var count = (uint)collection.Length;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = TSize<T>.size;
                 _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr(), (safe_ptr)(this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size), count * size);
                 this.Count += count;
@@ -421,7 +421,7 @@ namespace ME.BECS {
             var index = this.Count;
             var count = (uint)collectionLength;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = TSize<T>.size;
                 _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr() + offset * TSize<T>.sizeInt, this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
                 this.Count += count;
@@ -436,7 +436,7 @@ namespace ME.BECS {
             var index = this.Count;
             var count = (uint)collectionLength;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = TSize<T>.size;
                 _memcpy((safe_ptr)((byte*)collection.Ptr + offset * TSize<T>.sizeInt), this.arr.GetUnsafePtr(in this.ent.World.state.ptr->allocator) + index * size, count * size);
                 this.Count += count;
@@ -451,7 +451,7 @@ namespace ME.BECS {
             var index = this.Count;
             var count = (uint)collection.Length;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = TSize<T>.size;
                 _memcpy((safe_ptr)collection.GetUnsafeReadOnlyPtr(), this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
                 this.Count += count;
@@ -466,7 +466,7 @@ namespace ME.BECS {
             var index = this.Count;
             var count = collection.Count;
             if (count > 0u) {
-                this.EnsureCapacity(this.ent, this.Count + count);
+                this.EnsureCapacity(this.Count + count);
                 var size = TSize<T>.size;
                 _memcpy(collection.GetUnsafePtr(), this.arr.GetUnsafePtr(in allocator) + index * size, count * size);
                 this.Count += count;

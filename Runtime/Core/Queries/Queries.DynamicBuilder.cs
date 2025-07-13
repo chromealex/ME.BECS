@@ -639,9 +639,14 @@ namespace ME.BECS {
             public Allocator allocator;
 
             public void Execute() {
-                
-                this.composeJob.allocator = this.allocator;
-                this.composeJob.Execute();
+
+                {
+                    var marker = new Unity.Profiling.ProfilerMarker("Compose");
+                    marker.Begin();
+                    this.composeJob.allocator = this.allocator;
+                    this.composeJob.Execute();
+                    marker.End();
+                }
 
                 {
                     var archCount = this.queryData.ptr->archetypesCount;
@@ -649,9 +654,12 @@ namespace ME.BECS {
                     // so we need to check if it is null - we have a dynamic query
                     // build archetypes
                     if (this.queryData.ptr->archetypes.ptr == null) {
+                        var marker = new Unity.Profiling.ProfilerMarker("GetTrueBitsTemp");
+                        marker.Begin();
                         var tempListBits = this.queryData.ptr->archetypesBits.GetTrueBitsTemp();
                         this.queryData.ptr->archetypes = new safe_ptr<uint>(tempListBits.Ptr, (byte*)tempListBits.Ptr, (byte*)(tempListBits.Ptr + tempListBits.Length));
                         archCount = (uint)tempListBits.Length;
+                        marker.End();
                     }
 
                     if (archCount == 0u) {
@@ -715,13 +723,20 @@ namespace ME.BECS {
 
                         elementsCount = k;*/
 
-                        for (uint i = 0u; i < archCount; ++i) {
-                            var archIdx = archs[i];
-                            ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
-                            elementsCount += arch.entitiesList.Count;
+                        {
+                            var marker = new Unity.Profiling.ProfilerMarker("Count");
+                            marker.Begin();
+                            for (uint i = 0u; i < archCount; ++i) {
+                                var archIdx = archs[i];
+                                ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
+                                elementsCount += arch.entitiesList.Count;
+                            }
+                            marker.End();
                         }
 
                         if (elementsCount > 0u) {
+                            var marker = new Unity.Profiling.ProfilerMarker("Copy");
+                            marker.Begin();
                             arrPtr = _makeArray<uint>(elementsCount, this.allocator);
                             var k = 0u;
                             for (uint i = 0u; i < archCount; ++i) {
@@ -730,6 +745,7 @@ namespace ME.BECS {
                                 if (arch.entitiesList.Count > 0u) _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + k, TSize<uint>.size * arch.entitiesList.Count);
                                 k += arch.entitiesList.Count;
                             }
+                            marker.End();
                         }
 
                     }

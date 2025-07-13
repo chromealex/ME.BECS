@@ -295,7 +295,12 @@ namespace ME.BECS {
             var trueBits = new UnsafeList<uint>((int)this.Length, Constants.ALLOCATOR_TEMP);
             for (var i = 0; i < this.Length; ++i) {
                 var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i % TempBitArray.BITS_IN_ULONG))) > 0) {
+                var p = i % TempBitArray.BITS_IN_ULONG;
+                /*if (p == 0 && Unity.Mathematics.math.lzcnt(val) == 0) {
+                    i += TempBitArray.BITS_IN_ULONG - 1;
+                    continue;
+                }*/
+                if ((val & (0x1ul << p)) > 0) {
                     trueBits.Add((uint)i);
                 }
             }

@@ -17,17 +17,17 @@ namespace ME.BECS {
             
             [INLINE(256)]
             public QueryCompose Initialize(Unity.Collections.Allocator allocator) {
-                this.with = new UnsafeList<uint>(1, allocator);
-                this.withAny = new UnsafeList<System.Collections.Generic.KeyValuePair<uint, uint>>(1, allocator);
-                this.without = new UnsafeList<uint>(1, allocator);
+                this.with = new UnsafeList<uint>(4, allocator);
+                this.withAny = default;
+                this.without = default;
                 return this;
             }
 
             [INLINE(256)]
             public void Dispose() {
                 this.with.Dispose();
-                this.withAny.Dispose();
-                this.without.Dispose();
+                if (this.withAny.IsCreated == true) this.withAny.Dispose();
+                if (this.without.IsCreated == true) this.without.Dispose();
             }
             
             [INLINE(256)]
@@ -37,11 +37,13 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void WithAny<T0, T1>() where T0 : unmanaged, IComponentBase where T1 : unmanaged, IComponentBase {
+                if (this.withAny.IsCreated == false) this.withAny = new UnsafeList<System.Collections.Generic.KeyValuePair<uint, uint>>(1, this.with.Allocator);
                 this.withAny.Add(new System.Collections.Generic.KeyValuePair<uint, uint>(StaticTypes<T0>.typeId, StaticTypes<T1>.typeId));
             }
 
             [INLINE(256)]
             public void Without<T>() where T : unmanaged, IComponentBase {
+                if (this.without.IsCreated == false) this.without = new UnsafeList<uint>(1, this.with.Allocator);
                 this.without.Add(StaticTypes<T>.typeId);
             }
 

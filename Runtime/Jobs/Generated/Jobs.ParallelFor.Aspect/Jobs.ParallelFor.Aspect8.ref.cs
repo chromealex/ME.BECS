@@ -60,6 +60,8 @@ namespace ME.BECS.Jobs {
             var jobInfo = JobInfo.Create(buffer->worldId);
             dependsOn = JobStaticInfo<T>.SchedulePatch(ref jobInfo, buffer, ScheduleMode.Parallel, dependsOn);
             
+            if (innerLoopBatchCount == 0u) innerLoopBatchCount = JobUtils.GetScheduleBatchCount<T>(buffer->count);
+
             JobInject<T>.Patch(ref jobData, buffer->worldId);
             
             buffer->sync = false;

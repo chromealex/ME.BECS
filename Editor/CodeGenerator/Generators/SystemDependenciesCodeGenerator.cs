@@ -425,7 +425,7 @@ namespace ME.BECS.Editor.Systems {
             }
 
             public System.Collections.Generic.List<System.Type> GetDependencies() {
-                return this.ops.Where(x => typeof(ISystem).IsAssignableFrom(x.type) == true).Select(x => x.type).OrderBy(x => x.FullName).ToList();
+                return this.ops.Where(x => typeof(ISystem).IsAssignableFrom(x.type) == true).Select(x => x.type).Distinct().OrderBy(x => x.FullName).ToList();
             }
 
         }
