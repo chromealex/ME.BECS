@@ -82,8 +82,20 @@ namespace ME.BECS.Editor.Jobs {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
                 }
+
+                var typeInfos = GetJobTypesInfo(jobType);
+                var maxStructSize = 0u;
+                foreach (var item in typeInfos) {
+                    if (typeof(IComponent).IsAssignableFrom(item.type) == false) continue;
+                    var size = (uint)System.Runtime.InteropServices.Marshal.SizeOf(item.type);
+                    if (size > maxStructSize) {
+                        maxStructSize = size;
+                    }
+                }
+                
                 var weightsInfo = GetJobWeightsInfo(jobType);
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.opsWeight = {weightsInfo.weight}u;");
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
 
                 if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
 
@@ -398,6 +410,15 @@ namespace ME.BECS.Editor.Jobs {
                                 op = op.Op,
                             });
                             continueTraverse = false;
+                        }
+                    }
+                    {
+                        if (inst.OpCode == System.Reflection.Emit.OpCodes.Initobj && typeof(IComponentBase).IsAssignableFrom((System.Type)inst.Operand) == true) {
+                            uniqueTypes.Add(new TypeInfo() {
+                                type = (System.Type)inst.Operand,
+                                op = RefOp.WriteOnly,
+                                isArg = componentsType.Contains((System.Type)inst.Operand),
+                            });
                         }
                     }
                     {

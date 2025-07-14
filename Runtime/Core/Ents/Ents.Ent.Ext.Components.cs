@@ -92,6 +92,18 @@ namespace ME.BECS {
         [INLINE(256)]
         #endif
         [CodeGeneratorIgnore]
+        [SafetyCheck(RefOp.ReadOnly)] public static ref T GetOrThrow<T>(in this Ent ent) where T : unmanaged, IComponent {
+
+            E.IS_ALIVE(ent);
+            var world = ent.World;
+            return ref Batches.GetOrThrow<T>(in ent, world.state);
+
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        [CodeGeneratorIgnore]
         [SafetyCheck(RefOp.ReadOnly)] public static bool Has<T>(in this Ent ent, bool checkEnabled = true) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

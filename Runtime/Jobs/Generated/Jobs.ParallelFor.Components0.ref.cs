@@ -9,7 +9,7 @@ namespace ME.BECS.Jobs {
     public static unsafe partial class QueryParallelScheduleExtensions {
         
         public static JobHandle Schedule<T>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents {
-            builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
+            builder.commandBuffer.ptr->SetBuilder(ref builder);
             builder.builderDependsOn = job.Schedule<T>(in builder.commandBuffer.ptr, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -111,6 +111,8 @@ namespace ME.BECS.Jobs {
                 jobInfo.CreateLocalCounter();
                 jobInfo.count = jobData.buffer->count;
                 
+                JobStaticInfo<T>.lastCount = jobInfo.count;
+
                 if (jobData.scheduleMode == ScheduleMode.Parallel) {
                     while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                         jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
@@ -125,6 +127,8 @@ namespace ME.BECS.Jobs {
                         jobData.buffer->EndForEachRange();
                     }
                 } else {
+                    jobData.buffer->SetEntities(jobData.buffer);
+                    jobInfo.count = jobData.buffer->count;
                     JobUtils.SetCurrentThreadAsSingle(true);
                     jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                     for (uint i = 0u; i < jobData.buffer->count; ++i) {

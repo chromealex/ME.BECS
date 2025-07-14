@@ -183,6 +183,35 @@ namespace ME.BECS {
 
         public bool sync;
 
+        public ArchetypeQueries.QueryCompose builderCompose;
+        public safe_ptr<QueryData> builderQueryData;
+        public bool builderSort;
+
+        [INLINE(256)]
+        public void SetBuilder(ref QueryBuilder builder) {
+            if (builder.scheduleMode == Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Parallel) {
+                builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.useSort, builder.builderDependsOn);
+            } else {
+                this.builderCompose = builder.compose;
+                this.builderQueryData = builder.queryData;
+                this.builderSort = builder.useSort;
+            }
+        }
+        
+        [INLINE(256)]
+        public void SetEntities(CommandBuffer* ptr) {
+            var composeJob = this.builderCompose.Build(ref this);
+            var job = new QueryBuilder.SetEntitiesJob() {
+                composeJob = composeJob,
+                buffer = new safe_ptr<CommandBuffer>(ptr),
+                queryData = this.builderQueryData,
+                state = this.state,
+                allocator = Constants.ALLOCATOR_TEMP,
+                useSort = this.builderSort,
+            };
+            job.Execute();
+        }
+        
         [INLINE(256)]
         public void BeginForEachRange(uint fromIndex, uint toIndex) {
             

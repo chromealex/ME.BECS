@@ -38,6 +38,19 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static ref T GetOrThrow<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
+
+            E.IS_IN_TICK(state);
+            
+            var result = Components.Get<T>(state, in ent, out var isNew);
+            if (isNew == true) {
+                E.REQUIRED<T>(in ent);
+            }
+            return ref *result;
+
+        }
+
+        [INLINE(256)]
         public static bool Set<T>(in Ent ent, in T data, safe_ptr<State> state) where T : unmanaged, IComponent {
             
             E.IS_IN_TICK(state);

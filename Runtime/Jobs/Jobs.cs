@@ -74,11 +74,25 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoMaxStructSize<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoMaxStructSize<TJob>>();
+
+    }
+
+    public struct JobStaticInfoLastCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoLastCount<TJob>>();
+
+    }
+
     public unsafe struct JobStaticInfo<TJob> where TJob : struct {
 
+        public static ref uint lastCount => ref JobStaticInfoLastCount<TJob>.data.Data;
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
         public static ref uint inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
         public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
+        public static ref uint maxStructSize => ref JobStaticInfoMaxStructSize<TJob>.data.Data;
         public static bool IsParallelSupport => loopCount == 0u;
         
         [INLINE(256)]
@@ -268,23 +282,19 @@ namespace ME.BECS {
         [INLINE(256)]
         public static uint GetScheduleBatchCount<T>(uint count) where T : struct {
 
-            const uint weightPerBatch = 64u;
+            if (count == 0u) count = JobStaticInfo<T>.lastCount;
+            if (count == 0u) count = 1u;
+            var maxStructSize = JobStaticInfo<T>.maxStructSize;
+            if (maxStructSize == 0u) maxStructSize = 1u;
             
-            uint batch = 64u;
-            var opsWeight = JobStaticInfo<T>.opsWeight;
-            if (opsWeight > 0u) {
-                batch = weightPerBatch / opsWeight;
-                if (batch == 0u) batch = 1u;
-            }
-
-            var batchCount = count / batch;
-            if (batchCount == 0u) batchCount = 1u;
-            if (count <= 10u && batchCount == 1u) {
-            } else if (batchCount == 1u) {
-                batchCount = 2u;
-            }
-
-            return batchCount;
+            var threadCount = JobUtils.ThreadsCount;
+            var minItemsPerThread = count / threadCount;
+            var itemsPerCacheLine = Unity.Mathematics.math.max(1u, JobUtils.CacheLineSize / maxStructSize);
+            var minBatch = itemsPerCacheLine;
+            var maxBatch = minItemsPerThread;
+            var avgBatch = Unity.Mathematics.math.max(minBatch, (minBatch + maxBatch) / 2f);
+            avgBatch = (uint)(avgBatch / itemsPerCacheLine) * itemsPerCacheLine;
+            return Unity.Mathematics.math.max((uint)avgBatch, 1u);
 
         }
 

@@ -64,6 +64,16 @@ namespace ME.BECS {
                 return job;
             }
 
+            [INLINE(256)]
+            public ComposeJob Build(ref CommandBuffer buffer) {
+                var job = new ComposeJob() {
+                    query = this,
+                    queryData = buffer.builderQueryData,
+                    state = buffer.state,
+                };
+                return job;
+            }
+
         }
         
         [BURST]

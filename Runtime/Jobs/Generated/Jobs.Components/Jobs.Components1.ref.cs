@@ -15,7 +15,7 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, T0>(this QueryBuilder builder, in T job = default) where T : struct, IJobForComponents<T0> where T0 : unmanaged, IComponentBase {
             builder.With<T0>();
-            builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
+            builder.commandBuffer.ptr->SetBuilder(ref builder);
             builder.builderDependsOn = job.Schedule<T, T0>(builder.commandBuffer.ptr, builder.isUnsafe, builder.isReadonly, builder.parallelForBatch, builder.scheduleMode, builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -141,6 +141,8 @@ namespace ME.BECS.Jobs {
                 jobInfo.CreateLocalCounter();
                 jobInfo.count = jobData.buffer->count;
                 
+                JobStaticInfo<T>.lastCount = jobInfo.count;
+                
                 if ((jobData.scheduleFlags & ScheduleFlags.IsReadonly) != 0) {
                     if ((jobData.scheduleFlags & ScheduleFlags.Parallel) != 0) {
                         while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
@@ -156,6 +158,8 @@ namespace ME.BECS.Jobs {
                             jobData.buffer->EndForEachRange();
                         }
                     } else {
+                        jobData.buffer->SetEntities(jobData.buffer);
+                        jobInfo.count = jobData.buffer->count;
                         JobUtils.SetCurrentThreadAsSingle(true);
                         jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                         for (uint i = 0u; i < jobData.buffer->count; ++i) {
@@ -184,6 +188,8 @@ namespace ME.BECS.Jobs {
                             jobData.buffer->EndForEachRange();
                         }
                     } else {
+                        jobData.buffer->SetEntities(jobData.buffer);
+                        jobInfo.count = jobData.buffer->count;
                         JobUtils.SetCurrentThreadAsSingle(true);
                         jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
                         for (uint i = 0u; i < jobData.buffer->count; ++i) {

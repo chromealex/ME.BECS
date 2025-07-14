@@ -47,6 +47,7 @@ namespace ME.BECS {
         internal ScheduleMode scheduleMode;
         internal bool isUnsafe;
         internal bool isReadonly;
+        internal bool useSort;
         internal bool isCreated;
         
         public ushort WorldId => this.commandBuffer.ptr->worldId;
@@ -131,6 +132,12 @@ namespace ME.BECS {
         public QueryBuilder AsReadonly() {
             E.IS_CREATED(this);
             this.isReadonly = true;
+            return this;
+        }
+
+        [INLINE(256)]
+        public QueryBuilder Sort() {
+            this.useSort = true;
             return this;
         }
 
@@ -347,7 +354,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public JobHandle Schedule<T>(T job) where T : struct, IJobCommandBuffer {
 
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.builderDependsOn);
             return this.builderDependsOn;
 
@@ -374,7 +381,7 @@ namespace ME.BECS {
         [INLINE(256)][System.ObsoleteAttribute("ForEach methods is obsolete and will be removed in a future version. Please use Schedule instead.")]
         public JobHandle ScheduleParallelFor<T>(T job) where T : struct, IJobParallelForCommandBuffer {
 
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             this.builderDependsOn = job.Schedule(in this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
             return this.builderDependsOn;
 
@@ -415,7 +422,7 @@ namespace ME.BECS {
         public JobHandle ScheduleParallelForBatch<T>(T job) where T : struct, IJobParallelForCommandBufferBatch {
 
             // Need to complete previous job and run SetEntities in sync mode
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             this.builderDependsOn = job.Schedule(this.commandBuffer.ptr, this.parallelForBatch, this.builderDependsOn);
             return this.builderDependsOn;
 
@@ -427,7 +434,7 @@ namespace ME.BECS {
         /// <returns></returns>
         public Unity.Collections.NativeArray<Ent> ToArray(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             this.builderDependsOn.Complete();
             var cnt = (int)this.commandBuffer.ptr->count;
             var result = new Unity.Collections.NativeArray<Ent>(cnt, allocator);
@@ -446,7 +453,7 @@ namespace ME.BECS {
         /// <returns></returns>
         public uint Count() {
             
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, false, this.builderDependsOn);
             this.builderDependsOn.Complete();
             var cnt = (int)this.commandBuffer.ptr->count;
             return (uint)cnt;
@@ -468,7 +475,7 @@ namespace ME.BECS {
                 // wtf?
                 // TODO: Exception
             } else {
-                this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+                this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
                 this.commandBuffer.ptr->sync = true;
                 if (this.withBurst == true) {
                     // wtf?
@@ -500,7 +507,7 @@ namespace ME.BECS {
             
             if (this.parallelForBatch > 0u) {
 
-                this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+                this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
                 this.commandBuffer.ptr->sync = false;
                 JobHandle jobHandle;
                 if (this.withBurst == true) {
@@ -525,7 +532,7 @@ namespace ME.BECS {
 
             } else {
 
-                this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn);
+                this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
                 this.commandBuffer.ptr->sync = true;
                 if (this.withBurst == true) {
 
@@ -595,7 +602,7 @@ namespace ME.BECS {
                 state = state,
                 queryData = this.queryData,
             }.Schedule(this.builderDependsOn);
-            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.builderDependsOn, fromStaticQuery: true);
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn, fromStaticQuery: true);
             //this.builderDependsOn.Complete();
             return new QueryBuilderDisposable(this);
 
@@ -630,13 +637,14 @@ namespace ME.BECS {
         }
 
         [BURST]
-        private struct SetEntitiesJob : IJob {
+        internal struct SetEntitiesJob : IJob {
 
             public ArchetypeQueries.ComposeJob composeJob;
             public safe_ptr<State> state;
             public safe_ptr<CommandBuffer> buffer;
             public safe_ptr<QueryData> queryData;
             public Allocator allocator;
+            public bool useSort;
 
             public void Execute() {
 
@@ -749,8 +757,8 @@ namespace ME.BECS {
                         }
 
                     }
-
-                    if (elementsCount > 0u) Unity.Collections.NativeSortExtension.Sort(arrPtr.ptr, (int)elementsCount);
+                    
+                    if (this.useSort == true && elementsCount > 0u) Unity.Collections.NativeSortExtension.Sort(arrPtr.ptr, (int)elementsCount);
                     this.buffer.ptr->entities = arrPtr.ptr;
                     this.buffer.ptr->count = elementsCount;
                 }
@@ -760,7 +768,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, JobHandle dependsOn, bool fromStaticQuery = false) {
+        internal JobHandle SetEntities(safe_ptr<CommandBuffer> buffer, bool useSort, JobHandle dependsOn, bool fromStaticQuery = false) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(this.WorldId).Allocator.ToAllocator;
             /*if (fromStaticQuery == false) {
@@ -785,6 +793,7 @@ namespace ME.BECS {
                 queryData = this.queryData,
                 state = buffer.ptr->state,
                 allocator = allocator,
+                useSort = useSort,
             };
             var handle = job.ScheduleByRef(dependsOn);
             return handle;

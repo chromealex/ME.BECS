@@ -17,7 +17,7 @@ namespace ME.BECS.Jobs {
         
         public static JobHandle Schedule<T, {count(,)[T#i#]}>(this QueryBuilder builder, in T job = default) where T : struct, IJobParallelForComponents<{count(,)[T#i#]}> {count( )[where T#i# : unmanaged, IComponentBase]} {
             {count( )[builder.With<T#i#>();]}
-            builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.builderDependsOn);
+            builder.commandBuffer.ptr->SetBuilder(ref builder);
             builder.builderDependsOn = job.Schedule<T, {count(,)[T#i#]}>(builder.commandBuffer.ptr, builder.parallelForBatch, builder.isUnsafe, builder.builderDependsOn);
             return builder.builderDependsOn;
         }
@@ -122,6 +122,9 @@ namespace ME.BECS.Jobs {
                 var jobInfo = jobData.jobInfo;
                 jobInfo.CreateLocalCounter();
                 jobInfo.count = jobData.buffer->count;
+                
+                JobStaticInfo<T>.lastCount = jobInfo.count;
+                
                 while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
                     
                     jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
