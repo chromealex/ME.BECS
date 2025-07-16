@@ -200,6 +200,9 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public void SetEntities(CommandBuffer* ptr) {
+            if (this.builderQueryData.ptr == null) return;
+            var marker = new Unity.Profiling.ProfilerMarker("Query::SetEntities");
+            marker.Begin();
             var composeJob = this.builderCompose.Build(ref this);
             var job = new QueryBuilder.SetEntitiesJob() {
                 composeJob = composeJob,
@@ -210,6 +213,7 @@ namespace ME.BECS {
                 useSort = this.builderSort,
             };
             job.Execute();
+            marker.End();
         }
         
         [INLINE(256)]

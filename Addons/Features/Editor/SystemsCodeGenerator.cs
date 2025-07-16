@@ -300,15 +300,21 @@ namespace ME.BECS.Editor.Systems {
                         var maxIter = 10_000;
                         var methodContent = content;
 
+                        void AddSyncApply(System.Type systemType) {
+
+                            if (HasInlineMethodCall(systemType, method, typeof(Batches).GetMethod("Set_INTERNAL", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) == true ||
+                                HasInlineMethodCall(systemType, method, typeof(Batches).GetMethod("Remove_INTERNAL", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) == true) {
+                                methodContent.Add("Batches.ApplyThread(world.state);");
+                            }
+
+                        }
+
                         void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null, bool forceWithoutSync = false) {
 
                             var indexStr = index.ToString();
                             if (customDep == null) customDep = $"dep{indexStr}";
                             if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
                             if ((node is not ME.BECS.FeaturesGraph.Nodes.ExitNode && node.GetSyncPoint(methodEnum).syncPoint == false) || forceWithoutSync == true) {
-                                if (forceWithoutSync == true) {
-                                    methodContent.Add("// Force sync point removed");
-                                }
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }
@@ -327,7 +333,7 @@ namespace ME.BECS.Editor.Systems {
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, world.state);");
+                            methodContent.Add($"{customOutputDep} = Batches.ApplySystems({customDep}, in world);");
                         }
                         
                         while (q.Count > 0) {
@@ -497,8 +503,10 @@ namespace ME.BECS.Editor.Systems {
                                                             var indexStr = index.ToString();
                                                             methodContent.Add("{");
                                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
+                                                            methodContent.Add($"Batches.Prepare<{EditorUtils.GetTypeName(type)}>(in world);");
                                                             methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
                                                             methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = systemContext.dependsOn;");
+                                                            AddSyncApply(type);
                                                             methodContent.Add("}");
                                                             if (index.genericIndex == 0) collectedDeps.Add($"dep{indexStr}");
                                                             printedDependencies.Add($"dep{indexStr}");
@@ -520,7 +528,9 @@ namespace ME.BECS.Editor.Systems {
                                                             var indexStr = index.ToString();
                                                             methodContent.Add("{");
                                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {prevIndex});");
+                                                            methodContent.Add($"Batches.Prepare<{EditorUtils.GetTypeName(type)}>(in world);");
                                                             methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
+                                                            AddSyncApply(type);
                                                             AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{indexStr}"));
                                                             methodContent.Add("}");
                                                             collectedDeps.Add($"dep{indexStr}");
@@ -540,24 +550,10 @@ namespace ME.BECS.Editor.Systems {
                                             collectedDeps.Add($"dep{index.ToString()}");
                                             methodContent.Add("{");
                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
+                                            methodContent.Add($"Batches.Prepare<{EditorUtils.GetTypeName(systemType)}>(in world);");
                                             methodContent.Add($"(({EditorUtils.GetTypeName(systemType)}*)systems[{index.globalIndex}])->{method}(ref systemContext);");
-
-                                            var needApplyJob = false;
-                                            {
-                                                var types = new scg::HashSet<System.Type>();
-                                                var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
-                                                CollectJobsTypes(systemType.GetMethod(method, flags), types);
-                                                foreach (var jobType in types) {
-                                                    var typeInfos = ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
-                                                    foreach (var typeInfo in typeInfos) {
-                                                        if (typeInfo.op == RefOp.ReadOnly || typeInfo.isArg == true) continue;
-                                                        needApplyJob = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            
-                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"), forceWithoutSync: needApplyJob == false);
+                                            AddSyncApply(systemType);
+                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"));
                                             methodContent.Add("}");
                                             
                                         }
@@ -673,6 +669,36 @@ namespace ME.BECS.Editor.Systems {
             }
 
             return innerMethods;
+
+        }
+
+        private static bool HasInlineMethodCall(System.Type systemType, string method, MethodInfo methodCheck) {
+
+            var root = systemType.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            var q = new scg::Queue<System.Reflection.MethodInfo>();
+            q.Enqueue(root);
+            var visited = new scg::HashSet<System.Reflection.MethodInfo>();
+            while (q.Count > 0) {
+                var body = q.Dequeue();
+                var instructions = body.GetInstructions();
+                foreach (var inst in instructions) {
+                    if (inst.Operand is MethodInfo methodInfo) {
+                        if (methodInfo == methodCheck) {
+                            return true;
+                        }
+                    }
+
+                    if (inst.Operand is System.Reflection.MethodInfo member) {
+                        if (visited.Add(member) == true) {
+                            if (member.GetMethodBody() != null) {
+                                q.Enqueue(member);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return false;
 
         }
 
@@ -985,6 +1011,7 @@ namespace ME.BECS.Editor.Systems {
             localContent.Clear();
             
             // Find jobs
+            var systemTypeStr = EditorUtils.GetTypeName(systemType);
             var types = new scg::HashSet<System.Type>();
             var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
             CollectJobsTypes(systemType.GetMethod(nameof(IAwake.OnAwake), flags), types);
@@ -1015,10 +1042,18 @@ namespace ME.BECS.Editor.Systems {
                 }
             }
 
+            content.Add($"SystemStaticInfo<{systemTypeStr}>.loopCount = 0u;");
+            content.Add($"SystemStaticInfo<{systemTypeStr}>.inlineCount = 0u;");
+            content.Add($"SystemStaticInfo<{systemTypeStr}>.destroyCount = 0u;");
             foreach (var jobType in types) {
                 if (jobType.IsVisible == false) continue;
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                {
+                    content.Add($"SystemStaticInfo<{systemTypeStr}>.loopCount += JobStaticInfo<{jobTypeStr}>.loopCount;");
+                    content.Add($"SystemStaticInfo<{systemTypeStr}>.inlineCount += JobStaticInfo<{jobTypeStr}>.inlineCount;");
+                    content.Add($"SystemStaticInfo<{systemTypeStr}>.destroyCount += JobStaticInfo<{jobTypeStr}>.destroyCount;");
+                }
                 var containsBool = false;
                 localContent.Clear();
                 foreach (var field in fields) {
@@ -1029,7 +1064,7 @@ namespace ME.BECS.Editor.Systems {
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
                         var v = typeToVar[injectType];
-                        content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
+                        localContent.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
                     }
                     var attr = field.GetCustomAttribute<InjectDeltaTimeAttribute>();
                     if (attr != null) {
@@ -1041,7 +1076,7 @@ namespace ME.BECS.Editor.Systems {
                         } else if (field.FieldType == typeof(uint)) {
                             fieldType = 2;
                         }
-                        content.Add($"JobInject<{jobTypeStr}>.RegisterDeltaTime({fieldOffset}, {fieldType});");
+                        localContent.Add($"JobInject<{jobTypeStr}>.RegisterDeltaTime({fieldOffset}, {fieldType});");
                     }
                 }
                 if (containsBool == true && localContent.Count > 0) {

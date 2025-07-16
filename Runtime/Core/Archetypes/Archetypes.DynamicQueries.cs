@@ -88,7 +88,11 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                if (this.queryData.ptr->archetypesBits.IsCreated == false) this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
+                if (this.queryData.ptr->archetypesBits.IsCreated == false) {
+                    this.state.ptr->archetypes.lockIndex.ReadBegin(this.state);
+                    this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
+                    this.state.ptr->archetypes.lockIndex.ReadEnd(this.state);
+                }
                 
                 if (this.query.with.Length > 0) {
                     new WithArrJob() {
@@ -113,6 +117,7 @@ namespace ME.BECS {
                 }
 
                 if (this.query.withAny.Length > 0) {
+                    this.state.ptr->archetypes.lockIndex.ReadBegin(this.state);
                     var temp = new TempBitArray(this.state.ptr->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
                     for (int i = 0; i < this.query.withAny.Length; ++i) {
                         var typeIdPair = this.query.withAny[i];
@@ -130,6 +135,7 @@ namespace ME.BECS {
                         }
                     }
                     this.queryData.ptr->archetypesBits.Intersect(temp);
+                    this.state.ptr->archetypes.lockIndex.ReadEnd(this.state);
                 }
 
                 if (this.counter.ptr != null) this.counter.ptr->count = (int)this.queryData.ptr->archetypesBits.Length;
@@ -320,7 +326,9 @@ namespace ME.BECS {
             public void Execute() {
 
                 ref var arch = ref this.state.ptr->archetypes;
+                arch.lockIndex.ReadBegin(this.state);
                 if (this.typeId >= arch.archetypesWithTypeIdBits.Length) {
+                    arch.lockIndex.ReadEnd(this.state);
                     this.queryData.ptr->archetypesBits.Clear();
                     return;
                 }
@@ -331,6 +339,7 @@ namespace ME.BECS {
                 } else {
                     this.queryData.ptr->archetypesBits.Clear();
                 }
+                arch.lockIndex.ReadEnd(this.state);
                 
             }
 
@@ -349,7 +358,9 @@ namespace ME.BECS {
                 for (int i = 0; i < this.typeIdArr.Length; ++i) {
 
                     var typeId = this.typeIdArr.Get(i);
+                    this.state.ptr->archetypes.lockIndex.ReadBegin(this.state);
                     if (typeId >= this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
+                        this.state.ptr->archetypes.lockIndex.ReadEnd(this.state);
                         this.queryData.ptr->archetypesBits.Clear();
                         return;
                     }
@@ -360,6 +371,7 @@ namespace ME.BECS {
                     } else {
                         this.queryData.ptr->archetypesBits.Clear();
                     }
+                    this.state.ptr->archetypes.lockIndex.ReadEnd(this.state);
 
                 }
 

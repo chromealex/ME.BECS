@@ -45,7 +45,7 @@ namespace ME.BECS.Editor.Jobs {
                 if (jobType.IsValueType == false) continue;
                 if (jobType.IsVisible == false) continue;
 
-                if (this.IsValidTypeForAssembly(jobType) == false) continue;
+                if (this.IsValidTypeForAssembly(jobType, true) == false) continue;
 
                 var content = new System.Collections.Generic.List<string>();
                 if (jobType.IsGenericType == true && jobType.DeclaringType != null && jobType.DeclaringType.IsGenericType == true) {
@@ -63,7 +63,7 @@ namespace ME.BECS.Editor.Jobs {
                         foreach (var type in i.GenericTypeArguments) {
                             if (typeof(T0).IsAssignableFrom(type) == true ||
                                 typeof(T1).IsAssignableFrom(type) == true) {
-                                if (this.IsValidTypeForAssembly(type) == false) continue;
+                                if (this.IsValidTypeForAssembly(type, true) == false) continue;
                                 components.Add(EditorUtils.GetDataTypeName(type));
                                 componentsTypes.Add(type);
                             }
@@ -82,6 +82,7 @@ namespace ME.BECS.Editor.Jobs {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
                 }
+                content.Add($"JobStaticInfo<{jobTypeFullName}>.destroyCount = {entsInfo.destroyCount}u;");
 
                 var typeInfos = GetJobTypesInfo(jobType);
                 var maxStructSize = 0u;
@@ -460,14 +461,17 @@ namespace ME.BECS.Editor.Jobs {
 
             public int count;
             public int brCount;
+            public int destroyCount;
 
         }
         
         public static NewEntInfo GetJobEntInfo(System.Type jobType) {
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            var destroyEntMethod = typeof(EntExt).GetMethod(nameof(EntExt.Destroy), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var root = jobType.GetMethod("Execute");
             var visited = new System.Collections.Generic.HashSet<MethodInfo>();
             var instructions = root.GetInstructions().ToList();
+            var destroyCount = 0;
             var brOpen = 0;
             var count = 0;
             var brCount = 0;
@@ -508,6 +512,8 @@ namespace ME.BECS.Editor.Jobs {
                         } else {
                             ++count;
                         }
+                    } else if (methodInfo == destroyEntMethod) {
+                        ++destroyCount;
                     }
                 }
             }
@@ -515,6 +521,7 @@ namespace ME.BECS.Editor.Jobs {
             return new NewEntInfo() {
                 count = count,
                 brCount = brCount,
+                destroyCount = destroyCount,
             };
         }
 

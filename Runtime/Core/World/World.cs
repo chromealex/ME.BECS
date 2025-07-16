@@ -106,15 +106,15 @@ namespace ME.BECS {
             Journal.BeginFrame(this.id);
 
             dependsOn = State.BurstMode(this.state, true, dependsOn);
-            dependsOn = Batches.Apply(dependsOn, this.state);
+            dependsOn = Batches.Apply(dependsOn, this);
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.NextTick, updateType, dependsOn);
             {
                 if (updateType == UpdateType.FIXED_UPDATE) dependsOn = State.NextTick(this.state, dependsOn);
                 dependsOn = this.TickRootSystemGroup(deltaTimeMs, updateType, dependsOn);
-                dependsOn = Batches.Apply(dependsOn, this.state);
+                dependsOn = Batches.Apply(dependsOn, this);
             }
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.CurrentTick, updateType, dependsOn);
-            dependsOn = Batches.Apply(dependsOn, this.state);
+            dependsOn = Batches.Apply(dependsOn, this);
             dependsOn = State.BurstMode(this.state, false, dependsOn);
 
             Journal.EndFrame(this.id);

@@ -163,7 +163,7 @@ namespace ME.BECS {
 
         }
 
-        private LockSpinner lockIndex;
+        public ReadWriteSpinner lockIndex;
         public List<Archetype> list;
         public List<uint> allArchetypes;
         public BitArray allArchetypesForQuery;
@@ -204,8 +204,9 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public void BurstMode(in MemoryAllocator allocator, bool mode) {
-            JobUtils.Lock(ref this.lockIndex);
+        public void BurstMode(safe_ptr<State> state, bool mode) {
+            this.lockIndex.WriteBegin(state);
+            var allocator = state.ptr->allocator;
             this.list.BurstMode(in allocator, mode);
             for (uint i = 0u; i < this.list.Count; ++i) {
                 ref var arch = ref this.list[in allocator, i];
@@ -217,7 +218,7 @@ namespace ME.BECS {
             this.entToIdxInArchetype.BurstMode(in allocator, mode);
             this.componentsCountToArchetypeIds.BurstMode(in allocator, mode);
             this.archetypesWithTypeIdBits.BurstMode(in allocator, mode);
-            JobUtils.Unlock(ref this.lockIndex);
+            this.lockIndex.WriteEnd();
         }
 
         [INLINE(256)]
@@ -280,7 +281,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void AddEntity(safe_ptr<State> state, UnsafeList<Ent>* list, uint maxId) {
 
-            JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.lockIndex.WriteBegin(state);
             state.ptr->archetypes.entToArchetypeIdx.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->archetypes.entToIdxInArchetype.Resize(ref state.ptr->allocator, maxId + 1u, 2);
 
@@ -288,7 +289,7 @@ namespace ME.BECS {
                 var ent = list->ElementAt(i);
                 state.ptr->archetypes.list[in state.ptr->allocator, 0].AddEntity(state, ent.id);
             }
-            JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.lockIndex.WriteEnd();
 
         }
 
@@ -297,7 +298,7 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.lockIndex.WriteBegin(state);
             CheckEntityTimes(state, ent.id, 0);
             CheckNoEntity(state, ent.id, 0);
             state.ptr->archetypes.entToArchetypeIdx.Resize(ref state.ptr->allocator, ent.id + 1u, 2);
@@ -306,7 +307,7 @@ namespace ME.BECS {
             state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, ent.id] = 0u;
             CheckEntityTimes(state, ent.id, 1);
             CheckEntity(state, ent.id, 0);
-            JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.lockIndex.WriteEnd();
             
         }
 
@@ -315,7 +316,7 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
-            JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.lockIndex.WriteBegin(state);
             CheckEntityTimes(state, ent.id, 1);
             var idx = state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, ent.id];
             CheckEntity(state, ent.id, (int)idx);
@@ -325,7 +326,7 @@ namespace ME.BECS {
             CheckNoEntity(state, ent.id, 0);
             CheckNoEntity((int)idx, state, ent.id);
             CheckEntityTimes(state, ent.id, 1);
-            JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
+            state.ptr->archetypes.lockIndex.WriteEnd();
             
         }
 
@@ -333,7 +334,7 @@ namespace ME.BECS {
         public static void ApplyBatch(safe_ptr<State> state, uint entId, in ComponentsFastTrack addItems, in ComponentsFastTrack removeItems) {
 
             if (addItems.Count > 0 || removeItems.Count > 0) {
-                JobUtils.Lock(ref state.ptr->archetypes.lockIndex);
+                state.ptr->archetypes.lockIndex.WriteBegin(state);
                 CheckEntityTimes(state, entId, 1);
                 var idx = state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, entId];
                 ref var archetype = ref state.ptr->archetypes.list[in state.ptr->allocator, idx];
@@ -344,7 +345,7 @@ namespace ME.BECS {
                 CheckArch(state, archetype, (int)idx);
                 CheckEntity(state, entId, (int)state.ptr->archetypes.entToArchetypeIdx[in state.ptr->allocator, entId]);
                 CheckEntityTimes(state, entId, 1);
-                JobUtils.Unlock(ref state.ptr->archetypes.lockIndex);
+                state.ptr->archetypes.lockIndex.WriteEnd();
             }
 
         }
@@ -361,6 +362,7 @@ namespace ME.BECS {
                 archetypesWithTypeIdBits = new MemArray<BitArray>(ref state.ptr->allocator, StaticTypes.counter + 1u),
                 allArchetypes = new List<uint>(ref state.ptr->allocator, capacity),
                 allArchetypesForQuery = new BitArray(ref state.ptr->allocator, capacity),
+                lockIndex = ReadWriteSpinner.Create(state),
             };
             archs.list.Add(ref state.ptr->allocator, Archetype.Create(state, 0u, entitiesCapacity));
             archs.allArchetypes.Add(ref state.ptr->allocator, 0u);

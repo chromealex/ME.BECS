@@ -13,8 +13,51 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Execute() {
 
-            Batches.ApplyFromJob(this.state);
+            Batches.ApplyThreads(this.state);
             this.state.ptr->entities.free.Apply(in this.state.ptr->allocator);
+            Ents.ApplyDestroyed(this.state);
+
+        }
+
+    }
+
+    [BURST]
+    public unsafe struct ApplyEntJob : IJobSingle {
+
+        public safe_ptr<State> state;
+            
+        [INLINE(256)]
+        public void Execute() {
+
+            this.state.ptr->entities.free.Apply(in this.state.ptr->allocator);
+            Ents.ApplyDestroyed(this.state);
+
+        }
+
+    }
+
+    [BURST]
+    public unsafe struct ApplyEntCreateJob : IJobSingle {
+
+        public safe_ptr<State> state;
+            
+        [INLINE(256)]
+        public void Execute() {
+
+            this.state.ptr->entities.free.Apply(in this.state.ptr->allocator);
+
+        }
+
+    }
+
+    [BURST]
+    public struct ApplyDestroyedJob : IJobSingle {
+
+        public safe_ptr<State> state;
+            
+        [INLINE(256)]
+        public void Execute() {
+
             Ents.ApplyDestroyed(this.state);
 
         }

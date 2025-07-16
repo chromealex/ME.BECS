@@ -172,7 +172,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             // wait if we have to write op running
             #if EXCEPTIONS_INTERNAL
-            var i = 100_000_000;
+            var i = 100_000_000_000;
             #endif
             while (System.Threading.Volatile.Read(ref this.writeValue) == 1) {
                 #if EXCEPTIONS_INTERNAL
@@ -208,7 +208,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             // acquire write op
             #if EXCEPTIONS_INTERNAL
-            var i = 100_000_000;
+            var i = 100_000_000_000;
             #endif
             E.ADDR_4(ref this.writeValue);
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
@@ -223,7 +223,7 @@ namespace ME.BECS {
             }
             // wait if we have read op running
             #if EXCEPTIONS_INTERNAL
-            i = 100_000_000;
+            i = 100_000_000_000;
             #endif
             while (this.ReadCount(state) > 0) {
                 #if EXCEPTIONS_INTERNAL
@@ -242,7 +242,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             // release write op
             #if EXCEPTIONS_INTERNAL
-            var i = 100_000_000;
+            var i = 100_000_000_000;
             #endif
             E.ADDR_4(ref this.writeValue);
             while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 1) != 1) {

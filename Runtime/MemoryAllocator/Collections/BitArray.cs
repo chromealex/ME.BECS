@@ -56,6 +56,20 @@ namespace ME.BECS {
 
         }
 
+        public string ToString(in MemoryAllocator allocator) {
+
+            var str = new System.Text.StringBuilder();
+            for (uint i = 0; i < this.Length; ++i) {
+                if (this.IsSet(in allocator, (int)i) == true) {
+                    str.Append(i);
+                    str.Append(',');
+                }
+            }
+
+            return str.ToString();
+            
+        }
+
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, BitArray source) {
 

@@ -320,7 +320,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        [CodeGeneratorIgnore]
         public static T Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
             E.IS_ALIVE(in ent);
@@ -360,7 +359,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        [CodeGeneratorIgnore]
         public static T GetOrCreateAspect<T>(this in Ent ent) where T : unmanaged, IAspect {
 
             E.IS_ALIVE(in ent);

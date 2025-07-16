@@ -595,7 +595,7 @@ namespace ME.BECS {
         internal QueryBuilderDisposable FromQueryData(safe_ptr<State> state, ushort worldId, safe_ptr<Queries.QueryDataStatic> queryDataStatic) {
 
             //this.queryData = queryDataStatic->GetQueryData(state);
-            //this.commandBuffer = queryDataStatic->GetCommandBuffer(state, worldId);
+            //this.commandBuffer = queryDataStatic.ptr->GetCommandBuffer(state, worldId);
             
             this.builderDependsOn = new FromQueryDataJob() {
                 queryDataStatic = queryDataStatic,

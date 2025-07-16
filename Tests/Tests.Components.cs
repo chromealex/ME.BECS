@@ -446,6 +446,7 @@ namespace ME.BECS.Tests {
             dependsOn = Batches.Apply(dependsOn, world);
             JobUtils.RunScheduled();
             dependsOn.Complete();
+            Batches.ApplyThreads(world.state);
             
             Assert.AreEqual(3, world.state.ptr->archetypes.allArchetypes.Count);
 

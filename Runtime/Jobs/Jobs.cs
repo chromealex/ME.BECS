@@ -86,15 +86,101 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoDestroyCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoDestroyCount<TJob>>();
+
+    }
+    
+    public struct SystemStaticInfoDestroyCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<SystemStaticInfoDestroyCount<TJob>>();
+
+    }
+
+    public struct SystemStaticInfoLoopCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<SystemStaticInfoLoopCount<TJob>>();
+
+    }
+
+    public struct SystemStaticInfoInlineCount<TJob> {
+        
+        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<SystemStaticInfoInlineCount<TJob>>();
+
+    }
+
+    public struct SystemsEntCreationRuntimeStaticInfo {
+        
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> data = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreate<SystemsEntCreationRuntimeStaticInfo>();
+
+    }
+
+    public struct SystemsEntDestroyedRuntimeStaticInfo {
+        
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> data = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreate<SystemsEntDestroyedRuntimeStaticInfo>();
+
+    }
+
+    public struct SystemsRuntimeStaticInfo {
+
+        [INLINE(256)]
+        public static bool IsEntCreation(in World world) {
+            return SystemsEntCreationRuntimeStaticInfo.data.Data.Get(world.id);
+        }
+        [INLINE(256)]
+        public static bool IsEntDestroyed(in World world) {
+            return SystemsEntDestroyedRuntimeStaticInfo.data.Data.Get(world.id);
+        }
+
+        [INLINE(256)]
+        public static void AddEntCreation(in World world, bool value) {
+            SystemsEntCreationRuntimeStaticInfo.data.Data.Resize(world.id + 1u);
+            SystemsEntCreationRuntimeStaticInfo.data.Data.Get(world.id) |= value;
+        }
+
+        [INLINE(256)]
+        public static void AddEntDestroyed(in World world, bool value) {
+            SystemsEntDestroyedRuntimeStaticInfo.data.Data.Resize(world.id + 1u);
+            SystemsEntDestroyedRuntimeStaticInfo.data.Data.Get(world.id) |= value;
+        }
+
+        [INLINE(256)]
+        public static void SetEntCreation(in World world, bool value) {
+            SystemsEntCreationRuntimeStaticInfo.data.Data.Resize(world.id + 1u);
+            SystemsEntCreationRuntimeStaticInfo.data.Data.Get(world.id) = value;
+        }
+
+        [INLINE(256)]
+        public static void SetEntDestroyed(in World world, bool value) {
+            SystemsEntDestroyedRuntimeStaticInfo.data.Data.Resize(world.id + 1u);
+            SystemsEntDestroyedRuntimeStaticInfo.data.Data.Get(world.id) = value;
+        }
+
+    }
+
+    public struct SystemStaticInfo<TSystem> where TSystem : struct {
+
+        public static ref uint destroyCount => ref SystemStaticInfoDestroyCount<TSystem>.data.Data;
+        public static ref uint loopCount => ref SystemStaticInfoLoopCount<TSystem>.data.Data;
+        public static ref uint inlineCount => ref SystemStaticInfoInlineCount<TSystem>.data.Data;
+        public static bool IsEntCreation => loopCount > 0u || inlineCount > 0u;
+        public static bool IsEntDestroyed => destroyCount > 0u;
+        
+    }
+
     public unsafe struct JobStaticInfo<TJob> where TJob : struct {
 
         public static ref uint lastCount => ref JobStaticInfoLastCount<TJob>.data.Data;
+        public static ref uint destroyCount => ref JobStaticInfoDestroyCount<TJob>.data.Data;
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
         public static ref uint inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
         public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
         public static ref uint maxStructSize => ref JobStaticInfoMaxStructSize<TJob>.data.Data;
         public static bool IsParallelSupport => loopCount == 0u;
-        
+        public static bool IsEntCreation => loopCount > 0u || inlineCount > 0u;
+        public static bool IsEntDestroyed => destroyCount > 0u;
+
         [INLINE(256)]
         public static JobHandle SchedulePatch(ref JobInfo jobInfo, CommandBuffer* buffer, ScheduleMode scheduleMode, JobHandle dependsOn) {
 

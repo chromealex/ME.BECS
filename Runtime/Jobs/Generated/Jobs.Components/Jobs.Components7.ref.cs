@@ -157,6 +157,7 @@ namespace ME.BECS.Jobs {
                             }
                             jobData.buffer->EndForEachRange();
                         }
+                        Batches.ApplyThread(jobData.buffer->state);
                     } else {
                         jobData.buffer->SetEntities(jobData.buffer);
                         jobInfo.count = jobData.buffer->count;
@@ -172,6 +173,7 @@ namespace ME.BECS.Jobs {
                         }
                         jobData.buffer->EndForEachRange();
                         JobUtils.SetCurrentThreadAsSingle(false);
+                        Batches.ApplyThread(jobData.buffer->state);
                     }
                 } else {
                     if ((jobData.scheduleFlags & ScheduleFlags.Parallel) != 0) {
@@ -187,6 +189,7 @@ namespace ME.BECS.Jobs {
                             }
                             jobData.buffer->EndForEachRange();
                         }
+                        Batches.ApplyThread(jobData.buffer->state);
                     } else {
                         jobData.buffer->SetEntities(jobData.buffer);
                         jobInfo.count = jobData.buffer->count;
@@ -202,6 +205,7 @@ namespace ME.BECS.Jobs {
                         }
                         jobData.buffer->EndForEachRange();
                         JobUtils.SetCurrentThreadAsSingle(false);
+                        Batches.ApplyThread(jobData.buffer->state);
                     }
                 }
                 

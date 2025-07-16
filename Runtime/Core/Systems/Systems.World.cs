@@ -76,7 +76,6 @@ namespace ME.BECS {
         public static JobHandle Awake(this ref World world, JobHandle dependsOn, ushort subId = 0) {
             
             E.IS_CREATED(world);
-            dependsOn = Batches.Apply(dependsOn, world.state);
             var address = world.id;
             WorldSystemRegistry.Validate();
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
@@ -97,7 +96,6 @@ namespace ME.BECS {
         public static JobHandle Start(this ref World world, JobHandle dependsOn, ushort subId = 0) {
             
             E.IS_CREATED(world);
-            dependsOn = Batches.Apply(dependsOn, world.state);
             var address = world.id;
             WorldSystemRegistry.Validate();
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {

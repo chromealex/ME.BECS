@@ -148,7 +148,7 @@ namespace ME.BECS {
                 this.state.ptr->entities.BurstMode(this.state.ptr->allocator, this.mode);
                 this.state.ptr->batches.BurstMode(this.state.ptr->allocator, this.mode);
                 this.state.ptr->components.BurstMode(this.state.ptr->allocator, this.mode);
-                this.state.ptr->archetypes.BurstMode(this.state.ptr->allocator, this.mode);
+                this.state.ptr->archetypes.BurstMode(this.state, this.mode);
 
             }
 

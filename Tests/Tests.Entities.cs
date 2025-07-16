@@ -371,7 +371,7 @@ namespace ME.BECS.Tests {
                 var job = new DestroyEntitiesJob() {
                     world = world,
                 }.Schedule((int)amount, 64);
-                job = ME.BECS.Batches.Apply(job, world.state);
+                job = ME.BECS.Batches.Apply(job, world);
                 JobUtils.RunScheduled();
                 job.Complete();
             }
