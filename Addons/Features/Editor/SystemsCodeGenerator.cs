@@ -542,7 +542,7 @@ namespace ME.BECS.Editor.Systems {
                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
                                             methodContent.Add($"(({EditorUtils.GetTypeName(systemType)}*)systems[{index.globalIndex}])->{method}(ref systemContext);");
 
-                                            var needApplyJob = false;
+                                            /*var needApplyJob = false;
                                             {
                                                 var types = new scg::HashSet<System.Type>();
                                                 var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
@@ -555,9 +555,9 @@ namespace ME.BECS.Editor.Systems {
                                                         break;
                                                     }
                                                 }
-                                            }
+                                            }*/
                                             
-                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"), forceWithoutSync: needApplyJob == false);
+                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}")/*, forceWithoutSync: needApplyJob == false*/);
                                             methodContent.Add("}");
                                             
                                         }
