@@ -41,7 +41,7 @@ namespace ME.BECS.FogOfWar {
             
             var system = logicWorld.GetSystem<CreateSystem>();
             {
-                var fowSize = math.max(32u, (uint2)(system.mapSize * system.resolution));
+                var fowSize = math.max(8u, (uint2)(system.mapSize * system.resolution));
                 var tex = new UnityEngine.Texture2D((int)fowSize.x, (int)fowSize.y, UnityEngine.TextureFormat.RGBA32, false);
                 tex.wrapMode = UnityEngine.TextureWrapMode.Clamp;
                 FogOfWarUtils.CleanUpTexture(tex.GetPixelData<byte>(0));
