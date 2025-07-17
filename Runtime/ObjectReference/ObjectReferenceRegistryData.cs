@@ -130,6 +130,14 @@ namespace ME.BECS {
             return false;
         }
 
+        public bool IsValid() {
+            #if UNITY_EDITOR
+            return this.source != null || this.sourceReference.editorAsset != null;
+            #else
+            return true;
+            #endif
+        }
+
     }
 
     public class ObjectReferenceRegistryData : UnityEngine.ScriptableObject {
@@ -144,6 +152,7 @@ namespace ME.BECS {
         public void OnValidate() {
 
             var newObjects = new System.Collections.Generic.List<ItemInfo>();
+            var removedObjects = new System.Collections.Generic.List<ObjectReferenceRegistryItem>();
             {
                 var list = this.objects.ToList();
                 list.RemoveAll(x => x == null);
@@ -152,6 +161,10 @@ namespace ME.BECS {
             foreach (var item in this.items) {
                 var found = false;
                 foreach (var obj in this.objects) {
+                    if (obj.IsValid() == false) {
+                        removedObjects.Add(obj);
+                        continue;
+                    }
                     if (obj.data.Equals(item) == true) {
                         found = true;
                         break;
@@ -169,6 +182,10 @@ namespace ME.BECS {
                 var dir = $"{curDir}/ObjectReferenceRegistry";
                 if (System.IO.Directory.Exists(dir) == false) {
                     System.IO.Directory.CreateDirectory(dir);
+                }
+
+                foreach (var obj in removedObjects) {
+                    UnityEditor.AssetDatabase.DeleteAsset(UnityEditor.AssetDatabase.GetAssetPath(obj));
                 }
 
                 foreach (var obj in newObjects) {
@@ -213,7 +230,7 @@ namespace ME.BECS {
             if (this.itemLookup.Count == 0) {
                 this.Initialize();
             }
-            if (this.itemLookup.TryGetValue(sourceId, out var item) == true) {
+            if (this.itemLookup.TryGetValue(sourceId, out var item) == true && item.sourceType != null) {
                 return new ObjectItem(item);
             }
             for (int i = 0; i < this.objects.Length; ++i) {

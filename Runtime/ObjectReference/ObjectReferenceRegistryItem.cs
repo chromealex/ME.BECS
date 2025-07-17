@@ -4,6 +4,10 @@ namespace ME.BECS {
 
         public ItemInfo data;
 
+        public bool IsValid() {
+            return this.data.IsValid();
+        }
+
     }
 
 }
