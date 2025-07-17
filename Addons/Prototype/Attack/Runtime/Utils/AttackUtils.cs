@@ -107,6 +107,7 @@ namespace ME.BECS.Attack {
             var d = tfloat.MaxValue;
             var result = ReactionType.RotateToTarget;
             foreach (var unit in group.readUnits) {
+                if (unit.IsAlive() == false) continue;
                 var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, in buildGraphSystem, default);
                 var dist = math.distancesq(targetPos, pos);
                 if (dist < d) {

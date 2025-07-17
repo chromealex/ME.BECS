@@ -61,7 +61,7 @@ namespace ME.BECS.Editor {
         }
         
         private static void SaveData(Data data) {
-            data.items = data.items.OrderBy(x => x.type).ThenBy(x => x.className).ToList();
+            data.items = data.items.OrderBy(x => x.type).ThenBy(x => x.ns).ThenBy(x => x.className).ThenBy(x => x.assetPath.Length).ToList();
             var dir = $"{CodeGenerator.ECS}.Cache";
             if (System.IO.Directory.Exists(dir) == false) System.IO.Directory.CreateDirectory(dir);
             var path = $"{dir}/{FILENAME}";
