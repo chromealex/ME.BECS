@@ -157,14 +157,15 @@ namespace ME.BECS {
                 var list = this.objects.ToList();
                 list.RemoveAll(x => x == null);
                 this.objects = list.ToArray();
+                foreach (var obj in this.objects) {
+                    if (obj.IsValid() == false) {
+                        removedObjects.Add(obj);
+                    }
+                }
             }
             foreach (var item in this.items) {
                 var found = false;
                 foreach (var obj in this.objects) {
-                    if (obj.IsValid() == false) {
-                        removedObjects.Add(obj);
-                        continue;
-                    }
                     if (obj.data.Equals(item) == true) {
                         found = true;
                         break;
