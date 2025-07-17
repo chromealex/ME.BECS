@@ -150,9 +150,9 @@ namespace ME.BECS.Network {
         public void OnJoinedRoom() {
             //UnityEngine.Debug.Log("OnJoinedRoom");
             {
-                //UnityEngine.Debug.Log("Connected Player: " + Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
+                UnityEngine.Debug.Log("Connected Player: " + Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
                 this.Status = TransportStatus.Connected;
-                this.networkModule.SetLocalPlayerId((uint)Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber - 1u);
+                this.networkModule.SetLocalPlayerId((uint)Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
                 this.networkModule.SetServerStartTime(Photon.Pun.PhotonNetwork.ServerTimestamp, this.world);
             }
         }
