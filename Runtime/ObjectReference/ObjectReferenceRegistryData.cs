@@ -16,7 +16,7 @@ namespace ME.BECS {
             this.source = data.source;
             this.sourceReference = data.sourceReference;
             this.sourceId = data.sourceId;
-            this.sourceType = System.Type.GetType(data.sourceType);
+            this.sourceType = data.sourceType != null ? System.Type.GetType(data.sourceType) : null;
             this.data = data.customData;
             this.isGameObject = data.isGameObject;
         }
