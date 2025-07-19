@@ -260,6 +260,7 @@ namespace ME.BECS.Attack {
                 ME.BECS.Players.PlayerUtils.SetOwner(in ent, ME.BECS.Players.PlayerUtils.GetOwner(in sourceUnit));
                 config.Apply(ent);
                 var attack = ent.GetOrCreateAspect<QuadTreeQueryAspect>();
+                attack.query.ignoreSorting = true;
                 attack.query.treeMask = targetsMask; // Search for targets in this tree
                 attack.query.ignoreY = true;
                 attack.query.rangeSqr = math.max(1f, ent.Read<BulletConfigComponent>().hitRangeSqr);
@@ -267,6 +268,12 @@ namespace ME.BECS.Attack {
                 tr.position = position;
                 tr.rotation = rotation;
                 var bullet = ent.GetOrCreateAspect<BulletAspect>();
+                if (bullet.readConfig.autoTarget == true) {
+                    // Set nearest count to 1
+                    attack.query.nearestCount = 1;
+                } else {
+                    attack.query.nearestCount = 0;
+                }
                 if (bullet.readConfig.autoTarget == true) bullet.component.targetEnt = target;
                 bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
                 bullet.component.sourceUnit = sourceUnit;

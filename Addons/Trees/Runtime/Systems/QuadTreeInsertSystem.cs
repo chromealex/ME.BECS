@@ -8,6 +8,7 @@ using Unity.Mathematics;
 
 namespace ME.BECS {
     
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;
@@ -164,13 +165,15 @@ namespace ME.BECS {
             }
 
         }
-
+        
+        [INLINE(256)]
         public readonly safe_ptr<NativeTrees.NativeOctree<Ent>> GetTree(int treeIndex) {
 
             return (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.quadTrees[treeIndex];
 
         }
 
+        [INLINE(256)]
         public int AddTree() {
 
             var size = new NativeTrees.AABB(this.mapPosition, this.mapPosition + this.mapSize);
@@ -224,15 +227,20 @@ namespace ME.BECS {
         public readonly void FillNearest<T>(ref QuadTreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISubFilter<Ent> {
             
             if (tr.IsCalculated == false) return;
+            
+            var marker = new Unity.Profiling.ProfilerMarker("Prepare");
+            marker.Begin();
+            
             var q = query.readQuery;
             var worldPos = tr.GetWorldMatrixPosition();
             var worldRot = tr.GetWorldMatrixRotation();
             var sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
             var ent = tr.ent;
-                
+            
             // clean up results
             if (query.readResults.results.IsCreated == true) query.results.results.Clear();
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+            marker.End();
 
             if (q.nearestCount == 1u) {
                 var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, q.ignoreSorting, in subFilter);
@@ -268,11 +276,14 @@ namespace ME.BECS {
                     var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
                     marker.Begin();
                     tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
-                    marker.End();
                     if (visitor.found == true) {
-                        if (ignoreSorting == true) return visitor.nearest;
+                        if (ignoreSorting == true) {
+                            marker.End();
+                            return visitor.nearest;
+                        }
                         heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, math.lengthsq(worldPos - visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                     }
+                    marker.End();
                 }
             }
             
@@ -291,6 +302,7 @@ namespace ME.BECS {
 
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting, in T subFilter = default) where T : struct, ISubFilter<Ent> {
             
+            var bitsCount = math.countbits(mask);
             if (nearestCount > 0u) {
 
                 var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
@@ -314,18 +326,24 @@ namespace ME.BECS {
                         var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
                         marker.Begin();
                         tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
-                        marker.End();
                         if (ignoreSorting == true) {
+                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
+                            markerResults.Begin();
                             foreach (var item in visitor.results) {
                                 results.Add(item);
                             }
-                        } else { 
+                            markerResults.End();
+                        } else {
+                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
+                            markerResults.Begin();
                             foreach (var item in visitor.results) {
                                 heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                             }
+                            markerResults.End();
                         }
-
+                        marker.End();
                     }
+                    if (bitsCount == 1) break;
                 }
                 resultsTemp.Dispose();
 
@@ -368,19 +386,26 @@ namespace ME.BECS {
                             bounds.max.y = tfloat.MaxValue;
                         }
                         tree.Range(bounds, ref visitor);
-                        marker.End();
                         if (ignoreSorting == true) {
+                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
+                            markerResults.Begin();
                             results.EnsureCapacity(results.Count + (uint)visitor.results.Count);
                             foreach (var item in visitor.results) {
                                 results.Add(item);
                             }
+                            markerResults.End();
                         } else {
+                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
+                            markerResults.Begin();
                             heap.EnsureCapacity((uint)visitor.results.Count);
                             foreach (var item in visitor.results) {
                                 heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                             }
+                            markerResults.End();
                         }
+                        marker.End();
                     }
+                    if (bitsCount == 1) break;
                 }
                 resultsTemp.Dispose();
 

@@ -11,6 +11,8 @@ using Rect = UnityEngine.Rect;
 #endif
 
 namespace ME.BECS {
+    
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
     public readonly struct MathSector {
 
@@ -19,13 +21,19 @@ namespace ME.BECS {
         private readonly tfloat sector;
         private readonly bool checkSector;
         
+        [INLINE(256)]
         public MathSector(in float3 position, in quaternion rotation, tfloat sector) {
+            this.checkSector = sector > 0 && sector < 360;
+            if (this.checkSector == false) {
+                this = default;
+                return;
+            }
             this.position = position;
             this.lookDirection = math.normalize(math.mul(rotation, math.forward()));
             this.sector = math.radians(sector);
-            this.checkSector = sector > 0 && sector < 360;
         }
 
+        [INLINE(256)]
         public bool IsValid(in float3 objPosition) {
             if (this.checkSector == false) return true;
             var dir = math.normalize(objPosition - this.position);

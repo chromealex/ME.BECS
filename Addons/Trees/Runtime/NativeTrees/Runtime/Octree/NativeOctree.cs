@@ -61,16 +61,14 @@ namespace NativeTrees {
         private readonly float3 boundsCenter; // Precomputed bounds values as they are used often
         private readonly float3 boundsExtents;
         private readonly float3 boundsQuarterSize;
-
-        public ME.BECS.LockSpinner lockSpinner;
-
+        
         /// <summary>
         /// Mapping from nodeId to the amount of objects that are in it. Once that limit surpasses <see cref="objectsPerNode"/>
         /// the node subdivides and the count remains at <see cref="objectsPerNode"/> + 1.
         /// To check if a node is a leaf is therefore as simple as checking that the count is less or equal than <see cref="objectsPerNode"/>,
         /// or whether depth is <see cref="maxDepth"/>
         /// </summary>
-        private NativeParallelHashMap<uint, int> nodes;
+        private NativeHashMap<uint, int> nodes;
         private NativeParallelMultiHashMap<uint, ObjWrapper> objects;
 
         private ME.BECS.NativeCollections.NativeParallelList<ObjWrapper> tempObjects;
@@ -98,7 +96,7 @@ namespace NativeTrees {
             }
 
             this.objects = new NativeParallelMultiHashMap<uint, ObjWrapper>(initialCapacity, allocator);
-            this.nodes = new NativeParallelHashMap<uint, int>(initialCapacity / objectsPerNode, allocator);
+            this.nodes = new NativeHashMap<uint, int>(initialCapacity / objectsPerNode, allocator);
 
             this.objectsPerNode = objectsPerNode;
             this.maxDepth = maxDepth;
@@ -106,7 +104,6 @@ namespace NativeTrees {
             this.boundsCenter = bounds.Center;
             this.boundsExtents = bounds.Size / 2f;
             this.boundsQuarterSize = this.boundsExtents / 2f;
-            this.lockSpinner = default;
             this.tempObjects = new ME.BECS.NativeCollections.NativeParallelList<ObjWrapper>(initialCapacity, allocator);
         }
 
@@ -183,23 +180,49 @@ namespace NativeTrees {
             }
         }
 
+        private struct InsertNextNode {
+
+            public uint nodeId;
+            public QuarterSizeBounds quarterSizeBounds;
+            public ObjWrapper objWrapper;
+            public int parentDepth;
+
+        }
+
         private void InsertNext(uint nodeid, in QuarterSizeBounds quarterSizeBounds, in ObjWrapper objWrapper, int parentDepth) {
-            parentDepth++;
-            var objMask = NativeOctree<T>.GetBoundsMask(quarterSizeBounds.nodeCenter, objWrapper.bounds);
+            InsertNext(new InsertNextNode() {
+                nodeId = nodeid,
+                quarterSizeBounds = quarterSizeBounds,
+                objWrapper = objWrapper,
+                parentDepth = parentDepth,
+            });
+        }
 
-            for (var i = 0; i < 8; i++) {
-                var octantMask = NativeOctree<T>.OctantMasks[i];
-                if ((objMask & octantMask) != octantMask) {
-                    continue;
-                }
+        private void InsertNext(InsertNextNode nodeData) {
+            nodeData.parentDepth++;
+            var objMask = NativeOctree<T>.GetBoundsMask(nodeData.quarterSizeBounds.nodeCenter, nodeData.objWrapper.bounds);
 
-                var octantId = NativeOctree<T>.GetOctantId(nodeid, i);
-                var octantCenterQuarterSize = QuarterSizeBounds.GetOctant(quarterSizeBounds, i);
+            var q = new Unity.Collections.LowLevel.Unsafe.UnsafeList<InsertNextNode>(8, Allocator.Temp);
+            q.Add(nodeData);
+            while (q.Length > 0) {
+                var n = q[0];
+                q.RemoveAtSwapBack(0);
+                for (var i = 0; i < 8; i++) {
+                    var octantMask = NativeOctree<T>.OctantMasks[i];
+                    if ((objMask & octantMask) != octantMask) {
+                        continue;
+                    }
 
-                if (!this.TryInsert(octantId, octantCenterQuarterSize, objWrapper, parentDepth)) {
-                    this.InsertNext(octantId, octantCenterQuarterSize, objWrapper, parentDepth);
+                    var octantId = NativeOctree<T>.GetOctantId(n.nodeId, i);
+                    var octantCenterQuarterSize = QuarterSizeBounds.GetOctant(n.quarterSizeBounds, i);
+
+                    if (this.TryInsert(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth) == false) {
+                        //this.InsertNext(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth);
+                        q.Add(n);
+                    }
                 }
             }
+            q.Dispose();
         }
 
         /// <summary>

@@ -37,6 +37,7 @@ namespace ME.BECS.Commands {
 
                 for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
                     var unit = commandGroup.readUnits[i];
+                    if (unit.IsAlive() == false) continue;
                     unit.Set(new UnitAttackCommandComponent() {
                         target = attack.target,
                     });
