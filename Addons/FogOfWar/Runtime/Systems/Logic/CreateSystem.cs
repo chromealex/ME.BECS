@@ -305,6 +305,9 @@ namespace ME.BECS.FogOfWar {
             ref readonly var fow = ref team.Read<FogOfWarComponent>();
             ref readonly var props = ref this.heights.Read<FogOfWarStaticComponent>();
             var pos = FogOfWarUtils.WorldToFogMapPosition(in props, unit.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+            if (unit.TryRead(out UnitQuadSizeComponent quadSizeComponent) == true) {
+                return FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y, quadSizeComponent.size);
+            }
             return FogOfWarUtils.IsVisible(in props, in fow, pos.x, pos.y, unit.Read<NavAgentRuntimeComponent>().properties.radius);
 
         }

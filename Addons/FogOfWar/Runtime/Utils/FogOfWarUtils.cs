@@ -182,6 +182,11 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, float2 size) {
+            return IsSet(in fow.nodes, in props, x, y, size, offset: 0);
+        }
+
+        [INLINE(256)]
         public static bool IsVisible(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, tfloat radius) {
             return IsSet(in fow.nodes, in props, x, y, radius, offset: 0);
         }
@@ -197,8 +202,43 @@ namespace ME.BECS.FogOfWar {
         }
 
         [INLINE(256)]
+        public static bool IsExplored(in FogOfWarStaticComponent props, in FogOfWarComponent fow, uint x, uint y, float2 size) {
+            return IsSet(in fow.explored, in props, x, y, size, offset: 0);
+        }
+
+        [INLINE(256)]
         public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, byte offset) {
             return arr[(y * props.size.x + x) * BYTES_PER_NODE + offset] > 0;
+        }
+
+        [INLINE(256)]
+        public static bool IsSet(in MemArrayAuto<byte> arr, in FogOfWarStaticComponent props, uint x, uint y, float2 size, byte offset) {
+            if (IsSet(in arr, in props, x, y, offset) == true) return true;
+            if (size.x == 0u && size.y == 0u) return false;
+            
+            var stepsX = WorldToFogMapValue(in props, size.x * 0.5f);
+            var stepsY = WorldToFogMapValue(in props, size.y * 0.5f);
+            {
+                var py = y * props.size.x;
+                for (int px = -stepsX; px < stepsX; ++px) {
+                    var of = (x + px);
+                    if (of < 0 || of >= props.size.x) continue;
+                    var idx = py + (uint)of;
+                    if (arr[idx * BYTES_PER_NODE + offset] > 0) return true;
+                }
+            }
+
+            {
+                for (int py = -stepsY; py < stepsY; ++py) {
+                    var of = ((y + py) * props.size.x);
+                    if (of < 0 || of >= props.size.y) continue;
+                    of += x;
+                    var idx = (uint)of;
+                    if (arr[idx * BYTES_PER_NODE + offset] > 0) return true;
+                }
+            }
+
+            return false;
         }
 
         [INLINE(256)]
