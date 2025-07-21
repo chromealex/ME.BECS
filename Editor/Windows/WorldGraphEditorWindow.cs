@@ -302,7 +302,7 @@ namespace ME.BECS.Editor {
         private VisualElement rootVisualElement;
         private VisualElement graphElement;
         private VisualElement linesContainer;
-        internal scg::Dictionary<uint, NodeDrawItem> cacheNodes = new scg::Dictionary<uint, NodeDrawItem>();
+        internal readonly scg::Dictionary<uint, NodeDrawItem> cacheNodes = new scg::Dictionary<uint, NodeDrawItem>();
         private float scale;
         private float zoom;
         private bool isMouseDown;
@@ -397,13 +397,15 @@ namespace ME.BECS.Editor {
                 //this.DrawComponents(v.node, v.components, center, offset);
                 this.DrawBox(v.node, v.visualElement, center, offset);
                 //this.DrawConnections(v.node, v.nodes, center, offset);
-                var arch = world.state.ptr->archetypes.list[in world.state.ptr->allocator, v.node.id];
-                v.visualElementEntitiesCount.text = arch.entitiesList.Count.ToString();
-                var wb = new StyleLength(v.node.radius);
-                v.visualElementEntitiesCount.style.borderBottomLeftRadius = wb;
-                v.visualElementEntitiesCount.style.borderBottomRightRadius = wb;
-                v.visualElementEntitiesCount.style.borderTopLeftRadius = wb;
-                v.visualElementEntitiesCount.style.borderTopRightRadius = wb;
+                if (v.node.id < world.state.ptr->archetypes.list.Count) {
+                    var arch = world.state.ptr->archetypes.list[in world.state.ptr->allocator, v.node.id];
+                    v.visualElementEntitiesCount.text = arch.entitiesList.Count.ToString();
+                    var wb = new StyleLength(v.node.radius);
+                    v.visualElementEntitiesCount.style.borderBottomLeftRadius = wb;
+                    v.visualElementEntitiesCount.style.borderBottomRightRadius = wb;
+                    v.visualElementEntitiesCount.style.borderTopLeftRadius = wb;
+                    v.visualElementEntitiesCount.style.borderTopRightRadius = wb;
+                }
 
             }
 

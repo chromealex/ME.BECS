@@ -230,15 +230,20 @@ namespace ME.BECS {
             
             var marker = new Unity.Profiling.ProfilerMarker("Prepare");
             marker.Begin();
-            
             var q = query.readQuery;
             var worldPos = tr.GetWorldMatrixPosition();
             var worldRot = tr.GetWorldMatrixRotation();
             var sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
             var ent = tr.ent;
+            marker.End();
             
             // clean up results
+            marker = new Unity.Profiling.ProfilerMarker("Prepare:Clear");
+            marker.Begin();
             if (query.readResults.results.IsCreated == true) query.results.results.Clear();
+            marker.End();
+            marker = new Unity.Profiling.ProfilerMarker("Prepare:Alloc");
+            marker.Begin();
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
             marker.End();
 
