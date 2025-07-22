@@ -10,6 +10,7 @@ namespace ME.BECS.Memory {
         public uint initialSize;
         public UnsafeList<MemPtr> freeBlocks;
         private Unity.Collections.Allocator allocatorLabel;
+        public LockSpinner lockSpinner;
 
     }
 

@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Unity.Jobs;
+using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
 
@@ -114,6 +116,19 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void StressTestReverse() {
+            var amount = 100_000;
+            var items = new MemPtr[amount];
+            for (int i = 0; i < amount; ++i) {
+                var ptr = this.allocator.Alloc(10u);
+                items[i] = ptr;
+            }
+            for (int i = amount - 1; i >= 0; --i) {
+                Assert.IsTrue(this.allocator.Free(items[i]), $"i = {i}");
+            }
+        }
+
+        [Test]
         public void Serialize() {
             var amount = 1000;
             for (int i = 0; i < amount; ++i) {
@@ -157,6 +172,52 @@ namespace ME.BECS.Tests {
             newAllocator.CopyFrom(this.allocator);
             this.TestProxy(new ME.BECS.Memory.AllocatorDebugProxy(this.allocator), new ME.BECS.Memory.AllocatorDebugProxy(newAllocator));
             newAllocator.Dispose();
+        }
+
+        public unsafe struct JobAlloc : Unity.Jobs.IJobParallelFor {
+
+            [Unity.Collections.NativeDisableParallelForRestrictionAttribute]
+            public safe_ptr<ME.BECS.Memory.Allocator> allocator;
+            [Unity.Collections.WriteOnlyAttribute]
+            public Unity.Collections.NativeArray<MemPtr> results;
+
+            public void Execute(int index) {
+                this.results[index] = this.allocator.ptr->Alloc(10u);
+            }
+
+        }
+
+        public unsafe struct JobFree : Unity.Jobs.IJobParallelFor {
+
+            [Unity.Collections.NativeDisableParallelForRestrictionAttribute]
+            public safe_ptr<ME.BECS.Memory.Allocator> allocator;
+            [Unity.Collections.ReadOnlyAttribute]
+            public Unity.Collections.NativeArray<MemPtr> results;
+
+            public void Execute(int index) {
+                this.allocator.ptr->Free(this.results[index]);
+            }
+
+        }
+
+        [Test]
+        public void ParallelAlloc() {
+            var amount = 1000;
+            var r = _make(this.allocator);
+            var results = new Unity.Collections.NativeArray<MemPtr>(amount, Unity.Collections.Allocator.TempJob);
+            new JobAlloc() {
+                allocator = r,
+                results = results,
+            }.Schedule(amount, 64).Complete();
+            this.allocator.CheckConsistency();
+            new JobFree() {
+                allocator = r,
+                results = results,
+            }.Schedule(amount, 64).Complete();
+            _free(r);
+            results.Dispose();
+            
+            this.allocator.CheckConsistency();
         }
 
     }

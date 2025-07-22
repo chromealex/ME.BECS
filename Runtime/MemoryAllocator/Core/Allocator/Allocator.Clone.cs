@@ -16,7 +16,7 @@ namespace ME.BECS.Memory {
             this.zonesCapacity = other.zonesCapacity;
             this.zonesCount = other.zonesCount;
 
-            var newZones = this.MakeZones(other.zonesCapacity, other.allocatorLabel);
+            var newZones = MakeZones(other.zonesCapacity, other.allocatorLabel);
             for (uint i = 0u; i < this.zonesCount; ++i) {
                 var zone = other.zones[i];
                 var newZone = this.CreateZoneRaw(zone.ptr->size);
@@ -36,7 +36,7 @@ namespace ME.BECS.Memory {
             this.zonesCapacity = other.zonesCapacity;
             this.zonesCount = other.zonesCount;
             
-            var newZones = this.MakeZones(other.zonesCapacity, other.allocatorLabel);
+            var newZones = MakeZones(other.zonesCapacity, other.allocatorLabel);
             for (uint i = 0u; i < this.zonesCount; ++i) {
                 var zone = other.zones[i];
                 newZones[i] = this.CreateZoneRaw(zone.ptr->size);

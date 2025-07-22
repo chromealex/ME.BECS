@@ -24,8 +24,12 @@ namespace ME.BECS.Memory {
 
         [INLINE(256)]
         public MemPtr Alloc(uint size, out safe_ptr ptr) {
+            this.lockSpinner.Lock();
             var memPtr = this.AllocFromFreeBlocks(size, out ptr);
-            if (memPtr.IsValid() == true) return memPtr;
+            if (memPtr.IsValid() == true) {
+                this.lockSpinner.Unlock();
+                return memPtr;
+            }
 
             // create new zone
             var zoneId = this.zonesCount++;
@@ -33,14 +37,21 @@ namespace ME.BECS.Memory {
                 _resizeArray(this.allocatorLabel, ref this.zones, ref this.zonesCapacity, this.zonesCapacity * 2u);
             }
             this.zones[zoneId] = this.CreateZone(size > this.initialSize ? size : this.initialSize, zoneId);
-            return this.AllocFromFreeBlocks(size, out ptr);
+            memPtr = this.AllocFromFreeBlocks(size, out ptr);
+            this.lockSpinner.Unlock();
+            return memPtr;
         }
 
         [INLINE(256)]
         public bool Free(MemPtr ptr) {
             if (ptr.IsValid() == false) return false;
+            
+            this.lockSpinner.Lock();
             var header = (BlockHeader*)(this.GetPtr(ptr) - sizeof(BlockHeader));
-            if (header->freeIndex != uint.MaxValue) return false;
+            if (header->freeIndex != uint.MaxValue) {
+                this.lockSpinner.Unlock();
+                return false;
+            }
 
             var root = this.zones[ptr.zoneId].ptr->data.ptr;
             
@@ -74,6 +85,8 @@ namespace ME.BECS.Memory {
                 header->freeIndex = (uint)this.freeBlocks.Length;
                 this.freeBlocks.Add(this.GetSafePtr((byte*)header, ptr.zoneId));
             }
+            
+            this.lockSpinner.Unlock();
             return true;
         }
 
@@ -100,7 +113,7 @@ namespace ME.BECS.Memory {
             _memclear((safe_ptr)this.GetPtr(ptr), size);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][NotThreadSafe]
         public void Dispose() {
             if (this.freeBlocks.IsCreated == true) this.freeBlocks.Dispose();
             for (uint i = 0u; i < this.zonesCount; ++i) {

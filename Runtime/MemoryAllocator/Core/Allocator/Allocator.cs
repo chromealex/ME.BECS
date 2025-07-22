@@ -49,18 +49,19 @@ namespace ME.BECS.Memory {
             this = default;
             this.allocatorLabel = allocator;
         }
-
+        
+        [NotThreadSafe]
         public void Initialize(uint zonesCapacity, uint initialSize, Unity.Collections.Allocator allocator) {
             this.allocatorLabel = allocator;
             this.zonesCount = 0u;
             this.zonesCapacity = zonesCapacity;
             this.initialSize = initialSize;
             this.freeBlocks = new UnsafeList<MemPtr>(100, allocator);
-            this.zones = this.MakeZones(zonesCapacity, allocator);
+            this.zones = MakeZones(zonesCapacity, allocator);
             this.AddZone(initialSize);
         }
 
-        private safe_ptr<safe_ptr<Zone>> MakeZones(uint zonesCapacity, Unity.Collections.Allocator allocator) {
+        private static safe_ptr<safe_ptr<Zone>> MakeZones(uint zonesCapacity, Unity.Collections.Allocator allocator) {
             return _make(zonesCapacity * (uint)sizeof(safe_ptr<Zone>), 8, allocator);
         }
 
@@ -134,18 +135,6 @@ namespace ME.BECS.Memory {
             var lastHeader = (BlockHeader*)this.GetPtr(last);
             lastHeader->freeIndex = header->freeIndex;
             this.freeBlocks.RemoveAtSwapBack((int)header->freeIndex);
-        }
-
-        public void CheckConsistency() {
-            for (uint i = 0u; i < this.zonesCount; ++i) {
-                var zone = this.zones[i].ptr;
-                var node = (Allocator.BlockHeader*)zone->data.ptr;
-                node->CheckConsistency(this, i);
-                while (node->next != uint.MaxValue) {
-                    node = (Allocator.BlockHeader*)(zone->data.ptr + node->next);
-                    node->CheckConsistency(this, i);
-                }
-            }
         }
 
     }

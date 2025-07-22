@@ -37,7 +37,7 @@ namespace ME.BECS.Memory {
                 reader.Read(ref this.freeBlocks.Ptr, (uint)freeBlocksLength);
             }
 
-            this.zones = this.MakeZones(this.zonesCapacity, this.allocatorLabel);
+            this.zones = MakeZones(this.zonesCapacity, this.allocatorLabel);
             for (uint i = 0u; i < this.zonesCount; ++i) {
                 var size = 0u;
                 reader.Read(ref size);
