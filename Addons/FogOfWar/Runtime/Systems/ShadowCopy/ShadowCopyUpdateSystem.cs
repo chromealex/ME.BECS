@@ -18,7 +18,7 @@ namespace ME.BECS.FogOfWar {
                 ent.DestroyHierarchy();
                 return false;
             }
-            
+
             // if object is still alive - update properties
             var origTr = shadowCopy.original.GetAspect<TransformAspect>();
             var pos = origTr.position;
@@ -56,7 +56,8 @@ namespace ME.BECS.FogOfWar {
             }
             
             // if visibility state has not changed or shadow copy was and currently is visible - do not change anything
-            if ((isVisibilityStateJustChanged == false || shouldBeVisible == true) && wasVisible == true) return;
+            if (isVisibilityStateJustChanged == false) return;
+            if (shouldBeVisible == true && wasVisible == true) return;
                 
             if (UpdateShadowCopy(in ent, ref shadowCopy) == true) {
                 ent.SetTag<IsViewRequested>(currentVisibilityState);
