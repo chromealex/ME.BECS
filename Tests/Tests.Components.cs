@@ -234,14 +234,17 @@ namespace ME.BECS.Tests {
                     });
                     list.Add(ent);
                 }
+                world.state.ptr->allocator.CheckConsistency();
                 for (int i = 0; i < amount; i += 2) {
                     list[i].Remove<TestComponent>();
                 }
+                world.state.ptr->allocator.CheckConsistency();
 
                 var sum = 0;
                 for (int i = 0; i < amount; ++i) {
                     sum += list[i].Read<TestComponent>().data;
                 }
+                world.state.ptr->allocator.CheckConsistency();
                 
                 Assert.AreEqual(amount / 2, sum);
             }
@@ -252,9 +255,11 @@ namespace ME.BECS.Tests {
         public void StressTest() {
 
             {
-                var amount = 100_000;
-                using var world = World.Create();
-                var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>(amount, Constants.ALLOCATOR_TEMP);
+                var amount = 100_000u;
+                var props = WorldProperties.Default;
+                props.stateProperties.entitiesCapacity = amount * 4;
+                using var world = World.Create(props);
+                var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)amount, Constants.ALLOCATOR_TEMP);
                 for (int j = 0; j < 2; ++j) {
                     for (int i = 0; i < amount; ++i) {
                         var ent = Ent.New();

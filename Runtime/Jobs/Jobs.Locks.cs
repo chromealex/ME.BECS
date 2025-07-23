@@ -343,12 +343,15 @@ namespace ME.BECS {
         public bool Lock() {
             #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            var marker = new Unity.Profiling.ProfilerMarker("Lock");
+            marker.Begin();
             #endif
             E.ADDR_4(ref this.value);
             while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
                 #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
+                    marker.End();
                     UnityEngine.Debug.LogError("Max lock iter");
                     return false;
                 }
@@ -356,6 +359,9 @@ namespace ME.BECS {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             System.Threading.Interlocked.MemoryBarrier();
+            #if EXCEPTIONS_INTERNAL
+            marker.End();
+            #endif
             return true;
         }
         
@@ -363,6 +369,8 @@ namespace ME.BECS {
         public bool Unlock() {
             #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
+            var marker = new Unity.Profiling.ProfilerMarker("Unlock");
+            marker.Begin();
             #endif
             System.Threading.Interlocked.MemoryBarrier();
             E.ADDR_4(ref this.value);
@@ -370,31 +378,49 @@ namespace ME.BECS {
                 #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {
+                    marker.End();
                     UnityEngine.Debug.LogError("Max unlock iter");
                     return false;
                 }
                 #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
+            #if EXCEPTIONS_INTERNAL
+            marker.End();
+            #endif
             return true;
         }
         
         [INLINE(256)]
         public void LockWhile() {
             E.ADDR_4(ref this.value);
+            #if EXCEPTIONS_INTERNAL
+            var marker = new Unity.Profiling.ProfilerMarker("LockWhile");
+            marker.Begin();
+            #endif
             while (0 != System.Threading.Interlocked.CompareExchange(ref this.value, 1, 0)) {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             System.Threading.Interlocked.MemoryBarrier();
+            #if EXCEPTIONS_INTERNAL
+            marker.End();
+            #endif
         }
         
         [INLINE(256)]
         public void UnlockWhile() {
             System.Threading.Interlocked.MemoryBarrier();
             E.ADDR_4(ref this.value);
+            #if EXCEPTIONS_INTERNAL
+            var marker = new Unity.Profiling.ProfilerMarker("UnlockWhile");
+            marker.Begin();
+            #endif
             while (1 != System.Threading.Interlocked.CompareExchange(ref this.value, 0, 1)) {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
+            #if EXCEPTIONS_INTERNAL
+            marker.End();
+            #endif
         }
         
     }

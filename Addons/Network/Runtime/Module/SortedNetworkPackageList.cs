@@ -199,7 +199,7 @@ namespace ME.BECS.Network {
             }
 
             var ptr = this.arr.arrPtr;
-            var size = sizeof(NetworkPackage);
+            var size = TSize<NetworkPackage>.size;
             allocator.MemMove(ptr, size * index, ptr, size * (index + 1), (this.Count - index - 1) * size);
 
             --this.Count;
@@ -254,7 +254,7 @@ namespace ME.BECS.Network {
             E.IS_CREATED(this);
             E.IS_CREATED(arr);
 
-            var size = sizeof(NetworkPackage);
+            var size = TSize<NetworkPackage>.size;
             allocator.MemMove(arr.arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
 
         }

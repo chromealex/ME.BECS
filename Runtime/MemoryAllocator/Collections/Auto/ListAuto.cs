@@ -322,7 +322,7 @@ namespace ME.BECS {
             }
             
             var ptr = this.arr.arrPtr;
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             allocator.MemMove(ptr, size * index, ptr, size * (index + 1), (this.Count - index - 1) * size);
             
             --this.Count;
@@ -366,7 +366,7 @@ namespace ME.BECS {
             var count = toIdx - fromIdx;
             if (count > 0u) {
                 this.EnsureCapacity(this.Count + count);
-                var size = sizeof(T);
+                var size = TSize<T>.size;
                 if (index < this.Count) {
                     state.ptr->allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
                 }

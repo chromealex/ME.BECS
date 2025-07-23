@@ -212,7 +212,7 @@ namespace ME.BECS {
                 state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
                 state.ptr->entities.seeds.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx;
-                state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, idx + 1u, 1);
+                state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
                 state.ptr->entities.readWriteSpinner.WriteEnd();
                 return ent;

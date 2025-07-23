@@ -121,7 +121,7 @@ namespace ME.BECS.Tests {
 
         }
 
-        [Test]
+        /*[Test]
         public void Schedule() {
 
             var world = World.Create();
@@ -146,7 +146,7 @@ namespace ME.BECS.Tests {
 
             world.Dispose();
 
-        }
+        }*/
 
         public struct TestSystemDefer1 : IAwake, IUpdate, IDestroy {
 

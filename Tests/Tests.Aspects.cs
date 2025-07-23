@@ -127,6 +127,38 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void CreateEntitiesWithAspect() {
+
+            var amount = 10000;
+            var world = World.Create();
+            ME.BECS.Tests.TestAspect.TestInitialize(in world);
+            for (int i = 0; i < amount; ++i) {
+                var ent = Ent.New(world);
+                var aspect = ent.GetOrCreateAspect<ME.BECS.Tests.TestAspect>();
+                aspect.data.data = 100200;
+                aspect.data2.data = 100200;
+                aspect.data3.data = 100200;
+                aspect.data4.data = 100200;
+                aspect.data5.data = 100200;
+            }
+            world.state.ptr->allocator.CheckConsistency();
+
+            for (uint i = 0u; i < amount; ++i) {
+                var ent = new Ent(i, world);
+                var aspect = ent.GetAspect<ME.BECS.Tests.TestAspect>();
+                Assert.IsTrue(aspect.data.data == 100200);
+                Assert.IsTrue(aspect.data2.data == 100200);
+                Assert.IsTrue(aspect.data3.data == 100200);
+                Assert.IsTrue(aspect.data4.data == 100200);
+                Assert.IsTrue(aspect.data5.data == 100200);
+            }
+
+            ME.BECS.Batches.Apply(world.state);
+            world.Dispose();
+            
+        }
+
+        [Test]
         public void UpdateThreaded() {
             
             var props = WorldProperties.Default;

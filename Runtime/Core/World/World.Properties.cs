@@ -49,7 +49,7 @@ namespace ME.BECS {
     [System.Serializable]
     public struct AllocatorProperties {
 
-        [UnityEngine.MinAttribute(MemoryAllocator.MIN_ZONE_SIZE)]
+        [UnityEngine.MinAttribute((float)MemoryAllocator.MIN_ZONE_SIZE)]
         [UnityEngine.Tooltip("Memory Allocator default size, but it will be resized on demand. Min size is <i>{MIN_ZONE_SIZE_IN_KB} KB</i>. This size is used when new allocator zone created, so be sure you have took right size (Default value for this field 1MB).")]
         public uint sizeInBytesCapacity;
 

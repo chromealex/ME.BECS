@@ -65,7 +65,7 @@ namespace ME.BECS.Editor {
             
             this.UpdateCounters(in allocator);
             
-            var delta = (int)allocator.zonesListCount - (int)this.prevZonesCount;
+            var delta = (int)allocator.zonesCount - (int)this.prevZonesCount;
             if (delta > 0) {
                 for (int i = 0; i < delta; ++i) {
                     this.zones.Add(this.AddZone(root));
@@ -77,39 +77,36 @@ namespace ME.BECS.Editor {
                 }
             }
 
-            for (int i = 0; i < allocator.zonesListCount; ++i) {
+            for (int i = 0; i < allocator.zonesCount; ++i) {
 
                 var visual = this.zones[i];
-                var data = allocator.zonesList[i];
-                if (data == null) continue;
+                var data = allocator.zones[i];
+                if (data.ptr == null) continue;
                 
-                this.UpdateZone(visual, root, data);
+                this.UpdateZone(visual, root, data.ptr);
                 
             }
             
-            this.prevZonesCount = allocator.zonesListCount;
+            this.prevZonesCount = allocator.zonesCount;
 
         }
 
-        private void UpdateZone(Zone zoneVisual, VisualElement root, MemoryAllocator.MemZone* zone) {
+        private void UpdateZone(Zone zoneVisual, VisualElement root, MemoryAllocator.Zone* zone) {
 
-            var list = new System.Collections.Generic.List<MemoryAllocator.MemBlock>();
-            
+            var list = new System.Collections.Generic.List<MemoryAllocator.BlockHeader>();
+
             var blocksCount = 0;
             var freeBlocksCount = 0;
-            for (var block = zone->blocklist.next.Ptr(zone);; block = block->next.Ptr(zone)) {
-
+            var node = (MemoryAllocator.BlockHeader*)zone->firstBlock.ptr;
+            do {
                 ++blocksCount;
-                if (block->state == MemoryAllocator.BLOCK_STATE_FREE) {
+                if (node->freeIndex != uint.MaxValue) {
                     ++freeBlocksCount;
                 }
-                
-                list.Add(*block);
-                    
-                if (block->next.Ptr(zone) == &zone->blocklist) break;
-
-            }
-
+                list.Add(*node);
+                node = (MemoryAllocator.BlockHeader*)(zone->root.ptr + node->next);
+            } while (node->next != uint.MaxValue);
+            
             var delta = list.Count - zoneVisual.blocks.Count;
             if (delta > 0) {
                 for (int i = 0; i < delta; ++i) {
@@ -137,14 +134,14 @@ namespace ME.BECS.Editor {
                 var block = list[i];
                 var blockVisual = zoneVisual.blocks[i];
                 var length = block.size / (float)zone->size * 100f;
-                if (block.state == MemoryAllocator.BLOCK_STATE_FREE) {
+                if (block.freeIndex != uint.MaxValue) {
                     blockVisual.root.AddToClassList("free");
                 } else {
                     blockVisual.root.RemoveFromClassList("free");
                 }
                 blockVisual.root.style.width = new StyleLength(new Length(length, LengthUnit.Percent));
                 {
-                    blockVisual.tooltip.text = $"Size: {EditorUtils.BytesToString(block.size)}\nState: {(block.state == MemoryAllocator.BLOCK_STATE_FREE ? "Free" : "Allocated")}";
+                    blockVisual.tooltip.text = $"Size: {EditorUtils.BytesToString(block.size)}\nState: {(block.freeIndex != uint.MaxValue ? "Free" : "Allocated")}";
                 }
             }
 
@@ -172,8 +169,9 @@ namespace ME.BECS.Editor {
 
         public void UpdateCounters(in MemoryAllocator allocator) {
             
-            this.reservedSize.text = EditorUtils.BytesToString(allocator.GetReservedSize());
-            this.usedSize.text = EditorUtils.BytesToString(allocator.GetUsedSize());
+            allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);
+            this.reservedSize.text = EditorUtils.BytesToString(reservedSize);
+            this.usedSize.text = EditorUtils.BytesToString(usedSize);
             this.componentsSize.text = EditorUtils.BytesToString((int)Components.GetReservedSizeInBytes(this.world.state));
             this.archetypesSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->archetypes.GetReservedSizeInBytes(this.world.state));
             this.batchesSize.text = EditorUtils.BytesToString((int)Batches.GetReservedSizeInBytes(this.world.state));

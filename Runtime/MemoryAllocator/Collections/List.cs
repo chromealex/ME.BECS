@@ -164,7 +164,7 @@ namespace ME.BECS {
         private bool EnsureCapacity(ref MemoryAllocator allocator, uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            return this.arr.Resize(ref allocator, capacity, 2, ClearOptions.UninitializedMemory);
+            return this.arr.Resize(ref allocator, capacity, 1, ClearOptions.UninitializedMemory);
             
         }
         
@@ -251,7 +251,7 @@ namespace ME.BECS {
             }
             
             var ptr = this.arr.arrPtr;
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             allocator.MemMove(ptr, size * index, ptr, size * (index + 1), (this.Count - index - 1) * size);
             
             --this.Count;
@@ -314,7 +314,7 @@ namespace ME.BECS {
             var count = toIdx - fromIdx;
             if (count > 0u) {
                 this.EnsureCapacity(ref allocator, this.Count + count);
-                var size = sizeof(T);
+                var size = TSize<T>.size;
                 if (index < this.Count) {
                     allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
                 }
@@ -341,7 +341,7 @@ namespace ME.BECS {
             var count = collection.Length;
             if (count > 0u) {
                 this.EnsureCapacity(ref allocator, this.Count + count);
-                var size = sizeof(T);
+                var size = TSize<T>.size;
                 if (index < this.Count) {
                     allocator.MemMove(this.arr.arrPtr, (index + count) * size, this.arr.arrPtr, index * size, (this.Count - index) * size);
                 }
@@ -393,7 +393,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             E.IS_CREATED(arr);
 
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             allocator.MemCopy(arr.arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
             
         }
@@ -403,7 +403,7 @@ namespace ME.BECS {
             
             E.IS_CREATED(this);
 
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             allocator.MemCopy(arrPtr, index * size, this.arr.arrPtr, srcOffset * size, count * size);
             
         }
@@ -414,7 +414,7 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             E.IS_CREATED(arr);
 
-            var size = sizeof(T);
+            var size = TSize<T>.size;
             allocator.MemCopy(this.arr.arrPtr, index * size, arr.arrPtr, 0, arr.Length * size);
 
         }

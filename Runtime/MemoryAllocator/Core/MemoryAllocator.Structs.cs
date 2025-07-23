@@ -42,7 +42,7 @@
         }
 
         [INLINE(256)]
-        public bool IsValid() => this.zoneId >= 0u && this.offset > 0u;
+        public bool IsValid() => this.offset > 0u;
 
         [INLINE(256)]
         public static bool operator ==(in MemPtr m1, in MemPtr m2) {
@@ -192,69 +192,6 @@
 
             allocator.Free(this.ptr);
             this = default;
-
-        }
-
-    }
-
-    public unsafe partial struct MemoryAllocator {
-        
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MemZone {
-
-            public int size;           // total bytes malloced, including header
-            public MemBlock blocklist; // start / end cap for linked list
-            public MemBlockOffset rover;
-
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MemBlock {
-            
-            public int size;    // including the header and possibly tiny fragments
-            public byte state;
-            public MemBlockOffset next;
-            public MemBlockOffset prev;
-            #if MEMORY_ALLOCATOR_BOUNDS_CHECK
-            public int id;      // should be ZONE_ID
-            #endif
-
-        };
-
-        public readonly struct MemBlockOffset {
-
-            public readonly long value;
-
-            [INLINE(256)]
-            public MemBlockOffset(void* block, MemZone* zone) {
-                this.value = (byte*)block - (byte*)zone;
-            }
-
-            [INLINE(256)]
-            public MemBlock* Ptr(void* zone) {
-                return (MemBlock*)((byte*)zone + this.value);
-            }
-
-            [INLINE(256)]
-            public static bool operator ==(MemBlockOffset a, MemBlockOffset b) => a.value == b.value;
-
-            [INLINE(256)]
-            public static bool operator !=(MemBlockOffset a, MemBlockOffset b) => a.value != b.value;
-
-            [INLINE(256)]
-            public bool Equals(MemBlockOffset other) {
-                return this.value == other.value;
-            }
-
-            [INLINE(256)]
-            public override bool Equals(object obj) {
-                return obj is MemBlockOffset other && this.Equals(other);
-            }
-
-            [INLINE(256)]
-            public override int GetHashCode() {
-                return this.value.GetHashCode();
-            }
 
         }
 

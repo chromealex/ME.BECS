@@ -151,9 +151,9 @@ namespace ME.BECS {
             
             using (new ProfilerMarker("Allocator").Auto()) {
                 world.state.ptr->allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);
-                ProfilerCountersDefinition.memoryAllocatorReserved.Data.Sample(reservedSize);
-                ProfilerCountersDefinition.memoryAllocatorUsed.Data.Sample(usedSize);
-                ProfilerCountersDefinition.memoryAllocatorFree.Data.Sample(freeSize);
+                ProfilerCountersDefinition.memoryAllocatorReserved.Data.Sample((int)reservedSize);
+                ProfilerCountersDefinition.memoryAllocatorUsed.Data.Sample((int)usedSize);
+                ProfilerCountersDefinition.memoryAllocatorFree.Data.Sample((int)freeSize);
             }
 
             marker.End();

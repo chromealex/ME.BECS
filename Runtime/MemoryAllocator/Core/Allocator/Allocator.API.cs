@@ -1,20 +1,35 @@
-namespace ME.BECS.Memory {
+namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(AllocatorDebugProxy))]
-    public unsafe partial struct Allocator {
+    public unsafe partial struct MemoryAllocator {
 
         [INLINE(256)]
-        public MemPtr GetSafePtr(byte* ptr, uint zoneId) {
-            return new MemPtr(zoneId, (uint)(ptr - this.zones[zoneId].ptr->data.ptr));
+        public readonly MemPtr GetSafePtr(byte* ptr, uint zoneId) {
+            return new MemPtr(zoneId, (uint)(ptr - this.zones[zoneId].ptr->root.ptr));
         }
 
         [INLINE(256)]
-        public byte* GetPtr(MemPtr ptr) {
-            return this.zones[ptr.zoneId].ptr->data.ptr + ptr.offset;
+        public readonly byte* GetPtr(in MemPtr ptr) {
+            return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset;
+        }
+
+        [INLINE(256)]
+        public readonly byte* GetPtr(in MemPtr ptr, uint offset) {
+            return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset + offset;
+        }
+
+        [INLINE(256)]
+        public readonly byte* GetPtr(in MemPtr ptr, ulong offset) {
+            return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset + offset;
+        }
+
+        [INLINE(256)]
+        public readonly byte* GetPtr(in MemPtr ptr, int offset) {
+            return this.zones[ptr.zoneId].ptr->root.ptr + ptr.offset + offset;
         }
 
         [INLINE(256)]
@@ -24,93 +39,219 @@ namespace ME.BECS.Memory {
 
         [INLINE(256)]
         public MemPtr Alloc(uint size, out safe_ptr ptr) {
-            this.lockSpinner.Lock();
+            size = Align(size);
             var memPtr = this.AllocFromFreeBlocks(size, out ptr);
             if (memPtr.IsValid() == true) {
-                this.lockSpinner.Unlock();
                 return memPtr;
             }
 
+            this.lockSpinner.Lock();
             // create new zone
             var zoneId = this.zonesCount++;
             if (zoneId >= this.zonesCapacity) {
                 _resizeArray(this.allocatorLabel, ref this.zones, ref this.zonesCapacity, this.zonesCapacity * 2u);
             }
-            this.zones[zoneId] = this.CreateZone(size > this.initialSize ? size : this.initialSize, zoneId);
-            memPtr = this.AllocFromFreeBlocks(size, out ptr);
+            this.zones[zoneId] = this.CreateZone(size, zoneId);
             this.lockSpinner.Unlock();
+            memPtr = this.AllocFromFreeBlocks(size, out ptr);
+            //this.CheckConsistency();
             return memPtr;
         }
 
         [INLINE(256)]
-        public bool Free(MemPtr ptr) {
+        public bool Free(in MemPtr ptr) {
             if (ptr.IsValid() == false) return false;
+            CheckPtr(in this, ptr);
             
-            this.lockSpinner.Lock();
             var header = (BlockHeader*)(this.GetPtr(ptr) - sizeof(BlockHeader));
             if (header->freeIndex != uint.MaxValue) {
-                this.lockSpinner.Unlock();
                 return false;
             }
 
-            var root = this.zones[ptr.zoneId].ptr->data.ptr;
+            var root = this.zones[ptr.zoneId].ptr->root.ptr;
             
             // coalescing with next
             if (header->next != uint.MaxValue) {
+                this.lockSpinner.Lock();
                 var headerNext = (BlockHeader*)this.GetPtr(new MemPtr(ptr.zoneId, header->next));
                 if (headerNext->freeIndex != uint.MaxValue) {
                     this.RemoveFromFree(headerNext);
                     header->size += (uint)sizeof(BlockHeader) + headerNext->size;
                     header->next = headerNext->next;
+                    if (header->next != uint.MaxValue) {
+                        var next = (BlockHeader*)(root + header->next);
+                        next->prev = ptr.offset - (uint)sizeof(BlockHeader);
+                    }
                 }
+                this.lockSpinner.Unlock();
             }
 
             // coalescing with prev
             if (header->prev != uint.MaxValue) {
+                this.lockSpinner.Lock();
                 var prevHeader = (BlockHeader*)this.GetPtr(new MemPtr(ptr.zoneId, header->prev));
                 if (prevHeader->freeIndex != uint.MaxValue) {
+                    this.RemoveFromFree(prevHeader);
                     prevHeader->size += header->size + (uint)sizeof(BlockHeader);
                     prevHeader->next = header->next;
                     if (header->next != uint.MaxValue) {
                         var next = (BlockHeader*)(root + header->next);
                         next->prev = header->prev;
                     }
-                    this.RemoveFromFree(prevHeader);
                     header = prevHeader;
                 }
+                this.lockSpinner.Unlock();
             }
 
+            this.lockSpinner.Lock();
             {
-                // return data to free blocks
-                header->freeIndex = (uint)this.freeBlocks.Length;
-                this.freeBlocks.Add(this.GetSafePtr((byte*)header, ptr.zoneId));
+                // add to free blocks
+                this.freeBlocks.Add(in this, header, ptr.zoneId);
             }
-            
             this.lockSpinner.Unlock();
+            
+            //this.CheckConsistency();
             return true;
         }
 
         [INLINE(256)]
         public MemPtr ReAlloc(MemPtr ptr, uint size) {
-            var memPtr = this.Alloc(size);
-            this.MemMove(ptr, memPtr, size);
-            this.Free(ptr);
-            return memPtr;
+            return this.ReAlloc(ptr, size, out _);
         }
 
         [INLINE(256)]
-        public void MemMove(MemPtr srcPtr, MemPtr dstPtr, uint size) {
+        public MemPtr ReAlloc(MemPtr memPtr, uint size, out safe_ptr ptr) {
+            CheckPtr(in this, memPtr);
+            if (memPtr.IsValid() == false) {
+                return this.Alloc(size, out ptr);
+            }
+            var header = (BlockHeader*)(this.GetPtr(memPtr) - sizeof(BlockHeader));
+            this.lockSpinner.Lock();
+            if (size <= header->size) {
+                // if current block has valid space size - use it without re-alloc
+                this.lockSpinner.Unlock();
+                ptr = (safe_ptr)this.GetPtr(memPtr);
+                return memPtr;
+            }
+
+            if (header->next != uint.MaxValue) {
+                // if next block is free, and sum is enough to fit the object
+                var root = this.zones[memPtr.zoneId].ptr->root.ptr;
+                var requiredSize = size - header->size;
+                var nextHeader = (BlockHeader*)(this.zones[memPtr.zoneId].ptr->root.ptr + header->next);
+                var blockSize = nextHeader->size + (uint)sizeof(BlockHeader);
+                if (nextHeader->freeIndex != uint.MaxValue && requiredSize <= blockSize) {
+                    // remove next block from free list
+                    this.RemoveFromFree(nextHeader);
+                    var tailSize = nextHeader->size > requiredSize + sizeof(BlockHeader) + sizeof(BlockHeader) ? nextHeader->size - requiredSize : 0u;
+                    if (tailSize == 0u) {
+                        // use full block
+                        // resize current header and eliminate the next block
+                        header->size += nextHeader->size + (uint)sizeof(BlockHeader); 
+                        header->next = nextHeader->next;
+                        if (nextHeader->next != uint.MaxValue) {
+                            var nextNextHeader = (BlockHeader*)(root + nextHeader->next);
+                            nextNextHeader->prev = nextHeader->prev;
+                        }
+                    } else {
+                        // split blocks
+                        var next = nextHeader->next;
+                        var nextSize = nextHeader->size - requiredSize;
+                        
+                        // move header
+                        var newHeader = (BlockHeader*)((byte*)header + (uint)sizeof(BlockHeader) + header->size + requiredSize);
+                        *newHeader = *nextHeader;
+                        newHeader->prev = memPtr.offset - (uint)sizeof(BlockHeader);
+                        newHeader->next = next;
+                        newHeader->size = nextSize;
+                        
+                        header->size += requiredSize;
+                        header->next += requiredSize;
+                        if (newHeader->next != uint.MaxValue) {
+                            var nextNextHeader = (BlockHeader*)(root + newHeader->next);
+                            nextNextHeader->prev += requiredSize;
+                        }
+                        
+                        // add to free blocks
+                        this.freeBlocks.Add(in this, newHeader, memPtr.zoneId);
+                    }
+
+                    this.lockSpinner.Unlock();
+                    ptr = (safe_ptr)this.GetPtr(memPtr);
+                    return memPtr;
+                }
+            }
+            this.lockSpinner.Unlock();
+            
+            var newMemPtr = this.Alloc(size, out ptr);
+            this.MemMove(newMemPtr, memPtr, header->size);
+            this.Free(memPtr);
+            return newMemPtr;
+        }
+
+        [INLINE(256)]
+        public readonly void MemMove(MemPtr dstPtr, MemPtr srcPtr, uint size) {
+            CheckPtr(in this, dstPtr);
+            CheckPtr(in this, srcPtr);
             _memmove((safe_ptr)this.GetPtr(srcPtr), (safe_ptr)this.GetPtr(dstPtr), size);
         }
 
         [INLINE(256)]
-        public void MemCpy(MemPtr srcPtr, MemPtr dstPtr, uint size) {
+        public readonly void MemMove(MemPtr dstPtr, uint dstIndex, MemPtr srcPtr, uint srcIndex, uint size) {
+            CheckPtr(in this, dstPtr);
+            CheckPtr(in this, srcPtr);
+            _memmove((safe_ptr)this.GetPtr(srcPtr, srcIndex), (safe_ptr)this.GetPtr(dstPtr, dstIndex), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemMove(MemPtr dstPtr, int dstIndex, MemPtr srcPtr, int srcIndex, int size) {
+            CheckPtr(in this, dstPtr);
+            CheckPtr(in this, srcPtr);
+            _memmove((safe_ptr)this.GetPtr(srcPtr, srcIndex), (safe_ptr)this.GetPtr(dstPtr, dstIndex), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemCopy(MemPtr dstPtr, MemPtr srcPtr, uint size) {
+            CheckPtr(in this, dstPtr);
+            CheckPtr(in this, srcPtr);
             _memcpy((safe_ptr)this.GetPtr(srcPtr), (safe_ptr)this.GetPtr(dstPtr), size);
         }
 
         [INLINE(256)]
-        public void MemClear(MemPtr ptr, uint size) {
+        public readonly void MemCopy(MemPtr dstPtr, uint dstIndex, MemPtr srcPtr, uint srcIndex, uint size) {
+            CheckPtr(in this, dstPtr);
+            CheckPtr(in this, srcPtr);
+            _memcpy((safe_ptr)this.GetPtr(srcPtr, srcIndex), (safe_ptr)this.GetPtr(dstPtr, dstIndex), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemClear(MemPtr ptr, uint size) {
+            CheckPtr(in this, ptr);
             _memclear((safe_ptr)this.GetPtr(ptr), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemClear(MemPtr ptr, uint offset, uint size) {
+            CheckPtr(in this, ptr);
+            _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemClear(MemPtr ptr, uint offset, int size) {
+            CheckPtr(in this, ptr);
+            _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemClear(MemPtr ptr, uint offset, long size) {
+            CheckPtr(in this, ptr);
+            _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
+        }
+
+        [INLINE(256)]
+        public readonly void MemClear(MemPtr ptr, ulong offset, uint size) {
+            CheckPtr(in this, ptr);
+            _memclear((safe_ptr)this.GetPtr(ptr, offset), size);
         }
 
         [INLINE(256)][NotThreadSafe]

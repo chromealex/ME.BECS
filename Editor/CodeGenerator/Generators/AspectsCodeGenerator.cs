@@ -19,7 +19,7 @@ namespace ME.BECS.Editor.Aspects {
                 if (aspect.IsValueType == false) continue;
                 if (aspect.IsVisible == false) continue;
 
-                if (this.IsValidTypeForAssembly(aspect) == false) continue;
+                if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
                 
                 var contentItem = new System.Collections.Generic.List<string>();
                 var type = aspect;
@@ -71,7 +71,7 @@ namespace ME.BECS.Editor.Aspects {
                 if (aspect.IsValueType == false) continue;
                 if (aspect.IsVisible == false) continue;
 
-                if (this.IsValidTypeForAssembly(aspect) == false) continue;
+                if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
 
                 var type = aspect;
                 var strType = EditorUtils.GetTypeName(type);

@@ -22,7 +22,7 @@ namespace ME.BECS.Tests {
         public void SerializeWorld() {
 
             byte[] bytes;
-            var usedSize = 0;
+            var usedSize = 0u;
             uint entId = 0;
             {
                 var world = World.Create();
@@ -50,7 +50,7 @@ namespace ME.BECS.Tests {
         public void SerializeWorldCreateEntById() {
 
             byte[] bytes;
-            var usedSize = 0;
+            var usedSize = 0u;
             uint entId = 0;
             {
                 var world = World.Create();

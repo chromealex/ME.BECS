@@ -531,6 +531,10 @@ namespace ME.BECS.Editor {
         }
 
         public static string BytesToString(int bytes) {
+            return BytesToString((uint)bytes);
+        }
+
+        public static string BytesToString(uint bytes) {
 
             var postfix = "B";
             var value = (float)bytes;
@@ -547,7 +551,7 @@ namespace ME.BECS.Editor {
 
             }
             
-            return value.ToString("0.#") + " " + postfix;
+            return $"{value:0.#} {postfix}";
 
         }
 

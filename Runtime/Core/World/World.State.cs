@@ -59,6 +59,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static safe_ptr<State> Create(byte[] bytes) {
             State st = default;
+            st.allocator = new MemoryAllocator(Constants.ALLOCATOR_PERSISTENT);
             var state = st.Deserialize(bytes);
             return _make(state);
         }
