@@ -139,7 +139,7 @@ namespace ME.BECS.Editor {
                 } else {
                     blockVisual.root.RemoveFromClassList("free");
                 }
-                blockVisual.root.style.width = new StyleLength(new Length(length, LengthUnit.Percent));
+                blockVisual.root.style.width = new StyleLength(new Length(length * 10f, LengthUnit.Percent));
                 {
                     blockVisual.tooltip.text = $"Size: {EditorUtils.BytesToString(block.size)}\nState: {(block.freeIndex != uint.MaxValue ? "Free" : "Allocated")}";
                 }

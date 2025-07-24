@@ -264,7 +264,7 @@ GridBackground {
     font-size: 20px;
     white-space: nowrap;
     border-radius: 10px;
-    color: deepskyblue;
+    color: var(--highlight-text-color);
     padding-left: 8px;
     padding-right: 8px;
     background-color: black;
@@ -304,7 +304,7 @@ GridBackground {
 }
 
 .node .node-entities {
-    color: deepskyblue;
+    color: var(--highlight-text-color);
     padding: 0px;
     margin: 0px;
     border-radius: 50px;

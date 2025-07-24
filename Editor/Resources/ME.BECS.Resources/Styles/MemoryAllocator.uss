@@ -23,10 +23,11 @@
     background-color: #652a2a;
     border-width: 1px;
     border-color: #8f4c4c;
-    min-width: 2px;
+    min-width: 4px;
     border-right-width: 0px;
     height: 20px;
-    flex-grow: 1;
+    flex-grow: 0;
+    flex-shrink: 0;
     opacity: 1;
 }
 
@@ -64,6 +65,7 @@
 .zone > ListView > Foldout > #unity-content {
     padding: 8px;
     margin-left: 0px;
+    background-color: var(--main-background-color);
 }
 
 .zone > ListView > Foldout > #unity-content {
@@ -99,7 +101,7 @@
     font-size: 20px;
     white-space: nowrap;
     border-radius: 10px;
-    color: deepskyblue;
+    color: var(--highlight-text-color);
     padding-left: 8px;
     padding-right: 8px;
     background-color: black;
