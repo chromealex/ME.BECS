@@ -534,8 +534,11 @@ namespace ME.BECS.Network {
                     }
                     
                 }
-                
-                if (this.resetState.ptr != null) _free(this.resetState);
+
+                if (this.resetState.ptr != null) {
+                    this.resetState.ptr->Dispose();
+                    _free(this.resetState);
+                }
 
                 this = default;
 
@@ -777,6 +780,7 @@ namespace ME.BECS.Network {
                 this.statesStorage.Dispose();
                 this.methodsStorage.Dispose();
                 this.networkWorld.Dispose();
+                this.startFrameState.ptr->Dispose();
                 _free(ref this.startFrameState);
             }
             

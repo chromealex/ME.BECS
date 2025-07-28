@@ -52,7 +52,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static explicit operator safe_ptr(void* ptr) {
-            return new safe_ptr(ptr, 0u);
+            return new safe_ptr(ptr);
         }
 
         [INLINE(256)]
@@ -329,7 +329,7 @@ namespace ME.BECS {
 
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
-            LeakDetector.Track(sptr);
+            LeakDetector.Track(sptr, ALLOCATOR);
             return sptr;
 
         }
@@ -380,7 +380,7 @@ namespace ME.BECS {
         public static safe_ptr _make(uint size) {
 
             var ptr = (byte*)Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<byte>.alignInt);
-            LeakDetector.Track(ptr);
+            LeakDetector.Track(ptr, ALLOCATOR);
             return new safe_ptr<byte>(ptr, size);
 
         }
@@ -391,7 +391,7 @@ namespace ME.BECS {
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             *(T*)ptr = obj;
             var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
-            LeakDetector.Track(sptr);
+            LeakDetector.Track(sptr, ALLOCATOR);
             return sptr;
 
         }
@@ -401,7 +401,7 @@ namespace ME.BECS {
             
             var size = TSize<T>.size * length;
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
-            LeakDetector.Track(ptr);
+            LeakDetector.Track(ptr, ALLOCATOR);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             var tPtr = (T*)ptr;
             *tPtr = firstElement;
@@ -416,7 +416,7 @@ namespace ME.BECS {
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, (int)size, TAlign<T>.alignInt);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             var sptr = new safe_ptr<T>((T*)ptr, size);
-            LeakDetector.Track(sptr);
+            LeakDetector.Track(sptr, ALLOCATOR);
             return sptr;
 
         }
@@ -428,7 +428,7 @@ namespace ME.BECS {
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, TAlign<T>.alignInt);
             if (clearMemory == true) UnsafeUtility.MemClear(ptr, size);
             var sptr = new safe_ptr<T>((T*)ptr, size);
-            LeakDetector.Track(sptr);
+            LeakDetector.Track(sptr, allocator);
             return sptr;
 
         }
@@ -439,7 +439,7 @@ namespace ME.BECS {
             var ptr = Unity.Collections.AllocatorManager.Allocate(ALLOCATOR, TSize<T>.sizeInt, TAlign<T>.alignInt);
             *(T*)ptr = obj;
             var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
-            LeakDetector.Track(sptr);
+            LeakDetector.Track(sptr, ALLOCATOR);
             return sptr;
 
         }
@@ -450,7 +450,7 @@ namespace ME.BECS {
             var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, TSize<T>.sizeInt, TAlign<T>.alignInt);
             *(T*)ptr = obj;
             var sptr = new safe_ptr<T>((T*)ptr, TSize<T>.size);
-            LeakDetector.Track(sptr);
+            LeakDetector.Track(sptr, allocator);
             return sptr;
 
         }
@@ -564,7 +564,6 @@ namespace ME.BECS {
         public static void _free(safe_ptr obj) {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
-            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
 
@@ -574,7 +573,6 @@ namespace ME.BECS {
         public static void _free<T>(safe_ptr<T> obj) where T : unmanaged {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
-            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
 
@@ -584,7 +582,6 @@ namespace ME.BECS {
         public static void _free<T>(ref safe_ptr<T> obj) where T : unmanaged {
 
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
-            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
             obj = default;
@@ -595,7 +592,6 @@ namespace ME.BECS {
         public static void _free(ref safe_ptr obj) {
             
             if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
-            if (WorldsDomainAllocator.allocatorDomainValid == false) return;
             LeakDetector.Free(obj);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
             obj = default;
@@ -618,13 +614,13 @@ namespace ME.BECS {
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, size, align);
                 var sptr = new safe_ptr(ptr, size);
-                LeakDetector.Track(sptr);
+                LeakDetector.Track(sptr, allocator);
                 return sptr;
             }
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
                 var sptr = new safe_ptr(ptr, size);
-                LeakDetector.Track(sptr);
+                LeakDetector.Track(sptr, allocator);
                 return sptr;
             }
             
@@ -636,13 +632,13 @@ namespace ME.BECS {
             if (allocator >= Unity.Collections.Allocator.FirstUserIndex) {
                 var ptr = Unity.Collections.AllocatorManager.Allocate(allocator, (int)size, align);
                 var sptr = new safe_ptr(ptr, size);
-                LeakDetector.Track(sptr);
+                LeakDetector.Track(sptr, allocator);
                 return sptr;
             }
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
                 var sptr = new safe_ptr(ptr, size);
-                LeakDetector.Track(sptr);
+                LeakDetector.Track(sptr, allocator);
                 return sptr;
             }
 

@@ -42,6 +42,7 @@ namespace ME.BECS {
             size = Align(size);
             var memPtr = this.AllocFromFreeBlocks(size, out ptr);
             if (memPtr.IsValid() == true) {
+                LeakDetector.Track(ptr);
                 return memPtr;
             }
 
@@ -54,6 +55,7 @@ namespace ME.BECS {
             this.zones[zoneId] = this.CreateZone(size, zoneId);
             this.lockSpinner.Unlock();
             memPtr = this.AllocFromFreeBlocks(size, out ptr);
+            LeakDetector.Track(ptr);
             //this.CheckConsistency();
             return memPtr;
         }
@@ -68,6 +70,8 @@ namespace ME.BECS {
                 return false;
             }
 
+            LeakDetector.Free(this.GetPtr(ptr));
+            
             var root = this.zones[ptr.zoneId].ptr->root.ptr;
             
             // coalescing with next
@@ -264,6 +268,7 @@ namespace ME.BECS {
                 _free(zone);
             }
             if (this.zones.ptr != null) _free(this.zones);
+            this = default;
         }
 
     }

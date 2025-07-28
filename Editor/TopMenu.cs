@@ -35,13 +35,27 @@ namespace ME.BECS.Editor {
             
         }
         
-        [MenuItem("ME.BECS/Internal/Print Allocations", priority = 0)]
-        public static void PrintAllocations() {
+        [MenuItem("ME.BECS/Internal/Print Allocations (All)", priority = 0)]
+        public static void PrintAllocationsAll() {
             
-            LeakDetector.PrintAllocated();
+            LeakDetector.PrintAllocated(Allocator.None);
             
         }
-        
+
+        [MenuItem("ME.BECS/Internal/Print Allocations (Persistent)", priority = 0)]
+        public static void PrintAllocationsPersistent() {
+            
+            LeakDetector.PrintAllocated(Allocator.Persistent);
+            
+        }
+
+        [MenuItem("ME.BECS/Internal/Print Allocations (Domain)", priority = 0)]
+        public static void PrintAllocationsDomain() {
+            
+            LeakDetector.PrintAllocated(Allocator.Domain);
+            
+        }
+
         [MenuItem("ME.BECS/Internal/Generate Fp", priority = 0)]
         public static void GenerateFp() {
             

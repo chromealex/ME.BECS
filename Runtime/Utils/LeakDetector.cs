@@ -13,23 +13,29 @@ namespace ME.BECS {
 
             public System.IntPtr ptr;
             public System.IntPtr hiPtr;
+            public readonly Unity.Collections.Allocator allocator;
             public Unity.Collections.FixedString4096Bytes stackTrace;
 
-            public Item(void* ptr, void* hiPtr, bool withStackTrace = true) {
+            public Item(void* ptr, void* hiPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true) {
                 this = default;
                 this.ptr = (System.IntPtr)ptr;
                 this.hiPtr = (System.IntPtr)hiPtr;
-                if (withStackTrace == true) this.AddStackTrace();
+                this.allocator = allocator;
+                if (withStackTrace == true && this.IsTrackableAllocator() == true) this.AddStackTrace();
+            }
+
+            public bool IsTrackableAllocator() {
+                return (this.allocator == Unity.Collections.Allocator.Domain || this.allocator == Unity.Collections.Allocator.Persistent || this.allocator == Unity.Collections.Allocator.TempJob || this.allocator >= Unity.Collections.Allocator.FirstUserIndex);
             }
 
             [BURST_DISCARD]
             public void AddStackTrace() {
                 var str = UnityEngine.StackTraceUtility.ExtractStackTrace();
-                if (str.Length < 1000) {
+                if (str.Length < 2000) {
                     this.stackTrace = str;
                     return;
                 }
-                this.stackTrace = str.Substring(0, 1000);
+                this.stackTrace = str.Substring(0, 2000);
             }
 
             public bool Equals(Item other) {
@@ -64,7 +70,19 @@ namespace ME.BECS {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, Unity.Collections.Allocator.FirstUserIndex));
+            LeakDetectorData.spinner.Data.Unlock();
+
+        }
+
+        [Conditional(COND.LEAK_DETECTION)]
+        [HIDE_CALLSTACK]
+        [INLINE(256)]
+        public static void Track(void* ptr, Unity.Collections.Allocator allocator) {
+
+            LeakDetectorData.spinner.Data.Lock();
+            LeakDetectorData.Validate();
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, allocator));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -76,7 +94,19 @@ namespace ME.BECS {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.LowBound, ptr.HiBound));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, Unity.Collections.Allocator.FirstUserIndex));
+            LeakDetectorData.spinner.Data.Unlock();
+
+        }
+
+        [Conditional(COND.LEAK_DETECTION)]
+        [HIDE_CALLSTACK]
+        [INLINE(256)]
+        public static void Track(safe_ptr ptr, Unity.Collections.Allocator allocator) {
+
+            LeakDetectorData.spinner.Data.Lock();
+            LeakDetectorData.Validate();
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, allocator));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -85,7 +115,7 @@ namespace ME.BECS {
         [HIDE_CALLSTACK]
         [INLINE(256)]
         public static void Free(void* ptr) {
-            
+
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
             var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr, ptr));
@@ -103,23 +133,25 @@ namespace ME.BECS {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.LowBound, ptr.HiBound));
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
-                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr.LowBound).ToInt64()} which has been already freed or was never instantiated.");
+                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
             }
             
         }
 
         [Conditional(COND.LEAK_DETECTION)]
-        public static void PrintAllocated() {
+        public static void PrintAllocated(Unity.Collections.Allocator allocator) {
             
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
             foreach (var item in LeakDetectorData.tracked.Data) {
+                if (item.IsTrackableAllocator() == false) continue;
+                if (allocator != Unity.Collections.Allocator.None && allocator != item.allocator) continue; 
                 var str = item.stackTrace.ToString();
                 if (str.Contains("UnsafeEntityConfig") == true || str.Contains("ME.BECS.Gen") == true) continue;
-                UnityEngine.Debug.Log($"{item.ptr}\n{str}");
+                UnityEngine.Debug.Log($"{item.ptr} - {item.allocator}\n{str}");
             }
             LeakDetectorData.spinner.Data.Unlock();
             
