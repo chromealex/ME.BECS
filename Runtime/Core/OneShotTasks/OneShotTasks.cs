@@ -8,6 +8,7 @@ namespace ME.BECS {
     using Unity.Jobs;
     using System.Runtime.InteropServices;
     using static Cuts;
+    using Unity.Jobs.LowLevel.Unsafe;
     
     public unsafe partial struct OneShotTasks {
 
@@ -57,7 +58,7 @@ namespace ME.BECS {
         public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
-            var threadIndex = JobUtils.ThreadIndex;
+            var threadIndex = (uint)JobsUtility.ThreadIndex;
             Journal.SetOneShotComponent(in ent, typeId, type);
             ref var threadItem = ref state.ptr->oneShotTasks.threadItems[state, threadIndex];
             var collection = _addressT(ref threadItem.currentTick);

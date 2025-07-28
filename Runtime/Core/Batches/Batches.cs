@@ -9,6 +9,7 @@ namespace ME.BECS {
     using static Cuts;
     using Jobs;
     using System.Runtime.InteropServices;
+    using Unity.Jobs.LowLevel.Unsafe;
 
     public static class BatchesExt {
 
@@ -391,7 +392,7 @@ namespace ME.BECS {
             if (ent.IsAlive() == false) return;
             
             state.ptr->batches.lockReadWrite.ReadBegin(state);
-            ref var threadItem = ref state.ptr->batches.items[state, (uint)JobUtils.ThreadIndex];
+            ref var threadItem = ref state.ptr->batches.items[state, (uint)JobsUtility.ThreadIndex];
             threadItem.lockSpinner.Lock();
             {
                 ref var item = ref state.ptr->batches.arr[state, ent.id];
@@ -421,7 +422,7 @@ namespace ME.BECS {
             if (ent.IsAlive() == false) return;
             
             state.ptr->batches.lockReadWrite.ReadBegin(state);
-            ref var threadItem = ref state.ptr->batches.items[state, (uint)JobUtils.ThreadIndex];
+            ref var threadItem = ref state.ptr->batches.items[state, (uint)JobsUtility.ThreadIndex];
             threadItem.lockSpinner.Lock();
             {
                 ref var item = ref state.ptr->batches.arr[state, ent.id];

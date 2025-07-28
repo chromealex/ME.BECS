@@ -172,6 +172,32 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
             
+            var stack = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>(8, Constants.ALLOCATOR_TEMP);
+
+            stack.Add(ent);
+            var current = parent;
+            while (current.IsWorldMatrixTickCalculated == false) {
+                if (ent.ent.worldId != current.ent.worldId) {
+                    break;
+                }
+                stack.Add(current);
+                if (current.parent.IsAlive() == false) break;
+                current = current.parent.GetAspect<TransformAspect>();
+            }
+
+            for (int i = stack.Length - 1; i >= 0; --i) {
+                var p = stack[i];
+                p.LockWorldMatrix();
+                if (p.IsWorldMatrixTickCalculated == false) {
+                    if (p.parent.IsAlive() == true) {
+                        CalculateMatrix(p.parent.GetAspect<TransformAspect>(), in p);
+                    }
+                    p.IsWorldMatrixTickCalculated = true;
+                }
+                p.UnlockWorldMatrix();
+            }
+
+            /*
             if (parent.IsWorldMatrixTickCalculated == false) {
                 // Calculate parent matrix
                 if (ent.ent.worldId != parent.ent.worldId) return;
@@ -185,7 +211,7 @@ namespace ME.BECS.Transforms {
                     ent.IsWorldMatrixTickCalculated = true;
                 }
                 ent.UnlockWorldMatrix();
-            }
+            }*/
 
         }
 

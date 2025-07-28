@@ -55,14 +55,14 @@ namespace ME.BECS {
                 Unity.Burst.Intrinsics.Common.Pause();
             }
             // acquire read op
-            ++*(int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
+            ++*(int*)(this.value + CACHE_LINE_SIZE * (uint)JobsUtility.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
         public void ReadEnd() {
             E.IS_CREATED(this);
             // release read op
-            --*(int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
+            --*(int*)(this.value + CACHE_LINE_SIZE * (uint)JobsUtility.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
@@ -188,7 +188,7 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             ++this.ptr[CACHE_LINE_SIZE * JobUtils.ThreadIndex];
             #else
-            ++*(int*)(state.ptr->allocator.GetUnsafePtr(this.value) + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
+            ++*(int*)(state.ptr->allocator.GetUnsafePtr(this.value) + CACHE_LINE_SIZE * (uint)JobsUtility.ThreadIndex).ptr;
             #endif
         }
 
@@ -199,7 +199,7 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             --this.ptr[CACHE_LINE_SIZE * JobUtils.ThreadIndex];
             #else
-            --*(int*)(state.ptr->allocator.GetUnsafePtr(this.value) + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
+            --*(int*)(state.ptr->allocator.GetUnsafePtr(this.value) + CACHE_LINE_SIZE * (uint)JobsUtility.ThreadIndex).ptr;
             #endif
         }
 

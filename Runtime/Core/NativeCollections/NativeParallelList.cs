@@ -14,6 +14,7 @@ namespace ME.BECS.NativeCollections {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs;
     using static Cuts;
+    using Unity.Jobs.LowLevel.Unsafe;
 
     public unsafe struct NativeParallelList<T> : IIsCreated where T : unmanaged {
 
@@ -85,7 +86,7 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Add(in T item) {
 
-            ref var arr = ref *((UnsafeList<T>*)(this.lists + JobUtils.ThreadIndex * CACHE_LINE_SIZE).ptr);
+            ref var arr = ref *((UnsafeList<T>*)(this.lists + (uint)JobsUtility.ThreadIndex * CACHE_LINE_SIZE).ptr);
             arr.Add(item);
 
         }
