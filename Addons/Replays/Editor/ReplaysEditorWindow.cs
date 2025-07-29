@@ -279,8 +279,8 @@ namespace ME.BECS.Editor {
                 this.timelineRealTick.style.left = new StyleLength(new Length(this.GetPositionOnTimeline(realTick), LengthUnit.Pixel));
                 this.timelineBuffer.style.width = new StyleLength(new Length((float)(ticksAmount / (double)size) * 100f, LengthUnit.Percent));
                 
-                this.timelineMin.text = (this.startTick - resetTick).ToString();
-                this.timelineMax.text = (this.targetTick - resetTick).ToString();
+                this.timelineMin.text = $"{(this.startTick - resetTick)} ({this.GetTime(this.startTick - resetTick)})";
+                this.timelineMax.text = $"{(this.targetTick - resetTick)} ({this.GetTime(this.targetTick - resetTick)})";
                 
                 this.timelineGrid.spacing = this.timeline.localBound.width / size;
                 this.timelineGrid.spacingY = this.timeline.localBound.height;
@@ -435,6 +435,11 @@ namespace ME.BECS.Editor {
                 
             }
             
+        }
+
+        private string GetTime(ulong tick) {
+            var timeInMs = this.selectedNetworkModule.properties.tickTime * tick;
+            return System.TimeSpan.FromMilliseconds(timeInMs).ToString(@"hh\:mm\:ss");
         }
 
         private void NotifyReplayMode() {

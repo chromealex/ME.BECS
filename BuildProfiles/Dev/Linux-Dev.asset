@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 15003, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: Linux-Dev
+  m_EditorClassIdentifier: 
+  m_AssetVersion: 1
+  m_BuildTarget: 24
+  m_Subtarget: 2
+  m_PlatformId: cb423bfea44b4d658edb8bc5d91a3024
+  m_PlatformBuildProfile:
+    rid: -2
+  m_OverrideGlobalSceneList: 0
+  m_Scenes: []
+  m_ScriptingDefines:
+  - FIXED_POINT
+  - EXCEPTIONS
+  - EXCEPTIONS_ASPECTS
+  - EXCEPTIONS_CONTEXT
+  - EXCEPTIONS_THREAD_SAFE
+  - EXCEPTIONS_COLLECTIONS
+  - EXCEPTIONS_COMMAND_BUFFER
+  - EXCEPTIONS_ENTITIES
+  - EXCEPTIONS_QUERY_BUILDER
+  - EXCEPTIONS_INTERNAL
+  m_PlayerSettingsYaml:
+    m_Settings: []
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
