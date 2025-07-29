@@ -25,12 +25,12 @@ namespace ME.BECS {
 
             public bool CheckConsistency(in MemoryAllocator allocator, uint nodeId, uint zoneId, bool checkMove = true) {
                 var zone = allocator.zones[zoneId];
-                NUnit.Framework.Assert.IsTrue(this.freeIndex == uint.MaxValue || allocator.freeBlocks.GetPtr(in this).zoneId == zoneId);
+                UnityEngine.Assertions.Assert.IsTrue(this.freeIndex == uint.MaxValue || allocator.freeBlocks.GetPtr(in this).zoneId == zoneId);
                 if (checkMove == true) {
-                    if (this.prev != uint.MaxValue) NUnit.Framework.Assert.IsTrue(((BlockHeader*)(zone.ptr->root.ptr + this.prev))->next == nodeId);
-                    if (this.next != uint.MaxValue) NUnit.Framework.Assert.IsTrue(((BlockHeader*)(zone.ptr->root.ptr + this.next))->prev == nodeId);
-                    NUnit.Framework.Assert.IsTrue(this.prev == uint.MaxValue || ((BlockHeader*)(zone.ptr->root.ptr + this.prev))->CheckConsistency(in allocator, 0u, zoneId, false));
-                    NUnit.Framework.Assert.IsTrue(this.next == uint.MaxValue || ((BlockHeader*)(zone.ptr->root.ptr + this.next))->CheckConsistency(in allocator, 0u, zoneId, false));
+                    if (this.prev != uint.MaxValue) UnityEngine.Assertions.Assert.IsTrue(((BlockHeader*)(zone.ptr->root.ptr + this.prev))->next == nodeId);
+                    if (this.next != uint.MaxValue) UnityEngine.Assertions.Assert.IsTrue(((BlockHeader*)(zone.ptr->root.ptr + this.next))->prev == nodeId);
+                    UnityEngine.Assertions.Assert.IsTrue(this.prev == uint.MaxValue || ((BlockHeader*)(zone.ptr->root.ptr + this.prev))->CheckConsistency(in allocator, 0u, zoneId, false));
+                    UnityEngine.Assertions.Assert.IsTrue(this.next == uint.MaxValue || ((BlockHeader*)(zone.ptr->root.ptr + this.next))->CheckConsistency(in allocator, 0u, zoneId, false));
                 }
                 return true;
             }

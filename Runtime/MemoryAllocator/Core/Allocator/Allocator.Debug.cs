@@ -156,11 +156,11 @@ namespace ME.BECS {
             var memPtrOffset = ptr.offset - sizeof(BlockHeader);
             if (header->next != uint.MaxValue) {
                 var next = (BlockHeader*)(root + header->next);
-                NUnit.Framework.Assert.IsTrue(next->prev == memPtrOffset);
+                UnityEngine.Assertions.Assert.IsTrue(next->prev == memPtrOffset);
             }
             if (header->prev != uint.MaxValue) {
                 var next = (BlockHeader*)(root + header->prev);
-                NUnit.Framework.Assert.IsTrue(next->next == memPtrOffset);
+                UnityEngine.Assertions.Assert.IsTrue(next->next == memPtrOffset);
             }
         }
 
