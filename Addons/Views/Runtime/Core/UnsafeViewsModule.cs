@@ -281,6 +281,7 @@ namespace ME.BECS.Views {
         public UnsafeList<byte> dirty;
         public UnsafeList<EntityData> renderingOnSceneEnts;
         public List<SceneInstanceInfo> renderingOnScene;
+        public List<System.Runtime.InteropServices.GCHandle> gcHandles;
         
         public RenderingSparseList renderingOnSceneApplyState;
         public RenderingSparseList renderingOnSceneUpdate;
@@ -314,6 +315,7 @@ namespace ME.BECS.Views {
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
                 renderingOnScene = new List<SceneInstanceInfo>(ref allocator, properties.renderingObjectsCapacity),
+                gcHandles = new List<System.Runtime.InteropServices.GCHandle>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyState = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
@@ -344,6 +346,11 @@ namespace ME.BECS.Views {
             while (e.MoveNext() == true) {
                 var kv = e.Current;
                 kv.value.Dispose();
+            }
+
+            for (uint i = 0u; i < this.gcHandles.Count; ++i) {
+                var handle = this.gcHandles[state, i];
+                if (handle.IsAllocated == true) handle.Free();
             }
             
             _free(ref this.beginFrameState);

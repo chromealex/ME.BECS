@@ -619,8 +619,10 @@ namespace ME.BECS.Views {
                 viewsModuleData.ptr->instanceIdToPrefabId.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, prefabId);
                 ViewsTypeInfo.types.TryGetValue(prefab.GetType(), out var typeInfo);
                 typeInfo.cullingType = prefab.cullingType;
+                var handle = new HeapReference<EntityView>(prefab).handle;
+                viewsModuleData.ptr->gcHandles.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, handle);
                 var info = new SourceRegistry.Info() {
-                    prefabPtr = GCHandle.ToIntPtr(new HeapReference<EntityView>(prefab).handle),
+                    prefabPtr = GCHandle.ToIntPtr(handle),
                     prefabId = prefabId,
                     typeInfo = typeInfo,
                     sceneSource = sceneSource,
@@ -678,6 +680,7 @@ namespace ME.BECS.Views {
                     isLoaded = false;
                 }
 
+                viewsModuleData.ptr->gcHandles.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, handle);
                 var info = new SourceRegistry.Info() {
                     prefabPtr = GCHandle.ToIntPtr(handle),
                     prefabId = prefabId,
