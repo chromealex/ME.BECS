@@ -416,6 +416,7 @@ namespace ME.BECS.Editor {
             var aspectItem = aspects.FirstOrDefault(x => x.type == type);
             if (aspectItem.type == null) {
                 LoadComponentGroups();
+                aspects = default;
                 aspects = GetAspects();
             }
             return aspects.FirstOrDefault(x => x.type == type);
