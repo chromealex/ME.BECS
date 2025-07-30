@@ -122,11 +122,8 @@ namespace ME.BECS {
             // look up through free blocks
             var memPtr = this.freeBlocks.Pop(in this, size);
             if (memPtr.IsValid() == true) {
-                /*for (var index = 0; index < this.freeBlocks.Length; ++index) {
-                var memPtr = this.freeBlocks[index];*/
                 var blockPtr = this.GetPtr(memPtr);
                 var header = (BlockHeader*)blockPtr;
-                //if (size > header->size) continue;
                 // calc tail size
                 var tailSize = header->size > size + sizeof(BlockHeader) + sizeof(BlockHeader) ? header->size - size : 0u;
                 if (tailSize == 0u) {
