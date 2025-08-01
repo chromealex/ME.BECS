@@ -84,7 +84,7 @@ namespace ME.BECS {
                     this.hashes[i] = hasCustomHash == true ? comp.GetHash() : Components.COMPONENT_SHARED_DEFAULT_HASH;
                     offset += elemSize;
                 }
-                this.data = (safe_ptr<byte>)_make(size, 4, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+                this.data = (safe_ptr<byte>)_make(size);
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
@@ -143,7 +143,7 @@ namespace ME.BECS {
                     this.functionPointers[i].Dispose();
                 }
 
-                _free(this.data, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+                _free(this.data);
                 CutsPool._freeArray(this.hashes, this.count);
                 CutsPool._freeArray(this.offsets, this.count);
                 CutsPool._freeArray(this.typeIds, this.count);

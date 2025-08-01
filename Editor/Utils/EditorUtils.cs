@@ -413,6 +413,12 @@ namespace ME.BECS.Editor {
             if (aspects == null) LoadComponentGroups();
             if (aspects == null || aspects.Count == 0) aspects = GetAspects();
             if (aspects == null) return default;
+            var aspectItem = aspects.FirstOrDefault(x => x.type == type);
+            if (aspectItem.type == null) {
+                LoadComponentGroups();
+                aspects = default;
+                aspects = GetAspects();
+            }
             return aspects.FirstOrDefault(x => x.type == type);
         }
 
