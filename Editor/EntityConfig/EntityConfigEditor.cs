@@ -78,6 +78,14 @@ namespace ME.BECS.Editor {
                             data.Append(csv);
                         }
                     }
+                    {
+                        var components = serializedObject.FindProperty(nameof(EntityConfig.aspects)).FindPropertyRelative(nameof(EntityConfig.aspects.components));
+                        for (int i = 0; i < components.arraySize; ++i) {
+                            var component = components.GetArrayElementAtIndex(i);
+                            var csv = JSON.JsonUtils.ComponentToCSV(component);
+                            data.Append(csv);
+                        }
+                    }
                     EditorUtils.Copy(data.ToString());
                 });
             }));

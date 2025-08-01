@@ -6,6 +6,7 @@ using tfloat = System.Single;
 using Unity.Mathematics;
 #endif
 
+using ME.BECS.Jobs;
 using ME.BECS.Transforms;
 using NUnit.Framework;
 
@@ -125,20 +126,52 @@ namespace ME.BECS.Tests {
 
         }
 
-        /*
         [Unity.Burst.BurstCompileAttribute]
-        public struct CreateEntitiesJob : Unity.Jobs.IJobParallelFor {
+        public struct CreateEntitiesJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {
 
-            public World world;
-
-            public void Execute(int index) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TestComponent data) {
                 
-                var ent = Ent.New(this.world);
-                ent.Set(new Test1Component() {
-                    data = 1,
+                var newEnt = Ent.New(jobInfo);
+                newEnt.Set(new Test1Component() {
+                    data = data.data,
                 });
-                
+
             }
+
+        }
+
+        private static void CreateHugeAmountThreaded_INTERNAL(World world, uint amount) {
+            
+            var arr = new Unity.Collections.NativeArray<Ent>((int)amount, Unity.Collections.Allocator.Temp);
+            for (int i = 0; i < amount; ++i) {
+                var ent = Ent.New(world);
+                ent.Set(new TestComponent() {
+                    data = (int)ent.id,
+                });
+                arr[i] = ent;
+            }
+
+            Batches.Apply(world.state);
+
+            world.state.ptr->allocator.CheckConsistency();
+            
+            var job = API.Query(world).Schedule<CreateEntitiesJob, TestComponent>();
+                
+            job = ME.BECS.Batches.Apply(job, world.state);
+            JobUtils.RunScheduled();
+            job.Complete();
+                
+            Assert.AreEqual(amount * 2, world.state.ptr->entities.EntitiesCount);
+            for (int i = 0; i < amount; ++i) {
+                var id = arr[i].Read<TestComponent>().data;
+                Assert.IsTrue(id == arr[i].id);
+            }
+            for (var i = amount; i < amount * 2; ++i) {
+                var id = new Ent(i, world).Read<Test1Component>().data;
+                Assert.IsTrue(id == i - amount);
+            }
+            
+            world.state.ptr->allocator.CheckConsistency();
 
         }
 
@@ -151,15 +184,7 @@ namespace ME.BECS.Tests {
                 props.stateProperties.entitiesCapacity = amount;
                 using var world = World.Create(props);
 
-                var job = new CreateEntitiesJob() {
-                    world = world,
-                }.Schedule((int)amount, 64);
-
-                job = ME.BECS.Batches.Apply(job, world.state);
-                JobUtils.RunScheduled();
-                job.Complete();
-
-                Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+                CreateHugeAmountThreaded_INTERNAL(world, amount);
             }
 
         }
@@ -173,18 +198,10 @@ namespace ME.BECS.Tests {
                 props.stateProperties.entitiesCapacity = 1000;
                 using var world = World.Create(props);
 
-                var job = new CreateEntitiesJob() {
-                    world = world,
-                }.Schedule((int)amount, 64);
-
-                job = ME.BECS.Batches.Apply(job, world.state);
-                JobUtils.RunScheduled();
-                job.Complete();
-
-                Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+                CreateHugeAmountThreaded_INTERNAL(world, amount);
             }
 
-        }*/
+        }
 
         [Unity.Burst.BurstCompileAttribute]
         public static void CreateHugeAmountBurstMethod(ref World world, uint amount) {

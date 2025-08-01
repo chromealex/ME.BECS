@@ -18,6 +18,16 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
+        public struct TestConfigInitComponent : IConfigComponent, IConfigInitialize {
+            public int data;
+            public void OnInitialize(in Ent ent) {
+                ent.Set(new Test1Component() {
+                    data = this.data,
+                });
+            }
+
+        }
+
         public struct TestConfigShared1Component : IConfigComponentShared {
             public int data;
         }
@@ -331,6 +341,61 @@ namespace ME.BECS.Tests {
                 Assert.AreEqual(ent.Read<TestListComponent>().arr[1].data, 2);
                 Assert.AreEqual(ent.Read<TestListComponent>().arr[2].data, 3);
                 Assert.AreEqual(ent.Read<TestListComponent>().arr[3].data, 4);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void ApplyWithListZeroLength() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.data.components = new IConfigComponent[1] {
+                new TestListComponent() {
+                    arr = new ListAuto<TestListComponent.Test>() {
+                    },
+                },
+            };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.IsTrue(ent.Has<TestListComponent>());
+                Assert.IsTrue(ent.Read<TestListComponent>().arr.IsCreated);
+                Assert.AreEqual(ent.Read<TestListComponent>().arr.Count, 0);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void ApplyWithInit() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.data.components = new IConfigComponent[1] {
+                new TestConfigInitComponent() {
+                    data = 100500,
+                },
+            };
+            config.dataInitialize.components = new IConfigInitialize[1] {
+                new TestConfigInitComponent() {
+                    data = 100500,
+                },
+            };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.IsTrue(ent.Has<Test1Component>());
+                Assert.IsTrue(ent.Has<TestConfigInitComponent>());
+                Assert.AreEqual(100500, ent.Read<TestConfigInitComponent>().data);
+                Assert.AreEqual(100500, ent.Read<Test1Component>().data);
             }
             
             UnityEngine.Object.DestroyImmediate(config);

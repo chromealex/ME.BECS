@@ -59,9 +59,16 @@ namespace ME.BECS.Editor.Aspects {
                         content.Add($"var component = ({strType}*)componentPtr;");
                         content.Add($"var addr = ({typeStr}*)((byte*)component + {fieldOffset});");
                         content.Add($"var res = config.GetCollectionById(component->{field.Name}.GetConfigId(), out var data, out var length);");
+                        content.Add("if (addr->IsCreated == true) addr->Dispose();");
                         content.Add("if (res == true) {");
-                        content.Add($"if (addr->IsCreated == true) addr->Dispose();");
                         content.Add($"*addr = new {typeStr}(in ent, data, length);");
+                        if (typeof(IMemList).IsAssignableFrom(fieldType) == true) {
+                            content.Add("} else {");
+                            content.Add($"*addr = new {typeStr}(in ent, 1u);");
+                        } else if (typeof(IMemArray).IsAssignableFrom(fieldType) == true) {
+                            content.Add("} else {");
+                            content.Add($"*addr = {typeStr}.Empty;");
+                        }
                         content.Add("}");
                         content.Add("}");
                         ++count;

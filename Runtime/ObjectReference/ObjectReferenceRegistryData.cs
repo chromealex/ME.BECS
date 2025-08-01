@@ -34,6 +34,15 @@ namespace ME.BECS {
                 return null;
             }
             if (this.sourceReference == null || string.IsNullOrEmpty(this.sourceReference.AssetGUID) == true) return null;
+            #if UNITY_EDITOR
+            if (UnityEditor.EditorApplication.isPlaying == false) {
+                var obj = this.sourceReference.editorAsset;
+                if (this.isGameObject == true && obj is UnityEngine.GameObject goEditor) {
+                    return goEditor.GetComponent<T>();
+                }
+                return obj as T;
+            }
+            #endif
             if (this.isGameObject == true) {
                 UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.Object> op;
                 if (this.sourceReference.OperationHandle.IsValid() == true) {
