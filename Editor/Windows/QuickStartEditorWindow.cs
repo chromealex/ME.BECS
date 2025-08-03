@@ -102,6 +102,12 @@ namespace ME.BECS.Editor {
                     url = "https://youtu.be/6syQWOWxUwY",
                     texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-7.jpg"),
                 },
+                new TutorialInfo() {
+                    caption = "Trees",
+                    description = "How to use Trees queries.",
+                    url = "https://youtu.be/TilgB9G1G3g",
+                    texture = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/QuickStart/tutorial-8.jpg"),
+                },
             };
 
             var root = this.rootVisualElement;
