@@ -100,11 +100,11 @@ namespace ME.BECS.FogOfWar {
     public class FogOfWarViewModule : CollectRenderers, IViewUpdate, IViewInitialize, IViewIgnoreTracker {
         
         private bool isVisible;
-        protected CreateSystem fow;
+        private SystemLink<CreateSystem> fow;
 
         public virtual void OnInitialize(in EntRO ent) {
 
-            this.fow = ent.World.parent.GetSystem<CreateSystem>();
+            this.fow = ent.World.parent.GetSystemLink<CreateSystem>();
             this.UpdateVisibility(in ent, true);
             
         }
@@ -134,9 +134,17 @@ namespace ME.BECS.FogOfWar {
             }
             var state = false;
             if (ent.TryRead(out FogOfWarShadowCopyPointsComponent points) == true) {
-                state = this.fow.IsVisibleAny(in activePlayer, in points.points);
+                if (this.fow.IsCreated == false) {
+                    state = true;
+                } else {
+                    state = this.fow.Value.IsVisibleAny(in activePlayer, in points.points);
+                }
             } else {
-                state = this.fow.IsVisible(in activePlayer, ent.GetEntity());
+                if (this.fow.IsCreated == false) {
+                    state = true;
+                } else {
+                    state = this.fow.Value.IsVisible(in activePlayer, ent.GetEntity());
+                }
                 if (activePlayer.readTeam == UnitUtils.GetTeam(in ent)) isShadowCopy = false;
             }
             if (isShadowCopy == true) {
