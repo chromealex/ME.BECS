@@ -90,21 +90,22 @@ namespace ME.BECS.Editor {
             }
 
             if (cacheIsInvalid == false) {
-                
                 if (cachedItem.data is T data) {
                     value = data;
                     return true;
                 }
-                if (typeof(T) == typeof(scg::List<string>)) {
-                    var list = new scg::List<string>();
-                    foreach (var item in (Newtonsoft.Json.Linq.JArray)cachedItem.data) {
-                        list.Add(item.ToString());
+                try {
+                    if (typeof(T) == typeof(scg::List<string>)) {
+                        var list = new scg::List<string>();
+                        foreach (var item in (Newtonsoft.Json.Linq.JArray)cachedItem.data) {
+                            list.Add(item.ToString());
+                        }
+                        value = (T)(object)list;
+                        return true;
                     }
-                    value = (T)(object)list;
+                    value = (T)((Newtonsoft.Json.Linq.JObject)cachedItem.data).ToObject(typeof(T));
                     return true;
-                }
-                value = (T)((Newtonsoft.Json.Linq.JObject)cachedItem.data).ToObject(typeof(T));
-                return true;
+                } catch (System.Exception) {}
                 
             }
             value = default;
