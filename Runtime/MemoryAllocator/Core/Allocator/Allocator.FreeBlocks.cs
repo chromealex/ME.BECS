@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;

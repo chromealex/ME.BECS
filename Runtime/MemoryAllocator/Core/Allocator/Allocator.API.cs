@@ -40,23 +40,24 @@ namespace ME.BECS {
         [INLINE(256)]
         public MemPtr Alloc(uint size, out safe_ptr ptr) {
             size = Align(size);
+            this.lockSpinner.Lock();
             var memPtr = this.AllocFromFreeBlocks(size, out ptr);
             if (memPtr.IsValid() == true) {
+                this.lockSpinner.Unlock();
                 LeakDetector.Track(ptr);
                 return memPtr;
             }
 
-            this.lockSpinner.Lock();
             // create new zone
             var zoneId = this.zonesCount++;
             if (zoneId >= this.zonesCapacity) {
                 _resizeArray(this.allocatorLabel, ref this.zones, ref this.zonesCapacity, this.zonesCapacity * 2u);
             }
             this.zones[zoneId] = this.CreateZone(size, zoneId);
-            this.lockSpinner.Unlock();
             memPtr = this.AllocFromFreeBlocks(size, out ptr);
+            this.lockSpinner.Unlock();
             LeakDetector.Track(ptr);
-            //this.CheckConsistency();
+            MemoryAllocator.CheckConsistency(ref this);
             return memPtr;
         }
 
@@ -74,9 +75,9 @@ namespace ME.BECS {
             
             var root = this.zones[ptr.zoneId].ptr->root.ptr;
             
+            this.lockSpinner.Lock();
             // coalescing with next
             if (header->next != uint.MaxValue) {
-                this.lockSpinner.Lock();
                 var headerNext = (BlockHeader*)this.GetPtr(new MemPtr(ptr.zoneId, header->next));
                 if (headerNext->freeIndex != uint.MaxValue) {
                     this.RemoveFromFree(headerNext);
@@ -87,12 +88,10 @@ namespace ME.BECS {
                         next->prev = ptr.offset - (uint)sizeof(BlockHeader);
                     }
                 }
-                this.lockSpinner.Unlock();
             }
 
             // coalescing with prev
             if (header->prev != uint.MaxValue) {
-                this.lockSpinner.Lock();
                 var prevHeader = (BlockHeader*)this.GetPtr(new MemPtr(ptr.zoneId, header->prev));
                 if (prevHeader->freeIndex != uint.MaxValue) {
                     this.RemoveFromFree(prevHeader);
@@ -104,17 +103,15 @@ namespace ME.BECS {
                     }
                     header = prevHeader;
                 }
-                this.lockSpinner.Unlock();
             }
-
-            this.lockSpinner.Lock();
+            
+            // add to free blocks
             {
-                // add to free blocks
                 this.freeBlocks.Add(in this, header, ptr.zoneId);
             }
             this.lockSpinner.Unlock();
             
-            //this.CheckConsistency();
+            MemoryAllocator.CheckConsistency(ref this);
             return true;
         }
 
