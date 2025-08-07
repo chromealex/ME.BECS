@@ -1041,8 +1041,12 @@ namespace ME.BECS.Editor.Systems {
                     var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
-                        var v = typeToVar[injectType];
-                        content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
+                        if (typeToVar.TryGetValue(injectType, out var v) == true) {
+                            content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
+                        }
+                        else {
+                            UnityEngine.Debug.LogError($"[Failed] Failed to inject system {injectType.Name} because it's missing in current graph");
+                        }
                     }
                     var attr = field.GetCustomAttribute<InjectDeltaTimeAttribute>();
                     if (attr != null) {
