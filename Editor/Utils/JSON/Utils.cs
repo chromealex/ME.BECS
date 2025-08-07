@@ -1,9 +1,12 @@
+using System.Linq;
+
 namespace ME.BECS.Editor.JSON {
 
     using System.Text;
 
     public interface ISerializer {
 
+        int Priority { get; }
         bool IsValid(System.Type type);
         void Serialize(StringBuilder builder, object obj, UnityEditor.SerializedProperty property);
         void Deserialize(object obj, UnityEditor.SerializedProperty property);
@@ -13,6 +16,7 @@ namespace ME.BECS.Editor.JSON {
 
     public abstract class SerializerBase<T> : ISerializer {
 
+        public virtual int Priority => 0;
         public virtual bool IsValid(System.Type type) => typeof(T).IsAssignableFrom(type);
         public abstract void Serialize(StringBuilder builder, object obj, UnityEditor.SerializedProperty property);
 
@@ -40,9 +44,17 @@ namespace ME.BECS.Editor.JSON {
                 }
                 
                 foreach (var serializerType in types) {
-                    if (bannedTypes.Contains(serializerType)) continue;
-                    allSerializers.Add((ISerializer)System.Activator.CreateInstance(serializerType));
+                    if (bannedTypes.Contains(serializerType) == true) continue;
+                    if (serializerType.IsGenericType == true) {
+                        var gType = serializerType.MakeGenericType(type);
+                        allSerializers.Add((ISerializer)System.Activator.CreateInstance(gType));
+                    } else {
+                        allSerializers.Add((ISerializer)System.Activator.CreateInstance(serializerType));
+                    }
                 }
+                var list = allSerializers.OrderBy(x => x.Priority).ToList();
+                allSerializers.Clear();
+                allSerializers.AddRange(list);
             }
 
             foreach (var serializer in allSerializers) {

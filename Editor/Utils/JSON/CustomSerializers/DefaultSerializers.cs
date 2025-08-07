@@ -18,16 +18,25 @@ namespace ME.BECS.Editor.JSON {
                 var configObj = EditorUtils.GetAssetByPathPart<T>(str.Substring(protocol.Length));
                 ObjectReferenceRegistry.data.Add(configObj, out var isNew);
                 if (isNew == true) ObjectReferenceValidate.Validate(ObjectReferenceRegistry.data.objects.Length - 1, 1);
-                return this.Deserialize(ObjectReferenceRegistry.GetId(configObj), configObj, customData);
+                return this.Convert(fieldType, this.Deserialize(ObjectReferenceRegistry.GetId(configObj), configObj, customData));
             } else {
                 return null;
             }
         }
 
+        protected virtual object Convert(System.Type fieldType, TValue obj) {
+            return obj;
+        }
+
         public override void Serialize(System.Text.StringBuilder builder, object obj, UnityEditor.SerializedProperty property) {
             var customData = string.Empty;
-            var entityConfig = ObjectReferenceRegistry.GetObjectBySourceId<T>(this.GetId((TValue)obj, ref customData));
-            if (entityConfig == null) {
+            UnityEngine.Object objItem = null;
+            if (obj is IObjectReferenceId objRefId) {
+                objItem = ObjectReferenceRegistry.GetObjectBySourceId<T>(objRefId.Id);
+            } else {
+                objItem = ObjectReferenceRegistry.GetObjectBySourceId<T>(this.GetId((TValue)obj, ref customData));
+            }
+            if (objItem == null) {
                 builder.Append('"');
                 builder.Append(this.ProtocolPrefix);
                 builder.Append("://");
@@ -41,7 +50,7 @@ namespace ME.BECS.Editor.JSON {
                 builder.Append('"');
                 builder.Append(this.ProtocolPrefix);
                 builder.Append("://");
-                builder.Append(UnityEditor.AssetDatabase.GetAssetPath(entityConfig).Substring("Assets/".Length));
+                builder.Append(UnityEditor.AssetDatabase.GetAssetPath(objItem).Substring("Assets/".Length));
                 if (string.IsNullOrEmpty(customData) == false) {
                     builder.Append('#');
                     builder.Append(customData);
