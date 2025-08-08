@@ -49,6 +49,7 @@ namespace ME.BECS.Attack {
             attackQueryAspect.query.sector = attackAspect.readAttackSector;
             attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
             attackQueryAspect.query.nearestCount = 1;
+            attackQueryAspect.query.updatePerTick = 2;
             var unsafeConfig = config.AsUnsafeConfig();
             if (unsafeConfig.HasStatic<BulletViewPoint>() == true) {
                 var point = unsafeConfig.ReadStatic<BulletViewPoint>();
