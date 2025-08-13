@@ -276,7 +276,12 @@ namespace ME.BECS {
                 if (this.itemLookup.Count == 0) {
                     this.Initialize();
                 }
-                this.itemLookup.Add(nextId, item);
+
+                if (this.itemLookup.TryGetValue(nextId, out _) == false) {
+                    this.itemLookup[nextId] = item;
+                } else {
+                    this.itemLookup.Add(nextId, item);
+                }
                 #if UNITY_EDITOR
                 this.OnValidate();
                 #endif
