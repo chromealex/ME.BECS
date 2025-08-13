@@ -277,7 +277,7 @@ namespace ME.BECS {
                     this.Initialize();
                 }
 
-                if (this.itemLookup.TryGetValue(nextId, out _) == false) {
+                if (this.itemLookup.TryGetValue(nextId, out _) == true) {
                     this.itemLookup[nextId] = item;
                 } else {
                     this.itemLookup.Add(nextId, item);
