@@ -59,6 +59,8 @@ namespace ME.BECS {
         }
 
         private const uint ENTITIES_PER_PAGE = 64u;
+        private const uint ENTITIES_PER_PAGE_MASK = ENTITIES_PER_PAGE - 1u;
+        private const int ENTITIES_PER_PAGE_POW = 6;
 
         private ReadWriteSpinner readWriteSpinner;
         private readonly uint dataSize;
@@ -71,12 +73,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         private static uint _pageIndex(uint entityId) {
-            return entityId / ENTITIES_PER_PAGE;
+            return entityId >> ENTITIES_PER_PAGE_POW;
         }
 
         [INLINE(256)]
         private static uint _dataIndex(uint entityId) {
-            return entityId % ENTITIES_PER_PAGE;
+            return entityId & ENTITIES_PER_PAGE_MASK;
         }
 
         [INLINE(256)]
