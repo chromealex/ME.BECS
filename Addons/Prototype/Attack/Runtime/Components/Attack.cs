@@ -143,4 +143,14 @@ namespace ME.BECS.Attack {
         public float3 returnToPosition;
 
     }
+    
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct LastTargetDataComponent : IComponent {
+
+        public AttackUtils.ReactionType result;
+        public float3 position;
+        public Ent target;
+
+    }
+
 }

@@ -228,9 +228,11 @@ namespace ME.BECS {
             
             if (tr.IsCalculated == false) return;
             
+            var q = query.readQuery;
+            if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) return;
+            
             var marker = new Unity.Profiling.ProfilerMarker("Prepare");
             marker.Begin();
-            var q = query.readQuery;
             var worldPos = tr.GetWorldMatrixPosition();
             var worldRot = tr.GetWorldMatrixRotation();
             var sector = new MathSector(worldPos, worldRot, query.readQuery.sector);

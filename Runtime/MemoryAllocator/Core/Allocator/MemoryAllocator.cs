@@ -118,7 +118,6 @@ namespace ME.BECS {
 
         [INLINE(256)]
         private MemPtr AllocFromFreeBlocks(uint size, out safe_ptr ptr) {
-            this.lockSpinner.Lock();
             // look up through free blocks
             var memPtr = this.freeBlocks.Pop(in this, size);
             if (memPtr.IsValid() == true) {
@@ -148,11 +147,9 @@ namespace ME.BECS {
                     this.freeBlocks.Add(in this, newBlockHeader, memPtr.zoneId);
                 }
                 ptr = (safe_ptr)(blockPtr + sizeof(BlockHeader));
-                this.lockSpinner.Unlock();
                 return this.GetSafePtr(ptr.ptr, memPtr.zoneId);
             }
 
-            this.lockSpinner.Unlock();
             ptr = default;
             return MemPtr.Invalid;
         }

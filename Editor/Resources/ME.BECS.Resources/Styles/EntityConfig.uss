@@ -11,6 +11,16 @@
     border-color: rgba(0, 0, 0, 0.1);
 }
 
+.fields-container .property-field-container.has-tooltip .tooltip {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+}
+
+.fields-container .has-tooltip PropertyField {
+    flex-grow: 1;
+}
+
 .aspect-component-container-field #unity-content {
     padding: 0px;
 }

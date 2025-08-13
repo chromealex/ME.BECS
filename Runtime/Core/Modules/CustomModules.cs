@@ -20,18 +20,21 @@ namespace ME.BECS {
 
         public static void RegisterResetPass(InitializeResetPass initializeResetPassCallback) {
 
+            resetPass -= initializeResetPassCallback;
             resetPass += initializeResetPassCallback;
 
         }
 
         public static void RegisterFirstPass(InitializeFirstPass initializeFirstPassCallback) {
 
+            firstPass -= initializeFirstPassCallback;
             firstPass += initializeFirstPassCallback;
 
         }
 
         public static void RegisterSecondPass(InitializeSecondPass initializeSecondPassCallback) {
 
+            secondPass -= initializeSecondPassCallback;
             secondPass += initializeSecondPassCallback;
 
         }

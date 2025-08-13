@@ -129,6 +129,7 @@ namespace ME.BECS {
     public unsafe partial struct MemoryAllocator {
         
         public void CheckConsistency() {
+            this.lockSpinner.Lock();
             for (uint i = 0u; i < this.zonesCount; ++i) {
                 var zone = this.zones[i].ptr;
                 var size = zone->size;
@@ -147,6 +148,7 @@ namespace ME.BECS {
                 } while (true);
                 UnityEngine.Assertions.Assert.IsTrue(curSize == size);
             }
+            this.lockSpinner.Unlock();
         }
 
         [System.Diagnostics.ConditionalAttribute(COND.ALLOCATOR_VALIDATION)]

@@ -1,3 +1,5 @@
+
+using System;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -47,6 +49,7 @@ namespace ME.BECS.Attack {
             attackQueryAspect.query.sector = attackAspect.readAttackSector;
             attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
             attackQueryAspect.query.nearestCount = 1;
+            attackQueryAspect.query.updatePerTick = 2;
             var unsafeConfig = config.AsUnsafeConfig();
             if (unsafeConfig.HasStatic<BulletViewPoint>() == true) {
                 var point = unsafeConfig.ReadStatic<BulletViewPoint>();
@@ -285,6 +288,21 @@ namespace ME.BECS.Attack {
             }
 
         }
+
+        [INLINE(256)]
+        public static bool SetTargetChanged(in UnitCommandGroupAspect group, ReactionType result, in float3 position, in Ent target) {
+            ref var data = ref group.ent.Get<LastTargetDataComponent>();
+            if (data.result != result ||
+                math.any(data.position != position) == true ||
+                data.target != target) {
+                data.result = result;
+                data.position = position;
+                data.target = target;
+                return true;
+            }
+            return false;
+        }
+
     }
 
     public struct NearestPositionToAttackFilter : ME.BECS.Pathfinding.IFilter {
@@ -293,6 +311,7 @@ namespace ME.BECS.Attack {
         public float3 targetPos;
         public tfloat rangeSqr;
         
+        [INLINE(256)]
         public bool IsValid(in ME.BECS.Pathfinding.NodeInfo info, in ME.BECS.Pathfinding.RootGraphComponent root) {
 
             if (new ME.BECS.Pathfinding.Filter().IsValid(in info, in root) == false) return false;

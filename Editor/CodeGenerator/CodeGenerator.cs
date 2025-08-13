@@ -1,4 +1,5 @@
 using System.Reflection;
+using Newtonsoft.Json;
 
 namespace ME.BECS.Editor {
 
@@ -60,8 +61,10 @@ namespace ME.BECS.Editor {
                 {
                     var key = new Key(type, this.method, this.key).ToString();
                     if (this.cacheData.TryGetValue(key, out var item) == true) {
-                        System.Array.Resize(ref item.hashCodes, item.hashCodes.Length + 1);
-                        item.hashCodes[^1] = hashCode;
+                        if (System.Array.IndexOf(item.hashCodes, hashCode) == -1) {
+                            System.Array.Resize(ref item.hashCodes, item.hashCodes.Length + 1);
+                            item.hashCodes[^1] = hashCode;
+                        }
                         this.cacheData[key] = item;
                     } else {
                         this.cacheData.Add(key, new CachedItem() {
@@ -155,7 +158,7 @@ namespace ME.BECS.Editor {
             var path = $"{this.dir}/{this.filename}";
             var dir = System.IO.Path.GetDirectoryName(path);
             if (System.IO.Directory.Exists(dir) == false) System.IO.Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(this.cacheData));
+            System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(this.cacheData,  Formatting.Indented));
             UnityEditor.AssetDatabase.ImportAsset(path);
 
             this.isDirty = false;

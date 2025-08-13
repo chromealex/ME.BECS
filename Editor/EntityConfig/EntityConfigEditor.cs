@@ -365,6 +365,7 @@ namespace ME.BECS.Editor {
                 } else if (copy.hasVisibleChildren == true) {
 
                     var propContainer = new VisualElement();
+                    propContainer.AddToClassList("property-field-container");
                     
                     var propertyField = new UnityEditor.UIElements.PropertyField(copy, label) {
                         name = $"PropertyField:{it.propertyPath}",
@@ -418,11 +419,15 @@ namespace ME.BECS.Editor {
                     container.Add(propContainer);
                     list.Add(propertyField);
 
+                    EditorUIUtils.DrawTooltip(propContainer, EditorUtils.GetComponent(type)?.GetEditorComment());
+                    
                     this.DrawAspects(propContainer, type);
 
                 } else {
 
                     var labelField = new Foldout();
+                    var foldoutLabel = labelField.Q<Toggle>();
+                    EditorUIUtils.DrawTooltip(foldoutLabel, EditorUtils.GetComponent(type)?.GetEditorComment());
                     labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     labelField.text = label;
                     labelField.AddToClassList("tag-component");

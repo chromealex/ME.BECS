@@ -60,6 +60,10 @@ namespace ME.BECS {
         /// If set select will be a bit faster, but results will be unsorted
         /// </summary>
         public bbool ignoreSorting;
+        /// <summary>
+        /// Every n ticks query will be updated. 0 - update every tick.
+        /// </summary>
+        public byte updatePerTick;
 
     }
     

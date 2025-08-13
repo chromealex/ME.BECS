@@ -1,3 +1,6 @@
+using System;
+using ME.BECS.FixedPoint;
+
 namespace ME.BECS.Units {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -42,7 +45,7 @@ namespace ME.BECS.Units {
                 return true;
             }
         }
-        
+
         [INLINE(256)]
         public readonly void Lock() {
 

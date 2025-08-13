@@ -422,6 +422,20 @@ namespace ME.BECS.Editor {
             return aspects.FirstOrDefault(x => x.type == type);
         }
 
+        public static ComponentGroupItem.ComponentMetaInfo GetComponent(System.Type type) {
+            if (componentGroups == null) LoadComponentGroups();
+            if (componentGroups == null || componentGroups.Count == 0) componentGroups = GetComponentGroups();
+            if (componentGroups == null) return default;
+            foreach (var group in componentGroups) {
+                foreach (var comp in group.components) {
+                    if (comp.type == type) {
+                        return comp;
+                    }
+                }
+            }
+            return null;
+        }
+
         private static int aspectNextId;
         private static System.Collections.Generic.List<AspectItem> aspects;
         public static System.Collections.Generic.List<AspectItem> GetAspects() {

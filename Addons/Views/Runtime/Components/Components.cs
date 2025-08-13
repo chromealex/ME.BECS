@@ -40,6 +40,7 @@ namespace ME.BECS.Views {
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct IsViewRequested : IComponent {}
 
+    [EditorComment("Instantiate view on scene automatically from view source")]
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct InstantiateViewComponent : IConfigComponentStatic, IConfigInitialize {
 

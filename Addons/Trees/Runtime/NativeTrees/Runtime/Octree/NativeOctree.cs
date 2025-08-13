@@ -187,19 +187,23 @@ namespace NativeTrees {
             public ObjWrapper objWrapper;
             public int parentDepth;
 
+            public InsertNextNode(InsertNextNode other, int depth) {
+                this = other;
+                this.parentDepth = depth;
+            }
+
         }
 
         private void InsertNext(uint nodeid, in QuarterSizeBounds quarterSizeBounds, in ObjWrapper objWrapper, int parentDepth) {
-            InsertNext(new InsertNextNode() {
+            this.InsertNext(new InsertNextNode() {
                 nodeId = nodeid,
                 quarterSizeBounds = quarterSizeBounds,
                 objWrapper = objWrapper,
-                parentDepth = parentDepth,
+                parentDepth = parentDepth + 1,
             });
         }
 
         private void InsertNext(InsertNextNode nodeData) {
-            nodeData.parentDepth++;
             var objMask = NativeOctree<T>.GetBoundsMask(nodeData.quarterSizeBounds.nodeCenter, nodeData.objWrapper.bounds);
 
             var q = new Unity.Collections.LowLevel.Unsafe.UnsafeList<InsertNextNode>(8, Allocator.Temp);
@@ -218,11 +222,10 @@ namespace NativeTrees {
 
                     if (this.TryInsert(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth) == false) {
                         //this.InsertNext(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth);
-                        q.Add(n);
+                        q.Add(new InsertNextNode(n, n.parentDepth + 1));
                     }
                 }
             }
-            q.Dispose();
         }
 
         /// <summary>

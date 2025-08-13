@@ -58,7 +58,7 @@ namespace ME.BECS.Editor.ComponentsViewer {
                 new ComponentColumnInfo() {
                     componentType = (componentType) => typeof(IConfigComponent).IsAssignableFrom(componentType) || typeof(IConfigComponentStatic).IsAssignableFrom(componentType),
                     caption = "Config",
-                    tooltipOn = "You can use <b>{componentLabel}</b> component is EntityConfig.",
+                    tooltipOn = "You can use <b>{componentLabel}</b> component in EntityConfig.",
                     tooltipOff = "<b>{componentLabel}</b> is a runtime-only component.",
                     onAdd = (component) => {
                         // Remove others
