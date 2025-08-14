@@ -26,10 +26,25 @@ namespace ME.BECS.Editor.JSON {
 
         public override int Priority => 100;
         
+        protected override UnityEngine.Object GetObject(System.Type fieldType, string path) {
+            if (fieldType.IsGenericType == true) {
+                var arg = fieldType.GetGenericArguments()[0];
+                if (arg != typeof(UnityEngine.Object) && typeof(UnityEngine.Object).IsAssignableFrom(arg) == true) {
+                    var method = this.GetType().GetMethod("GetObjectByType", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                    return (UnityEngine.Object)method.MakeGenericMethod(arg).Invoke(null, new [] { path });
+                }
+            }
+            return EditorUtils.GetAssetByPathPart<UnityEngine.Object>(path);
+        }
+
+        private static UnityEngine.Object GetObjectByType<T>(string path) where T : UnityEngine.Object {
+            return EditorUtils.GetAssetByPathPart<T>(path);
+        }
+        
         protected override object Convert(System.Type fieldType, ObjectReference<UnityEngine.Object> obj) {
             if (fieldType.IsGenericType == true) {
                 var arg = fieldType.GetGenericArguments()[0];
-                if (arg != typeof(UnityEngine.Object) && typeof(UnityEngine.Object).IsAssignableFrom(arg)) {
+                if (arg != typeof(UnityEngine.Object) && typeof(UnityEngine.Object).IsAssignableFrom(arg) == true) {
                     var objRefTarget = typeof(ObjectReference<>).MakeGenericType(arg);
                     var target = (IObjectReferenceId)System.Activator.CreateInstance(objRefTarget);
                     target.Id = obj.id;
