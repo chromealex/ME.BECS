@@ -11,8 +11,8 @@ public static partial class libm
     /// Returns the sine of x
     /// </summary>
     public static sfloat sinf(sfloat x) {
-        return (float)System.Math.Sin((float)x);
-        const uint pi_squared_times_five = 0x42456460; // 49.348022005446793094172454999381
+        return (float)System.Math.Sin((double)x);
+        /*const uint pi_squared_times_five = 0x42456460; // 49.348022005446793094172454999381
 
         // https://en.wikipedia.org/wiki/Bhaskara_I%27s_sine_approximation_formula
         // sin(x) ~= (16x * (pi - x)) / (5pi^2 - 4x * (pi - x)) if 0 <= x <= pi
@@ -39,7 +39,7 @@ public static partial class libm
 
         sfloat piMinusX = sfloat.FromRaw(pi) - x;
         sfloat result = ((sfloat)16.0f * x * piMinusX) / (sfloat.FromRaw(pi_squared_times_five) - (sfloat)4.0f * x * piMinusX);
-        return negate ? -result : result;
+        return negate ? -result : result;*/
     }
 
     /// <summary>
