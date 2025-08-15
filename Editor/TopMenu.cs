@@ -156,32 +156,31 @@ namespace ME.BECS.Editor {
         private const string MENU_NAME = "ME.BECS/Jobs/Enable Multithreading";
         private const string MENU_NAME_ONE_THREAD = "ME.BECS/Jobs/Enable Multithreading (1 Thread)";
         
-        [UnityEditor.MenuItem(MENU_NAME, true)]
-        private static bool IsMultiThreadingEnabled() {
-            UnityEditor.Menu.SetChecked(MENU_NAME, JobsUtility.JobWorkerCount != 0);
-            return true;
+        [MenuItem(MENU_NAME, priority = 100)]
+        private static void MultithreadingOn() {
+            if (Menu.GetChecked(MENU_NAME) == false) {
+                JobsUtility.ResetJobWorkerCount();
+            } else {
+                JobsUtility.JobWorkerCount = 0;
+            }
         }
 
-        [UnityEditor.MenuItem(MENU_NAME, priority = 100)]
-        private static void ToggleMultiThreading() {
-            if (JobsUtility.JobWorkerCount != 0) {
-                JobsUtility.JobWorkerCount = 0;
+        [MenuItem(MENU_NAME_ONE_THREAD, priority = 101)]
+        private static void MultithreadingSingleOn() {
+            if (Menu.GetChecked(MENU_NAME) == false) {
+                JobsUtility.JobWorkerCount = 1;
             } else {
                 JobsUtility.ResetJobWorkerCount();
             }
         }
 
-        [UnityEditor.MenuItem(MENU_NAME_ONE_THREAD, true)]
-        private static bool IsMultiThreadingEnabledOneThread() {
-            UnityEditor.Menu.SetChecked(MENU_NAME_ONE_THREAD, JobsUtility.JobWorkerCount == 1);
+        [MenuItem(MENU_NAME, true)]
+        private static bool SwitchOffValidate() {
+            Menu.SetChecked(MENU_NAME, JobsUtility.JobWorkerCount != 0);
+            Menu.SetChecked(MENU_NAME_ONE_THREAD, JobsUtility.JobWorkerCount == 1);
             return true;
         }
-
-        [UnityEditor.MenuItem(MENU_NAME_ONE_THREAD, priority = 100)]
-        private static void EnableOneThread() {
-            if (JobsUtility.JobWorkerCount != 1) JobsUtility.JobWorkerCount = 1;
-        }
-
+        
     }
 
     public static class LeakDetection {
