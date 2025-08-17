@@ -14,28 +14,38 @@ namespace ME.BECS {
 
     public static class EntExt {
 
+        private static void CleanUpDestroyComponents(in Ent ent) {
+            
+            ent.Remove<DestroyWithLifetime>();
+            ent.Remove<DestroyWithLifetimeMs>();
+            ent.Remove<DestroyWithTicks>();
+            
+        }
+
         public static void Destroy(this in Ent ent, uint ms) {
 
-            ent.Remove<DestroyWithLifetime>();
+            CleanUpDestroyComponents(in ent);
             ent.Set(new DestroyWithLifetimeMs() { lifetime = ms, });
             
         }
 
         public static void Destroy(this in Ent ent, tfloat lifetime) {
 
-            ent.Remove<DestroyWithLifetimeMs>();
+            CleanUpDestroyComponents(in ent);
             ent.Set(new DestroyWithLifetime() { lifetime = lifetime, });
             
         }
 
         public static void DestroyEndTick(this in Ent ent) {
 
+            CleanUpDestroyComponents(in ent);
             ent.Set(new DestroyWithTicks() { ticks = 0UL, });
             
         }
 
         public static void Destroy(this in Ent ent, ulong ticks) {
 
+            CleanUpDestroyComponents(in ent);
             ent.Set(new DestroyWithTicks() { ticks = ticks, });
 
         }
