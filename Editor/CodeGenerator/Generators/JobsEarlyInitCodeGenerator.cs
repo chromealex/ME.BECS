@@ -373,8 +373,31 @@ namespace ME.BECS.Editor.Jobs {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
+            var parametersOverrides = new System.Collections.Generic.HashSet<TypeInfo>();
             var parameters = root.GetParameters();
             foreach (var p in parameters) {
+                var overrideWO = p.GetCustomAttribute<WOAttribute>() != null;
+                var overrideRO = p.GetCustomAttribute<ROAttribute>() != null;
+                var overrideRW = p.GetCustomAttribute<RWAttribute>() != null;
+                if (overrideRW == true) {
+                    parametersOverrides.Add(new TypeInfo() {
+                        type = p.ParameterType.GetElementType(),
+                        op = RefOp.ReadWrite,
+                        isArg = true,
+                    });
+                } else if (overrideWO == true) {
+                    parametersOverrides.Add(new TypeInfo() {
+                        type = p.ParameterType.GetElementType(),
+                        op = RefOp.WriteOnly,
+                        isArg = true,
+                    });
+                } else if (overrideRO == true) {
+                    parametersOverrides.Add(new TypeInfo() {
+                        type = p.ParameterType.GetElementType(),
+                        op = RefOp.ReadOnly,
+                        isArg = true,
+                    });
+                }
                 if (p.ParameterType.GetInterfaces().Contains(typeof(IAspect)) == true) {
                     aspectsType.Add(p.ParameterType.GetElementType());
                 } else if (p.ParameterType.GetInterfaces().Contains(typeof(IComponentBase)) == true) {
@@ -453,6 +476,13 @@ namespace ME.BECS.Editor.Jobs {
                 }
             }
 
+            foreach (var p in parametersOverrides) {
+                uniqueTypes.Remove(new TypeInfo() { type = p.type, op = RefOp.ReadOnly, });
+                uniqueTypes.Remove(new TypeInfo() { type = p.type, op = RefOp.WriteOnly, });
+                uniqueTypes.Remove(new TypeInfo() { type = p.type, op = RefOp.ReadWrite, });
+                uniqueTypes.Add(p);
+            }
+            
             return uniqueTypes;
         }
 

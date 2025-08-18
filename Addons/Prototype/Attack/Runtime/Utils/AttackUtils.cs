@@ -41,6 +41,7 @@ namespace ME.BECS.Attack {
             var trSensor = attackSensor.Set<TransformAspect>();
             trSensor.localPosition = float3.zero;
             trSensor.localRotation = quaternion.identity;
+            trSensor.IsStaticLocal = true;
             var attackAspect = attackSensor.GetAspect<AttackAspect>();
             var attackQueryAspect = attackSensor.GetAspect<QuadTreeQueryAspect>();
             attackQueryAspect.query.treeMask = targetsMask;

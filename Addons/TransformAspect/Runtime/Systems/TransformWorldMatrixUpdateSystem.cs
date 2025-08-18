@@ -2,6 +2,7 @@ namespace ME.BECS.Transforms {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using Unity.Jobs;
     using Jobs;
     
     [UnityEngine.Tooltip("Update all entities with TransformAspect (LocalPosition and LocalRotation components are required).")]
@@ -90,8 +91,8 @@ namespace ME.BECS.Transforms {
             // Calculate local matrix
             var localMatrixHandle = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<IsTransformStaticLocalCalculatedComponent>().Schedule<CalculateLocalMatrixJob, TransformAspect>();
             // Update roots
-            var rootsHandle = context.Query(Unity.Jobs.JobHandle.CombineDependencies(localMatrixHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<ParentComponent>().Schedule<CalculateRootsJob, TransformAspect>();
-            var rootsWithChildrenHandle = context.Query(Unity.Jobs.JobHandle.CombineDependencies(rootsHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();
+            var rootsHandle = context.Query(JobHandle.CombineDependencies(localMatrixHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<ParentComponent>().Schedule<CalculateRootsJob, TransformAspect>();
+            var rootsWithChildrenHandle = context.Query(JobHandle.CombineDependencies(rootsHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();
             // Update children with roots
             context.SetDependency(rootsWithChildrenHandle);
 

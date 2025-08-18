@@ -757,8 +757,13 @@ namespace ME.BECS {
                         }
 
                     }
-                    
-                    if (this.useSort == true && elementsCount > 0u) Unity.Collections.NativeSortExtension.Sort(arrPtr.ptr, (int)elementsCount);
+
+                    if (this.useSort == true && elementsCount > 0u) {
+                        var marker = new Unity.Profiling.ProfilerMarker("Sort");
+                        marker.Begin();
+                        Unity.Collections.NativeSortExtension.Sort(arrPtr.ptr, (int)elementsCount);
+                        marker.End();
+                    }
                     this.buffer.ptr->entities = arrPtr.ptr;
                     this.buffer.ptr->count = elementsCount;
                 }

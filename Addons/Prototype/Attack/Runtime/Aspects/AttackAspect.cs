@@ -47,9 +47,9 @@ namespace ME.BECS.Attack {
         public bool HasAnyTarget => this.target.IsAlive() == true || this.targets.Count > 0;
         public readonly uint Damage {
             get {
-                if (this.ent.Has<ME.BECS.Bullets.DamageOverrideComponent>()) return this.ent.Read<ME.BECS.Bullets.DamageOverrideComponent>().damage;
+                if (this.ent.Has<ME.BECS.Bullets.DamageOverrideComponent>() == true) return this.ent.Read<ME.BECS.Bullets.DamageOverrideComponent>().damage;
                 var config = this.readComponentVisual.bulletConfig.AsUnsafeConfig();
-                if (config.IsValid() == true && config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent)) {
+                if (config.IsValid() == true && config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent) == true) {
                     return bulletConfigComponent.damage;
                 }
                 

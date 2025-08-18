@@ -1,4 +1,3 @@
-
 using ME.BECS.Jobs;
 #if FIXED_POINT
 using tfloat = sfloat;
@@ -27,6 +26,15 @@ namespace ME.BECS {
 
     }
     
+    [System.AttributeUsage(System.AttributeTargets.Parameter)]
+    public class ROAttribute : System.Attribute {}
+
+    [System.AttributeUsage(System.AttributeTargets.Parameter)]
+    public class RWAttribute : System.Attribute {}
+
+    [System.AttributeUsage(System.AttributeTargets.Parameter)]
+    public class WOAttribute : System.Attribute {}
+
     public interface IJobParallelForAspectsComponentsBase { }
     public interface IJobParallelForComponentsBase { }
     public interface IJobParallelForAspectsBase { }

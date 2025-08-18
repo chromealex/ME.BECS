@@ -124,9 +124,30 @@ namespace ME.BECS.Transforms {
             [INLINE(256)] set => this.rotation = MatrixUtils.FromToRotation(math.down(), value); 
         }
         
-        public readonly ref float3 localPosition => ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
-        public readonly ref quaternion localRotation => ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
-        public readonly ref float3 localScale => ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref float3 localPosition {
+            [INLINE(256)]
+            get {
+                this.IsWorldMatrixTickCalculated = false;
+                return ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
+            }
+        }
+
+        public readonly ref quaternion localRotation {
+            [INLINE(256)]
+            get {
+                this.IsWorldMatrixTickCalculated = false;
+                return ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
+            }
+        }
+
+        public readonly ref float3 localScale {
+            [INLINE(256)]
+            get {
+                this.IsWorldMatrixTickCalculated = false;
+                return ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
+            }
+        }
+
         public readonly ref readonly float3 readLocalPosition => ref this.localPositionData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly quaternion readLocalRotation => ref this.localRotationData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id, this.ent.gen).value;

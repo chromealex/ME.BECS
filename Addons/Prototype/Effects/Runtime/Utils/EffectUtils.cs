@@ -19,19 +19,19 @@ namespace ME.BECS.Effects {
     public static class EffectUtils {
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect) {
-            return CreateEffect(in jobInfo, in position, quaternion.identity, in effect);
+        public static void CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect) {
+            CreateEffect(in jobInfo, in position, quaternion.identity, in effect);
         }
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect, in PlayerAspect owner) {
-            return CreateEffect(in jobInfo, in position, quaternion.identity, in effect, owner);
+        public static void CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect, in PlayerAspect owner) {
+            CreateEffect(in jobInfo, in position, quaternion.identity, in effect, owner);
         }
 
         [INLINE(256)]
-        public static EffectAspect CreateEffect(in JobInfo jobInfo, in float3 position, in quaternion rotation, in EffectConfig effect, in PlayerAspect owner = default) {
+        public static void CreateEffect(in JobInfo jobInfo, in float3 position, in quaternion rotation, in EffectConfig effect, in PlayerAspect owner = default) {
 
-            if (effect.config.IsValid == false) return default;
+            if (effect.config.IsValid == false) return;
             
             var ent = Ent.New(in jobInfo);
             var tr = ent.Set<TransformAspect>();
@@ -40,10 +40,9 @@ namespace ME.BECS.Effects {
             tr.rotation = rotation;
             effect.config.Apply(ent);
             if (owner.ent != default) {
-                ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
+                PlayerUtils.SetOwner(in ent, in owner);
             }
             ent.Destroy(effect.lifetime);
-            return ent.GetOrCreateAspect<EffectAspect>();
 
         }
 
