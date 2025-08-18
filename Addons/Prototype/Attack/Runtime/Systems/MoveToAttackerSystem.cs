@@ -88,6 +88,36 @@ namespace ME.BECS.Attack {
             }
 
         }
+        
+        [BURST]
+        public struct StopOnTargetOnMoveJob : IJobFor1Aspects1Components<UnitAspect, UnitAttackOnMoveCommandComponent> {
+
+            public BuildGraphSystem buildGraphSystem;
+            public SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem;
+
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackOnMoveCommandComponent target) {
+
+                var t = unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId];
+                if (unit.HasCommandGroup() == false || t.IsAlive() == false || t.Read<TargetPathComponent>().path.IsCreated == false) {
+                    return;
+                }
+                if (target.target.IsAlive() == true && AttackUtils.CanAttack(in unit, in target.target) == true) {
+                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.buildGraphSystem, in this.fogOfWarSystem);
+                    if (result == AttackUtils.ReactionType.RotateToTarget) {
+                        // Stop unit to attack
+                        unit.ent.Set(new UnitLookAtComponent() {
+                            target = target.target.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
+                        });
+                        unit.IsPathFollow = false;
+                        // unit.IsHold = true;
+                        ent.Remove<ComebackAfterAttackComponent>();
+                        
+                    }
+                }
+
+            }
+
+        }
 
         [BURST]
         public struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
@@ -163,6 +193,12 @@ namespace ME.BECS.Attack {
             
             context.Query()
                    .Schedule<StopOnTargetJob, UnitAspect, UnitAttackCommandComponent>(new StopOnTargetJob() {
+                       buildGraphSystem = buildGraphSystem,
+                       fogOfWarSystem = fogOfWarSystem,
+                   }).AddDependency(ref context);
+
+            context.Query()
+                   .Schedule<StopOnTargetOnMoveJob, UnitAspect, UnitAttackOnMoveCommandComponent>(new StopOnTargetOnMoveJob() {
                        buildGraphSystem = buildGraphSystem,
                        fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);

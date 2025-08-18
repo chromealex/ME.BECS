@@ -57,9 +57,8 @@ namespace ME.BECS.Editor {
         
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
-            var ent = (Ent)PropertyEditorUtils.GetTargetObjectOfProperty(property);
-            
             this.LoadStyle();
+
             var rootVisualElement = new VisualElement();
             rootVisualElement.AddToClassList("entity-mini");
             rootVisualElement.Clear();
@@ -67,16 +66,26 @@ namespace ME.BECS.Editor {
             rootVisualElement.styleSheets.Add(EntityDrawer.styleSheet);
             this.rootVisualElement = rootVisualElement;
 
-            this.entity = ent;
             this.propertyPath = property.propertyPath;
             this.propertySerializedObject = property.serializedObject;
             this.property = property;
-            this.DrawEntity(rootVisualElement, this.entity.World, property.displayName);
+            
+            var entObj = PropertyEditorUtils.GetTargetObjectOfProperty(property);
+            if (entObj is Ent ent) {
+                
+                this.entity = ent;
+                this.DrawEntity(rootVisualElement, this.entity.World, property.displayName);
+
+            } else {
+                
+                this.entity = default;
+                
+            }
 
             EditorApplication.update -= this.OnUpdate;
             EditorApplication.update += this.OnUpdate;
 
-            return rootVisualElement;
+            return this.rootVisualElement;
 
         }
 

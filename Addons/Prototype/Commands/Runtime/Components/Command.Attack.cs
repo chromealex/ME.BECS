@@ -30,4 +30,20 @@ namespace ME.BECS.Commands {
 
     }
 
+    [ComponentGroup(typeof(CommandComponentsGroup))]
+    public struct UnitAttackOnMoveCommandComponent : IComponent {
+
+        public Ent target;
+
+    }
+
+    [ComponentGroup(typeof(CommandComponentsGroup))]
+    public struct CommandMoveAttack : ICommandComponent {
+
+        public float3 TargetPosition => this.targetPosition;
+
+        public float3 targetPosition;
+
+    }
+
 }
