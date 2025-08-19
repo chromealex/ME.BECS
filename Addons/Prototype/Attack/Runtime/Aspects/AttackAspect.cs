@@ -157,6 +157,7 @@ namespace ME.BECS.Attack {
             if (this.readComponentRuntimeFire.fireRateCount >= this.readComponent.rateCount) {
                 this.componentRuntimeFire.fireRateCount = 0u;
                 this.ent.SetTag<FireUsedComponent>(true);
+                this.IsReloaded = false;
             }
             this.ent.SetOneShot(new OnFireEvent(), OneShotType.NextTick);
         }

@@ -1,3 +1,5 @@
+
+using UnityEngine;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
