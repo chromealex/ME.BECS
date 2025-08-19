@@ -53,13 +53,14 @@ namespace ME.BECS.Transforms {
                 children.lockSpinner.Lock();
                 children.list.Remove(ent);
                 children.lockSpinner.Unlock();
-                ent.Remove<IsFirstLevelComponent>();
                 currentParent = default;
+                RecalculateParent(in ent);
             }
 
             if (parent.IsAlive() == false) {
                 // Clean up parent component
                 ent.Remove<ParentComponent>();
+                RecalculateParent(in ent);
                 return;
             }
 
@@ -75,12 +76,38 @@ namespace ME.BECS.Transforms {
             }
             
             currentParent = parent;
-            // if new parent has no parent component
-            // set IsFirstLevelComponent
-            if (parent.Has<ParentComponent>() == false) {
-                ent.Set(new IsFirstLevelComponent());
+            RecalculateParent(in ent);
+
+        }
+
+        [INLINE(256)]
+        private static void RecalculateParent(in Ent ent) {
+            var level = 0u;
+            var e = ent;
+            while (e.IsAlive() == true && e.TryRead(out ParentComponent parent) == true) {
+                ++level;
+                e = parent.value;
+            }
+            
+            ent.SetTag<TransformLevel1>(false);
+            ent.SetTag<TransformLevel2>(false);
+            ent.SetTag<TransformLevel3>(false);
+            ent.SetTag<TransformLevelOther>(false);
+            
+            switch (level) {
+                case 1u: ent.SetTag<TransformLevel1>(true); break;
+                case 2u: ent.SetTag<TransformLevel2>(true); break;
+                case 3u: ent.SetTag<TransformLevel3>(true); break;
+                default: ent.SetTag<TransformLevelOther>(true); break;
             }
 
+            if (ent.TryRead(out ChildrenComponent list) == true) {
+                for (var i = 0u; i < list.list.Count; ++i) {
+                    var child = list.list[i];
+                    if (child.worldId != ent.worldId) continue;
+                    RecalculateParent(in child);
+                }
+            }
         }
         
         [INLINE(256)]
@@ -167,6 +194,19 @@ namespace ME.BECS.Transforms {
 
             ent.IsWorldMatrixTickCalculated = false;
 
+        }
+
+        [INLINE(256)]
+        public static void CalculateWorldMatrixLevel(in TransformAspect parent, in TransformAspect ent) {
+            
+            if (parent.IsWorldMatrixTickCalculated == false) {
+                // Calculate parent matrix
+                if (ent.ent.worldId != parent.ent.worldId) return;
+            }
+
+            CalculateMatrix(in parent, in ent);
+            ent.IsWorldMatrixTickCalculated = true;
+            
         }
 
         [INLINE(256)]

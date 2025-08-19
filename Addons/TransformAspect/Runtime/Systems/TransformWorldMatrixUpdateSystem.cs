@@ -1,3 +1,5 @@
+using Unity.Profiling;
+
 namespace ME.BECS.Transforms {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -14,7 +16,10 @@ namespace ME.BECS.Transforms {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
+                var marker = new ProfilerMarker("CalculateLocalMatrix");
+                marker.Begin();
                 Transform3DExt.CalculateLocalMatrix(in aspect);
+                marker.End();
                 if (aspect.IsStaticLocal == true) ent.SetTag<IsTransformStaticLocalCalculatedComponent>(true);
 
             }
@@ -28,17 +33,6 @@ namespace ME.BECS.Transforms {
 
                 Transform3DExt.CalculateWorldMatrix(in aspect);
                 if (aspect.IsStatic == true) ent.SetTag<IsTransformStaticCalculatedComponent>(true);
-
-            }
-
-        }
-
-        [BURST]
-        public struct CalculateRootsWithChildrenJob : IJobFor1Aspects2Components<TransformAspect, ParentComponent, IsFirstLevelComponent> {
-
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect, ref ParentComponent parent, ref IsFirstLevelComponent isFirstLevelComponent) {
-
-                Transform3DExt.CalculateWorldMatrixHierarchy(parent.value, in aspect);
 
             }
 
@@ -61,6 +55,17 @@ namespace ME.BECS.Transforms {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
 
                 Transform3DExt.CalculateWorldMatrixParent(aspect.parent, in aspect);
+
+            }
+
+        }
+
+        [BURST]
+        public struct CalculateLevelJob : IJobForAspects<TransformAspect> {
+
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect aspect) {
+
+                Transform3DExt.CalculateWorldMatrixLevel(aspect.parent, in aspect);
 
             }
 
@@ -92,7 +97,10 @@ namespace ME.BECS.Transforms {
             var localMatrixHandle = context.Query().AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<IsTransformStaticLocalCalculatedComponent>().Schedule<CalculateLocalMatrixJob, TransformAspect>();
             // Update roots
             var rootsHandle = context.Query(JobHandle.CombineDependencies(localMatrixHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().Without<ParentComponent>().Schedule<CalculateRootsJob, TransformAspect>();
-            var rootsWithChildrenHandle = context.Query(JobHandle.CombineDependencies(rootsHandle, clearCurrenTick)).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();
+            var level1 = context.Query(rootsHandle).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel1>().With<ParentComponent>().Schedule<CalculateLevelJob, TransformAspect>();
+            var level2 = context.Query(level1).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel2>().With<ParentComponent>().Schedule<CalculateLevelJob, TransformAspect>();
+            var level3 = context.Query(level2).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel3>().With<ParentComponent>().Schedule<CalculateLevelJob, TransformAspect>();
+            var rootsWithChildrenHandle = context.Query(level3).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevelOther>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();
             // Update children with roots
             context.SetDependency(rootsWithChildrenHandle);
 

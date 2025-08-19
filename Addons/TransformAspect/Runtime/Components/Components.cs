@@ -119,8 +119,20 @@ namespace ME.BECS.Transforms {
 
     }
 
-    [EditorComment("Is first level entity under the root?")]
+    [EditorComment("First Transform Level")]
     [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct IsFirstLevelComponent : IComponent { }
+    public struct TransformLevel1 : IComponent { }
+
+    [EditorComment("Second Transform Level")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct TransformLevel2 : IComponent { }
+
+    [EditorComment("Third Transform Level")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct TransformLevel3 : IComponent { }
+
+    [EditorComment("Other Transform Level")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct TransformLevelOther : IComponent { }
 
 }
