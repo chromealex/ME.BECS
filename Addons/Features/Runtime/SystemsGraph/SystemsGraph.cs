@@ -1,4 +1,5 @@
 using System.Linq;
+using ME.BECS.Extensions.GraphProcessor;
 using UnityEngine;
 
 namespace ME.BECS.FeaturesGraph {
@@ -147,6 +148,7 @@ namespace ME.BECS.FeaturesGraph {
                 }
 
                 bool Filter(ME.BECS.Extensions.GraphProcessor.BaseNode node) {
+                    if (node is RelayNode) return true;
                     if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                         if (systemNode.system != null) {
                             if (System.Array.IndexOf(systemNode.system.GetType().GetInterfaces(), type) >= 0) {

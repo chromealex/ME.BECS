@@ -582,7 +582,7 @@ namespace ME.BECS.Editor.Systems {
                                 } else {
 
                                     collectedDeps.Add($"dep{index.ToString()}");
-                                    methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
+                                    AddApply(n, index, ref schemeDependsOn, dependsOn, collectedDeps.GetReadOpString($"dep{index.ToString()}"));
                                     scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
 
                                 }
