@@ -126,26 +126,17 @@ namespace ME.BECS.Transforms {
         
         public readonly ref float3 localPosition {
             [INLINE(256)]
-            get {
-                this.IsWorldMatrixTickCalculated = false;
-                return ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
-            }
+            get => ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
         }
 
         public readonly ref quaternion localRotation {
             [INLINE(256)]
-            get {
-                this.IsWorldMatrixTickCalculated = false;
-                return ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
-            }
+            get => ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
         }
 
         public readonly ref float3 localScale {
             [INLINE(256)]
-            get {
-                this.IsWorldMatrixTickCalculated = false;
-                return ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
-            }
+            get => ref this.localScaleData.Get(this.ent.id, this.ent.gen).value;
         }
 
         public readonly ref readonly float3 readLocalPosition => ref this.localPositionData.Read(this.ent.id, this.ent.gen).value;
@@ -164,9 +155,9 @@ namespace ME.BECS.Transforms {
 
         public readonly bool IsWorldMatrixTickCalculated {
             [INLINE(256)]
-            get => this.ent.Has<IsWorldMatrixTickCalculatedComponent>();
+            get => this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
             [INLINE(256)]
-            set => this.ent.SetTag<IsWorldMatrixTickCalculatedComponent>(value);
+            set => this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated = value;
         }
         
         public readonly float3 position {

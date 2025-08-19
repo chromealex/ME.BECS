@@ -170,7 +170,7 @@ namespace ME.BECS.Views {
                 ME.BECS.Transforms.WorldMatrixComponent sourceData;
                 if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
                     sourceData = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
-                    if (Components.Has<ME.BECS.Transforms.IsWorldMatrixTickCalculatedComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == false) {
+                    if (sourceData.isTickCalculated == false) {
                         interpolate = false;
                     }
                 } else {

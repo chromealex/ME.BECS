@@ -16,6 +16,7 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Jobs;
 
+    [System.Flags]
     public enum ScheduleFlags {
 
         None = 0,

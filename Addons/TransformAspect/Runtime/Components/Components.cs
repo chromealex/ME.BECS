@@ -48,9 +48,6 @@ namespace ME.BECS.Transforms {
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct IsTransformStaticLocalCalculatedComponent : IComponent { }
 
-    [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct IsWorldMatrixTickCalculatedComponent : IComponent { }
-
     [EditorComment("Current calculated world matrix")]
     [ComponentGroup(typeof(TransformMatrixComponentGroup))]
     //[LAYOUT(LayoutKind.Explicit, Size = 64)]
@@ -59,6 +56,7 @@ namespace ME.BECS.Transforms {
         //[FieldOffset(0)]
         public float4x4 value;
         public LockSpinner spinner;
+        public bbool isTickCalculated;
 
     }
 

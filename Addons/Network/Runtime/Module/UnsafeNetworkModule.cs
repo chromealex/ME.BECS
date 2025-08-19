@@ -1,3 +1,5 @@
+
+using Unity.Profiling;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -1009,7 +1011,9 @@ namespace ME.BECS.Network {
                 //var completePerTick = this.properties.maxFrameTime / this.properties.tickTime;
                 this.frameStopwatch.Restart();
                 for (ulong tick = currentTick; tick < targetTick; ++tick) {
-                    
+
+                    var marker = new ProfilerMarker("Tick");
+                    marker.Begin();
                     // Begin tick
                     dependsOn = State.SetWorldState(in world, WorldState.BeginTick, UpdateType.FIXED_UPDATE, deltaTimeMs, dependsOn);
                     {
@@ -1021,6 +1025,8 @@ namespace ME.BECS.Network {
                     dependsOn = State.SetWorldState(in world, WorldState.EndTick, UpdateType.FIXED_UPDATE, deltaTimeMs, dependsOn);
                     dependsOn.Complete();
                     // End tick
+                    
+                    marker.End();
 
                     if (this.data.ptr->IsRollbackRequired(tick) == true) {
                         break;
