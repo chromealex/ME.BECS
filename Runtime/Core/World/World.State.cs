@@ -1,3 +1,5 @@
+using Unity.Jobs;
+
 namespace ME.BECS {
 
     using static Cuts;
@@ -25,6 +27,7 @@ namespace ME.BECS {
         public byte state;
         public byte tickCheck;
         public ushort updateType;
+        public JobHandle lastApplyHandle;
 
         public WorldState WorldState {
             get {
@@ -163,6 +166,7 @@ namespace ME.BECS {
                 updateType = updateType,
                 deltaTimeMs = deltaTimeMs,
             }.ScheduleSingle(dependsOn);
+            world.state.ptr->lastApplyHandle = dependsOn;
             return dependsOn;
         }
 

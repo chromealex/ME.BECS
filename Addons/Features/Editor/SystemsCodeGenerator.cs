@@ -317,6 +317,20 @@ namespace ME.BECS.Editor.Systems {
                             }
                             return needApplyJob == false;
                         }
+
+                        string AddPreApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, string dependsOn) {
+                            if (node.inputPorts.Count > 0) {
+                                if (node.GetSyncPoint(methodEnum).syncPoint == true) {
+                                    var edges = node.inputPorts[0].GetEdges();
+                                    if (edges.Count > 1) {
+                                        // we have current sync point, but previous sync point was not exist - add pre apply
+                                        methodContent.Add($"var preBatch{index.ToString()} = Batches.Apply({dependsOn}, world.state);");
+                                        return $"preBatch{index.ToString()}";
+                                    }
+                                }
+                            }
+                            return dependsOn;
+                        }
                         
                         void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null, bool forceWithoutSync = false) {
 
@@ -501,6 +515,7 @@ namespace ME.BECS.Editor.Systems {
                                             isInBurst = isBursted;
                                         }
 
+                                        dependsOn = AddPreApply(systemNode, index, dependsOn);
                                         if (systemNode.system.GetType().IsGenericType == true) {
                                             var systemType = systemNode.system.GetType();
                                             if (systemType.IsGenericType == true) {

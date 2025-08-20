@@ -348,16 +348,13 @@ namespace ME.BECS {
             var job = new ApplyJob() {
                 state = state,
             };
-            return job.ScheduleSingle(jobHandle);
+            var handle = job.ScheduleSingle(jobHandle);
+            state.ptr->lastApplyHandle = handle;
+            return handle;
         }
 
         [INLINE(256)]
-        public static JobHandle Apply(JobHandle jobHandle, in World world) {
-            var job = new ApplyJob() {
-                state = world.state,
-            };
-            return job.ScheduleSingle(jobHandle);
-        }
+        public static JobHandle Apply(JobHandle jobHandle, in World world) => Apply(jobHandle, world.state);
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {

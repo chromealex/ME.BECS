@@ -190,7 +190,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void SetBuilder(ref QueryBuilder builder) {
             if (builder.scheduleMode == Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Parallel) {
-                builder.builderDependsOn = builder.SetEntities(builder.commandBuffer, builder.useSort, builder.builderDependsOn);
+                builder.builderDependsOn = JobHandle.CombineDependencies(builder.builderDependsOn, builder.SetEntities(builder.commandBuffer, builder.useSort, builder.commandBuffer.ptr->state.ptr->lastApplyHandle));
             } else {
                 this.builderCompose = builder.compose;
                 this.builderQueryData = builder.queryData;
