@@ -318,14 +318,17 @@ namespace ME.BECS.Editor.Systems {
                             return needApplyJob == false;
                         }
 
-                        string AddPreApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, string dependsOn) {
+                        string AddPreApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string dependsOn) {
                             if (node.inputPorts.Count > 0) {
                                 if (node.GetSyncPoint(methodEnum).syncPoint == true) {
                                     var edges = node.inputPorts[0].GetEdges();
                                     if (edges.Count > 1) {
                                         // we have current sync point, but previous sync point was not exist - add pre apply
-                                        methodContent.Add($"var preBatch{index.ToString()} = Batches.Apply({dependsOn}, world.state);");
-                                        return $"preBatch{index.ToString()}";
+                                        var v = $"preBatch{index}";
+                                        schemeDependsOn = v;
+                                        scheme.Add($" * {Align("Batches.Apply (Pre)", 32)} :  {Align($"{schemeDependsOn} => {v}", 16 + 32 + 4, true)} [  SYNC   ]");
+                                        methodContent.Add($"var {v} = Batches.Apply({dependsOn}, world.state);");
+                                        return v;
                                     }
                                 }
                             }
@@ -515,7 +518,9 @@ namespace ME.BECS.Editor.Systems {
                                             isInBurst = isBursted;
                                         }
 
-                                        dependsOn = AddPreApply(systemNode, index, dependsOn);
+                                        dependsOn = AddPreApply(systemNode, index, ref schemeDependsOn, dependsOn);
+                                        scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
+
                                         if (systemNode.system.GetType().IsGenericType == true) {
                                             var systemType = systemNode.system.GetType();
                                             if (systemType.IsGenericType == true) {
@@ -591,8 +596,6 @@ namespace ME.BECS.Editor.Systems {
                                         }
 
                                     }
-
-                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
 
                                 } else {
 
