@@ -100,21 +100,22 @@ namespace ME.BECS.Editor {
                 }
             }
 
-            void Add(System.Text.StringBuilder builder, Theme theme, int priority) {
-                builder.AppendLine($"[UnityEditor.MenuItem(\"ME.BECS/Themes/{theme.menuName}\", true)] private static bool {EditorUtils.GetCodeName(theme.menuName)}Validation() {{ UnityEditor.Menu.SetChecked(\"ME.BECS/Themes/{theme.menuName}\", Themes.CurrentTheme == \"{theme.style}\"); return true; }}");
+            void Add(System.Text.StringBuilder builder, System.Text.StringBuilder builderValidation, Theme theme, int priority) {
+                builderValidation.AppendLine($"UnityEditor.Menu.SetChecked(\"ME.BECS/Themes/{theme.menuName}\", Themes.CurrentTheme == \"{theme.style}\");");
                 builder.AppendLine($"[UnityEditor.MenuItem(\"ME.BECS/Themes/{theme.menuName}\", priority = {priority})] private static void {EditorUtils.GetCodeName(theme.menuName)}() => Themes.CurrentTheme = \"{theme.style}\";");
             }
             
             var priority = 200;
             var builder = new System.Text.StringBuilder();
+            var builderValidation = new System.Text.StringBuilder();
             foreach (var theme in themes) {
-                Add(builder, theme, priority);
+                Add(builder, builderValidation, theme, priority);
                 ++priority;
             }
 
             priority += 10;
             foreach (var custom in customList) {
-                Add(builder, new Theme() {
+                Add(builder, builderValidation, new Theme() {
                     menuName = custom.name,
                     style = AssetDatabase.GetAssetPath(custom),
                 }, priority);
@@ -123,12 +124,13 @@ namespace ME.BECS.Editor {
             
             var content = $@"
     public static class ThemesMenu {{
+        [UnityEditor.MenuItem(""ME.BECS/Themes/Default"", true)] private static bool DefaultValidation() {{ {builderValidation.ToString()} return true; }}
         {builder.ToString()}
     }}
     ";
             
             var file = new FileContent();
-            file.filename = "MenuThemes.cs";
+            file.filename = "MenuThemes";
             file.content = content;
             
             return new FileContent[] {

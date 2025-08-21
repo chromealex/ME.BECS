@@ -349,7 +349,7 @@ namespace ME.BECS {
                 state = state,
             };
             var handle = job.ScheduleSingle(jobHandle);
-            state.ptr->lastApplyHandle = handle;
+            state.ptr->lastApplyHandle = JobHandle.CombineDependencies(state.ptr->lastApplyHandle, handle);
             return handle;
         }
 

@@ -184,7 +184,7 @@ namespace ME.BECS.Editor {
             }
             {
                 var allocatorInstance = WorldsTempAllocator.allocatorTemp.Get(this.world.id).Allocator;
-                this.tempAllocatorSize.text = $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
+                this.tempAllocatorSize.text = $"{EditorUtils.BytesToString(allocatorInstance.BytesUsed)}/{EditorUtils.BytesToString(allocatorInstance.BytesAllocated)} (Blocks: {allocatorInstance.BlocksAllocated})";
             }
 
         }

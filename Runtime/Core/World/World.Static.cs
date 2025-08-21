@@ -301,8 +301,8 @@ namespace ME.BECS {
 
     public struct WorldsTempAllocator {
 
-        private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.align, 10005);
-        internal static ref Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
+        private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.align, 10005);
+        internal static ref Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<bool>>.align, 10007);
         internal static ref Internal.Array<bool> allocatorTempValid => ref allocatorTempValidBurst.Data;
@@ -317,8 +317,8 @@ namespace ME.BECS {
                     allocatorTempValid.Resize(worldId + 1u);
                 }
                 {
-                    var allocator = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
-                    allocator.Allocator.Initialize(128 * 1024, false);
+                    var allocator = new Unity.Collections.AllocatorHelper<TempAllocator>(Constants.ALLOCATOR_PERSISTENT);
+                    allocator.Allocator.Initialize(128 * 1024);
                     allocatorTemp.Get(worldId) = allocator;
                     allocatorTempValidBurst.Data.Get(worldId) = true;
                 }
