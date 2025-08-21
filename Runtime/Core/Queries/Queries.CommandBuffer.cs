@@ -181,11 +181,11 @@ namespace ME.BECS {
         public safe_ptr<State> state;
         public ushort worldId;
 
-        public bool sync;
+        public bbool sync;
+        public bbool builderSort;
 
-        public ArchetypeQueries.QueryCompose builderCompose;
         public safe_ptr<QueryData> builderQueryData;
-        public bool builderSort;
+        public ArchetypeQueries.QueryCompose builderCompose;
 
         [INLINE(256)]
         public void SetBuilder(ref QueryBuilder builder) {

@@ -41,7 +41,10 @@ namespace ME.BECS.Transforms {
         /// </summary>
         public bool IsStaticLocal {
             [INLINE(256)] get => this.ent.Has<IsTransformStaticLocalComponent>();
-            [INLINE(256)] set => this.ent.SetTag<IsTransformStaticLocalComponent>(value);
+            [INLINE(256)] set {
+                this.ent.SetTag<IsTransformStaticLocalCalculatedComponent>(false);
+                this.ent.SetTag<IsTransformStaticLocalComponent>(value);
+            }
         }
 
         /// <summary>

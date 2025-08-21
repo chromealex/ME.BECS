@@ -56,6 +56,8 @@ namespace ME.BECS.Attack {
                     }
                 }
 
+                transformAspect.IsStaticLocal = true;
+
             }
 
         }
