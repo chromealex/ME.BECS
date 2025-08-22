@@ -345,9 +345,18 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, safe_ptr<State> state) {
-            var handle1 = new ApplyJob() { state = state }.ScheduleSingle(jobHandle);
-            var handle2 = new ApplyFreeJob() { state = state }.ScheduleSingle(jobHandle);
-            var handle3 = new ApplyDestroyedJob() { state = state }.ScheduleSingle(jobHandle);
+            var handle1 = new ApplyJob() { 
+                state = state,
+                #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+                safety = new SafetyComponentContainerRW<TNull>(state, Context.world.id),
+                #endif
+            }.ScheduleSingle(jobHandle);
+            var handle2 = new ApplyFreeJob() { 
+                state = state,
+            }.ScheduleSingle(jobHandle);
+            var handle3 = new ApplyDestroyedJob() { 
+                state = state,
+            }.ScheduleSingle(jobHandle);
             var handle = JobHandle.CombineDependencies(handle1, handle2, handle3);
             state.ptr->lastApplyHandle = JobHandle.CombineDependencies(state.ptr->lastApplyHandle, handle);
             return handle;

@@ -39,7 +39,11 @@ namespace ME.BECS {
     
     public unsafe struct SafetyComponentContainerRO<T> where T : unmanaged, IComponentBase {
 
+        [Unity.Collections.ReadOnly]
+        public SafetyComponentContainerRW<T> safety;
+        
         public SafetyComponentContainerRO(safe_ptr<State> state, ushort worldId) {
+            this.safety = new SafetyComponentContainerRW<T>(state, worldId);
         }
 
     }

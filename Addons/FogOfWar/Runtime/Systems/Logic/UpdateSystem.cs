@@ -15,7 +15,7 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, ref OwnerComponent owner) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
@@ -33,7 +33,7 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, ref OwnerComponent owner) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
@@ -51,7 +51,7 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, ref OwnerComponent owner) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
@@ -71,7 +71,7 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, ref OwnerComponent owner) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
@@ -91,7 +91,7 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, ref OwnerComponent owner, ref FogOfWarSectorRevealerComponent sectorComponent) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref FogOfWarRevealerComponent revealer, [RO] ref OwnerComponent owner, ref FogOfWarSectorRevealerComponent sectorComponent) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsCalculated == false) return;
@@ -110,13 +110,14 @@ namespace ME.BECS.FogOfWar {
 
             public FogOfWarStaticComponent props;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, ref OwnerComponent owner) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref ParentComponent parent, ref FogOfWarRevealerPartialComponent part, [RO] ref OwnerComponent owner) {
 
                 var tr = ent.GetAspect<TransformAspect>();
                 if (tr.IsWorldMatrixTickCalculated == false) return;
                 
                 var parentEnt = parent.value;
-                var fow = owner.ent.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
+                var ownerEnt = owner.ent;
+                var fow = ownerEnt.GetAspect<PlayerAspect>().readTeam.Read<FogOfWarComponent>();
                 var sector = new FowMathSector(tr.GetWorldMatrixPosition(), tr.GetWorldMatrixRotation(), parentEnt.Read<FogOfWarSectorRevealerComponent>().value);
                 ref readonly var revealer = ref parentEnt.Read<FogOfWarRevealerComponent>();
                 FogOfWarUtils.WriteRange(in this.props, in fow, in tr, revealer.height, revealer.range, revealer.rangeY, part.part, in sector);

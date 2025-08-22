@@ -8,6 +8,10 @@ namespace ME.BECS {
     [BURST]
     public unsafe struct ApplyJob : IJobSingle {
 
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        public SafetyComponentContainerRW<TNull> safety;
+        #endif
+        
         public safe_ptr<State> state;
             
         [INLINE(256)]

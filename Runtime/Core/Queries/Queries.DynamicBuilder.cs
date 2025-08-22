@@ -639,6 +639,10 @@ namespace ME.BECS {
         [BURST]
         internal struct SetEntitiesJob : IJob {
 
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            public SafetyComponentContainerRO<TNull> safety;
+            #endif
+
             public ArchetypeQueries.ComposeJob composeJob;
             public safe_ptr<State> state;
             public safe_ptr<CommandBuffer> buffer;
@@ -799,6 +803,9 @@ namespace ME.BECS {
                 state = buffer.ptr->state,
                 allocator = allocator,
                 useSort = useSort,
+                #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+                safety = new SafetyComponentContainerRO<TNull>(buffer.ptr->state, Context.world.id),
+                #endif
             };
             var handle = job.ScheduleByRef(dependsOn);
             return handle;
