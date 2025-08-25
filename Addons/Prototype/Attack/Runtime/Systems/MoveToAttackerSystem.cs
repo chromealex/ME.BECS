@@ -144,21 +144,17 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct RemoveComebackAfterAttackComponentJob : IJobForEntity {
-            
-            public void Execute(in JobInfo jobInfo, in Ent ent) {
-                ent.Remove<ComebackAfterAttackComponent>();
-            }
-
-        }
-        
-        [BURST]
         public struct ComebackAfterAttackJob : IJobFor2Aspects1Components<TransformAspect, UnitAspect, ComebackAfterAttackComponent> {
 
             public BuildGraphSystem buildGraphSystem;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit, ref ComebackAfterAttackComponent comeback) {
 
+                if (ent.Has<ReceivedCommandFromUserEvent>() == true) {
+                    ent.Remove<ComebackAfterAttackComponent>();
+                    return;
+                }
+                
                 var maxDistanceSqr = ent.ReadStatic<AttackerFollowDistanceComponent>();
                 if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr) {
                     return;
@@ -202,14 +198,6 @@ namespace ME.BECS.Attack {
                        buildGraphSystem = buildGraphSystem,
                        fogOfWarSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
-
-            context.Query()
-                   .With<ComebackAfterAttackComponent>()
-                   .With<ReceivedCommandFromUserEvent>()
-                   .Schedule<RemoveComebackAfterAttackComponentJob>()
-                   .AddDependency(ref context);
-            
-            context.Apply();
 
             context.Query()
                    .Schedule<ComebackAfterAttackJob, TransformAspect, UnitAspect, ComebackAfterAttackComponent>(new ComebackAfterAttackJob() {

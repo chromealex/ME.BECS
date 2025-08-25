@@ -58,7 +58,7 @@ namespace ME.BECS.Pathfinding {
         
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = API.Query(in context).With<TargetComponent>().AsParallel().Schedule<UpdatePathJob, TargetComponent>(new UpdatePathJob() {
+            var dependsOn = context.Query().With<TargetComponent>().AsParallel().Schedule<UpdatePathJob, TargetComponent>(new UpdatePathJob() {
                 world = context.world,
                 filter = this.filter,
             });

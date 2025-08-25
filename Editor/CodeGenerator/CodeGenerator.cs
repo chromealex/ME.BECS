@@ -81,13 +81,15 @@ namespace ME.BECS.Editor {
         public bool TryGetValue<T>(System.Type key, out T value) {
             var cacheIsInvalid = true;
             if (this.cacheData.TryGetValue(new Key(key, this.method, this.key).ToString(), out var cachedItem) == true) {
-                cacheIsInvalid = false;
                 var scriptsPath = ScriptsImporter.FindScript(key);
-                foreach (string scriptPath in scriptsPath) {
-                    var monoScriptHashCode = scriptPath != null ? Md5(scriptPath) : null;
-                    if (System.Array.IndexOf(cachedItem.hashCodes, monoScriptHashCode) == -1) {
-                        cacheIsInvalid = true;
-                        break;
+                if (scriptsPath != null) {
+                    cacheIsInvalid = false;
+                    foreach (string scriptPath in scriptsPath) {
+                        var monoScriptHashCode = scriptPath != null ? Md5(scriptPath) : null;
+                        if (System.Array.IndexOf(cachedItem.hashCodes, monoScriptHashCode) == -1) {
+                            cacheIsInvalid = true;
+                            break;
+                        }
                     }
                 }
             }

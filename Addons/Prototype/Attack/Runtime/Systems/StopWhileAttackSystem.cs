@@ -11,6 +11,7 @@ using Rect = UnityEngine.Rect;
 #endif
 
 using ME.BECS.Transforms;
+using Unity.Jobs;
 
 namespace ME.BECS.Attack {
     
@@ -30,7 +31,7 @@ namespace ME.BECS.Attack {
                 var unit = parent.value;
                 if (sensor.target.IsAlive() == true) {
                     var unitAspect = unit.GetAspect<UnitAspect>();
-                    if (unitAspect.IsPathFollow == false && sensor.readComponentRuntimeFire.fireTimer > 0) {
+                    if (unitAspect.IsPathFollow == false && sensor.readComponentRuntimeFire.fireTimer > 0f) {
                         unitAspect.IsHold = true;
                     }
                 }
@@ -45,7 +46,7 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor) {
 
                 var unit = sensor.ent.GetParent();
-                if (sensor.target.IsAlive() == false || sensor.readComponentRuntimeFire.fireTimer <= 0) unit.GetAspect<UnitAspect>().IsHold = false;
+                if (sensor.target.IsAlive() == false || sensor.readComponentRuntimeFire.fireTimer <= 0f) unit.GetAspect<UnitAspect>().IsHold = false;
 
             }
 
@@ -53,16 +54,18 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query()
+            var dependsOnSet = context.Query()
                                    .AsParallel()
+                                   .AsUnsafe()
                                    .WithAny<AttackTargetComponent, AttackTargetsComponent>()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobSet, AttackAspect, ParentComponent>();
-            dependsOn = context.Query(dependsOn)
+            var dependsOnRemove = context.Query()
                                    .AsParallel()
+                                   .AsUnsafe()
                                    .Without<CanFireWhileMovesTag>()
                                    .Schedule<JobRemove, AttackAspect>();
-            context.SetDependency(dependsOn);
+            context.SetDependency(dependsOnSet, dependsOnRemove);
 
         }
 
