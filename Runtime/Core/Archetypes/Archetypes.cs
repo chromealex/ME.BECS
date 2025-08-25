@@ -76,7 +76,6 @@ namespace ME.BECS {
                             var currentBits = new TempBitArray(in state.ptr->allocator, this.componentBits, Constants.ALLOCATOR_TEMP);
                             currentBits.Union(addItems.root);
                             if (removeItemsCount > 0u) currentBits.Remove(removeItems.root);
-                            //var fastComponentsRead = UIntHashSetRead.Create(in state.ptr->allocator, in this.components);
                             for (uint i = 0u; i < list.Count; ++i) {
                                 var archIdx = list[in state.ptr->allocator, i];
                                 ref var arch = ref archetypes.list[in state.ptr->allocator, archIdx];

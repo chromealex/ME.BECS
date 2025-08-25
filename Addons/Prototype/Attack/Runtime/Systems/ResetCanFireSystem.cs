@@ -7,7 +7,6 @@ namespace ME.BECS.Attack {
 
     [BURST]
     [UnityEngine.Tooltip("Reset Can Fire system")]
-    [RequiredDependencies(typeof(StopWhileAttackSystem))]
     public struct ResetCanFireSystem : IUpdate {
 
         [BURST]
