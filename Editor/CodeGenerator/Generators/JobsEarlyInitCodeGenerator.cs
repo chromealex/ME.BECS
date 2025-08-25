@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using ME.BECS.Mono.Reflection;
+using System.Reflection.Emit;
 
 namespace ME.BECS.Editor.Jobs {
     
@@ -410,6 +412,14 @@ namespace ME.BECS.Editor.Jobs {
             var visited = new System.Collections.Generic.HashSet<MethodInfo>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
+                var deps = ILAnalyzer.AnalyzeMethod(body);
+                foreach (var item in deps) {
+                    uniqueTypes.Add(new TypeInfo() {
+                        type = item.type,
+                        op = item.access,
+                        isArg = componentsType.Contains(item.type),
+                    });
+                }
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
                     var continueTraverse = true;
@@ -435,7 +445,7 @@ namespace ME.BECS.Editor.Jobs {
                             continueTraverse = false;
                         }
                     }
-                    {
+                    /*{
                         if (inst.OpCode == System.Reflection.Emit.OpCodes.Initobj && typeof(IComponentBase).IsAssignableFrom((System.Type)inst.Operand) == true) {
                             uniqueTypes.Add(new TypeInfo() {
                                 type = (System.Type)inst.Operand,
@@ -453,7 +463,7 @@ namespace ME.BECS.Editor.Jobs {
                             });
                             continueTraverse = false;
                         }
-                    }
+                    }*/
                     if (inst.Operand is System.Reflection.MethodInfo method && method.IsGenericMethod == true) {
                         var safetyCheck = method.GetCustomAttribute<SafetyCheckAttribute>();
                         if (safetyCheck != null) {
@@ -485,7 +495,7 @@ namespace ME.BECS.Editor.Jobs {
             
             return uniqueTypes;
         }
-
+        
         public struct NewEntInfo {
 
             public int count;

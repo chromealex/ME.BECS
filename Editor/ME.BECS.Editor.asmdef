@@ -9,7 +9,9 @@
         "ME.BECS.Units",
         "ME.BECS.Units.Editor",
         "Unity.Addressables",
-        "Unity.Addressables.Editor"
+        "Unity.Addressables.Editor",
+        "ME.BECS.Transforms",
+        "WS"
     ],
     "includePlatforms": [
         "Editor"
