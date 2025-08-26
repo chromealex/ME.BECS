@@ -371,7 +371,7 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
-        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, System.Predicate<Instruction> onInstruction = null) {
+        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, bool useAnalyzer = true, System.Predicate<Instruction> onInstruction = null) {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
@@ -412,14 +412,17 @@ namespace ME.BECS.Editor.Jobs {
             var visited = new System.Collections.Generic.HashSet<MethodInfo>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
-                var deps = ILAnalyzer.AnalyzeMethod(body);
-                foreach (var item in deps) {
-                    uniqueTypes.Add(new TypeInfo() {
-                        type = item.type,
-                        op = item.access,
-                        isArg = componentsType.Contains(item.type),
-                    });
+                var deps = useAnalyzer == true ? ILAnalyzer.AnalyzeMethod(body) : null;
+                if (deps != null) {
+                    foreach (var item in deps) {
+                        uniqueTypes.Add(new TypeInfo() {
+                            type = item.type,
+                            op = item.access,
+                            isArg = componentsType.Contains(item.type),
+                        });
+                    }
                 }
+
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
                     var continueTraverse = true;

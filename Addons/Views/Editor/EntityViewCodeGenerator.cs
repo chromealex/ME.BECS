@@ -121,7 +121,7 @@ namespace ME.BECS.Editor.Aspects {
                 str.AppendLine($"// {methodName} not found");
                 return;
             }
-            var typesInfo = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(methodInfo);
+            var typesInfo = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(methodInfo, useAnalyzer: false);
             if (typesInfo.Count > 0) str.AppendLine($"// {methodName}:");
             foreach (var type in typesInfo) {
                 if (type.op != RefOp.ReadOnly) {
