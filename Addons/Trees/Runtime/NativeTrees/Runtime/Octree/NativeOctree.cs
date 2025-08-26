@@ -119,7 +119,10 @@ namespace NativeTrees {
             // [!] Must be sorted because we add elements in threads 
             temp.Sort();
             foreach (var obj in temp) {
+                var marker = new Unity.Profiling.ProfilerMarker("Insert");
+                marker.Begin();
                 this.Insert(obj.obj, obj.bounds);
+                marker.End();
             }
             
         }
@@ -206,11 +209,12 @@ namespace NativeTrees {
         private void InsertNext(InsertNextNode nodeData) {
             var objMask = NativeOctree<T>.GetBoundsMask(nodeData.quarterSizeBounds.nodeCenter, nodeData.objWrapper.bounds);
 
-            var q = new Unity.Collections.LowLevel.Unsafe.UnsafeList<InsertNextNode>(8, Allocator.Temp);
-            q.Add(nodeData);
-            while (q.Length > 0) {
-                var n = q[0];
-                q.RemoveAtSwapBack(0);
+            //var q = new Unity.Collections.LowLevel.Unsafe.UnsafeList<InsertNextNode>(8, Allocator.Temp);
+            //q.Add(nodeData);
+            //while (q.Length > 0) {
+                //var n = q[0];
+                //q.RemoveAtSwapBack(0);
+                var n = nodeData;
                 for (var i = 0; i < 8; i++) {
                     var octantMask = NativeOctree<T>.OctantMasks[i];
                     if ((objMask & octantMask) != octantMask) {
@@ -221,11 +225,11 @@ namespace NativeTrees {
                     var octantCenterQuarterSize = QuarterSizeBounds.GetOctant(n.quarterSizeBounds, i);
 
                     if (this.TryInsert(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth) == false) {
-                        //this.InsertNext(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth);
-                        q.Add(new InsertNextNode(n, n.parentDepth + 1));
+                        this.InsertNext(octantId, octantCenterQuarterSize, n.objWrapper, n.parentDepth);
+                        //q.Add(new InsertNextNode(n, n.parentDepth + 1));
                     }
                 }
-            }
+            //}
         }
 
         /// <summary>
@@ -241,7 +245,10 @@ namespace NativeTrees {
                 this.objects.Add(nodeId, objWrapper);
                 this.nodes[nodeId] = objectCount;
                 if (objectCount > this.objectsPerNode && depth < this.maxDepth) {
+                    var marker = new Unity.Profiling.ProfilerMarker("Subdivide");
+                    marker.Begin();
                     this.Subdivide(nodeId, in extents, depth);
+                    marker.End();
                 }
 
                 return true;
