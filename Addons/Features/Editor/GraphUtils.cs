@@ -35,6 +35,13 @@ namespace ME.BECS.Editor.FeaturesGraph {
 
     internal class GraphBuilder {
 
+        /*[MenuItem("ME.BECS/Internal/Gen Graph")]
+        public static void Test() {
+            if (UnityEditor.Selection.activeObject is SystemsGraph g) {
+                GraphBuilder.Build(g);
+            }
+        }*/
+
         public static void Build(SystemsGraph graph) {
 
             BECS.FeaturesGraph.Nodes.SystemNode[] FilterNodes(BaseNode x) {
@@ -90,7 +97,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
             var nodeSizeY = 200f;
 
             var instance = ScriptableObject.CreateInstance<SystemsGraph>();
-            instance.name = $"{graph}-Gen";
+            instance.name = $"{graph.name}-Gen";
             instance.nodes = new List<BaseNode>();
             {
                 var sysNode = new StartNode() {
@@ -111,6 +118,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 instance.AddNode(sysNode);
             }
             var nodesKey = new Dictionary<Vector2Int, BaseNode>();
+            var countColumns = new Dictionary<int, int>();
             foreach (var node in sorted) {
                 var sysNode = new SystemNode() {
                     position = new Rect(node.X * nodeSizeX, node.Y * nodeSizeY, 100f, 80f),
@@ -120,34 +128,84 @@ namespace ME.BECS.Editor.FeaturesGraph {
                 sysNode.OnNodeCreated();
                 instance.AddNode(sysNode);
                 nodesKey.Add(new Vector2Int(node.X, node.Y), sysNode);
+                if (countColumns.TryGetValue(node.X, out var count) == true) {
+                    ++countColumns[node.X];
+                } else {
+                    countColumns.Add(node.X, 1);
+                }
             }
             instance.OnAfterDeserialize();
 
+            var relays = new Dictionary<int, RelayNode>();
             var startNode = instance.nodes[0];
             var exitNode = instance.nodes[1];
             foreach (var node in sorted) {
                 var x = node.X;
                 if (x == 0) {
                     instance.Connect(
-                        new NodePort(nodesKey[new Vector2Int(node.X, node.Y)], "inputNodes", new PortData() { }),
-                        new NodePort(startNode, "output", new PortData() { })
+                        nodesKey[new Vector2Int(node.X, node.Y)].GetPort("inputNodes", null),
+                        startNode.GetPort("output", null)
                     );
                 }
                 if (x == maxX) {
                     instance.Connect(
-                        new NodePort(exitNode, "inputNodes", new PortData() { }),
-                        new NodePort(nodesKey[new Vector2Int(node.X, node.Y)], "outputNodes", new PortData() { })
+                        exitNode.GetPort("inputNodes", null),
+                        nodesKey[new Vector2Int(node.X, node.Y)].GetPort("outputNodes", null)
                     );
                 }
-                var next = x + 1;
-                var kSource = nodesKey[new Vector2Int(node.X, node.Y)];
-                foreach (var n in sorted) {
-                    if (n.X == next) {
-                        var kTarget = nodesKey[new Vector2Int(n.X, n.Y)];
-                        instance.Connect(
-                            new NodePort(kTarget, "inputNodes", new PortData() { }),
-                            new NodePort(kSource, "outputNodes", new PortData() { })
-                        );
+
+                countColumns.TryGetValue(x - 1, out var prevCount);
+                countColumns.TryGetValue(x, out var count);
+                countColumns.TryGetValue(x + 1, out var nextCount);
+                if (prevCount >= 2 && count >= 2) {
+                    if (relays.TryGetValue(x - 1, out var relay) == true) {
+                        
+                    } else {
+                        relay = new RelayNode() {
+                            position = new Rect((x - 1) * nodeSizeX + nodeSizeX * 0.5f, 0f, 100f, 80f),
+                            graph = instance,
+                            GUID = $"RelayNode{x - 1}",
+                        };
+                        relay.OnNodeCreated();
+                        instance.AddNode(relay);
+                        relays.Add(x - 1, relay);
+                    }
+                    var kSource = nodesKey[new Vector2Int(node.X, node.Y)];
+                    instance.Connect(
+                        kSource.GetPort("inputNodes", null),
+                        relay.GetPort("output", "0")
+                    );
+                }
+                if (count >= 2 && nextCount >= 2) {
+                    if (relays.TryGetValue(x, out var relay) == true) {
+                        
+                    } else {
+                        relay = new RelayNode() {
+                            position = new Rect(x * nodeSizeX + nodeSizeX * 0.5f, 0f, 100f, 80f),
+                            graph = instance,
+                            GUID = $"RelayNode{x}",
+                        };
+                        relay.OnNodeCreated();
+                        instance.AddNode(relay);
+                        relays.Add(x, relay);
+                    }
+
+                    var kSource = nodesKey[new Vector2Int(node.X, node.Y)];
+                    instance.Connect(
+                        relay.GetPort("input", "0"),
+                        kSource.GetPort("outputNodes", null)
+                    );
+                } else {
+                    var next = x + 1;
+                    var kSource = nodesKey[new Vector2Int(node.X, node.Y)];
+                    foreach (var n in sorted) {
+                        if (n.X == next) {
+                            var kTarget = nodesKey[new Vector2Int(n.X, n.Y)];
+                            instance.Connect(
+                                kTarget.GetPort("inputNodes", null),
+                                kSource.GetPort("outputNodes", null)
+                            );
+                        }
                     }
                 }
             }

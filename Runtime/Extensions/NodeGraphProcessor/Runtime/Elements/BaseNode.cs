@@ -869,13 +869,23 @@ namespace ME.BECS.Extensions.GraphProcessor
 		/// <param name="fieldName">C# field name</param>
 		/// <param name="identifier">Unique port identifier</param>
 		/// <returns></returns>
-		public NodePort	GetPort(string fieldName, string identifier)
-		{
-			return inputPorts.Concat(outputPorts).FirstOrDefault(p => {
-				var bothNull = String.IsNullOrEmpty(identifier) && String.IsNullOrEmpty(p.portData.identifier);
-				return p.fieldName == fieldName && (bothNull || identifier == p.portData.identifier);
-			});
-		}
+        public NodePort	GetPort(string fieldName, string identifier)
+        {
+            foreach (var p in this.inputPorts) {
+                var bothNull = String.IsNullOrEmpty(identifier) && String.IsNullOrEmpty(p.portData.identifier);
+                if (p.fieldName == fieldName && (bothNull || identifier == p.portData.identifier)) {
+                    return p;
+                }
+            }
+            foreach (var p in this.outputPorts) {
+                var bothNull = String.IsNullOrEmpty(identifier) && String.IsNullOrEmpty(p.portData.identifier);
+                if (p.fieldName == fieldName && (bothNull || identifier == p.portData.identifier)) {
+                    return p;
+                }
+            }
+
+            return null;
+        }
 
 		/// <summary>
 		/// Return all the ports of the node
