@@ -76,7 +76,7 @@ namespace ME.BECS.Editor {
                         break;
                     }
 
-                    case var _ when op == OpCodes.Call || op == OpCodes.Callvirt: {
+                    /*case var _ when op == OpCodes.Call || op == OpCodes.Callvirt: {
                         if (ins.Operand is MethodInfo m) {
                             if (m.Name.StartsWith("get_")) {
                                 Add(temp, m.DeclaringType, AccessType.Read);
@@ -86,7 +86,7 @@ namespace ME.BECS.Editor {
                         }
 
                         break;
-                    }
+                    }*/
 
                     case var _ when op == OpCodes.Ldelema || op == OpCodes.Ldelem ||
                                     op == OpCodes.Ldelem_I1 || op == OpCodes.Ldelem_U1 ||
