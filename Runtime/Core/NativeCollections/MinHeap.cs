@@ -1,3 +1,5 @@
+
+using Unity.Jobs;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -8,14 +10,15 @@ using Unity.Mathematics;
 
 namespace ME.BECS.NativeCollections {
 
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
 
-    public unsafe struct NativeMinHeap : IDisposable {
+    public unsafe struct NativeMinHeap<T> : IDisposable where T : unmanaged, IMinHeapNode {
 
-        private safe_ptr<MinHeapNode> mBuffer;
+        private safe_ptr<T> mBuffer;
         private uint mCapacity;
         private Allocator mAllocatorLabel;
 
@@ -31,8 +34,9 @@ namespace ME.BECS.NativeCollections {
             UnsafeUtility.MemClear(m_Buffer, (long) m_capacity * UnsafeUtility.SizeOf<MinHeapNode>());*/
         }
 
-        private static void Allocate(uint capacity, Allocator allocator, out NativeMinHeap nativeMinHeap) {
-            var size = (uint)TSize<MinHeapNode>.size * capacity;
+        [INLINE(256)]
+        private static void Allocate(uint capacity, Allocator allocator, out NativeMinHeap<T> nativeMinHeap) {
+            var size = (uint)TSize<T>.size * capacity;
             if (allocator <= Allocator.None) {
                 throw new ArgumentException("Allocator must be Temp, TempJob or Persistent", nameof(allocator));
             }
@@ -42,7 +46,7 @@ namespace ME.BECS.NativeCollections {
                                                       $"Length * sizeof(T) cannot exceed {(object)int.MaxValue} bytes");
             }
 
-            nativeMinHeap.mBuffer = _make(size, TAlign<MinHeapNode>.alignInt, allocator);
+            nativeMinHeap.mBuffer = _make(size, TAlign<T>.alignInt, allocator);
             nativeMinHeap.mCapacity = capacity;
             nativeMinHeap.mAllocatorLabel = allocator;
             //nativeMinHeap.mMinIndex = 0;
@@ -52,11 +56,13 @@ namespace ME.BECS.NativeCollections {
 
         }
 
+        [INLINE(256)]
         public bool HasNext() {
             return this.mHead >= 0;
         }
 
-        public void Push(MinHeapNode node) {
+        [INLINE(256)]
+        public void Push(T node) {
 
             if (this.mHead < 0) {
                 this.mHead = this.mLength;
@@ -75,21 +81,46 @@ namespace ME.BECS.NativeCollections {
                 node.Next = current.Next;
                 current.Next = this.mLength;
 
-                this.mBuffer[currentPtr] = current;
+                this.Set(currentPtr, in current);
             }
 
-            this.mBuffer[this.mLength] = node;
+            this.Set(this.mLength, in node);
             ++this.mLength;
         }
 
+        [INLINE(256)]
+        public void Set(int index, in T data) {
+            if (index >= this.mCapacity) {
+                this.mCapacity *= 2u;
+                var size = TSize<T>.size * this.mCapacity;
+                var newPtr = _make(size, TAlign<T>.alignInt, this.mAllocatorLabel);
+                _memmove(this.mBuffer, newPtr, TSize<T>.size * this.mLength);
+                this.mBuffer = newPtr;
+            }
+            this.mBuffer[index] = data;
+        }
+
+        [INLINE(256)]
         public int Pop() {
             var result = this.mHead;
             this.mHead = this[this.mHead].Next;
             return result;
         }
 
-        public MinHeapNode this[int index] => this.mBuffer[index];
+        [INLINE(256)]
+        public bool TryPop(out T node) {
+            if (this.mHead == -1) {
+                node = default;
+                return false;
+            }
+            var idx = this.Pop();
+            node = this[idx];
+            return true;
+        }
 
+        public T this[int index] => this.mBuffer[index];
+
+        [INLINE(256)]
         public void Clear() {
             this.mHead = -1;
             this.mLength = 0;
@@ -105,10 +136,28 @@ namespace ME.BECS.NativeCollections {
             this.mCapacity = 0;
         }
 
+        public JobHandle Dispose(JobHandle dependsOn) {
+            dependsOn = new DisposeWithAllocatorPtrJob() {
+                ptr = this.mBuffer,
+                allocator = this.mAllocatorLabel,
+            }.Schedule(dependsOn);
+            this.mBuffer = default;
+            this.mCapacity = 0;
+            return dependsOn;
+        }
+
     }
 
-    public struct MinHeapNode {
+    public interface IMinHeapNode {
 
+        public tfloat ExpectedCost { get; }
+        public int Next { get; set; }
+
+    }
+    
+    public struct MinHeapNode : IMinHeapNode {
+
+        [INLINE(256)]
         public MinHeapNode(uint position, tfloat expectedCost) {
             this.Position = position;
             this.ExpectedCost = expectedCost;

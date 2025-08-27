@@ -54,14 +54,13 @@ namespace NativeTrees {
             where U : struct, IOctreeRangeVisitor<T> {
             // Are we in a leaf node?
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
-                if (this.objects.TryGetFirstValue(nodeId, out var wrappedObj, out var it)) {
-                    do {
+                if (this.objects.TryGetValue(nodeId, out var list) == true) {
+                    foreach (var wrappedObj in list) {
                         if (!visitor.OnVisit(wrappedObj.obj, wrappedObj.bounds, range)) {
                             return false; // stop traversing if visitor says so
                         }
-                    } while (this.objects.TryGetNextValue(out wrappedObj, ref it));
+                    }
                 }
-
                 return true;
             }
 

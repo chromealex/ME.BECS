@@ -140,14 +140,14 @@ namespace NativeTrees {
                 var closest = maxDistance;
                 var didHit = false;
 
-                if (this.objects.TryGetFirstValue(nodeId, out var wrappedObj, out var it)) {
-                    do {
+                if (this.objects.TryGetValue(nodeId, out var list) == true) {
+                    foreach (var wrappedObj in list) {
                         if (intersecter.IntersectRay(ray, wrappedObj.obj, wrappedObj.bounds, out var t) && t < closest) {
                             closest = t;
                             hit.obj = wrappedObj.obj;
                             didHit = true;
                         }
-                    } while (this.objects.TryGetNextValue(out wrappedObj, ref it));
+                    }
                 }
 
                 if (didHit) {

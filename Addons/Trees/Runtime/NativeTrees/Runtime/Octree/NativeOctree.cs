@@ -15,6 +15,7 @@ using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
+using Unity.Collections.LowLevel.Unsafe;
 
 // https://bartvandesande.nl
 // https://github.com/bartofzo
@@ -69,9 +70,11 @@ namespace NativeTrees {
         /// or whether depth is <see cref="maxDepth"/>
         /// </summary>
         private NativeHashMap<uint, int> nodes;
-        private NativeParallelMultiHashMap<uint, ObjWrapper> objects;
+        private NativeHashMap<uint, UnsafeList<ObjWrapper>> objects;
 
         private ME.BECS.NativeCollections.NativeParallelList<ObjWrapper> tempObjects;
+
+        private Allocator allocator;
 
         /// <summary>
         /// Constructs an octree with a max depth of 8
@@ -95,7 +98,9 @@ namespace NativeTrees {
                 throw new ArgumentException("Bounds max must be greater than min");
             }
 
-            this.objects = new NativeParallelMultiHashMap<uint, ObjWrapper>(initialCapacity, allocator);
+            this.allocator = allocator;
+            
+            this.objects = new NativeHashMap<uint, UnsafeList<ObjWrapper>>(initialCapacity, allocator);
             this.nodes = new NativeHashMap<uint, int>(initialCapacity / objectsPerNode, allocator);
 
             this.objectsPerNode = objectsPerNode;
@@ -242,7 +247,7 @@ namespace NativeTrees {
             // or, when it is at the max tree depth
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
                 objectCount++;
-                this.objects.Add(nodeId, objWrapper);
+                this.AddObject(nodeId, objWrapper);
                 this.nodes[nodeId] = objectCount;
                 if (objectCount > this.objectsPerNode && depth < this.maxDepth) {
                     var marker = new Unity.Profiling.ProfilerMarker("Subdivide");
@@ -257,17 +262,34 @@ namespace NativeTrees {
             return false;
         }
 
+        private void AddObject(uint nodeId, in ObjWrapper objWrapper) {
+            if (this.objects.TryGetValue(nodeId, out var list) == true) {
+                list.Add(objWrapper);
+                this.objects[nodeId] = list;
+            } else {
+                list = new UnsafeList<ObjWrapper>(4, this.allocator);
+                this.objects.Add(nodeId, list);
+            }
+        }
+
         private void Subdivide(uint nodeId, in QuarterSizeBounds quarterSizeBounds, int depth) {
             var objectCount = 0;
+            var marker = new Unity.Profiling.ProfilerMarker("Fill Temp Objects");
+            marker.Begin();
             var tempObjects = new NativeArray<ObjWrapper>(this.objectsPerNode + 1, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-            foreach (var tempObj in this.objects.GetValuesForKey(nodeId)) {
-                tempObjects[objectCount++] = tempObj;
+            if (this.objects.TryGetValue(nodeId, out var list) == true) {
+                foreach (var tempObj in list) {
+                    tempObjects[objectCount++] = tempObj;
+                }
             }
+            marker.End();
 
             var countPerOctant = new FixedList64Bytes<int>();
             countPerOctant.Length = 8;
 
-            this.objects.Remove(nodeId); // remove all occurances of objects in our original
+            var markerAdd = new Unity.Profiling.ProfilerMarker("Add Objects");
+            markerAdd.Begin();
+            this.objects.Remove(nodeId); // remove all occurrences of objects in our original
             for (var i = 0; i < objectCount; i++) {
                 var moveObject = tempObjects[i];
                 var aabbMask = NativeOctree<T>.GetBoundsMask(quarterSizeBounds.nodeCenter, moveObject.bounds);
@@ -278,15 +300,16 @@ namespace NativeTrees {
                 for (var j = 0; j < 8; j++) {
                     var octantMask = NativeOctree<T>.OctantMasks[j];
                     if ((aabbMask & octantMask) == octantMask) {
-                        this.objects.Add(NativeOctree<T>.GetOctantId(nodeId, j), moveObject);
+                        this.AddObject(NativeOctree<T>.GetOctantId(nodeId, j), moveObject);
                         countPerOctant[j] = countPerOctant[j] + 1; // ++ ?
                     }
                 }
             }
+            markerAdd.End();
 
-            tempObjects.Dispose();
-
-            // Update counts, create nodes when neccessary
+            var markerSub = new Unity.Profiling.ProfilerMarker("Fill Nodes and Subdivide");
+            markerSub.Begin();
+            // Update counts, create nodes when necessary
             depth++;
             for (var i = 0; i < 8; i++) {
                 var count = countPerOctant[i];
@@ -301,10 +324,11 @@ namespace NativeTrees {
                     }
                 }
             }
+            markerSub.End();
         }
 
         /// <summary>
-        /// Returns the octant's index of a point. Which translated to bits means if the point is on the negative (0) side or positve (1)
+        /// Returns the octant's index of a point. Which translated to bits means if the point is on the negative (0) side or positive (1)
         /// side of the node's center.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

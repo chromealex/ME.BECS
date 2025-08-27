@@ -263,7 +263,7 @@ namespace ME.BECS.Pathfinding {
 
             [INLINE(256)]
             static void TraverseNeighbours(ref Unity.Collections.NativeArray<TempNodeData> temp, 
-                                           ref ME.BECS.NativeCollections.NativeMinHeap heap,
+                                           ref ME.BECS.NativeCollections.NativeMinHeap<ME.BECS.NativeCollections.MinHeapNode> heap,
                                            in Unity.Collections.NativeArray<uint> chunkPortalsCount, 
                                            in ListAuto<Portal.Connection> list, 
                                            in Unity.Collections.NativeList<Portal> graphNodes,
@@ -337,7 +337,7 @@ namespace ME.BECS.Pathfinding {
                 temp = new Unity.Collections.NativeArray<TempNodeData>(graphNodes.Length, Unity.Collections.Allocator.Temp);
                 {
                     // recursive find path
-                    var heap = new ME.BECS.NativeCollections.NativeMinHeap((uint)graphNodes.Length, Unity.Collections.Allocator.Temp);
+                    var heap = new ME.BECS.NativeCollections.NativeMinHeap<ME.BECS.NativeCollections.MinHeapNode>((uint)graphNodes.Length, Unity.Collections.Allocator.Temp);
                     heap.Push(new ME.BECS.NativeCollections.MinHeapNode(portalInfoIndex, 0f));
                     pathState = PathState.Failed;
                     var tmp = new TempNodeData {
@@ -531,7 +531,7 @@ namespace ME.BECS.Pathfinding {
                 {
                     var targetPos = GetPosition(in root, in chunk, toNodeIndex);
                     // recursive find path
-                    var heap = new ME.BECS.NativeCollections.NativeMinHeap(chunk.nodes.Length, Unity.Collections.Allocator.Temp);
+                    var heap = new ME.BECS.NativeCollections.NativeMinHeap<ME.BECS.NativeCollections.MinHeapNode>(chunk.nodes.Length, Unity.Collections.Allocator.Temp);
                     heap.Push(new ME.BECS.NativeCollections.MinHeapNode(fromNodeIndex, 0f));
                     pathState = PathState.Failed;
                     var tmp = temp[(int)fromNodeIndex];

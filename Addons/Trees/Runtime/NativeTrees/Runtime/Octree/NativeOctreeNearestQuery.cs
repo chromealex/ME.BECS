@@ -41,9 +41,8 @@ namespace NativeTrees {
         public void Nearest<U, V>(float3 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, V distanceSquaredProvider = default)
             where U : struct, IOctreeNearestVisitor<T>
             where V : struct, IOctreeDistanceProvider<T> {
-            var query = new NearestNeighbourCache(Allocator.Temp);
+            var query = new NearestNeighbourCache(this.nodes.Count, Allocator.Temp);
             query.Nearest(ref this, point, minDistanceSqr, maxDistanceSqr, ref visitor, distanceSquaredProvider);
-            query.Dispose();
         }
 
         /// <summary>
@@ -58,14 +57,14 @@ namespace NativeTrees {
             // we want to keep the struct in the minheap as small as possibly as many comparisons and swaps take place there
             private NativeList<ObjWrapper> objList;
             private NativeList<NodeWrapper> nodeList;
-            private NativeMinHeap<DistanceAndIndexWrapper, NearestComp> minHeap;
+            private ME.BECS.NativeCollections.NativeMinHeap<DistanceAndIndexWrapper> minHeap;//NativeMinHeap<DistanceAndIndexWrapper, NearestComp> minHeap;
 
             public NearestNeighbourCache(Allocator allocator) : this(0, allocator) { }
 
             public NearestNeighbourCache(int initialCapacity, Allocator allocator) {
                 this.nodeList = new NativeList<NodeWrapper>(initialCapacity, allocator);
                 this.objList = new NativeList<ObjWrapper>(initialCapacity, allocator);
-                this.minHeap = new NativeMinHeap<DistanceAndIndexWrapper, NearestComp>(default, allocator);
+                this.minHeap = new ME.BECS.NativeCollections.NativeMinHeap<DistanceAndIndexWrapper>((uint)initialCapacity, allocator); //new NativeMinHeap<DistanceAndIndexWrapper, NearestComp>(default, allocator);
             }
 
             public void Dispose() {
@@ -144,13 +143,18 @@ namespace NativeTrees {
 
                 // Leaf?
                 if (node.nodeCounter <= octree.objectsPerNode || node.nodeDepth == octree.maxDepth) {
-                    if (objects.TryGetFirstValue(node.nodeId, out var objWrapper, out var it)) {
-                        do {
+                    
+                    var marker = new Unity.Profiling.ProfilerMarker("NearestNode::TryGetFirstValue");
+                    marker.Begin();
+                    if (objects.TryGetValue(node.nodeId, out var list) == true) {
+                        foreach (var objWrapper in list) {
                             var objDistanceSquared = distanceProvider.DistanceSquared(point, objWrapper.obj, objWrapper.bounds);
                             if (objDistanceSquared > maxDistanceSquared) {
                                 continue;
                             }
 
+                            var markerPush = new Unity.Profiling.ProfilerMarker("NearestNode::Push");
+                            markerPush.Begin();
                             var objIndex = this.objList.Length;
                             this.objList.Add(objWrapper);
 
@@ -159,9 +163,10 @@ namespace NativeTrees {
                                                   objIndex,
                                                   0,
                                                   false));
-
-                        } while (objects.TryGetNextValue(out objWrapper, ref it));
+                            markerPush.End();
+                        }
                     }
+                    marker.End();
 
                     return;
                 }
@@ -192,6 +197,8 @@ namespace NativeTrees {
                         continue;
                     }
 
+                    var marker = new Unity.Profiling.ProfilerMarker("NearestNodeNext::Push");
+                    marker.Begin();
                     var nodeIndex = this.nodeList.Length;
                     this.nodeList.Add(
                         new NodeWrapper(
@@ -205,27 +212,32 @@ namespace NativeTrees {
                                           0,
                                           nodeIndex,
                                           true));
+                    marker.End();
                 }
             }
 
             /// <summary>
             /// Goes in the priority queue
             /// </summary>
-            private readonly struct DistanceAndIndexWrapper {
+            private struct DistanceAndIndexWrapper : ME.BECS.NativeCollections.IMinHeapNode {
 
                 public readonly tfloat distanceSquared;
 
                 // There's no polymorphism with HPC#, so this is our way around that
                 public readonly int objIndex;
                 public readonly int nodeIndex;
-                public readonly bool isNode;
+                public readonly bbool isNode;
 
                 public DistanceAndIndexWrapper(tfloat distanceSquared, int objIndex, int nodeIndex, bool isNode) {
                     this.distanceSquared = distanceSquared;
                     this.objIndex = objIndex;
                     this.nodeIndex = nodeIndex;
                     this.isNode = isNode;
+                    this.Next = -1;
                 }
+
+                public tfloat ExpectedCost => this.distanceSquared;
+                public int Next { get; set; }
 
             }
 
