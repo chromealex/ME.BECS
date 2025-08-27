@@ -268,6 +268,7 @@ namespace NativeTrees {
                 this.objects[nodeId] = list;
             } else {
                 list = new UnsafeList<ObjWrapper>(4, this.allocator);
+                list.Add(objWrapper);
                 this.objects.Add(nodeId, list);
             }
         }
