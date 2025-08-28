@@ -19,12 +19,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly ref T Get(uint entId, ushort gen) {
+        [SafetyCheck(RefOp.ReadWrite)] public readonly ref T Get(uint entId, ushort gen) {
             return ref this.value.Get(entId, gen);
         }
 
         [INLINE(256)]
-        public readonly ref readonly T Read(uint entId, ushort gen) {
+        [SafetyCheck(RefOp.ReadOnly)] public readonly ref readonly T Read(uint entId, ushort gen) {
             return ref this.valueRO.Read(entId, gen);
         }
 

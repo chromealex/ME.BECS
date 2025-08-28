@@ -35,7 +35,7 @@ namespace ME.BECS.Commands {
         public void OnUpdate(ref SystemContext context) {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
-            var handle = context.Query().With<CommandMove>().With<IsCommandGroupDirty>().Schedule<Job, UnitCommandGroupAspect>(new Job() {
+            var handle = context.Query().AsUnsafe().With<CommandMove>().With<IsCommandGroupDirty>().Schedule<Job, UnitCommandGroupAspect>(new Job() {
                 buildGraphSystem = buildGraphSystem,
             });
             context.SetDependency(handle);

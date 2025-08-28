@@ -88,10 +88,10 @@ namespace ME.BECS.Commands {
 
             var buildGraphSystem = context.world.GetSystem<BuildGraphSystem>();
             context.Query().With<UnitAttackOnMoveCommandComponent>().AsParallel().Schedule<CleanUpJob, UnitAspect>().AddDependency(ref context);
-            context.Query().With<CommandMoveAttack>().With<IsCommandGroupDirty>().Schedule<Job, UnitCommandGroupAspect>(new Job() {
+            context.Query().AsUnsafe().With<CommandMoveAttack>().With<IsCommandGroupDirty>().Schedule<Job, UnitCommandGroupAspect>(new Job() {
                 buildGraphSystem = buildGraphSystem,
             }).AddDependency(ref context);
-            context.Query().With<CommandMoveAttack>().Schedule<StopToAttackJob, UnitCommandGroupAspect>().AddDependency(ref context);
+            context.Query().AsUnsafe().With<CommandMoveAttack>().Schedule<StopToAttackJob, UnitCommandGroupAspect>().AddDependency(ref context);
             
         }
 

@@ -53,9 +53,9 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static void DestroyCommandGroup(in UnitCommandGroupAspect commandGroup) {
 
-            var cmd = commandGroup.prevChainTarget;
+            var cmd = commandGroup.readPrevChainTarget;
             while (cmd.IsAlive() == true) {
-                var next = cmd.GetAspect<UnitCommandGroupAspect>().prevChainTarget;
+                var next = cmd.GetAspect<UnitCommandGroupAspect>().readPrevChainTarget;
                 cmd.DestroyHierarchy();
                 cmd = next;
             }

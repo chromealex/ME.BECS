@@ -45,6 +45,20 @@ namespace ME.BECS.Editor {
             foreach (var ins in instructions) {
                 var op = ins.OpCode;
 
+                if (ins.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<SafetyCheckAttribute>() != null && methodInfo.IsGenericMethod == true) {
+                    var sc = methodInfo.GetCustomAttribute<SafetyCheckAttribute>();
+                    var type = methodInfo.GetGenericArguments()[0];
+                    if (sc.Op == RefOp.ReadOnly) {
+                        Add(temp, type, AccessType.Read);
+                    } else if (sc.Op == RefOp.ReadWrite) {
+                        Add(temp, type, AccessType.Read);
+                        Add(temp, type, AccessType.Write);
+                    } else if (sc.Op == RefOp.WriteOnly) {
+                        Add(temp, type, AccessType.Write);
+                    }
+                    continue;
+                }
+                
                 switch (op) {
                     case var _ when op == OpCodes.Ldflda: {
                         var field = (FieldInfo)ins.Operand;

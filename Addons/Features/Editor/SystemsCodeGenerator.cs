@@ -786,7 +786,7 @@ namespace ME.BECS.Editor.Systems {
                     scheme = result;
                 } else {
                     var list = string.Join(", ", arr);
-                    result = "JobsExt.CombineDependencies(" + list + ")";
+                    result = $"JobsExt.CombineDependencies({list})";
                     scheme = list;
                 }
             }

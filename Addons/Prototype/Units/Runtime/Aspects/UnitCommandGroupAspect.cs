@@ -25,6 +25,8 @@ namespace ME.BECS.Units {
         public readonly ref readonly uint readVolume => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).volume;
         public readonly ref Ent nextChainTarget => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).nextChainTarget;
         public readonly ref Ent prevChainTarget => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).prevChainTarget;
+        public readonly ref readonly Ent readNextChainTarget => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).nextChainTarget;
+        public readonly ref readonly Ent readPrevChainTarget => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).prevChainTarget;
         
         public readonly void Add(in UnitAspect unit) => UnitUtils.AddToCommandGroup(in this, in unit);
 

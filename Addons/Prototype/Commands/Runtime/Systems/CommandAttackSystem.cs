@@ -52,7 +52,7 @@ namespace ME.BECS.Commands {
         public void OnUpdate(ref SystemContext context) {
 
             context.Query().With<UnitAttackCommandComponent>().AsParallel().Schedule<CleanUpJob, UnitAspect>().AddDependency(ref context);
-            context.Query().With<CommandAttack>().With<IsCommandGroupDirty>().Schedule<MoveJob, UnitCommandGroupAspect>().AddDependency(ref context);
+            context.Query().AsUnsafe().With<CommandAttack>().With<IsCommandGroupDirty>().Schedule<MoveJob, UnitCommandGroupAspect>().AddDependency(ref context);
             
         }
 
