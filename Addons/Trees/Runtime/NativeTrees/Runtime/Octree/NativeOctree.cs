@@ -55,6 +55,22 @@ namespace NativeTrees {
     public partial struct NativeOctree<T> : INativeDisposable
         where T : unmanaged, IComparable<T> {
 
+        [Unity.Burst.BurstCompileAttribute]
+        private struct DisposeObjectsJob : IJob {
+
+            public NativeHashMap<uint, UnsafeList<ObjWrapper>> objects;
+
+            public void Execute() {
+
+                foreach (var item in this.objects) {
+                    item.Value.Dispose();
+                }
+                this.objects.Dispose();
+
+            }
+
+        }
+
         private readonly int maxDepth;
         private readonly int objectsPerNode;
 
@@ -79,7 +95,7 @@ namespace NativeTrees {
         /// <summary>
         /// Constructs an octree with a max depth of 8
         /// </summary>
-        public NativeOctree(AABB bounds, Allocator allocator) : this(bounds, 32, 8, allocator) { }
+        public NativeOctree(AABB bounds, Allocator allocator) : this(bounds, 32, 6, allocator) { }
 
         /// <summary>
         /// Constructs an octree
@@ -138,6 +154,9 @@ namespace NativeTrees {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear() {
             this.tempObjects.Clear();
+            foreach (var item in this.objects) {
+                item.Value.Dispose();
+            }
             this.objects.Clear();
             this.nodes.Clear();
         }
@@ -263,13 +282,27 @@ namespace NativeTrees {
         }
 
         private void AddObject(uint nodeId, in ObjWrapper objWrapper) {
+            var marker = new Unity.Profiling.ProfilerMarker("AddObject");
+            marker.Begin();
             if (this.objects.TryGetValue(nodeId, out var list) == true) {
                 list.Add(objWrapper);
                 this.objects[nodeId] = list;
             } else {
-                list = new UnsafeList<ObjWrapper>(4, this.allocator);
+                var markerNew = new Unity.Profiling.ProfilerMarker("New");
+                markerNew.Begin();
+                list = new UnsafeList<ObjWrapper>(this.objectsPerNode + 1, this.allocator);
                 list.Add(objWrapper);
                 this.objects.Add(nodeId, list);
+                markerNew.End();
+            }
+            marker.End();
+        }
+
+        private void RemoveNode(uint nodeId) {
+            // remove all occurrences of objects in our original
+            if (this.objects.TryGetValue(nodeId, out var list) == true) {
+                list.Clear();
+                this.objects[nodeId] = list;
             }
         }
 
@@ -290,7 +323,7 @@ namespace NativeTrees {
 
             var markerAdd = new Unity.Profiling.ProfilerMarker("Add Objects");
             markerAdd.Begin();
-            this.objects.Remove(nodeId); // remove all occurrences of objects in our original
+            this.RemoveNode(nodeId);
             for (var i = 0; i < objectCount; i++) {
                 var moveObject = tempObjects[i];
                 var aabbMask = NativeOctree<T>.GetBoundsMask(quarterSizeBounds.nodeCenter, moveObject.bounds);
@@ -512,6 +545,9 @@ namespace NativeTrees {
                 throw new ArgumentException("Source bounds must be equal");
             }
 
+            foreach (var item in this.objects) {
+                item.Value.Dispose();
+            }
             this.objects.Clear();
             this.nodes.Clear();
 
@@ -534,6 +570,9 @@ namespace NativeTrees {
         /// </summary>
         public void Dispose() {
             this.nodes.Dispose();
+            foreach (var item in this.objects) {
+                item.Value.Dispose();
+            }
             this.objects.Dispose();
         }
 
@@ -541,7 +580,7 @@ namespace NativeTrees {
         /// Dispose the NativeOctree
         /// </summary>
         public JobHandle Dispose(JobHandle inputDeps) {
-            return JobHandle.CombineDependencies(this.nodes.Dispose(inputDeps), this.objects.Dispose(inputDeps));
+            return JobHandle.CombineDependencies(this.nodes.Dispose(inputDeps), new DisposeObjectsJob() { objects = this.objects }.Schedule(inputDeps));
         }
 
         /// <summary>
