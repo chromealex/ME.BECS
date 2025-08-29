@@ -52,14 +52,14 @@ namespace ME.BECS.Bullets {
                     var direction = math.normalize(vector);
                     var distance = math.length(vector);
                 
-                    var mask = ent.GetAspect<QuadTreeQueryAspect>().query.treeMask;
-                    for (int i = 0; i < this.qt.treesCount; i++) {
+                    var mask = ent.GetAspect<QuadTreeQueryAspect>().readQuery.treeMask;
+                    for (int i = 0; i < this.qt.treesCount; ++i) {
                         if ((mask & (1 << i)) == 0) {
                             continue;
                         }
                     
-                        ref var tree = ref *qt.GetTree(i).ptr;
-                        var ray = new Ray((Vector3)tr.position, (Vector3)direction);
+                        ref var tree = ref *this.qt.GetTree(i).ptr;
+                        var ray = new Ray2D((Vector2)tr.position.xz, (Vector2)direction.xz);
                         if (tree.RaycastAABB(ray, out var hitResult, distance) == true) {
                             aspect.component.targetEnt = hitResult.obj;
                             aspect.IsReached = true;

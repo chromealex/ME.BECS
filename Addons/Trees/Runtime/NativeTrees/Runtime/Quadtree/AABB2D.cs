@@ -15,28 +15,27 @@ using Rect = UnityEngine.Rect;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-namespace NativeTrees
-{
+namespace NativeTrees {
+
     /// <summary>
     /// 2D axis aligned bounding box with support for fast ray intersection checking.
     /// </summary>
-    public struct AABB2D
-    {
+    public readonly struct AABB2D {
+
         public readonly float2 min;
         public readonly float2 max;
 
-        public float2 Center => .5f * (min + max);
-        public float2 Size => max - min;
-        public bool IsValid => all(max >= min);
-        
+        public float2 Center => 0.5f * (this.min + this.max);
+        public float2 Size => this.max - this.min;
+        public bool IsValid => all(this.max >= this.min);
+
         /// <summary>
         /// Construct an AABB
         /// </summary>
         /// <param name="min">Bottom left</param>
         /// <param name="max">Top right</param>
         /// <remarks>Does not check wether max is greater than min for maximum performance.</remarks>
-        public AABB2D(float2 min, float2 max)
-        {
+        public AABB2D(float2 min, float2 max) {
             this.min = min;
             this.max = max;
         }
@@ -45,51 +44,59 @@ namespace NativeTrees
         /// Returns wether this AABB overlaps with another AABB
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Overlaps(in AABB2D other)
-        {
-            return all(max >= other.min) && 
-                   all(other.max >= min);
+        public readonly bool Overlaps(in AABB2D other) {
+            return all(this.max >= other.min) &&
+                   all(other.max >= this.min);
         }
 
         /// <summary>
         /// Returns wether this AABB fully contains another
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(in AABB2D other)
-        {
-            return all(min <= other.min) && 
-                   all(max >= other.max);
+        public readonly bool Contains(in AABB2D other) {
+            return all(this.min <= other.min) &&
+                   all(this.max >= other.max);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(float2 point) => all(point >= min) && all(point <= max);
-        
+        public readonly bool Contains(float2 point) {
+            return all(point >= this.min) && all(point <= this.max);
+        }
+
         /// <summary>
         /// Returns the closest point on this AABB from a given point. If the point lies in this AABB, the point itself is returned.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float2 ClosestPoint(float2 point) => clamp(point, min, max);
-        
+        public readonly float2 ClosestPoint(float2 point) {
+            return clamp(point, this.min, this.max);
+        }
+
         /// <summary>
         /// Returns the squared distance of a point to this AABB. If the point lies in the box, zero is returned.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float DistanceSquared(float2 point) => (float)distancesq(point, ClosestPoint(point));
+        public readonly tfloat DistanceSquared(float2 point) {
+            return distancesq(point, this.ClosestPoint(point));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ContainsPoint(in float2 point) => all(point >= min) && all(point <= max);
+        public readonly bool ContainsPoint(in float2 point) {
+            return all(point >= this.min) && all(point <= this.max);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in Ray2D ray) => IntersectsRay((PrecomputedRay2D) ray);
-        
+        public readonly bool IntersectsRay(in Ray2D ray) {
+            return this.IntersectsRay((PrecomputedRay2D)ray);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in PrecomputedRay2D ray) => IntersectsRay(ray.origin, ray.invDir, out _);
-        
+        public readonly bool IntersectsRay(in PrecomputedRay2D ray) {
+            return this.IntersectsRay(ray.origin, ray.invDir, out _);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in PrecomputedRay2D ray, out float2 point)
-        {
-            if (IntersectsRay(ray.origin, ray.invDir, out float t))
-            {
+        public readonly bool IntersectsRay(in PrecomputedRay2D ray, out float2 point) {
+            if (this.IntersectsRay(ray.origin, ray.invDir, out var t)) {
                 point = ray.origin + ray.dir * t;
                 return true;
             }
@@ -112,18 +119,19 @@ namespace NativeTrees
         /// generally implements a further check.
         /// See https://tavianator.com/2011/ray_box.html and https://tavianator.com/2015/ray_box_nan.html</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in float2 rayPos, in float2 rayInvDir, out float tMin) 
-        {
-            float2 t1 = (min - rayPos) * rayInvDir;
-            float2 t2 = (max - rayPos) * rayInvDir;
+        public readonly bool IntersectsRay(in float2 rayPos, in float2 rayInvDir, out tfloat tMin) {
+            var t1 = (this.min - rayPos) * rayInvDir;
+            var t2 = (this.max - rayPos) * rayInvDir;
 
-            float2 tMin1 = min(t1, t2);
-            float2 tMax1 = max(t1, t2);
+            var tMin1 = min(t1, t2);
+            var tMax1 = max(t1, t2);
 
-            tMin = (float)max(0, cmax(tMin1));
-            float tMax = (float)cmin(tMax1);
+            tMin = max(0, cmax(tMin1));
+            var tMax = cmin(tMax1);
 
             return tMax >= tMin;
         }
+
     }
+
 }

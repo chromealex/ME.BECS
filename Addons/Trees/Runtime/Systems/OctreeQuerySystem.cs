@@ -16,14 +16,14 @@ namespace ME.BECS {
     using ME.BECS.Jobs;
     using ME.BECS.Transforms;
 
-    public struct QuadTreeComponentGroup {
+    public struct OctreeComponentGroup {
 
         public static UnityEngine.Color color = UnityEngine.Color.yellow;
 
     }
     
-    [ComponentGroup(typeof(QuadTreeComponentGroup))]
-    public struct QuadTreeQuery : IConfigComponent {
+    [ComponentGroup(typeof(OctreeComponentGroup))]
+    public struct OctreeQuery : IConfigComponent {
 
         /// <summary>
         /// Trees mask
@@ -65,45 +65,45 @@ namespace ME.BECS {
 
     }
     
-    [ComponentGroup(typeof(QuadTreeComponentGroup))]
-    public struct QuadTreeQueryHasCustomFilterTag : IComponent {}
+    [ComponentGroup(typeof(OctreeComponentGroup))]
+    public struct OctreeQueryHasCustomFilterTag : IComponent {}
 
-    [ComponentGroup(typeof(QuadTreeComponentGroup))]
-    public struct QuadTreeResult : IComponent {
+    [ComponentGroup(typeof(OctreeComponentGroup))]
+    public struct OctreeResult : IComponent {
 
         public ListAuto<Ent> results;
 
     }
 
     [EditorComment("Filter all entities which suitable for this query")]
-    public struct QuadTreeQueryAspect : IAspect {
+    public struct OctreeQueryAspect : IAspect {
 
         public Ent ent { get; set; }
 
         [QueryWith]
-        public AspectDataPtr<QuadTreeQuery> queryPtr;
-        public AspectDataPtr<QuadTreeResult> resultPtr;
+        public AspectDataPtr<OctreeQuery> queryPtr;
+        public AspectDataPtr<OctreeResult> resultPtr;
 
-        public readonly ref QuadTreeQuery query => ref this.queryPtr.Get(this.ent.id, this.ent.gen);
-        public readonly ref QuadTreeResult results => ref this.resultPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref OctreeQuery query => ref this.queryPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref OctreeResult results => ref this.resultPtr.Get(this.ent.id, this.ent.gen);
 
-        public readonly ref readonly QuadTreeQuery readQuery => ref this.queryPtr.Read(this.ent.id, this.ent.gen);
-        public readonly ref readonly QuadTreeResult readResults => ref this.resultPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly OctreeQuery readQuery => ref this.queryPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly OctreeResult readResults => ref this.resultPtr.Read(this.ent.id, this.ent.gen);
 
     }
     
     [BURST]
-    [RequiredDependencies(typeof(QuadTreeInsertSystem))]
-    public struct QuadTreeQuerySystem : IUpdate {
+    [RequiredDependencies(typeof(OctreeInsertSystem))]
+    public struct OctreeQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<QuadTreeQueryAspect, TransformAspect> {
+        public struct Job : IJobForAspects<OctreeQueryAspect, TransformAspect> {
 
-            public QuadTreeInsertSystem system;
+            public OctreeInsertSystem system;
 
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeQueryAspect query, ref TransformAspect tr) {
 
-                this.system.FillNearest(ref query, in tr, new AlwaysTrueSubFilter());
+                this.system.FillNearest(ref query, in tr, new AlwaysTrueOctreeSubFilter());
                 
             }
 
@@ -111,8 +111,8 @@ namespace ME.BECS {
         
         public void OnUpdate(ref SystemContext context) {
 
-            var querySystem = context.world.GetSystem<QuadTreeInsertSystem>();
-            var handle = context.Query().Without<QuadTreeQueryHasCustomFilterTag>().AsParallel().Schedule<Job, QuadTreeQueryAspect, TransformAspect>(new Job() {
+            var querySystem = context.world.GetSystem<OctreeInsertSystem>();
+            var handle = context.Query().Without<OctreeQueryHasCustomFilterTag>().AsParallel().Schedule<Job, OctreeQueryAspect, TransformAspect>(new Job() {
                 system = querySystem,
             });
             context.SetDependency(handle);

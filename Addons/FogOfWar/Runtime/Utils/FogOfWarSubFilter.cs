@@ -5,7 +5,7 @@ namespace ME.BECS.FogOfWar {
         public CreateSystem fow;
         public Ent forTeam;
         
-        public bool IsValid(in Ent ent, in NativeTrees.AABB bounds) {
+        public bool IsValid(in Ent ent, in NativeTrees.AABB2D bounds) {
 
             if (ent.IsAlive() == false) return false;
             

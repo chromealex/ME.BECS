@@ -51,8 +51,7 @@ namespace NativeTrees {
     ///     - 'Fat' raycast (virtually expand AABB's of nodes and objects when testing for ray intersections)
     /// </para>
     /// </summary>
-    public partial struct NativeOctree<T> : INativeDisposable
-        where T : unmanaged, IComparable<T> {
+    public partial struct NativeOctree<T> : INativeDisposable where T : unmanaged, IComparable<T> {
 
         private readonly int maxDepth;
         private readonly int objectsPerNode;
@@ -284,7 +283,7 @@ namespace NativeTrees {
                 }
             }
 
-            tempObjects.Dispose();
+            //tempObjects.Dispose();
 
             // Update counts, create nodes when neccessary
             depth++;

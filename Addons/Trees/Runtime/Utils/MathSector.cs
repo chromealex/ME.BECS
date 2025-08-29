@@ -41,7 +41,16 @@ namespace ME.BECS {
             var angle = math.acos(dot);
             return angle < this.sector * 0.5f;
         }
-        
+
+        [INLINE(256)]
+        public bool IsValid(in float2 objPosition) {
+            if (this.checkSector == false) return true;
+            var dir = math.normalize(objPosition - this.position.xz);
+            var dot = math.clamp(math.dot(dir, this.lookDirection.xz), -1f, 1f);
+            var angle = math.acos(dot);
+            return angle < this.sector * 0.5f;
+        }
+
     }
 
 }

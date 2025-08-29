@@ -16,13 +16,13 @@ namespace ME.BECS.Units {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
-    public struct RangeMoveableAABBUniqueVisitor : NativeTrees.IOctreeRangeVisitor<Ent> {
+    public struct RangeMoveableAABBUniqueVisitor : NativeTrees.IQuadtreeRangeVisitor<Ent> {
         public Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent> results;
         public tfloat rangeSqr;
         public uint max;
         public MathSector sector;
 
-        public bool OnVisit(Ent obj, NativeTrees.AABB objBounds, NativeTrees.AABB queryRange) {
+        public bool OnVisit(Ent obj, NativeTrees.AABB2D objBounds, NativeTrees.AABB2D queryRange) {
             if (this.sector.IsValid(objBounds.Center) == true) {
                 // check if our object's AABB overlaps with the query AABB
                 if (obj.Has<IsUnitStaticComponent>() == true) return true;
@@ -162,8 +162,8 @@ namespace ME.BECS.Units {
             var tree = trees.GetTree(treeIndex);
             var group = UnitUtils.CreateSelectionGroup(1u, jobInfo);
 
-            var visitor = new OctreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
-            tree.ptr->Nearest(position, minRange, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+            var visitor = new QuadtreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
+            tree.ptr->Nearest(position.xz, minRange, maxRange, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
             if (visitor.found == true) {
                 if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
             }
@@ -184,8 +184,8 @@ namespace ME.BECS.Units {
             var tree = trees.GetTree(treeIndex);
             var group = UnitUtils.CreateSelectionTempGroup(1u, jobInfo);
 
-            var visitor = new OctreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
-            tree.ptr->Nearest(position, minRange, maxRange, ref visitor, new AABBDistanceSquaredProvider<Ent>());
+            var visitor = new QuadtreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
+            tree.ptr->Nearest(position.xz, minRange, maxRange, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
             if (visitor.found == true) {
                 if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
             }
@@ -198,11 +198,11 @@ namespace ME.BECS.Units {
         public static unsafe UnitSelectionGroupAspect CreateSelectionGroupByTypeInRange(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
+            var visitor = new RangeAABB2DUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
                 results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
                 rangeSqr = range * range,
             };
-            tree.ptr->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
+            tree.ptr->Range(new NativeTrees.AABB2D(position.xz - range, position.xz + range), ref visitor);
             
             var group = UnitUtils.CreateSelectionGroup((uint)visitor.results.Count, jobInfo);
             foreach (var unit in visitor.results) {
@@ -222,11 +222,11 @@ namespace ME.BECS.Units {
         public static unsafe UnitSelectionTempGroupAspect CreateSelectionGroupByTypeInRangeTemp(in SystemContext context, int treeIndex, float3 position, uint unitTypeId, tfloat range, JobInfo jobInfo = default) {
 
             var tree = context.world.GetSystem<QuadTreeInsertSystem>().GetTree(treeIndex);
-            var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
+            var visitor = new RangeAABB2DUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
                 results = new Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent>(10, Unity.Collections.Allocator.Temp),
                 rangeSqr = range * range,
             };
-            tree.ptr->Range(new NativeTrees.AABB(position - range, position + range), ref visitor);
+            tree.ptr->Range(new NativeTrees.AABB2D(position.xz - range, position.xz + range), ref visitor);
             
             var group = UnitUtils.CreateSelectionTempGroup((uint)visitor.results.Count, jobInfo);
             foreach (var unit in visitor.results) {
@@ -320,14 +320,14 @@ namespace ME.BECS.Units {
                     results = results,
                     rangeSqr = range * range,
                 };
-                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                tree.ptr->Range(new NativeTrees.AABB2D(center.xz - range, center.xz + range), ref visitor);
                 results = visitor.results;
             } else {
-                var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
+                var visitor = new RangeAABB2DUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
                     results = results,
                     rangeSqr = range * range,
                 };
-                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                tree.ptr->Range(new NativeTrees.AABB2D(center.xz - range, center.xz + range), ref visitor);
                 results = visitor.results;
             }
             
@@ -369,14 +369,14 @@ namespace ME.BECS.Units {
                     results = results,
                     rangeSqr = range * range,
                 };
-                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                tree.ptr->Range(new NativeTrees.AABB2D(center.xz - range, center.xz + range), ref visitor);
                 results = visitor.results;
             } else {
-                var visitor = new RangeAABBUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
+                var visitor = new RangeAABB2DUniqueVisitor<Ent, AlwaysTrueSubFilter>() {
                     results = results,
                     rangeSqr = range * range,
                 };
-                tree.ptr->Range(new NativeTrees.AABB(center - range, center + range), ref visitor);
+                tree.ptr->Range(new NativeTrees.AABB2D(center.xz - range, center.xz + range), ref visitor);
                 results = visitor.results;
             }
             

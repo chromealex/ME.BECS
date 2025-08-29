@@ -1,7 +1,17 @@
-namespace NativeTrees
-{
-    public interface IQuadtreeRayIntersecter<T>
-    {
+#if FIXED_POINT
+using tfloat = sfloat;
+using ME.BECS.FixedPoint;
+using Bounds = ME.BECS.FixedPoint.AABB;
+using Rect = ME.BECS.FixedPoint.Rect;
+#else
+using tfloat = System.Single;
+using Unity.Mathematics;
+using Bounds = UnityEngine.Bounds;
+using Rect = UnityEngine.Rect;
+#endif
+
+namespace NativeTrees {
+    public interface IQuadtreeRayIntersecter<T> {
         /// <summary>
         /// Return wether the object in question intersects with the input ray.
         /// </summary>
@@ -12,6 +22,6 @@ namespace NativeTrees
         /// <returns>Return if a hit occured</returns>
         /// <remarks>Note that the <see cref="NativeOctree{T}"/> does not prune based on AABB's. So if your
         /// intersection test is fairly expensive, it may be a good idea to first test against the object's bounds in this method.</remarks>
-        bool IntersectRay(in PrecomputedRay2D ray, T obj, AABB2D objBounds, out float distance);
+        bool IntersectRay(in PrecomputedRay2D ray, T obj, AABB2D objBounds, out tfloat distance);
     }
 }

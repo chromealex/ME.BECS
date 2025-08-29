@@ -17,9 +17,9 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
 
-    [ComponentGroup(typeof(QuadTreeComponentGroup))]
+    [ComponentGroup(typeof(OctreeComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
-    public struct QuadTreeElement : IComponent {
+    public struct OctreeElement : IComponent {
 
         [FieldOffset(0)]
         public tfloat radius;
@@ -32,97 +32,107 @@ namespace ME.BECS {
 
     }
 
-    [ComponentGroup(typeof(QuadTreeComponentGroup))]
-    public struct QuadTreeElementRect : IComponent {
+    [ComponentGroup(typeof(OctreeComponentGroup))]
+    public struct OctreeElementRect : IComponent {
 
         public tfloat sizeY;
         
     }
 
-    [ComponentGroup(typeof(QuadTreeComponentGroup))]
-    public struct QuadTreeHeightComponent : IComponent {
+    [ComponentGroup(typeof(OctreeComponentGroup))]
+    public struct OctreeHeightComponent : IComponent {
         
         public tfloat height;
         
     }
 
-    [EditorComment("Used by QuadTreeInsertSystem to filter entities by treeIndex")]
-    public struct QuadTreeAspect : IAspect {
+    [EditorComment("Used by OctreeInsertSystem to filter entities by treeIndex")]
+    public struct OctreeAspect : IAspect {
         
         public Ent ent { get; set; }
 
         [QueryWith]
-        public AspectDataPtr<QuadTreeElement> quadTreeElementPtr;
-        public AspectDataPtr<QuadTreeElementRect> quadTreeRectPtr;
-        public AspectDataPtr<QuadTreeHeightComponent> quadTreeHeightPtr;
+        public AspectDataPtr<OctreeElement> octreeElementPtr;
+        public AspectDataPtr<OctreeElementRect> octreeRectPtr;
+        public AspectDataPtr<OctreeHeightComponent> octreeHeightPtr;
 
-        public readonly ref QuadTreeElement quadTreeElement => ref this.quadTreeElementPtr.Get(this.ent.id, this.ent.gen);
-        public readonly ref readonly QuadTreeElement readQuadTreeElement => ref this.quadTreeElementPtr.Read(this.ent.id, this.ent.gen);
-        public readonly ref int treeIndex => ref this.quadTreeElement.treeIndex;
-        public readonly ref readonly int readTreeIndex => ref this.readQuadTreeElement.treeIndex;
-        public readonly bool isRect => this.ent.Has<QuadTreeElementRect>();
-        public readonly bool hasHeight => this.ent.Has<QuadTreeHeightComponent>();
-        public readonly float2 rectSize => new float2(this.readQuadTreeElement.sizeX, this.quadTreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
-        public readonly tfloat height => this.quadTreeHeightPtr.Read(this.ent.id, this.ent.gen).height;
+        public readonly ref OctreeElement octreeElement => ref this.octreeElementPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly OctreeElement readOctreeElement => ref this.octreeElementPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref int treeIndex => ref this.octreeElement.treeIndex;
+        public readonly ref readonly int readTreeIndex => ref this.readOctreeElement.treeIndex;
+        public readonly bool isRect => this.ent.Has<OctreeElementRect>();
+        public readonly bool hasHeight => this.ent.Has<OctreeHeightComponent>();
+        public readonly float2 rectSize => new float2(this.readOctreeElement.sizeX, this.octreeRectPtr.Read(this.ent.id, this.ent.gen).sizeY);
+        public readonly tfloat height => this.octreeHeightPtr.Read(this.ent.id, this.ent.gen).height;
 
         public readonly void SetHeight(tfloat height) {
-            this.ent.Set(new QuadTreeHeightComponent() {
+            this.ent.Set(new OctreeHeightComponent() {
                 height = height,
             });
         }
         
         public readonly void SetAsRectWithSize(tfloat sizeX, tfloat sizeY) {
-            ref var rect = ref this.quadTreeRectPtr.Get(this.ent.id, this.ent.gen);
+            ref var rect = ref this.octreeRectPtr.Get(this.ent.id, this.ent.gen);
             rect.sizeY = sizeY;
-            this.quadTreeElement.sizeX = sizeX;
+            this.octreeElement.sizeX = sizeX;
         }
 
     }
     
     [BURST]
-    public unsafe struct QuadTreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
+    public unsafe struct OctreeInsertSystem : IAwake, IUpdate, IDestroy, IDrawGizmos {
         
-        public static QuadTreeInsertSystem Default => new QuadTreeInsertSystem() {
-            mapSize = new float2(200f, 200f),
+        public static OctreeInsertSystem Default => new OctreeInsertSystem() {
+            mapSize = new float3(200f, 200f, 200f),
         };
 
-        public float2 mapPosition;
-        public float2 mapSize;
+        public float3 mapPosition;
+        public float3 mapSize;
         
         private UnsafeList<safe_ptr> trees;
         public readonly uint treesCount => (uint)this.trees.Length;
 
         [BURST]
-        public struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
+        public struct CollectRectJob : IJobForAspects<OctreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
 
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeAspect aspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.treeIndex];
                 if (tr.IsCalculated == false) return;
-                var pos = tr.GetWorldMatrixPosition().xz;
-                var size = quadTreeAspect.rectSize;
-                var halfSize = new float2(size.x * 0.5f, size.y * 0.5f);
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB2D(pos - halfSize, pos + new float2(halfSize.x, halfSize.y)));
+                var pos = tr.GetWorldMatrixPosition();
+                if (aspect.readOctreeElement.ignoreY == 1) pos.y = 0f;
+                tfloat height = 0f;
+                if (ent.TryRead(out OctreeHeightComponent heightComponent) == true) {
+                    height = heightComponent.height;
+                }
+                var size = aspect.rectSize;
+                var halfSize = new float3(size.x * 0.5f, 0f, size.y * 0.5f);
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - halfSize, pos + new float3(halfSize.x, height, halfSize.z)));
                 
             }
 
         }
 
         [BURST]
-        public struct CollectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
+        public struct CollectJob : IJobForAspects<OctreeAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
 
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeAspect aspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.treeIndex];
                 if (tr.IsCalculated == false) return;
-                var pos = tr.GetWorldMatrixPosition().xz;
-                var radius = quadTreeAspect.readQuadTreeElement.radius;
+                var pos = tr.GetWorldMatrixPosition();
+                if (aspect.readOctreeElement.ignoreY == 1) pos.y = 0f;
+                tfloat height = 0f;
+                if (ent.TryRead(out OctreeHeightComponent heightComponent) == true) {
+                    height = heightComponent.height;
+                }
+                var radius = aspect.readOctreeElement.radius;
 
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB2D(pos - quadTreeAspect.readQuadTreeElement.radius, pos + new float2(radius, radius)));
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - aspect.readOctreeElement.radius, pos + new float3(radius, height, radius)));
                 
             }
 
@@ -135,7 +145,7 @@ namespace ME.BECS {
             
             public void Execute(int index) {
 
-                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[index];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[index];
                 tree.ptr->Rebuild();
                 
             }
@@ -149,7 +159,7 @@ namespace ME.BECS {
 
             public void Execute(int index) {
 
-                var item = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[index];
+                var item = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[index];
                 item.ptr->Clear();
                 
             }
@@ -157,17 +167,17 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public readonly safe_ptr<NativeTrees.NativeQuadtree<Ent>> GetTree(int treeIndex) {
+        public readonly safe_ptr<NativeTrees.NativeOctree<Ent>> GetTree(int treeIndex) {
 
-            return (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[treeIndex];
+            return (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[treeIndex];
 
         }
 
         [INLINE(256)]
         public int AddTree() {
 
-            var size = new NativeTrees.AABB2D(this.mapPosition, this.mapPosition + this.mapSize);
-            this.trees.Add((safe_ptr)_make(new NativeTrees.NativeQuadtree<Ent>(size, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator)));
+            var size = new NativeTrees.AABB(this.mapPosition, this.mapPosition + this.mapSize);
+            this.trees.Add((safe_ptr)_make(new NativeTrees.NativeOctree<Ent>(size, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator)));
             return this.trees.Length - 1;
 
         }
@@ -185,11 +195,11 @@ namespace ME.BECS {
             };
             var clearJobHandle = clearJob.Schedule(this.trees.Length, 1, context.dependsOn);
             
-            var handle = context.Query(clearJobHandle).Without<QuadTreeElementRect>().AsParallel().AsUnsafe().Schedule<CollectJob, QuadTreeAspect, TransformAspect>(new CollectJob() {
+            var handle = context.Query(clearJobHandle).Without<OctreeElementRect>().AsParallel().AsUnsafe().Schedule<CollectJob, OctreeAspect, TransformAspect>(new CollectJob() {
                 trees = this.trees,
             });
             
-            var handleRect = context.Query(clearJobHandle).With<QuadTreeElementRect>().AsParallel().AsUnsafe().Schedule<CollectRectJob, QuadTreeAspect, TransformAspect>(new CollectRectJob() {
+            var handleRect = context.Query(clearJobHandle).With<OctreeElementRect>().AsParallel().AsUnsafe().Schedule<CollectRectJob, OctreeAspect, TransformAspect>(new CollectRectJob() {
                 trees = this.trees,
             });
 
@@ -205,7 +215,7 @@ namespace ME.BECS {
         public void OnDestroy(ref SystemContext context) {
 
             for (int i = 0; i < this.trees.Length; ++i) {
-                var item = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[i];
+                var item = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[i];
                 item.ptr->Dispose();
                 _free(item);
             }
@@ -214,7 +224,7 @@ namespace ME.BECS {
 
         }
 
-        public readonly void FillNearest<T>(ref QuadTreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly void FillNearest<T>(ref OctreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
             
             if (tr.IsCalculated == false) return;
             
@@ -240,20 +250,20 @@ namespace ME.BECS {
             marker.End();
 
             if (q.nearestCount == 1u) {
-                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
+                var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, q.ignoreSorting, in subFilter);
                 if (nearest.IsAlive() == true) query.results.results.Add(nearest);
             } else {
-                this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
+                this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreY, q.ignoreSorting, in subFilter);
             }
             
         }
         
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
                                             tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = false) {
-            return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSubFilter());
+            return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueOctreeSubFilter());
         }
 
-        public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
 
             const uint nearestCount = 1u;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
@@ -264,7 +274,7 @@ namespace ME.BECS {
                 }
                 ref var tree = ref *this.GetTree(i).ptr;
                 {
-                    var visitor = new QuadtreeNearestAABBVisitor<Ent, T>() {
+                    var visitor = new OctreeNearestAABBVisitor<Ent, T>() {
                         subFilter = subFilter,
                         sector = sector,
                         ignoreSelf = ignoreSelf,
@@ -272,7 +282,7 @@ namespace ME.BECS {
                     };
                     var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
                     marker.Begin();
-                    tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
+                    tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
                     if (visitor.found == true) {
                         if (ignoreSorting == true) {
                             marker.End();
@@ -294,10 +304,10 @@ namespace ME.BECS {
         }
 
         public readonly void GetNearest(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
-            this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSubFilter());
+            this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueOctreeSubFilter());
         }
 
-        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISubFilter<Ent> {
+        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
             
             var bitsCount = math.countbits(mask);
             if (nearestCount > 0u) {
@@ -312,7 +322,7 @@ namespace ME.BECS {
                     ref var tree = ref *this.GetTree(i).ptr;
                     {
                         resultsTemp.Clear();
-                        var visitor = new QuadtreeKNearestAABBVisitor<Ent, T>() {
+                        var visitor = new OctreeKNearestAABBVisitor<Ent, T>() {
                             subFilter = subFilter,
                             sector = sector,
                             results = resultsTemp,
@@ -322,7 +332,7 @@ namespace ME.BECS {
                         };
                         var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
                         marker.Begin();
-                        tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
+                        tree.Nearest(worldPos, minRangeSqr, rangeSqr, ref visitor, new AABBDistanceSquaredProvider<Ent>() { ignoreY = ignoreY });
                         if (ignoreSorting == true) {
                             var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
                             markerResults.Begin();
@@ -365,7 +375,7 @@ namespace ME.BECS {
                     ref var tree = ref *this.GetTree(i).ptr;
                     {
                         resultsTemp.Clear();
-                        var visitor = new RangeAABB2DUniqueVisitor<Ent, T>() {
+                        var visitor = new RangeAABBUniqueVisitor<Ent, T>() {
                             subFilter = subFilter,
                             sector = sector,
                             results = resultsTemp,
@@ -377,7 +387,11 @@ namespace ME.BECS {
                         var range = math.sqrt(rangeSqr);
                         var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
                         marker.Begin();
-                        var bounds = new NativeTrees.AABB2D(worldPos.xz - range, worldPos.xz + range);
+                        var bounds = new NativeTrees.AABB(worldPos - range, worldPos + range);
+                        if (ignoreY == true) {
+                            bounds.min.y = tfloat.MinValue;
+                            bounds.max.y = tfloat.MaxValue;
+                        }
                         tree.Range(bounds, ref visitor);
                         if (ignoreSorting == true) {
                             var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");

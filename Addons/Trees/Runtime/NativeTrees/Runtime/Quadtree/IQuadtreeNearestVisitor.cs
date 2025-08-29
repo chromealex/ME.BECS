@@ -12,6 +12,6 @@ namespace NativeTrees
         /// <param name="obj">The object in question</param>
         /// <returns>Return true to keep iterating, false to stop. So for example if you only need to know the one nearest neighbour, return false
         /// immediately.</returns>
-        bool OnVist(T obj);
+        bool OnVisit(T obj, AABB2D bounds);
     }
 }

@@ -43,7 +43,6 @@ namespace NativeTrees {
             where V : struct, IOctreeDistanceProvider<T> {
             var query = new NearestNeighbourCache(Allocator.Temp);
             query.Nearest(ref this, point, minDistanceSqr, maxDistanceSqr, ref visitor, distanceSquaredProvider);
-            query.Dispose();
         }
 
         /// <summary>
@@ -58,14 +57,14 @@ namespace NativeTrees {
             // we want to keep the struct in the minheap as small as possibly as many comparisons and swaps take place there
             private NativeList<ObjWrapper> objList;
             private NativeList<NodeWrapper> nodeList;
-            private NativeMinHeap<DistanceAndIndexWrapper, NearestComp> minHeap;
+            private ME.BECS.NativeCollections.NativeMinHeap<DistanceAndIndexWrapper> minHeap;
 
-            public NearestNeighbourCache(Allocator allocator) : this(0, allocator) { }
+            public NearestNeighbourCache(Allocator allocator) : this(8, allocator) { }
 
             public NearestNeighbourCache(int initialCapacity, Allocator allocator) {
                 this.nodeList = new NativeList<NodeWrapper>(initialCapacity, allocator);
                 this.objList = new NativeList<ObjWrapper>(initialCapacity, allocator);
-                this.minHeap = new NativeMinHeap<DistanceAndIndexWrapper, NearestComp>(default, allocator);
+                this.minHeap = new ME.BECS.NativeCollections.NativeMinHeap<DistanceAndIndexWrapper>((uint)initialCapacity, allocator);
             }
 
             public void Dispose() {
@@ -211,7 +210,7 @@ namespace NativeTrees {
             /// <summary>
             /// Goes in the priority queue
             /// </summary>
-            private readonly struct DistanceAndIndexWrapper {
+            private struct DistanceAndIndexWrapper : ME.BECS.NativeCollections.IMinHeapNode {
 
                 public readonly tfloat distanceSquared;
 
@@ -225,7 +224,11 @@ namespace NativeTrees {
                     this.objIndex = objIndex;
                     this.nodeIndex = nodeIndex;
                     this.isNode = isNode;
+                    this.Next = -1;
                 }
+
+                public tfloat ExpectedCost => this.distanceSquared;
+                public int Next { get; set; }
 
             }
 
