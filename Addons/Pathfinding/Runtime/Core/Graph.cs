@@ -83,7 +83,7 @@ namespace ME.BECS.Pathfinding {
             // build flow field for chunk
             var needToRepath = new Unity.Collections.NativeReference<byte>(1, Unity.Collections.Allocator.TempJob);
             dependsOn = Graph.PathUpdate(in world, ref path, in path.graph, chunksToUpdate, path.filter, needToRepath, dependsOn);
-            dependsOn = needToRepath.Dispose(dependsOn);
+            world.AddEndTickHandle(needToRepath.Dispose(dependsOn));
             return dependsOn;
 
         }
@@ -1092,7 +1092,7 @@ namespace ME.BECS.Pathfinding {
                 graph = graph,
                 results = results,
             }.Schedule(addConnectionsHandle);
-            dependsOn = results.Dispose(floodFillPortalAreas);
+            world.AddEndTickHandle(results.Dispose(floodFillPortalAreas));
             return dependsOn;
 
         }
@@ -1154,7 +1154,8 @@ namespace ME.BECS.Pathfinding {
                 graph = graph,
                 results = results,
             }.Schedule(addConnectionsHandle);
-            return results.Dispose(floodFillPortalAreas);
+            world.AddEndTickHandle(results.Dispose(floodFillPortalAreas));
+            return floodFillPortalAreas;
 
         }
 

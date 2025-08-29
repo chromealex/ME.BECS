@@ -516,7 +516,7 @@ namespace ME.BECS.Network {
                         data = data,
                         tempData = tempData,
                     }.Schedule(count, 4, dependsOn);
-                    dependsOn = tempData.Dispose(dependsOn);
+                    world.AddEndTickHandle(tempData.Dispose(dependsOn));
                     JobUtils.RunScheduled();
 
                 }
