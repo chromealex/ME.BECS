@@ -121,7 +121,12 @@ namespace ME.BECS {
             if (dic != null) dic.Clear();
             if (worldId >= WorldEvents.events.Data.Length) return;
             ref var events = ref WorldEvents.events.Data.Get(worldId).events;
-            if (events.IsCreated == true) events.Clear();
+            if (events.IsCreated == true) {
+                foreach (var item in events) {
+                    if (item.Value.data.ptr != null) _free(item.Value.data);
+                }
+                events.Clear();
+            }
         }
         
         /// <summary>
