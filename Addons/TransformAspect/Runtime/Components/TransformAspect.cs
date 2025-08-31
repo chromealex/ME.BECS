@@ -26,6 +26,7 @@ namespace ME.BECS.Transforms {
         internal AspectDataPtr<LocalScaleComponent> localScaleData;
         internal AspectDataPtr<ParentComponent> parentData;
         internal AspectDataPtr<ChildrenComponent> childrenData;
+        internal AspectDataPtr<DirtyMoveComponent> dirtyMoveComponent;
         [QueryWith]
         internal AspectDataPtr<LocalMatrixComponent> localMatrixData;
         [QueryWith]
@@ -33,17 +34,22 @@ namespace ME.BECS.Transforms {
         internal AspectDataPtr<BoundsSizeComponent> boundsSizeData;
 
         public readonly bool IsCalculated => math.all(math.isnan(this.GetWorldMatrixRotation().value)) == false;
+        public readonly bool IsDirty {
+            [INLINE(256)] get => this.dirtyMoveComponent.Read(this.ent.id, this.ent.gen).tick == this.ent.World.CurrentTick;
+            [INLINE(256)] set => this.dirtyMoveComponent.Get(this.ent.id, this.ent.gen).tick = this.ent.World.CurrentTick;
+        }
 
         /// <summary>
         /// Is this transform static?
         /// Static transforms doesn't recalculate localMatrix and worldMatrix at all.
         /// So, if you need to move current object - you do not need to use this flag.
         /// </summary>
-        public bool IsStaticLocal {
+        public readonly bool IsStaticLocal {
             [INLINE(256)] get => this.ent.Has<IsTransformStaticLocalComponent>();
             [INLINE(256)] set {
                 this.ent.SetTag<IsTransformStaticLocalCalculatedComponent>(false);
                 this.ent.SetTag<IsTransformStaticLocalComponent>(value);
+                this.IsDirty = true;
             }
         }
 
@@ -52,19 +58,20 @@ namespace ME.BECS.Transforms {
         /// Static transforms doesn't recalculate localMatrix and worldMatrix at all.
         /// So, if you need to move parent object or current object - you do not need to use this flag.
         /// </summary>
-        public bool IsStatic {
+        public readonly bool IsStatic {
             [INLINE(256)] get => this.ent.Has<IsTransformStaticComponent>();
             [INLINE(256)] set {
                 this.ent.SetTag<IsTransformStaticLocalComponent>(false);
                 this.ent.SetTag<IsTransformStaticLocalCalculatedComponent>(false);
                 this.ent.SetTag<IsTransformStaticCalculatedComponent>(false);
                 this.ent.SetTag<IsTransformStaticComponent>(value);
+                this.IsDirty = true;
             }
         }
 
         /// <get>Returns true if all parent objects and current object has IsStatic as true.</get>
         /// <set>Set current object and all children IsStatic as true.</set>
-        public bool IsStaticHierarchy {
+        public readonly bool IsStaticHierarchy {
             [INLINE(256)] get {
                 if (this.parent.IsAlive() == true) {
                     var parent = this.parent.GetAspect<TransformAspect>();
@@ -172,8 +179,13 @@ namespace ME.BECS.Transforms {
                     var containerRotation = parentTr.rotation;
                     var containerPosition = parentTr.position;
                     this.localPosition = math.mul(math.inverse(containerRotation), GetInvScale_INTERNAL(in parent) * (value - containerPosition));
+                    this.SetDirty();
                 } else {
-                    this.localPosition = value;
+                    ref var val = ref this.localPosition;
+                    if (math.all(val == value) == false) {
+                        val = value;
+                        this.SetDirty();
+                    }
                 }
             }
             [INLINE(256)]
@@ -203,8 +215,13 @@ namespace ME.BECS.Transforms {
                 if (container.IsEmpty() == false) {
                     var parentTr = (TransformAspect)container;
                     this.localRotation = math.mul(math.inverse(parentTr.rotation), value);
+                    this.SetDirty();
                 } else {
-                    this.localRotation = value;
+                    ref var val = ref this.localRotation;
+                    if (math.all(val.value == value.value) == false) {
+                        val = value;
+                        this.SetDirty();
+                    }
                 }
             }
             [INLINE(256)]
@@ -223,6 +240,11 @@ namespace ME.BECS.Transforms {
                 }
                 return worldRot;
             }
+        }
+
+        [INLINE(256)]
+        public readonly void SetDirty() {
+            this.IsDirty = true;
         }
             
         [INLINE(256)]

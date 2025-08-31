@@ -91,7 +91,7 @@ namespace NativeTrees {
                 UnityEngine.Gizmos.DrawCube((Vector2)debugExt.nodeCenter, (Vector2)debugExt.nodeExtents * 1.75f);
                 #endif
 
-                if (this.nodes.TryGetValue(quadId, out var objectCount) && this.Raycast(
+                if (this.TryGetNode(quadId, out var objectCount) && this.Raycast(
                         new PrecomputedRay2D(ray, quadRayIntersection),
                         quadId,
                         ExtentsBounds.GetQuad(extentsBounds, quadIndex),

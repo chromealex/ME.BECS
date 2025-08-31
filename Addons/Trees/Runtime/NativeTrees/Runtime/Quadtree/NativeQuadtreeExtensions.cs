@@ -66,7 +66,7 @@ namespace NativeTrees {
 
             public NativeList<T> results;
 
-            public bool OnVisit(T obj, AABB2D objBounds, AABB2D queryRange) {
+            public bool OnVisit(in T obj, in AABB2D objBounds, in AABB2D queryRange) {
                 if (objBounds.Overlaps(queryRange)) {
                     this.results.Add(obj);
                 }
@@ -96,7 +96,7 @@ namespace NativeTrees {
 
             public NativeParallelHashSet<T> results;
 
-            public bool OnVisit(T obj, AABB2D objBounds, AABB2D queryRange) {
+            public bool OnVisit(in T obj, in AABB2D objBounds, in AABB2D queryRange) {
                 if (objBounds.Overlaps(queryRange)) {
                     this.results.Add(obj);
                 }
@@ -117,7 +117,8 @@ namespace NativeTrees {
         /// <returns>If an object was found within the given maximum distance</returns>
         public static bool TryGetNearestAABB<T>(this NativeQuadtree<T> quadtree, float2 point, tfloat maxDistanceSqr, tfloat minDistanceSqr, out T nearest) where T : unmanaged, IComparable<T> {
             var visitor = new QuadtreeNearestAABBVisitor<T>();
-            quadtree.Nearest(point, maxDistanceSqr, minDistanceSqr, ref visitor, default(AABBDistanceSquaredProvider<T>));
+            var d = new AABBDistanceSquaredProvider<T>();
+            quadtree.Nearest(point, maxDistanceSqr, minDistanceSqr, ref visitor, ref d);
             nearest = visitor.nearest;
             return visitor.found;
         }
@@ -135,14 +136,15 @@ namespace NativeTrees {
         public static bool TryGetNearestAABB<T>(this NativeQuadtree<T>.NearestNeighbourQuery queryCache, ref NativeQuadtree<T> quadtree, float2 point, tfloat maxDistanceSqr,
                                                 tfloat minDistanceSqr, out T nearest) where T : unmanaged, IComparable<T> {
             var visitor = new QuadtreeNearestAABBVisitor<T>();
-            queryCache.Nearest(ref quadtree, point, maxDistanceSqr, minDistanceSqr, ref visitor, default(AABBDistanceSquaredProvider<T>));
+            var d = new AABBDistanceSquaredProvider<T>();
+            queryCache.Nearest(ref quadtree, point, maxDistanceSqr, minDistanceSqr, ref visitor, ref d);
             nearest = visitor.nearest;
             return visitor.found;
         }
 
         public struct AABBDistanceSquaredProvider<T> : IQuadtreeDistanceProvider<T> where T : unmanaged {
 
-            public tfloat DistanceSquared(float2 point, T obj, AABB2D bounds) {
+            public tfloat DistanceSquared(in float2 point, in T obj, in AABB2D bounds) {
                 return bounds.DistanceSquared(point);
             }
 
@@ -152,8 +154,9 @@ namespace NativeTrees {
 
             public T nearest;
             public bool found;
+            public uint Capacity => 1u;
 
-            public bool OnVisit(T obj, AABB2D bounds) {
+            public bool OnVisit(in T obj, in AABB2D bounds) {
                 this.found = true;
                 this.nearest = obj;
 

@@ -33,11 +33,11 @@ namespace NativeTrees {
         /// <typeparam name="V">Provide a calculation for the distance</typeparam>
         /// <remarks>Allocates native containers. To prevent reallocating for every query, create a <see cref="NearestNeighbourQuery"/> struct
         /// and re-use it.</remarks>
-        public void Nearest<U, V>(float2 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, V distanceSquaredProvider = default)
+        public void Nearest<U, V>(float2 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V distanceSquaredProvider)
             where U : struct, IQuadtreeNearestVisitor<T>
             where V : struct, IQuadtreeDistanceProvider<T> {
-            var query = new NearestNeighbourQuery(Allocator.Temp);
-            query.Nearest(ref this, point, minDistanceSqr, maxDistanceSqr, ref visitor, distanceSquaredProvider);
+            var query = new NearestNeighbourQuery((int)visitor.Capacity, Allocator.Temp);
+            query.Nearest(ref this, point, minDistanceSqr, maxDistanceSqr, ref visitor, ref distanceSquaredProvider);
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace NativeTrees {
         /// </summary>
         /// <remarks>Implemented as a struct because this type of query requires the use of some extra native containers.
         /// You can cache this struct and re-use it to circumvent the extra cost associated with allocating the internal containers.</remarks>
-        public struct NearestNeighbourQuery : INativeDisposable {
+        public ref struct NearestNeighbourQuery {
 
             // objects and nodes are stored in a separate list, as benchmarking turned out,
             // putting everything in one big struct was much, much slower because of the large struct size
@@ -82,8 +82,7 @@ namespace NativeTrees {
             /// <param name="distanceSquaredProvider">Provide a calculation for the distance</param>
             /// <typeparam name="U">Handler type for when a neighbour is encountered</typeparam>
             /// <typeparam name="V">Provide a calculation for the distance</typeparam>
-            public void Nearest<U, V>(ref NativeQuadtree<T> quadtree, float2 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor,
-                                      V distanceSquaredProvider = default)
+            public void Nearest<U, V>(ref NativeQuadtree<T> quadtree, float2 point, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V distanceSquaredProvider)
                 where U : struct, IQuadtreeNearestVisitor<T>
                 where V : struct, IQuadtreeDistanceProvider<T> {
                 // reference for the method used:
@@ -117,7 +116,7 @@ namespace NativeTrees {
                             point,
                             distanceAndIndexWrapper: nearestWrapper,
                             maxDistanceSquared: maxDistanceSqr,
-                            distanceProvider: distanceSquaredProvider);
+                            distanceProvider: ref distanceSquaredProvider);
                     } else {
                         var item = this.objList[nearestWrapper.objIndex];
                         if (minDistanceSqr > 0f && math.distancesq(item.bounds.Center, point) <= minDistanceSqr) {
@@ -131,8 +130,7 @@ namespace NativeTrees {
                 }
             }
 
-            private void NearestNode<V>(ref NativeQuadtree<T> quadtree, float2 point, tfloat maxDistanceSquared, in DistanceAndIndexWrapper distanceAndIndexWrapper,
-                                        V distanceProvider = default)
+            private void NearestNode<V>(ref NativeQuadtree<T> quadtree, float2 point, tfloat maxDistanceSquared, in DistanceAndIndexWrapper distanceAndIndexWrapper, ref V distanceProvider)
                 where V : struct, IQuadtreeDistanceProvider<T> {
                 ref var node = ref this.nodeList.ElementAt(distanceAndIndexWrapper.nodeIndex);
                 ref var objects = ref quadtree.objects;
@@ -141,7 +139,7 @@ namespace NativeTrees {
                 if (node.nodeCounter <= quadtree.objectsPerNode || node.nodeDepth == quadtree.maxDepth) {
                     if (objects.TryGetFirstValue(node.nodeId, out var objWrapper, out var it)) {
                         do {
-                            var objDistanceSquared = distanceProvider.DistanceSquared(point, objWrapper.obj, objWrapper.bounds);
+                            var objDistanceSquared = distanceProvider.DistanceSquared(in point, in objWrapper.obj, in objWrapper.bounds);
                             if (objDistanceSquared > maxDistanceSquared) {
                                 continue;
                             }
@@ -174,7 +172,7 @@ namespace NativeTrees {
                 parentDepth++;
                 for (var i = 0; i < 4; i++) {
                     var quadId = GetQuadId(nodeWrapper.nodeId, i);
-                    if (!quadtree.nodes.TryGetValue(quadId, out var quadObjectCount)) {
+                    if (!quadtree.TryGetNode(quadId, out var quadObjectCount)) {
                         continue;
                     }
 

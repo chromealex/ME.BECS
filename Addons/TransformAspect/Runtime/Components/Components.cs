@@ -133,4 +133,11 @@ namespace ME.BECS.Transforms {
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct TransformLevelOther : IComponent { }
 
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct DirtyMoveComponent : IComponent {
+
+        public ulong tick;
+
+    }
+    
 }

@@ -49,7 +49,23 @@ namespace ME.BECS.Units {
                 var alignmentUnitsCount = 0u;
                 var rangeSq = query.readQuery.rangeSqr;
                 var srcPos = tr.position;
+                var isDirty = tr.IsDirty;
                 srcPos.y = 0f;
+                if (isDirty == false) {
+                    for (uint i = 0, size = query.readResults.results.Count; i < size; ++i) {
+                        var queryEnt = query.readResults.results[this.world.state, i];
+                        if (queryEnt.IsAlive() == false) continue;
+                        var entTr = queryEnt.GetAspect<TransformAspect>();
+                        var dirty = entTr.IsDirty;
+                        if (dirty == true) {
+                            isDirty = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isDirty == false) return;
+
                 for (uint i = 0, size = query.readResults.results.Count; i < size; ++i) {
                     var queryEnt = query.readResults.results[this.world.state, i];
                     if (queryEnt.IsAlive() == false) continue;
@@ -133,11 +149,6 @@ namespace ME.BECS.Units {
 
             }
             
-            [INLINE(256)]
-            private static bool IsFacing(float3 rightTransformVector, float3 normal, tfloat cosineValue) {
-                return math.dot(rightTransformVector, normal) >= cosineValue;
-            }
-
         }
 
         public void OnUpdate(ref SystemContext context) {

@@ -214,6 +214,28 @@ namespace ME.BECS {
 
         }
 
+        public readonly void FillAll(ref QuadTreeQueryAspect query, in TransformAspect tr) {
+            
+            if (tr.IsCalculated == false) return;
+
+            var q = query.readQuery;
+            if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) return;
+
+            if (query.readResults.results.IsCreated == true) query.results.results.Clear();
+            if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+
+            for (int i = 0; i < this.treesCount; ++i) {
+                if ((q.treeMask & (1 << i)) == 0) {
+                    continue;
+                }
+                ref var tree = ref *this.GetTree(i).ptr;
+                var list = tree.tempObjects.ToList(Constants.ALLOCATOR_TEMP);
+                foreach (var item in list) {
+                    query.results.results.Add(item.obj);
+                }
+            }
+        }
+
         public readonly void FillNearest<T>(ref QuadTreeQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISubFilter<Ent> {
             
             if (tr.IsCalculated == false) return;
@@ -257,6 +279,7 @@ namespace ME.BECS {
 
             const uint nearestCount = 1u;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
+            var d = new AABB2DDistanceSquaredProvider<Ent>();
             // for each tree
             for (int i = 0; i < this.treesCount; ++i) {
                 if ((mask & (1 << i)) == 0) {
@@ -272,7 +295,7 @@ namespace ME.BECS {
                     };
                     var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
                     marker.Begin();
-                    tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
+                    tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
                     if (visitor.found == true) {
                         if (ignoreSorting == true) {
                             marker.End();
@@ -302,6 +325,7 @@ namespace ME.BECS {
             var bitsCount = math.countbits(mask);
             if (nearestCount > 0u) {
 
+                var d = new AABB2DDistanceSquaredProvider<Ent>();
                 var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
                 var resultsTemp = new UnsafeHashSet<Ent>(nearestCount, Constants.ALLOCATOR_TEMP);
                 // for each tree
@@ -322,7 +346,7 @@ namespace ME.BECS {
                         };
                         var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
                         marker.Begin();
-                        tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
+                        tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
                         if (ignoreSorting == true) {
                             var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
                             markerResults.Begin();

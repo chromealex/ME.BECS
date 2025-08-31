@@ -19,7 +19,7 @@ namespace NativeTrees {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Range<U>(in AABB2D range, ref U visitor) where U : struct, IQuadtreeRangeVisitor<T> {
             this.RangeNext(
-                range,
+                in range,
                 1,
                 new QuarterSizeBounds(this.boundsCenter, this.boundsQuarterSize),
                 ref visitor,
@@ -29,20 +29,20 @@ namespace NativeTrees {
         private bool RangeNext<U>(in AABB2D range, uint nodeId, in QuarterSizeBounds quarterSizeBounds, ref U visitor, int parentDepth)
             where U : struct, IQuadtreeRangeVisitor<T> {
             parentDepth++;
-            var rangeMask = GetBoundsMask(quarterSizeBounds.nodeCenter, range);
+            var rangeMask = GetBoundsMask(in quarterSizeBounds.nodeCenter, in range);
 
             for (var i = 0; i < 4; i++) {
                 var quadMask = QuadMasks[i];
                 if ((rangeMask & quadMask) == quadMask) {
                     var octantId = GetQuadId(nodeId, i);
-                    if (this.nodes.TryGetValue(octantId, out var objectCount) &&
-                        !this.Range(
-                            range,
+                    if (this.TryGetNode(octantId, out var objectCount) == true &&
+                        this.Range(
+                            in range,
                             octantId,
                             QuarterSizeBounds.GetQuad(quarterSizeBounds, i),
                             objectCount,
                             ref visitor,
-                            parentDepth)) {
+                            parentDepth) == false) {
                         return false;
                     }
                 }
@@ -57,7 +57,7 @@ namespace NativeTrees {
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
                 if (this.objects.TryGetFirstValue(nodeId, out var wrappedObj, out var it)) {
                     do {
-                        if (!visitor.OnVisit(wrappedObj.obj, wrappedObj.bounds, range)) {
+                        if (visitor.OnVisit(wrappedObj.obj, wrappedObj.bounds, range) == false) {
                             return false; // stop traversing if visitor says so
                         }
                     } while (this.objects.TryGetNextValue(out wrappedObj, ref it));
@@ -67,9 +67,9 @@ namespace NativeTrees {
             }
 
             return this.RangeNext(
-                range,
+                in range,
                 nodeId,
-                quarterSizeBounds,
+                in quarterSizeBounds,
                 ref visitor,
                 depth);
         }

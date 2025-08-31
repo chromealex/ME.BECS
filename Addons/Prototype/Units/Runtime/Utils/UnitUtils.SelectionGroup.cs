@@ -22,7 +22,8 @@ namespace ME.BECS.Units {
         public uint max;
         public MathSector sector;
 
-        public bool OnVisit(Ent obj, NativeTrees.AABB2D objBounds, NativeTrees.AABB2D queryRange) {
+        public bool OnVisit(in Ent obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
+            if (this.results.Contains(obj) == true) return true;
             if (this.sector.IsValid(objBounds.Center) == true) {
                 // check if our object's AABB overlaps with the query AABB
                 if (obj.Has<IsUnitStaticComponent>() == true) return true;
@@ -163,7 +164,8 @@ namespace ME.BECS.Units {
             var group = UnitUtils.CreateSelectionGroup(1u, jobInfo);
 
             var visitor = new QuadtreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
-            tree.ptr->Nearest(position.xz, minRange, maxRange, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
+            var d = new AABB2DDistanceSquaredProvider<Ent>();
+            tree.ptr->Nearest(position.xz, minRange, maxRange, ref visitor, ref d);
             if (visitor.found == true) {
                 if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
             }
@@ -185,7 +187,8 @@ namespace ME.BECS.Units {
             var group = UnitUtils.CreateSelectionTempGroup(1u, jobInfo);
 
             var visitor = new QuadtreeNearestAABBVisitor<Ent, AlwaysTrueSubFilter>();
-            tree.ptr->Nearest(position.xz, minRange, maxRange, ref visitor, new AABB2DDistanceSquaredProvider<Ent>());
+            var d = new AABB2DDistanceSquaredProvider<Ent>();
+            tree.ptr->Nearest(position.xz, minRange, maxRange, ref visitor, ref d);
             if (visitor.found == true) {
                 if (visitor.nearest.IsAlive() == true) group.Add(visitor.nearest.GetAspect<UnitAspect>());
             }

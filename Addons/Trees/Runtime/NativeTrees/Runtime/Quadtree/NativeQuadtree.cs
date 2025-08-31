@@ -15,6 +15,8 @@ using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
+using ME.BECS;
+using static ME.BECS.Cuts;
 
 // https://bartvandesande.nl
 // https://github.com/bartofzo
@@ -70,10 +72,11 @@ namespace NativeTrees {
         /// To check if a node is a leaf is therefore as simple as checking that the count is less or equal than <see cref="objectsPerNode"/>,
         /// or whether depth is <see cref="maxDepth"/>
         /// </summary>
-        public NativeHashMap<uint, int> nodes;
+        public NativeArray<int> nodes;
         private UnsafeParallelMultiHashMap<uint, ObjWrapper> objects;
 
-        private ME.BECS.NativeCollections.NativeParallelList<ObjWrapper> tempObjects;
+        public ME.BECS.NativeCollections.NativeParallelList<ObjWrapper> tempObjects;
+        private Allocator allocator;
 
         /// <summary>
         /// Constructs an quadtree with a max depth of 8
@@ -97,8 +100,9 @@ namespace NativeTrees {
                 throw new ArgumentException("Bounds max must be greater than min");
             }
 
+            this.allocator = allocator;
             this.objects = new UnsafeParallelMultiHashMap<uint, ObjWrapper>(initialCapacity, allocator);
-            this.nodes = new NativeHashMap<uint, int>(initialCapacity / objectsPerNode, allocator);
+            this.nodes = CollectionHelper.CreateNativeArray<int>(initialCapacity / objectsPerNode, allocator);//new NativeArray<int>(initialCapacity / objectsPerNode, allocator);//new NativeHashMap<uint, int>(initialCapacity / objectsPerNode, allocator);
 
             this.objectsPerNode = objectsPerNode;
             this.maxDepth = maxDepth;
@@ -108,7 +112,7 @@ namespace NativeTrees {
             this.boundsQuarterSize = this.boundsExtents / 2;
             this.tempObjects = new ME.BECS.NativeCollections.NativeParallelList<ObjWrapper>(initialCapacity, allocator);
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(in T obj, AABB2D bounds) {
             this.tempObjects.Add(new ObjWrapper(obj, bounds));
@@ -133,10 +137,11 @@ namespace NativeTrees {
         /// Clear the tree
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Clear() {
+        public unsafe void Clear() {
             this.tempObjects.Clear();
             this.objects.Clear();
-            this.nodes.Clear();
+            //this.nodes.Clear();
+            _memclear((safe_ptr)this.nodes.GetUnsafePtr(), TSize<int>.size * this.nodes.Length);
         }
 
         /// <summary>
@@ -208,14 +213,16 @@ namespace NativeTrees {
         /// Inserts the object if the node is a leaf. Otherwise, returns false and the tree should be traversed deeper.
         /// </summary>
         private bool TryInsert(uint nodeId, in QuarterSizeBounds extents, in ObjWrapper objWrapper, int depth) {
-            this.nodes.TryGetValue(nodeId, out var objectCount);
+            //this.nodes.TryGetValue(nodeId, out var objectCount);
+            this.TryGetNode(nodeId, out var objectCount);
 
             // a node is considered a leaf as long as it's (prev) objectcount <= max objects per node
             // or, when it is at the max tree depth
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
                 objectCount++;
                 this.objects.Add(nodeId, objWrapper);
-                this.nodes[nodeId] = objectCount;
+                this.SetNode(nodeId, objectCount);
+                //this.nodes[nodeId] = objectCount;
                 if (objectCount > this.objectsPerNode && depth < this.maxDepth) {
                     this.Subdivide(nodeId, in extents, depth);
                 }
@@ -224,6 +231,23 @@ namespace NativeTrees {
             }
 
             return false;
+        }
+
+        private bool TryGetNode(uint nodeId, out int count) {
+            count = 0;
+            if (nodeId >= this.nodes.Length) return false;
+            count = this.nodes[(int)nodeId];
+            return count > 0;
+        }
+
+        private void SetNode(uint nodeId, int count) {
+            if (nodeId >= this.nodes.Length) {
+                var newNodes = CollectionHelper.CreateNativeArray<int>((int)(nodeId + 1u), this.allocator);//new NativeArray<int>((int)(nodeId + 1u), this.allocator);
+                NativeArray<int>.Copy(this.nodes, 0, newNodes, 0, this.nodes.Length);
+                this.nodes.Dispose();
+                this.nodes = newNodes;
+            }
+            this.nodes[(int)nodeId] = count;
         }
 
         private void Subdivide(uint nodeId, in QuarterSizeBounds quarterSizeBounds, int depth) {
@@ -261,7 +285,8 @@ namespace NativeTrees {
                 var count = countPerQuad[i];
                 if (count > 0) {
                     var quadId = GetQuadId(nodeId, i);
-                    this.nodes[quadId] = count; // mark our node as being used
+                    //this.nodes[(int)quadId] = count; // mark our node as being used
+                    this.SetNode(quadId, count);
 
                     // could be that we need to subdivide again if all of the objects went to the same quad
                     if (count > this.objectsPerNode && depth < this.maxDepth) // todo: maxDepth check can be hoisted
@@ -327,7 +352,7 @@ namespace NativeTrees {
          */
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetBoundsMask(float2 nodeCenter, AABB2D AABB2D) {
+        private static int GetBoundsMask(in float2 nodeCenter, in AABB2D AABB2D) {
             var offMin = math.bitmask(AABB2D.min.xyxy <= nodeCenter.xyxy) >> 2;
             return offMin | (math.bitmask(AABB2D.max.xyxy >= nodeCenter.xyxy) << 2);
         }
@@ -350,7 +375,7 @@ namespace NativeTrees {
         /// <summary>
         /// Stores an object together with it's bounds
         /// </summary>
-        private readonly struct ObjWrapper : IComparable<ObjWrapper> {
+        public readonly struct ObjWrapper : IComparable<ObjWrapper> {
 
             public readonly AABB2D bounds;
             public readonly T obj;
@@ -368,7 +393,7 @@ namespace NativeTrees {
 
         // This turned out to be the most efficient way of passing down dimensions of nodes
         // for insertion and range queries
-        private readonly struct QuarterSizeBounds {
+        private readonly ref struct QuarterSizeBounds {
 
             public readonly float2 nodeCenter;
             public readonly float2 nodeQuarterSize;
@@ -419,36 +444,6 @@ namespace NativeTrees {
         }
 
         /// <summary>
-        /// Clears and copies the contents of the source tree into this one
-        /// </summary>
-        /// <param name="source">The source tree to copy</param>
-        public void CopyFrom(NativeQuadtree<T> source) {
-            if (this.maxDepth != source.maxDepth || this.objectsPerNode != source.objectsPerNode) {
-                throw new ArgumentException("Source maxDepth and objectsPerNode must be the same as destination");
-            }
-
-            if (!this.boundsCenter.Equals(source.boundsCenter) || !this.boundsExtents.Equals(source.boundsExtents)) {
-                throw new ArgumentException("Source bounds must be equal");
-            }
-
-            this.objects.Clear();
-            this.nodes.Clear();
-
-            var kvs = source.objects.GetKeyValueArrays(Allocator.Temp);
-            for (var i = 0; i < kvs.Length; i++) {
-                this.objects.Add(kvs.Keys[i], kvs.Values[i]);
-            }
-
-            var kvs2 = source.nodes.GetKeyValueArrays(Allocator.Temp);
-            for (var i = 0; i < kvs2.Length; i++) {
-                this.nodes.Add(kvs2.Keys[i], kvs2.Values[i]);
-            }
-
-            kvs.Dispose();
-            kvs2.Dispose();
-        }
-
-        /// <summary>
         /// Dispose the NativeOctree
         /// </summary>
         public void Dispose() {
@@ -476,7 +471,7 @@ namespace NativeTrees {
 
             for (var i = 0; i < 4; i++) {
                 var quadId = GetQuadId(nodeId, i);
-                if (this.nodes.TryGetValue(quadId, out var count)) {
+                if (this.TryGetNode(quadId, out var count)) {
                     this.Gizmos(quadId, ExtentsBounds.GetQuad(quarterSizeBounds, i), count, parentDepth);
                 }
             }

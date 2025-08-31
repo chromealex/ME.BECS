@@ -28,8 +28,8 @@ namespace ME.BECS.Attack {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parent) {
 
-                var unit = parent.value;
                 if (sensor.target.IsAlive() == true) {
+                    var unit = parent.value;
                     var unitAspect = unit.GetAspect<UnitAspect>();
                     if (unitAspect.IsPathFollow == false && sensor.readComponentRuntimeFire.fireTimer > 0f) {
                         unitAspect.IsHold = true;
@@ -41,11 +41,11 @@ namespace ME.BECS.Attack {
         }
         
         [BURST]
-        public struct JobRemove : IJobForAspects<AttackAspect> {
+        public struct JobRemove : IJobFor1Aspects1Components<AttackAspect, ParentComponent> {
 
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect sensor, ref ParentComponent parentComponent) {
 
-                var unit = sensor.ent.GetParent();
+                var unit = parentComponent.value;
                 if (sensor.target.IsAlive() == false || sensor.readComponentRuntimeFire.fireTimer <= 0f) unit.GetAspect<UnitAspect>().IsHold = false;
 
             }
@@ -64,7 +64,7 @@ namespace ME.BECS.Attack {
                                    .AsParallel()
                                    .AsUnsafe()
                                    .Without<CanFireWhileMovesTag>()
-                                   .Schedule<JobRemove, AttackAspect>();
+                                   .Schedule<JobRemove, AttackAspect, ParentComponent>();
             context.SetDependency(dependsOnSet, dependsOnRemove);
 
         }

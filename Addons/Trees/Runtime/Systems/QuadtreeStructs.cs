@@ -17,7 +17,7 @@ namespace ME.BECS {
     
     public struct AABB2DDistanceSquaredProvider<T> : NativeTrees.IQuadtreeDistanceProvider<T> {
         // Just return the distance squared to our bounds
-        public tfloat DistanceSquared(float2 point, T obj, NativeTrees.AABB2D bounds) => bounds.DistanceSquared(point);
+        public tfloat DistanceSquared(in float2 point, in T obj, in NativeTrees.AABB2D bounds) => bounds.DistanceSquared(point);
     }
 
     public struct QuadtreeNearestIgnoreSelfAABBVisitor<T> : NativeTrees.IQuadtreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> {
@@ -25,7 +25,9 @@ namespace ME.BECS {
         public T ignoreSelf;
         public T nearest;
         public bool found;
-        public bool OnVisit(T obj, NativeTrees.AABB2D bounds) {
+        public uint Capacity => 1u;
+        
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.ignoreSelf.Equals(obj) == true) return true;
             this.found = true;
@@ -56,8 +58,9 @@ namespace ME.BECS {
         public MathSector sector;
         public bool ignoreSelf;
         public T ignore;
+        public uint Capacity => 1u;
 
-        public bool OnVisit(T obj, NativeTrees.AABB2D bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
                 return true;
@@ -87,8 +90,11 @@ namespace ME.BECS {
         public MathSector sector;
         public bool ignoreSelf;
         public T ignore;
+        public uint Capacity => (uint)this.results.Capacity;
 
-        public bool OnVisit(T obj, NativeTrees.AABB2D bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
+
+            if (this.results.Contains(obj) == true) return true;
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
                 return true;
@@ -118,7 +124,9 @@ namespace ME.BECS {
         public bool ignoreSelf;
         public T ignore;
 
-        public bool OnVisit(T obj, NativeTrees.AABB2D objBounds, NativeTrees.AABB2D queryRange) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
+
+            if (this.results.Contains(obj) == true) return true;
             
             if (this.subFilter.IsValid(in obj, in objBounds) == false) {
                 return true;

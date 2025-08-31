@@ -5,10 +5,10 @@ using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
 #else
 using tfloat = System.Single;
-using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
+using um = Unity.Mathematics;
 
 namespace ME.BECS.FogOfWar {
     
@@ -23,7 +23,7 @@ namespace ME.BECS.FogOfWar {
         private readonly float2 position;
         private readonly float2 lookDirection;
         private readonly tfloat sector;
-        private readonly bool checkSector;
+        public readonly bool checkSector;
         
         [INLINE(256)]
         public FowMathSector(in float3 position, in quaternion rotation, tfloat sector) {
@@ -132,7 +132,10 @@ namespace ME.BECS.FogOfWar {
 
             var fowPos = WorldToFogMapPosition(in props, position);
             var fowHeight = position.y + height;
-            SetVisibleRangePartial(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector, part);
+            if (part == 0) FogOfWarUtilsPartial.SetVisibleRangePartial0(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector);
+            if (part == 1) FogOfWarUtilsPartial.SetVisibleRangePartial1(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector);
+            if (part == 2) FogOfWarUtilsPartial.SetVisibleRangePartial2(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector);
+            if (part == 3) FogOfWarUtilsPartial.SetVisibleRangePartial3(in props, in fow, (int)fowPos.x, (int)fowPos.y, (int)fowRangeMin, (int)fowRange, fowHeight, in sector);
 
         }
 
@@ -272,7 +275,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static tfloat GetHeight(in FogOfWarStaticComponent props, uint x, uint y) {
-            return props.heights[y * props.size.x + x];
+            return props.heights[um::math.mad(y, props.size.x, x)];
         }
 
         [INLINE(256)]
@@ -283,8 +286,8 @@ namespace ME.BECS.FogOfWar {
             var pixelX = xf >= 0u ? (uint)(xf + 0.5f) : 0u;
             var pixelY = yf >= 0u ? (uint)(yf + 0.5f) : 0u;
             
-            pixelX = math.clamp(pixelX, 0u, props.size.x - 1u);
-            pixelY = math.clamp(pixelY, 0u, props.size.y - 1u);
+            pixelX = um::math.clamp(pixelX, 0u, props.size.x - 1u);
+            pixelY = um::math.clamp(pixelY, 0u, props.size.y - 1u);
 
             return (pixelX, pixelY);
 
@@ -295,7 +298,7 @@ namespace ME.BECS.FogOfWar {
 
             var xf = position.x * props.nodeSize + props.mapPosition.x;
             var yf = position.y * props.nodeSize + props.mapPosition.y;
-            var h = props.heights[position.y * props.size.x + position.x];
+            var h = props.heights[um::math.mad(position.y, props.size.x, position.x)];
             return new float3(xf, h, yf);
 
         }
@@ -339,7 +342,7 @@ namespace ME.BECS.FogOfWar {
         public static void SetVisibleRect(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int sizeX, int sizeY, tfloat height) {
 
             if (sizeX == 1 && sizeY == 1 && FogOfWarUtils.BYTES_PER_NODE == 1) {
-                var idx = y0 * (int)props.size.x + x0;
+                var idx = um::math.mad(y0, (int)props.size.x, x0);
                 if (height >= 0f && props.heights[idx] > height) return;
                 map.nodes[idx] = 255;
                 map.explored[idx] = 255;
@@ -347,41 +350,36 @@ namespace ME.BECS.FogOfWar {
             }
             var propSizeX = (int)props.size.x;
             var propSizeY = (int)props.size.y;
-            var rMin = math.max(0, x0);
-            var rMax = math.min(x0 + sizeX, propSizeX);
-            var yMin = math.max(0, y0);
-            var yMax = math.min(y0 + sizeY, propSizeY);
+            var rMin = um::math.max(0, x0);
+            var rMax = um::math.min(x0 + sizeX, propSizeX);
+            var yMin = um::math.max(0, y0);
+            var yMax = um::math.min(y0 + sizeY, propSizeY);
+            var src = FogOfWarData.fill255.Data.GetPtr();
+            var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+            var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
             if (height > 0f) {
-                var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
-                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
-                    var s = y * propSizeX;
-                    var fromIdx = s + rMin;
-                    var toIdx = s + rMax;
+                    var fromIdx = um::math.mad(y, propSizeX, rMin);
+                    var toIdx = um::math.mad(y, propSizeX, rMax);
                     var checkHeight = true;
                     for (int h = fromIdx; h < toIdx; ++h) {
-                        if (height > 0f && props.heights[toIdx - fromIdx] > height) {
+                        if (height > 0f && props.heights[h] > height) {
                             checkHeight = false;
                             break;
                         }
                     }
                     if (checkHeight == false) continue;
                     var count = (toIdx - fromIdx) * BYTES_PER_NODE;
-                    _memcpy(src, nodesPtr + fromIdx, count);
-                    _memcpy(src, exploredPtr + fromIdx, count);
+                    _memmove(src, nodesPtr + fromIdx, count);
+                    _memmove(src, exploredPtr + fromIdx, count);
                 }
             } else {
-                var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
-                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
-                    var s = y * propSizeX;
-                    var fromIdx = s + rMin;
-                    var toIdx = s + rMax;
+                    var fromIdx = um::math.mad(y, propSizeX, rMin);
+                    var toIdx = um::math.mad(y, propSizeX, rMax);
                     var count = (toIdx - fromIdx) * BYTES_PER_NODE;
-                    _memcpy(src, nodesPtr + fromIdx, count);
-                    _memcpy(src, exploredPtr + fromIdx, count);
+                    _memmove(src, nodesPtr + fromIdx, count);
+                    _memmove(src, exploredPtr + fromIdx, count);
                 }
             }
             
@@ -392,10 +390,10 @@ namespace ME.BECS.FogOfWar {
 
             var propSizeX = (int)props.size.x;
             var propSizeY = (int)props.size.y;
-            var rMin = math.max(0, x0);
-            var rMax = math.min(x0 + sizeX, propSizeX);
-            var yMin = math.max(0, y0);
-            var yMax = math.min(y0 + sizeY, propSizeY);
+            var rMin = um::math.max(0, x0);
+            var rMax = um::math.min(x0 + sizeX, propSizeX);
+            var yMin = um::math.max(0, y0);
+            var yMax = um::math.min(y0 + sizeY, propSizeY);
             if (part == 0) {
                 /*
                  * + -
@@ -425,37 +423,34 @@ namespace ME.BECS.FogOfWar {
                 rMin = (rMax - rMin) / 2 + rMin;
                 yMin = (yMax - yMin) / 2 + yMin;
             }
+            var src = FogOfWarData.fill255.Data.GetPtr();
+            var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+            var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
             if (height > 0f) {
-                var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
-                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
                     var s = y * propSizeX;
                     var fromIdx = s + rMin;
                     var toIdx = s + rMax;
                     var checkHeight = true;
                     for (int h = fromIdx; h < toIdx; ++h) {
-                        if (height > 0f && props.heights[toIdx - fromIdx] > height) {
+                        if (height > 0f && props.heights[h] > height) {
                             checkHeight = false;
                             break;
                         }
                     }
                     if (checkHeight == false) continue;
                     var count = (toIdx - fromIdx) * BYTES_PER_NODE;
-                    _memcpy(src, nodesPtr + fromIdx, count);
-                    _memcpy(src, exploredPtr + fromIdx, count);
+                    _memmove(src, nodesPtr + fromIdx, count);
+                    _memmove(src, exploredPtr + fromIdx, count);
                 }
             } else {
-                var src = FogOfWarData.fill255.Data.GetPtr();
-                var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
-                var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
                 for (var y = yMin; y < yMax; ++y) {
                     var s = y * propSizeX;
                     var fromIdx = s + rMin;
                     var toIdx = s + rMax;
                     var count = (toIdx - fromIdx) * BYTES_PER_NODE;
-                    _memcpy(src, nodesPtr + fromIdx, count);
-                    _memcpy(src, exploredPtr + fromIdx, count);
+                    _memmove(src, nodesPtr + fromIdx, count);
+                    _memmove(src, exploredPtr + fromIdx, count);
                 }
             }
             
@@ -464,27 +459,106 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static void SetVisibleRange(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector) {
 
-            var radiusMinSqr = minRadius * minRadius;
             var radiusSqr = radius * radius;
             
             var propSizeX = (int)props.size.x;
             var propSizeY = (int)props.size.y;
-            var rMin = math.min(radius, x0);
-            var rMax = math.min(radius, propSizeX);
+            var yMin = um::math.max(0, y0 - radius);
+            var yMax = um::math.min(y0 + radius, propSizeY);
             var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
+            var exploredPtr = (safe_ptr<byte>)map.explored.GetUnsafePtr();
+            if (sector.checkSector == false && height < 0f && minRadius <= 0) {
+                var fillPtr = FogOfWarData.fill255.Data.GetPtr();
+                for (var y = yMin; y < yMax; ++y) {
+
+                    var localY = y - y0;
+                    var hh = Math.SqrtInt(radiusSqr - localY * localY);
+                    var xMin = um::math.max(0, x0 - hh);
+                    var xMax = um::math.min(propSizeY, x0 + hh);
+                    if (xMax <= xMin) continue;
+                    var fromIdx = um::math.mad(y, propSizeX, xMin);
+                    var toIdx = um::math.mad(y, propSizeX, xMax);
+                    var count = (toIdx - fromIdx) * BYTES_PER_NODE;
+                    _memmove(fillPtr, nodesPtr + fromIdx, count);
+                    _memmove(fillPtr, exploredPtr + fromIdx, count);
+
+                }
+            } else if (sector.checkSector == false && height >= 0f && minRadius <= 0) {
+                var fillPtr = FogOfWarData.fill255.Data.GetPtr();
+                for (var y = yMin; y < yMax; ++y) {
+
+                    var localY = y - y0;
+                    var hh = Math.SqrtInt(radiusSqr - localY * localY);
+                    var xMin = um::math.max(0, x0 - hh);
+                    var xMax = um::math.min(propSizeY, x0 + hh);
+                    if (xMax <= xMin) continue;
+                    var fromIdx = um::math.mad(y, propSizeX, xMin);
+                    var toIdx = um::math.mad(y, propSizeX, xMax);
+                    var checkHeight = false;
+                    for (int h = fromIdx; h < toIdx; ++h) {
+                        if (height > 0f && props.heights[h] > height) {
+                            checkHeight = true;
+                            break;
+                        }
+                    }
+
+                    if (checkHeight == false) {
+                        var count = (toIdx - fromIdx) * BYTES_PER_NODE;
+                        _memmove(fillPtr, nodesPtr + fromIdx, count);
+                        _memmove(fillPtr, exploredPtr + fromIdx, count);
+                    } else {
+                        for (var index = fromIdx; index < toIdx; ++index) {
+
+                            if (nodesPtr[index] > 0) continue;
+                            if (height < 0f || Raycast(in props, x0, y0, xMin + (index - fromIdx), y, height) == true) {
+                                nodesPtr[index] = 255;
+                                exploredPtr[index] = 255;
+                            }
+
+                        }
+                    }
+
+                }
+            } else {
+                var radiusMinSqr = minRadius * minRadius;
+                for (var y = yMin; y < yMax; ++y) {
+
+                    var localY = y - y0;
+                    var r2 = localY * localY;
+                    var hh = Math.SqrtInt(radiusSqr - r2);
+                    var xMin = um::math.max(0, x0 - hh);
+                    var xMax = um::math.min(propSizeY, x0 + hh);
+                    for (var x = xMin; x < xMax; ++x) {
+
+                        var localX = x - x0;
+                        var index = um::math.mad(y, propSizeX, x);
+                        if (nodesPtr[index] > 0) continue;
+                        if (radiusMinSqr > 0 && r2 <= radiusMinSqr && localX * localX <= radiusMinSqr) continue;
+                        if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
+                        if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
+                            nodesPtr[index] = 255;
+                            exploredPtr[index] = 255;
+                        }
+
+                    }
+
+                }
+            }
+
+            /*
             for (var r = -rMin; r < rMax; ++r) {
 
                 var x = x0 + r;
                 if (x < 0 || x >= props.size.x) continue;
 
                 var hh = Math.SqrtInt(radiusSqr - r * r);
-                var yMin = math.max(0, y0 - hh);
-                var yMax = math.min(propSizeY, y0 + hh);
+                var yMin = um::math.max(0, y0 - hh);
+                var yMax = um::math.min(propSizeY, y0 + hh);
                 for (var y = yMin; y < yMax; ++y) {
 
                     if (y < 0 || y >= propSizeY) continue;
                     // IsVisible
-                    var index = y * propSizeX + x;
+                    var index = um::math.mad(y, propSizeX, x);
                     if (nodesPtr[index] > 0) {
                         continue;
                     }
@@ -501,13 +575,13 @@ namespace ME.BECS.FogOfWar {
 
                 }
 
-            }
+            }*/
             
         }
         
         [INLINE(256)]
         public static void SetVisibleRangePartial(in FogOfWarStaticComponent props, in FogOfWarComponent map, int x0, int y0, int minRadius, int radius, tfloat height, in FowMathSector sector, byte part) {
-
+            
             var propSizeX = (int)props.size.x;
             var propSizeY = (int)props.size.y;
             var radiusMinSqr = minRadius * minRadius;
@@ -519,7 +593,7 @@ namespace ME.BECS.FogOfWar {
                  * + -
                  * + -
                  */
-                rMin = math.min(radius, x0);
+                rMin = um::math.min(radius, x0);
                 rMax = 0;
             } else if (part == 1 || part == 3) {
                 /*
@@ -527,72 +601,128 @@ namespace ME.BECS.FogOfWar {
                  * - +
                  */
                 rMin = 0;
-                rMax = math.min(radius, propSizeX);
+                rMax = um::math.min(radius, propSizeX);
             }
 
             var nodesPtr = (safe_ptr<byte>)map.nodes.GetUnsafePtr();
-            for (var r = -rMin; r < rMax; ++r) {
+            if (sector.checkSector == false && height < 0f && radiusMinSqr <= 0) {
+                for (var r = -rMin; r < rMax; ++r) {
 
-                var x = x0 + r;
-                if (x < 0 || x >= props.size.x) continue;
-                
-                var hh = Math.SqrtInt(radiusSqr - r * r);
-                var yMin = math.max(0, y0 - hh);
-                var yMax = math.min(propSizeY, y0 + hh);
-                if (part == 0) {
-                    /*
-                     * - -
-                     * + -
-                     */
-                    yMax = (yMax + yMin) / 2;
-                } else if (part == 2) {
-                    /*
-                     * + -
-                     * - -
-                     */
-                    yMin = (yMax + yMin) / 2;
-                } else if (part == 1) {
-                    /*
-                     * - -
-                     * - +
-                     */
-                    yMax = (yMax + yMin) / 2;
-                } else if (part == 3) {
-                    /*
-                     * - +
-                     * - -
-                     */
-                    yMin = (yMax + yMin) / 2;
-                }
-                for (var y = yMin; y < yMax; ++y) {
+                    var x = x0 + r;
+                    if (x < 0 || x >= props.size.x) continue;
 
-                    if (y < 0 || y >= propSizeY) continue;
-                    // IsVisible
-                    var index = y * propSizeX + x;
-                    if (nodesPtr[index] > 0) {
-                        continue;
+                    var r2 = r * r;
+                    var hh = Math.SqrtInt(radiusSqr - r2);
+                    var yMin = um::math.max(0, y0 - hh);
+                    var yMax = um::math.min(propSizeY, y0 + hh);
+                    if (part == 0) {
+                        /*
+                         * - -
+                         * + -
+                         */
+                        yMax = (yMax + yMin) / 2;
+                    } else if (part == 2) {
+                        /*
+                         * + -
+                         * - -
+                         */
+                        yMin = (yMax + yMin) / 2;
+                    } else if (part == 1) {
+                        /*
+                         * - -
+                         * - +
+                         */
+                        yMax = (yMax + yMin) / 2;
+                    } else if (part == 3) {
+                        /*
+                         * - +
+                         * - -
+                         */
+                        yMin = (yMax + yMin) / 2;
                     }
 
-                    var localY = y - y0;
-                    if (radiusMinSqr > 0 && r * r <= radiusMinSqr && localY * localY <= radiusMinSqr) continue;
+                    yMin = um::math.max(yMin, 0);
+                    yMax = um::math.min(yMax, propSizeX);
+                    for (int y = yMin; y < yMax; ++y) {
 
-                    if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
+                        // IsVisible
+                        var index = um::math.mad(y, propSizeX, x);
+                        if (nodesPtr[index] > 0) {
+                            continue;
+                        }
 
-                    if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
                         map.nodes[index] = 255;
                         map.explored[index] = 255;
+
                     }
 
                 }
+            } else {
+                for (var r = -rMin; r < rMax; ++r) {
 
+                    var x = x0 + r;
+                    if (x < 0 || x >= props.size.x) continue;
+
+                    var hh = Math.SqrtInt(radiusSqr - r * r);
+                    var yMin = um::math.max(0, y0 - hh);
+                    var yMax = um::math.min(propSizeY, y0 + hh);
+                    if (part == 0) {
+                        /*
+                         * - -
+                         * + -
+                         */
+                        yMax = (yMax + yMin) / 2;
+                    } else if (part == 2) {
+                        /*
+                         * + -
+                         * - -
+                         */
+                        yMin = (yMax + yMin) / 2;
+                    } else if (part == 1) {
+                        /*
+                         * - -
+                         * - +
+                         */
+                        yMax = (yMax + yMin) / 2;
+                    } else if (part == 3) {
+                        /*
+                         * - +
+                         * - -
+                         */
+                        yMin = (yMax + yMin) / 2;
+                    }
+
+                    yMin = um::math.max(yMin, 0);
+                    yMax = um::math.min(yMax, propSizeX);
+                    for (var y = yMin; y < yMax; ++y) {
+
+                        // IsVisible
+                        var index = um::math.mad(y, propSizeX, x);
+                        if (nodesPtr[index] > 0) {
+                            continue;
+                        }
+
+                        var localY = y - y0;
+                        if (radiusMinSqr > 0 && r * r <= radiusMinSqr && localY * localY <= radiusMinSqr) continue;
+
+                        if (sector.IsValid(in props, (uint)x, (uint)y) == false) continue;
+
+                        if (height < 0f || Raycast(in props, x0, y0, x, y, height) == true) {
+                            map.nodes[index] = 255;
+                            map.explored[index] = 255;
+                        }
+
+                    }
+
+                }
             }
-            
+
         }
 
         [INLINE(256)]
-        private static bool Raycast(in FogOfWarStaticComponent props, int x0, int y0, int x1, int y1, tfloat terrainHeight) {
+        internal static bool Raycast(in FogOfWarStaticComponent props, int x0, int y0, int x1, int y1, tfloat terrainHeight) {
 
-            var steep = math.abs(y1 - y0) > math.abs(x1 - x0);
+            var steep = um::math.abs(y1 - y0) > um::math.abs(x1 - x0);
             if (steep == true) {
                 var t = x0;
                 x0 = y0;
@@ -612,7 +742,7 @@ namespace ME.BECS.FogOfWar {
             }
 
             var dx = x1 - x0;
-            var dy = math.abs(y1 - y0);
+            var dy = um::math.abs(y1 - y0);
             var error = dx / 2;
             var ystep = y0 < y1 ? 1 : -1;
             var y = y0;
@@ -653,7 +783,6 @@ namespace ME.BECS.FogOfWar {
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat range, tfloat? height = null, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
                 height = height != null ? height.Value : (tfloat)(-1f),
@@ -662,10 +791,12 @@ namespace ME.BECS.FogOfWar {
             entTr.IsStaticLocal = true;
             entTr.position = position;
             entTr.rotation = quaternion.identity;
-            CreatePart(in jobInfo, in ent, in owner, 0);
-            CreatePart(in jobInfo, in ent, in owner, 1);
-            CreatePart(in jobInfo, in ent, in owner, 2);
-            CreatePart(in jobInfo, in ent, in owner, 3);
+            ent.Set(new FogOfWarRevealerIsRangeTag());
+            //ent.Set(new FogOfWarRevealerIsPartialTag());
+            //CreatePart(in jobInfo, in ent, in owner, 0);
+            //CreatePart(in jobInfo, in ent, in owner, 1);
+            //CreatePart(in jobInfo, in ent, in owner, 2);
+            //CreatePart(in jobInfo, in ent, in owner, 3);
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
             
@@ -687,7 +818,6 @@ namespace ME.BECS.FogOfWar {
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat range, tfloat? height, Sector sector, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
                 height = height != null ? height.Value : (tfloat)(-1f),
@@ -699,10 +829,13 @@ namespace ME.BECS.FogOfWar {
             entTr.IsStaticLocal = true;
             entTr.position = position;
             entTr.rotation = quaternion.identity;
-            CreatePart(in jobInfo, in ent, in owner, 0);
-            CreatePart(in jobInfo, in ent, in owner, 1);
-            CreatePart(in jobInfo, in ent, in owner, 2);
-            CreatePart(in jobInfo, in ent, in owner, 3);
+            ent.Set(new FogOfWarRevealerIsRangeTag());
+            ent.Set(new FogOfWarRevealerIsSectorTag());
+            //ent.Set(new FogOfWarRevealerIsPartialTag());
+            //CreatePart(in jobInfo, in ent, in owner, 0);
+            //CreatePart(in jobInfo, in ent, in owner, 1);
+            //CreatePart(in jobInfo, in ent, in owner, 2);
+            //CreatePart(in jobInfo, in ent, in owner, 3);
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
             
@@ -725,7 +858,6 @@ namespace ME.BECS.FogOfWar {
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat sizeX, tfloat sizeY, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, sizeX),
                 rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, sizeY),
@@ -735,10 +867,12 @@ namespace ME.BECS.FogOfWar {
             entTr.IsStaticLocal = true;
             entTr.position = position;
             entTr.rotation = quaternion.identity;
-            CreatePart(in jobInfo, in ent, in owner, 0);
-            CreatePart(in jobInfo, in ent, in owner, 1);
-            CreatePart(in jobInfo, in ent, in owner, 2);
-            CreatePart(in jobInfo, in ent, in owner, 3);
+            ent.Set(new FogOfWarRevealerIsRectTag());
+            //ent.Set(new FogOfWarRevealerIsPartialTag());
+            //CreatePart(in jobInfo, in ent, in owner, 0);
+            //CreatePart(in jobInfo, in ent, in owner, 1);
+            //CreatePart(in jobInfo, in ent, in owner, 2);
+            //CreatePart(in jobInfo, in ent, in owner, 3);
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
             
@@ -759,16 +893,22 @@ namespace ME.BECS.FogOfWar {
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in Rect rect, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            ent.Set(new FogOfWarRevealerComponent() {
+                range = FogOfWarUtils.WorldToFogMapUValue(in props, rect.width),
+                rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, rect.height),
+                height = height != null ? height.Value : (tfloat)(-1f),
+            });
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            ent.Set(new FogOfWarRevealerIsPartialTag());
             var entTr = ent.GetOrCreateAspect<TransformAspect>();
             entTr.IsStaticLocal = true;
             entTr.position = new float3(rect.center.x, 0f, rect.center.y);
             entTr.rotation = quaternion.identity;
-            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 0);
-            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 1);
-            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 2);
-            CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 3);
+            ent.Set(new FogOfWarRevealerIsRectTag());
+            //ent.Set(new FogOfWarRevealerIsPartialTag());
+            //CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 0);
+            //CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 1);
+            //CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 2);
+            //CreatePart(in jobInfo, in ent, in owner, in props, in rect, height, 3);
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
 
@@ -795,7 +935,6 @@ namespace ME.BECS.FogOfWar {
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in RectUInt rect, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
             var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
-            ent.Set(new FogOfWarRevealerIsPartialTag());
             ent.Set(new FogOfWarRevealerComponent() {
                 range = rect.width,
                 rangeY = rect.height,
@@ -807,10 +946,12 @@ namespace ME.BECS.FogOfWar {
             var size = FogOfWarUtils.FogMapToWorldPosition(in props, rect.size);
             entTr.position = new float3(pos.x, 0f, pos.z) + new float3(size.x, 0f, size.z) * 0.5f;
             entTr.rotation = quaternion.identity;
-            CreatePart(in jobInfo, in ent, in owner, 0);
-            CreatePart(in jobInfo, in ent, in owner, 1);
-            CreatePart(in jobInfo, in ent, in owner, 2);
-            CreatePart(in jobInfo, in ent, in owner, 3);
+            ent.Set(new FogOfWarRevealerIsRectTag());
+            //ent.Set(new FogOfWarRevealerIsPartialTag());
+            //CreatePart(in jobInfo, in ent, in owner, 0);
+            //CreatePart(in jobInfo, in ent, in owner, 1);
+            //CreatePart(in jobInfo, in ent, in owner, 2);
+            //CreatePart(in jobInfo, in ent, in owner, 3);
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
 
