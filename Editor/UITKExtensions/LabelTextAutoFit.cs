@@ -77,8 +77,6 @@ namespace ME.BECS.Editor {
     /// </summary>
     public class LabelAutoFit : Label
     {
-        [UnityEngine.Scripting.Preserve] public new class UxmlFactory : UxmlFactory<LabelAutoFit, UxmlTraits>{}
-     
         public LabelAutoFit() => TextElementAutoFitter.RegisterAutoFitCallbacks(this);
     }
     
@@ -87,12 +85,6 @@ namespace ME.BECS.Editor {
     /// </summary>
     public class ButtonAutoFit : Button
     {
-        [UnityEngine.Scripting.Preserve]
-        public new class UxmlFactory : UxmlFactory<ButtonAutoFit, UxmlTraits>
-        {
-            public override string uxmlNamespace => "Custom"; // neat tip for anyone who doesn't know
-        }
- 
         public ButtonAutoFit(System.Action clickEvent) : base(clickEvent) {
             TextElementAutoFitter.UpdateFontSize(this);
             //TextElementAutoFitter.RegisterAutoFitCallbacks(this);
