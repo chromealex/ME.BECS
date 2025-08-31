@@ -144,7 +144,7 @@ Material:
     - _Blend: 0
     - _BlendOp: 0
     - _BlurHorizontalStep: 0.5
-    - _BlurRadius: 1.94
+    - _BlurRadius: 0.88
     - _BlurStep: 0.359
     - _BlurVerticalStep: 0.5
     - _Border: 0.5
@@ -236,6 +236,7 @@ Material:
     - _ExploredColor: {r: 0, g: 0, b: 0, a: 0.5176471}
     - _FogColor: {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
     - _HueVariation: {r: 1, g: 0.5, b: 0, a: 0.1}
+    - _Padding: {r: 0, g: 0, b: 0, a: 0}
     - _Params: {r: 0.49999997, g: 0.49999997, b: 0.0038461536, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
