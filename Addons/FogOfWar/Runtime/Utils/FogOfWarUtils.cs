@@ -474,7 +474,7 @@ namespace ME.BECS.FogOfWar {
                     var localY = y - y0;
                     var hh = Math.SqrtInt(radiusSqr - localY * localY);
                     var xMin = um::math.max(0, x0 - hh);
-                    var xMax = um::math.min(propSizeY, x0 + hh);
+                    var xMax = um::math.min(propSizeX, x0 + hh);
                     if (xMax <= xMin) continue;
                     var fromIdx = um::math.mad(y, propSizeX, xMin);
                     var toIdx = um::math.mad(y, propSizeX, xMax);
@@ -490,7 +490,7 @@ namespace ME.BECS.FogOfWar {
                     var localY = y - y0;
                     var hh = Math.SqrtInt(radiusSqr - localY * localY);
                     var xMin = um::math.max(0, x0 - hh);
-                    var xMax = um::math.min(propSizeY, x0 + hh);
+                    var xMax = um::math.min(propSizeX, x0 + hh);
                     if (xMax <= xMin) continue;
                     var fromIdx = um::math.mad(y, propSizeX, xMin);
                     var toIdx = um::math.mad(y, propSizeX, xMax);
@@ -527,7 +527,7 @@ namespace ME.BECS.FogOfWar {
                     var r2 = localY * localY;
                     var hh = Math.SqrtInt(radiusSqr - r2);
                     var xMin = um::math.max(0, x0 - hh);
-                    var xMax = um::math.min(propSizeY, x0 + hh);
+                    var xMax = um::math.min(propSizeX, x0 + hh);
                     for (var x = xMin; x < xMax; ++x) {
 
                         var localX = x - x0;
