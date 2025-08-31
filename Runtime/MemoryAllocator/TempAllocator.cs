@@ -8,6 +8,7 @@ using Unity.Mathematics;
 
 namespace ME.BECS {
 
+    [BurstCompile]
     public unsafe struct TempAllocator : AllocatorManager.IAllocator {
 
         public struct Block {
