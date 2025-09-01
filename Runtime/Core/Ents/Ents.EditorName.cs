@@ -22,10 +22,12 @@ namespace ME.BECS {
     
     public class EntEditorName {
 
-        public struct World {
+        public struct World : IIsCreated {
 
             public Array<FixedString32Bytes> names;
             public LockSpinner spinner;
+            
+            public bool IsCreated => this.names.IsCreated;
 
             [INLINE(256)]
             public void Set(in Ent ent, in FixedString32Bytes name) {
@@ -67,6 +69,13 @@ namespace ME.BECS {
                 return;
             }
             entToWorld.Data.Get(worldId).Dispose();
+            var cnt = 0;
+            for (int i = 0; i < entToWorld.Data.Length; ++i) {
+                if (entToWorld.Data.Get(i).IsCreated == false) {
+                    ++cnt;
+                }
+            }
+            if (entToWorld.Data.Length == cnt) entToWorld.Data.Dispose();
         }
         
         [INLINE(256)]

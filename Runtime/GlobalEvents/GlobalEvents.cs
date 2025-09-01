@@ -123,7 +123,9 @@ namespace ME.BECS {
             ref var events = ref WorldEvents.events.Data.Get(worldId).events;
             if (events.IsCreated == true) {
                 foreach (var item in events) {
-                    if (item.Value.data.ptr != null) _free(item.Value.data);
+                    if (item.Value.data.ptr != null) {
+                        _free(item.Value.data);
+                    }
                 }
                 events.Clear();
             }
@@ -150,11 +152,16 @@ namespace ME.BECS {
         
         [INLINE(256)]
         private static void RaiseEvent<T>(in Event evt, in T data, bool useData) where T : unmanaged {
+
+            WorldEvents.readWriteSpinner.Data.ReadBegin();
+            if (WorldEvents.events.Data.IsCreated == false) {
+                WorldEvents.readWriteSpinner.Data.ReadEnd();
+                return;
+            }
+            WorldEvents.readWriteSpinner.Data.ReadEnd();
             
             var world = Worlds.GetWorld(evt.worldId);
             E.IS_VISUAL_MODE(world.state.ptr->Mode);
-            
-            ValidateCapacity();
             
             WorldEvents.readWriteSpinner.Data.ReadBegin();
             ref var item = ref WorldEvents.events.Data.Get(evt.worldId);
@@ -165,14 +172,21 @@ namespace ME.BECS {
                 }
                 item.Unlock();
             }
-            var val = new GlobalEventsData.Item() {
-                data = useData == true ? _make(data) : default,
-            };
+
             item.Lock();
-            if (item.events.TryAdd(evt, val) == false) {
+            if (item.events.TryAdd(evt, new GlobalEventsData.Item()) == false) {
                 var elem = item.events[evt];
-                _free(elem.data);
-                elem.data = val.data;
+                if (elem.data.ptr != null) {
+                    fixed (void* dataPtr = &data) {
+                        _memcpy(elem.data, (safe_ptr)dataPtr, TSize<T>.size);
+                    }
+                } else {
+                    elem.data = useData == true ? _make(data) : default;
+                }
+                item.events[evt] = elem;
+            } else {
+                var elem = item.events[evt];
+                elem.data = useData == true ? _make(data) : default;
                 item.events[evt] = elem;
             }
             item.Unlock();
@@ -224,6 +238,8 @@ namespace ME.BECS {
         [INLINE(256)][NotThreadSafe]
         public static void RegisterEvent<T>(in Event evt, GlobalEventWithDataCallback<T> callback) where T : unmanaged {
 
+            ValidateCapacity();
+
             if (WorldEvents.evtToCallers == null || Worlds.MaxWorldId >= WorldEvents.evtToCallers.Length) System.Array.Resize(ref WorldEvents.evtToCallers, (int)(Worlds.MaxWorldId + 1u));
             if (WorldEvents.evtToCallers[evt.worldId] == null) WorldEvents.evtToCallers[evt.worldId] = new System.Collections.Generic.Dictionary<Event, RegistryCallerBase>();
             
@@ -244,6 +260,8 @@ namespace ME.BECS {
         /// <param name="callback"></param>
         [INLINE(256)][NotThreadSafe]
         public static void RegisterEvent(in Event evt, GlobalEventCallback callback) {
+
+            ValidateCapacity();
 
             if (WorldEvents.evtToCallers == null || Worlds.MaxWorldId >= WorldEvents.evtToCallers.Length) System.Array.Resize(ref WorldEvents.evtToCallers, (int)(Worlds.MaxWorldId + 1u));
             if (WorldEvents.evtToCallers[evt.worldId] == null) WorldEvents.evtToCallers[evt.worldId] = new System.Collections.Generic.Dictionary<Event, RegistryCallerBase>();
@@ -301,7 +319,9 @@ namespace ME.BECS {
                                 UnityEngine.Debug.LogException(ex);
                             }
                         }
-                        if (kv.Value.data.ptr != null) _free(kv.Value.data);
+                        if (kv.Value.data.ptr != null) {
+                            _free(kv.Value.data);
+                        }
                     }
                 }
                 item.events.Clear();

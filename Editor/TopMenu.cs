@@ -35,6 +35,13 @@ namespace ME.BECS.Editor {
             
         }
         
+        [MenuItem("ME.BECS/Internal/Clear Allocations State", priority = 0)]
+        public static void PrintAllocationsState() {
+            
+            LeakDetector.ClearAllocated();
+            
+        }
+
         [MenuItem("ME.BECS/Internal/Print Allocations (All)", priority = 0)]
         public static void PrintAllocationsAll() {
             

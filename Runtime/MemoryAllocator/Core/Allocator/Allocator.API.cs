@@ -44,7 +44,7 @@ namespace ME.BECS {
             var memPtr = this.AllocFromFreeBlocks(size, out ptr);
             if (memPtr.IsValid() == true) {
                 this.lockSpinner.Unlock();
-                LeakDetector.Track(ptr);
+                LeakDetector.TrackAllocator(ptr);
                 return memPtr;
             }
 
@@ -56,7 +56,7 @@ namespace ME.BECS {
             this.zones[zoneId] = this.CreateZone(size, zoneId);
             memPtr = this.AllocFromFreeBlocks(size, out ptr);
             this.lockSpinner.Unlock();
-            LeakDetector.Track(ptr);
+            LeakDetector.TrackAllocator(ptr);
             MemoryAllocator.CheckConsistency(ref this);
             return memPtr;
         }
@@ -71,7 +71,7 @@ namespace ME.BECS {
                 return false;
             }
 
-            LeakDetector.Free(this.GetPtr(ptr));
+            LeakDetector.FreeAllocator(this.GetPtr(ptr));
             
             var root = this.zones[ptr.zoneId].ptr->root.ptr;
             
@@ -261,10 +261,10 @@ namespace ME.BECS {
             for (uint i = 0u; i < this.zonesCount; ++i) {
                 var zone = this.zones[i];
                 if (zone.ptr == null) continue;
-                zone.ptr->Dispose();
-                _free(zone);
+                zone.ptr->Dispose(this.allocatorLabel);
+                _free(zone, this.allocatorLabel);
             }
-            if (this.zones.ptr != null) _free(this.zones);
+            if (this.zones.ptr != null) _free(this.zones, this.allocatorLabel);
             this = default;
         }
 

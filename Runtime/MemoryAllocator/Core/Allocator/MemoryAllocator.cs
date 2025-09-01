@@ -48,8 +48,8 @@ namespace ME.BECS {
             public safe_ptr firstBlock => this.data + ZONE_HEADER_OFFSET;
             public uint size;
 
-            public void Dispose() {
-                _free(this.data);
+            public void Dispose(Unity.Collections.Allocator allocator) {
+                _free(this.data, allocator);
             }
 
         }
