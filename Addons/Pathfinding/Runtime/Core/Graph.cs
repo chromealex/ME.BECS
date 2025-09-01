@@ -387,6 +387,7 @@ namespace ME.BECS.Pathfinding {
                     nodes.Add(graphNodes[(int)n].portalInfo);
                 }
                 nodes.Add(fromPortalInfo);
+                #if PATHFINDING_DEBUG
                 var offset = new float3(0f, 0f, 0f);
                 for (uint i = 1; i < nodes.Length; ++i) {
                     var n1 = nodes[(int)i - 1];
@@ -397,6 +398,7 @@ namespace ME.BECS.Pathfinding {
                     UnityEngine.Debug.DrawLine((UnityEngine.Vector3)portal1.position + (UnityEngine.Vector3)offset, (UnityEngine.Vector3)portal2.position + (UnityEngine.Vector3)offset2, UnityEngine.Color.yellow);
                     offset += new float3(0f, 0.1f, 0f);
                 }
+                #endif
             }
 
             var pathInfo = new PathInfo() {
