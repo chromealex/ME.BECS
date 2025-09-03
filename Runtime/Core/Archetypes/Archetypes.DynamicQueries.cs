@@ -119,17 +119,17 @@ namespace ME.BECS {
                         if (typeIdPair.Key > 0u && typeIdPair.Key < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                             var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeIdPair.Key];
                             if (list.IsCreated == true) {
-                                temp.Union(in this.state.ptr->allocator, list);
+                                temp.Union(in this.state.ptr->allocator, in list);
                             }
                         }
                         if (typeIdPair.Value > 0u && typeIdPair.Value < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                             var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeIdPair.Value];
                             if (list.IsCreated == true) {
-                                temp.Union(in this.state.ptr->allocator, list);
+                                temp.Union(in this.state.ptr->allocator, in list);
                             }
                         }
                     }
-                    this.queryData.ptr->archetypesBits.Intersect(temp);
+                    this.queryData.ptr->archetypesBits.Intersect(in temp);
                 }
 
                 if (this.counter.ptr != null) this.counter.ptr->count = (int)this.queryData.ptr->archetypesBits.Length;
@@ -158,56 +158,6 @@ namespace ME.BECS {
 
             builder.compose.Without<T>();
             
-        }
-
-        [INLINE(256)]
-        public static void WithAny(ref QueryBuilder builder, uint typeId1, uint typeId2, uint typeId3, uint typeId4) {
-
-            builder.WaitForAllJobs();
-            new WithAnyJob() {
-                state = builder.commandBuffer.ptr->state,
-                typeId1 = typeId1,
-                typeId2 = typeId2,
-                typeId3 = typeId3,
-                typeId4 = typeId4,
-                queryData = builder.queryData,
-            }.Execute();
-            
-        }
-
-        [INLINE(256)]
-        public static void With(ref QueryBuilder builder, uint typeId) {
-
-            builder.WaitForAllJobs();
-            new WithJob() {
-                typeId = typeId,
-                queryData = builder.queryData,
-                state = builder.commandBuffer.ptr->state,
-            }.Execute();
-
-        }
-
-        [INLINE(256)]
-        public static JobHandle With(ref QueryBuilder builder, ME.BECS.Internal.Array<uint> typeIdArr) {
-
-            return new WithArrJob() {
-                typeIdArr = typeIdArr,
-                queryData = builder.queryData,
-                state = builder.commandBuffer.ptr->state,
-            }.Schedule(builder.builderDependsOn);
-
-        }
-
-        [INLINE(256)]
-        public static void Without(ref QueryBuilder builder, uint typeId) {
-
-            builder.WaitForAllJobs();
-            new WithoutJob() {
-                typeId = typeId,
-                queryData = builder.queryData,
-                state = builder.commandBuffer.ptr->state,
-            }.Execute();
-
         }
 
         [INLINE(256)]
@@ -261,32 +211,32 @@ namespace ME.BECS {
                 if (this.typeId1 > 0u && this.typeId1 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
                     if (list.IsCreated == true) {
-                        temp.Union(in this.state.ptr->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, in list);
                     }
                 }
                 
                 if (this.typeId2 > 0u && this.typeId2 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId2];
                     if (list.IsCreated == true) {
-                        temp.Union(in this.state.ptr->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, in list);
                     }
                 }
 
                 if (this.typeId3 > 0u && this.typeId3 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId3];
                     if (list.IsCreated == true) {
-                        temp.Union(in this.state.ptr->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, in list);
                     }
                 }
 
                 if (this.typeId4 > 0u && this.typeId4 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId4];
                     if (list.IsCreated == true) {
-                        temp.Union(in this.state.ptr->allocator, list);
+                        temp.Union(in this.state.ptr->allocator, in list);
                     }
                 }
 
-                this.queryData.ptr->archetypesBits.Intersect(temp);
+                this.queryData.ptr->archetypesBits.Intersect(in temp);
                 
             }
 
@@ -356,7 +306,7 @@ namespace ME.BECS {
 
                     var bits = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeId];
                     if (bits.IsCreated == true) {
-                        this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, bits);
+                        this.queryData.ptr->archetypesBits.Intersect(in this.state.ptr->allocator, in bits);
                     } else {
                         this.queryData.ptr->archetypesBits.Clear();
                     }
@@ -387,24 +337,13 @@ namespace ME.BECS {
 
                     var bits = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, typeId];
                     if (bits.IsCreated == true) {
-                        this.queryData.ptr->archetypesBits.Remove(in this.state.ptr->allocator, bits);
+                        this.queryData.ptr->archetypesBits.Remove(in this.state.ptr->allocator, in bits);
                     }
 
                 }
 
             }
 
-        }
-
-        [INLINE(256)]
-        public static JobHandle With<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
-
-            return new WithJob() {
-                typeId = StaticTypes<T>.typeId,
-                queryData = builder.queryData,
-                state = builder.commandBuffer.ptr->state,
-            }.Schedule(builder.builderDependsOn);
-            
         }
 
         [BURST]
@@ -428,17 +367,6 @@ namespace ME.BECS {
 
         }
         
-        [INLINE(256)]
-        public static JobHandle Without<T>(ref QueryBuilder builder) where T : unmanaged, IComponentBase {
-
-            return new WithoutJob() {
-                typeId = StaticTypes<T>.typeId,
-                queryData = builder.queryData,
-                state = builder.commandBuffer.ptr->state,
-            }.Schedule(builder.builderDependsOn);
-            
-        }
-
     }
     
 }

@@ -179,7 +179,7 @@ namespace ME.BECS.Editor {
             this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->aspectsStorage.GetReservedSizeInBytes(this.world.state));
             this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)CollectionsRegistry.GetReservedSizeInBytes(this.world.state));
             {
-                var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Allocator;
+                var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Get(this.world.id).Allocator;
                 this.persistentAllocatorSize.text = $"{EditorUtils.BytesToString((int)(long)allocatorBytesAllocatedProperty.GetMethod.Invoke(allocatorInstance, null))} (Blocks: {allocatorInstance.BlocksAllocated})";
             }
             {

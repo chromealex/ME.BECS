@@ -570,7 +570,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _free(safe_ptr obj) {
 
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
@@ -580,7 +579,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _free<T>(safe_ptr<T> obj) where T : unmanaged {
 
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
@@ -590,7 +588,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _free<T>(ref safe_ptr<T> obj) where T : unmanaged {
 
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);
@@ -601,7 +598,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void _free(ref safe_ptr obj) {
             
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             LeakDetector.Free(obj, ALLOCATOR);
             LeakDetector.UntrackCount(obj.ptr, ALLOCATOR);
             Unity.Collections.AllocatorManager.Free(ALLOCATOR, obj.ptr);

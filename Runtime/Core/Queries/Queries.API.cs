@@ -83,16 +83,17 @@ namespace ME.BECS {
 
         internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
 
+            var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(queryContext.worldId).Allocator.ToAllocator;
             var builder = new QueryBuilder {
-                queryData = _makeDefault(new QueryData(), Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                queryData = _makeDefault(new QueryData(), allocator),
                 commandBuffer = _makeDefault(new CommandBuffer {
                     state = queryContext.state,
                     worldId = queryContext.worldId,
-                }, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                compose = new ArchetypeQueries.QueryCompose().Initialize(Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                }, allocator),
+                compose = new ArchetypeQueries.QueryCompose().Initialize(allocator),
                 isCreated = true,
                 builderDependsOn = dependsOn,
-                allocator = Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator,
+                allocator = allocator,
                 scheduleMode = Unity.Jobs.LowLevel.Unsafe.ScheduleMode.Single,
             };
             builder.Without<IsInactive>();

@@ -210,10 +210,11 @@ namespace ME.BECS.Views {
                     renderingInstanced = renderParams.material.enableInstancing,
                 };
                 if (this.objectsPerMeshAndMaterial.TryGetValue(info, out var objectsPerInfo) == false) {
+                    var allocatorPersistent = WorldsPersistentAllocator.allocatorPersistent.Get(world.id).Allocator.ToAllocator;
                     objectsPerInfo = new ObjectsPerInfo() {
-                        matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                        entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                        prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                        matrices = new NativeList<UnityEngine.Matrix4x4>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
+                        entities = new NativeList<Ent>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
+                        prefabWorldMatrices = new NativeList<float4x4>((int)this.properties.renderingObjectsCapacity, allocatorPersistent),
                     };
                     this.objectsPerMeshAndMaterial.Add(info, objectsPerInfo);
                 }

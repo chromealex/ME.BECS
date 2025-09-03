@@ -18,6 +18,39 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        [Unity.PerformanceTesting.PerformanceAttribute]
+        public void Performance() {
+
+            {
+                var testData = new System.Collections.Generic.List<int>();
+                for (int i = 0; i < 64; ++i) {
+                    testData.Add(i);
+                }
+                testData.Add(120);
+                
+                var bits = new TempBitArray(150, allocator: Constants.ALLOCATOR_TEMP);
+                foreach (var item in testData) {
+                    bits.Set(item, true);
+                }
+
+                var temp = bits.GetTrueBitsTemp();
+                for (int i = 0; i < testData.Count; ++i) {
+                    Assert.IsTrue(temp[i] == testData[i]);
+                }
+
+                Unity.PerformanceTesting.Measure.Method(Method).WarmupCount(5).MeasurementCount(1000).Run();
+                
+                FullFillBits.fullFillBits.Data.Dispose();
+                
+                void Method() {
+                    var temp = bits.GetTrueBitsTemp();
+                }
+
+            }
+            
+        }
+
+        [Test]
         public void NotContainsAll() {
             
             {

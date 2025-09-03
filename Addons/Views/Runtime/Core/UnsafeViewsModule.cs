@@ -303,8 +303,9 @@ namespace ME.BECS.Views {
 
         public Ent camera;
         
-        public static ViewsModuleData Create(ref MemoryAllocator allocator, uint entitiesCapacity, ViewsModuleProperties properties) {
-
+        public static ViewsModuleData Create(ref MemoryAllocator allocator, ushort worldId, uint entitiesCapacity, ViewsModuleProperties properties) {
+            
+            var allocatorPersistent = WorldsPersistentAllocator.allocatorPersistent.Get(worldId).Allocator.ToAllocator;
             return new ViewsModuleData() {
                 prefabId = 0u,
                 properties = properties,
@@ -320,18 +321,18 @@ namespace ME.BECS.Views {
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
                 renderingOnSceneUpdateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST),
-                renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: allocatorPersistent),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneRenderIndexToEnt = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneEntToPrefabId = new MemArray<uint>(ref allocator, entitiesCapacity),
-                toAssign = new UnsafeParallelHashMap<uint, uint>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                dirty = new UnsafeList<byte>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
-                toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator),
+                toAssign = new UnsafeParallelHashMap<uint, uint>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                toChange = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                toRemove = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                toAdd = new UnsafeParallelHashMap<uint, bool>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                dirty = new UnsafeList<byte>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, allocatorPersistent),
             };
 
         }
@@ -473,7 +474,7 @@ namespace ME.BECS.Views {
             provider.Initialize(providerId, viewsWorld, properties);
 
             var module = new UnsafeViewsModule<TEntityView> {
-                data = _make(ViewsModuleData.Create(ref viewsWorld.state.ptr->allocator, entitiesCapacity, properties)),
+                data = _make(ViewsModuleData.Create(ref viewsWorld.state.ptr->allocator, viewsWorld.id, entitiesCapacity, properties)),
                 provider = provider,
             };
             module.data.ptr->connectedWorld = connectedWorld;
@@ -528,6 +529,7 @@ namespace ME.BECS.Views {
             var mode = this.data.ptr->connectedWorld.state.ptr->Mode;
             ref var allocator = ref this.data.ptr->viewsWorld.state.ptr->allocator;
             dependsOn = new Jobs.PrepareJob() {
+                worldId = this.data.ptr->viewsWorld.id,
                 viewsModuleData = this.data,
                 state = this.data.ptr->viewsWorld.state,
                 connectedWorld = this.data.ptr->connectedWorld,

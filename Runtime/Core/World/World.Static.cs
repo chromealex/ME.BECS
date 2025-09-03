@@ -263,38 +263,38 @@ namespace ME.BECS {
 
     public struct WorldsPersistentAllocator {
 
-        private static readonly Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>.align, 10006);
-        internal static ref Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> allocatorPersistent => ref allocatorPersistentBurst.Data;
+        private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.align, 10006);
+        public static ref Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>> allocatorPersistent => ref allocatorPersistentBurst.Data;
 
-        private static readonly Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>> allocatorPersistentValidBurst = Unity.Burst.SharedStatic<Unity.Collections.NativeReference<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Unity.Collections.NativeReference<bool>>.align, 10007);
-        internal static bool allocatorPersistentValid => allocatorPersistentValidBurst.Data.IsCreated == true && allocatorPersistentValidBurst.Data.Value;
+        private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorPersistentValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Internal.Array<bool>>.align, 10007);
+        public static ref Internal.Array<bool> allocatorPersistentValid => ref allocatorPersistentValidBurst.Data;
 
-        public static Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator> Initialize() {
+        public static void Initialize(ushort worldId) {
 
             var prevMode = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.GetLeakDetectionMode();
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(Unity.Collections.NativeLeakDetectionMode.Disabled);
-            allocatorPersistent = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
-            allocatorPersistent.Allocator.Initialize(128 * 1024, true);
-            allocatorPersistentValidBurst.Data = new Unity.Collections.NativeReference<bool>(true, Constants.ALLOCATOR_PERSISTENT);
+            {
+                {
+                    allocatorPersistent.Resize(worldId + 1u);
+                    allocatorPersistentValid.Resize(worldId + 1u);
+                }
+                {
+                    var allocator = new Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>(Constants.ALLOCATOR_PERSISTENT);
+                    allocator.Allocator.Initialize(128 * 1024);
+                    allocatorPersistent.Get(worldId) = allocator;
+                    allocatorPersistentValidBurst.Data.Get(worldId) = true;
+                }
+            }
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SetLeakDetectionMode(prevMode);
 
-            return allocatorPersistent;
-
         }
 
-        public static void Dispose() {
+        public static void Dispose(ushort worldId) {
 
-            if (allocatorPersistentValidBurst.Data.IsCreated == false || allocatorPersistentValidBurst.Data.Value == false) return;
-            allocatorPersistentValidBurst.Data.Value = false;
-            allocatorPersistentValidBurst.Data.Dispose();
-            allocatorPersistent.Dispose();
-            
-        }
+            if (worldId >= allocatorPersistentValidBurst.Data.Length || allocatorPersistentValidBurst.Data.Get(worldId) == false) return;
+            allocatorPersistentValidBurst.Data.Get(worldId) = false;
+            allocatorPersistent.Get(worldId).Dispose();
 
-        public static void Reset() {
-
-            allocatorPersistent.Allocator.Rewind();
-            
         }
 
     }
@@ -304,7 +304,7 @@ namespace ME.BECS {
         private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.align, 10005);
         internal static ref Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
 
-        private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<bool>>.align, 10007);
+        private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<bool>>.align, 10008);
         internal static ref Internal.Array<bool> allocatorTempValid => ref allocatorTempValidBurst.Data;
 
         public static void Initialize(ushort worldId) {
@@ -361,8 +361,9 @@ namespace ME.BECS {
             #endif
             
             if (WorldsStorage.worlds.Length > 0u) Dispose();
-            WorldsPersistentAllocator.Initialize();
             WorldsDomainAllocator.Initialize();
+            
+            FullFillBits.Initialize();
 
             if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
             ResetWorldsCounter();
@@ -382,7 +383,6 @@ namespace ME.BECS {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             AtomicSafetyHandle.Release(StartParallelJob.safetyHandler.Data);
             #endif
-            WorldsPersistentAllocator.Dispose();
             WorldsDomainAllocator.Dispose();
             
         }
@@ -429,6 +429,7 @@ namespace ME.BECS {
         internal static void ReleaseWorldId(ushort worldId) {
 
             WorldsTempAllocator.Dispose(worldId);
+            WorldsPersistentAllocator.Dispose(worldId);
             
             ref var worldIds = ref WorldsIdStorage.worldIds;
             worldIds.Add(worldId);
@@ -549,6 +550,7 @@ namespace ME.BECS {
             };
             
             WorldsTempAllocator.Initialize(worldId);
+            WorldsPersistentAllocator.Initialize(worldId);
             
             if (raiseCallback == true) WorldStaticCallbacks.RaiseCallback(ref world);
 

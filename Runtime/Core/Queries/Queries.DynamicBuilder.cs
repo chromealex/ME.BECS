@@ -229,7 +229,7 @@ namespace ME.BECS {
                                                       where T3 : unmanaged, IComponentBase {
             E.IS_CREATED(this);
             this.compose.WithAny<T0, T1>();
-            this.compose.WithAny<T1, T2>();
+            this.compose.WithAny<T2, T3>();
             //this.builderDependsOn = ArchetypeQueries.WithAny<T0, T1, T2, T3>(ref this);
             return this;
         }
@@ -669,7 +669,11 @@ namespace ME.BECS {
                         var marker = new Unity.Profiling.ProfilerMarker("GetTrueBitsTemp");
                         marker.Begin();
                         var tempListBits = this.queryData.ptr->archetypesBits.GetTrueBitsTemp();
+                        #if MEMORY_ALLOCATOR_BOUNDS_CHECK || LEAK_DETECTION
                         this.queryData.ptr->archetypes = new safe_ptr<uint>(tempListBits.Ptr, (byte*)tempListBits.Ptr, (byte*)(tempListBits.Ptr + tempListBits.Length));
+                        #else
+                        this.queryData.ptr->archetypes = new safe_ptr<uint>(tempListBits.Ptr);
+                        #endif
                         archCount = (uint)tempListBits.Length;
                         marker.End();
                     }
@@ -713,27 +717,6 @@ namespace ME.BECS {
                         temp.Dispose();
 
                     } else {
-
-                        /*elementsCount = archCount * 10u;
-                        if (elementsCount > 0u) arrPtr = _makeArray<uint>(elementsCount, this.allocator);
-                        var k = 0u;
-                        for (uint i = 0u; i < archCount; ++i) {
-                            var archIdx = archs[i];
-                            ref var arch = ref this.state.ptr->archetypes.list[in this.state.ptr->allocator, archIdx];
-                            var prevCount = k;
-                            k += arch.entitiesList.Count;
-                            if (k > elementsCount) {
-                                var oldArr = arrPtr;
-                                var cnt = elementsCount;
-                                elementsCount = math.max(elementsCount * 2u, k);
-                                arrPtr = _makeArray<uint>(elementsCount, this.allocator);
-                                _memcpy(oldArr, arrPtr, TSize<uint>.size * cnt);
-                                _free(oldArr, this.allocator);
-                            }
-                            _memcpy(arch.entitiesList.GetUnsafePtr(in this.state.ptr->allocator), arrPtr + prevCount, TSize<uint>.size * arch.entitiesList.Count);
-                        }
-
-                        elementsCount = k;*/
 
                         {
                             var marker = new Unity.Profiling.ProfilerMarker("Count");

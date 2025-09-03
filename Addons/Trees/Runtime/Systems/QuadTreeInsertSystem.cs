@@ -91,6 +91,7 @@ namespace ME.BECS {
         
         private UnsafeList<safe_ptr> trees;
         public readonly uint treesCount => (uint)this.trees.Length;
+        private ushort worldId;
 
         [BURST]
         public struct CollectRectJob : IJobForAspects<QuadTreeAspect, TransformAspect> {
@@ -167,14 +168,15 @@ namespace ME.BECS {
         public int AddTree() {
 
             var size = new NativeTrees.AABB2D(this.mapPosition, this.mapPosition + this.mapSize);
-            this.trees.Add((safe_ptr)_make(new NativeTrees.NativeQuadtree<Ent>(size, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator)));
+            this.trees.Add((safe_ptr)_make(new NativeTrees.NativeQuadtree<Ent>(size, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator)));
             return this.trees.Length - 1;
 
         }
 
         public void OnAwake(ref SystemContext context) {
 
-            this.trees = new UnsafeList<safe_ptr>(10, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+            this.worldId = context.world.id;
+            this.trees = new UnsafeList<safe_ptr>(10, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator);
             
         }
 

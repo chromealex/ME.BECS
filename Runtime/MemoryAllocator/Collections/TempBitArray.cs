@@ -4,10 +4,25 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
+    public class FullFillBits {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<uint>> fullFillBits = Unity.Burst.SharedStatic<Internal.Array<uint>>.GetOrCreate<FullFillBits>();
+
+        public static void Initialize() {
+            if (fullFillBits.Data.IsCreated == true) fullFillBits.Data.Dispose();
+            fullFillBits.Data.Resize(2048);
+            for (uint i = 0; i < 2048u; ++i) {
+                fullFillBits.Data.Get(i) = i;
+            }
+        }
+
+    }
+
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(TempBitArrayDebugView))]
     public unsafe struct TempBitArray : IIsCreated {
 
-        private const int BITS_IN_ULONG = sizeof(ulong) * 8;
+        internal const int BITS_IN_ULONG = sizeof(ulong) * 8;
+        internal const int BITS_IN_ULONG_MASK = BITS_IN_ULONG - 1;
 
         public readonly safe_ptr<ulong> ptr;
         public uint Length;
@@ -98,7 +113,7 @@ namespace ME.BECS {
         public readonly bool IsSet(int index) {
             E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
-            return (this.ptr[index / TempBitArray.BITS_IN_ULONG] & (0x1ul << (index % TempBitArray.BITS_IN_ULONG))) > 0;
+            return (this.ptr[index / TempBitArray.BITS_IN_ULONG] & (1UL << (index & TempBitArray.BITS_IN_ULONG_MASK))) > 0;
         }
 
         /// <summary>
@@ -112,9 +127,9 @@ namespace ME.BECS {
             E.IS_CREATED(this);
             E.RANGE(index, 0, this.Length);
             if (value == true) {
-                this.ptr[index / TempBitArray.BITS_IN_ULONG] |= 0x1ul << (index % TempBitArray.BITS_IN_ULONG);
+                this.ptr[index / TempBitArray.BITS_IN_ULONG] |= 1UL << (index & TempBitArray.BITS_IN_ULONG_MASK);
             } else {
-                this.ptr[index / TempBitArray.BITS_IN_ULONG] &= ~(0x1ul << (index % TempBitArray.BITS_IN_ULONG));
+                this.ptr[index / TempBitArray.BITS_IN_ULONG] &= ~(1UL << (index & TempBitArray.BITS_IN_ULONG_MASK));
             }
         }
 
@@ -125,9 +140,9 @@ namespace ME.BECS {
         /// <param name="bitmap">The bitmap to union with this instance.</param>
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
-        public void Union(TempBitArray bitmap) {
+        public void Union(in TempBitArray bitmap) {
             E.IS_CREATED(this);
-            if (bitmap.Length == 0) return;
+            if (bitmap.Length == 0u) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
@@ -137,9 +152,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Union(in MemoryAllocator allocator, BitArray bitmap) {
+        public void Union(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
-            if (bitmap.Length == 0) return;
+            if (bitmap.Length == 0u) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
             E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
@@ -156,9 +171,9 @@ namespace ME.BECS {
         /// <param name="bitmap">The bitmap to intersect with this instance.</param>
         /// <returns>A reference to this instance.</returns>
         [INLINE(256)]
-        public void Intersect(TempBitArray bitmap) {
+        public void Intersect(in TempBitArray bitmap) {
             E.IS_CREATED(this);
-            if (bitmap.Length == 0) {
+            if (bitmap.Length == 0u) {
                 this.SetAllBits(false);
                 return;
             }
@@ -176,7 +191,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
-            if (bitmap.Length == 0) {
+            if (bitmap.Length == 0u) {
                 this.SetAllBits(false);
                 return;
             }
@@ -192,7 +207,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Remove(TempBitArray bitmap) {
+        public void Remove(in TempBitArray bitmap) {
             E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
             this.Resize(bitmap.Length > this.Length ? bitmap.Length : this.Length, this.allocator);
@@ -244,9 +259,9 @@ namespace ME.BECS {
             }
 
             var startBucket = start / TempBitArray.BITS_IN_ULONG;
-            var startOffset = start % TempBitArray.BITS_IN_ULONG;
+            var startOffset = start & TempBitArray.BITS_IN_ULONG_MASK;
             var endBucket = end / TempBitArray.BITS_IN_ULONG;
-            var endOffset = end % TempBitArray.BITS_IN_ULONG;
+            var endOffset = end & TempBitArray.BITS_IN_ULONG_MASK;
 
             if (value) {
                 this.ptr[startBucket] |= ulong.MaxValue << startOffset;
@@ -293,15 +308,26 @@ namespace ME.BECS {
         public UnsafeList<uint> GetTrueBitsTemp() {
 
             var trueBits = new UnsafeList<uint>((int)this.Length, Constants.ALLOCATOR_TEMP);
-            for (var i = 0; i < this.Length; ++i) {
-                var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                var p = i % TempBitArray.BITS_IN_ULONG;
-                /*if (p == 0 && Unity.Mathematics.math.lzcnt(val) == 0) {
-                    i += TempBitArray.BITS_IN_ULONG - 1;
+            for (int i = 0, cnt = (int)Bitwise.AlignULongBits(this.Length) * 8 / BITS_IN_ULONG; i < cnt; ++i) {
+                var val = this.ptr[i];
+                if (val == 0UL) continue;
+                var offset = (uint)(i * BITS_IN_ULONG);
+                if (val == ulong.MaxValue) {
+                    var arr = FullFillBits.fullFillBits.Data;
+                    if (offset - BITS_IN_ULONG < arr.Length) {
+                        trueBits.AddRange(FullFillBits.fullFillBits.Data.ptr.ptr + offset, BITS_IN_ULONG);
+                    } else {
+                        for (uint j = 0u; j < BITS_IN_ULONG; ++j) {
+                            trueBits.Add(offset + j);
+                        }
+                    }
                     continue;
-                }*/
-                if ((val & (0x1ul << p)) > 0) {
-                    trueBits.Add((uint)i);
+                }
+
+                for (int j = 0; j < BITS_IN_ULONG; ++j) {
+                    if ((val & (1UL << j)) > 0) {
+                        trueBits.Add(offset + (uint)j);
+                    }
                 }
             }
             
@@ -314,7 +340,7 @@ namespace ME.BECS {
             var trueBits = new UnsafeList<uint>((int)this.Length, WorldsTempAllocator.allocatorTemp.Get(worldId).Allocator.ToAllocator);
             for (var i = 0; i < this.Length; ++i) {
                 var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i % TempBitArray.BITS_IN_ULONG))) > 0) {
+                if ((val & (0x1ul << (i & TempBitArray.BITS_IN_ULONG_MASK))) > 0) {
                     trueBits.Add((uint)i);
                 }
             }
@@ -328,7 +354,7 @@ namespace ME.BECS {
             var trueBits = new UnsafeList<uint>((int)this.Length, allocator);
             for (var i = 0; i < this.Length; ++i) {
                 var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i % TempBitArray.BITS_IN_ULONG))) > 0) {
+                if ((val & (0x1ul << (i & TempBitArray.BITS_IN_ULONG_MASK))) > 0) {
                     trueBits.Add((uint)i);
                 }
             }
@@ -342,7 +368,7 @@ namespace ME.BECS {
             var trueBits = new UIntListHash(ref allocator, this.Length);
             for (var i = 0; i < this.Length; ++i) {
                 var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i % TempBitArray.BITS_IN_ULONG))) > 0) {
+                if ((val & (0x1ul << (i & TempBitArray.BITS_IN_ULONG_MASK))) > 0) {
                     trueBits.Add(ref allocator, (uint)i);
                 }
             }

@@ -243,18 +243,18 @@ namespace ME.BECS.Trees {
 
                 if (this.tree->hashIndex.IsCreated == false || this.tree->hashIndex.Length != this.tree->positions.Length) {
                     if (this.tree->hashIndex.IsCreated == true) this.tree->hashIndex.Dispose();
-                    this.tree->hashIndex = CollectionHelper.CreateNativeArray<int2>(this.tree->positions.Length, Constants.ALLOCATOR_PERSISTENT_ST);
+                    this.tree->hashIndex = CollectionHelper.CreateNativeArray<int2>(this.tree->positions.Length, Constants.ALLOCATOR_PERSISTENT);
                 }
 
                 if (this.tree->sortedPos.IsCreated == false || this.tree->sortedPos.Length != this.tree->positions.Length) {
                     if (this.tree->sortedPos.IsCreated == true) this.tree->sortedPos.Dispose();
-                    this.tree->sortedPos = CollectionHelper.CreateNativeArray<float3>(this.tree->positions.Length, Constants.ALLOCATOR_PERSISTENT_ST);
+                    this.tree->sortedPos = CollectionHelper.CreateNativeArray<float3>(this.tree->positions.Length, Constants.ALLOCATOR_PERSISTENT);
                 }
 
                 var nCells = this.tree->gridDim.x * this.tree->gridDim.y * this.tree->gridDim.z;
                 if (this.tree->cellStartEnd.IsCreated == false || nCells != this.tree->cellStartEnd.Length) {
                     if (this.tree->cellStartEnd.IsCreated == true) this.tree->cellStartEnd.Dispose();
-                    this.tree->cellStartEnd = CollectionHelper.CreateNativeArray<int2>(nCells, Constants.ALLOCATOR_PERSISTENT_ST);
+                    this.tree->cellStartEnd = CollectionHelper.CreateNativeArray<int2>(nCells, Constants.ALLOCATOR_PERSISTENT);
                 }
 
                 this.tree->rebuildCellsCounter.ptr->count = nCells;
@@ -389,8 +389,8 @@ namespace ME.BECS.Trees {
                 var data = this.tree->dataWriter.ToList(Allocator.Temp);
                 if (this.tree->positions.IsCreated == true) this.tree->positions.Dispose();
                 if (this.tree->data.IsCreated == true) this.tree->data.Dispose();
-                this.tree->positions = CollectionHelper.CreateNativeArray<float3>(positions.Length, Constants.ALLOCATOR_PERSISTENT_ST);
-                this.tree->data = CollectionHelper.CreateNativeArray<T>(data.Length, Constants.ALLOCATOR_PERSISTENT_ST);
+                this.tree->positions = CollectionHelper.CreateNativeArray<float3>(positions.Length, Constants.ALLOCATOR_PERSISTENT);
+                this.tree->data = CollectionHelper.CreateNativeArray<T>(data.Length, Constants.ALLOCATOR_PERSISTENT);
                 _memcpy((safe_ptr)positions.Ptr, (safe_ptr)this.tree->positions.GetUnsafePtr(), positions.Length * TSize<float3>.sizeInt);
                 _memcpy((safe_ptr)data.Ptr, (safe_ptr)this.tree->data.GetUnsafePtr(), data.Length * TSize<T>.sizeInt);
 

@@ -409,14 +409,16 @@ namespace ME.BECS.Views {
             public World connectedWorld;
             public safe_ptr<State> state;
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            public ushort worldId;
 
             public void Execute() {
 
                 // Set visual mode
                 //this.viewsModuleData.ptr->connectedWorld.state.ptr->Mode = WorldMode.Visual;
-
+                
+                var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator;
                 var entitiesCapacity = this.connectedWorld.state.ptr->entities.Capacity;
-                this.viewsModuleData.ptr->renderingOnSceneBits.Resize(entitiesCapacity, Constants.ALLOCATOR_PERSISTENT_ST.ToAllocator);
+                this.viewsModuleData.ptr->renderingOnSceneBits.Resize(entitiesCapacity, allocator);
                 this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
                 this.viewsModuleData.ptr->renderingOnSceneUpdateCulling.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
                 if (entitiesCapacity > this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId.Length) {

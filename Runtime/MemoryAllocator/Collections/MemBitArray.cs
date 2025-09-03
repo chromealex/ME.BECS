@@ -40,8 +40,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static uint AlignULongBits(uint bitsCount) {
-            var delta = bitsCount % 64u;
-            if (delta < 64u && delta > 0u) bitsCount += 64u - delta;
+            var delta = bitsCount & TempBitArray.BITS_IN_ULONG_MASK;
+            if (delta < TempBitArray.BITS_IN_ULONG && delta > 0u) bitsCount += TempBitArray.BITS_IN_ULONG - delta;
             return bitsCount / 8u;
         }
         

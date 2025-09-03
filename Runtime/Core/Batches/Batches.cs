@@ -37,12 +37,15 @@ namespace ME.BECS {
         public uint hash;
         public uint maxId;
 
-        public bool isCreated => this.list.IsCreated;
+        public bool IsCreated => this.list.IsCreated;
 
         [INLINE(256)]
-        public void Add(uint value) {
+        public void Add(uint value, ushort worldId) {
 
-            if (this.list.IsCreated == false) this.list = new TempBitArray(StaticTypes.counter + 1u, ClearOptions.ClearMemory, Constants.ALLOCATOR_PERSISTENT_ST);
+            if (this.list.IsCreated == false) {
+                var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(worldId).Allocator.ToAllocator;
+                this.list = new TempBitArray(StaticTypes.counter + 1u, ClearOptions.ClearMemory, allocator);
+            }
             
             ++this.Count;
             if (value > this.maxId) this.maxId = value;
@@ -53,6 +56,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public bool Remove(uint value) {
+
+            if (this.list.IsCreated == false) return false;
 
             var idx = (int)value;
             if (this.list.IsSet(idx) == true) {
@@ -67,10 +72,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Dispose() {
+        public void Clear() {
 
-            if (this.list.IsCreated == true) this.list.Dispose();
-            this = default;
+            if (this.list.IsCreated == true) this.list.Clear();
+            this.Count = 0u;
+            this.hash = 0u;
+            this.maxId = 0u;
 
         }
 
@@ -83,14 +90,14 @@ namespace ME.BECS {
         public LockSpinner lockIndex;
         public ushort entGen;
         public uint Count;
-        public bool isCreated => this.addItems.isCreated == true || this.removeItems.isCreated == true;
+        public bool IsCreated => this.addItems.IsCreated == true || this.removeItems.IsCreated == true;
 
         [INLINE(256)]
         public void Apply(safe_ptr<State> state, uint entId, ref Archetypes archetypes) {
 
             if (Ents.IsAlive(state, entId, out var gen) == false || gen != this.entGen) {
-                this.addItems.Dispose();
-                this.removeItems.Dispose();
+                this.addItems.Clear();
+                this.removeItems.Clear();
                 return;
             }
 
@@ -99,33 +106,33 @@ namespace ME.BECS {
                 var removeItems = ComponentsFastTrack.Create(this.removeItems);
                 MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
                 Archetypes.ApplyBatch(state, entId, in addItems, in removeItems);
-                this.addItems.Dispose();
-                this.removeItems.Dispose();
+                this.addItems.Clear();
+                this.removeItems.Clear();
                 this.Count = 0u;
             }
 
         }
         
         [INLINE(256)]
-        public void Add(uint typeId) {
+        public void Add(uint typeId, ushort worldId) {
 
             var removed = false;
             if (this.removeItems.Count > 0u) {
                 removed = this.removeItems.Remove(typeId);
             }
-            if (removed == false) this.addItems.Add(typeId);
+            if (removed == false) this.addItems.Add(typeId, worldId);
             this.Count = this.addItems.Count + this.removeItems.Count;
 
         }
 
         [INLINE(256)]
-        public void Remove(uint typeId) {
+        public void Remove(uint typeId, ushort worldId) {
 
             var removed = false;
             if (this.addItems.Count > 0u) {
                 removed = this.addItems.Remove(typeId);
             }
-            if (removed == false) this.removeItems.Add(typeId);
+            if (removed == false) this.removeItems.Add(typeId, worldId);
             this.Count = this.addItems.Count + this.removeItems.Count;
             
         }
@@ -133,9 +140,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Clear() {
             
-            this.addItems.Dispose();
-            this.removeItems.Dispose();
-            this.Count = 0;
+            this.addItems.Clear();
+            this.removeItems.Clear();
+            this.Count = 0u;
 
         }
 
@@ -407,7 +414,7 @@ namespace ME.BECS {
                 {
                     var wasCount = item.Count;
                     {
-                        item.Add(typeId);
+                        item.Add(typeId, ent.worldId);
                     }
                     if (wasCount == 0u && item.Count > 0u) {
                         threadItem.items.Add(ref state.ptr->allocator, ent.id);
@@ -437,7 +444,7 @@ namespace ME.BECS {
                 {
                     var wasCount = item.Count;
                     {
-                        item.Remove(typeId);
+                        item.Remove(typeId, ent.worldId);
                     }
                     if (wasCount == 0u && item.Count > 0u) {
                         threadItem.items.Add(ref state.ptr->allocator, ent.id);

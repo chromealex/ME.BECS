@@ -17,7 +17,6 @@ namespace ME.BECS {
 
         private static void Load(bool isEditor) {
 
-            if (WorldsPersistentAllocator.allocatorPersistentValid == false) return;
             if (ObjectReferenceRegistry.data == null) return;
             LoadForced(isEditor);
 
