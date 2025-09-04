@@ -107,7 +107,6 @@ namespace ME.BECS {
                 return;
             }
 
-            this = default;
             var memPtr = allocator.AllocArray(length, out safe_ptr<T> ptr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in allocator, ptr);
@@ -130,7 +129,6 @@ namespace ME.BECS {
                 return;
             }
 
-            this = default;
             this.data.arrPtr = allocator.Alloc(elementSize * length, out var tPtr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in allocator, (T*)tPtr);

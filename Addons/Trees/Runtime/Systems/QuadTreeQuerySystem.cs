@@ -47,10 +47,6 @@ namespace ME.BECS {
         /// </summary>
         public ushort nearestCount;
         /// <summary>
-        /// Reset pos.y to zero
-        /// </summary>
-        public bbool ignoreY;
-        /// <summary>
         /// Ignore self ent
         /// </summary>
         public bbool ignoreSelf;
@@ -62,6 +58,11 @@ namespace ME.BECS {
         /// Every n ticks query will be updated. 0 - update every tick.
         /// </summary>
         public byte updatePerTick;
+        /// <summary>
+        /// Sometimes you need to use parent rotation instead of sensor rotation
+        /// Be sure you have parent of this object
+        /// </summary>
+        public bbool useParentRotation;
 
     }
     

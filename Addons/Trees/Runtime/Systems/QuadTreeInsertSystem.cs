@@ -248,7 +248,7 @@ namespace ME.BECS {
             var marker = new Unity.Profiling.ProfilerMarker("Prepare");
             marker.Begin();
             var worldPos = tr.GetWorldMatrixPosition();
-            var worldRot = tr.GetWorldMatrixRotation();
+            var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().GetWorldMatrixRotation() : tr.GetWorldMatrixRotation();
             var sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
             var ent = tr.ent;
             marker.End();

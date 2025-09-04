@@ -19,6 +19,58 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void Patch() {
+            
+            var worldSource = World.Create();
+            {
+                var ent = Ent.New(worldSource);
+                ent.Set(new TestComponent() { data = 100200 });
+            }
+
+            var worldDest = World.Create();
+            {
+                var ent = Ent.New(worldDest);
+                ent.Set(new TestComponent() { data = 100200 });
+            }
+
+            var src = new StreamBufferWriter();
+            var dest = new StreamBufferWriter();
+            //var srcState = worldSource.state.ptr;
+            //srcState->allocator = default;
+            //src.Write(*srcState);
+            //var destState = worldDest.state.ptr;
+            //destState->allocator = default;
+            //dest.Write(*destState);
+            worldSource.state.ptr->allocator.Serialize(ref src);
+            worldDest.state.ptr->allocator.Serialize(ref dest);
+            var diff = ME.BECS.Patch.GetDiff(new StreamBufferReader(src.ToArray()), new StreamBufferReader(dest.ToArray()));
+            {
+                UnityEngine.Debug.Log(diff);
+            }
+            diff.Dispose();
+            
+            worldSource.Dispose();
+            worldDest.Dispose();
+
+        }
+
+        [Test]
+        public void PatchArr() {
+
+            var srcArr = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            var destArr = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+            var src = new StreamBufferReader(srcArr);
+            var dest = new StreamBufferReader(destArr);
+            var diff = ME.BECS.Patch.GetDiff(src, dest);
+            {
+                UnityEngine.Debug.Log(diff);
+            }
+            diff.Dispose();
+            
+        }
+
+        [Test]
         public void SerializeWorld() {
 
             byte[] bytes;

@@ -113,6 +113,7 @@ namespace ME.BECS {
             var zone = (safe_ptr<Zone>)_make(sizeof(Zone), TAlign<Zone>.alignInt, this.allocatorLabel);
             zone.ptr->data = _make(s, 4, this.allocatorLabel);
             zone.ptr->size = s;
+            _memclear(zone.ptr->data, s);
             return zone;
         }
 

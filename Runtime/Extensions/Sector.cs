@@ -34,7 +34,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool IsValid() {
+        public readonly bool IsValid() {
             return this.sector > 0 && this.sector < 360;
         }
 

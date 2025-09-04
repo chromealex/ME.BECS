@@ -65,11 +65,110 @@ namespace ME.BECS {
 
     }
 
+    public struct Patch {
+
+        public StreamBufferWriter data;
+
+        public override string ToString() {
+
+            var data = new StreamBufferReader(this.data.ToArray());
+            var str = new System.Text.StringBuilder((int)data.Length);
+            var deltaCount = 0;
+            while (data.Position < data.Length) {
+                byte type = default;
+                data.Read(ref type);
+                uint pos = default;
+                data.Read(ref pos);
+                ++deltaCount;
+                str.Append("Offset:");
+                str.Append(pos);
+                str.AppendLine();
+                if (type == 0) {
+                    ulong val = default;
+                    data.Read(ref val);
+                    str.Append("Data:");
+                    str.Append(val);
+                    str.AppendLine();
+                } else {
+                    var delta = data.Length - data.Position;
+                    for (int i = 0; i < delta; ++i) {
+                        byte val = default;
+                        data.Read(ref val);
+                        str.AppendLine("Data:");
+                        str.Append(val);
+                        str.AppendLine();
+                    }
+                }
+            }
+            
+            str.Insert(0, deltaCount);
+            str.Insert(0, "Delta:");
+            return str.ToString();
+            
+        }
+
+        public static Patch GetDiff(StreamBufferReader source, StreamBufferReader dest) {
+
+            if (dest.Length > source.Length) {
+                return GetDiff(dest, source);
+            }
+
+            const uint packSize = 8u;
+
+            var stream = new StreamBufferWriter(source.Length);
+            // source length must be always greater than dest length
+            var isBreak = false;
+            var length = source.Length;
+            while (length >= packSize) {
+                ulong valSource = default;
+                ulong valDest = default;
+                source.Read(ref valSource);
+                if (dest.Position > dest.Length - packSize) dest.Read(ref valDest);
+                if (valSource != valDest) {
+                    if (isBreak == true) {
+                        // if break found - write offset
+                        stream.Write((byte)0);
+                        stream.Write(source.Position);
+                    }
+                    // write delta
+                    stream.Write(valSource);
+                    isBreak = false;
+                } else {
+                    isBreak = true;
+                }
+                length -= packSize;
+            }
+
+            if (length > 0) {
+                stream.Write((byte)1);
+                stream.Write(source.Position);
+                for (uint i = 0; i < length; ++i) {
+                    byte b = default;
+                    dest.Read(ref b);
+                    stream.Write(b);
+                }
+            }
+
+            return new Patch() {
+                data = stream,
+            };
+
+        }
+
+        public void Dispose() {
+            this.data.Dispose();
+        }
+
+    }
+
     public unsafe struct StreamBufferReader {
 
         private readonly safe_ptr<byte> arr;
         private readonly uint arrSize;
         private uint position;
+        
+        public uint Length => this.arrSize;
+        public uint Position => this.position;
 
         [INLINE(256)]
         public StreamBufferReader(byte[] bytes) {

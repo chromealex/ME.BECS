@@ -6,7 +6,7 @@ namespace ME.BECS {
 
     public class FullFillBits {
 
-        public static readonly Unity.Burst.SharedStatic<Internal.Array<uint>> fullFillBits = Unity.Burst.SharedStatic<Internal.Array<uint>>.GetOrCreate<FullFillBits>();
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<uint>> fullFillBits = Unity.Burst.SharedStatic<Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<FullFillBits>(TAlign<Internal.Array<uint>>.align, 101L);
 
         public static void Initialize() {
             if (fullFillBits.Data.IsCreated == true) fullFillBits.Data.Dispose();
