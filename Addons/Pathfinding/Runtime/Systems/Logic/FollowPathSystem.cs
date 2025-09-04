@@ -42,8 +42,6 @@ namespace ME.BECS.Pathfinding {
             public FollowPathSystem followPathSystem;
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
-
-                if (tr.IsDirty == false) return;
                 
                 var pos = tr.position;
 
