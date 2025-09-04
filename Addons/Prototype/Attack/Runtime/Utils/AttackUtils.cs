@@ -102,7 +102,7 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        public static ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem) {
+        public static ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, SystemLink<ME.BECS.FogOfWar.CreateSystem> fowSystem) {
 
             position = default;
             if (group.readUnits.Count == 0u) return ReactionType.None;
@@ -112,7 +112,7 @@ namespace ME.BECS.Attack {
             var result = ReactionType.RotateToTarget;
             foreach (var unit in group.readUnits) {
                 if (unit.IsAlive() == false) continue;
-                var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, in buildGraphSystem, default);
+                var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, in buildGraphSystem, in fowSystem);
                 var dist = math.distancesq(targetPos, pos);
                 if (dist < d) {
                     position = pos;
@@ -186,6 +186,8 @@ namespace ME.BECS.Attack {
                 // find point on the line
                 var attackRangeSqr = attackSensor.sector.rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
+            } else if (distSq > 0f && ((distSq > sightRangeSqr && distSq <= attackSensor.sector.rangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, target) == false))) {
+                position = targetNearestPoint - dirNormalized * (math.sqrt(sightRangeSqr) - offset);
             } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= attackSensor.sector.rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return ReactionType.RotateToTarget;
