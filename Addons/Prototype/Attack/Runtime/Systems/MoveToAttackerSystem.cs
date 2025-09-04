@@ -123,12 +123,13 @@ namespace ME.BECS.Attack {
         public struct UpdatePathJob : IJobFor1Aspects1Components<UnitCommandGroupAspect, CommandAttack> {
 
             public BuildGraphSystem buildGraphSystem;
+            public SystemLink<ME.BECS.FogOfWar.CreateSystem> fowSystem;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect group, ref CommandAttack command) {
 
                 if (command.target.IsAlive() == false) return;
                 
-                var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos, in this.buildGraphSystem);
+                var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos, in this.buildGraphSystem, this.fowSystem);
                 if (result == AttackUtils.ReactionType.MoveToTarget) {
                     if (AttackUtils.SetTargetChanged(in group, result, in pos, in command.target) == true) {
                         if (command.target.TryRead(out UnitQuadSizeComponent unitQuadSizeComponent) == true) {
@@ -185,6 +186,7 @@ namespace ME.BECS.Attack {
             context.Query()
                    .Schedule<UpdatePathJob, UnitCommandGroupAspect, CommandAttack>(new UpdatePathJob() {
                        buildGraphSystem = buildGraphSystem,
+                       fowSystem = fogOfWarSystem,
                    }).AddDependency(ref context);
             
             context.Query()
