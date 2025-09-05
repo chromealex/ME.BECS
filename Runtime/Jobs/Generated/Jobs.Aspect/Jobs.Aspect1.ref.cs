@@ -92,7 +92,7 @@ namespace ME.BECS.Jobs {
                 jobData = jobData,
                 jobInfo = jobInfo,
                 buffer = buffer,
-                a0 = buffer->state.ptr->aspectsStorage.Initialize<T0>(buffer->state),
+                a0 = WorldAspectStorage.Initialize<T0>(buffer->worldId),
             };
             data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, reflectionData, dependsOn, scheduleMode);

@@ -38,7 +38,7 @@ namespace ME.BECS {
 
         public override Unity.Jobs.JobHandle OnUpdate(Unity.Jobs.JobHandle dependsOn) {
             dependsOn.Complete();
-            Batches.Apply(this.uiWorld.state);
+            Batches.Apply(this.uiWorld);
             for (int i = 0; i < this.views.Count; ++i) {
                 var view = this.views[i];
                 var worldEnt = view.uiEntity.Read<UIComponent>().entity;

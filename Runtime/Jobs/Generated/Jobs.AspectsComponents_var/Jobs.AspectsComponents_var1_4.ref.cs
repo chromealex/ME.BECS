@@ -96,7 +96,7 @@ namespace ME.BECS.Jobs {
                 jobData = jobData,
                 jobInfo = jobInfo,
                 buffer = buffer,
-                a0 = buffer->state.ptr->aspectsStorage.Initialize<A0>(buffer->state),
+                a0 = WorldAspectStorage.Initialize<A0>(buffer->worldId),
                 c0 = buffer->state.ptr->components.GetRW<C0>(buffer->state, buffer->worldId),c1 = buffer->state.ptr->components.GetRW<C1>(buffer->state, buffer->worldId),c2 = buffer->state.ptr->components.GetRW<C2>(buffer->state, buffer->worldId),c3 = buffer->state.ptr->components.GetRW<C3>(buffer->state, buffer->worldId),
             };
             data = _addressPtr(ref dataVal);

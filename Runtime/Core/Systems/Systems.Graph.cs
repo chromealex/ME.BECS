@@ -218,7 +218,7 @@ namespace ME.BECS {
             ref var queue = ref this.runtimeQueue;
             queue.Clear();
             queue.Enqueue(this.rootNode);
-            this.rootNode.ptr->dependsOn = Batches.Apply(dependsOn, world.state);
+            this.rootNode.ptr->dependsOn = Batches.Apply(dependsOn, in world);
             try {
                 while (queue.Count > 0) {
 
@@ -236,7 +236,7 @@ namespace ME.BECS {
                                 list.Add(new NodeData() { data = node });
                                 this.RunSystem(node.ptr->systemData.ptr, node.ptr->GetMethod(method).ptr, ref context);
                                 Journal.UpdateSystemEnded(world.id, node.ptr->name);
-                                node.ptr->dependsOn = Batches.Apply(context.dependsOn, world.state);
+                                node.ptr->dependsOn = Batches.Apply(context.dependsOn, in world);
                                 //UnityEngine.Debug.Log("Ended: " + node.ptr->name + " :: " + DebugHandle(dj) + " => " + DebugHandle(node.ptr->dependsOn));
                             } else {
                                 node.ptr->isStarted = false;

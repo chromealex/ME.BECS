@@ -18,7 +18,7 @@ namespace ME.BECS {
             
             E.IS_CREATED(srcWorld);
 
-            Batches.Apply(srcWorld.state);
+            Batches.Apply(srcWorld.id, srcWorld.state);
 
             // Dispose current state
             if (this.state.ptr != null) {

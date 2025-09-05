@@ -17,7 +17,7 @@ namespace ME.BECS {
             var result = Components.Get<T>(state, in ent, out var isNew);
             if (isNew == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
             }
             return result;
 
@@ -31,7 +31,7 @@ namespace ME.BECS {
             var result = Components.Get<T>(state, in ent, out var isNew);
             if (isNew == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
             }
             return ref *result;
 
@@ -57,7 +57,7 @@ namespace ME.BECS {
             
             if (Components.Set(state, in ent, in data) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
             
@@ -72,7 +72,7 @@ namespace ME.BECS {
             
             var groupId = StaticTypes.tracker.Get(typeId);
             if (Components.SetUnknownType(state, typeId, groupId, in ent, data) == true) {
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
             
@@ -87,7 +87,7 @@ namespace ME.BECS {
             
             if (Components.Remove<T>(state, in ent) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Remove_INTERNAL(typeId, in ent, state);
+                Batches.Remove_INTERNAL(typeId, in ent);
                 return true;
             }
             
@@ -102,7 +102,7 @@ namespace ME.BECS {
             
             var groupId = StaticTypes.tracker.Get(typeId);
             if (Components.Remove(state, in ent, typeId, groupId) == true) {
-                Batches.Remove_INTERNAL(typeId, in ent, state);
+                Batches.Remove_INTERNAL(typeId, in ent);
                 return true;
             }
             
@@ -117,7 +117,7 @@ namespace ME.BECS {
             
             if (Components.Enable<T>(state, in ent) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
             
@@ -132,7 +132,7 @@ namespace ME.BECS {
             
             if (Components.Disable<T>(state, in ent) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Remove_INTERNAL(typeId, in ent, state);
+                Batches.Remove_INTERNAL(typeId, in ent);
                 return true;
             }
             

@@ -174,9 +174,8 @@ namespace ME.BECS.Editor {
             this.usedSize.text = EditorUtils.BytesToString(usedSize);
             this.componentsSize.text = EditorUtils.BytesToString((int)Components.GetReservedSizeInBytes(this.world.state));
             this.archetypesSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->archetypes.GetReservedSizeInBytes(this.world.state));
-            this.batchesSize.text = EditorUtils.BytesToString((int)Batches.GetReservedSizeInBytes(this.world.state));
+            this.batchesSize.text = EditorUtils.BytesToString((int)Batches.GetReservedSizeInBytes(this.world.id));
             this.entitiesSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->entities.GetReservedSizeInBytes(this.world.state));
-            this.aspectsSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->aspectsStorage.GetReservedSizeInBytes(this.world.state));
             this.collectionsRegistrySize.text = EditorUtils.BytesToString((int)CollectionsRegistry.GetReservedSizeInBytes(this.world.state));
             {
                 var allocatorInstance = WorldsPersistentAllocator.allocatorPersistent.Get(this.world.id).Allocator;
@@ -196,7 +195,6 @@ namespace ME.BECS.Editor {
         private Label archetypesSize;
         private Label batchesSize;
         private Label entitiesSize;
-        private Label aspectsSize;
         private Label collectionsRegistrySize;
         private Label persistentAllocatorSize;
         private Label tempAllocatorSize;
@@ -209,10 +207,9 @@ namespace ME.BECS.Editor {
             this.usedSize = this.AddCounter(container, "Used Size");
             this.componentsSize = this.AddCounter(container, "Components Size", className: "small-counter");
             this.archetypesSize = this.AddCounter(container, "Archetypes Size", className: "small-counter");
-            this.batchesSize = this.AddCounter(container, "Batches Size", className: "small-counter");
             this.entitiesSize = this.AddCounter(container, "Entities Size", className: "small-counter");
-            this.aspectsSize = this.AddCounter(container, "Aspects Size", className: "small-counter");
             this.collectionsRegistrySize = this.AddCounter(container, "Collections Registry Size", className: "small-counter");
+            this.batchesSize = this.AddCounter(container, "Batches Size", className: "small-counter", true);
             this.persistentAllocatorSize = this.AddCounter(container, "Persistent Allocator Size", className: "small-counter", true);
             this.tempAllocatorSize = this.AddCounter(container, "Temp Allocator Size", className: "small-counter", true);
             

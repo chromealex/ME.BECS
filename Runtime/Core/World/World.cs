@@ -56,7 +56,8 @@ namespace ME.BECS {
             world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
-            Worlds.AddWorld(ref world, name: properties.name);
+            Worlds.AddWorld(ref world);
+            Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;
@@ -73,7 +74,8 @@ namespace ME.BECS {
             world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
-            Worlds.AddWorld(ref world, name: properties.name, raiseCallback: false);
+            Worlds.AddWorld(ref world, raiseCallback: false);
+            Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;
@@ -106,15 +108,15 @@ namespace ME.BECS {
             Journal.BeginFrame(this.id);
 
             dependsOn = State.BurstMode(this.state, true, dependsOn);
-            dependsOn = Batches.Apply(dependsOn, this.state);
+            dependsOn = Batches.Apply(dependsOn, in this);
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.NextTick, updateType, dependsOn);
             {
                 if (updateType == UpdateType.FIXED_UPDATE) dependsOn = State.NextTick(this.state, dependsOn);
                 dependsOn = this.TickRootSystemGroup(deltaTimeMs, updateType, dependsOn);
-                dependsOn = Batches.Apply(dependsOn, this.state);
+                dependsOn = Batches.Apply(dependsOn, in this);
             }
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.CurrentTick, updateType, dependsOn);
-            dependsOn = Batches.Apply(dependsOn, this.state);
+            dependsOn = Batches.Apply(dependsOn, in this);
             dependsOn = State.BurstMode(this.state, false, dependsOn);
 
             Journal.EndFrame(this.id);

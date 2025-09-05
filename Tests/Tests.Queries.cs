@@ -677,7 +677,7 @@ namespace ME.BECS.Tests {
 
                 }
 
-                Batches.Apply(world.state);
+                Batches.Apply(world);
                 
                 var result = new System.Collections.Generic.List<Ent>();
 
@@ -953,7 +953,7 @@ namespace ME.BECS.Tests {
                 }
 
                 // sync point
-                Batches.Apply(world.state);
+                Batches.Apply(world);
                 
                 var d1 = API.Query(world).With<TestComponent>().AsParallel().Schedule<Job1>();
                 var d2 = API.Query(world).With<TestComponent>().AsParallel().Schedule<Job2>();
@@ -1024,7 +1024,7 @@ namespace ME.BECS.Tests {
             }
 
             // sync point
-            Batches.Apply(world.state);
+            Batches.Apply(world);
 
             {
                 var d1 = API.Query(world).AsParallel().Schedule<TestA1Job, TestAspect>();
@@ -1084,7 +1084,7 @@ namespace ME.BECS.Tests {
                 }
 
                 // sync point
-                Batches.Apply(world.state);
+                Batches.Apply(world);
 
                 var handle = API.Query(world).AsParallel().Schedule<EntityCreateJob, TestComponent>();
                 handle.Complete();
@@ -1108,7 +1108,7 @@ namespace ME.BECS.Tests {
                 }
 
                 // sync point
-                Batches.Apply(world.state);
+                Batches.Apply(world);
 
                 var handle = API.Query(world).AsParallel().Schedule<EntityCreateJob, TestComponent>();
                 handle.Complete();

@@ -235,7 +235,7 @@ namespace ME.BECS {
             if (isNew == true) {
                 res = StaticTypes<T>.defaultValue;
                 Journal.CreateComponent<T>(in ent, in res);
-                Batches.Set_INTERNAL(typeId, in ent, this.state);
+                Batches.Set_INTERNAL(typeId, in ent);
             } else {
                 Journal.UpdateComponent<T>(in ent, in res);
             }
@@ -307,7 +307,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static unsafe ref T InitAspect(in World world) {
 
-            return ref world.state.ptr->aspectsStorage.Initialize<T>(world.state);
+            return ref WorldAspectStorage.Initialize<T>(world.id);
+            //return ref world.state.ptr->aspectsStorage.Initialize<T>(world.state);
 
         }
 
@@ -330,7 +331,7 @@ namespace ME.BECS {
             E.IS_ALIVE(in ent);
             
             var world = ent.World;
-            AspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
+            UnsafeAspectsStorage.SetAspect(world.state, in ent, AspectTypeInfo<T>.typeId);
             return ent.GetAspect<T>();
             
         }

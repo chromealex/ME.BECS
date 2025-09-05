@@ -96,7 +96,7 @@ namespace ME.BECS.Jobs {
                 jobData = jobData,
                 jobInfo = jobInfo,
                 buffer = buffer,
-                {countAspects[a#i# = buffer->state.ptr->aspectsStorage.Initialize<A#i#>(buffer->state),]}
+                {countAspects[a#i# = WorldAspectStorage.Initialize<A#i#>(buffer->worldId),]}
                 {countComponents[c#i# = buffer->state.ptr->components.Get{{RWRO}}<C#i#>(buffer->state, buffer->worldId),]}
             };
             data = _addressPtr(ref dataVal);

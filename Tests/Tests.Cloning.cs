@@ -118,7 +118,7 @@ namespace ME.BECS.Tests {
                 aspect.data4.data = 100200;
                 aspect.data5.data = 100200;
             }
-            ME.BECS.Batches.Apply(world.state);
+            ME.BECS.Batches.Apply(world);
 
             {
                 var newWorld = world.Clone();
@@ -145,7 +145,7 @@ namespace ME.BECS.Tests {
                 aspect.data4.data = 100200;
                 aspect.data5.data = 100200;
             }
-            ME.BECS.Batches.Apply(world.state);
+            ME.BECS.Batches.Apply(world);
 
             var srcState = world.state;
             var destState = _make(new State());

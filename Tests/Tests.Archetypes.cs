@@ -37,7 +37,7 @@ namespace ME.BECS.Tests {
             ent.Set(new Test2Component() {
                 data = 4,
             });
-            ME.BECS.Batches.Apply(world.state);
+            ME.BECS.Batches.Apply(world);
             Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 1].entitiesList.Contains(world.state.ptr->allocator, ent.id));
             Assert.IsFalse(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent.id));
@@ -67,22 +67,22 @@ namespace ME.BECS.Tests {
                 ent.Set(new Test5Component() {
                     data = 4,
                 });
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
                 
                 ent.Remove<TestComponent>();
 
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
                 
                 ent.Remove<Test5Component>();
 
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 
                 ent.Remove<Test5Component>();
 
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             }
             {
@@ -94,20 +94,20 @@ namespace ME.BECS.Tests {
                 ent.Set(new Test2Component() {
                     data = 2,
                 });
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 1].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 Assert.IsFalse(world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Contains(world.state.ptr->allocator, ent.id));
 
                 ent.Remove<TestComponent>();
 
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent.id));
 
                 ent.Remove<Test2Component>();
 
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Contains(world.state.ptr->allocator, ent.id));
             }
@@ -127,22 +127,22 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 ent.Remove<TestComponent>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 1].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 
                 ent.Remove<Test3Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 3].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 
                 ent.Remove<Test2Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Contains(world.state.ptr->allocator, ent.id));
             }
@@ -162,22 +162,22 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 1].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 
                 ent.Remove<Test3Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 
                 ent.Remove<Test2Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 3].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 
                 ent.Remove<TestComponent>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Contains(world.state.ptr->allocator, ent.id));
             }
@@ -211,25 +211,25 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 1].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent2.id));
                 
                 ent.Remove<Test3Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 3].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent2.id));
                 
                 ent.Remove<Test2Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(5, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 4].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent2.id));
                 
                 ent.Remove<TestComponent>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(5, world.state.ptr->archetypes.list.Count);
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Contains(world.state.ptr->allocator, ent.id));
                 Assert.IsTrue(world.state.ptr->archetypes.list[world.state.ptr->allocator, 2].entitiesList.Contains(world.state.ptr->allocator, ent2.id));

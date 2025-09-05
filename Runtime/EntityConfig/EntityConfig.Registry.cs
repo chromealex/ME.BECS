@@ -49,7 +49,7 @@ namespace ME.BECS {
             unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
             registryFromId.Add(ref staticWorld.state.ptr->allocator, nextId, unsafeConfig);
             EntityConfigsRegistry.TryAdd(nextId, unsafeConfig);
-            Batches.Apply(staticWorld.state);
+            Batches.Apply(in staticWorld);
             lockSpinner.Unlock();
             return nextId;
 

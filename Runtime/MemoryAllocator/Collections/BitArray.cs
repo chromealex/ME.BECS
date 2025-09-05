@@ -23,7 +23,9 @@ namespace ME.BECS {
 
         public MemPtr ptr;
         public uint Length;
-        private safe_ptr<ulong> cachedPtr;
+        #if USE_CACHE_PTR
+        public CachedPtr cachedPtr;
+        #endif
 
         public bool IsCreated => this.ptr.IsValid();
 
@@ -31,9 +33,10 @@ namespace ME.BECS {
         public BitArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             var sizeInBytes = Bitwise.AlignULongBits(length);
-            this.cachedPtr = default;
             this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
-            this.cachedPtr = ptr;
+            #if USE_CACHE_PTR
+            this.cachedPtr = new CachedPtr(in allocator, ptr);
+            #endif
             this.Length = length;
 
             if (clearOptions == ClearOptions.ClearMemory) {
@@ -45,9 +48,10 @@ namespace ME.BECS {
         public BitArray(ref MemoryAllocator allocator, BitArray source) {
 
             var sizeInBytes = Bitwise.AlignULongBits(source.Length);
-            this.cachedPtr = default;
             this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
-            this.cachedPtr = ptr;
+            #if USE_CACHE_PTR
+            this.cachedPtr = new CachedPtr(in allocator, ptr);
+            #endif
             this.Length = source.Length;
             var sourcePtr = allocator.GetUnsafePtr(source.ptr);
             MemoryAllocator.ValidateConsistency(ref allocator);
@@ -150,10 +154,13 @@ namespace ME.BECS {
         public void Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions clearOptions = ClearOptions.ClearMemory) {
 
             if (newLength > this.Length) {
-                this.ptr = allocator.ReAllocArray(in this.ptr, Bitwise.AlignULongBits(newLength), out this.cachedPtr);
+                this.ptr = allocator.ReAllocArray<ulong>(in this.ptr, Bitwise.AlignULongBits(newLength), out var ptr);
+                #if USE_CACHE_PTR
+                this.cachedPtr = new CachedPtr(in allocator, allocator.GetUnsafePtr(this.ptr));
+                #endif
                 if (clearOptions == ClearOptions.ClearMemory) {
                     var clearSize = Bitwise.AlignULongBits(newLength - this.Length);
-                    _memclear(this.cachedPtr.Cast<byte>() + Bitwise.AlignULongBits(this.Length), clearSize);
+                    _memclear(ptr.Cast<byte>() + Bitwise.AlignULongBits(this.Length), clearSize);
                 }
                 this.Length = newLength;
             }
@@ -162,11 +169,13 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
+            #if USE_CACHE_PTR
             if (state == true && this.IsCreated == true) {
-                this.cachedPtr = (safe_ptr<ulong>)allocator.GetUnsafePtr(this.ptr);
+                this.cachedPtr = new CachedPtr(in allocator, allocator.GetUnsafePtr(this.ptr));
             } else {
                 this.cachedPtr = default;
             }
+            #endif
         }
 
         /// <summary>

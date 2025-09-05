@@ -75,7 +75,7 @@ namespace ME.BECS.Jobs {
                 jobData = jobData,
                 jobInfo = jobInfo,
                 buffer = buffer,
-                a0 = buffer->state.ptr->aspectsStorage.Initialize<T0>(buffer->state),a1 = buffer->state.ptr->aspectsStorage.Initialize<T1>(buffer->state),a2 = buffer->state.ptr->aspectsStorage.Initialize<T2>(buffer->state),a3 = buffer->state.ptr->aspectsStorage.Initialize<T3>(buffer->state),a4 = buffer->state.ptr->aspectsStorage.Initialize<T4>(buffer->state),a5 = buffer->state.ptr->aspectsStorage.Initialize<T5>(buffer->state),a6 = buffer->state.ptr->aspectsStorage.Initialize<T6>(buffer->state),
+                a0 = WorldAspectStorage.Initialize<T0>(buffer->worldId),a1 = WorldAspectStorage.Initialize<T1>(buffer->worldId),a2 = WorldAspectStorage.Initialize<T2>(buffer->worldId),a3 = WorldAspectStorage.Initialize<T3>(buffer->worldId),a4 = WorldAspectStorage.Initialize<T4>(buffer->worldId),a5 = WorldAspectStorage.Initialize<T5>(buffer->worldId),a6 = WorldAspectStorage.Initialize<T6>(buffer->worldId),
             };
             data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, ScheduleMode.Parallel);
