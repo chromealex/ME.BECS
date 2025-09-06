@@ -79,6 +79,38 @@ namespace ME.BECS.Tests {
 
         }
 
+        [Test]
+        public void ApplyPatch() {
+
+            var prop = WorldProperties.Default;
+            prop.stateProperties.entitiesCapacity = 10_000;
+            var worldSource = World.Create(prop);
+            {
+                var ent = Ent.New(worldSource);
+                ent.Set(new TestComponent() { data = 100200 });
+            }
+
+            var worldDest = World.Create(prop);
+            Ent targetEnt = default;
+            {
+                var ent = Ent.New(worldDest);
+                ent.Set(new TestComponent() { data = 100500 });
+                targetEnt = ent;
+            }
+
+            var src = worldSource.Serialize();
+            var dest = worldDest.Serialize();
+            var diff = ME.BECS.Patch.GetDiff(new StreamBufferReader(src), new StreamBufferReader(dest));
+            Assert.IsTrue(targetEnt.Read<TestComponent>().data == 100500);
+            ME.BECS.Patch.Apply(in diff, worldDest.state);
+            Assert.IsTrue(targetEnt.Read<TestComponent>().data == 100200);
+            diff.Dispose();
+            
+            worldSource.Dispose();
+            worldDest.Dispose();
+
+        }
+
         [Unity.Burst.BurstCompileAttribute]
         public static void PatchBurstDiff(in StreamBufferReader src, in StreamBufferReader dest, ref Patch patch) {
             patch = ME.BECS.Patch.GetDiff(src, dest);

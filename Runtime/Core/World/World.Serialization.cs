@@ -89,9 +89,8 @@ namespace ME.BECS {
 
         public static void Apply(in Patch patch, safe_ptr<State> state) {
 
-            var stateWriter = new StreamBufferWriter();
+            var stateWriter = new StreamBufferWriter(patch.newLength);
             state.ptr->Serialize(ref stateWriter);
-            stateWriter.SetCapacity(patch.newLength);
             
             var data = new StreamBufferReader(patch.data.ToArray());
             while (data.Position < data.Length) {
@@ -179,13 +178,14 @@ namespace ME.BECS {
             while (length >= packSize) {
                 Unity.Burst.Intrinsics.v256 valSource = default;
                 Unity.Burst.Intrinsics.v256 valDest = default;
+                var pos = source.Position;
                 if (source.Position + packSize <= source.Length) source.Read(ref valSource);
                 if (dest.Position + packSize <= dest.Length) dest.Read(ref valDest);
                 if (Equals(ref valSource, ref valDest) == false) {
                     if (isBreak == true) {
                         // if break found - write offset
                         stream.Write((byte)0);
-                        stream.Write(source.Position);
+                        stream.Write(pos);
                         headerPos = stream.Position;
                         stream.Write(1u);
                         ++patch.deltaCount;
@@ -197,7 +197,7 @@ namespace ME.BECS {
                 } else {
                     // write header count
                     if (currentCount > 0u) {
-                        var pos = stream.Position;
+                        pos = stream.Position;
                         stream.MoveTo(headerPos);
                         stream.Write(currentCount);
                         stream.MoveTo(pos);
