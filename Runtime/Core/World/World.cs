@@ -56,7 +56,7 @@ namespace ME.BECS {
             world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
-            Worlds.AddWorld(ref world);
+            Worlds.AddWorld(ref world, name: properties.name);
             Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
@@ -74,7 +74,7 @@ namespace ME.BECS {
             world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
-            Worlds.AddWorld(ref world, raiseCallback: false);
+            Worlds.AddWorld(ref world, name: properties.name, raiseCallback: false);
             Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);

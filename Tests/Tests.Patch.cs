@@ -18,6 +18,65 @@ namespace ME.BECS.Tests {
             AllTests.Dispose();
             yield return null;
         }
+        
+        [Unity.Burst.BurstCompileAttribute]
+        public static bool TestBurst(ulong a1, ulong a2, ulong a3, ulong a4, ulong b1, ulong b2, ulong b3, ulong b4) {
+            var res = false;
+            for (int i = 0; i < 100000; ++i) {
+                if (a1 == b1 &&
+                    a2 == b2 &&
+                    a3 == b3 &&
+                    a4 == b4) {
+                    res = true;
+                }
+            }
+
+            return res;
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        public static bool Test2Burst(ref Unity.Burst.Intrinsics.v256 a1, ref Unity.Burst.Intrinsics.v256 b1) {
+            var res = false;
+            for (int i = 0; i < 100000; ++i) {
+                res = ME.BECS.Patch.Equals(ref a1, ref b1);
+            }
+            return res;
+        }
+
+        [Test, Unity.PerformanceTesting.PerformanceAttribute]
+        public void PerformanceTest() {
+
+            ulong a1 = 123UL;
+            ulong a2 = 123UL;
+            ulong a3 = 123UL;
+            ulong a4 = 123UL;
+            
+            ulong b1 = 123UL;
+            ulong b2 = 123UL;
+            ulong b3 = 123UL;
+            ulong b4 = 123UL;
+            
+            Unity.PerformanceTesting.Measure.Method(() => {
+
+                TestBurst(a1, a2, a3, a4, b1, b2, b3, b4);
+
+            }).MeasurementCount(10).IterationsPerMeasurement(50).WarmupCount(10).Run();
+
+        }
+
+        [Test, Unity.PerformanceTesting.PerformanceAttribute]
+        public void PerformanceTestBurst() {
+
+            Unity.Burst.Intrinsics.v256 a1 = default;
+            Unity.Burst.Intrinsics.v256 b1 = default;
+            
+            Unity.PerformanceTesting.Measure.Method(() => {
+                
+                Test2Burst(ref a1, ref b1);
+                
+            }).MeasurementCount(10).IterationsPerMeasurement(50).WarmupCount(10).Run();
+
+        }
 
         [Test]
         public void Serialization() {

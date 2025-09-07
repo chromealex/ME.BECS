@@ -124,7 +124,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private static bool Equals(ref Unity.Burst.Intrinsics.v256 a, ref Unity.Burst.Intrinsics.v256 b) {
+        public static bool Equals(ref Unity.Burst.Intrinsics.v256 a, ref Unity.Burst.Intrinsics.v256 b) {
             if (a.Byte0 != b.Byte0 ||
                 a.Byte31 != b.Byte31) {
                 // early exit
