@@ -4,6 +4,7 @@ using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
 #else
+using Unity.Mathematics;
 using tfloat = System.Single;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
