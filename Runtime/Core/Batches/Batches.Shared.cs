@@ -14,7 +14,7 @@ namespace ME.BECS {
             var result = _addressT(ref Components.GetShared<T>(state, in ent, hash, out var isNew));
             if (isNew == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
             }
             return ref _ref(result.ptr);
 
@@ -32,7 +32,7 @@ namespace ME.BECS {
 
             if (Components.SetShared(state, in ent, in data, hash) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
 
@@ -44,7 +44,7 @@ namespace ME.BECS {
         public static bool SetShared(in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, safe_ptr<State> state, uint hash) {
 
             if (Components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash, out _) == true) {
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
 
@@ -56,7 +56,7 @@ namespace ME.BECS {
         public static bool SetShared(in Ent ent, uint groupId, void* data, uint dataSize, uint typeId, uint sharedTypeId, safe_ptr<State> state, uint hash, out safe_ptr dataPtr) {
 
             if (Components.SetShared(state, in ent, groupId, data, dataSize, sharedTypeId, hash, out dataPtr) == true) {
-                Batches.Set_INTERNAL(typeId, in ent, state);
+                Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
 
@@ -69,7 +69,7 @@ namespace ME.BECS {
 
             if (Components.RemoveShared<T>(state, in ent, hash) == true) {
                 var typeId = StaticTypes<T>.typeId;
-                Batches.Remove_INTERNAL(typeId, in ent, state);
+                Batches.Remove_INTERNAL(typeId, in ent);
                 return true;
             }
 

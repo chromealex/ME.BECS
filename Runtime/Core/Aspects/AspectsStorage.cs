@@ -4,6 +4,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
 
+    [System.AttributeUsageAttribute(System.AttributeTargets.Field)]
     public class QueryWithAttribute : System.Attribute {}
     
     public interface IAspectData {}
@@ -54,7 +55,7 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<uint> typeIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<AspectTypeInfoId<T>>();
 
     }
-
+    
     public struct AspectTypeInfo<T> where T : unmanaged, IAspect {
 
         public static ref uint typeId => ref AspectTypeInfoId<T>.typeIdBurst.Data;
@@ -77,58 +78,96 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct AspectsStorage {
+    public struct WorldAspectStorage {
 
-        public struct Aspect {
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<UnsafeAspectsStorage>> storage = Unity.Burst.SharedStatic<Internal.Array<UnsafeAspectsStorage>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldAspectStorage>(TAlign<Internal.Array<UnsafeAspectsStorage>>.align, 109L);
 
-            public MemPtr constructedAspect;
-            public LockSpinner lockSpinner;
-            public ushort version;
-
-        }
-
-        public MemArray<Aspect> list;
-        
-        public uint GetReservedSizeInBytes(safe_ptr<State> state) {
-
-            if (this.list.IsCreated == false) return 0u;
-
-            return this.list.GetReservedSizeInBytes();
+        [INLINE(256)]
+        public static void AddWorld(in World world) {
+            
+            storage.Data.Resize(world.id + 1u);
+            storage.Data.Get(world.id) = UnsafeAspectsStorage.Create();
 
         }
 
         [INLINE(256)]
-        public static AspectsStorage Create(safe_ptr<State> state) {
-            var aspectsCount = AspectTypeInfo.counter + 1u;
-            var storage = new AspectsStorage() {
-                list = new MemArray<Aspect>(ref state.ptr->allocator, aspectsCount),
-            };
+        public static void DisposeWorld(in World world) {
+
+            if (world.id >= storage.Data.Length) return;
+            storage.Data.Get(world.id).Dispose();
+
+        }
+
+        [INLINE(256)]
+        public static ref T Initialize<T>(ushort worldId) where T : unmanaged, IAspect {
             
+            return ref storage.Data.Get(worldId).Initialize<T>();
+
+        }
+
+        [INLINE(256)]
+        public static safe_ptr Initialize(ushort worldId, uint typeId, uint size) {
+            
+            return storage.Data.Get(worldId).Initialize(typeId, size);
+
+        }
+
+    }
+
+    public unsafe struct UnsafeAspectsStorage {
+
+        public struct Aspect {
+
+            public safe_ptr constructedAspect;
+            public LockSpinner lockSpinner;
+
+            [INLINE(256)]
+            public void Dispose() {
+                _free(this.constructedAspect);
+            }
+
+        }
+
+        public Unity.Collections.NativeArray<Aspect> list;
+        
+        [INLINE(256)]
+        public static UnsafeAspectsStorage Create() {
+            var aspectsCount = AspectTypeInfo.counter + 1u;
+            var storage = new UnsafeAspectsStorage() {
+                list = new Unity.Collections.NativeArray<Aspect>((int)aspectsCount, Constants.ALLOCATOR_DOMAIN),
+            };
             return storage;
         }
 
         [INLINE(256)]
-        public ref T Initialize<T>(safe_ptr<State> state) where T : unmanaged, IAspect {
+        public void Dispose() {
+            foreach (var item in this.list) {
+                item.Dispose();
+            }
+            this.list.Dispose();
+        }
+
+        [INLINE(256)]
+        public ref T Initialize<T>() where T : unmanaged, IAspect {
             
             var typeId = AspectTypeInfo<T>.typeId;
-            return ref *(T*)this.Initialize(state, typeId, TSize<T>.size).ptr;
+            return ref *(T*)this.Initialize(typeId, TSize<T>.size).ptr;
             
         }
 
         [INLINE(256)]
-        public safe_ptr Initialize(safe_ptr<State> state, uint typeId, uint size) {
+        public safe_ptr Initialize(uint typeId, uint size) {
             
-            ref var item = ref this.list[state, typeId];
-            if (item.constructedAspect.IsValid() == false) {
-                item.lockSpinner.Lock();
-                if (item.constructedAspect.IsValid() == false) {
-                    item.version = state.ptr->allocator.version;
-                    item.constructedAspect = state.ptr->allocator.Alloc(size);
+            var item = (Aspect*)((byte*)this.list.GetUnsafePtr() + TSize<Aspect>.size * typeId);
+            if (item->constructedAspect.ptr == null) {
+                item->lockSpinner.Lock();
+                if (item->constructedAspect.ptr == null) {
+                    item->constructedAspect = _make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_DOMAIN);
                 }
-                item.lockSpinner.Unlock();
+                item->lockSpinner.Unlock();
             }
 
-            return state.ptr->allocator.GetUnsafePtr(in item.constructedAspect);
+            return item->constructedAspect;
 
         }
 
@@ -141,7 +180,7 @@ namespace ME.BECS {
                 var has = Components.HasUnknownType(state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     Components.SetUnknownType(state, typeId, StaticTypes.tracker.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));
-                    Batches.Set_INTERNAL(typeId, in ent, state);
+                    Batches.Set_INTERNAL(typeId, in ent);
                 }
 
             }

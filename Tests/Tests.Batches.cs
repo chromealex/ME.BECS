@@ -40,7 +40,7 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             }
             {
@@ -74,7 +74,7 @@ namespace ME.BECS.Tests {
                     data = 1,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
             }
             {
@@ -119,7 +119,7 @@ namespace ME.BECS.Tests {
                     data = 1,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             }
 
@@ -152,7 +152,7 @@ namespace ME.BECS.Tests {
                 });
                 ent.Remove<Test4Component>();
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             }
 
@@ -194,7 +194,7 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             }
 
@@ -215,20 +215,20 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(2, world.state.ptr->archetypes.list.Count);
                 
                 ent.Set(new Test4Component());
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
 
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 
                 ent.Set(new Test4Component());
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
             }
             {
@@ -269,20 +269,20 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 
                 ent.Set(new Test4Component());
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
 
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 
                 ent.Set(new Test4Component());
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
                 
                 ent.Remove<TestComponent>();
@@ -290,7 +290,7 @@ namespace ME.BECS.Tests {
                 ent.Remove<Test2Component>();
                 ent.Remove<Test3Component>();
                 ent.Remove<Test4Component>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
             }
 
@@ -313,17 +313,17 @@ namespace ME.BECS.Tests {
                     data = 4,
                 });
                 Assert.AreEqual(1, world.state.ptr->archetypes.list.Count);
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(3, world.state.ptr->archetypes.list.Count);
                 
                 ent2.Set(new Test3Component());
                 ent2.Set(new Test4Component());
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
 
                 ent2.Remove<Test1Component>();
                 ent2.Remove<TestComponent>();
-                ME.BECS.Batches.Apply(world.state);
+                ME.BECS.Batches.Apply(world);
                 Assert.AreEqual(4, world.state.ptr->archetypes.list.Count);
 
             }

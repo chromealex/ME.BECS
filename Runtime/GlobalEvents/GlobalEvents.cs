@@ -110,6 +110,7 @@ namespace ME.BECS {
         }
 
         public static void Dispose() {
+            if (WorldEvents.readWriteSpinner.Data.IsCreated == true) WorldEvents.readWriteSpinner.Data.Dispose();
             ref var items = ref WorldEvents.events.Data;
             items.Dispose();
             WorldEvents.evtToCallers = null;

@@ -77,7 +77,6 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> batchesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99002);
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> archetypesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99003);
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99004);
-        public static readonly Unity.Burst.SharedStatic<Counter<uint>> aspectStorageSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99005);
         
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorReserved = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99006);
         public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorUsed = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99007);
@@ -98,7 +97,6 @@ namespace ME.BECS {
             batchesSize.Data = new ("Batches Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
             archetypesSize.Data = new ("Archetypes Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
             entitiesSize.Data = new ("Entities Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
-            aspectStorageSize.Data = new ("Aspect Storage Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
             
             memoryAllocatorReserved.Data = new ("Allocator: Reserved (bytes)", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
             memoryAllocatorUsed.Data = new ("Allocator: Used (bytes)", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
@@ -139,14 +137,11 @@ namespace ME.BECS {
             using (new ProfilerMarker("Archetypes").Auto()) {
                 ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state.ptr->archetypes.GetReservedSizeInBytes(world.state));
             }
-            using (new ProfilerMarker("EntitiesCount").Auto()) {
-                ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.state));
+            using (new ProfilerMarker("Batches").Auto()) {
+                ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.id));
             }
             using (new ProfilerMarker("Entities").Auto()) {
                 ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state.ptr->entities.GetReservedSizeInBytes(world.state));
-            }
-            using (new ProfilerMarker("AspectsStorage").Auto()) {
-                ProfilerCountersDefinition.aspectStorageSize.Data.Sample(world.state.ptr->aspectsStorage.GetReservedSizeInBytes(world.state));
             }
             
             using (new ProfilerMarker("Allocator").Auto()) {

@@ -222,6 +222,30 @@ namespace ME.BECS.Network {
         public bool DeserializeAllEvents(byte[] bytes) {
             return this.network.DeserializeAllEvents(bytes);
         }
+        
+        /// <summary>
+        /// Create diff patch between current state and reset state
+        /// </summary>
+        /// <returns></returns>
+        public Patch CreatePatch() {
+            var resetState = this.GetResetState();
+            var currentState = this.network.data.ptr->connectedWorld.state;
+            var resetStateWriter = new StreamBufferWriter();
+            resetState.ptr->Serialize(ref resetStateWriter);
+            var currentStateWriter = new StreamBufferWriter();
+            currentState.ptr->Serialize(ref currentStateWriter);
+            var patch = new Patch();
+            Patch.GetDiff(new StreamBufferReader(resetStateWriter), new StreamBufferReader(currentStateWriter), ref patch);
+            return patch;
+        }
+
+        /// <summary>
+        /// Apply patch to current state
+        /// </summary>
+        /// <param name="patch"></param>
+        public void ApplyPatch(in Patch patch) {
+            Patch.Apply(in patch, this.network.data.ptr->connectedWorld.state);
+        }
 
     }
 

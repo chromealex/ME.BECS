@@ -101,7 +101,7 @@ namespace ME.BECS {
                 if (reused == false) {
                     Ents.Lock(world.state, in newEnt);
                     Components.OnEntityAdd(world.state, newEnt.id);
-                    Batches.OnEntityAdd(world.state, newEnt.id);
+                    Batches.OnEntityAdd(world.id, newEnt.id);
                     CollectionsRegistry.OnEntityAdd(world.state, newEnt.id);
                     AutoDestroyRegistry.OnEntityAdd(world.state, newEnt.id);
                     Ents.Unlock(world.state, in newEnt);

@@ -65,7 +65,7 @@ namespace ME.BECS {
                 Components.ClearShared(state, ent.id);
             }
             {
-                Batches.Clear(state, in ent);
+                Batches.Clear(ent.worldId, in ent);
             }
             {
                 Archetypes.RemoveEntity(state, in ent);

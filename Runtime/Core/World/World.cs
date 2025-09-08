@@ -57,6 +57,7 @@ namespace ME.BECS {
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name);
+            Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;
@@ -74,6 +75,7 @@ namespace ME.BECS {
 
             if (switchContext == true) Context.Switch(world);
             Worlds.AddWorld(ref world, name: properties.name, raiseCallback: false);
+            Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             if (switchContext == true) Context.Switch(world);
             State.BurstMode(world.state, true, default);
             return world;
@@ -106,15 +108,15 @@ namespace ME.BECS {
             Journal.BeginFrame(this.id);
 
             dependsOn = State.BurstMode(this.state, true, dependsOn);
-            dependsOn = Batches.Apply(dependsOn, this.state);
+            dependsOn = Batches.Apply(dependsOn, in this);
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.NextTick, updateType, dependsOn);
             {
                 if (updateType == UpdateType.FIXED_UPDATE) dependsOn = State.NextTick(this.state, dependsOn);
                 dependsOn = this.TickRootSystemGroup(deltaTimeMs, updateType, dependsOn);
-                dependsOn = Batches.Apply(dependsOn, this.state);
+                dependsOn = Batches.Apply(dependsOn, in this);
             }
             dependsOn = OneShotTasks.ScheduleJobs(this.state, OneShotType.CurrentTick, updateType, dependsOn);
-            dependsOn = Batches.Apply(dependsOn, this.state);
+            dependsOn = Batches.Apply(dependsOn, in this);
             dependsOn = State.BurstMode(this.state, false, dependsOn);
 
             Journal.EndFrame(this.id);

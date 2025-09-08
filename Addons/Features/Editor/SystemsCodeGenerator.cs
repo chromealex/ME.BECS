@@ -327,7 +327,7 @@ namespace ME.BECS.Editor.Systems {
                                         var v = $"preBatch{index}";
                                         schemeDependsOn = v;
                                         scheme.Add($" * {Align("Batches.Apply (Pre)", 32)} :  {Align($"{schemeDependsOn} => {v}", 16 + 32 + 4, true)} [  SYNC   ]");
-                                        methodContent.Add($"var {v} = Batches.Apply({dependsOn}, world.state);");
+                                        methodContent.Add($"var {v} = Batches.Apply({dependsOn}, in world);");
                                         return v;
                                     }
                                 }
@@ -365,7 +365,7 @@ namespace ME.BECS.Editor.Systems {
                             scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
-                            methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, world.state);");
+                            methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, in world);");
                         }
                         
                         while (q.Count > 0) {

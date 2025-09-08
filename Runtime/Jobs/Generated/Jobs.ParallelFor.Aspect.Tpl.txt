@@ -75,7 +75,7 @@ namespace ME.BECS.Jobs {
                 jobData = jobData,
                 jobInfo = jobInfo,
                 buffer = buffer,
-                {count[a#i# = buffer->state.ptr->aspectsStorage.Initialize<T#i#>(buffer->state),]}
+                {count[a#i# = WorldAspectStorage.Initialize<T#i#>(buffer->worldId),]}
             };
             data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, ScheduleMode.Parallel);

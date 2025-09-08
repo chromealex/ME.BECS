@@ -55,7 +55,7 @@ namespace ME.BECS {
             ref var storage = ref ptr.As<DataDenseSet>(in sourceState.ptr->allocator);
             var data = storage.Get(sourceState, ent.id, ent.gen, true, out _, default);
             if (Components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data) == true) {
-                Batches.Set_INTERNAL(typeId, in targetEnt, targetState);
+                Batches.Set_INTERNAL(typeId, in targetEnt);
             }
             //WorldStaticCallbacks.RaiseCopyFromComponentCallback(typeId, data, in targetEnt);
         }

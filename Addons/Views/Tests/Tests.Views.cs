@@ -38,7 +38,7 @@ namespace ME.BECS.Tests {
                     var ent = world.NewEnt();
                     ent.Set<ME.BECS.Transforms.TransformAspect>();
                     ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
-                    Batches.Apply(world.state);
+                    Batches.Apply(world);
                     firstEnt = ent;
                 }
                 {
@@ -52,7 +52,7 @@ namespace ME.BECS.Tests {
                         var ent = world.NewEnt();
                         ent.Set<ME.BECS.Transforms.TransformAspect>();
                         ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
-                        Batches.Apply(world.state);
+                        Batches.Apply(world);
                     }
                     views.Update(dt).Complete();
                     Assert.AreEqual(2, views.data.ptr->renderingOnSceneEntToRenderIndex.Count);
@@ -64,7 +64,7 @@ namespace ME.BECS.Tests {
                     Assert.AreEqual(2, views.data.ptr->renderingOnScene.Count);
                     {
                         ME.BECS.Views.UnsafeViewsModule.DestroyView(firstEnt);
-                        Batches.Apply(world.state);
+                        Batches.Apply(world);
                     }
                     views.Update(dt).Complete();
                     //Assert.IsFalse(firstEnt.Has<ViewComponent>());
@@ -103,7 +103,7 @@ namespace ME.BECS.Tests {
                     var ent = world.NewEnt();
                     ent.Set<ME.BECS.Transforms.TransformAspect>();
                     ME.BECS.Views.UnsafeViewsModule.InstantiateView(in ent, viewId);
-                    Batches.Apply(world.state);
+                    Batches.Apply(world);
                     firstEnt = ent;
                 }
                 {
@@ -122,7 +122,7 @@ namespace ME.BECS.Tests {
                     var newEnt = world.NewEnt();
                     newEnt.Set<ME.BECS.Transforms.TransformAspect>();
                     Assert.IsTrue(ME.BECS.Views.UnsafeViewsModule.AssignView(in newEnt, in firstEnt));
-                    Batches.Apply(world.state);
+                    Batches.Apply(world);
                     views.Update(dt).Complete();
                     {
                         Assert.IsFalse(firstEnt.Has<ViewComponent>());

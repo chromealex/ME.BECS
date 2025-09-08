@@ -435,7 +435,7 @@ namespace ME.BECS.Tests {
                 list[i] = ent;
             }
 
-            Batches.Apply(world.state);
+            Batches.Apply(world);
 
             Assert.AreEqual(2, world.state.ptr->archetypes.allArchetypes.Count);
 

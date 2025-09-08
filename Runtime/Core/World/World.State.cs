@@ -14,12 +14,10 @@ namespace ME.BECS {
 
         public MemoryAllocator allocator;
         public Ents entities;
-        public Batches batches;
         public OneShotTasks oneShotTasks;
         public Components components;
         public Archetypes archetypes;
         public Queries queries;
-        public AspectsStorage aspectsStorage;
         public RandomData random;
         public CollectionsRegistry collectionsRegistry;
         public AutoDestroyRegistry autoDestroyRegistry;
@@ -97,10 +95,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
-            this.aspectsStorage = AspectsStorage.Create(statePtr);
             this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
             this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
-            this.batches = Batches.Create(statePtr, stateProperties.entitiesCapacity);
             this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
@@ -150,7 +146,6 @@ namespace ME.BECS {
             public void Execute() {
 
                 this.state.ptr->entities.BurstMode(this.state.ptr->allocator, this.mode);
-                this.state.ptr->batches.BurstMode(this.state.ptr->allocator, this.mode);
                 this.state.ptr->components.BurstMode(this.state.ptr->allocator, this.mode);
                 this.state.ptr->archetypes.BurstMode(this.state.ptr->allocator, this.mode);
 

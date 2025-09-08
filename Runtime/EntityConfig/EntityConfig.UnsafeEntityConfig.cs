@@ -485,8 +485,8 @@ namespace ME.BECS {
 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
-                    state.ptr->aspectsStorage.Initialize(state, this.typeIds[i], this.sizes[i]);
-                    AspectsStorage.SetAspect(state, in ent, this.typeIds[i]);
+                    WorldAspectStorage.Initialize(ent.worldId, this.typeIds[i], this.sizes[i]);
+                    UnsafeAspectsStorage.SetAspect(state, in ent, this.typeIds[i]);
                 }
 
             }
@@ -634,7 +634,7 @@ namespace ME.BECS {
                             continue;
                         }
                     }
-                    Batches.Set_INTERNAL(typeId, in ent, state);
+                    Batches.Set_INTERNAL(typeId, in ent);
                 }
                 
             }

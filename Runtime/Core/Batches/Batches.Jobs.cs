@@ -12,12 +12,13 @@ namespace ME.BECS {
         public SafetyComponentContainerRW<TNull> safety;
         #endif
         
+        public ushort worldId;
         public safe_ptr<State> state;
             
         [INLINE(256)]
         public void Execute() {
 
-            Batches.ApplyFromJob(this.state);
+            Batches.ApplyFromJob(this.worldId, this.state);
 
         }
 

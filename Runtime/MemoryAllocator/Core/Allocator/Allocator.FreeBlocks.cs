@@ -71,7 +71,7 @@ namespace ME.BECS {
             this.freeBlocks = new UnsafeList<Block>((int)FreeBlocks.POTS, allocator);
             for (int i = 0; i < FreeBlocks.POTS; ++i) {
                 this.freeBlocks.Add(new Block() {
-                    freeBlocks = new UnsafeList<MemPtr>(capacity, allocator),
+                    freeBlocks = new UnsafeList<MemPtr>(capacity, allocator, NativeArrayOptions.ClearMemory),
                 });
             }
         }

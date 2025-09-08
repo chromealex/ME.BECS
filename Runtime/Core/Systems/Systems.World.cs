@@ -69,14 +69,14 @@ namespace ME.BECS {
     public static unsafe class SystemsWorldExt {
 
         public static void Awake(this ref World world) {
-            Batches.Apply(world.state);
+            Batches.Apply(world.id, world.state);
             world.Awake(default, 0).Complete();
         }
 
         public static JobHandle Awake(this ref World world, JobHandle dependsOn, ushort subId = 0) {
             
             E.IS_CREATED(world);
-            dependsOn = Batches.Apply(dependsOn, world.state);
+            dependsOn = Batches.Apply(dependsOn, in world);
             var address = world.id;
             WorldSystemRegistry.Validate();
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
@@ -97,7 +97,7 @@ namespace ME.BECS {
         public static JobHandle Start(this ref World world, JobHandle dependsOn, ushort subId = 0) {
             
             E.IS_CREATED(world);
-            dependsOn = Batches.Apply(dependsOn, world.state);
+            dependsOn = Batches.Apply(dependsOn, in world);
             var address = world.id;
             WorldSystemRegistry.Validate();
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {

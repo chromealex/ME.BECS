@@ -428,9 +428,6 @@ namespace ME.BECS {
         [INLINE(256)]
         internal static void ReleaseWorldId(ushort worldId) {
 
-            WorldsTempAllocator.Dispose(worldId);
-            WorldsPersistentAllocator.Dispose(worldId);
-            
             ref var worldIds = ref WorldsIdStorage.worldIds;
             worldIds.Add(worldId);
 
@@ -552,6 +549,9 @@ namespace ME.BECS {
             WorldsTempAllocator.Initialize(worldId);
             WorldsPersistentAllocator.Initialize(worldId);
             
+            WorldAspectStorage.AddWorld(in world);
+            WorldBatches.AddWorld(in world);
+            
             if (raiseCallback == true) WorldStaticCallbacks.RaiseCallback(ref world);
 
         }
@@ -564,11 +564,16 @@ namespace ME.BECS {
             worldsStorage.Get(world.id).Dispose();
             worldsStorage.Get(world.id) = default;
             
+            WorldBatches.DisposeWorld(in world);
+            WorldAspectStorage.DisposeWorld(in world);
             GlobalEvents.DisposeWorld(world.id);
             #if UNITY_EDITOR
             EntEditorName.Dispose(world.id);
             #endif
             WorldsParent.Clear(world.id);
+
+            WorldsTempAllocator.Dispose(world.id);
+            WorldsPersistentAllocator.Dispose(world.id);
 
         }
 

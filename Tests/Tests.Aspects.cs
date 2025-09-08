@@ -153,7 +153,7 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(aspect.data5.data == 100200);
             }
 
-            ME.BECS.Batches.Apply(world.state);
+            ME.BECS.Batches.Apply(world);
             world.Dispose();
             
         }
