@@ -130,12 +130,17 @@ namespace ME.BECS.Units {
             if (unit.unitSelectionGroup.IsAlive() == true) {
                 var aspect = unit.unitSelectionGroup.GetAspect<UnitSelectionGroupAspect>();
                 aspect.units.Remove(unit.ent);
-                if (aspect.units.Count == 0u) {
+                unit.unitSelectionGroup = default;
+
+                if (aspect.readUnits.Count == 1u) {
+                    return RemoveFromSelectionGroup(aspect.readUnits[0u].GetAspect<UnitAspect>());
+                }
+                
+                if (aspect.readUnits.Count == 0u) {
                     // destroy group
                     aspect.ent.DestroyHierarchy();
                     return true;
                 }
-                unit.unitSelectionGroup = default;
             }
 
             return false;
@@ -389,6 +394,8 @@ namespace ME.BECS.Units {
                 if (unit.IsAlive() == false) continue;
                 var unitAspect = unit.GetAspect<UnitAspect>();
                 var tr = unit.GetAspect<TransformAspect>();
+                
+                
                 if (Math.IsInPolygon(tr.position, p1, p2, p3, p4) == true) {
                     
                     group.Add(unitAspect);
