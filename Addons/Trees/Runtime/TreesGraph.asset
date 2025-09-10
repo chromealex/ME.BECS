@@ -107,19 +107,11 @@ MonoBehaviour:
       type: {class: QuadTreeInsertSystem, ns: ME.BECS, asm: ME.BECS.Trees}
       data:
         mapPosition:
-          x:
-            rawValue: 0
-          y:
-            rawValue: 0
-          z:
-            rawValue: 0
+          x: 0
+          y: 0
         mapSize:
-          x:
-            rawValue: 0
-          y:
-            rawValue: 0
-          z:
-            rawValue: 0
+          x: 0
+          y: 0
     - rid: 8346928920201003092
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:

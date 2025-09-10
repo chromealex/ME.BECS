@@ -146,11 +146,14 @@ namespace ME.BECS {
         [BURST]
         public struct ClearJob : Unity.Jobs.IJobParallelFor {
 
+            public QuadTreeInsertSystem system;
             public UnsafeList<safe_ptr> trees;
 
             public void Execute(int index) {
 
+                var size = new NativeTrees.AABB2D(this.system.mapPosition, this.system.mapPosition + this.system.mapSize);
                 var item = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[index];
+                item.ptr->SetBounds(size);
                 item.ptr->Clear();
                 
             }
@@ -184,6 +187,7 @@ namespace ME.BECS {
 
             var clearJob = new ClearJob() {
                 trees = this.trees,
+                system = this,
             };
             var clearJobHandle = clearJob.Schedule(this.trees.Length, 1, context.dependsOn);
             

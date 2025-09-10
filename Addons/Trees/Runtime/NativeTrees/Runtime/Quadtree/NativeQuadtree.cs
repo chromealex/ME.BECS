@@ -62,9 +62,9 @@ namespace NativeTrees {
         private readonly int objectsPerNode;
 
         private AABB2D bounds;
-        private readonly float2 boundsCenter; // Precomputed bounds values as they are used often
-        private readonly float2 boundsExtents;
-        private readonly float2 boundsQuarterSize;
+        private float2 boundsCenter; // Precomputed bounds values as they are used often
+        private float2 boundsExtents;
+        private float2 boundsQuarterSize;
 
         /// <summary>
         /// Mapping from nodeId to the amount of objects that are in it. Once that limit surpasses <see cref="objectsPerNode"/>
@@ -111,6 +111,13 @@ namespace NativeTrees {
             this.boundsExtents = bounds.Size / 2;
             this.boundsQuarterSize = this.boundsExtents / 2;
             this.tempObjects = new ME.BECS.NativeCollections.NativeParallelList<ObjWrapper>(initialCapacity, allocator);
+        }
+
+        public void SetBounds(AABB2D bounds) {
+            this.bounds = bounds;
+            this.boundsCenter = bounds.Center;
+            this.boundsExtents = bounds.Size / 2;
+            this.boundsQuarterSize = this.boundsExtents / 2;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -480,7 +487,7 @@ namespace NativeTrees {
         private void Gizmos(uint nodeId, in ExtentsBounds quarterSizeBounds, int objectCount, int depth) {
             // Are we in a leaf node?
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
-                UnityEngine.Gizmos.DrawWireCube((Vector2)quarterSizeBounds.nodeCenter, (Vector2)quarterSizeBounds.nodeExtents * 2);
+                UnityEngine.Gizmos.DrawWireCube(new Vector3(quarterSizeBounds.nodeCenter.x, 0f, quarterSizeBounds.nodeCenter.y), new Vector3(quarterSizeBounds.nodeExtents.x, 0f, quarterSizeBounds.nodeExtents.y) * 2);
                 return;
             }
 
