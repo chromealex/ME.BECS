@@ -54,6 +54,28 @@ namespace ME.BECS.Views {
 
     }
 
+    [EditorComment("Instantiate view on scene automatically from view source")]
+    [ComponentGroup(typeof(ViewsComponentGroup))]
+    public struct InstantiateViewRandomComponent : IConfigComponentStatic, IConfigInitialize {
+
+        [System.Serializable]
+        public struct Item {
+
+            public View view;
+
+        }
+        
+        public MemArrayAuto<Item> views;
+        
+        public void OnInitialize(in Ent ent) {
+
+            if (this.views.Length == 0u) return;
+            ent.InstantiateView(this.views[ent.GetRandomValue(0u, this.views.Length)].view);
+
+        }
+
+    }
+
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct InstantiateAvatarViewComponent : IConfigComponentStatic, IConfigInitialize {
 

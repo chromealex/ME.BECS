@@ -801,7 +801,7 @@ namespace ME.BECS.FogOfWar {
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
             
-            [INLINE(256)]
+            /*[INLINE(256)]
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
@@ -812,7 +812,7 @@ namespace ME.BECS.FogOfWar {
                 part.Set(new FogOfWarRevealerPartialComponent() {
                     part = partIndex,
                 });
-            }
+            }*/
         }
 
         [INLINE(256)]
@@ -840,7 +840,7 @@ namespace ME.BECS.FogOfWar {
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
             
-            [INLINE(256)]
+            /*[INLINE(256)]
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
@@ -852,7 +852,7 @@ namespace ME.BECS.FogOfWar {
                     part = partIndex,
                 });
                 part.Set(new FogOfWarRevealerIsSectorTag());
-            }
+            }*/
         }
 
         [INLINE(256)]
@@ -877,7 +877,7 @@ namespace ME.BECS.FogOfWar {
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
             
-            [INLINE(256)]
+            /*[INLINE(256)]
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
@@ -888,7 +888,7 @@ namespace ME.BECS.FogOfWar {
                 part.Set(new FogOfWarRevealerPartialComponent() {
                     part = partIndex,
                 });
-            }
+            }*/
         }
 
         [INLINE(256)]
@@ -913,7 +913,7 @@ namespace ME.BECS.FogOfWar {
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
 
-            [INLINE(256)]
+            /*[INLINE(256)]
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner, in FogOfWarStaticComponent props, in Rect rect, tfloat? height, byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
@@ -929,7 +929,7 @@ namespace ME.BECS.FogOfWar {
                 part.Set(new FogOfWarRevealerPartialComponent() {
                     part = partIndex,
                 });
-            }
+            }*/
         }
 
         [INLINE(256)]
@@ -956,7 +956,7 @@ namespace ME.BECS.FogOfWar {
             if (lifetime != null) ent.Destroy(lifetime.Value);
             return ent;
 
-            [INLINE(256)]
+            /*[INLINE(256)]
             static void CreatePart(in JobInfo jobInfo, in Ent ent, in ME.BECS.Players.PlayerAspect owner,  byte partIndex) {
                 var part = Ent.New(in jobInfo, editorName: "FOW Observer Part");
                 part.SetParent(ent);
@@ -967,7 +967,7 @@ namespace ME.BECS.FogOfWar {
                 part.Set(new FogOfWarRevealerPartialComponent() {
                     part = partIndex,
                 });
-            }
+            }*/
         }
 
         [INLINE(256)]
