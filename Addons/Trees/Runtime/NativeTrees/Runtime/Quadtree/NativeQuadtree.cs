@@ -487,7 +487,7 @@ namespace NativeTrees {
         private void Gizmos(uint nodeId, in ExtentsBounds quarterSizeBounds, int objectCount, int depth) {
             // Are we in a leaf node?
             if (objectCount <= this.objectsPerNode || depth == this.maxDepth) {
-                UnityEngine.Gizmos.DrawWireCube(new Vector3(quarterSizeBounds.nodeCenter.x, 0f, quarterSizeBounds.nodeCenter.y), new Vector3(quarterSizeBounds.nodeExtents.x, 0f, quarterSizeBounds.nodeExtents.y) * 2);
+                UnityEngine.Gizmos.DrawWireCube(new Vector3((float)quarterSizeBounds.nodeCenter.x, 0f, (float)quarterSizeBounds.nodeCenter.y), new Vector3((float)quarterSizeBounds.nodeExtents.x, 0f, (float)quarterSizeBounds.nodeExtents.y) * 2);
                 return;
             }
 
