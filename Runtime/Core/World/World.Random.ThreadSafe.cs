@@ -16,6 +16,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float3 GetRandomVector3InSphere(this in Ent ent, tfloat radius) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -24,6 +25,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float3 GetRandomVector3OnSphere(this in Ent ent, tfloat radius) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -32,6 +34,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float2 GetRandomVector2InCircle(this in Ent ent, tfloat radius) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -40,6 +43,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float2 GetRandomVector2OnCircle(this in Ent ent, tfloat radius) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -48,6 +52,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe tfloat GetRandomValue(this in Ent ent) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -56,6 +61,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe tfloat GetRandomValue(this in Ent ent, tfloat max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -64,6 +70,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe tfloat GetRandomValue(this in Ent ent, tfloat min, tfloat max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -72,6 +79,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe uint GetRandomValue(this in Ent ent, uint min, uint max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -80,6 +88,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float2 GetRandomVector2(this in Ent ent) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -88,6 +97,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float2 GetRandomVector2(this in Ent ent, float2 min, float2 max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -96,6 +106,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float2 GetRandomVector2(this in Ent ent, float2 max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -104,6 +115,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float3 GetRandomVector3(this in Ent ent) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -112,6 +124,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float3 GetRandomVector3(this in Ent ent, float3 min, float3 max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -120,6 +133,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float3 GetRandomVector3(this in Ent ent, float3 max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -128,6 +142,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float4 GetRandomVector4(this in Ent ent) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -136,6 +151,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float4 GetRandomVector4(this in Ent ent, float4 min, float4 max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);
@@ -144,6 +160,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static unsafe float4 GetRandomVector4(this in Ent ent, float4 max) {
+            E.IS_ALIVE(in ent);
             var world = ent.World;
             var state = world.state;
             var seed = Ents.GetNextSeed(state, in ent);

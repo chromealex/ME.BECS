@@ -83,7 +83,7 @@ namespace ME.BECS {
         public ComponentsStorage<IConfigComponent> data = new() { components = System.Array.Empty<IConfigComponent>() };
         public ComponentsStorage<IConfigComponentShared> sharedData = new() { components = System.Array.Empty<IConfigComponentShared>() };
         public ComponentsStorage<IConfigComponentStatic> staticData = new() { components = System.Array.Empty<IConfigComponentStatic>() };
-        public ComponentsStorage<IConfigInitialize> dataInitialize = new() { components = System.Array.Empty<IConfigInitialize>() };
+        public ComponentsStorageLink dataInitialize = new() { items = System.Array.Empty<ComponentsStorageLink.Item>() };
         public ComponentsStorage<IAspect> aspects = new() { components = System.Array.Empty<IAspect>() };
         public CollectionsData collectionsData;
 
@@ -93,12 +93,36 @@ namespace ME.BECS {
         }
 
         public void OnValidate() {
-            var list = new System.Collections.Generic.List<IConfigInitialize>();
-            list.AddRange(this.data.components.OfType<IConfigInitialize>());
-            list.AddRange(this.sharedData.components.OfType<IConfigInitialize>());
-            list.AddRange(this.staticData.components.OfType<IConfigInitialize>());
-            this.dataInitialize = new ComponentsStorage<IConfigInitialize>() {
-                components = list.ToArray(),
+            var list = new System.Collections.Generic.List<ComponentsStorageLink.Item>();
+            for (uint i = 0u; i < this.data.components.Length; ++i) {
+                var item = this.data.components[i];
+                if (item is IConfigInitialize) {
+                    list.Add(new ComponentsStorageLink.Item() {
+                        type = 0,
+                        index = i,
+                    });
+                }
+            }
+            for (uint i = 0u; i < this.sharedData.components.Length; ++i) {
+                var item = this.sharedData.components[i];
+                if (item is IConfigInitialize) {
+                    list.Add(new ComponentsStorageLink.Item() {
+                        type = 1,
+                        index = i,
+                    });
+                }
+            }
+            for (uint i = 0u; i < this.staticData.components.Length; ++i) {
+                var item = this.staticData.components[i];
+                if (item is IConfigInitialize) {
+                    list.Add(new ComponentsStorageLink.Item() {
+                        type = 2,
+                        index = i,
+                    });
+                }
+            }
+            this.dataInitialize = new ComponentsStorageLink() {
+                items = list.ToArray(),
             };
         }
 

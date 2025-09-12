@@ -38,7 +38,7 @@ namespace ME.BECS {
 
             private readonly safe_ptr<byte> data;
             private readonly safe_ptr<uint> offsets;
-            private readonly safe_ptr<uint> typeIds;
+            internal readonly safe_ptr<uint> typeIds;
             private readonly safe_ptr<uint> hashes;
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
@@ -137,6 +137,11 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
+            internal safe_ptr<byte> GetComponentPtr(uint index) {
+                return this.data + this.offsets[index];
+            }
+
+            [INLINE(256)]
             public void Dispose() {
 
                 for (uint i = 0u; i < this.count; ++i) {
@@ -179,7 +184,7 @@ namespace ME.BECS {
             
             private readonly safe_ptr<byte> data;
             private readonly safe_ptr<uint> offsets;
-            private readonly safe_ptr<uint> typeIds;
+            internal readonly safe_ptr<uint> typeIds;
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
 
@@ -286,6 +291,11 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
+            internal safe_ptr<byte> GetComponentPtr(uint index) {
+                return this.data + this.offsets[index];
+            }
+
+            [INLINE(256)]
             public bool TryRead<TComponent>(out TComponent data) where TComponent : unmanaged, IComponent {
 
                 data = default;
@@ -339,9 +349,7 @@ namespace ME.BECS {
 
             }
 
-            private readonly safe_ptr<byte> data;
-            private readonly safe_ptr<uint> offsets;
-            private readonly safe_ptr<uint> typeIds;
+            private readonly safe_ptr<ComponentsStorageLink.Item> data;
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
             
@@ -355,7 +363,6 @@ namespace ME.BECS {
                         T tempData = default;
                         tempData.OnInitialize(in ent);
                     } else {
-                        WorldStaticCallbacks.RaiseConfigComponentCallback<T>(in config, component, in ent);
                         _ptrToStruct(component, out T tempData);
                         tempData.OnInitialize(in ent);
                         _structToPtr(ref tempData, component);
@@ -366,40 +373,24 @@ namespace ME.BECS {
             }
             
             [INLINE(256)]
-            public DataInitialize(IConfigInitialize[] components) {
-                
-                var cnt = (uint)components.Length;
+            public DataInitialize(in UnsafeEntityConfig config, ComponentsStorageLink components) {
+
+                var cnt = (uint)components.items.Length;
                 if (cnt == 0u) {
                     this = default;
                     return;
                 }
-                this.offsets = _makeArray<uint>(cnt, false);
-                this.typeIds = _makeArray<uint>(cnt, false);
+
+                this.data = _makeArray<ComponentsStorageLink.Item>(cnt, false);
                 this.functionPointers = _makeArray<Func>(cnt, false);
                 this.count = cnt;
                 
-                var offset = 0u;
-                var size = 0u;
-                for (uint i = 0u; i < components.Length; ++i) {
-                    var comp = components[i];
-                    StaticTypesLoadedManaged.typeToId.TryGetValue(comp.GetType(), out var typeId);
-                    E.IS_VALID_TYPE_ID(typeId);
-                    var elemSize = StaticTypes.sizes.Get(typeId);
-                    size += elemSize;
-                    this.offsets[i] = offset;
-                    this.typeIds[i] = typeId;
-                    offset += elemSize;
-                }
-                this.data = (safe_ptr<byte>)_make(size);
-
-                for (uint i = 0u; i < components.Length; ++i) {
-                    var comp = components[i];
-                    var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
-                    var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
-                    if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
+                for (uint i = 0u; i < cnt; ++i) {
+                    var item = components.items[i];
+                    this.data[i] = item;
                     {
-                        var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
+                        var type = GetItemType(config, item);
+                        var caller = typeof(MethodCaller<>).MakeGenericType(type);
                         var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                         var del = System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
                         var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
@@ -408,9 +399,40 @@ namespace ME.BECS {
                             handle = handle,
                         };
                     }
-                    gcHandle.Free();
                 }
 
+            }
+
+            [INLINE(256)]
+            private static System.Type GetItemType(in UnsafeEntityConfig config, ComponentsStorageLink.Item item) {
+                uint typeId = 0u;
+                if (item.type == 0) {
+                    typeId = config.data.typeIds[item.index];
+                } else if (item.type == 1) {
+                    typeId = config.dataShared.typeIds[item.index];
+                } else if (item.type == 2) {
+                    typeId = config.staticData.typeIds[item.index];
+                }
+                StaticTypesLoadedManaged.allLoadedTypes.TryGetValue(typeId, out var type);
+                return type;
+            }
+
+            [INLINE(256)]
+            private static uint GetTypeId(in UnsafeEntityConfig config, ComponentsStorageLink.Item item) {
+                var index = item.index;
+                if (item.type == 0) return config.data.typeIds[index];
+                if (item.type == 1) return config.dataShared.typeIds[index];
+                if (item.type == 2) return config.staticData.typeIds[index];
+                return uint.MaxValue;
+            }
+
+            [INLINE(256)]
+            private static safe_ptr<byte> GetData(in UnsafeEntityConfig config, ComponentsStorageLink.Item item) {
+                var index = item.index;
+                if (item.type == 0) return config.data.GetComponentPtr(index);
+                if (item.type == 1) return config.dataShared.GetComponentPtr(index);
+                if (item.type == 2) return (safe_ptr)Components.ReadUnknownType(config.staticData.staticDataEnt.World.state, config.staticData.typeIds[index], entId: config.staticData.staticDataEnt.id, gen: config.staticData.staticDataEnt.gen, out _);
+                return default;
             }
 
             [INLINE(256)]
@@ -418,7 +440,7 @@ namespace ME.BECS {
 
                 var state = ent.World.state;
                 for (uint i = 0u; i < this.count; ++i) {
-                    var typeId = this.typeIds[i];
+                    var typeId = GetTypeId(in config, this.data[i]);
                     if (options == Config.JoinOptions.LeftJoin) {
                         if (Components.HasUnknownType(state, typeId, ent.id, ent.gen, false) == false) {
                             continue;
@@ -429,7 +451,7 @@ namespace ME.BECS {
                         }
                     }
                     var elemSize = StaticTypes.sizes.Get(typeId);
-                    var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
+                    var data = elemSize == 0u ? new safe_ptr<byte>() : GetData(in config, this.data[i]);
                     this.functionPointers[i].Call(in config, data.ptr, in ent);
                 }
 
@@ -443,8 +465,6 @@ namespace ME.BECS {
                 }
                 
                 _free(this.data);
-                CutsPool._freeArray(this.offsets, this.count);
-                CutsPool._freeArray(this.typeIds, this.count);
                 CutsPool._freeArray(this.functionPointers, this.count);
 
             }
@@ -587,10 +607,10 @@ namespace ME.BECS {
             }
 
             internal readonly Ent staticDataEnt;
-            private readonly safe_ptr<uint> typeIds;
+            internal readonly safe_ptr<uint> typeIds;
             private readonly uint count;
 
-            public StaticData(in Ent ent, EntityConfig sourceConfig, UnsafeEntityConfig config) {
+            public StaticData(in Ent ent, EntityConfig sourceConfig, in UnsafeEntityConfig config) {
                 
                 this.staticDataEnt = ent;
 
@@ -682,11 +702,11 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default, bool autoRegisterConfig = true) {
-            
+
+            this = default;
             this.id = id > 0u || autoRegisterConfig == false ? id : EntityConfigRegistry.Register(config, out _);
             this.data = new Data(config.data.components);
             this.dataShared = new SharedData(config.sharedData.components);
-            this.dataInitialize = new DataInitialize(config.dataInitialize.components);
             this.aspects = new Aspect(config.aspects);
             this.collectionsData = new CollectionsData(config.collectionsData);
             
@@ -696,8 +716,10 @@ namespace ME.BECS {
             }
 
             this.staticData = default;
-            this.staticData = new StaticData(staticDataEnt, config, this);
+            this.staticData = new StaticData(staticDataEnt, config, in this);
             
+            this.dataInitialize = new DataInitialize(in this, config.dataInitialize);
+
         }
 
         [INLINE(256)]

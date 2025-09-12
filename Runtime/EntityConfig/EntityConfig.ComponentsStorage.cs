@@ -15,4 +15,19 @@ namespace ME.BECS {
         
     }
 
+    [System.Serializable]
+    public struct ComponentsStorageLink : IConfigComponentsStorage {
+
+        [System.Serializable]
+        public struct Item {
+
+            public byte type; // 0 - data, 1 - shared, 2 - static
+            public uint index;
+
+        }
+        
+        public Item[] items;
+
+    }
+
 }

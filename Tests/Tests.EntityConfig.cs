@@ -381,10 +381,11 @@ namespace ME.BECS.Tests {
                     data = 100500,
                 },
             };
-            config.dataInitialize.components = new IConfigInitialize[1] {
-                new TestConfigInitComponent() {
-                    data = 100500,
-                },
+            config.dataInitialize.items = new[] {
+                new ComponentsStorageLink.Item() {
+                    type = 0,
+                    index = 0,
+                }
             };
             ObjectReferenceRegistry.AddRuntimeObject(config);
 
