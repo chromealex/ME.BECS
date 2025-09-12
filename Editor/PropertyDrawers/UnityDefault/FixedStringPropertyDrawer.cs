@@ -2,7 +2,9 @@ namespace ME.BECS.Editor {
     
     using UnityEditor;
     using UnityEngine.UIElements;
-
+    using Unity.Collections;
+    using CPD = UnityEditor.CustomPropertyDrawer;
+    
     public abstract class FixedStringBasePropertyDrawer<T> : PropertyDrawer {
 
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
@@ -27,10 +29,10 @@ namespace ME.BECS.Editor {
 
     }
     
-    [CustomPropertyDrawer(typeof(Unity.Collections.FixedString32Bytes))] public class FixedString32PropertyDrawer : FixedStringBasePropertyDrawer<Unity.Collections.FixedString32Bytes> { protected override Unity.Collections.FixedString32Bytes Cast(string value) => value; }
-    [CustomPropertyDrawer(typeof(Unity.Collections.FixedString64Bytes))] public class FixedString64PropertyDrawer : FixedStringBasePropertyDrawer<Unity.Collections.FixedString64Bytes> { protected override Unity.Collections.FixedString64Bytes Cast(string value) => value; }
-    [CustomPropertyDrawer(typeof(Unity.Collections.FixedString128Bytes))] public class FixedString128PropertyDrawer : FixedStringBasePropertyDrawer<Unity.Collections.FixedString128Bytes> { protected override Unity.Collections.FixedString128Bytes Cast(string value) => value; }
-    [CustomPropertyDrawer(typeof(Unity.Collections.FixedString512Bytes))] public class FixedString512PropertyDrawer : FixedStringBasePropertyDrawer<Unity.Collections.FixedString512Bytes> { protected override Unity.Collections.FixedString512Bytes Cast(string value) => value; }
-    [CustomPropertyDrawer(typeof(Unity.Collections.FixedString4096Bytes))] public class FixedString4096PropertyDrawer : FixedStringBasePropertyDrawer<Unity.Collections.FixedString4096Bytes> { protected override Unity.Collections.FixedString4096Bytes Cast(string value) => value; }
+    [CPD(typeof(FixedString32Bytes))]   public class FixedString32PropertyDrawer   : FixedStringBasePropertyDrawer<FixedString32Bytes>   { protected override FixedString32Bytes Cast(string value) => value; }
+    [CPD(typeof(FixedString64Bytes))]   public class FixedString64PropertyDrawer   : FixedStringBasePropertyDrawer<FixedString64Bytes>   { protected override FixedString64Bytes Cast(string value) => value; }
+    [CPD(typeof(FixedString128Bytes))]  public class FixedString128PropertyDrawer  : FixedStringBasePropertyDrawer<FixedString128Bytes>  { protected override FixedString128Bytes Cast(string value) => value; }
+    [CPD(typeof(FixedString512Bytes))]  public class FixedString512PropertyDrawer  : FixedStringBasePropertyDrawer<FixedString512Bytes>  { protected override FixedString512Bytes Cast(string value) => value; }
+    [CPD(typeof(FixedString4096Bytes))] public class FixedString4096PropertyDrawer : FixedStringBasePropertyDrawer<FixedString4096Bytes> { protected override FixedString4096Bytes Cast(string value) => value; }
 
 }
