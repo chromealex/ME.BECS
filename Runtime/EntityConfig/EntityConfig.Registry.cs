@@ -17,11 +17,13 @@ namespace ME.BECS {
         public static void Initialize() {
             //UnityEngine.Debug.Log("Initialize static world for configs");
             lockSpinner.Lock();
-            var props = WorldProperties.Default;
-            props.name = "EntityConfig Static World";
-            staticWorld = World.Create(props, false);
-            registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state.ptr->allocator, 10u);
-            registryToId.Clear();
+            if (staticWorld.isCreated == false) {
+                var props = WorldProperties.Default;
+                props.name = "EntityConfig Static World";
+                staticWorld = World.Create(props, false);
+                registryFromId = new UIntDictionary<UnsafeEntityConfig>(ref staticWorld.state.ptr->allocator, 10u);
+                registryToId.Clear();
+            }
             lockSpinner.Unlock();
         }
         
@@ -45,8 +47,8 @@ namespace ME.BECS {
             }
             
             lockSpinner.Lock();
-            registryToId.Add(config, nextId);
             unsafeConfig = config.CreateUnsafeConfig(nextId, staticConfigEnt);
+            registryToId.Add(config, nextId);
             registryFromId.Add(ref staticWorld.state.ptr->allocator, nextId, unsafeConfig);
             EntityConfigsRegistry.TryAdd(nextId, unsafeConfig);
             Batches.Apply(in staticWorld);

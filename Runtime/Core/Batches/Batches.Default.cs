@@ -70,7 +70,7 @@ namespace ME.BECS {
             
             E.IS_IN_TICK(state);
             
-            var groupId = StaticTypes.tracker.Get(typeId);
+            var groupId = StaticTypes.tracker.IsCreated == true ? StaticTypes.tracker.Get(typeId) : default;
             if (Components.SetUnknownType(state, typeId, groupId, in ent, data) == true) {
                 Batches.Set_INTERNAL(typeId, in ent);
                 return true;

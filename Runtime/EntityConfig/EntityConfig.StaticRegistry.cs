@@ -9,6 +9,8 @@ namespace ME.BECS {
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
 
         public static void Initialize(bool isEditor = false) {
+
+            if (StaticTypes.tracker.IsCreated == false) return;
             
             ObjectReferenceRegistry.Load();
             Load(isEditor);
