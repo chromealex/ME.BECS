@@ -313,7 +313,7 @@ namespace ME.BECS.Editor.Jobs {
                         foreach (var component in aspects) {
                             tempStructBuilder.AppendLine($"public {component} a{i};");
                             tempStructUnsafeBuilder.AppendLine($"[NativeDisableContainerSafetyRestriction] public {component} a{i};");
-                            tempFuncBuilder.AppendLine($"data->a{i} = buffer->state.ptr->aspectsStorage.Initialize<{component}>(buffer->state);");
+                            tempFuncBuilder.AppendLine($"data->a{i} = WorldAspectStorage.Initialize<{component}>(buffer->worldId);");
                             ++i;
                         }
                         
