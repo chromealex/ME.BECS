@@ -27,7 +27,7 @@ namespace ME.BECS {
         
         public uint sourceId;
 
-        public bool IsValid => this.sourceId > 0u;
+        public bool IsValid => this.sourceId > 0u && this.UnsafeConfig.IsValid() == true;
 
         public readonly UnsafeEntityConfig UnsafeConfig => this.AsUnsafeConfig();
 
