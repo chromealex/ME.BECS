@@ -171,6 +171,20 @@
     margin-top: 20px;
 }
 
+.maskable-field {
+    padding: 5px;
+    margin: 5px;
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+.maskable-field Label {
+    width: 135px;
+}
+
+.maskable-property-field.unchecked {
+    opacity: 0.5;
+}
+
 .component-aspects {
     position: absolute;
     top: 0px;

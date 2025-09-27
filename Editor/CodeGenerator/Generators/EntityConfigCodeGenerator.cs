@@ -34,10 +34,45 @@ namespace ME.BECS.Editor.Aspects {
 
             var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             var content = new System.Collections.Generic.List<string>();
-            var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>().OrderBy(x => x.FullName).ToArray();
+            var allConfigComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponent>().OrderBy(x => x.FullName).ToArray();
             var allStaticComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
             var allSharedComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentShared>().OrderBy(x => x.FullName).ToArray();
-            allComponents = allComponents.Concat(allStaticComponents).Concat(allSharedComponents).ToArray();
+            var allComponents = allConfigComponents.Concat(allStaticComponents).Concat(allSharedComponents).ToArray();
+            foreach (var component in allConfigComponents) {
+                
+                if (component.IsValueType == false) continue;
+                if (this.IsValidTypeForAssembly(component) == false) continue;
+                
+                content.Clear();
+                
+                var type = component;
+                var strType = EditorUtils.GetTypeName(type);
+                var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).ToArray();
+                var idx = 0u;
+                content.Add($"var allocator = ent.World.state.ptr->allocator;");
+                foreach (var field in fields) {
+                    
+                    var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
+                    var sizeOf = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf(field.FieldType);
+                    content.Add($"if (mask.IsSet(in allocator, {idx}) == true) UnsafeUtility.MemCpy((byte*)componentPtr + {fieldOffset}, (byte*)configComponent + {fieldOffset}, {sizeOf});");
+                    ++idx;
+
+                }
+
+                if (idx > 1u) {
+                    var def = new CodeGenerator.MethodDefinition() {
+                        methodName = $"EntityConfigComponentMaskApply{EditorUtils.GetCodeName(strType)}",
+                        type = strType,
+                        registerMethodName = "RegisterConfigComponentMaskCallback",
+                        definition = "in UnsafeEntityConfig config, void* componentPtr, void* configComponent, in BitArray mask, in Ent ent",
+                        content = string.Join("\n", content),
+                        burstCompile = true,
+                        pInvoke = "ME.BECS.UnsafeEntityConfig.MethodMaskCallerDelegate",
+                    };
+                    definitions.Add(def);
+                }
+            }
+            
             foreach (var component in allComponents) {
 
                 if (component.IsValueType == false) continue;

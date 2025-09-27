@@ -1,3 +1,4 @@
+using System.Linq;
 using ME.BECS.Editor.Extensions.SubclassSelector;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -28,7 +29,14 @@ namespace ME.BECS.Editor {
             
             this.LoadStyle();
             var rootVisualElement = new VisualElement();
-            rootVisualElement.Clear();
+            this.Build(rootVisualElement);
+            this.rootVisualElement = rootVisualElement;
+            return rootVisualElement;
+            
+        }
+
+        private void Build(VisualElement rootVisualElement) {
+            //rootVisualElement.Clear();
             EditorUIUtils.ApplyDefaultStyles(rootVisualElement);
             rootVisualElement.styleSheets.Add(this.styleSheetBase);
             rootVisualElement.styleSheets.Add(this.styleSheetTooltip);
@@ -38,14 +46,39 @@ namespace ME.BECS.Editor {
             
             var serializedObject = this.serializedObject;
             this.DrawComponents(rootVisualElement, serializedObject);
+        }
 
-            return rootVisualElement;
+        private VisualElement rootVisualElement;
+        private Item componentsContainer;
+        private VisualElement componentsContainerRoot;
+        private Item componentsSharedContainer;
+        private VisualElement componentsSharedContainerRoot;
+        private Item aspects;
+
+        private void RedrawComponents() {
+            
+            var data = this.serializedObject.FindProperty(nameof(EntityConfig.data));
+            var componentsData = data.FindPropertyRelative(nameof(EntityConfig.data.components));
+            if (this.componentsContainer.container != null) {
+                this.componentsContainer.container.RemoveFromHierarchy();
+            }
+            this.componentsContainer = this.DrawFields(typeof(IConfigComponent), data, componentsData, this.serializedObject);
+            this.componentsContainerRoot.Add(this.componentsContainer.container);
             
         }
 
-        private Item componentsContainer;
-        private Item aspects;
-        
+        private void RedrawSharedComponents() {
+            
+            var data = this.serializedObject.FindProperty(nameof(EntityConfig.sharedData));
+            var componentsData = data.FindPropertyRelative(nameof(EntityConfig.sharedData.components));
+            if (this.componentsSharedContainer.container != null) {
+                this.componentsSharedContainer.container.RemoveFromHierarchy();
+            }
+            this.componentsSharedContainer = this.DrawFields(typeof(IConfigComponentShared), data, componentsData, this.serializedObject, false);
+            this.componentsSharedContainerRoot.Add(this.componentsSharedContainer.container);
+            
+        }
+
         private void DrawComponents(VisualElement root, SerializedObject serializedObject) {
 
             var container = root;
@@ -115,12 +148,10 @@ namespace ME.BECS.Editor {
                 components.Add(componentsList);
                 {
                     var componentContainer = new VisualElement();
+                    this.componentsContainerRoot = componentContainer;
                     componentsList.Add(componentContainer);
 
-                    var data = serializedObject.FindProperty(nameof(EntityConfig.data));
-                    var componentsData = data.FindPropertyRelative(nameof(EntityConfig.data.components));
-                    this.componentsContainer = this.DrawFields(typeof(IConfigComponent), componentsData, serializedObject);
-                    componentContainer.Add(this.componentsContainer.container);
+                    this.RedrawComponents();
                 }
             }
             {
@@ -142,11 +173,10 @@ namespace ME.BECS.Editor {
                 components.Add(componentsList);
                 {
                     var componentContainer = new VisualElement();
+                    this.componentsSharedContainerRoot = componentContainer;
                     componentsList.Add(componentContainer);
 
-                    var data = serializedObject.FindProperty(nameof(EntityConfig.sharedData));
-                    var componentsData = data.FindPropertyRelative(nameof(EntityConfig.sharedData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentShared), componentsData, serializedObject).container);
+                    this.RedrawSharedComponents();
                 }
             }
             {
@@ -172,7 +202,7 @@ namespace ME.BECS.Editor {
                     
                     var data = serializedObject.FindProperty(nameof(EntityConfig.staticData));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.staticData.components));
-                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentStatic), componentsData, serializedObject).container);
+                    componentContainer.Add(this.DrawFields(typeof(IConfigComponentStatic), data, componentsData, serializedObject, false).container);
                 }
             }
             {
@@ -198,9 +228,25 @@ namespace ME.BECS.Editor {
                     
                     var data = serializedObject.FindProperty(nameof(EntityConfig.aspects));
                     var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
-                    this.aspects = this.DrawFields(typeof(IAspect), componentsData, serializedObject);
+                    this.aspects = this.DrawFields(typeof(IAspect), data, componentsData, serializedObject);
                     componentContainer.Add(this.aspects.container);
                 }
+            }
+            {
+                // maskable
+                var prop = serializedObject.FindProperty(nameof(EntityConfig.maskable));
+                var maskable = new Toggle("Maskable Config");
+                EditorUIUtils.DrawTooltip(maskable, "<b>Maskable Config</b>\nChoose which fields in components you want to apply.");
+                maskable.value = prop.boolValue;
+                maskable.RegisterValueChangedCallback((evt) => {
+                    if (this.rootVisualElement == null) return;
+                    prop.boolValue = evt.newValue;
+                    prop.serializedObject.ApplyModifiedProperties();
+                    this.RedrawComponents();
+                    this.RedrawSharedComponents();
+                });
+                maskable.AddToClassList("maskable-field");
+                componentsContainer.Add(maskable);
             }
             
         }
@@ -234,7 +280,7 @@ namespace ME.BECS.Editor {
 
         }
         
-        private Item DrawFields(System.Type type, SerializedProperty componentsArr, SerializedObject serializedObject) {
+        private Item DrawFields(System.Type type, SerializedProperty dataContainer, SerializedProperty componentsArr, SerializedObject serializedObject, bool useMaskable = true) {
 
             Button removeButton = null;
             Button addButton = null;
@@ -247,7 +293,10 @@ namespace ME.BECS.Editor {
                 }
 
                 this.needSync = true;
-                EditorApplication.delayCall += this.Update;
+                EditorApplication.delayCall = () => {
+                    EditorApplication.delayCall = null;
+                    this.Update();
+                };
                 removeButton.SetEnabled(selectIndex >= 0);
             }
             
@@ -268,7 +317,7 @@ namespace ME.BECS.Editor {
                     if (selectedIndex >= 0) prop.DeleteArrayElementAtIndex(selectedIndex);
                     selectedIndex = -1;
                     serializedObject.ApplyModifiedProperties();
-                    this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(componentsArr.propertyPath), serializedObject);
+                    this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsArr.propertyPath), serializedObject, useMaskable);
                     this.componentsContainer.redrawFields?.Invoke();
                 });
                 removeButton.text = "-";
@@ -308,10 +357,10 @@ namespace ME.BECS.Editor {
                             }
 
                             if (refreshRequired == true) {
-                                this.DrawFields_INTERNAL(this.componentsContainer.updateButtons, this.componentsContainer.drawFieldsContainer, serializedObject.FindProperty(componentsData.propertyPath), serializedObject);
+                                this.DrawFields_INTERNAL(this.componentsContainer.updateButtons, this.componentsContainer.drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsData.propertyPath), serializedObject, useMaskable);
                             }
                         }
-                        this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(componentsArr.propertyPath), serializedObject);
+                        this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsArr.propertyPath), serializedObject, useMaskable);
                     }, type, unmanagedTypes: true, runtimeAssembliesOnly: true, showNullElement: false);
                 });
                 addButton.text = "+";
@@ -319,13 +368,13 @@ namespace ME.BECS.Editor {
                 buttons.Add(addButton);
             }
 
-            this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, componentsArr, serializedObject);
+            this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, dataContainer, componentsArr, serializedObject, useMaskable);
 
             return new Item() {
                 container = container,
                 drawFieldsContainer = drawFieldsContainer,
                 updateButtons = UpdateButtons,
-                redrawFields = () => this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, componentsArr, serializedObject),
+                redrawFields = () => this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, dataContainer, componentsArr, serializedObject, useMaskable),
             };
 
         }
@@ -340,12 +389,19 @@ namespace ME.BECS.Editor {
             lastProp.serializedObject.Update();
         }
 
-        private void DrawFields_INTERNAL(System.Action<System.Collections.Generic.List<VisualElement>, int> updateButtons, VisualElement container, SerializedProperty componentsArr, SerializedObject serializedObject) {
+        private void DrawFields_INTERNAL(System.Action<System.Collections.Generic.List<VisualElement>, int> updateButtons, VisualElement container, SerializedProperty dataContainer, SerializedProperty componentsArr, SerializedObject serializedObject, bool useMaskable) {
             
             container.Clear();
 
+            var maskable = serializedObject.FindProperty("maskable").boolValue;
+            var dataPropertyPath = dataContainer.propertyPath;
+            
             var list = new System.Collections.Generic.List<VisualElement>();
             var dataArr = componentsArr;
+            var masks = dataContainer.FindPropertyRelative("masks");
+            if (masks.arraySize < dataArr.arraySize) {
+                masks.arraySize = dataArr.arraySize;
+            }
             for (int i = 0; i < dataArr.arraySize; ++i) {
 
                 var idx = i;
@@ -374,12 +430,77 @@ namespace ME.BECS.Editor {
                     propertyField.AddToClassList("field");
                     propertyField.Bind(serializedObject);
 
-                    System.Action rebuild = () => {
+                    System.Action rebuild = null;
+                    rebuild = () => {
                         var lbl = propertyField.Q<Label>();
                         if (lbl != null) lbl.text = label;
+
+                        if (useMaskable == true && maskable == true) {
+                            var foldout = propertyField.Query(className: "unity-foldout").First();
+                            if (foldout != null) {
+                                var container = foldout.Query(className: "unity-foldout__content").First();
+                                var children = container.Children();
+                                if (children != null && children.Count() > 1) {
+                                    var list = children.ToList();
+                                    var addContainers = new System.Collections.Generic.List<VisualElement>();
+                                    var so = new SerializedObject(this.targets);
+                                    var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
+                                    if (maskValues.arraySize < list.Count) {
+                                        maskValues.arraySize = list.Count;
+                                    }
+                                    for (int i = 0; i < list.Count; ++i) {
+                                        var savedIndex = i;
+                                        var item = list[i];
+                                        if (item is not PropertyField) continue;
+                                        item.RegisterCallbackOnce<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
+                                        item.RegisterCallbackOnce<UnityEngine.UIElements.AttachToPanelEvent>((evt) => { rebuild.Invoke(); });
+                                        item.RegisterCallbackOnce<UnityEngine.UIElements.DetachFromPanelEvent>((evt) => { rebuild.Invoke(); });
+                                        if (item.userData is Toggle tlg) {
+                                            tlg.RemoveFromHierarchy();
+                                            addContainers.Add(tlg);
+                                            continue;
+                                        }
+
+                                        static void ApplyState(VisualElement item, bool state) {
+                                            item.RemoveFromClassList("checked");
+                                            item.RemoveFromClassList("unchecked");
+                                            if (state == true) {
+                                                item.AddToClassList("checked");
+                                            } else {
+                                                item.AddToClassList("unchecked");
+                                            }
+                                        }
+
+                                        item.AddToClassList("maskable-property-field");
+                                        var toggle = new Toggle();
+                                        toggle.RegisterValueChangedCallback(evt => {
+                                            maskValues.GetArrayElementAtIndex(savedIndex).boolValue = evt.newValue;
+                                            serializedObject.ApplyModifiedProperties();
+                                            ApplyState(item, evt.newValue);
+                                        });
+                                        toggle.value = maskValues.GetArrayElementAtIndex(i).boolValue;
+                                        ApplyState(item, toggle.value);
+                                        toggle.AddToClassList("toggle-mask-field");
+                                        addContainers.Add(toggle);
+                                        item.userData = toggle;
+                                        toggle.userData = item;
+                                    }
+
+                                    for (int i = addContainers.Count - 1; i >= 0; --i) {
+                                        var addContainer = addContainers[i];
+                                        if (addContainer.userData is VisualElement root) {
+                                            root.Add(addContainer);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                     };
                     propertyField.RegisterCallback<UnityEngine.UIElements.GeometryChangedEvent>((evt) => { rebuild.Invoke(); });
                     propertyField.RegisterCallback<AttachToPanelEvent>(new EventCallback<AttachToPanelEvent>((evt) => { rebuild.Invoke(); }));
+                    propertyField.RegisterCallback<UnityEngine.UIElements.FocusEvent>((evt) => { rebuild.Invoke(); });
+                    propertyField.RegisterCallback<ChangeEvent<object>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<string>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleFont>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleFontDefinition>, PropertyField>((evt, p) => rebuild(), propertyField);
@@ -411,6 +532,7 @@ namespace ME.BECS.Editor {
                     }));
 
                     propContainer.Add(propertyField);
+
                     if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
                         color.a = 0.1f;
                         propertyField.style.backgroundColor = new StyleColor(color);
@@ -420,6 +542,7 @@ namespace ME.BECS.Editor {
                     list.Add(propertyField);
 
                     EditorUIUtils.DrawTooltip(propContainer, EditorUtils.GetComponent(type)?.GetEditorComment());
+                    rebuild.Invoke();
                     
                     this.DrawAspects(propContainer, type);
 
@@ -452,7 +575,7 @@ namespace ME.BECS.Editor {
             var aspects = new VisualElement();
             aspects.AddToClassList("component-aspects");
             {
-                var data = serializedObject.FindProperty(nameof(EntityConfig.aspects));
+                var data = this.serializedObject.FindProperty(nameof(EntityConfig.aspects));
                 var componentsData = data.FindPropertyRelative(nameof(EntityConfig.aspects.components));
                 for (int j = 0; j < componentsData.arraySize; ++j) {
 

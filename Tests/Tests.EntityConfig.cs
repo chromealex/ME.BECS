@@ -36,6 +36,12 @@ namespace ME.BECS.Tests {
             public int data;
         }
 
+        public struct TestConfigMaskComponent : IConfigComponent {
+            public int data1;
+            public int data2;
+            public int data3;
+        }
+
         public struct TestConfig2Component : IConfigComponent {
             public int data;
         }
@@ -425,6 +431,45 @@ namespace ME.BECS.Tests {
                 Assert.IsTrue(ent.Has<TestConfig2Component>());
                 Assert.AreEqual(1, ent.Read<TestConfig1Component>().data);
                 Assert.AreEqual(2, ent.Read<TestConfig2Component>().data);
+            }
+            
+            UnityEngine.Object.DestroyImmediate(config);
+
+        }
+
+        [Test]
+        public void ApplyWithMask() {
+
+            var config = ME.BECS.EntityConfig.CreateInstance<ME.BECS.EntityConfig>();
+            config.data.components = new IConfigComponent[2] {
+                new TestConfig1Component() { data = 1 },
+                new TestConfigMaskComponent() { data1 = 1, data2 = 2, data3 = 3 },
+            };
+            config.maskable = true;
+            config.data.masks = new ComponentsStorageBitMask[2] {
+                new ComponentsStorageBitMask() {
+                    mask = new bool[1] { false },
+                },
+                new ComponentsStorageBitMask() {
+                    mask = new bool[] {
+                        false,
+                        true,
+                        true,
+                    }
+                },
+            };
+            ObjectReferenceRegistry.AddRuntimeObject(config);
+
+            {
+                using var world = World.Create();
+                var ent = Ent.New();
+                config.Apply(ent);
+                Assert.IsTrue(ent.Has<TestConfig1Component>());
+                Assert.IsTrue(ent.Has<TestConfigMaskComponent>());
+                Assert.AreEqual(1, ent.Read<TestConfig1Component>().data);
+                Assert.AreEqual(0, ent.Read<TestConfigMaskComponent>().data1);
+                Assert.AreEqual(2, ent.Read<TestConfigMaskComponent>().data2);
+                Assert.AreEqual(3, ent.Read<TestConfigMaskComponent>().data3);
             }
             
             UnityEngine.Object.DestroyImmediate(config);

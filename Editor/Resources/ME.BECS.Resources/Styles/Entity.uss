@@ -252,3 +252,11 @@
 .fields-container Label.no-children {
     padding-left: 22px;
 }
+
+.toggle-mask-field {
+    position: absolute;
+    left: -16px;
+}
+.unity-property-field__imgui-container-property > .toggle-mask-field {
+    left: 0px;
+}

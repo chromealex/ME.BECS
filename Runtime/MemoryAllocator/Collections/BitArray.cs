@@ -61,6 +61,22 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public BitArray(ref MemoryAllocator allocator, bool[] source) {
+
+            var sizeInBytes = Bitwise.AlignULongBits((uint)source.Length);
+            this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
+            #if USE_CACHE_PTR
+            this.cachedPtr = new CachedPtr(in allocator, ptr);
+            #endif
+            this.Length = (uint)source.Length;
+            for (int i = 0; i < source.Length; ++i) {
+                this.Set(in allocator, i, source[i]);
+            }
+            MemoryAllocator.ValidateConsistency(ref allocator);
+
+        }
+
+        [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, BitArray source) {
 
             var sizeInBytes = Bitwise.AlignULongBits(source.Length);
@@ -201,7 +217,7 @@ namespace ME.BECS {
         /// <param name="index">The index of the bit.</param>
         /// <returns>The value of the bit at the specified index.</returns>
         [INLINE(256)]
-        public bool IsSet(in MemoryAllocator allocator, int index) {
+        public readonly bool IsSet(in MemoryAllocator allocator, int index) {
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
             return (ptr[index / BitArray.BITS_IN_ULONG] & (0x1ul << (index % BitArray.BITS_IN_ULONG))) > 0;

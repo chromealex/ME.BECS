@@ -287,6 +287,8 @@ namespace ME.BECS.Editor.CsvImporter {
                 public string name;
                 public System.Type type;
                 public scg::Dictionary<string, string> fields;
+                public scg::HashSet<string> baseFields;
+                public bool[] masks;
                 public object componentInstance;
 
             }
@@ -441,10 +443,14 @@ namespace ME.BECS.Editor.CsvImporter {
                                     name = componentName,
                                     type = componentType,
                                     componentInstance = System.Activator.CreateInstance(componentType),
-                                    fields = new System.Collections.Generic.Dictionary<string, string>(),
+                                    fields = new scg::Dictionary<string, string>(),
+                                    baseFields = new scg::HashSet<string>(),
                                 };
                                 configFile.components.Add(component);
                             }
+
+                            var keys = fieldName.Split('/');
+                            component.baseFields.Add(keys[0]);
 
                             if (component.fields.ContainsKey(fieldName) == false) {
                                 component.fields.Add(fieldName, value);
@@ -464,10 +470,23 @@ namespace ME.BECS.Editor.CsvImporter {
             var temp = TempComponent.CreateInstance<TempComponent>();
             foreach (var config in configFiles) {
                 if (config.components == null) continue;
+                var hasMask = false;
                 foreach (var comp in config.components) {
                     var instance = comp.componentInstance;
                     temp.component = instance;
                     temp.config = config.instance;
+                    
+                    var compFields = comp.type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).Select(x => x.Name).ToArray();
+                    if (compFields.Length > 1) {
+                        comp.masks = new bool[compFields.Length];
+                        for (int i = 0; i < comp.masks.Length; ++i) {
+                            comp.masks[i] = false;
+                        }
+                    }
+
+                    if (compFields.Length != comp.baseFields.Count) {
+                        hasMask = true;
+                    }
                     var so = new SerializedObject(temp);
                     foreach (var field in comp.fields) {
                         so.Update();
@@ -519,6 +538,15 @@ namespace ME.BECS.Editor.CsvImporter {
                         }
 
                         {
+                            if (comp.masks != null) {
+                                var maskIndex = System.Array.IndexOf(compFields, keys[0]);
+                                if (maskIndex >= 0) {
+                                    comp.masks[maskIndex] = true;
+                                } else {
+                                    hasMask = true;
+                                }
+                            }
+
                             component.serializedObject.ApplyModifiedProperties();
                             component.serializedObject.Update();
                             //var fieldInfo = comp.GetField(field.Key);
@@ -542,7 +570,8 @@ namespace ME.BECS.Editor.CsvImporter {
                             }
                         }
                     }
-
+                    
+                    temp.config.maskable = hasMask;
                     comp.componentInstance = temp.component;
                 }
             }
@@ -562,6 +591,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 res |= Apply(ref config.instance.data.components, config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray());
                 res |= Apply(ref config.instance.sharedData.components, config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray());
                 res |= Apply(ref config.instance.staticData.components, config.components.Where(x => x.componentInstance is IConfigComponentStatic).Select(x => (IConfigComponentStatic)x.componentInstance).ToArray());
+                res |= Apply(ref config.instance.data.masks, config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => new ComponentsStorageBitMask() { mask = x.masks }).ToArray());
                 //config.instance.aspects.components = config.aspects?.Select(x => (IAspect)System.Activator.CreateInstance(x.type)).ToArray();
                 //config.instance.data.components = config.components.Where(x => x.componentInstance is IConfigComponent).Select(x => (IConfigComponent)x.componentInstance).ToArray();
                 //config.instance.sharedData.components = config.components.Where(x => x.componentInstance is IConfigComponentShared).Select(x => (IConfigComponentShared)x.componentInstance).ToArray();

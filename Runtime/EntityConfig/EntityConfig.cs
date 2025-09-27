@@ -86,7 +86,8 @@ namespace ME.BECS {
         public ComponentsStorageLink dataInitialize = new() { items = System.Array.Empty<ComponentsStorageLink.Item>() };
         public ComponentsStorage<IAspect> aspects = new() { components = System.Array.Empty<IAspect>() };
         public CollectionsData collectionsData;
-
+        public bool maskable;
+        
         public void Validate() {
             this.OnValidate();
             this.collectionsData.CleanUp(this);

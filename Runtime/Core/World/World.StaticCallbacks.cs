@@ -30,6 +30,12 @@ namespace ME.BECS {
 
     }
 
+    public class WorldStaticConfigComponentMaskCallbacksTypes {
+
+        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentMaskCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentMaskCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentMaskCallbacksTypes>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentMaskCallbackDelegate>>>.align, 20003);
+
+    }
+
     public static class WorldStaticCallbacks {
 
         private static scg::HashSet<System.Collections.IDictionary> allDics = new scg::HashSet<System.Collections.IDictionary>();
@@ -51,6 +57,7 @@ namespace ME.BECS {
 
         public delegate void CallbackDelegate<T>(ref T data) where T : unmanaged;
         public unsafe delegate void ConfigComponentCallbackDelegate(in UnsafeEntityConfig config, void* componentPtr, in Ent ent);
+        public unsafe delegate void ConfigComponentMaskCallbackDelegate(in UnsafeEntityConfig config, void* componentPtr, void* configComponent, in BitArray mask, in Ent ent);
         public unsafe delegate void CopyFromComponentCallbackDelegate(void* componentPtr, in Ent ent);
 
         public static void RegisterCopyFromComponentCallback<T>(CopyFromComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
@@ -82,6 +89,22 @@ namespace ME.BECS {
             if (WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Length == 0u) return;
             var callback = WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId);
             if (callback.IsCreated == true) callback.Invoke(in config, component, in ent);
+
+        }
+
+        public static void RegisterConfigComponentMaskCallback<T>(ConfigComponentMaskCallbackDelegate callback) where T : unmanaged, IComponentBase {
+
+            var maxTypeId = StaticTypes.counter;
+            WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Resize(maxTypeId + 1u);
+            WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
+
+        }
+
+        public static unsafe void RaiseConfigComponentMaskCallback<T>(in UnsafeEntityConfig config, void* component, void* configComponent, in BitArray mask, in Ent ent) where T : unmanaged, IComponentBase {
+
+            if (WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Length == 0u) return;
+            var callback = WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId);
+            if (callback.IsCreated == true) callback.Invoke(in config, component, configComponent, in mask, in ent);
 
         }
 

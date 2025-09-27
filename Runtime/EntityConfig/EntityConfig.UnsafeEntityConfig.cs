@@ -11,6 +11,43 @@ namespace ME.BECS {
 
         [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
         public delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
+        
+        [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
+        public delegate void MethodMaskCallerDelegate(in UnsafeEntityConfig config, void* component, void* configComponent, in BitArray mask, in Ent ent);
+
+        internal static class MethodComponentMaskCaller<T> where T : unmanaged, IComponentBase {
+
+            [UnityEngine.Scripting.PreserveAttribute]
+            [AOT.MonoPInvokeCallbackAttribute(typeof(MethodMaskCallerDelegate))]
+            public static void Call(in UnsafeEntityConfig config, void* component, void* configComponent, in BitArray mask, in Ent ent) {
+
+                WorldStaticCallbacks.RaiseConfigComponentMaskCallback<T>(in config, component, configComponent, in mask, in ent);
+
+            }
+
+        }
+
+        private struct FuncMask {
+
+            public System.IntPtr pointer;
+            public System.Runtime.InteropServices.GCHandle handle;
+
+            public bool IsValid() => this.pointer != System.IntPtr.Zero;
+
+            public void Call(in UnsafeEntityConfig config, safe_ptr<byte> comp, safe_ptr<byte> configComp, in BitArray mask, in Ent ent) {
+                var del = new Unity.Burst.FunctionPointer<MethodMaskCallerDelegate>(this.pointer);
+                del.Invoke(in config, comp.ptr, configComp.ptr, in mask, in ent);
+            }
+
+            public void Dispose() {
+                    
+                // TODO: Free
+                //this.handle.Free();
+                this = default;
+
+            }
+
+        }
 
         private readonly struct SharedData {
 
@@ -185,7 +222,9 @@ namespace ME.BECS {
             private readonly safe_ptr<byte> data;
             private readonly safe_ptr<uint> offsets;
             internal readonly safe_ptr<uint> typeIds;
+            internal readonly safe_ptr<BitArray> masks;
             private readonly safe_ptr<Func> functionPointers;
+            private readonly safe_ptr<FuncMask> functionMaskPointers;
             private readonly uint count;
 
             internal static class MethodCaller<T> where T : unmanaged, IComponentBase {
@@ -201,7 +240,7 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public Data(IConfigComponent[] components) {
+            public Data(ref MemoryAllocator allocator, IConfigComponent[] components, ComponentsStorageBitMask[] masks) {
                 
                 var cnt = (uint)components.Length;
                 if (cnt == 0u) {
@@ -210,6 +249,13 @@ namespace ME.BECS {
                 }
                 this.offsets = _makeArray<uint>(cnt, false);
                 this.typeIds = _makeArray<uint>(cnt, false);
+                if (masks != null) {
+                    this.masks = _makeArray<BitArray>(cnt, false);
+                    this.functionMaskPointers = _makeArray<FuncMask>(cnt);
+                } else {
+                    this.masks = default;
+                    this.functionMaskPointers = default;
+                }
                 this.functionPointers = _makeArray<Func>(cnt);
                 this.count = cnt;
                 
@@ -223,6 +269,9 @@ namespace ME.BECS {
                     size += elemSize;
                     this.offsets[i] = offset;
                     this.typeIds[i] = typeId;
+                    if (masks != null) {
+                        this.masks[i] = (masks[i].mask != null && masks[i].mask.Length > 1u) ? new BitArray(ref allocator, masks[i].mask) : default;
+                    }
                     offset += elemSize;
                 }
                 this.data = (safe_ptr<byte>)_make(size);
@@ -239,6 +288,17 @@ namespace ME.BECS {
                         var del = System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
                         var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
                         this.functionPointers[i] = new Func() {
+                            pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
+                            handle = handle,
+                        };
+                    }
+
+                    if (masks != null) {
+                        var caller = typeof(MethodComponentMaskCaller<>).MakeGenericType(comp.GetType());
+                        var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        var del = System.Delegate.CreateDelegate(typeof(MethodMaskCallerDelegate), null, method);
+                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
+                        this.functionMaskPointers[i] = new FuncMask() {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
                             handle = handle,
                         };
@@ -263,12 +323,24 @@ namespace ME.BECS {
                             continue;
                         }
                     }
+
                     var elemSize = StaticTypes.sizes.Get(typeId);
                     var data = elemSize == 0u ? new safe_ptr<byte>() : (this.data + this.offsets[i]);
+                    var groupId = StaticTypes.tracker.Get(typeId);
+                    if (this.masks.ptr != null && this.masks[i].Length > 1u) {
+                        var dataPtr = Components.GetUnknownType(ent.World.state, typeId, groupId, in ent, out var isNew, default);
+                        if (isNew == true) {
+                            Batches.Set_INTERNAL(typeId, in ent);
+                        }
+                        if (this.functionMaskPointers[i].IsValid() == true) {
+                            this.functionMaskPointers[i].Call(in config, new safe_ptr<byte>(dataPtr), data, in this.masks[i], in config.staticData.staticDataEnt);
+                        }
+                    } else {
+                        Batches.Set(in ent, typeId, data.ptr, state);
+                    }
+
                     var func = this.functionPointers[i];
-                    Batches.Set(in ent, typeId, data.ptr, state);
                     if (func.IsValid() == true) {
-                        var groupId = StaticTypes.tracker.Get(typeId);
                         var dataPtr = Components.GetUnknownType(state, typeId, groupId, in ent, out _, default);
                         func.Call(in config, new safe_ptr<byte>(dataPtr), in ent);
                     }
@@ -282,11 +354,19 @@ namespace ME.BECS {
                 for (uint i = 0u; i < this.count; ++i) {
                     this.functionPointers[i].Dispose();
                 }
-                
+
+                if (this.functionMaskPointers.ptr != null) {
+                    for (uint i = 0u; i < this.count; ++i) {
+                        this.functionMaskPointers[i].Dispose();
+                    }
+                }
+
                 _free(this.data);
                 CutsPool._freeArray(this.offsets, this.count);
                 CutsPool._freeArray(this.typeIds, this.count);
+                if (this.masks.ptr != null) CutsPool._freeArray(this.masks, this.count);
                 CutsPool._freeArray(this.functionPointers, this.count);
+                if (this.functionMaskPointers.ptr != null) CutsPool._freeArray(this.functionMaskPointers, this.count);
 
             }
 
@@ -705,7 +785,7 @@ namespace ME.BECS {
 
             this = default;
             this.id = id > 0u || autoRegisterConfig == false ? id : EntityConfigRegistry.Register(config, out _);
-            this.data = new Data(config.data.components);
+            this.data = new Data(ref staticDataEnt.World.state.ptr->allocator, config.data.components, config.maskable == true ? config.data.masks : null);
             this.dataShared = new SharedData(config.sharedData.components);
             this.aspects = new Aspect(config.aspects);
             this.collectionsData = new CollectionsData(config.collectionsData);
