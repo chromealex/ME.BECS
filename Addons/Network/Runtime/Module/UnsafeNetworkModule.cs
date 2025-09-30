@@ -936,11 +936,13 @@ namespace ME.BECS.Network {
                 moduleData.ptr->writeBuffer.Reset();
                 data.Serialize(ref moduleData.ptr->writeBuffer);
                 var dataBytes = moduleData.ptr->writeBuffer.ToArray();
-                dataPtr = _makeArray<byte>((uint)dataBytes.Length);
-                fixed (void* ptr = &dataBytes[0]) {
-                    _memcpy((safe_ptr)ptr, dataPtr, dataBytes.Length);
+                if (dataBytes.Length > 0) {
+                    dataPtr = _makeArray<byte>((uint)dataBytes.Length);
+                    fixed (void* ptr = &dataBytes[0]) {
+                        _memcpy((safe_ptr)ptr, dataPtr, dataBytes.Length);
+                    }
+                    dataLength = (ushort)dataBytes.Length;
                 }
-                dataLength = (ushort)dataBytes.Length;
             }
 
             // Form the package
