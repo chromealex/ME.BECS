@@ -50,6 +50,9 @@ namespace ME.BECS.Attack {
                 if (this.ent.Has<ME.BECS.Bullets.DamageOverrideComponent>() == true) return this.ent.Read<ME.BECS.Bullets.DamageOverrideComponent>().damage;
                 var config = this.readComponentVisual.bulletConfig.AsUnsafeConfig();
                 if (config.IsValid() == true && config.TryRead(out ME.BECS.Bullets.BulletConfigComponent bulletConfigComponent) == true) {
+                    if (this.ent.TryRead(out ME.BECS.Bullets.DamageMultiplierComponent multiplierComponent) == true) {
+                        return (uint)math.floor(bulletConfigComponent.damage * multiplierComponent.factor);
+                    }
                     return bulletConfigComponent.damage;
                 }
                 

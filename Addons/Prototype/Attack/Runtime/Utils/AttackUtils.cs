@@ -283,8 +283,11 @@ namespace ME.BECS.Attack {
                 bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
                 bullet.component.sourceUnit = sourceUnit;
 
-                if (attackAspect.ent.Has<DamageOverrideComponent>()) {
+                if (attackAspect.ent.Has<DamageOverrideComponent>() == true) {
                     bullet.damage = attackAspect.ent.Read<DamageOverrideComponent>().damage;
+                } else if (attackAspect.ent.Has<DamageMultiplierComponent>() == true) {
+                    ref var dmg = ref ent.Get<BulletConfigComponent>().damage;
+                    dmg = (uint)math.floor(dmg * attackAspect.ent.Read<DamageMultiplierComponent>().factor);
                 }
                 return bullet;
             }

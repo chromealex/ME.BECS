@@ -33,4 +33,13 @@ namespace ME.BECS.Bullets {
 
     }
     
+    [ComponentGroup(typeof(BulletComponentGroup))]
+    public struct DamageMultiplierComponent : IComponent {
+
+        public static DamageMultiplierComponent Default => new DamageMultiplierComponent() { factor = 1f };
+        
+        public tfloat factor;
+
+    }
+    
 }
