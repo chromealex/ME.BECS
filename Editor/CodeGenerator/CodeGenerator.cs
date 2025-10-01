@@ -378,7 +378,10 @@ namespace ME.BECS.Editor {
         public static void RegenerateBurstAOT(bool forced = false) {
 
             if (UnityEngine.Application.isBatchMode == true && forced == false) return;
+            if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
+            UnityEngine.Debug.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
+            
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
 
             var list = EditorUtils.GetAssembliesInfo();

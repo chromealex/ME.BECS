@@ -20,13 +20,6 @@ namespace ME.BECS.Editor {
             
         }
 
-        [MenuItem("ME.BECS/Regenerate Assemblies", priority = 100)]
-        public static void CodeGeneratorRegenerateAsms() {
-
-            CodeGenerator.RegenerateBurstAOT(true);
-
-        }
-
         #if ME_BECS_EDITOR_INTERNAL
         [MenuItem("ME.BECS/Internal/Generate Jobs", priority = 0)]
         public static void CodeGenInternalGenerateJobs() {
@@ -71,6 +64,33 @@ namespace ME.BECS.Editor {
         }
         #endif
 
+    }
+
+    public static class CodeGeneratorMenu {
+
+        private const string MENU_NAME = "ME.BECS/Code Generator/Run";
+        private const string MENU_NAME_AUTO = "ME.BECS/Code Generator/Run Automatically";
+        
+        public static bool IsEnabledAuto => EditorPrefs.GetBool(MENU_NAME_AUTO, true);
+        
+        [MenuItem(MENU_NAME, priority = 100)]
+        private static void Run() {
+            
+            CodeGenerator.RegenerateBurstAOT(true);
+
+        }
+
+        [MenuItem(MENU_NAME_AUTO, priority = 101)]
+        private static void RunAuto() {
+            EditorPrefs.SetBool(MENU_NAME_AUTO, !IsEnabledAuto);
+        }
+
+        [MenuItem(MENU_NAME_AUTO, true)]
+        private static bool SwitchOffValidate() {
+            Menu.SetChecked(MENU_NAME_AUTO, IsEnabledAuto);
+            return true;
+        }
+        
     }
 
     public class ThemesCodeGenerator : CustomCodeGenerator {
