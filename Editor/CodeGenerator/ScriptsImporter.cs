@@ -73,8 +73,61 @@ namespace ME.BECS.Editor {
             System.IO.File.WriteAllText(path, UnityEngine.JsonUtility.ToJson(data, true));
         }
 
+        [System.Serializable]
+        public struct ImporterCache {
+
+            public System.Collections.Generic.List<string> importedAssets;
+            public System.Collections.Generic.List<string> deletedAssets;
+            public System.Collections.Generic.List<string> movedAssets;
+            public System.Collections.Generic.List<string> movedFromAssetPaths;
+
+        }
+        
+        private static void AddCache(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths) {
+            
+            var cacheStr = UnityEditor.EditorPrefs.GetString("ME.BECS.Importer.Cache", "{}");
+            var cache = UnityEngine.JsonUtility.FromJson<ImporterCache>(cacheStr);
+            if (cache.importedAssets == null) cache.importedAssets = new System.Collections.Generic.List<string>();
+            if (cache.deletedAssets == null) cache.deletedAssets = new System.Collections.Generic.List<string>();
+            if (cache.movedAssets == null) cache.movedAssets = new System.Collections.Generic.List<string>();
+            if (cache.movedFromAssetPaths == null) cache.movedFromAssetPaths = new System.Collections.Generic.List<string>();
+            
+            cache.importedAssets.AddRange(importedAssets);
+            cache.deletedAssets.AddRange(deletedAssets);
+            cache.movedAssets.AddRange(movedAssets);
+            cache.movedFromAssetPaths.AddRange(movedFromAssetPaths);
+            UnityEditor.EditorPrefs.SetString("ME.BECS.Importer.Cache", UnityEngine.JsonUtility.ToJson(cache));
+            
+        }
+        
+        private static void LoadCache(ref string[] importedAssets, ref string[] deletedAssets, ref string[] movedAssets, ref string[] movedFromAssetPaths) {
+            
+            var cacheStr = UnityEditor.EditorPrefs.GetString("ME.BECS.Importer.Cache", "{}");
+            var cache = UnityEngine.JsonUtility.FromJson<ImporterCache>(cacheStr);
+            if (cache.importedAssets == null) cache.importedAssets = new System.Collections.Generic.List<string>();
+            if (cache.deletedAssets == null) cache.deletedAssets = new System.Collections.Generic.List<string>();
+            if (cache.movedAssets == null) cache.movedAssets = new System.Collections.Generic.List<string>();
+            if (cache.movedFromAssetPaths == null) cache.movedFromAssetPaths = new System.Collections.Generic.List<string>();
+            
+            importedAssets = importedAssets.Concat(cache.importedAssets).ToArray();
+            deletedAssets = deletedAssets.Concat(cache.deletedAssets).ToArray();
+            movedAssets = movedAssets.Concat(cache.movedAssets).ToArray();
+            movedFromAssetPaths = movedFromAssetPaths.Concat(cache.movedFromAssetPaths).ToArray();
+
+            cache = default;
+            UnityEditor.EditorPrefs.SetString("ME.BECS.Importer.Cache", "{}");
+            
+        }
+
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths) {
 
+            if (CodeGeneratorMenu.IsEnabledImportCache == false) {
+                AddCache(importedAssets, deletedAssets, movedAssets, movedFromAssetPaths);
+                return;
+            }
+
+            LoadCache(ref importedAssets, ref deletedAssets, ref movedAssets, ref movedFromAssetPaths);
+            
             var isDirty = false;
             if (movedAssets != null && movedAssets.Length > 0) {
 

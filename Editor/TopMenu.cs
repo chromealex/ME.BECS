@@ -70,8 +70,10 @@ namespace ME.BECS.Editor {
 
         private const string MENU_NAME = "ME.BECS/Code Generator/Run";
         private const string MENU_NAME_AUTO = "ME.BECS/Code Generator/Run Automatically";
+        private const string MENU_NAME_IMPORT_CACHE = "ME.BECS/Code Generator/Generate Import Cache";
         
         public static bool IsEnabledAuto => EditorPrefs.GetBool(MENU_NAME_AUTO, true);
+        public static bool IsEnabledImportCache => EditorPrefs.GetBool(MENU_NAME_IMPORT_CACHE, true);
         
         [MenuItem(MENU_NAME, priority = 100)]
         private static void Run() {
@@ -86,11 +88,22 @@ namespace ME.BECS.Editor {
         }
 
         [MenuItem(MENU_NAME_AUTO, true)]
-        private static bool SwitchOffValidate() {
+        private static bool AutoValidate() {
             Menu.SetChecked(MENU_NAME_AUTO, IsEnabledAuto);
             return true;
         }
-        
+
+        [MenuItem(MENU_NAME_IMPORT_CACHE, priority = 102)]
+        private static void RunImportCache() {
+            EditorPrefs.SetBool(MENU_NAME_IMPORT_CACHE, !IsEnabledImportCache);
+        }
+
+        [MenuItem(MENU_NAME_IMPORT_CACHE, true)]
+        private static bool ImportCacheValidate() {
+            Menu.SetChecked(MENU_NAME_IMPORT_CACHE, IsEnabledImportCache);
+            return true;
+        }
+
     }
 
     public class ThemesCodeGenerator : CustomCodeGenerator {
