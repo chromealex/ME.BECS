@@ -26,6 +26,7 @@ namespace ME.BECS {
         public byte tickCheck;
         public ushort updateType;
         public JobHandle lastApplyHandle;
+        public uint seed;
 
         public WorldState WorldState {
             get {

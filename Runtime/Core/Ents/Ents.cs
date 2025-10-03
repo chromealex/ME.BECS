@@ -188,7 +188,7 @@ namespace ME.BECS {
                 state.ptr->entities.readWriteSpinner.ReadBegin(state);
                 var nextGen = ++state.ptr->entities.generations[in state.ptr->allocator, idx];
                 state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
-                state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx;
+                state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx + state.ptr->seed;
                 var groupsIndex = (StaticTypesTrackedBurst.maxId + 1u) * idx;
                 _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<ushort>.size, (StaticTypesTrackedBurst.maxId + 1u) * TSize<ushort>.size);
                 state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
@@ -211,7 +211,7 @@ namespace ME.BECS {
                 state.ptr->entities.versions.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.versions[in state.ptr->allocator, idx] = version;
                 state.ptr->entities.seeds.Resize(ref state.ptr->allocator, idx + 1u, 2);
-                state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx;
+                state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx + state.ptr->seed;
                 state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
                 state.ptr->entities.readWriteSpinner.WriteEnd();

@@ -309,6 +309,11 @@ namespace ME.BECS {
             return result;
         }
 
+        [INLINE(256)]
+        public void SetSeed(uint seed) {
+            this.state.ptr->seed = seed;
+        }
+
     }
 
 }
