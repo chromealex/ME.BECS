@@ -20,6 +20,7 @@ namespace ME.BECS.Network {
         public bool useAbsoluteTime = true;
         public SimulationMode simulationMode = SimulationMode.Normal;
         public UnityEngine.TextAsset replayData;
+        public uint pingMs = 0u;
         
         private unsafe struct ConnectJob : Unity.Jobs.IJob {
 
@@ -118,6 +119,7 @@ namespace ME.BECS.Network {
         }
         
         private System.Collections.Generic.Queue<byte[]> sendBytes;
+        private System.Collections.Generic.Queue<byte[]> receivedBytes;
         private System.Collections.Generic.Queue<byte[]> loadedPackages;
         
         private ClassPtr<LocalTransport> transportPtr;
@@ -137,6 +139,7 @@ namespace ME.BECS.Network {
 
         public void OnAwake() {
             this.sendBytes = new System.Collections.Generic.Queue<byte[]>();
+            this.receivedBytes = new System.Collections.Generic.Queue<byte[]>();
             this.Status = TransportStatus.Unknown;
         }
 
@@ -154,6 +157,7 @@ namespace ME.BECS.Network {
             if (this.networkPtr.IsValid == true) this.networkPtr.Dispose();
             
             this.sendBytes = null;
+            this.receivedBytes = null;
             this.Status = TransportStatus.Unknown;
         }
 
@@ -230,17 +234,20 @@ namespace ME.BECS.Network {
             
         }
 
+        private uint currentPingCounter;
         public byte[] Receive() {
             
             if (this.Status != TransportStatus.Connected) return null;
 
+            this.SimulateReceive();
+            
             if (this.useAbsoluteTime == true) {
                 var currentTime = System.DateTime.UtcNow.ToUniversalTime().Subtract(
                     new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)
                 ).TotalMilliseconds;
                 this.ServerTime = currentTime;
             }
-
+            
             if (this.simulationMode == SimulationMode.SimulateReplay) {
                 if (this.loadedPackages.Count > 0) {
                     return this.loadedPackages.Dequeue();
@@ -248,14 +255,32 @@ namespace ME.BECS.Network {
                 return null;
             }
 
-            if (this.sendBytes.Count > 0) {
+            if (this.receivedBytes.Count > 0) {
 
-                return this.sendBytes.Dequeue();
+                return this.receivedBytes.Dequeue();
 
             }
 
             return null;
 
+        }
+
+        private void SimulateReceive() {
+            
+            if (this.pingMs > 0u) {
+                this.currentPingCounter += (uint)System.Math.Floor(UnityEngine.Time.unscaledTimeAsDouble * 1000L);
+                if (this.currentPingCounter < this.pingMs) {
+                    return;
+                }
+                this.currentPingCounter -= this.pingMs;
+            }
+
+            while (this.sendBytes.Count > 0) {
+                var bytes = this.sendBytes.Dequeue();
+                this.receivedBytes.Enqueue(bytes);
+            }
+            this.sendBytes.Clear();
+            
         }
 
     }

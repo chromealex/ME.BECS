@@ -992,13 +992,15 @@ namespace ME.BECS.Network {
                 var deltaTimeMs = this.GetDeltaTime();
                 var currentTick = world.state.ptr->tick;
                 var targetTick = this.GetTargetTick();
-                {
+                while (true) {
                     var bytes = this.networkTransport.Receive();
                     if (bytes != null) {
                         var readBuffer = new StreamBufferReader(bytes);
                         var package = NetworkPackage.Create(ref readBuffer);
                         this.data.ptr->eventsStorage.Add(package, currentTick);
                         readBuffer.Dispose();
+                    } else {
+                        break;
                     }
                 }
                 if (targetTick > currentTick && targetTick - currentTick > 1) Logger.Network.LogInfo($"Tick {currentTick}..{targetTick}, dt: {deltaTimeMs}, ticks: {unchecked(targetTick - currentTick)}");

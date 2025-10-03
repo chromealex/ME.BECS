@@ -31,7 +31,7 @@ namespace ME.BECS.Network {
             public uint capacity;
             [UnityEngine.Tooltip("Events storage per tick resize by this value.")]
             public uint capacityPerTick;
-            [UnityEngine.Tooltip("How much local players will be in your game.")]
+            [UnityEngine.Tooltip("How many local players will be in your game.")]
             public uint localPlayersCapacity;
             [UnityEngine.Tooltip("Write/Read buffer capacity.")]
             public uint bufferCapacity;
@@ -67,7 +67,7 @@ namespace ME.BECS.Network {
         public uint tickTime;
         [UnityEngine.Tooltip("How long can take one frame (ms). Logic will smoothly run up to the next frames.")]
         public uint maxFrameTime;
-        [UnityEngine.Tooltip("Input lag in ticks. How much ticks should be added to current tick when send network event.")]
+        [UnityEngine.Tooltip("Input lag in ticks. How many ticks should be added to current tick when send network event.")]
         public uint inputLag;
         [UnityEngine.SerializeReference]
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(runtimeAssembliesOnly: true, showLabel = false)]
