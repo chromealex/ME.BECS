@@ -17,10 +17,10 @@ namespace ME.BECS {
         private static void EditorApplicationOnplayModeStateChanged(UnityEditor.PlayModeStateChange state) {
              if (state != UnityEditor.PlayModeStateChange.EnteredEditMode) {
                 return;           
-            }
-            if (UnityEditor.EditorSettings.enterPlayModeOptionsEnabled == true) {
-                data = null;
-            }
+             }
+             if (UnityEditor.EditorSettings.enterPlayModeOptionsEnabled == true) {
+                 data = null;
+             }
         }
         #endif
         
