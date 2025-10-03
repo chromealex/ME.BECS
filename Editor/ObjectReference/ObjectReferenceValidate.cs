@@ -87,9 +87,9 @@ namespace ME.BECS.Editor {
             }
 
             if (isDirty == true) {
-                items = items.Where(x => x.data.source != null || x.data.sourceReference.editorAsset != null).ToArray();
                 ObjectReferenceRegistry.data.objects = items;
                 EditorUtility.SetDirty(ObjectReferenceRegistry.data);
+                ObjectReferenceRegistry.data.OnValidate();
             }
             
         }
