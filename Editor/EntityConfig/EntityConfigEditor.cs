@@ -85,7 +85,7 @@ namespace ME.BECS.Editor {
 
             var scrollView = new ScrollView(ScrollViewMode.Vertical);
             scrollView.AddManipulator(new ContextualMenuManipulator((menu) => {
-                menu.menu.AppendAction("Copy CSV", (evt) => {
+                menu.menu.AppendAction("Copy Entity Config CSV", (evt) => {
                     var data = new System.Text.StringBuilder();
                     {
                         var components = serializedObject.FindProperty(nameof(EntityConfig.data)).FindPropertyRelative(nameof(EntityConfig.data.components));
@@ -261,6 +261,8 @@ namespace ME.BECS.Editor {
         }
 
         private bool needSync = false;
+        private bool dragging;
+
         public void Update() {
 
             if (this.needSync == true) {
@@ -402,8 +404,28 @@ namespace ME.BECS.Editor {
             if (masks.arraySize < dataArr.arraySize) {
                 masks.arraySize = dataArr.arraySize;
             }
+
+            var dragHandler = new VisualElement();
+            dragHandler.style.visibility = Visibility.Hidden;
+            {
+                dragHandler.AddToClassList("drag-handler");
+                {
+                    var decorator = new VisualElement();
+                    decorator.AddToClassList("left");
+                    dragHandler.Add(decorator);
+                }
+                {
+                    var decorator = new VisualElement();
+                    decorator.AddToClassList("right");
+                    dragHandler.Add(decorator);
+                }
+                container.Add(dragHandler);
+            }
+
             for (int i = 0; i < dataArr.arraySize; ++i) {
 
+                VisualElement rootElement = null;
+                PropertyField propertyField = null;
                 var idx = i;
                 var it = dataArr.GetArrayElementAtIndex(i);
                 var copy = it.Copy();
@@ -421,9 +443,10 @@ namespace ME.BECS.Editor {
                 } else if (copy.hasVisibleChildren == true) {
 
                     var propContainer = new VisualElement();
+                    rootElement = propContainer;
                     propContainer.AddToClassList("property-field-container");
                     
-                    var propertyField = new UnityEditor.UIElements.PropertyField(copy, label) {
+                    propertyField = new UnityEditor.UIElements.PropertyField(copy, label) {
                         name = $"PropertyField:{it.propertyPath}",
                     };
                     propertyField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
@@ -505,31 +528,6 @@ namespace ME.BECS.Editor {
                     propertyField.RegisterCallback<ChangeEvent<StyleFont>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleFontDefinition>, PropertyField>((evt, p) => rebuild(), propertyField);
                     propertyField.RegisterCallback<ChangeEvent<StyleLength>, PropertyField>((evt, p) => rebuild(), propertyField);
-                    propertyField.AddManipulator(new ContextualMenuManipulator((menu) => {
-                        menu.menu.AppendAction("Copy JSON", (evt) => {
-                            var json = JSON.JsonUtils.ComponentToJSON(copy);
-                            EditorUtils.Copy(json);
-                        });
-                        var pasteStatus = DropdownMenuAction.Status.Normal;
-                        var buffer = EditorUtils.ReadCopyBuffer();
-                        if (string.IsNullOrEmpty(buffer) == true) {
-                            pasteStatus = DropdownMenuAction.Status.Disabled;
-                        } else if (JSON.JsonUtils.IsValidJson(buffer) == false) {
-                            pasteStatus = DropdownMenuAction.Status.Disabled;
-                        }
-                        menu.menu.AppendAction("Paste JSON", (evt) => {
-                            copy.serializedObject.Update();
-                            JSON.JsonUtils.JSONToComponent(buffer, copy);
-                            copy.serializedObject.ApplyModifiedProperties();
-                            copy.serializedObject.Update();
-                            propertyField.Bind(serializedObject);
-                            propertyField.BindProperty(copy);
-                        }, pasteStatus);
-                        menu.menu.AppendAction("Copy CSV", (evt) => {
-                            var csv = JSON.JsonUtils.ComponentToCSV(copy);
-                            EditorUtils.Copy(csv);
-                        });
-                    }));
 
                     propContainer.Add(propertyField);
 
@@ -548,25 +546,185 @@ namespace ME.BECS.Editor {
 
                 } else {
 
-                    var labelField = new Foldout();
+                    var elementContainer = new VisualElement();
+                    elementContainer.AddToClassList("field");
+                    elementContainer.AddToClassList("tag-component");
+                    var labelField = new Label();
+                    labelField.AddToClassList("unity-foldout");
+                    elementContainer.Add(labelField);
+                    rootElement = elementContainer;
                     var foldoutLabel = labelField.Q<Toggle>();
                     EditorUIUtils.DrawTooltip(foldoutLabel, EditorUtils.GetComponent(type)?.GetEditorComment());
                     labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     labelField.text = label;
                     labelField.AddToClassList("tag-component");
-                    labelField.AddToClassList("field");
                     if (EditorUtils.TryGetComponentGroupColor(type, out var color) == true) {
                         color.a = 0.1f;
                         labelField.style.backgroundColor = new StyleColor(color);
                     }
-                    container.Add(labelField);
-                    list.Add(labelField);
+                    container.Add(elementContainer);
+                    list.Add(elementContainer);
 
+                    elementContainer.AddManipulator(new ContextualMenuManipulator((menu) => {
+                        menu.menu.AppendAction("Move Up", (evt) => {
+                            copy.serializedObject.Update();
+                            dataArr.MoveArrayElement(idx, idx - 1);
+                            copy.serializedObject.ApplyModifiedProperties();
+                            copy.serializedObject.Update();
+                        }, idx == 0 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+                        menu.menu.AppendAction("Move Down", (evt) => {
+                            copy.serializedObject.Update();
+                            dataArr.MoveArrayElement(idx, idx + 1);
+                            copy.serializedObject.ApplyModifiedProperties();
+                            copy.serializedObject.Update();
+                        }, idx == dataArr.arraySize - 1 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+                    }));
+
+                }
+
+                if (rootElement != null) {
+
+                    rootElement.AddManipulator(new ContextualMenuManipulator((menu) => {
+                        menu.menu.AppendAction("Move Up", (evt) => {
+                            copy.serializedObject.Update();
+                            dataArr.MoveArrayElement(idx, idx - 1);
+                            copy.serializedObject.ApplyModifiedProperties();
+                            copy.serializedObject.Update();
+                            Redraw();
+                        }, idx == 0 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+                        menu.menu.AppendAction("Move Down", (evt) => {
+                            copy.serializedObject.Update();
+                            dataArr.MoveArrayElement(idx, idx + 1);
+                            copy.serializedObject.ApplyModifiedProperties();
+                            copy.serializedObject.Update();
+                            Redraw();
+                        }, idx == dataArr.arraySize - 1 ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+                        if (propertyField != null) {
+                            menu.menu.AppendSeparator();
+                            menu.menu.AppendAction("Copy JSON", (evt) => {
+                                var json = JSON.JsonUtils.ComponentToJSON(copy);
+                                EditorUtils.Copy(json);
+                            });
+                            var pasteStatus = DropdownMenuAction.Status.Normal;
+                            var buffer = EditorUtils.ReadCopyBuffer();
+                            if (string.IsNullOrEmpty(buffer) == true) {
+                                pasteStatus = DropdownMenuAction.Status.Disabled;
+                            } else if (JSON.JsonUtils.IsValidJson(buffer) == false) {
+                                pasteStatus = DropdownMenuAction.Status.Disabled;
+                            }
+                            menu.menu.AppendAction("Paste JSON", (evt) => {
+                                copy.serializedObject.Update();
+                                JSON.JsonUtils.JSONToComponent(buffer, copy);
+                                copy.serializedObject.ApplyModifiedProperties();
+                                copy.serializedObject.Update();
+                                propertyField.Bind(serializedObject);
+                                propertyField.BindProperty(copy);
+                            }, pasteStatus);
+                            menu.menu.AppendAction("Copy CSV", (evt) => {
+                                var csv = JSON.JsonUtils.ComponentToCSV(copy);
+                                EditorUtils.Copy(csv);
+                            });
+                        }
+                    }));
+
+                    var dragRoot = new VisualElement();
+                    dragRoot.AddToClassList("drag-root");
+                    rootElement.Add(dragRoot);
+
+                    dragRoot.RegisterCallback<PointerDownEvent>((evt) => {
+                        // show handler
+                        dragHandler.style.visibility = Visibility.Visible;
+                        FindClosestSlot(rootElement, evt.position, out _, out var pos);
+                        dragHandler.style.top = pos.y - rootElement.parent.worldBound.y;
+                        dragRoot.CapturePointer(evt.pointerId);
+                        this.dragging = true;
+                    });
+                    dragRoot.RegisterCallback<PointerMoveEvent>((evt) => {
+                        if (this.dragging == true && dragRoot.HasPointerCapture(evt.pointerId) == true) {
+                            FindClosestSlot(rootElement, evt.position, out _, out var pos);
+                            dragHandler.style.top = pos.y - rootElement.parent.worldBound.y;
+                        }
+                    });
+                    dragRoot.RegisterCallback<PointerUpEvent>((evt) => {
+                        if (this.dragging == true && dragRoot.HasPointerCapture(evt.pointerId) == true) {
+                            FindClosestSlot(rootElement, evt.position, out var index, out _);
+                            copy.serializedObject.Update();
+                            dataArr.MoveArrayElement(idx, index);
+                            copy.serializedObject.ApplyModifiedProperties();
+                            copy.serializedObject.Update();
+                            dragRoot.ReleasePointer(evt.pointerId);
+                            Redraw();
+                        }
+                    });
+                    dragRoot.RegisterCallback<PointerCaptureOutEvent>((evt) => {
+                        if (this.dragging == true) {
+                            dragHandler.style.visibility = Visibility.Hidden;
+                            this.dragging = false;
+                        }
+                    });
                 }
 
             }
 
             updateButtons.Invoke(list, -2);
+
+            return;
+
+            VisualElement FindClosestSlot(VisualElement drag, UnityEngine.Vector2 position, out int index, out UnityEngine.Vector2 pos) {
+                var idx = -1;
+                for (var i = 0; i < list.Count; ++i) {
+                    var slot = list[i];
+                    if (slot == drag) {
+                        idx = i;
+                        break;
+                    }
+                }
+
+                pos = default;
+                index = -1;
+                float bestDistanceSq = float.MaxValue;
+                VisualElement closest = null;
+                for (var i = 0; i < list.Count + 1; ++i) {
+                    var slot = i >= list.Count ? null : list[i];
+                    UnityEngine.Vector2 displacement;
+                    UnityEngine.Vector2 offset;
+                    if (slot == null) {
+                        // bottom
+                        offset = new UnityEngine.Vector2(0f, list[list.Count - 1].worldBound.yMax);
+                        displacement = position - offset;
+                    } else {
+                        offset = new UnityEngine.Vector2(0f, slot.worldBound.yMin);
+                        displacement = position - offset;
+                    }
+                    float distanceSq = displacement.sqrMagnitude;
+                    if (distanceSq < bestDistanceSq) {
+                        pos = offset;
+                        index = i;
+                        bestDistanceSq = distanceSq;
+                        closest = slot;
+                    }
+                }
+
+                var last = false;
+                if (index >= list.Count) {
+                    index = list.Count - 1;
+                    last = true;
+                }
+                if (idx < index && last == false) {
+                    index = UnityEngine.Mathf.Clamp(index - 1, 0, list.Count - 1);
+                }
+
+                return closest;
+            }
+            
+            UnityEngine.Vector3 RootSpaceOfSlot(VisualElement drag, VisualElement slot) {
+                var slotWorldSpace = slot.parent.LocalToWorld(slot.layout.position);
+                return drag.parent.WorldToLocal(slotWorldSpace);
+            }
+            
+            void Redraw() {
+                this.DrawFields_INTERNAL(updateButtons, container, dataContainer, componentsArr, serializedObject, useMaskable);
+            }
 
         }
 

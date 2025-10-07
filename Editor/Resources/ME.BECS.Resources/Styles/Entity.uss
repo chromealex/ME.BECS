@@ -3,6 +3,46 @@
     border-bottom-color: rgba(0, 90, 128, 0.1);
 }
 
+.drag-handler {
+    position: absolute;
+    height: 2px;
+    left: 0px;
+    right: 0px;
+    background-color: #116791;
+    overflow: visible;
+}
+.drag-handler VisualElement {
+    height: 8px;
+    top: -3px;
+    position: absolute;
+    width: 1px;
+    overflow: visible;
+    background-color: #116791;
+}
+.drag-handler .left {
+    left: 0px;
+}
+.drag-handler .right {
+    right: 0px;
+}
+
+.drag-root {
+    opacity: 0.1;
+}
+.field:hover .drag-root,
+.property-field-container:hover .drag-root {
+    opacity: 1;
+}
+.drag-root {
+    position: absolute;
+    right: 6px;
+    width: 16px;
+    height: 16px;
+    top: 6px;
+    background-image: resource("d_Grid.MoveTool.png");
+    cursor: move-arrow;
+}
+
 .entity-header {
     padding: 10px;
     margin-left: 10px;
@@ -171,13 +211,13 @@
 }
 
 .fields-container .field .unity-foldout,
-.fields-container Label.field {
+.fields-container .field .tag-component {
     border-radius: 5px;
     border-bottom-width: 1px;
 }
 
 .fields-container .field .unity-foldout__content,
-.fields-container Label.field {
+.fields-container .field .tag-component {
     background-color: rgba(0, 0, 0, 0.35);
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
@@ -189,7 +229,7 @@
 }
 
 .fields-container .field .unity-toggle,
-.fields-container Label.field {
+.fields-container .field .tag-component {
     margin: 0px;
     padding: 3px;
     border-top-left-radius: 5px;
@@ -206,15 +246,19 @@
     border-bottom-right-radius: 0px;
 }
 .fields-container .field .unity-toggle:hover,
-.fields-container Label.field:hover {
+.fields-container .field .tag-component:hover {
     background-color: rgba(0, 0, 0, 0.35);
     transition-property: background-color;
     transition-duration: 0.3s;
 }
 
 .fields-container .field .unity-toggle__input,
-.fields-container Label.field {
+.fields-container .field .tag-component {
     -unity-font-style: bold;
+}
+
+.fields-container .field .tag-component {
+    padding-left: 20px;
 }
 
 .fields-container .field.enabled {
