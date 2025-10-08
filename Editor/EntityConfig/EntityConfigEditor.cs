@@ -740,11 +740,6 @@ namespace ME.BECS.Editor {
                 return closest;
             }
             
-            UnityEngine.Vector3 RootSpaceOfSlot(VisualElement drag, VisualElement slot) {
-                var slotWorldSpace = slot.parent.LocalToWorld(slot.layout.position);
-                return drag.parent.WorldToLocal(slotWorldSpace);
-            }
-            
             void Redraw() {
                 this.DrawFields_INTERNAL(updateButtons, container, dataContainer, componentsArr, serializedObject, useMaskable);
             }

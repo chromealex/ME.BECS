@@ -326,7 +326,7 @@ namespace ME.BECS.Editor.Systems {
                                         // we have current sync point, but previous sync point was not exist - add pre apply
                                         var v = $"preBatch{index}";
                                         schemeDependsOn = v;
-                                        scheme.Add($" * {Align("Batches.Apply (Pre)", 32)} :  {Align($"{schemeDependsOn} => {v}", 16 + 32 + 4, true)} [  SYNC   ]");
+                                        scheme.Add($" * {Align("Batches.Apply (Pre)", 32)} :  {Align($"{schemeDependsOn} => {v}", 16 + 32 + 4, CutType.Start)} [  SYNC   ]");
                                         methodContent.Add($"var {v} = Batches.Apply({dependsOn}, in world);");
                                         return v;
                                     }
@@ -362,7 +362,7 @@ namespace ME.BECS.Editor.Systems {
                             }*/
                             
                             var resDep = $"dep{indexStr}";
-                            scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, true)} [  SYNC   ]");
+                            scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, CutType.Start)} [  SYNC   ]");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
                             methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, in world);");
@@ -519,7 +519,7 @@ namespace ME.BECS.Editor.Systems {
                                         }
 
                                         dependsOn = AddPreApply(systemNode, index, ref schemeDependsOn, dependsOn);
-                                        scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, true)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
+                                        scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, CutType.End)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
 
                                         if (systemNode.system.GetType().IsGenericType == true) {
                                             var systemType = systemNode.system.GetType();
@@ -601,7 +601,7 @@ namespace ME.BECS.Editor.Systems {
 
                                     collectedDeps.Add($"dep{index.ToString()}");
                                     AddApply(n, index, ref schemeDependsOn, dependsOn, collectedDeps.GetReadOpString($"dep{index.ToString()}"));
-                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, CutType.End)} [ SKIPPED ]");
 
                                 }
 
@@ -632,7 +632,7 @@ namespace ME.BECS.Editor.Systems {
 
                                     collectedDeps.Add($"dep{index.ToString()}");
                                     methodContent.Add($"{collectedDeps.GetReadOpString($"dep{index.ToString()}")} = {dependsOn};");
-                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, true)} [ SKIPPED ]");
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(n.name, 32, CutType.End)} [ SKIPPED ]");
                                     printedDependencies.Add($"dep{index.ToString()}");
 
                                 }
@@ -707,18 +707,29 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
-        private static string Align(string str, int align, bool cut = false) {
+        public enum CutType {
+            None,
+            Start,
+            End,
+        }
+        
+        private static string Align(string str, int align, CutType cut = CutType.None) {
 
-            if (str.Length < align) {
+            if (str.Length <= align) {
 
                 var builder = new System.Text.StringBuilder(str);
                 builder.Append(' ', align - str.Length);
                 return builder.ToString();
 
-            } else if (cut == true) {
+            } else if (cut == CutType.Start) {
 
                 str = str.Substring(0, align - 3);
                 str += "...";
+
+            } else if (cut == CutType.End) {
+
+                str = str.Substring(str.Length - align + 3, align - 3);
+                str = $"...{str}";
 
             }
 
