@@ -316,7 +316,11 @@ namespace ME.BECS.Editor {
                 removeButton = new Button(() => {
                     serializedObject.Update();
                     var prop = serializedObject.FindProperty(componentsArr.propertyPath);
-                    if (selectedIndex >= 0) prop.DeleteArrayElementAtIndex(selectedIndex);
+                    var masksProp = serializedObject.FindProperty(dataContainer.propertyPath).FindPropertyRelative(nameof(EntityConfig.data.masks));
+                    if (selectedIndex >= 0) {
+                        prop.DeleteArrayElementAtIndex(selectedIndex);
+                        masksProp.DeleteArrayElementAtIndex(selectedIndex);
+                    }
                     selectedIndex = -1;
                     serializedObject.ApplyModifiedProperties();
                     this.DrawFields_INTERNAL(UpdateButtons, drawFieldsContainer, serializedObject.FindProperty(dataContainer.propertyPath), serializedObject.FindProperty(componentsArr.propertyPath), serializedObject, useMaskable);
@@ -331,7 +335,7 @@ namespace ME.BECS.Editor {
                     var rect = buttons.worldBound;
                     EditorUtils.ShowPopup(rect, (type) => {
                         {
-                            AddComponent(serializedObject, componentsArr, type);
+                            AddComponent(serializedObject, dataContainer, componentsArr, type);
                         }
                         if (typeof(IAspect).IsAssignableFrom(type) == true) {
                             // Add missing types
@@ -353,7 +357,7 @@ namespace ME.BECS.Editor {
                                 }
                                 if (found == false) {
                                     // Add component
-                                    AddComponent(serializedObject, componentsData, item.fieldType);
+                                    AddComponent(serializedObject, dataContainer, componentsData, item.fieldType);
                                     refreshRequired = true;
                                 }
                             }
@@ -381,10 +385,14 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static void AddComponent(SerializedObject serializedObject, SerializedProperty componentsArr, System.Type componentType) {
+        private static void AddComponent(SerializedObject serializedObject, SerializedProperty dataContainer, SerializedProperty componentsArr, System.Type componentType) {
             var prop = serializedObject.FindProperty(componentsArr.propertyPath);
+            var masksProp = serializedObject.FindProperty(dataContainer.propertyPath).FindPropertyRelative(nameof(EntityConfig.data.masks));
+            ++masksProp.arraySize;
             ++prop.arraySize;
             var lastProp = prop.GetArrayElementAtIndex(prop.arraySize - 1);
+            var mask = masksProp.GetArrayElementAtIndex(prop.arraySize - 1);
+            mask.FindPropertyRelative(nameof(ComponentsStorageBitMask.mask)).arraySize = componentType.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).Length; 
             var obj = lastProp.CreateComponent(componentType);
             lastProp.isExpanded = obj != null;
             lastProp.serializedObject.ApplyModifiedProperties();
@@ -585,9 +593,22 @@ namespace ME.BECS.Editor {
                 if (rootElement != null) {
 
                     rootElement.AddManipulator(new ContextualMenuManipulator((menu) => {
+                        var listIdx = new Unity.Collections.LowLevel.Unsafe.UnsafeList<int>(2, Unity.Collections.Allocator.Temp);
+                        var items = menu.menu.MenuItems();
+                        for (int index = 0; index < items.Count; ++index) {
+                            var dropdownMenuItem = items[index];
+                            if (dropdownMenuItem is DropdownMenuAction d && (d.name.Equals("Delete Array Element") == true || d.name.Equals("Duplicate Array Element") == true)) {
+                                listIdx.Add(index);
+                            }
+                        }
+                        for (int index = listIdx.Length - 1; index >= 0; --index) {
+                            int j = listIdx[index];
+                            menu.menu.RemoveItemAt(j);
+                        }
                         menu.menu.AppendAction("Move Up", (evt) => {
                             copy.serializedObject.Update();
                             dataArr.MoveArrayElement(idx, idx - 1);
+                            masks.MoveArrayElement(idx, idx - 1);
                             copy.serializedObject.ApplyModifiedProperties();
                             copy.serializedObject.Update();
                             Redraw();
@@ -595,6 +616,7 @@ namespace ME.BECS.Editor {
                         menu.menu.AppendAction("Move Down", (evt) => {
                             copy.serializedObject.Update();
                             dataArr.MoveArrayElement(idx, idx + 1);
+                            masks.MoveArrayElement(idx, idx + 1);
                             copy.serializedObject.ApplyModifiedProperties();
                             copy.serializedObject.Update();
                             Redraw();
@@ -650,6 +672,7 @@ namespace ME.BECS.Editor {
                             FindClosestSlot(rootElement, evt.position, out var index, out _);
                             copy.serializedObject.Update();
                             dataArr.MoveArrayElement(idx, index);
+                            masks.MoveArrayElement(idx, index);
                             copy.serializedObject.ApplyModifiedProperties();
                             copy.serializedObject.Update();
                             dragRoot.ReleasePointer(evt.pointerId);
