@@ -68,7 +68,7 @@ namespace ME.BECS.Editor {
 
     public static class CodeGeneratorMenu {
 
-        private const string MENU_NAME = "ME.BECS/Code Generator/Run";
+        private const string MENU_NAME = "ME.BECS/Code Generator/Run &R";
         private const string MENU_NAME_AUTO = "ME.BECS/Code Generator/Run Automatically";
         private const string MENU_NAME_IMPORT_CACHE = "ME.BECS/Code Generator/Generate Import Cache";
         
