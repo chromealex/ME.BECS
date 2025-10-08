@@ -360,6 +360,7 @@ namespace ME.BECS.Extensions.GraphProcessor
             Reset(didConnect);
         }
 
+        #if UNITY_6000_0_58_OR_NEWER
         public override void HandlePointerUp(PointerUpEvent evt) {
             
         }
@@ -371,6 +372,7 @@ namespace ME.BECS.Extensions.GraphProcessor
         public override void HandlePointerMove(PointerMoveEvent evt) {
             
         }
+        #endif
 
         Rect GetPortBounds(BaseNodeView nodeView, int index, scg::List<PortView> portList)
         {
