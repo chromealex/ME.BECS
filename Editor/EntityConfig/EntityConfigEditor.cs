@@ -476,8 +476,11 @@ namespace ME.BECS.Editor {
                                     var addContainers = new System.Collections.Generic.List<VisualElement>();
                                     var so = new SerializedObject(this.targets);
                                     var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
-                                    if (maskValues.arraySize < list.Count) {
+                                    if (maskValues.arraySize != list.Count) {
+                                        so.Update();
                                         maskValues.arraySize = list.Count;
+                                        so.ApplyModifiedProperties();
+                                        so.Update();
                                     }
                                     for (int i = 0; i < list.Count; ++i) {
                                         var savedIndex = i;
@@ -505,8 +508,11 @@ namespace ME.BECS.Editor {
                                         item.AddToClassList("maskable-property-field");
                                         var toggle = new Toggle();
                                         toggle.RegisterValueChangedCallback(evt => {
+                                            so.Update();
+                                            var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
                                             maskValues.GetArrayElementAtIndex(savedIndex).boolValue = evt.newValue;
-                                            serializedObject.ApplyModifiedProperties();
+                                            so.ApplyModifiedProperties();
+                                            so.Update();
                                             ApplyState(item, evt.newValue);
                                         });
                                         toggle.value = maskValues.GetArrayElementAtIndex(i).boolValue;

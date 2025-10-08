@@ -143,7 +143,6 @@ namespace ME.BECS {
     public struct StaticTypesShared<T> where T : unmanaged, IComponentShared {
 
         public static void AOT() {
-            
         }
 
     }
@@ -253,6 +252,7 @@ namespace ME.BECS {
 
         public static unsafe void AOT() {
             UnsafeEntityConfig.Data.MethodCaller<T>.Call(default, null, default);
+            UnsafeEntityConfig.MethodComponentMaskCaller<T>.Call(default, null, null, default, default);
         }
 
         [INLINE(256)]

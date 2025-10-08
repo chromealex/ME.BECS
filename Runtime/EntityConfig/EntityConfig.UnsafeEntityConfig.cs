@@ -80,7 +80,7 @@ namespace ME.BECS {
             private readonly safe_ptr<Func> functionPointers;
             private readonly uint count;
 
-            internal static class MethodCaller<T> where T : unmanaged, IComponent {
+            internal static class MethodCaller<T> where T : unmanaged, IComponentBase {
 
                 [UnityEngine.Scripting.PreserveAttribute]
                 [AOT.MonoPInvokeCallbackAttribute(typeof(MethodCallerDelegate))]
@@ -333,7 +333,7 @@ namespace ME.BECS {
                             Batches.Set_INTERNAL(typeId, in ent);
                         }
                         if (this.functionMaskPointers[i].IsValid() == true) {
-                            this.functionMaskPointers[i].Call(in config, new safe_ptr<byte>(dataPtr), data, in this.masks[i], in config.staticData.staticDataEnt);
+                            this.functionMaskPointers[i].Call(in config, new safe_ptr<byte>(dataPtr), data, in this.masks.ptr[i], in config.staticData.staticDataEnt);
                         }
                     } else {
                         Batches.Set(in ent, typeId, data.ptr, state);
