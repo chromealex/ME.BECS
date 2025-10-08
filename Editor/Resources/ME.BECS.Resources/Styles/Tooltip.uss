@@ -1,6 +1,9 @@
+* {
+    --duration: 0.2s;
+}
 .has-tooltip .tooltip-text {
     position: absolute;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.0);
     border-radius: 7px;
     padding: 7px;
     width: 100%;
@@ -9,10 +12,13 @@
     white-space: normal;
     align-self: flex-end;
     border-width: 2px;
-    border-color: rgba(0, 0, 0, 0.5);
+    border-color: rgba(0, 0, 0, 0.0);
     border-bottom-left-radius: 0px;
     border-bottom-right-radius: 0px;
-    display: none;
+    opacity: 0;
+    transition-property: background-color, border-color, opacity;
+    transition-duration: var(--duration);
+    /*display: none;*/
 }
 
 .has-tooltip .tooltip-text.custom-width {
@@ -26,6 +32,12 @@
     padding-right: 4px;
     padding-left: 0px;
     justify-content: flex-start;
+    background-color: rgba(20, 20, 20, 0.0);
+    transition-property: background-color, border-color, opacity;
+    transition-duration: var(--duration);
+    border-radius: 7px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
 }
 
 .has-tooltip .tooltip {
@@ -46,16 +58,15 @@
 }
 
 .has-tooltip:hover .tooltip-text {
-    display: flex;
+    /*display: flex;*/
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.5);
 }
 
 .has-tooltip:hover {
     overflow: visible;
-}
-
-.has-tooltip:hover {
     background-color: rgba(20, 20, 20, 0.8);
-    border-radius: 7px;
     border-top-left-radius: 0px;
     border-top-right-radius: 0px;
 }
