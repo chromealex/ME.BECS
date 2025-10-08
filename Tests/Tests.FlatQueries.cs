@@ -30,7 +30,7 @@ namespace ME.BECS.Tests {
                 test.Add((uint)i);
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -55,7 +55,7 @@ namespace ME.BECS.Tests {
                 data.Set(i, r);
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -81,7 +81,7 @@ namespace ME.BECS.Tests {
                 if (r == true) test.Add((uint)i);
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -116,7 +116,7 @@ namespace ME.BECS.Tests {
                 }
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -142,7 +142,7 @@ namespace ME.BECS.Tests {
                 if (r == true) test.Add((uint)i);
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -168,7 +168,7 @@ namespace ME.BECS.Tests {
                 if (r == true) test.Add((uint)i);
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -194,7 +194,7 @@ namespace ME.BECS.Tests {
                 if (r == true) test.Add((uint)i);
             }
             
-            var res = data.GetTrueBitsTempFast();
+            var res = data.GetTrueBitsTemp();
             for (int i = 0; i < res.Length; ++i) {
                 Assert.IsTrue(test[i] == res[i]);
             }
@@ -210,7 +210,7 @@ namespace ME.BECS.Tests {
         [Unity.Burst.BurstCompileAttribute]
         private static void TestsBurst(ref TempBitArray data) {
             
-            var bits = data.GetTrueBitsTempFast();
+            var bits = data.GetTrueBitsTemp();
 
         }
 

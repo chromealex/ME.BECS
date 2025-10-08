@@ -311,40 +311,8 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public UnsafeList<uint> GetTrueBitsTempFast() {
-            return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this);
-        }
-
-        [INLINE(256)]
         public UnsafeList<uint> GetTrueBitsTemp() {
-
-            var arr = FullFillBits.fullFillBits.Data;
-            var trueBits = new UnsafeList<uint>((int)this.Length, Constants.ALLOCATOR_TEMP);
-            for (int i = 0, cnt = (int)(this.Length + 63u) / BITS_IN_ULONG; i < cnt; ++i) {
-                var val = this.ptr[i];
-                if (val == 0UL) continue;
-                var offset = (uint)(i * BITS_IN_ULONG);
-                if (val == ulong.MaxValue) {
-                    if (offset + BITS_IN_ULONG <= arr.Length) {
-                        uint* srcPtr = arr.ptr.ptr + offset;
-                        UnsafeUtility.MemCpy(trueBits.Ptr + trueBits.Length, srcPtr, sizeof(uint) * BITS_IN_ULONG);
-                        trueBits.Length += BITS_IN_ULONG;
-                    } else {
-                        for (uint j = 0u; j < BITS_IN_ULONG; ++j) {
-                            trueBits.Ptr[trueBits.Length++] = offset + j;
-                        }
-                    }
-                    continue;
-                }
-
-                while (val != 0) {
-                    var c = Unity.Mathematics.math.tzcnt(val);
-                    trueBits.Add(offset + (uint)c);
-                    val &= val - 1;
-                }
-            }
-            
-            return trueBits;
+            return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this);
         }
 
         [INLINE(256)]

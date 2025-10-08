@@ -19,8 +19,7 @@ namespace ME.BECS.Collections {
             } else if (Unity.Burst.Intrinsics.Arm.Neon.IsNeonSupported == true) {
                 return BitScannerNeon.GetTrueBits(arr.ptr.ptr, (int)arr.Length);
             }*/
-            var bitsFullPreset = arr.Length < FullFillBits.FILL_BITS_COUNT;
-            return bitsFullPreset == true ? GetTrueBitsTempFastFull(arr.ptr.ptr, (int)arr.Length) : GetTrueBitsTempFast(arr.ptr.ptr, (int)arr.Length);
+            return arr.Length < FullFillBits.FILL_BITS_COUNT ? GetTrueBitsTempFastFull(arr.ptr.ptr, (int)arr.Length) : GetTrueBitsTempFast(arr.ptr.ptr, (int)arr.Length);
         }
         
         [INLINE(256)]
@@ -76,7 +75,6 @@ namespace ME.BECS.Collections {
         [INLINE(256)]
         internal static void ProcessWordInline(ulong val, uint* destPtr, ref int idx, uint offset) {
             if (val == 0UL) return;
-            
             if (val == ulong.MaxValue) {
                 if (offset + BITS_IN_ULONG <= FullFillBits.FILL_BITS_COUNT) {
                     var src = FullFillBits.fullFillBits.Data.ptr.ptr;
@@ -85,7 +83,6 @@ namespace ME.BECS.Collections {
                     return;
                 }
             }
-
             while (val != 0UL) {
                 var bit = math.tzcnt(val);
                 destPtr[idx++] = offset + (uint)bit;
@@ -96,14 +93,12 @@ namespace ME.BECS.Collections {
         [INLINE(256)]
         internal static void ProcessWordInlineFull(ulong val, uint* destPtr, ref int idx, uint offset) {
             if (val == 0UL) return;
-            
             if (val == ulong.MaxValue) {
                 var src = FullFillBits.fullFillBits.Data.ptr.ptr;
                 UnsafeUtility.MemCpy(destPtr + idx, src + offset, sizeof(uint) * BITS_IN_ULONG);
                 idx += BITS_IN_ULONG;
                 return;
             }
-
             while (val != 0UL) {
                 var bit = math.tzcnt(val);
                 destPtr[idx++] = offset + (uint)bit;
