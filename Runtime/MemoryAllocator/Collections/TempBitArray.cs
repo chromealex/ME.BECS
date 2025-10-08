@@ -6,14 +6,20 @@ namespace ME.BECS {
 
     public class FullFillBits {
 
+        public const uint FILL_BITS_COUNT = 2048u;
+        
         public static readonly Unity.Burst.SharedStatic<Internal.Array<uint>> fullFillBits = Unity.Burst.SharedStatic<Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<FullFillBits>(TAlign<Internal.Array<uint>>.align, 101L);
 
         public static void Initialize() {
             if (fullFillBits.Data.IsCreated == true) fullFillBits.Data.Dispose();
-            fullFillBits.Data.Resize(2048);
-            for (uint i = 0; i < 2048u; ++i) {
+            fullFillBits.Data.Resize(FILL_BITS_COUNT);
+            for (uint i = 0; i < FILL_BITS_COUNT; ++i) {
                 fullFillBits.Data.Get(i) = i;
             }
+        }
+
+        public static void Dispose() {
+            if (fullFillBits.Data.IsCreated == true) fullFillBits.Data.Dispose();
         }
 
     }
@@ -305,29 +311,36 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public UnsafeList<uint> GetTrueBitsTempFast() {
+            return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this);
+        }
+
+        [INLINE(256)]
         public UnsafeList<uint> GetTrueBitsTemp() {
 
+            var arr = FullFillBits.fullFillBits.Data;
             var trueBits = new UnsafeList<uint>((int)this.Length, Constants.ALLOCATOR_TEMP);
-            for (int i = 0, cnt = (int)Bitwise.AlignULongBits(this.Length) * 8 / BITS_IN_ULONG; i < cnt; ++i) {
+            for (int i = 0, cnt = (int)(this.Length + 63u) / BITS_IN_ULONG; i < cnt; ++i) {
                 var val = this.ptr[i];
                 if (val == 0UL) continue;
                 var offset = (uint)(i * BITS_IN_ULONG);
                 if (val == ulong.MaxValue) {
-                    var arr = FullFillBits.fullFillBits.Data;
-                    if (offset - BITS_IN_ULONG < arr.Length) {
-                        trueBits.AddRange(FullFillBits.fullFillBits.Data.ptr.ptr + offset, BITS_IN_ULONG);
+                    if (offset + BITS_IN_ULONG <= arr.Length) {
+                        uint* srcPtr = arr.ptr.ptr + offset;
+                        UnsafeUtility.MemCpy(trueBits.Ptr + trueBits.Length, srcPtr, sizeof(uint) * BITS_IN_ULONG);
+                        trueBits.Length += BITS_IN_ULONG;
                     } else {
                         for (uint j = 0u; j < BITS_IN_ULONG; ++j) {
-                            trueBits.Add(offset + j);
+                            trueBits.Ptr[trueBits.Length++] = offset + j;
                         }
                     }
                     continue;
                 }
 
-                for (int j = 0; j < BITS_IN_ULONG; ++j) {
-                    if ((val & (1UL << j)) > 0) {
-                        trueBits.Add(offset + (uint)j);
-                    }
+                while (val != 0) {
+                    var c = Unity.Mathematics.math.tzcnt(val);
+                    trueBits.Add(offset + (uint)c);
+                    val &= val - 1;
                 }
             }
             
