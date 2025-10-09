@@ -354,48 +354,6 @@ namespace ME.BECS {
             return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this);
         }
 
-        [INLINE(256)]
-        public UnsafeList<uint> GetTrueBitsTemp(ushort worldId) {
-
-            var trueBits = new UnsafeList<uint>((int)this.Length, WorldsTempAllocator.allocatorTemp.Get(worldId).Allocator.ToAllocator);
-            for (var i = 0; i < this.Length; ++i) {
-                var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i & TempBitArray.BITS_IN_ULONG_MASK))) > 0) {
-                    trueBits.Add((uint)i);
-                }
-            }
-            
-            return trueBits;
-        }
-
-        [INLINE(256)]
-        public UnsafeList<uint> GetTrueBitsTemp(Unity.Collections.Allocator allocator) {
-
-            var trueBits = new UnsafeList<uint>((int)this.Length, allocator);
-            for (var i = 0; i < this.Length; ++i) {
-                var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i & TempBitArray.BITS_IN_ULONG_MASK))) > 0) {
-                    trueBits.Add((uint)i);
-                }
-            }
-            
-            return trueBits;
-        }
-
-        [INLINE(256)]
-        public UIntListHash GetTrueBitsPersistent(ref MemoryAllocator allocator) {
-
-            var trueBits = new UIntListHash(ref allocator, this.Length);
-            for (var i = 0; i < this.Length; ++i) {
-                var val = this.ptr[i / TempBitArray.BITS_IN_ULONG];
-                if ((val & (0x1ul << (i & TempBitArray.BITS_IN_ULONG_MASK))) > 0) {
-                    trueBits.Add(ref allocator, (uint)i);
-                }
-            }
-            
-            return trueBits;
-        }
-
         public uint GetReservedSizeInBytes() {
             return Bitwise.AlignULongBits(this.Length);
         }

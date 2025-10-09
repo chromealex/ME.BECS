@@ -535,12 +535,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static bool Equal(T v1, T v2) {
-            return System.Collections.Generic.EqualityComparer<T>.Default.Equals(v1, v2);
+            return v1.Equals(v2);
         }
 
         [INLINE(256)]
         public static uint GetHashCode(T item) {
-            return (uint)System.Collections.Generic.EqualityComparer<T>.Default.GetHashCode(item);
+            return (uint)item.GetHashCode();
         }
 
     }

@@ -360,7 +360,7 @@ namespace ME.BECS.Extensions.GraphProcessor
             Reset(didConnect);
         }
 
-        #if UNITY_6000_0_58_OR_NEWER
+        #if UNITY_6000_1_OR_NEWER
         public override void HandlePointerUp(PointerUpEvent evt) {
             
         }
