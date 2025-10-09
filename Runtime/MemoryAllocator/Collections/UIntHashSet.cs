@@ -269,6 +269,7 @@ namespace ME.BECS {
             }
         }
 
+        #if !ENABLE_BECS_FLAT_QUIERIES
         [INLINE(256)]
         public void Remove(ref MemoryAllocator allocator, in BatchList other) {
             var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);
@@ -304,7 +305,7 @@ namespace ME.BECS {
 
             return removedCount;
         }
-
+        
         /*
         [INLINE(256)]
         public void Add(ref MemoryAllocator allocator, in BatchList other) {
@@ -329,6 +330,7 @@ namespace ME.BECS {
                 }
             }
         }
+        #endif
 
         [INLINE(256)]
         public void Remove(ref MemoryAllocator allocator, in UIntHashSet other) {

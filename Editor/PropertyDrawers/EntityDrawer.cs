@@ -115,8 +115,11 @@ namespace ME.BECS.Editor {
                 this.FetchDataFromEntity(world);
             }
             var newState = this.GetState(world);
-            if (this.prevState != newState ||
-                (newState == true && this.archId != this.GetArchId())) {
+            if (this.prevState != newState
+                #if !ENABLE_BECS_FLAT_QUIERIES 
+                || (newState == true && this.archId != this.GetArchId())
+                #endif
+                ) {
                 this.DrawEntity(this.rootVisualElement, world, this.property.displayName);
             } else if (newState == true) {
                 this.UpdateData();
@@ -139,10 +142,12 @@ namespace ME.BECS.Editor {
 
         private Label versionLabel;
 
+        #if !ENABLE_BECS_FLAT_QUIERIES
         private uint GetArchId() {
             var world = this.entity.World;
             return world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
         }
+        #endif
 
         private void UpdateData() {
 
@@ -322,6 +327,8 @@ namespace ME.BECS.Editor {
 
                 this.prevState = true;
                 root.RemoveFromClassList("entity-not-alive");
+        
+                #if !ENABLE_BECS_FLAT_QUIERIES
                 {
                     var archContainer = new VisualElement();
                     archContainer.AddToClassList("entity-arch-container");
@@ -337,6 +344,7 @@ namespace ME.BECS.Editor {
                     entityArch.AddToClassList("label-value");
                     archContainer.Add(entityArch);
                 }
+                #endif
 
             }
 
@@ -455,14 +463,21 @@ namespace ME.BECS.Editor {
         
         private void FetchComponentsFromEntity(World world) {
             
+            #if !ENABLE_BECS_FLAT_QUIERIES
             var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
             var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
+            #endif
                     
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
             var methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
             var cnt = 0;
             {
-                var e = arch.components.GetEnumerator(world);
+                #if ENABLE_BECS_FLAT_QUIERIES
+                var components = world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                #else
+                var components = arch.components;
+                #endif
+                var e = components.GetEnumerator(world);
                 while (e.MoveNext() == true) {
                     var cId = e.Current;
                     if (StaticTypesLoadedManaged.loadedTypes.ContainsKey(cId) == true) ++cnt;
@@ -474,7 +489,12 @@ namespace ME.BECS.Editor {
                 
                 {
                     var i = 0;
-                    var e = arch.components.GetEnumerator(world);
+                    #if ENABLE_BECS_FLAT_QUIERIES
+                    var components = world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                    #else
+                    var components = arch.components;
+                    #endif
+                    var e = components.GetEnumerator(world);
                     while (e.MoveNext() == true) {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
@@ -495,7 +515,12 @@ namespace ME.BECS.Editor {
                 this.tempObject.dataHas = new bool[cnt];
                 {
                     var i = 0;
-                    var e = arch.components.GetEnumerator(world);
+                    #if ENABLE_BECS_FLAT_QUIERIES
+                    var components = world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                    #else
+                    var components = arch.components;
+                    #endif
+                    var e = components.GetEnumerator(world);
                     while (e.MoveNext() == true) {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {

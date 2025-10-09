@@ -22,6 +22,7 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
+        #if !ENABLE_BECS_FLAT_QUIERIES
         public static JobHandle Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForAspects<T0,T1,T2,T3,T4,T5,T6,T7> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect where T2 : unmanaged, IAspect where T3 : unmanaged, IAspect where T4 : unmanaged, IAspect where T5 : unmanaged, IAspect where T6 : unmanaged, IAspect where T7 : unmanaged, IAspect {
             return staticQuery.Schedule<T, T0,T1,T2,T3,T4,T5,T6,T7>(in job, in context.world, context.dependsOn);
         }
@@ -37,6 +38,7 @@ namespace ME.BECS.Jobs {
             staticQuery.builderDependsOn = staticQuery.Dispose(staticQuery.builderDependsOn);
             return staticQuery.builderDependsOn;
         }
+        #endif
         
     }
 

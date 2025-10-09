@@ -6,6 +6,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
 
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public partial struct Query {
         
         [INLINE(256)]
@@ -71,5 +72,6 @@ namespace ME.BECS {
         }
 
     }
+    #endif
 
 }

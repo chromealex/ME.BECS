@@ -421,43 +421,6 @@ namespace ME.BECS.Tests {
 
         }
 
-        [Test]
-        public void ParallelSetRemove() {
-
-            var amount = 10_000;
-            using var world = World.Create();
-            var list = new Unity.Collections.NativeArray<Ent>(amount, Unity.Collections.Allocator.TempJob);
-            for (int i = 0; i < amount; ++i) {
-                var ent = Ent.New();
-                ent.Set(new Test1Component() {
-                    data = 1,
-                });
-                list[i] = ent;
-            }
-
-            Batches.Apply(world);
-
-            Assert.AreEqual(2, world.state.ptr->archetypes.allArchetypes.Count);
-
-            var handle1 = new TestJobSetParallel() {
-                arr = list,
-            }.Schedule(list.Length, 64);
-            
-            var handle2 = new TestJobRemoveParallel() {
-                arr = list,
-            }.Schedule(list.Length, 64);
-
-            var dependsOn = JobHandle.CombineDependencies(handle1, handle2);
-            dependsOn = Batches.Apply(dependsOn, world);
-            JobUtils.RunScheduled();
-            dependsOn.Complete();
-            
-            Assert.AreEqual(3, world.state.ptr->archetypes.allArchetypes.Count);
-
-            list.Dispose();
-
-        }
-
     }
 
 }

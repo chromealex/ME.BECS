@@ -5,43 +5,6 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
 
-    public readonly ref struct ComponentsFastTrack {
-
-        public readonly TempBitArray root;
-        public readonly uint maxId;
-        public readonly uint hash;
-        public readonly uint Count;
-
-        [INLINE(256)]
-        public static ComponentsFastTrack Create(in BatchList list) {
-            return new ComponentsFastTrack(in list);
-        }
-
-        [INLINE(256)]
-        public ComponentsFastTrack(in BatchList list) {
-            if (list.Count == 0u) {
-                this = default;
-                return;
-            }
-
-            this.root = list.list;
-            this.hash = list.hash;
-            this.maxId = list.maxId;
-            this.Count = list.Count;
-        }
-
-        [INLINE(256)]
-        public bool Contains(uint value) {
-            if (this.maxId == 0u || value > this.maxId) return false;
-            return this.root.IsSet((int)value);
-        }
-        
-        public override string ToString() {
-            return string.Join(", ", new TempBitArrayDebugView(this.root).BitIndexes);
-        }
-
-    }
-    
     public unsafe partial struct Components {
 
         [INLINE(256)]

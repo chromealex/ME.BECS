@@ -5,8 +5,9 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
+    #if !ENABLE_BECS_FLAT_QUIERIES
     [BURST]
-    public unsafe struct ApplyJob : IJobSingle {
+    public struct ApplyJob : IJobSingle {
 
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         public SafetyComponentContainerRW<TNull> safety;
@@ -23,6 +24,7 @@ namespace ME.BECS {
         }
 
     }
+    #endif
 
     [BURST]
     public unsafe struct ApplyFreeJob : IJobSingle {
@@ -39,7 +41,7 @@ namespace ME.BECS {
     }
 
     [BURST]
-    public unsafe struct ApplyDestroyedJob : IJobSingle {
+    public struct ApplyDestroyedJob : IJobSingle {
 
         public safe_ptr<State> state;
             

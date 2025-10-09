@@ -3,6 +3,7 @@ using ME.BECS.Jobs;
 
 namespace ME.BECS.Tests {
 
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public class Tests_Queries_Static {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
@@ -309,5 +310,6 @@ namespace ME.BECS.Tests {
         }
 
     }
+    #endif
 
 }

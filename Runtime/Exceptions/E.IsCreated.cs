@@ -64,23 +64,25 @@ namespace ME.BECS {
             NotCreatedException.Throw(world);
         }
 
+        #if !ENABLE_BECS_FLAT_QUIERIES
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(in Query query) {
             if (query.isCreated == true) return;
             NotCreatedException.Throw(query);
         }
+        
+        [Conditional(COND.EXCEPTIONS)]
+        [HIDE_CALLSTACK]
+        public static void IS_CREATED(in QueryBuilderStatic queryBuilder) {
+            if (queryBuilder.isCreated == true) return;
+            NotCreatedException.Throw(queryBuilder);
+        }
+        #endif
 
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(in QueryBuilder queryBuilder) {
-            if (queryBuilder.isCreated == true) return;
-            NotCreatedException.Throw(queryBuilder);
-        }
-
-        [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
-        public static void IS_CREATED(in QueryBuilderStatic queryBuilder) {
             if (queryBuilder.isCreated == true) return;
             NotCreatedException.Throw(queryBuilder);
         }

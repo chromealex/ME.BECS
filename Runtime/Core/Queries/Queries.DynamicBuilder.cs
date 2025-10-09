@@ -574,7 +574,8 @@ namespace ME.BECS {
             this.builderDependsOn = handle;
             return handle;
         }
-
+        
+        #if !ENABLE_BECS_FLAT_QUIERIES
         [BURST]
         private struct FromQueryDataJob : IJob {
 
@@ -607,6 +608,7 @@ namespace ME.BECS {
             return new QueryBuilderDisposable(this);
 
         }
+        #endif
 
         [BURST]
         public struct FillTrueBitsJob : IJobParallelForDefer {
@@ -653,15 +655,93 @@ namespace ME.BECS {
             public void Execute() {
 
                 #if ENABLE_BECS_FLAT_QUIERIES
-                var tempBits = new TempBitArray(this.state.ptr->entities.EntitiesCount, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP);
-                if (this.composeJob.query.with.Length > 0) {
-                    for (int i = 0; i < this.composeJob.query.with.Length; ++i) {
-                        var typeId = this.composeJob.query.with[i];
+                var allCount = (this.state.ptr->entities.Capacity + DataDenseSet.ENTITIES_PER_PAGE_MASK) / DataDenseSet.ENTITIES_PER_PAGE * DataDenseSet.ENTITIES_PER_PAGE;
+                var tempBits = new TempBitArray(allCount, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP);
+                tempBits.Union(in this.state.ptr->allocator, in this.state.ptr->entities.aliveBits);
+                {
+                    var marker = new Unity.Profiling.ProfilerMarker("Query");
+                    marker.Begin();
+                    if (this.composeJob.query.with.Length > 0) {
+                        for (int i = 0; i < this.composeJob.query.with.Length; ++i) {
+                            var typeId = this.composeJob.query.with[i];
+                            ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
+                            ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
+                            var bits = storage.bits;
+                            tempBits.Intersect(in this.state.ptr->allocator, in bits, allCount);
+                        }
+                    }
+                    if (this.composeJob.query.withAny.Length > 0) {
+                        var temp = new TempBitArray(allCount, allocator: Constants.ALLOCATOR_TEMP);
+                        for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
+                            var typeIdPair = this.composeJob.query.withAny[i];
+                            if (typeIdPair.Key > 0u) {
+                                ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Key];
+                                ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
+                                var bits = storage.bits;
+                                temp.Union(in this.state.ptr->allocator, in bits);
+                            }
+                            if (typeIdPair.Value > 0u) {
+                                ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Value];
+                                ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
+                                var bits = storage.bits;
+                                temp.Union(in this.state.ptr->allocator, in bits);
+                            }
+                        }
+                        tempBits.Intersect(in temp, allCount);
+                    }
+                    for (int i = 0; i < this.composeJob.query.without.Length; ++i) {
+                        var typeId = this.composeJob.query.without[i];
                         ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
                         ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
                         var bits = storage.bits;
-                        tempBits.Union(in this.state.ptr->allocator, bits);
+                        tempBits.Remove(in this.state.ptr->allocator, bits);
                     }
+                    marker.End();
+                }
+                {
+                    var marker = new Unity.Profiling.ProfilerMarker("GetTrueBits");
+                    marker.Begin();
+                    var trueBitsTemp = tempBits.GetTrueBitsTemp();
+                    marker.End();
+                    var elementsCount = (uint)trueBitsTemp.Length;
+                    if (elementsCount == 0u) {
+                        this.buffer.ptr->entities = null;
+                        this.buffer.ptr->count = 0u;
+                        return;
+                    }
+
+                    safe_ptr<uint> arrPtr;
+                    if (this.queryData.ptr->steps > 0u) {
+
+                        var currentStep = this.state.ptr->tick;
+                        var steps = this.queryData.ptr->steps;
+                        {
+                            var elementsPerStep = elementsCount / steps;
+                            if (elementsPerStep < this.queryData.ptr->minElementsPerStep) elementsPerStep = this.queryData.ptr->minElementsPerStep;
+                            steps = (uint)math.ceil((elementsCount / (tfloat)elementsPerStep));
+                            var fromIdx = (uint)(currentStep % steps) * elementsPerStep;
+                            var toIdx = fromIdx + elementsPerStep;
+                            if (toIdx > elementsCount) toIdx = elementsCount;
+                            // Add range fromIdx..toIdx
+                            var size = toIdx - fromIdx;
+                            arrPtr = _makeArray<uint>(size, this.allocator);
+                            if (size > 0u) _memcpy((safe_ptr)(trueBitsTemp.Ptr + fromIdx), arrPtr, TSize<uint>.size * size);
+                            elementsCount = size;
+                        }
+
+                    } else {
+                        arrPtr = _makeArray<uint>(elementsCount, this.allocator);
+                        _memcpy(new safe_ptr(trueBitsTemp.Ptr), arrPtr, elementsCount * TSize<uint>.size);
+                    }
+
+                    if (this.useSort == true) {
+                        var markerSort = new Unity.Profiling.ProfilerMarker("Sort");
+                        markerSort.Begin();
+                        Unity.Collections.NativeSortExtension.Sort(trueBitsTemp.Ptr, (int)elementsCount);
+                        markerSort.End();
+                    }
+                    this.buffer.ptr->entities = arrPtr.ptr;
+                    this.buffer.ptr->count = elementsCount;
                 }
                 #else
                 {

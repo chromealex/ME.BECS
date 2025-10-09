@@ -107,11 +107,13 @@ namespace ME.BECS {
                     Ents.Unlock(world.state, in newEnt);
                 }
             }
+            #if !ENABLE_BECS_FLAT_QUIERIES
             {
                 Ents.Lock(world.state, in newEnt);
                 Archetypes.AddEntity(world.state, newEnt);
                 Ents.Unlock(world.state, in newEnt);
             }
+            #endif
 
             #if UNITY_EDITOR
             EntEditorName.SetEditorName(in newEnt, editorName);

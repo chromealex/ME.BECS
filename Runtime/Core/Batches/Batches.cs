@@ -30,6 +30,7 @@ namespace ME.BECS {
 
     }
     
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public struct BatchList {
 
         public TempBitArray list;
@@ -154,10 +155,12 @@ namespace ME.BECS {
         }
 
     }
+    #endif
     
     [BURST]
     public unsafe partial struct Batches {
 
+        #if !ENABLE_BECS_FLAT_QUIERIES
         [StructLayout(LayoutKind.Sequential)]
         public struct ThreadItem {
 
@@ -334,6 +337,7 @@ namespace ME.BECS {
             JobUtils.Decrement(ref batches.openIndex);
 
         }
+        #endif
         
         [BURST]
         [INLINE(256)]
@@ -344,10 +348,12 @@ namespace ME.BECS {
         [BURST]
         [INLINE(256)]
         public static void Apply(ushort worldId, in safe_ptr<State> state) {
+            #if !ENABLE_BECS_FLAT_QUIERIES
             new ApplyJob() {
                 worldId = worldId,
                 state = state,
             }.Execute();
+            #endif
             new ApplyFreeJob() {
                 state = state,
             }.Execute();
@@ -358,6 +364,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, ushort worldId, safe_ptr<State> state) {
+            #if !ENABLE_BECS_FLAT_QUIERIES
             var handle1 = new ApplyJob() { 
                 state = state,
                 worldId = worldId,
@@ -365,13 +372,18 @@ namespace ME.BECS {
                 safety = new SafetyComponentContainerRW<TNull>(state, Context.world.id),
                 #endif
             }.ScheduleSingle(jobHandle);
+            #endif
             var handle2 = new ApplyFreeJob() { 
                 state = state,
             }.ScheduleSingle(jobHandle);
             var handle3 = new ApplyDestroyedJob() { 
                 state = state,
             }.ScheduleSingle(jobHandle);
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var handle = JobHandle.CombineDependencies(handle2, handle3);
+            #else
             var handle = JobHandle.CombineDependencies(handle1, handle2, handle3);
+            #endif
             state.ptr->lastApplyHandle = JobHandle.CombineDependencies(state.ptr->lastApplyHandle, handle);
             return handle;
         }
@@ -380,7 +392,8 @@ namespace ME.BECS {
         public static JobHandle Apply(JobHandle jobHandle, in World world) => Apply(jobHandle, world.id, world.state);
 
     }
-
+    
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public struct WorldBatches {
 
         public static readonly Unity.Burst.SharedStatic<Internal.Array<Batches>> storage = Unity.Burst.SharedStatic<Internal.Array<Batches>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldBatches>(TAlign<Internal.Array<Batches>>.align, 110L);
@@ -402,12 +415,14 @@ namespace ME.BECS {
         }
 
     }
+    #endif
 
     public unsafe partial struct Batches {
 
         [INLINE(256)]
         public static void OnEntityAdd(ushort worldId, uint entId, byte growFactor = 2) {
 
+            #if !ENABLE_BECS_FLAT_QUIERIES
             ref var batches = ref WorldBatches.storage.Data.Get(worldId);
             if (entId >= batches.arr.Length) {
                 batches.lockReadWrite.WriteBegin();
@@ -421,6 +436,7 @@ namespace ME.BECS {
                 batches.lockReadWrite.WriteEnd();
             }
             Batches.OnEntityAddThreadItem(worldId, entId);
+            #endif
 
         }
 
@@ -430,10 +446,14 @@ namespace ME.BECS {
             if (ent.IsAlive() == false) return;
 
             #if ENABLE_BECS_FLAT_QUIERIES
-            var state = ent.World.state;
-            state.ptr->entities.OnAddComponent(state, ent.id, typeId);
-            #endif
-
+            {
+                var state = ent.World.state;
+                state.ptr->entities.OnAddComponent(state, ent.id, typeId);
+                var ptr = state.ptr->components.items[in state.ptr->allocator, typeId];
+                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
+                storage.SetBit(state, ent.id, true);
+            }
+            #else
             var worldId = ent.worldId;
             ref var batches = ref WorldBatches.storage.Data.Get(worldId);
             batches.lockReadWrite.ReadBegin();
@@ -456,6 +476,7 @@ namespace ME.BECS {
             }
             threadItem.lockSpinner.Unlock();
             batches.lockReadWrite.ReadEnd();
+            #endif
 
         }
 
@@ -465,10 +486,14 @@ namespace ME.BECS {
             if (ent.IsAlive() == false) return;
             
             #if ENABLE_BECS_FLAT_QUIERIES
-            var state = ent.World.state;
-            state.ptr->entities.OnRemoveComponent(state, ent.id, typeId);
-            #endif
-
+            {
+                var state = ent.World.state;
+                state.ptr->entities.OnRemoveComponent(state, ent.id, typeId);
+                var ptr = state.ptr->components.items[in state.ptr->allocator, typeId];
+                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
+                storage.SetBit(state, ent.id, false);
+            }
+            #else
             var worldId = ent.worldId;
             ref var batches = ref WorldBatches.storage.Data.Get(worldId);
             batches.lockReadWrite.ReadBegin();
@@ -491,6 +516,7 @@ namespace ME.BECS {
             }
             threadItem.lockSpinner.Unlock();
             batches.lockReadWrite.ReadEnd();
+            #endif
             
         }
 

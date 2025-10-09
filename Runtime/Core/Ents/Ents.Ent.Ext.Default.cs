@@ -64,19 +64,20 @@ namespace ME.BECS {
             {
                 Components.ClearShared(state, ent.id);
             }
+            #if !ENABLE_BECS_FLAT_QUIERIES
             {
                 Batches.Clear(ent.worldId, in ent);
             }
             {
                 Archetypes.RemoveEntity(state, in ent);
             }
+            #else
+            {
+                Components.CleanUpEntity(state, in ent);
+            }
+            #endif
             {
                 CollectionsRegistry.Destroy(state, in ent);
-            }
-            {
-                #if ENABLE_BECS_FLAT_QUIERIES
-                Components.CleanUpEntity(state, in ent);
-                #endif
             }
             Ents.Unlock(state, in ent);
             

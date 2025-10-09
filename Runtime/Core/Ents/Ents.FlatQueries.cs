@@ -5,7 +5,7 @@ namespace ME.BECS {
     public unsafe partial struct Ents {
 
         #if ENABLE_BECS_FLAT_QUIERIES
-        public MemArray<List<uint>> entityToComponents;
+        public MemArray<HashSet<uint>> entityToComponents;
         
         [INLINE(256)]
         public void OnAddComponent(safe_ptr<State> state, uint entityId, uint typeId) {

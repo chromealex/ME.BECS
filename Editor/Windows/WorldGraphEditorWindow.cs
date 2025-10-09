@@ -7,6 +7,7 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
     
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public static class Arrange {
         
         private static bool TestNodes(scg::List<GNode> nodes) {
@@ -787,6 +788,7 @@ namespace ME.BECS.Editor {
         }
 
     }
+    #endif
 
     public unsafe class WorldGraphEditorWindow : EditorWindow {
 
@@ -845,6 +847,7 @@ namespace ME.BECS.Editor {
                     this.CreateGUI();
                 }
 
+                #if !ENABLE_BECS_FLAT_QUIERIES
                 if (this.graph != null && this.world.isCreated == true) {
                     if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                     if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
@@ -856,6 +859,7 @@ namespace ME.BECS.Editor {
                     this.RedrawArchetype();
                     hasActiveWorlds = true;
                 }
+                #endif
 
                 /*var isDirty = false;
                 var rect = this.rootContainer.parent.worldBound;
@@ -892,12 +896,16 @@ namespace ME.BECS.Editor {
         }
 
         private Rect prevRect;
+        #if !ENABLE_BECS_FLAT_QUIERIES
         private float zoom = 1f;
         private GGraph graph;
+        #endif
         private Label filteredEntitiesCount;
         private Label filteredArchetypesCount;
         private Label entitiesCount;
+        #if !ENABLE_BECS_FLAT_QUIERIES
         private Label archetypesCount;
+        #endif
         private Label memoryUsed;
         private Label memoryReserved;
         private Label stopwatchValue;
@@ -908,12 +916,15 @@ namespace ME.BECS.Editor {
             if (world.isCreated == false) return;
             
             this.entitiesCount.text = world.state.ptr->entities.EntitiesCount.ToString();
+            #if !ENABLE_BECS_FLAT_QUIERIES
             this.archetypesCount.text = world.state.ptr->archetypes.Count.ToString();
+            #endif
             var usedBytes = world.state.ptr->allocator.GetUsedSize();
             this.memoryUsed.text = EditorUtils.BytesToString(usedBytes);
             var reservedBytes = world.state.ptr->allocator.GetReservedSize();
             this.memoryReserved.text = EditorUtils.BytesToString(reservedBytes);
-
+        
+            #if !ENABLE_BECS_FLAT_QUIERIES
             if (this.graph.lastQueryStopwatch != null) this.stopwatchValue.text = (this.graph.lastQueryStopwatch.ElapsedTicks / 10_000d).ToString("0.00") + "ms";
             
             if (this.graph.IsAnyHighlighted() == true) {
@@ -936,6 +947,10 @@ namespace ME.BECS.Editor {
                 this.filteredArchetypesCount.parent.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
                 
             }
+            #else
+            this.filteredEntitiesCount.parent.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
+            this.filteredArchetypesCount.parent.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
+            #endif
 
         }
 
@@ -982,14 +997,15 @@ namespace ME.BECS.Editor {
                 //this.rootVisualElement.Add(container);
                 this.newRootContainer = EditorUIUtils.AddWindowContent(this.rootVisualElement, container);
                 this.rootContainer = container;
+                #if !ENABLE_BECS_FLAT_QUIERIES
                 var world = this.world;
                 var graph = this.CreateGraph();
                 graph.RegisterOnSelectArchetypeCallback(this.OnSelectArchetype);
                 graph.Draw(world, container, this.zoom);
                 this.graph = graph;
-
-                this.entitiesCount = this.AddCounter("Entities Count");
                 this.archetypesCount = this.AddCounter("Archetypes Count");
+                #endif
+                this.entitiesCount = this.AddCounter("Entities Count");
                 this.memoryUsed = this.AddCounter("Memory Used");
                 this.memoryReserved = this.AddCounter("Memory Reserved");
 
@@ -1118,7 +1134,9 @@ namespace ME.BECS.Editor {
             
             this.allocatorWindow = null;
             this.world = world;
+            #if !ENABLE_BECS_FLAT_QUIERIES
             this.currentNode = null;
+            #endif
             this.CreateGUI();
             
         }
@@ -1180,6 +1198,7 @@ namespace ME.BECS.Editor {
 
         private VisualElement prevArchetype;
         private VisualElement entitiesList;
+        #if !ENABLE_BECS_FLAT_QUIERIES
         private GNode currentNode;
         private void OnSelectArchetype(GNode node) {
 
@@ -1198,10 +1217,12 @@ namespace ME.BECS.Editor {
             if (this.currentNode != null) this.RedrawArchetype(this.currentNode);
             
         }
+        #endif
 
         private scg::List<uint> tempEntitiesList = new scg::List<uint>();
         private string searchStr;
         private string[] searchItems = System.Array.Empty<string>();
+        #if !ENABLE_BECS_FLAT_QUIERIES
         private void RedrawArchetype(GNode node) {
 
             var world = this.world;
@@ -1409,6 +1430,7 @@ namespace ME.BECS.Editor {
             return container;
             
         }
+        #endif
 
         public class QueryItem {
 
@@ -1612,6 +1634,7 @@ namespace ME.BECS.Editor {
 
         }
 
+        #if !ENABLE_BECS_FLAT_QUIERIES
         public void UpdateGraph(GGraph graph) {
 
             if (this.world.isCreated == true) {
@@ -1692,6 +1715,7 @@ namespace ME.BECS.Editor {
             return graph;
 
         }
+        #endif
 
     }
 

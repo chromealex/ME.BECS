@@ -7,9 +7,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void CopyFrom(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) {
 
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var list = sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
+            var e = list.GetEnumerator(sourceState);
+            #else
             var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
             var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
+            #endif
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
@@ -21,9 +26,14 @@ namespace ME.BECS {
         public static void CopyFrom<TIgnore0>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var list = sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
+            var e = list.GetEnumerator(sourceState);
+            #else
             var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
             var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
+            #endif
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
                 if (ignore0 == typeId) continue;
@@ -37,9 +47,14 @@ namespace ME.BECS {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
             var ignore1 = StaticTypes<TIgnore1>.typeId;
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var list = sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
+            var e = list.GetEnumerator(sourceState);
+            #else
             var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
             var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
             var e = srcArch.components.GetEnumerator(sourceState);
+            #endif
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
                 if (ignore0 == typeId || ignore1 == typeId) continue;

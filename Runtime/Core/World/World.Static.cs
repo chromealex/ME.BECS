@@ -550,7 +550,9 @@ namespace ME.BECS {
             WorldsPersistentAllocator.Initialize(worldId);
             
             WorldAspectStorage.AddWorld(in world);
+            #if !ENABLE_BECS_FLAT_QUIERIES
             WorldBatches.AddWorld(in world);
+            #endif
             
             if (raiseCallback == true) WorldStaticCallbacks.RaiseCallback(ref world);
 
@@ -564,7 +566,9 @@ namespace ME.BECS {
             worldsStorage.Get(world.id).Dispose();
             worldsStorage.Get(world.id) = default;
             
+            #if !ENABLE_BECS_FLAT_QUIERIES
             WorldBatches.DisposeWorld(in world);
+            #endif
             WorldAspectStorage.DisposeWorld(in world);
             GlobalEvents.DisposeWorld(world.id);
             #if UNITY_EDITOR

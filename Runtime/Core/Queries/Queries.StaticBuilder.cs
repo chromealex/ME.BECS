@@ -6,7 +6,8 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
-
+    
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public unsafe struct QueryBuilderDisposable {
 
         [BURST]
@@ -501,5 +502,6 @@ namespace ME.BECS {
         }
 
     }
+    #endif
 
 }

@@ -20,8 +20,10 @@ namespace ME.BECS {
     public unsafe struct BitArray : IIsCreated {
 
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;
+        private const int BITS_IN_ULONG_MASK = BITS_IN_ULONG - 1;
 
         public MemPtr ptr;
+        public MemArray<LockSpinner> locks;
         public uint Length;
         #if USE_CACHE_PTR
         public CachedPtr cachedPtr;
@@ -30,7 +32,7 @@ namespace ME.BECS {
         public bool IsCreated => this.ptr.IsValid();
 
         [INLINE(256)]
-        public BitArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {
+        public BitArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, bool threadSafe = false) {
 
             var sizeInBytes = Bitwise.AlignULongBits(length);
             this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
@@ -42,6 +44,12 @@ namespace ME.BECS {
             if (clearOptions == ClearOptions.ClearMemory) {
                 allocator.MemClear(this.ptr, 0u, sizeInBytes);
             }
+            
+            this.locks = default;
+            if (threadSafe == true) {
+                this.locks = new MemArray<LockSpinner>(ref allocator, this.Length, ClearOptions.ClearMemory);
+            }
+
         }
 
         [INLINE(256)]
@@ -57,6 +65,7 @@ namespace ME.BECS {
             MemoryAllocator.ValidateConsistency(ref allocator);
             _memcpy(sourcePtr, ptr, sizeInBytes);
             MemoryAllocator.ValidateConsistency(ref allocator);
+            this.locks = default;
 
         }
 
@@ -68,6 +77,7 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             this.cachedPtr = new CachedPtr(in allocator, ptr);
             #endif
+            this.locks = default;
             this.Length = (uint)source.Length;
             for (int i = 0; i < source.Length; ++i) {
                 this.Set(in allocator, i, source[i]);
@@ -167,16 +177,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions clearOptions = ClearOptions.ClearMemory) {
+        public void Resize(ref MemoryAllocator allocator, uint newLength, ClearOptions clearOptions = ClearOptions.ClearMemory, byte growFactor = 1) {
 
             if (newLength > this.Length) {
-                this.ptr = allocator.ReAllocArray<ulong>(in this.ptr, Bitwise.AlignULongBits(newLength), out var ptr);
+                newLength *= growFactor;
+                var newSize = Bitwise.AlignULongBits(newLength);
+                this.ptr = allocator.ReAllocArray<ulong>(in this.ptr, newSize, out var ptr);
                 #if USE_CACHE_PTR
                 this.cachedPtr = new CachedPtr(in allocator, allocator.GetUnsafePtr(this.ptr));
                 #endif
                 if (clearOptions == ClearOptions.ClearMemory) {
                     var clearSize = Bitwise.AlignULongBits(newLength - this.Length);
                     _memclear(ptr.Cast<byte>() + Bitwise.AlignULongBits(this.Length), clearSize);
+                }
+                if (this.locks.IsCreated == true) {
+                    this.locks.Resize(ref allocator, newLength, 1);
                 }
                 this.Length = newLength;
             }
@@ -253,10 +268,31 @@ namespace ME.BECS {
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
             if (value == true) {
-                ptr[index / BitArray.BITS_IN_ULONG] |= 0x1ul << ((int)index % BitArray.BITS_IN_ULONG);
+                ptr[index / BitArray.BITS_IN_ULONG] |= 0x1ul << ((int)index & BitArray.BITS_IN_ULONG_MASK);
             } else {
-                ptr[index / BitArray.BITS_IN_ULONG] &= ~(0x1ul << ((int)index % BitArray.BITS_IN_ULONG));
+                ptr[index / BitArray.BITS_IN_ULONG] &= ~(0x1ul << ((int)index & BitArray.BITS_IN_ULONG_MASK));
             }
+        }
+        
+        /// <summary>
+        /// Sets the value of the bit at the specified index to the specified value.
+        /// </summary>
+        /// <param name="allocator"></param>
+        /// <param name="index">The index of the bit to set.</param>
+        /// <param name="value">The value to set the bit to.</param>
+        /// <returns>The instance of the modified bitmap.</returns>
+        [INLINE(256)]
+        public void SetThreaded(in MemoryAllocator allocator, uint index, bool value) {
+            E.RANGE(index, 0, this.Length);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
+            var idx = index >> 6;
+            var shift = index & 0x3f;
+            var mask = 1ul << (int)shift;
+            ref var lockSpinner = ref this.locks[in allocator, idx];
+            lockSpinner.Lock();
+            var bits = (ptr[idx] & ~mask) | ((ulong)-Bitwise.FromBool(value) & mask);
+            ptr[idx] = bits;
+            lockSpinner.Unlock();
         }
 
         /// <summary>
@@ -390,6 +426,7 @@ namespace ME.BECS {
         public void Dispose(ref MemoryAllocator allocator) {
 
             allocator.Free(this.ptr);
+            if (this.locks.IsCreated == true) this.locks.Dispose(ref allocator);
             this = default;
 
         }

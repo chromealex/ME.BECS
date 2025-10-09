@@ -583,7 +583,11 @@ namespace ME.BECS.Editor {
                 var changed = true;
                 var state = this.value.World.state;
                 if (force == false) {
+                    #if ENABLE_BECS_FLAT_QUIERIES
+                    var componentsCount = state.ptr->entities.entityToComponents[state, this.value.id].Count;
+                    #else
                     var componentsCount = state.ptr->archetypes.list[state, state.ptr->archetypes.entToArchetypeIdx[state, this.value.id]].componentsCount;
+                    #endif
                     if (this.window.entToComponentsCount.TryGetValue(this.value, out var count) == true) {
                         if (count == componentsCount) {
                             changed = false;
@@ -851,6 +855,7 @@ namespace ME.BECS.Editor {
         private void DrawEntities(VisualElement root) {
             
             this.cache.Clear();
+            #if !ENABLE_BECS_FLAT_QUIERIES
             for (uint i = 0u; i < this.selectedWorld.state.ptr->archetypes.list.Count; ++i) {
                 var arch = this.selectedWorld.state.ptr->archetypes.list[this.selectedWorld.state, i];
                 for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
@@ -861,6 +866,7 @@ namespace ME.BECS.Editor {
                     }
                 }
             }
+            #endif
 
             var k = 0;
             this.DrawEntities(ref k, 0, root, this.cache);

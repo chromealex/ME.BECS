@@ -2,6 +2,7 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     
+    #if !ENABLE_BECS_FLAT_QUIERIES
     public unsafe class Tests_Batches {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
@@ -331,5 +332,6 @@ namespace ME.BECS.Tests {
         }
 
     }
+    #endif
 
 }

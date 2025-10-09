@@ -356,7 +356,9 @@ namespace ME.BECS.Tests {
                 ME.BECS.Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            #if !ENABLE_BECS_FLAT_QUIERIES
             Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
+            #endif
 
             {
                 DestroyHugeAmountBurstMethod(ref world, amount);
@@ -382,7 +384,9 @@ namespace ME.BECS.Tests {
                 ME.BECS.Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            #if !ENABLE_BECS_FLAT_QUIERIES
             Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
+            #endif
             
             {
                 var job = new DestroyEntitiesJob() {

@@ -58,8 +58,8 @@ namespace ME.BECS {
 
         }
 
-        private const uint ENTITIES_PER_PAGE = 64u;
-        private const uint ENTITIES_PER_PAGE_MASK = ENTITIES_PER_PAGE - 1u;
+        internal const uint ENTITIES_PER_PAGE = 64u;
+        internal const uint ENTITIES_PER_PAGE_MASK = ENTITIES_PER_PAGE - 1u;
         private const int ENTITIES_PER_PAGE_POW = 6;
 
         private ReadWriteSpinner readWriteSpinner;
@@ -71,7 +71,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         private static uint _sizeData(uint capacity) {
-            return (uint)math.ceil(capacity / (float)ENTITIES_PER_PAGE);
+            return (capacity + ENTITIES_PER_PAGE_MASK) / ENTITIES_PER_PAGE;
         }
 
         [INLINE(256)]
@@ -122,7 +122,7 @@ namespace ME.BECS {
             this.dataPages = new MemArray<Page>(ref state.ptr->allocator, pages);
             this.readWriteSpinner = ReadWriteSpinner.Create(state);
             #if ENABLE_BECS_FLAT_QUIERIES
-            this.bits = new BitArray(ref state.ptr->allocator, pages);
+            this.bits = new BitArray(ref state.ptr->allocator, pages * ENTITIES_PER_PAGE, ClearOptions.ClearMemory, true);
             #endif
             MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
         }
@@ -147,7 +147,7 @@ namespace ME.BECS {
                 this.readWriteSpinner.WriteBegin(state);
                 if (newSize > this.dataPages.Length) {
                     #if ENABLE_BECS_FLAT_QUIERIES
-                    this.bits.Resize(ref state.ptr->allocator, newSize);
+                    this.bits.Resize(ref state.ptr->allocator, newSize * ENTITIES_PER_PAGE, growFactor: 2);
                     #endif
                     this.dataPages.Resize(ref state.ptr->allocator, newSize, 2);
                 }
@@ -163,7 +163,7 @@ namespace ME.BECS {
         #if ENABLE_BECS_FLAT_QUIERIES
         [INLINE(256)]
         public void CleanUpEntity(safe_ptr<State> state, uint entityId) {
-            this.bits.Set(state.ptr->allocator, entityId, false);
+            this.bits.SetThreaded(state.ptr->allocator, entityId, false);
         }
         #endif
 
@@ -357,6 +357,17 @@ namespace ME.BECS {
             this.readWriteSpinner.ReadEnd(state);
             return gen == entityGen && disableState == 0;
         }
+
+        #if ENABLE_BECS_FLAT_QUIERIES
+        [INLINE(256)]
+        public void SetBit(safe_ptr<State> state, uint entityId, bool value) {
+            var pageIndex = _pageIndex(entityId);
+            ref var page = ref this.dataPages[state, pageIndex];
+            page.Lock();
+            this.bits.Set(state.ptr->allocator, entityId, value);
+            page.Unlock();
+        }
+        #endif
 
     }
 

@@ -3,6 +3,7 @@ namespace ME.BECS {
     using static CutsPool;
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using Unity.Mathematics;
 
     public class FullFillBits {
 
@@ -195,6 +196,25 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public void Intersect(in TempBitArray bitmap, uint maxLength) {
+            E.IS_CREATED(this);
+            if (bitmap.Length == 0u) {
+                this.SetAllBits(false);
+                return;
+            }
+            var targetLength = math.min(maxLength, bitmap.Length);
+            E.RANGE(targetLength - 1u, 0u, this.Length);
+            var ptr = bitmap.ptr;
+            var len = Bitwise.GetLength(this.Length);
+            var bLen = Bitwise.GetLength(targetLength);
+            for (var index = 0; index < len; ++index) {
+                var v = 0UL;
+                if (index < bLen) v = ptr[index];
+                this.ptr[index] &= v;
+            }
+        }
+
+        [INLINE(256)]
         public void Intersect(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
             if (bitmap.Length == 0u) {
@@ -205,6 +225,26 @@ namespace ME.BECS {
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             var len = Bitwise.GetLength(this.Length);
             var bLen = Bitwise.GetLength(bitmap.Length);
+            for (var index = 0; index < len; ++index) {
+                var v = 0UL;
+                if (index < bLen) v = ptr[index];
+                this.ptr[index] &= v;
+            }
+        }
+
+        [INLINE(256)]
+        public void Intersect(in MemoryAllocator allocator, in BitArray bitmap, uint maxLength) {
+            E.IS_CREATED(this);
+            if (bitmap.Length == 0u) {
+                this.SetAllBits(false);
+                return;
+            }
+
+            var targetLength = math.min(maxLength, bitmap.Length);
+            E.RANGE(targetLength - 1u, 0u, this.Length);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
+            var len = Bitwise.GetLength(this.Length);
+            var bLen = Bitwise.GetLength(targetLength);
             for (var index = 0; index < len; ++index) {
                 var v = 0UL;
                 if (index < bLen) v = ptr[index];
@@ -228,7 +268,6 @@ namespace ME.BECS {
         public void Remove(in MemoryAllocator allocator, in BitArray bitmap) {
             E.IS_CREATED(this);
             if (bitmap.Length == 0) return;
-            E.RANGE(bitmap.Length - 1u, 0u, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(bitmap.ptr);
             var len = Bitwise.GetMinLength(bitmap.Length, this.Length);
             for (var index = 0; index < len; ++index) {
