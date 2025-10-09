@@ -847,7 +847,15 @@ namespace ME.BECS.Editor {
                     this.CreateGUI();
                 }
 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if ENABLE_BECS_FLAT_QUIERIES
+                if (this.world.isCreated == true) {
+                    if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
+                    if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
+                    this.DrawToolbar(this.toolbarContainer);
+                    this.UpdateCounters();
+                    hasActiveWorlds = true;
+                }
+                #else
                 if (this.graph != null && this.world.isCreated == true) {
                     if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                     if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);

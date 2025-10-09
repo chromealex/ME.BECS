@@ -389,7 +389,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static JobHandle Apply(JobHandle jobHandle, in World world) => Apply(jobHandle, world.id, world.state);
+        public static JobHandle Apply(JobHandle jobHandle, in World world) {
+            #if ENABLE_BECS_FLAT_QUIERIES
+            return jobHandle;
+            #else
+            return Apply(jobHandle, world.id, world.state);
+            #endif
+        }
 
     }
     

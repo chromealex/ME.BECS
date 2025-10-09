@@ -855,7 +855,18 @@ namespace ME.BECS.Editor {
         private void DrawEntities(VisualElement root) {
             
             this.cache.Clear();
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var bits = new TempBitArray(this.selectedWorld.state.ptr->entities.aliveBits.Length, allocator: Constants.ALLOCATOR_TEMP);
+            bits.Union(in this.selectedWorld.state.ptr->allocator, in this.selectedWorld.state.ptr->entities.aliveBits);
+            var trueBits = bits.GetTrueBitsTemp();
+            for (uint i = 0u; i < trueBits.Length; ++i) {
+                var entId = trueBits[(int)i];
+                var ent = new Ent(entId, this.selectedWorld);
+                if (ent.Read<ParentComponent>().value == default) {
+                    this.cache.Add(ent);
+                }
+            }
+            #else
             for (uint i = 0u; i < this.selectedWorld.state.ptr->archetypes.list.Count; ++i) {
                 var arch = this.selectedWorld.state.ptr->archetypes.list[this.selectedWorld.state, i];
                 for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
