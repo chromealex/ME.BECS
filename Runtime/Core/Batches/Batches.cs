@@ -429,6 +429,11 @@ namespace ME.BECS {
             
             if (ent.IsAlive() == false) return;
 
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var state = ent.World.state;
+            state.ptr->entities.OnAddComponent(state, ent.id, typeId);
+            #endif
+
             var worldId = ent.worldId;
             ref var batches = ref WorldBatches.storage.Data.Get(worldId);
             batches.lockReadWrite.ReadBegin();
@@ -459,6 +464,11 @@ namespace ME.BECS {
             
             if (ent.IsAlive() == false) return;
             
+            #if ENABLE_BECS_FLAT_QUIERIES
+            var state = ent.World.state;
+            state.ptr->entities.OnRemoveComponent(state, ent.id, typeId);
+            #endif
+
             var worldId = ent.worldId;
             ref var batches = ref WorldBatches.storage.Data.Get(worldId);
             batches.lockReadWrite.ReadBegin();

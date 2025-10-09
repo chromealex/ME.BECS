@@ -242,6 +242,24 @@ namespace ME.BECS {
         }
 
         /// <summary>
+        /// Sets the value of the bit at the specified index to the specified value.
+        /// </summary>
+        /// <param name="allocator"></param>
+        /// <param name="index">The index of the bit to set.</param>
+        /// <param name="value">The value to set the bit to.</param>
+        /// <returns>The instance of the modified bitmap.</returns>
+        [INLINE(256)]
+        public void Set(in MemoryAllocator allocator, uint index, bool value) {
+            E.RANGE(index, 0, this.Length);
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
+            if (value == true) {
+                ptr[index / BitArray.BITS_IN_ULONG] |= 0x1ul << ((int)index % BitArray.BITS_IN_ULONG);
+            } else {
+                ptr[index / BitArray.BITS_IN_ULONG] &= ~(0x1ul << ((int)index % BitArray.BITS_IN_ULONG));
+            }
+        }
+
+        /// <summary>
         /// Takes the union of this bitmap and the specified bitmap and stores the result in this
         /// instance.
         /// </summary>

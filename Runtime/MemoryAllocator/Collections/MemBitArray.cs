@@ -551,6 +551,29 @@ namespace ME.BECS {
             ptr[idx] = bits;
         }
         
+        /// <summary>
+        /// Sets the bit at an index to 0 or 1.
+        /// </summary>
+        /// <param name="allocator"></param>
+        /// <param name="pos">Index of the bit to set.</param>
+        /// <param name="value">True for 1, false for 0.</param>
+        [INLINE(256)]
+        public void Set(in MemoryAllocator allocator, uint pos, bool value) {
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
+            var idx = pos >> 6;
+            var shift = pos & 0x3f;
+            var mask = 1ul << (int)shift;
+            var bits = (ptr[idx] & ~mask) | ((ulong)-Bitwise.FromBool(value) & mask);
+            /*ref var p = ref ptr[idx];
+            ulong initialValue;
+            ulong targetValue;
+            do {
+                initialValue = p;
+                targetValue = bits;
+            } while (initialValue != CompareExchange(ref p, targetValue, initialValue));*/
+            ptr[idx] = bits;
+        }
+        
         [INLINE(256)]
         private static ulong CompareExchange(ref ulong target, ulong v, ulong cmp) {
             fixed (ulong* p = &target) {

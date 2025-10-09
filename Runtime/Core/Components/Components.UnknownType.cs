@@ -32,7 +32,7 @@ namespace ME.BECS {
             }
 
         }
-        
+
         [INLINE(256)]
         public static bool SetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, void* data) {
 

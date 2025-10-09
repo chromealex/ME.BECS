@@ -4,7 +4,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     
-    public unsafe struct Ents {
+    public unsafe partial struct Ents {
 
         public MemArray<ushort> generations;
         public MemArray<uint> versions;
@@ -79,6 +79,9 @@ namespace ME.BECS {
                 destroyed = new List<uint>(ref state.ptr->allocator, entityCapacity),
                 locksPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, entityCapacity),
                 readWriteSpinner = ReadWriteSpinner.Create(state),
+                #if ENABLE_BECS_FLAT_QUIERIES
+                entityToComponents = new MemArray<List<uint>>(ref state.ptr->allocator, entityCapacity),
+                #endif
             };
             //var ptr = (uint*)ents.free.GetUnsafePtr(in state.ptr->allocator);
             for (uint i = ents.generations.Length, k = 0u; i > 0u; --i, ++k) {
@@ -127,6 +130,9 @@ namespace ME.BECS {
             state.ptr->entities.versions.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->entities.seeds.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u, 1);
+            #if ENABLE_BECS_FLAT_QUIERIES
+            state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, maxId + 1u, 1);
+            #endif
             
             // Apply list
             for (int i = 0; i < list->Length; ++i) {
@@ -214,6 +220,10 @@ namespace ME.BECS {
                 state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx + state.ptr->seed;
                 state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, idx + 1u, 2);
                 state.ptr->entities.aliveBits[in state.ptr->allocator, idx] = true;
+                #if ENABLE_BECS_FLAT_QUIERIES
+                state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, idx + 1u, 2);
+                state.ptr->entities.entityToComponents[in state.ptr->allocator, idx] = new List<uint>(ref state.ptr->allocator, 8u);
+                #endif
                 state.ptr->entities.readWriteSpinner.WriteEnd();
                 return ent;
 

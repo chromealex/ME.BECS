@@ -73,6 +73,11 @@ namespace ME.BECS {
             {
                 CollectionsRegistry.Destroy(state, in ent);
             }
+            {
+                #if ENABLE_BECS_FLAT_QUIERIES
+                Components.CleanUpEntity(state, in ent);
+                #endif
+            }
             Ents.Unlock(state, in ent);
             
         }

@@ -652,6 +652,18 @@ namespace ME.BECS {
 
             public void Execute() {
 
+                #if ENABLE_BECS_FLAT_QUIERIES
+                var tempBits = new TempBitArray(this.state.ptr->entities.EntitiesCount, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP);
+                if (this.composeJob.query.with.Length > 0) {
+                    for (int i = 0; i < this.composeJob.query.with.Length; ++i) {
+                        var typeId = this.composeJob.query.with[i];
+                        ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
+                        ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
+                        var bits = storage.bits;
+                        tempBits.Union(in this.state.ptr->allocator, bits);
+                    }
+                }
+                #else
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("Compose");
                     marker.Begin();
@@ -754,6 +766,7 @@ namespace ME.BECS {
                     this.buffer.ptr->entities = arrPtr.ptr;
                     this.buffer.ptr->count = elementsCount;
                 }
+                #endif
                 
             }
 
