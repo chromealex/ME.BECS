@@ -639,7 +639,7 @@ namespace ME.BECS {
         }
 
         [BURST]
-        internal struct SetEntitiesJob : IJob {
+        public struct SetEntitiesJob : IJob {
 
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             public SafetyComponentContainerRO<TNull> safety;
@@ -658,6 +658,7 @@ namespace ME.BECS {
                 var allCount = (this.state.ptr->entities.Capacity + DataDenseSet.ENTITIES_PER_PAGE_MASK) / DataDenseSet.ENTITIES_PER_PAGE * DataDenseSet.ENTITIES_PER_PAGE;
                 var tempBits = new TempBitArray(allCount, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP);
                 tempBits.Union(in this.state.ptr->allocator, in this.state.ptr->entities.aliveBits);
+                
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("Query");
                     marker.Begin();

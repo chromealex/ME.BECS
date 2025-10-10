@@ -105,7 +105,7 @@ namespace ME.BECS {
         public static bool RemoveUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent) {
 
             E.IS_VALID_TYPE_ID(typeId);
-
+            
             ref var ptr = ref state.ptr->components.items[state, typeId];
             ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
             if (storage.Remove(state, ent.id, ent.gen) == true) {

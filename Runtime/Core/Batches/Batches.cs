@@ -391,6 +391,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, in World world) {
             #if ENABLE_BECS_FLAT_QUIERIES
+            var state = world.state;
+            state.ptr->lastApplyHandle = JobHandle.CombineDependencies(state.ptr->lastApplyHandle, jobHandle);
             return jobHandle;
             #else
             return Apply(jobHandle, world.id, world.state);
@@ -457,7 +459,7 @@ namespace ME.BECS {
                 state.ptr->entities.OnAddComponent(state, ent.id, typeId);
                 var ptr = state.ptr->components.items[in state.ptr->allocator, typeId];
                 ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.SetBit(state, ent.id, true);
+                storage.SetBit(state, ent.id, true, typeId);
             }
             #else
             var worldId = ent.worldId;
@@ -497,7 +499,7 @@ namespace ME.BECS {
                 state.ptr->entities.OnRemoveComponent(state, ent.id, typeId);
                 var ptr = state.ptr->components.items[in state.ptr->allocator, typeId];
                 ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.SetBit(state, ent.id, false);
+                storage.SetBit(state, ent.id, false, typeId);
             }
             #else
             var worldId = ent.worldId;

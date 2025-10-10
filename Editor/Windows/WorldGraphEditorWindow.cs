@@ -590,7 +590,7 @@ namespace ME.BECS.Editor {
             job.Execute();
             queryBuilder.WaitForAllJobs();
 
-            var list = queryBuilder.queryData.ptr->archetypesBits.GetTrueBitsTemp(world.id);
+            var list = queryBuilder.queryData.ptr->archetypesBits.GetTrueBitsTemp();
             for (int i = 0; i < list.Length; ++i) {
                 var archIdx = list[i];
                 this.highlightedArchetypes.Add(archIdx);

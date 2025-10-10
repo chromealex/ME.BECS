@@ -11,7 +11,7 @@ namespace ME.BECS.Collections {
         public const int BITS_IN_ULONG = 64;
         
         [INLINE(256)]
-        public static UnsafeList<uint> GetTrueBitsTempFast(in TempBitArray arr) {
+        public static UnsafeList<uint> GetTrueBitsTempFast(in TempBitArray arr, Unity.Collections.Allocator allocator) {
             /*if (X86.Sse2.IsSse2Supported == true) {
                 return BitScannerSse2.GetTrueBits(arr.ptr.ptr, (int)arr.Length);
             } else if (X86.Avx2.IsAvx2Supported == true) {
@@ -19,12 +19,12 @@ namespace ME.BECS.Collections {
             } else if (Unity.Burst.Intrinsics.Arm.Neon.IsNeonSupported == true) {
                 return BitScannerNeon.GetTrueBits(arr.ptr.ptr, (int)arr.Length);
             }*/
-            return arr.Length < FullFillBits.FILL_BITS_COUNT ? GetTrueBitsTempFastFull(arr.ptr.ptr, (int)arr.Length) : GetTrueBitsTempFast(arr.ptr.ptr, (int)arr.Length);
+            return arr.Length < FullFillBits.FILL_BITS_COUNT ? GetTrueBitsTempFastFull(arr.ptr.ptr, (int)arr.Length, allocator) : GetTrueBitsTempFast(arr.ptr.ptr, (int)arr.Length, allocator);
         }
         
         [INLINE(256)]
-        public static UnsafeList<uint> GetTrueBitsTempFast(ulong* data, int bitLength) {
-            var trueBits = new UnsafeList<uint>(bitLength, Constants.ALLOCATOR_TEMP);
+        public static UnsafeList<uint> GetTrueBitsTempFast(ulong* data, int bitLength, Unity.Collections.Allocator allocator) {
+            var trueBits = new UnsafeList<uint>(bitLength, allocator);
             var destPtr = trueBits.Ptr;
             var wordCount = (bitLength + BITS_IN_ULONG - 1) / BITS_IN_ULONG;
             var idx = 0;
@@ -48,8 +48,8 @@ namespace ME.BECS.Collections {
         }
 
         [INLINE(256)]
-        public static UnsafeList<uint> GetTrueBitsTempFastFull(ulong* data, int bitLength) {
-            var trueBits = new UnsafeList<uint>(bitLength, Constants.ALLOCATOR_TEMP);
+        public static UnsafeList<uint> GetTrueBitsTempFastFull(ulong* data, int bitLength, Unity.Collections.Allocator allocator) {
+            var trueBits = new UnsafeList<uint>(bitLength, allocator);
             var destPtr = trueBits.Ptr;
             var wordCount = (bitLength + BITS_IN_ULONG - 1) / BITS_IN_ULONG;
             var idx = 0;

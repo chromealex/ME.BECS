@@ -453,7 +453,11 @@ namespace ME.BECS {
                 }
 
                 if (this.archetypes.IsCreated == true) this.archetypes.Dispose(ref state.ptr->allocator);
-                this.archetypes = queryRef.ptr->archetypesBits.GetTrueBitsPersistent(ref state.ptr->allocator);
+                this.archetypes = new UIntListHash(ref state.ptr->allocator, 10u);
+                var bits = queryRef.ptr->archetypesBits.GetTrueBitsTemp();
+                for (int i = 0; i < bits.Length; ++i) {
+                    this.archetypes.Add(ref state.ptr->allocator, bits[i]);
+                }
                 queryRef.ptr->Dispose();
                 
             }

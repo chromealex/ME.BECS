@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Unity.Jobs;
 
 namespace ME.BECS.Tests {
     
@@ -65,11 +66,11 @@ namespace ME.BECS.Tests {
 
             Assert.AreEqual(2, world.state.ptr->archetypes.allArchetypes.Count);
 
-            var handle1 = new TestJobSetParallel() {
+            var handle1 = new Tests_Components.TestJobSetParallel() {
                 arr = list,
             }.Schedule(list.Length, 64);
             
-            var handle2 = new TestJobRemoveParallel() {
+            var handle2 = new Tests_Components.TestJobRemoveParallel() {
                 arr = list,
             }.Schedule(list.Length, 64);
 

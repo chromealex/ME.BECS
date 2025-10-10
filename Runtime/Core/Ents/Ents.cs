@@ -87,9 +87,6 @@ namespace ME.BECS {
             for (uint i = ents.generations.Length, k = 0u; i > 0u; --i, ++k) {
                 //ents.free.PushNoChecks(i - 1u, ptr + k);
                 var entId = i - 1u;
-                #if ENABLE_BECS_FLAT_QUIERIES
-                ents.entityToComponents[in state.ptr->allocator, entId] = new HashSet<uint>(ref state.ptr->allocator, 8u);
-                #endif
                 ents.free.Push(ref state.ptr->allocator, entId);
                 ++ents.entitiesCount;
             }
@@ -113,8 +110,8 @@ namespace ME.BECS {
 
             gen = 0;
             if (entId > state.ptr->entities.entitiesCount) return false;
-            if (entId >= state.ptr->entities.aliveBits.Length || state.ptr->entities.aliveBits.IsSet(in state.ptr->allocator, (int)entId) == false) return false;
             state.ptr->entities.readWriteSpinner.ReadBegin(state);
+            if (entId >= state.ptr->entities.aliveBits.Length || state.ptr->entities.aliveBits.IsSet(in state.ptr->allocator, (int)entId) == false) return false;
             gen = state.ptr->entities.generations[in state.ptr->allocator, entId];
             state.ptr->entities.readWriteSpinner.ReadEnd(state);
             return true;
@@ -143,7 +140,7 @@ namespace ME.BECS {
                 var ent = list->ElementAt(i);
                 state.ptr->entities.generations[in state.ptr->allocator, ent.id] = ent.gen;
                 state.ptr->entities.versions[in state.ptr->allocator, ent.id] = version;
-                state.ptr->entities.aliveBits.Set(in state.ptr->allocator, ent.id, true);
+                state.ptr->entities.aliveBits.SetThreaded(in state.ptr->allocator, ent.id, true);
                 #if ENABLE_BECS_FLAT_QUIERIES
                 state.ptr->entities.entityToComponents[in state.ptr->allocator, ent.id] = new HashSet<uint>(ref state.ptr->allocator, 8u);
                 #endif
@@ -204,10 +201,10 @@ namespace ME.BECS {
                 state.ptr->entities.seeds[in state.ptr->allocator, idx] = idx + state.ptr->seed;
                 var groupsIndex = (StaticTypesTrackedBurst.maxId + 1u) * idx;
                 _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<ushort>.size, (StaticTypesTrackedBurst.maxId + 1u) * TSize<ushort>.size);
-                state.ptr->entities.aliveBits.SetThreaded(in state.ptr->allocator, idx, true);
                 #if ENABLE_BECS_FLAT_QUIERIES
                 state.ptr->entities.entityToComponents[in state.ptr->allocator, idx] = new HashSet<uint>(ref state.ptr->allocator, 8u);
                 #endif
+                state.ptr->entities.aliveBits.SetThreaded(in state.ptr->allocator, idx, true);
                 state.ptr->entities.readWriteSpinner.ReadEnd(state);
                 return new Ent(idx, nextGen, worldId);
 

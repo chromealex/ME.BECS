@@ -34,7 +34,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory, bool threadSafe = false) {
 
-            var sizeInBytes = Bitwise.AlignULongBits(length);
+            var sizeInBytes = (uint)Bitwise.AlignUp((int)length, 64) / 8u;
             this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
             #if USE_CACHE_PTR
             this.cachedPtr = new CachedPtr(in allocator, ptr);
@@ -44,7 +44,7 @@ namespace ME.BECS {
             if (clearOptions == ClearOptions.ClearMemory) {
                 allocator.MemClear(this.ptr, 0u, sizeInBytes);
             }
-            
+
             this.locks = default;
             if (threadSafe == true) {
                 this.locks = new MemArray<LockSpinner>(ref allocator, this.Length, ClearOptions.ClearMemory);
@@ -55,7 +55,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, BitArray source) {
 
-            var sizeInBytes = Bitwise.AlignULongBits(source.Length);
+            var sizeInBytes = (uint)Bitwise.AlignUp((int)source.Length, 64) / 8u;
             this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
             #if USE_CACHE_PTR
             this.cachedPtr = new CachedPtr(in allocator, ptr);
@@ -72,7 +72,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public BitArray(ref MemoryAllocator allocator, bool[] source) {
 
-            var sizeInBytes = Bitwise.AlignULongBits((uint)source.Length);
+            var sizeInBytes = (uint)Bitwise.AlignUp(source.Length, 64) / 8u;
             this.ptr = allocator.Alloc(sizeInBytes, out var ptr);
             #if USE_CACHE_PTR
             this.cachedPtr = new CachedPtr(in allocator, ptr);
@@ -89,7 +89,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, BitArray source) {
 
-            var sizeInBytes = Bitwise.AlignULongBits(source.Length);
+            var sizeInBytes = (uint)Bitwise.AlignUp((int)source.Length, 64) / 8u;
             this.Resize(ref allocator, source.Length);
             var sourcePtr = allocator.GetUnsafePtr(in source.ptr);
             _memcpy(sourcePtr, allocator.GetUnsafePtr(in this.ptr), sizeInBytes);
@@ -181,15 +181,17 @@ namespace ME.BECS {
 
             if (newLength > this.Length) {
                 newLength *= growFactor;
-                var newSize = Bitwise.AlignULongBits(newLength);
-                this.ptr = allocator.ReAllocArray<ulong>(in this.ptr, newSize, out var ptr);
+                var newSize = (uint)Bitwise.AlignUp((int)newLength, 64) / 8u;
+                this.ptr = allocator.ReAlloc(this.ptr, newSize, out var ptr);
                 #if USE_CACHE_PTR
                 this.cachedPtr = new CachedPtr(in allocator, allocator.GetUnsafePtr(this.ptr));
                 #endif
                 if (clearOptions == ClearOptions.ClearMemory) {
-                    var clearSize = Bitwise.AlignULongBits(newLength - this.Length);
-                    _memclear(ptr.Cast<byte>() + Bitwise.AlignULongBits(this.Length), clearSize);
+                    var prevSize = (uint)Bitwise.AlignUp((int)this.Length, 64) / 8u;
+                    var clearSize = newSize - prevSize;
+                    _memclear(ptr + prevSize, clearSize);
                 }
+
                 if (this.locks.IsCreated == true) {
                     this.locks.Resize(ref allocator, newLength, 1);
                 }
@@ -235,7 +237,10 @@ namespace ME.BECS {
         public readonly bool IsSet(in MemoryAllocator allocator, int index) {
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
-            return (ptr[index / BitArray.BITS_IN_ULONG] & (0x1ul << (index % BitArray.BITS_IN_ULONG))) > 0;
+            var idx = index >> 6;
+            var shift = index & 0x3f;
+            var mask = 1ul << shift;
+            return 0ul != (ptr[idx] & mask);
         }
 
         /// <summary>
@@ -249,11 +254,10 @@ namespace ME.BECS {
         public void Set(in MemoryAllocator allocator, int index, bool value) {
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
-            if (value == true) {
-                ptr[index / BitArray.BITS_IN_ULONG] |= 0x1ul << (index % BitArray.BITS_IN_ULONG);
-            } else {
-                ptr[index / BitArray.BITS_IN_ULONG] &= ~(0x1ul << (index % BitArray.BITS_IN_ULONG));
-            }
+            var idx = (int)index >> 6;
+            var shift = (int)index & 0x3f;
+            var mask = 1ul << shift;
+            ptr[idx] = (ptr[idx] & ~mask) | ((ulong)-Bitwise.FromBool(value) & mask);
         }
 
         /// <summary>
@@ -267,11 +271,10 @@ namespace ME.BECS {
         public void Set(in MemoryAllocator allocator, uint index, bool value) {
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
-            if (value == true) {
-                ptr[index / BitArray.BITS_IN_ULONG] |= 0x1ul << ((int)index & BitArray.BITS_IN_ULONG_MASK);
-            } else {
-                ptr[index / BitArray.BITS_IN_ULONG] &= ~(0x1ul << ((int)index & BitArray.BITS_IN_ULONG_MASK));
-            }
+            var idx = (int)index >> 6;
+            var shift = (int)index & 0x3f;
+            var mask = 1ul << shift;
+            ptr[idx] = (ptr[idx] & ~mask) | ((ulong)-Bitwise.FromBool(value) & mask);
         }
         
         /// <summary>
@@ -285,13 +288,12 @@ namespace ME.BECS {
         public void SetThreaded(in MemoryAllocator allocator, uint index, bool value) {
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
-            var idx = index >> 6;
-            var shift = index & 0x3f;
-            var mask = 1ul << (int)shift;
+            var idx = (int)index >> 6;
+            var shift = (int)index & 0x3f;
+            var mask = 1ul << shift;
             ref var lockSpinner = ref this.locks[in allocator, idx];
             lockSpinner.Lock();
-            var bits = (ptr[idx] & ~mask) | ((ulong)-Bitwise.FromBool(value) & mask);
-            ptr[idx] = bits;
+            ptr[idx] = (ptr[idx] & ~mask) | ((ulong)-Bitwise.FromBool(value) & mask);
             lockSpinner.Unlock();
         }
 

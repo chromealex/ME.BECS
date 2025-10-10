@@ -14,7 +14,7 @@ namespace ME.BECS {
                 var typeId = e.Current;
                 ref var ptr = ref state.ptr->components.items[state, typeId];
                 ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.CleanUpEntity(state, ent.id);
+                storage.CleanUpEntity(state, ent.id, typeId);
             }
             components.Dispose(ref state.ptr->allocator);
 

@@ -162,8 +162,10 @@ namespace ME.BECS {
 
         #if ENABLE_BECS_FLAT_QUIERIES
         [INLINE(256)]
-        public void CleanUpEntity(safe_ptr<State> state, uint entityId) {
+        public void CleanUpEntity(safe_ptr<State> state, uint entityId, uint typeId) {
+            this.readWriteSpinner.ReadBegin(state);
             this.bits.SetThreaded(state.ptr->allocator, entityId, false);
+            this.readWriteSpinner.ReadEnd(state);
         }
         #endif
 
@@ -179,14 +181,14 @@ namespace ME.BECS {
                 if (value == true && *val.ptr == 1) {
                     // if we want to enable component and it was disabled
                     #if ENABLE_BECS_FLAT_QUIERIES
-                    this.bits.Set(state.ptr->allocator, entityId, false);
+                    this.bits.SetThreaded(state.ptr->allocator, entityId, true);
                     #endif
                     changed = true;
                     *val.ptr = 0;
                 } else if (value == false && *val.ptr == 0) {
                     // if we want to disable component and it was enabled
                     #if ENABLE_BECS_FLAT_QUIERIES
-                    this.bits.Set(state.ptr->allocator, entityId, true);
+                    this.bits.SetThreaded(state.ptr->allocator, entityId, false);
                     #endif
                     changed = true;
                     *val.ptr = 1;
@@ -240,9 +242,6 @@ namespace ME.BECS {
                     page.Lock();
                     if (*gen.ptr != entityGen) {
                         *gen.ptr = entityGen;
-                        #if ENABLE_BECS_FLAT_QUIERIES
-                        this.bits.Set(state.ptr->allocator, entityId, true);
-                        #endif
                         changed = true;
                         isNew = true;
                     }
@@ -287,9 +286,6 @@ namespace ME.BECS {
                     page.Lock();
                     if (*gen.ptr != entityGen) {
                         *gen.ptr = entityGen;
-                        #if ENABLE_BECS_FLAT_QUIERIES
-                        this.bits.Set(state.ptr->allocator, entityId, true);
-                        #endif
                         if (this.dataSize > 0u) {
                             if (defaultValue.ptr != null) {
                                 _memcpy(defaultValue, dataPtr, this.dataSize);
@@ -325,9 +321,6 @@ namespace ME.BECS {
                     page.Lock();
                     if (*gen.ptr == entityGen) {
                         *gen.ptr = 0;
-                        #if ENABLE_BECS_FLAT_QUIERIES
-                        this.bits.Set(state.ptr->allocator, entityId, false);
-                        #endif
                         hasRemoved = true;
                     }
                     page.Unlock();
@@ -360,12 +353,14 @@ namespace ME.BECS {
 
         #if ENABLE_BECS_FLAT_QUIERIES
         [INLINE(256)]
-        public void SetBit(safe_ptr<State> state, uint entityId, bool value) {
+        public void SetBit(safe_ptr<State> state, uint entityId, bool value, uint typeId) {
             var pageIndex = _pageIndex(entityId);
+            this.readWriteSpinner.ReadBegin(state);
             ref var page = ref this.dataPages[state, pageIndex];
             page.Lock();
-            this.bits.Set(state.ptr->allocator, entityId, value);
+            this.bits.SetThreaded(state.ptr->allocator, entityId, value);
             page.Unlock();
+            this.readWriteSpinner.ReadEnd(state);
         }
         #endif
 

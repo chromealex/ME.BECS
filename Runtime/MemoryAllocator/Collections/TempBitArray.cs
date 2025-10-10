@@ -350,8 +350,8 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public UnsafeList<uint> GetTrueBitsTemp() {
-            return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this);
+        public UnsafeList<uint> GetTrueBitsTemp(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+            return ME.BECS.Collections.BitScanner.GetTrueBitsTempFast(in this, allocator);
         }
 
         public uint GetReservedSizeInBytes() {
