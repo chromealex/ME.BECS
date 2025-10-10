@@ -312,6 +312,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void SetSeed(uint seed) {
             this.state.ptr->seed = seed;
+            this.state.ptr->entities.SetSeed(this.state, seed);
         }
 
     }

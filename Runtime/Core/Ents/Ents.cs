@@ -352,6 +352,15 @@ namespace ME.BECS {
             return JobUtils.Increment(ref state.ptr->entities.seeds[in state.ptr->allocator, ent.id]);
         }
 
+        [INLINE(256)]
+        public void SetSeed(safe_ptr<State> state, uint seed) {
+
+            for (uint i = 0; i < state.ptr->entities.seeds.Length; ++i) {
+                state.ptr->entities.seeds[in state.ptr->allocator, i] += seed;
+            }
+            
+        }
+
     }
     
 }
