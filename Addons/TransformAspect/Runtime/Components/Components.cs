@@ -50,10 +50,8 @@ namespace ME.BECS.Transforms {
 
     [EditorComment("Current calculated world matrix")]
     [ComponentGroup(typeof(TransformMatrixComponentGroup))]
-    //[LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct WorldMatrixComponent : IComponent {
 
-        //[FieldOffset(0)]
         public float4x4 value;
         public LockSpinner spinner;
         public bbool isTickCalculated;
@@ -62,10 +60,8 @@ namespace ME.BECS.Transforms {
 
     [EditorComment("Current calculated local matrix")]
     [ComponentGroup(typeof(TransformMatrixComponentGroup))]
-    //[LAYOUT(LayoutKind.Explicit, Size = 64)]
     public struct LocalMatrixComponent : IComponent {
 
-        //[FieldOffset(0)]
         public float4x4 value;
         
     }
@@ -91,11 +87,9 @@ namespace ME.BECS.Transforms {
 
     [EditorComment("Current local scale")]
     [ComponentGroup(typeof(TransformComponentGroup))]
-    //[LAYOUT(LayoutKind.Explicit, Size = sizeof(float) * 4)]
     public struct LocalScaleComponent : IConfigComponent {
 
         public static LocalScaleComponent Default => new LocalScaleComponent() { value = new float3(1f, 1f, 1f) };
-        //[FieldOffset(0)]
         public float3 value;
 
     }

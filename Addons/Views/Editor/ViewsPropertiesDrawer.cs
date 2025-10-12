@@ -31,7 +31,6 @@ namespace ME.BECS.Views.Editor {
 
         private void DrawProperties(VisualElement root, SerializedProperty property) {
 
-            var so = property.serializedObject;
             var foldout = new Foldout();
             foldout.AddToClassList("foldout");
             foldout.text = "Views Module Properties";

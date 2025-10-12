@@ -1,6 +1,7 @@
 namespace ME.BECS.Views {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     [System.Serializable]
     public struct ViewSource : System.IEquatable<ViewSource> {
@@ -36,7 +37,7 @@ namespace ME.BECS.Views {
         /// <param name="ent"></param>
         /// <param name="viewSource"></param>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool InstantiateView(this in Ent ent, in ViewSource viewSource) {
             
             return UnsafeViewsModule.InstantiateView(in ent, in viewSource);
@@ -51,7 +52,7 @@ namespace ME.BECS.Views {
         /// <param name="ent">Entity to receive view</param>
         /// <param name="sourceEnt">Entity with source view</param>
         /// <returns>True if operation is success</returns>
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool AssignView(this in Ent ent, in Ent sourceEnt) {
             
             return UnsafeViewsModule.AssignView(in ent, in sourceEnt);
@@ -62,7 +63,7 @@ namespace ME.BECS.Views {
         /// Remove view from entity
         /// </summary>
         /// <param name="ent"></param>
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void DestroyView(this in Ent ent) {
             
             UnsafeViewsModule.DestroyView(in ent);

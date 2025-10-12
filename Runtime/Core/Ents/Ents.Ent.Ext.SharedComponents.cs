@@ -1,10 +1,11 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public static unsafe partial class EntExt {
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool SetShared<T>(in this Ent ent, in T data) where T : unmanaged, IComponentShared {
 
             E.IS_ALIVE(ent);
@@ -13,7 +14,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool RemoveShared<T>(in this Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             E.IS_ALIVE(ent);
@@ -22,7 +23,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool HasShared<T>(in this Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             E.IS_ALIVE(ent);
@@ -31,7 +32,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static ref T GetShared<T>(in this Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             E.IS_ALIVE(ent);
@@ -40,7 +41,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static ref readonly T ReadShared<T>(in this Ent ent, uint hash = 0u) where T : unmanaged, IComponentShared {
 
             E.IS_ALIVE(ent);

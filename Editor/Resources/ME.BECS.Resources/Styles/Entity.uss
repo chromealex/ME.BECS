@@ -295,6 +295,9 @@
 
 .fields-container Label.no-children {
     padding-left: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    height: 28px;
 }
 
 .toggle-mask-field {

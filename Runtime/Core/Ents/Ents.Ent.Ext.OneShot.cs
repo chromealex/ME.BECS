@@ -1,6 +1,7 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public enum OneShotType : byte {
         /// <summary>
@@ -22,7 +23,7 @@ namespace ME.BECS {
         /// <param name="data">Component data</param>
         /// <typeparam name="T">Component type</typeparam>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool SetOneShot<T>(in this Ent ent, in T data) where T : unmanaged, IComponent {
 
             return ent.SetOneShot(in data, OneShotType.CurrentTick);
@@ -37,7 +38,7 @@ namespace ME.BECS {
         /// <param name="type">Component lifetime</param>
         /// <typeparam name="T">Component type</typeparam>
         /// <returns></returns>
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool SetOneShot<T>(in this Ent ent, in T data, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);

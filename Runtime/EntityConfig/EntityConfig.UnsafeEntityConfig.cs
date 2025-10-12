@@ -41,8 +41,7 @@ namespace ME.BECS {
 
             public void Dispose() {
                     
-                // TODO: Free
-                //this.handle.Free();
+                this.handle.Free();
                 this = default;
 
             }
@@ -65,8 +64,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    // TODO: Free
-                    //this.handle.Free();
+                    this.handle.Free();
                     this = default;
 
                 }
@@ -211,8 +209,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    // TODO: Free
-                    //this.handle.Free();
+                    this.handle.Free();
                     this = default;
 
                 }
@@ -421,8 +418,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    // TODO: Free
-                    //this.handle.Free();
+                    this.handle.Free();
                     this = default;
 
                 }
@@ -795,7 +791,6 @@ namespace ME.BECS {
                 this.baseConfig = _make(new UnsafeEntityConfig(config.baseConfig, staticDataEnt: staticDataEnt, autoRegisterConfig: false));
             }
 
-            this.staticData = default;
             this.staticData = new StaticData(staticDataEnt, config, in this);
             
             this.dataInitialize = new DataInitialize(in this, config.dataInitialize);
@@ -861,7 +856,6 @@ namespace ME.BECS {
             
         }
 
-        [BURST]
         private struct ConfigDisposeJob : Unity.Jobs.IJob {
 
             public UnsafeEntityConfig config;
@@ -882,14 +876,19 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            this.aspects.Dispose();
-            this.data.Dispose();
-            this.dataShared.Dispose();
-            this.dataInitialize.Dispose();
-            this.collectionsData.Dispose();
-            if (this.baseConfig.ptr != null) {
-                this.baseConfig.ptr->Dispose();
-                _free(this.baseConfig);
+            var q = new Unity.Collections.NativeQueue<UnsafeEntityConfig>(Unity.Collections.Allocator.Temp);
+            q.Enqueue(this);
+            while (q.Count > 0) {
+                var config = q.Dequeue();
+                config.aspects.Dispose();
+                config.data.Dispose();
+                config.dataShared.Dispose();
+                config.dataInitialize.Dispose();
+                config.collectionsData.Dispose();
+                if (config.baseConfig.ptr != null) {
+                    q.Enqueue(*config.baseConfig.ptr);
+                    _free(config.baseConfig);
+                }
             }
 
         }

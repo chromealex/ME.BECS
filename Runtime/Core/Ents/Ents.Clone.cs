@@ -2,16 +2,17 @@
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public static unsafe class EntCloneExt {
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static Ent Clone(this in Ent source) {
             return source.Clone(source.worldId);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static Ent Clone(this in Ent source, ushort worldId) {
 
@@ -21,7 +22,7 @@ namespace ME.BECS {
 
         }
         
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static void CopyFrom(this in Ent target, in Ent source) {
 
@@ -29,7 +30,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static void CopyFrom<TIgnore0>(this in Ent target, in Ent source) where TIgnore0 : unmanaged, IComponent {
 
@@ -37,7 +38,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
         public static void CopyFrom<TIgnore0, TIgnore1>(this in Ent target, in Ent source) where TIgnore0 : unmanaged, IComponent where TIgnore1 : unmanaged, IComponent {
 

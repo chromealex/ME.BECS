@@ -19,6 +19,7 @@ namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Internal;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     public class EntEditorName {
 
@@ -63,7 +64,7 @@ namespace ME.BECS {
         private static readonly SharedStatic<Array<World>> entToWorld = SharedStatic<Array<World>>.GetOrCreatePartiallyUnsafeWithHashCode<EntEditorName>(TAlign<Array<World>>.align, 1L);
         private static readonly SharedStatic<LockSpinner> spinner = SharedStatic<LockSpinner>.GetOrCreate<EntEditorName>();
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void Dispose(ushort worldId) {
             if (worldId >= entToWorld.Data.Length) {
                 return;
@@ -78,7 +79,7 @@ namespace ME.BECS {
             if (entToWorld.Data.Length == cnt) entToWorld.Data.Dispose();
         }
         
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void SetEditorName(in Ent ent, in FixedString32Bytes name) {
 
             var worldId = ent.worldId;
@@ -93,7 +94,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static FixedString32Bytes GetEditorName(in Ent ent) {
             var worldId = ent.worldId;
             if (worldId >= entToWorld.Data.Length) {

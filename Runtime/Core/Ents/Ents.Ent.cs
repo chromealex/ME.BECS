@@ -4,6 +4,7 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
@@ -34,7 +35,7 @@ namespace ME.BECS {
             get => ref Worlds.GetWorld(this.worldId);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public readonly ushort GetVersion(uint groupId) {
             E.IS_ALIVE(this);
             var world = this.World;
@@ -50,27 +51,27 @@ namespace ME.BECS {
         /// Create new entity from Context.world
         /// </summary>
         /// <returns></returns>
-        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
         public static Ent New(in FixedString32Bytes editorName = default) {
             return Ent.New(Context.world.id, default, in editorName);
         }
         
-        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
         public static Ent New(in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
             return Ent.New(jobInfo.worldId, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
         public static Ent New(in World world, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return Ent.New(world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
         public static Ent New(in SystemContext systemContext, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return Ent.New(systemContext.world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
         public static Ent New(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return NewEnt_INTERNAL(worldId, in jobInfo, in editorName);
         }

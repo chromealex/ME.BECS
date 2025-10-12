@@ -5,6 +5,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     public interface IAspect {
 
@@ -297,14 +298,14 @@ namespace ME.BECS {
 
     public struct AspectStorage<T> where T : unmanaged, IAspect {
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static T GetAspect(in World world) {
 
             return InitAspect(in world);
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static unsafe ref T InitAspect(in World world) {
 
             return ref WorldAspectStorage.Initialize<T>(world.id);
