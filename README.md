@@ -140,7 +140,7 @@ Worlds Viewer can give you an important information about memory usage, entities
 -define:EXCEPTIONS
 ```
 
-Optional defines:
+Optional defines: ([Description](https://github.com/chromealex/ME.BECS/wiki/Defines))
 ```
 -define:ENABLE_BECS_COLLECTIONS_CHECKS
 -define:LEAK_DETECTION
