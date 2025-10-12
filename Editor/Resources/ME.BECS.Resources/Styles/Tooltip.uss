@@ -18,7 +18,7 @@
     opacity: 0;
     transition-property: background-color, border-color, opacity;
     transition-duration: var(--duration);
-    /*display: none;*/
+    display: none;
 }
 
 .has-tooltip .tooltip-text.custom-width {
@@ -58,7 +58,7 @@
 }
 
 .has-tooltip:hover .tooltip-text {
-    /*display: flex;*/
+    display: flex;
     opacity: 1;
     background-color: rgba(0, 0, 0, 0.8);
     border-color: rgba(0, 0, 0, 0.5);
