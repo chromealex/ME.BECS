@@ -344,6 +344,10 @@ namespace ME.BECS.Editor.Systems {
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }
+                            #if ENABLE_BECS_FLAT_QUIERIES
+                            var tag = "[   SET   ]";
+                            #else
+                            var tag = "[  SYNC   ]";
                             if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
                                 while (parentNode != null) {
                                     if (parentNode.GetSyncPoint(methodEnum).syncPoint == false) {
@@ -360,9 +364,10 @@ namespace ME.BECS.Editor.Systems {
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }*/
+                            #endif
                             
                             var resDep = $"dep{indexStr}";
-                            scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, CutType.Start)} [  SYNC   ]");
+                            scheme.Add($" * {Align("Batches.Apply", 32)} :  {Align($"{schemeDependsOn} => {resDep}", 16 + 32 + 4, CutType.Start)} {tag}");
                             //methodContent.Add($"{resDep} = Batches.Apply({resDep}, in world);");
                             schemeDependsOn = resDep;
                             methodContent.Add($"{customOutputDep} = Batches.Apply({customDep}, in world);");
@@ -519,8 +524,7 @@ namespace ME.BECS.Editor.Systems {
                                         }
 
                                         dependsOn = AddPreApply(systemNode, index, ref schemeDependsOn, dependsOn);
-                                        scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, CutType.End)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
-
+                                        
                                         if (systemNode.system.GetType().IsGenericType == true) {
                                             var systemType = systemNode.system.GetType();
                                             if (systemType.IsGenericType == true) {
@@ -594,8 +598,10 @@ namespace ME.BECS.Editor.Systems {
                                             methodContent.Add("}");
                                             
                                         }
-
+                                        
                                     }
+
+                                    scheme.Add($" * {Align(schemeDependsOn, 32)} => dep{Align(index.ToString(), 16)} {Align(EditorUtils.GetTypeName(systemNode.system.GetType()), 32, CutType.End)} [{(isInBurst == true ? "  BURST  " : "NOT BURST")}]{customAttr}{notUsedDescr}");
 
                                 } else {
 
