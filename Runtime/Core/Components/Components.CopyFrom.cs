@@ -1,10 +1,11 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     public unsafe partial struct Components {
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) {
 
             #if ENABLE_BECS_FLAT_QUIERIES
@@ -22,7 +23,7 @@ namespace ME.BECS {
             
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom<TIgnore0>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
@@ -42,7 +43,7 @@ namespace ME.BECS {
             
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom<TIgnore0, TIgnore1>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent where TIgnore1 : unmanaged, IComponent {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;

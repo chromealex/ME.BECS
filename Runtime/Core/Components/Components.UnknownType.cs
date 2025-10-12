@@ -2,6 +2,7 @@ namespace ME.BECS {
 
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     public unsafe partial struct Components {
 
@@ -21,7 +22,7 @@ namespace ME.BECS {
             
         }
         
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static void OnEntityAdd(safe_ptr<State> state, uint entityId) {
 
             var c = StaticTypes.counter;
@@ -33,7 +34,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool SetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, void* data) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -46,7 +47,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool SetUnknownType<T>(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, in T data) where T : unmanaged, IComponent {
 
             fixed (T* dataPtr = &data) {
@@ -55,7 +56,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool SetState(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, bool value) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -68,7 +69,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool ReadState(safe_ptr<State> state, uint typeId, in Ent ent) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -79,7 +80,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static byte* GetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -90,7 +91,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static byte* GetUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -101,7 +102,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool RemoveUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -117,7 +118,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static byte* ReadUnknownType(safe_ptr<State> state, uint typeId, uint entId, ushort gen, out bool exists) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -128,7 +129,7 @@ namespace ME.BECS {
             
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static byte* ReadUnknownType(safe_ptr<State> state, MemAllocatorPtr storage, uint typeId, uint entId, ushort gen, out bool exists) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -139,7 +140,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static bool HasUnknownType(safe_ptr<State> state, uint typeId, uint entId, ushort gen, bool checkEnabled) {
 
             E.IS_VALID_TYPE_ID(typeId);
@@ -150,7 +151,7 @@ namespace ME.BECS {
             
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static ref MemAllocatorPtr GetUnsafeSparseSetPtr(safe_ptr<State> state, uint typeId) {
 
             E.IS_VALID_TYPE_ID(typeId);

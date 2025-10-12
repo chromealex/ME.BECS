@@ -3,6 +3,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public partial struct Components {
 
@@ -35,7 +36,7 @@ namespace ME.BECS {
             
         }
         
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public AtomicSafetyHandle GetSafetyHandler<T>() where T : unmanaged, IComponentBase {
 
             var counter = StaticTypes.counter;

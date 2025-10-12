@@ -6,6 +6,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public ref struct QueryContext {
 
@@ -60,6 +61,7 @@ namespace ME.BECS {
             return API.Query((QueryContext)systemContext, JobHandle.CombineDependencies(systemContext.dependsOn, dependsOn));
         }
 
+        [IgnoreProfiler]
         public static QueryBuilder Query(in QueryContext queryContext, JobHandle dependsOn = default) {
 
             var allocator = WorldsTempAllocator.allocatorTemp.Get(queryContext.worldId).Allocator.ToAllocator;
@@ -81,6 +83,7 @@ namespace ME.BECS {
             
         }
 
+        [IgnoreProfiler]
         internal static QueryBuilder MakeStaticQuery(in QueryContext queryContext, JobHandle dependsOn) {
 
             var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(queryContext.worldId).Allocator.ToAllocator;

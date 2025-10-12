@@ -4,6 +4,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public unsafe partial struct Components {
 
@@ -24,7 +25,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void BurstMode(in MemoryAllocator allocator, bool state) {
             this.items.BurstMode(in allocator, state);
             for (uint i = 1u; i < this.items.Length; ++i) {
@@ -33,7 +34,7 @@ namespace ME.BECS {
             }
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public RefRW<T> GetRW<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRW<T>() {
                 state = state,
@@ -42,7 +43,7 @@ namespace ME.BECS {
             };
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public RefRO<T> GetRO<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRO<T>() {
                 state = state,
@@ -50,12 +51,12 @@ namespace ME.BECS {
             };
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public RefRWSafe<T> GetRWSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefRWSafe<T>(state, worldId);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public RefROSafe<T> GetROSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
             return new RefROSafe<T>(state, worldId);
         }
