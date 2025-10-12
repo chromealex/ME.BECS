@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace ME.BECS {
     
+    public class EntityConfigIdAttribute : PropertyAttribute {}
+    
     [CreateAssetMenu(menuName = "ME.BECS/Entity Config")]
     public class EntityConfig : ScriptableObject {
 

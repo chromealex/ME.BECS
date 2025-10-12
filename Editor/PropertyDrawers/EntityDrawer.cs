@@ -467,7 +467,7 @@ namespace ME.BECS.Editor {
             var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
             var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
             #endif
-                    
+            
             var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
             var methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
             var cnt = 0;

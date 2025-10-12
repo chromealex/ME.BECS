@@ -37,6 +37,7 @@ namespace ME.BECS {
     [ComponentGroup(typeof(EntityConfigComponentGroup))]
     public struct EntityConfigComponent : IComponent {
 
+        [EntityConfigId]
         public uint id;
         public UnsafeEntityConfig EntityConfig {
             get {
