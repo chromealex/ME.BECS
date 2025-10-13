@@ -1,0 +1,25 @@
+{
+    "name": "NewProject",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Features",
+"ME.BECS.Network",
+"Unity.Collections",
+"Unity.Burst",
+"ME.BECS.Players",
+"ME.BECS.Trees",
+"ME.BECS.Pathfinding",
+"ME.BECS.Commands",
+"ME.BECS.Units"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

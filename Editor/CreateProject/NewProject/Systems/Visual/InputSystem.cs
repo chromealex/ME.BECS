@@ -1,0 +1,136 @@
+using UnityEngine;
+using Unity.Burst;
+using ME.BECS;
+using ME.BECS.Network;
+using ME.BECS.Players;
+using ME.BECS.Trees;
+using ME.BECS.Commands;
+using ME.BECS.Pathfinding;
+using ME.BECS.Units;
+using ME.BECS.FixedPoint; // use FixedPoint instead of Unity.Mathematics
+using ME.BECS.Network.Markers;
+
+namespace NewProject {
+    
+    public class InputSystem : IStart, IUpdate {
+        
+        public static InputSystem Default => new InputSystem() { activePlayer = 1u };
+        
+        public uint activePlayer;
+        
+        public void OnStart(ref SystemContext context) {
+            
+            context.dependsOn.Complete();
+            
+            // this method must be called from transport connector do determine which player is active now
+            SetActivePlayer(this.activePlayer);
+            
+        }
+        
+        public void OnUpdate(ref SystemContext context) {
+            
+            context.dependsOn.Complete();
+            
+            this.DebugPlayerChange();
+            this.UpdateDemoInput();
+            
+        }
+        
+        private void DebugPlayerChange() {
+            
+            // here we can switch player for debug purposes
+            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Alpha1) == true) {
+                SetActivePlayer(1u);
+            } else if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Alpha2) == true) {
+                SetActivePlayer(2u);
+            }
+            
+        }
+        
+        private void UpdateDemoInput() {
+            
+            // Select units
+            if (Input.GetMouseButtonDown(0) == true) {
+                var camera = Camera.main;
+                var ray = camera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out var hit, 1000f, -1) == true) {
+                    var point = (float3)hit.point;
+                    var world = LogicWorld.World;
+                    var activePlayer = PlayerUtils.GetActivePlayer();
+                    var qt = world.GetSystem<QuadTreeInsertSystem>();
+                    var group = UnitUtils.CreateSelectionGroupByTypeInPointTemp(qt, activePlayer.readUnitsTreeIndex, point, maxRange: 1f);
+                    if (group.readUnits.Count > 0u) {
+                        world.SendNetworkEvent(new SelectUnitData() {
+                            position = point,
+                            ctrl = Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.RightControl),
+                            shift = Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift),
+                        }, SelectUnitAction);
+                    }
+                    group.Destroy();
+                }
+            }
+            
+            // Move units
+            if (Input.GetMouseButtonDown(1) == true) {
+                var camera = Camera.main;
+                var ray = camera.ScreenPointToRay(Input.mousePosition);
+                if (Physics.Raycast(ray, out var hit, 1000f, -1) == true) {
+                    var point = (float3)hit.point;
+                    var world = LogicWorld.World;
+                    world.SendNetworkEvent(new CommandUnitData() {
+                        position = point,
+                    }, CommandUnitAction);
+                }
+            }
+            
+        }
+        
+        [NetworkMethod]
+        [AOT.MonoPInvokeCallback(typeof(NetworkMethodDelegate))]
+        public static void CommandUnitAction(in InputData data, ref SystemContext context) {
+            
+            context.dependsOn.Complete();
+            
+            var world = context.world;
+            var commandUnitData = data.GetData<CommandUnitData>();
+            var playerId = data.PlayerId;
+            
+            var owner = world.GetSystem<PlayersSystem>().GetPlayerEntity(playerId);
+            var buildGraphSystem = world.GetSystem<BuildGraphSystem>();
+            
+            // here we can check move vs attack command
+            CommandsUtils.SetCommand(buildGraphSystem, owner.readCurrentSelection.GetAspect<UnitSelectionGroupAspect>(), new CommandMove() {
+                targetPosition = commandUnitData.position,
+            }, context);
+            
+        }
+        
+        [NetworkMethod]
+        [AOT.MonoPInvokeCallback(typeof(NetworkMethodDelegate))]
+        public static void SelectUnitAction(in InputData data, ref SystemContext context) {
+            
+            context.dependsOn.Complete();
+            
+            var world = context.world;
+            var selectUnitData = data.GetData<SelectUnitData>();
+            var playerId = data.PlayerId;
+            
+            var owner = world.GetSystem<PlayersSystem>().GetPlayerEntity(playerId);
+            var qt = world.GetSystem<QuadTreeInsertSystem>();
+            
+            // here we can use other methods like a ByTypeInRect or similar
+            var group = UnitUtils.CreateSelectionGroupByTypeInPointTemp(qt, owner.readUnitsTreeIndex, selectUnitData.position, maxRange: 1f, jobInfo: context);
+            UnitUtils.SetSelectionGroup(owner, group, selectUnitData.shift, selectUnitData.ctrl, context);
+            
+        }
+        
+        public static void SetActivePlayer(uint activePlayer) {
+            var players = LogicWorld.World.GetSystem<PlayersSystem>();
+            var player = players.GetPlayers()[activePlayer];
+            PlayerUtils.SetActivePlayer(player.GetAspect<PlayerAspect>());
+            LogicInitializer.GetNetworkModule().SetLocalPlayerId(activePlayer);
+        }
+        
+    }
+    
+}

@@ -1,0 +1,65 @@
+{
+    "caption": "RTS",
+    "description": "Real-time strategy template",
+    "modes": [
+        {
+            "mode": 0,
+            "dependencies": [ "Unity.Burst" ],
+            "directory": "Singleplayer",
+            "initializers": [
+                ""
+            ]
+        },
+        {
+            "mode": 1,
+            "dependencies": [ "ME.BECS.Network", "Unity.Collections", "Unity.Burst", "ME.BECS.Players", "ME.BECS.Trees", "ME.BECS.Pathfinding", "ME.BECS.Commands", "ME.BECS.Units" ],
+            "directory": "Multiplayer",
+            "initializers": [
+                "Logic",
+                "Visual"
+            ],
+            "systems": [
+                {
+                    "name": "Logic",
+                    "systems": [
+                        {
+                            "name": "InitializeSystem"
+                        }
+                    ]
+                },
+                {
+                    "name": "Visual",
+                    "systems": [
+                        {
+                            "name": "InputSystem"
+                        }
+                    ]
+                }
+            ],
+            "graphs": [
+                {
+                    "name": "Logic",
+                    "systems": [
+                        {
+                            "name": "InitializeSystem",
+                            "guid": "type: {class: InitializeSystem, ns: ME.BECS, asm: ME.BECS}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Visual",
+                    "systems": [
+                        {
+                            "name": "InputSystem",
+                            "guid": "type: {class: InputSystem, ns: ME.BECS, asm: ME.BECS}"
+                        }
+                    ]
+                }
+            ],
+            "files": [
+                "Network/NetworkPackages.SelectUnitData.cs.txt",
+                "Network/NetworkPackages.CommandUnitData.cs.txt"
+            ]
+        }
+    ]
+}
