@@ -1003,6 +1003,16 @@ namespace ME.BECS.Editor {
             return name;
         }
 
+        public static bool IsValidProjectName(string name) {
+            if (string.IsNullOrEmpty(name) == true) return false;
+            return System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Z]+[a-zA-Z_0-9]*[a-zA-Z0-9]+$");
+        }
+
+        public static string UpperFirstLetter(string value) {
+            if (string.IsNullOrEmpty(value) == true) return value;
+            return $"{value.Substring(0, 1).ToUpper()}{value.Substring(1)}";
+        }
+
         public static string GetTypeName(System.Type type, bool useFullName = true, bool showGenericType = true) {
             var name = type.Name;
             if (useFullName == true) {

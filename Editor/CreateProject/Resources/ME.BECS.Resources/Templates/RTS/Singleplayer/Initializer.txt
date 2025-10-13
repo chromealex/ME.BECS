@@ -1,0 +1,10 @@
+using UnityEngine;
+using ME.BECS;
+
+namespace {{PROJECT_NAME}} {
+    
+    public class {{PROJECT_NAME}}Initializer : WorldInitializer {
+
+    }
+    
+}

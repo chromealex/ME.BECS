@@ -1,0 +1,15 @@
+{
+    "singleplayer": {
+        "directory": "Singleplayer",
+        "initializers": [
+            "Initializer"
+        ]
+    },
+    "multiplayer": {
+        "directory": "Multiplayer",
+        "initializers": [
+            "LogicInitializer",
+            "VisualInitializer"
+        ]
+    }
+}

@@ -35,6 +35,8 @@ namespace ME.BECS.Features.Editor {
                 pathRoot = UnityEditor.AssetDatabase.GetAssetPath(dirObject);
             }
             if (pathRoot != null) {
+                ME.BECS.Editor.CreateProjectEditorWindow.ShowWindow(pathRoot);
+                return;
                 var newProject = UnityEngine.ScriptableObject.CreateInstance<EndCreateProject>();
                 newProject.onCreated = (path) => {
                     path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(path);
