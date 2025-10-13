@@ -13,15 +13,15 @@ namespace ME.BECS {
         public delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
         
         [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
-        public delegate void MethodMaskCallerDelegate(in UnsafeEntityConfig config, void* component, void* configComponent, in BitArray mask, in Ent ent);
+        public delegate void MethodMaskCallerDelegate(in UnsafeEntityConfig config, void* component, void* configComponent, void* mask, in Ent ent);
 
         internal static class MethodComponentMaskCaller<T> where T : unmanaged, IComponentBase {
 
             [UnityEngine.Scripting.PreserveAttribute]
             [AOT.MonoPInvokeCallbackAttribute(typeof(MethodMaskCallerDelegate))]
-            public static void Call(in UnsafeEntityConfig config, void* component, void* configComponent, in BitArray mask, in Ent ent) {
+            public static void Call(in UnsafeEntityConfig config, void* component, void* configComponent, void* mask, in Ent ent) {
 
-                WorldStaticCallbacks.RaiseConfigComponentMaskCallback<T>(in config, component, configComponent, in mask, in ent);
+                WorldStaticCallbacks.RaiseConfigComponentMaskCallback<T>(in config, component, configComponent, *(BitArray*)mask, in ent);
 
             }
 
@@ -34,9 +34,9 @@ namespace ME.BECS {
 
             public bool IsValid() => this.pointer != System.IntPtr.Zero;
 
-            public void Call(in UnsafeEntityConfig config, safe_ptr<byte> comp, safe_ptr<byte> configComp, in BitArray mask, in Ent ent) {
+            public void Call(in UnsafeEntityConfig config, safe_ptr<byte> comp, safe_ptr<byte> configComp, BitArray* mask, in Ent ent) {
                 var del = new Unity.Burst.FunctionPointer<MethodMaskCallerDelegate>(this.pointer);
-                del.Invoke(in config, comp.ptr, configComp.ptr, in mask, in ent);
+                del.Invoke(in config, comp.ptr, configComp.ptr, mask, in ent);
             }
 
             public void Dispose() {
@@ -330,7 +330,7 @@ namespace ME.BECS {
                             Batches.Set_INTERNAL(typeId, in ent);
                         }
                         if (this.functionMaskPointers[i].IsValid() == true) {
-                            this.functionMaskPointers[i].Call(in config, new safe_ptr<byte>(dataPtr), data, in this.masks.ptr[i], in config.staticData.staticDataEnt);
+                            this.functionMaskPointers[i].Call(in config, new safe_ptr<byte>(dataPtr), data, (this.masks.ptr + i), in config.staticData.staticDataEnt);
                         }
                     } else {
                         Batches.Set(in ent, typeId, data.ptr, state);
