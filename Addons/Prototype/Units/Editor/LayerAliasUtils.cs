@@ -1,6 +1,6 @@
 ﻿namespace ME.BECS.Units.Editor {
 
-    public class LayerAliasUtils {
+    public static class LayerAliasUtils {
         
         private static System.Collections.Generic.Dictionary<uint, string> layerAliasMap;
         private static System.Collections.Generic.Dictionary<string, uint> aliasLayerMap;
@@ -59,17 +59,18 @@
         }
 
         private static void Cache() {
-            if (customLayerAliasProvider != null)
-                return;
+            
+            if (customLayerAliasProvider != null) return;
+            
             var derivedTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<ILayerAliasProvider>();
             System.Type type = null;
-            foreach (var derivedType in derivedTypes)
-            {
+            foreach (var derivedType in derivedTypes) {
                 if (typeof(DefaultLayerAliasProvider).IsAssignableFrom(derivedType) == false) {
                     type = derivedType;
                     break;
                 }
             }
+            
             customLayerAliasProvider = (ILayerAliasProvider)System.Activator.CreateInstance(type ?? typeof(DefaultLayerAliasProvider));
             
             layerAliasMap = new System.Collections.Generic.Dictionary<uint, string>(32);
@@ -94,13 +95,12 @@
         
     }
 
-    public class DefaultLayerAliasProvider : ILayerAliasProvider
-    {
+    public class DefaultLayerAliasProvider : ILayerAliasProvider {
 
-        private System.Collections.Generic.Dictionary<uint, string> aliases = new ();
+        private readonly System.Collections.Generic.Dictionary<uint, string> aliases = new ();
         
         public System.Collections.Generic.Dictionary<uint, string> GetCustomAliases() {
-            return aliases;
+            return this.aliases;
         }
 
     }

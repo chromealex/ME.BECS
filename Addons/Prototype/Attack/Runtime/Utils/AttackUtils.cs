@@ -214,6 +214,15 @@ namespace ME.BECS.Attack {
             
         }
 
+        [INLINE(256)]
+        public static bool CanAttack(in AttackAspect attackSensor, in Ent target) {
+            
+            var unitAttackMask = attackSensor.ent.Read<AttackFilterComponent>().layers;
+            var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
+            return unitAttackMask.Contains(targetAttackLayer);
+            
+        }
+
         /// <summary>
         /// Create bullet entity with 200 ms muzzleLifetime
         /// </summary>
