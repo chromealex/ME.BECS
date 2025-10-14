@@ -50,11 +50,12 @@ namespace ME.BECS.Editor.Aspects {
                 var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).ToArray();
                 var idx = 0u;
                 content.Add($"var allocator = ent.World.state.ptr->allocator;");
+                content.Add($"var mask = (BitArray*)maskPtr;");
                 foreach (var field in fields) {
                     
                     var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
                     var sizeOf = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf(field.FieldType);
-                    content.Add($"if (mask.IsSet(in allocator, {idx}) == true) UnsafeUtility.MemCpy((byte*)componentPtr + {fieldOffset}, (byte*)configComponent + {fieldOffset}, {sizeOf});");
+                    content.Add($"if (mask->IsSet(in allocator, {idx}) == true) UnsafeUtility.MemCpy((byte*)componentPtr + {fieldOffset}, (byte*)configComponent + {fieldOffset}, {sizeOf});");
                     ++idx;
 
                 }
@@ -64,7 +65,7 @@ namespace ME.BECS.Editor.Aspects {
                         methodName = $"EntityConfigComponentMaskApply{EditorUtils.GetCodeName(strType)}",
                         type = strType,
                         registerMethodName = "RegisterConfigComponentMaskCallback",
-                        definition = "in UnsafeEntityConfig config, void* componentPtr, void* configComponent, in BitArray mask, in Ent ent",
+                        definition = "in UnsafeEntityConfig config, void* componentPtr, void* configComponent, void* maskPtr, in Ent ent",
                         content = string.Join("\n", content),
                         burstCompile = true,
                         pInvoke = "ME.BECS.UnsafeEntityConfig.MethodMaskCallerDelegate",
