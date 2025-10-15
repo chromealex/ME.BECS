@@ -17,7 +17,9 @@ namespace ME.BECS.Commands {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitCommandGroupAspect commandGroup) {
 
                 var move = commandGroup.ent.Read<CommandMove>();
-                PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in move.targetPosition, in jobInfo);
+                var target = Path.Target.Create(move.targetPosition);
+                if (move.targets.IsCreated == true) Path.Target.Create(move.targets);
+                PathUtils.UpdateTarget(in this.buildGraphSystem, in commandGroup, in target, in jobInfo);
                 
                 for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
                     var u = commandGroup.readUnits[i];

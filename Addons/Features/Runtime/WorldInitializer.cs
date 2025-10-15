@@ -11,7 +11,7 @@ namespace ME.BECS {
 
         protected override void DoWorldAwake() {
             
-            if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null) {
+            if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null && this.featuresGraphLateUpdate == null) {
                 Logger.Features.Error("Graphs are null");
                 return;
             }

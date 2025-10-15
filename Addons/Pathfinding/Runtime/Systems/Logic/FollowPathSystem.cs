@@ -47,7 +47,7 @@ namespace ME.BECS.Pathfinding {
 
                 if (unit.IsPathFollow == false) {
                     // just apply rvo direction
-                    this.Move(ref tr, ref unit, in float3.zero, false);
+                    this.Move(ref tr, ref unit, in unit.componentRuntime.manualDirection, false);
                     return;
                 }
 

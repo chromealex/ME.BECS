@@ -295,8 +295,7 @@ namespace ME.BECS.Editor {
                 }
 
                 this.needSync = true;
-                EditorApplication.delayCall = () => {
-                    EditorApplication.delayCall = null;
+                EditorApplication.delayCall += () => {
                     this.Update();
                 };
                 removeButton.SetEnabled(selectIndex >= 0);

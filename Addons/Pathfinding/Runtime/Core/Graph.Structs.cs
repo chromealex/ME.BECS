@@ -381,11 +381,13 @@ namespace ME.BECS.Pathfinding {
                 Point  = 0,
                 Rect   = 1,
                 Radius = 2,
+                Points = 3,
             }
             
             public TargetType type;
             public float3 center;
             public float2 size;
+            public ListAuto<float3> positions;
 
             public tfloat radius {
                 [INLINE(256)] get => this.size.x;
@@ -409,12 +411,27 @@ namespace ME.BECS.Pathfinding {
                 this.type = other.type;
                 this.center = other.center;
                 this.size = other.size;
+                this.positions = other.positions;
             }
 
             [INLINE(256)]
             public void FillNodes(in RootGraphComponent root, safe_ptr<State> state, ref Unity.Collections.NativeHashSet<Graph.TempNode> set, tfloat agentRadius) {
                 
                 switch (this.type) {
+                    case TargetType.Points: {
+                        for (uint i = 0u; i < this.positions.Count; ++i) {
+                            var point = this.positions[i];
+                            var targetChunkIndex = Graph.GetChunkIndex(in root, in point, true);
+                            var targetChunk = root.chunks[state, targetChunkIndex];
+                            var targetNodeIndex = Graph.GetNodeIndex(in root, in targetChunk, in point, false);
+                            set.Add(new Graph.TempNode() {
+                                chunkIndex = targetChunkIndex,
+                                nodeIndex = targetNodeIndex,
+                            });
+                        }
+                        return;
+                    }
+                    
                     case TargetType.Point: {
                         var targetChunkIndex = Graph.GetChunkIndex(in root, in this.center, true);
                         var targetChunk = root.chunks[state, targetChunkIndex];
@@ -475,6 +492,15 @@ namespace ME.BECS.Pathfinding {
             public void FillChunks(in RootGraphComponent root, safe_ptr<State> state, ref Unity.Collections.NativeHashSet<uint> set) {
                 
                 switch (this.type) {
+                    case TargetType.Points: {
+                        for (uint i = 0u; i < this.positions.Count; ++i) {
+                            var point = this.positions[i];
+                            var targetChunkIndex = Graph.GetChunkIndex(in root, in point, true);
+                            set.Add(targetChunkIndex);
+                        }
+                        return;
+                    }
+
                     case TargetType.Point: {
                         var targetChunkIndex = Graph.GetChunkIndex(in root, in this.center, true);
                         set.Add(targetChunkIndex);
@@ -540,7 +566,15 @@ namespace ME.BECS.Pathfinding {
                     center = position,
                 };
             }
-            
+
+            [INLINE(256)]
+            public static Target Create(in ListAuto<float3> positions) {
+                return new Target() {
+                    type = TargetType.Points,
+                    positions = positions,
+                };
+            }
+
             [INLINE(256)]
             public static Target Create(in Bounds rect) {
                 return new Target() {

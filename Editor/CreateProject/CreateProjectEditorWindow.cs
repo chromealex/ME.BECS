@@ -92,6 +92,7 @@ namespace ME.BECS.Editor {
 
                 public string package;
                 public string[] dependencies;
+                public string[] defines;
                 public int mode;
 
             }
@@ -355,7 +356,7 @@ namespace ME.BECS.Editor {
         private static void OnPackageImport(PackageImport packageImport) {
             AssetDatabase.Refresh();
             var root = "Assets/__template";
-            try {
+            //try {
                 // complete
                 var templateInnerFile = $"{root}/template.json";
                 var templateText = System.IO.File.ReadAllText(templateInnerFile);
@@ -363,39 +364,58 @@ namespace ME.BECS.Editor {
                 var allFiles = System.IO.Directory.EnumerateFiles(root, "*.*", System.IO.SearchOption.AllDirectories).ToList();
                 var localRoot = $"{root}/data";
 
-                EditorUtility.DisplayProgressBar("Creating Project", "Patching", 0f);
+                //EditorUtility.DisplayProgressBar("Creating Project", "Patching", 0f);
 
                 // patch files
                 var index = 0;
                 foreach (var file in allFiles) {
 
-                    EditorUtility.DisplayProgressBar("Creating Project", "Patching", ++index / (float)allFiles.Count);
+                    //EditorUtility.DisplayProgressBar("Creating Project", "Patching", ++index / (float)allFiles.Count);
 
                     if (System.IO.File.Exists(file) == false) continue;
                     var data = System.IO.File.ReadAllText(file);
-                    data = Patch(localRoot, templateInner, data);
+                    data = Patch(localRoot, packageImport.projectName, templateInner, data);
                     System.IO.File.WriteAllText(file, data);
                     var filename = System.IO.Path.GetFileNameWithoutExtension(file);
                     if (filename.Contains("__template_name__") == true) {
                         AssetDatabase.RenameAsset(file, filename.Replace("__template_name__", packageImport.projectName));
                     }
                 }
-
-                EditorUtility.DisplayProgressBar("Creating Project", "Clean up", 1f);
+                
+                // add defines
+                if (packageImport.mode.defines != null) {
+                    BuildTargetGroup buildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+                    var name = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(buildTargetGroup);
+                    PlayerSettings.GetScriptingDefineSymbols(name, out var currentDefines);
+                    var list = new scg::List<string>(packageImport.mode.defines.Length);
+                    foreach (var define in packageImport.mode.defines) {
+                        if (currentDefines.Any(x => x == define) == true) {
+                            // skip
+                            continue;
+                        }
+                        list.Add(define);
+                    }
+                    currentDefines = currentDefines.Concat(list).ToArray();
+                    PlayerSettings.SetScriptingDefineSymbols(name, currentDefines);
+                }
+                
+                //EditorUtility.DisplayProgressBar("Creating Project", "Clean up", 1f);
+                
                 // move files
                 {
                     AssetDatabase.MoveAsset($"{root}/data", packageImport.targetPath);
                     CreateAssembly(packageImport.targetPath, packageImport.projectName, packageImport.mode.dependencies);
                 }
-            } catch (System.Exception ex) {
+            /*} catch (System.Exception ex) {
                 Debug.LogException(ex);
-            } finally {
+            } finally */{
                 // remove template
                 AssetDatabase.DeleteAsset(root);
-                EditorUtility.ClearProgressBar();
+                //EditorUtility.ClearProgressBar();
             }
             
-            static string Patch(string root, TemplateInnerJson data, string text) {
+            static string Patch(string root, string projectName, TemplateInnerJson data, string text) {
+                text = text.Replace("namespace NewProject", $"namespace {projectName}");
                 if (data.files != null) {
                     foreach (var file in data.files) {
                         var obj = AssetDatabase.LoadAssetAtPath<Object>($"{root}/{file.file}");
@@ -443,7 +463,7 @@ namespace ME.BECS.Editor {
 
         private static void CreateTemplate(TemplateJson.ModeJson templateJson, string templatePath, string dir, string targetPath, string projectName) {
             
-            EditorUtility.DisplayProgressBar("Creating Project", "Creating Project", 0f);
+            //EditorUtility.DisplayProgressBar("Creating Project", "Creating Project", 0f);
             
             EditorPrefs.SetString("ME.BECS.Editor.AwaitPackageImport", System.IO.Path.GetFileNameWithoutExtension(templateJson.package));
             EditorPrefs.SetString("ME.BECS.Editor.AwaitPackageImportData", JsonUtility.ToJson(new PackageImport() {
@@ -455,7 +475,7 @@ namespace ME.BECS.Editor {
             // unpack template
             AssetDatabase.importPackageFailed += (packageName, error) => {
                 Debug.LogError(error);
-                EditorUtility.ClearProgressBar();
+                //EditorUtility.ClearProgressBar();
             };
             AssetDatabase.importPackageCompleted += (packageName) => {
                 OnScriptReloaded();
