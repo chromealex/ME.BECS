@@ -80,6 +80,7 @@ namespace ME.BECS.Network {
             if (this.networkModule is null) {
                 // Use default initializer behaviour if network module not found as FIXED_UPDATE
                 this.previousFrameDependsOn.Complete();
+                this.previousFrameDependsOn = State.NextTick(this.world.state, this.previousFrameDependsOn);
                 this.previousFrameDependsOn = this.DoUpdate(UpdateType.FIXED_UPDATE, this.previousFrameDependsOn);
                 this.previousFrameDependsOn.Complete();
             }

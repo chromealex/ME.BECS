@@ -6,6 +6,19 @@ using scg = System.Collections.Generic;
 
 namespace ME.BECS.Editor {
 
+    public abstract class CreateProjectDefaultModule {
+
+        public abstract ModeSupport mode { get; }
+
+        public abstract string CreateModule(string projectPath, string projectName);
+
+    }
+
+    public enum ModeSupport {
+        SinglePlayer = 1 << 0,
+        Multiplayer  = 1 << 1,
+    }
+
     public class CreateProjectEditorWindow : EditorWindow {
 
         private StyleSheet styleSheet;
@@ -16,12 +29,13 @@ namespace ME.BECS.Editor {
         private ListView modesList;
         private TemplateInfo[] allModes;
         private scg::List<TemplateInfo> currentModes;
+        private TextField projectNameField;
 
         public enum Mode {
             SinglePlayer = 0,
             Multiplayer  = 1,
         }
-        
+
         public struct TemplateInfo {
 
             public Texture icon;
@@ -67,6 +81,40 @@ namespace ME.BECS.Editor {
             public bool IsValid() {
                 return string.IsNullOrEmpty(this.caption) == false;
             }
+
+        }
+
+        [System.Serializable]
+        public struct TemplateJson {
+
+            [System.Serializable]
+            public struct ModeJson {
+
+                public string package;
+                public string[] dependencies;
+                public int mode;
+
+            }
+
+            public ModeJson[] modes;
+
+        }
+
+        [System.Serializable]
+        public struct TemplateInnerJson {
+
+            [System.Serializable]
+            public struct File {
+
+                public string search;
+                public string target;
+                public string file;
+
+            }
+
+            public File[] files;
+            public File[] configs;
+            public File[] views;
 
         }
 
@@ -150,18 +198,13 @@ namespace ME.BECS.Editor {
                 top.Add(path);
 
                 var projectName = new TextField();
-                this.projectName = projectName.value = "NewProject";
+                this.projectNameField = projectName;
                 projectName.RegisterValueChangedCallback((evt) => {
                     this.projectName = evt.newValue;
                     this.projectName = projectName.value = EditorUtils.UpperFirstLetter(this.projectName);
-                    if (EditorUtils.IsValidProjectName(this.projectName) == false) {
-                        projectName.AddToClassList("fail");
-                    } else {
-                        projectName.RemoveFromClassList("fail");
-                    }
-
                     this.UpdateButton(createButton);
                 });
+                this.projectName = projectName.value = "NewProject";
                 projectName.AddToClassList("project-name");
                 top.Add(projectName);
             }
@@ -290,168 +333,135 @@ namespace ME.BECS.Editor {
         }
 
         private static void CreateProject(string path, string projectName, string template, Mode mode) {
-            var pathRoot = path;
             path = $"{path}/{projectName}";
             path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(path);
-            var newName = System.IO.Path.GetFileName(path);
-            var dirGuid = UnityEditor.AssetDatabase.CreateFolder(pathRoot, newName);
-            var dirPath = UnityEditor.AssetDatabase.GUIDToAssetPath(dirGuid);
             {
-                CreateTemplateScript(dirPath, newName, template, mode);
+                CreateTemplateScript(path, projectName, template, mode);
             }
-        }
-
-        [System.Serializable]
-        public struct TemplateJson {
-
-            [System.Serializable]
-            public struct SystemJson {
-
-                public string name;
-
-            }
-
-            [System.Serializable]
-            public struct SystemGroupJson {
-
-                public string name;
-                public SystemJson[] systems;
-
-            }
-
-            [System.Serializable]
-            public struct GraphJson {
-
-                [System.Serializable]
-                public struct GraphSystem {
-
-                    public string name;
-                    public string guid;
-
-                }
-                
-                public string name;
-                public GraphSystem[] systems;
-                
-            }
-
-            [System.Serializable]
-            public struct ModeJson {
-
-                public string directory;
-                public string[] initializers;
-                public string[] dependencies;
-                public SystemGroupJson[] systems;
-                public GraphJson[] graphs;
-                public string[] files;
-                public int mode;
-
-            }
-
-            public ModeJson[] modes;
-
         }
 
         private static void CreateTemplateScript(string path, string name, string template, Mode mode) {
 
             var dir = $"ME.BECS.Resources/Templates/{template}";
-            var json = EditorUtils.LoadResource<UnityEngine.TextAsset>($"{dir}/template.json").text;
+            var templateAsset = EditorUtils.LoadResource<UnityEngine.TextAsset>($"{dir}/template.json");
+            var json = templateAsset.text;
             var templateJson = JsonUtility.FromJson<TemplateJson>(json);
 
             var modeJson = templateJson.modes.FirstOrDefault(x => x.mode == (int)mode);
-            CreateTemplate(modeJson, dir, path, name);
+            CreateTemplate(modeJson, System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(templateAsset)), dir, path, name);
 
         }
 
-        private static void CreateTemplate(TemplateJson.ModeJson templateJson, string dir, string targetPath, string projectName) {
-            
-            CreateAssembly(targetPath, projectName, templateJson.dependencies);
-            
-            for (int i = 0; i < templateJson.initializers?.Length; ++i) {
-                var templateName = templateJson.initializers[i];
-                var initializerName = $"{templateName}Initializer";
-                var scriptContent = EditorUtils.LoadResource<UnityEngine.TextAsset>($"{dir}/{templateJson.directory}/{initializerName}.txt").text;
-                scriptContent = scriptContent.Replace("{{PROJECT_NAME}}", projectName);
-                scriptContent = scriptContent.Replace("{{SCRIPT_NAME}}", initializerName);
-                scriptContent = scriptContent.Replace("{{SCRIPT_NAME_SHORT}}", templateName);
+        private static void OnPackageImport(PackageImport packageImport) {
+            AssetDatabase.Refresh();
+            var root = "Assets/__template";
+            try {
+                // complete
+                var templateInnerFile = $"{root}/template.json";
+                var templateText = System.IO.File.ReadAllText(templateInnerFile);
+                var templateInner = JsonUtility.FromJson<TemplateInnerJson>(templateText);
+                var allFiles = System.IO.Directory.EnumerateFiles(root, "*.*", System.IO.SearchOption.AllDirectories).ToList();
+                var localRoot = $"{root}/data";
 
-                var assetPath = $"{targetPath}/{initializerName}Initializer.cs";
-                WriteFile(assetPath, scriptContent);
-            }
+                EditorUtility.DisplayProgressBar("Creating Project", "Patching", 0f);
 
-            for (int i = 0; i < templateJson.systems?.Length; ++i) {
-                var groupName = templateJson.systems[i].name;
-                for (int j = 0; j < templateJson.systems[i].systems.Length; ++j) {
-                    var systemName = templateJson.systems[i].systems[j].name;
-                    var scriptContent = EditorUtils.LoadResource<UnityEngine.TextAsset>($"{dir}/{templateJson.directory}/Systems/{groupName}/{systemName}.txt").text;
-                    scriptContent = scriptContent.Replace("{{PROJECT_NAME}}", projectName);
-                    scriptContent = scriptContent.Replace("{{SCRIPT_NAME}}", systemName);
+                // patch files
+                var index = 0;
+                foreach (var file in allFiles) {
 
-                    var writeDir = $"{targetPath}/Systems/{groupName}";
-                    WriteDir(writeDir);
-                    var assetPath = $"{writeDir}/{systemName}.cs";
-                    WriteFile(assetPath, scriptContent);
-                }
-            }
+                    EditorUtility.DisplayProgressBar("Creating Project", "Patching", ++index / (float)allFiles.Count);
 
-            WriteDir($"{targetPath}/Graphs");
-            for (int i = 0; i < templateJson.graphs?.Length; ++i) {
-                var graph = templateJson.graphs[i];
-                var graphName = graph.name;
-                Copy<ME.BECS.FeaturesGraph.SystemsGraph>($"{dir}/{templateJson.directory}/Graphs/{graphName}Graph.asset", $"{targetPath}/Graphs/{projectName}-{graphName}Graph.asset", (text) => {
-                    foreach (var system in graph.systems) {
-                        text = text.Replace(system.guid, "type: {class: " + system.name + ", ns: " + projectName + @", asm: " + projectName + "}");
+                    if (System.IO.File.Exists(file) == false) continue;
+                    var data = System.IO.File.ReadAllText(file);
+                    data = Patch(localRoot, templateInner, data);
+                    System.IO.File.WriteAllText(file, data);
+                    var filename = System.IO.Path.GetFileNameWithoutExtension(file);
+                    if (filename.Contains("__template_name__") == true) {
+                        AssetDatabase.RenameAsset(file, filename.Replace("__template_name__", packageImport.projectName));
                     }
-                    text = text.Replace("builtInGraph: 1", "builtInGraph: 0");
-                    return text;
-                });
+                }
+
+                EditorUtility.DisplayProgressBar("Creating Project", "Clean up", 1f);
+                // move files
+                {
+                    AssetDatabase.MoveAsset($"{root}/data", packageImport.targetPath);
+                    CreateAssembly(packageImport.targetPath, packageImport.projectName, packageImport.mode.dependencies);
+                }
+            } catch (System.Exception ex) {
+                Debug.LogException(ex);
+            } finally {
+                // remove template
+                AssetDatabase.DeleteAsset(root);
+                EditorUtility.ClearProgressBar();
+            }
+            
+            static string Patch(string root, TemplateInnerJson data, string text) {
+                if (data.files != null) {
+                    foreach (var file in data.files) {
+                        var obj = AssetDatabase.LoadAssetAtPath<Object>($"{root}/{file.file}");
+                        var newId = ObjectReferenceRegistry.data.Add(obj, out _);
+                        text = text.Replace(file.search, string.Format(file.target, newId));
+                    }
+                }
+                if (data.configs != null) {
+                    foreach (var file in data.configs) {
+                        var obj = AssetDatabase.LoadAssetAtPath<EntityConfig>($"{root}/{file.file}");
+                        var newId = ObjectReferenceRegistry.data.Add(obj, out _);
+                        text = text.Replace(file.search, string.Format(file.target, newId));
+                    }
+                }
+                if (data.views != null) {
+                    foreach (var file in data.views) {
+                        var obj = AssetDatabase.LoadAssetAtPath<GameObject>($"{root}/{file.file}").GetComponent<ME.BECS.Views.EntityView>();
+                        var newId = ObjectReferenceRegistry.data.Add(obj, out _);
+                        text = text.Replace(file.search, string.Format(file.target, newId));
+                    }
+                }
+
+                return text;
             }
 
-            for (int i = 0; i < templateJson.files?.Length; ++i) {
-                var file = templateJson.files[i];
-                var res = EditorUtils.LoadResource<TextAsset>($"{dir}/{templateJson.directory}/{file}");
-                var path = AssetDatabase.GetAssetPath(res);
-                var localDir = System.IO.Path.GetDirectoryName(file);
-                WriteDir($"{targetPath}/{localDir}");
-                var targetFilePath = $"{targetPath}/{localDir}/{System.IO.Path.GetFileNameWithoutExtension(path)}";
-                System.IO.File.Copy(path, targetFilePath, true);
-                var text = System.IO.File.ReadAllText(targetFilePath);
-                text = text.Replace("{{PROJECT_NAME}}", projectName);
-                System.IO.File.WriteAllText(targetFilePath, text);
-                AssetDatabase.ImportAsset(targetFilePath);
-            }
+        }
+
+        public struct PackageImport {
+
+            public TemplateJson.ModeJson mode;
+            public string targetPath;
+            public string projectName;
 
         }
 
-        private static T Copy<T>(string from, string to, System.Func<string, string> onProcess) where T : Object {
-            var res = EditorUtils.LoadResource<T>(from);
-            var path = AssetDatabase.GetAssetPath(res);
-            System.IO.File.Copy(path, to, true);
-            var text = System.IO.File.ReadAllText(to);
-            text = onProcess.Invoke(text);
-            text = text.Replace($"m_Name: {System.IO.Path.GetFileNameWithoutExtension(from)}", $"m_Name: {System.IO.Path.GetFileNameWithoutExtension(to)}");
-            System.IO.File.WriteAllText(to, text);
-            AssetDatabase.ImportAsset(to);
-            var asset = AssetDatabase.LoadAssetAtPath<T>(to);
-            return asset;
+        [UnityEditor.Callbacks.DidReloadScripts]
+        public static void OnScriptReloaded() {
+            if (EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == false) return;
+            var data = EditorPrefs.GetString("ME.BECS.Editor.AwaitPackageImportData");
+            EditorPrefs.DeleteKey("ME.BECS.Editor.AwaitPackageImportData");
+            EditorApplication.delayCall += () => {
+                OnPackageImport(JsonUtility.FromJson<PackageImport>(data));
+            };
         }
 
-        private static void WriteDir(string path) {
+        private static void CreateTemplate(TemplateJson.ModeJson templateJson, string templatePath, string dir, string targetPath, string projectName) {
+            
+            EditorUtility.DisplayProgressBar("Creating Project", "Creating Project", 0f);
+            
+            EditorPrefs.SetString("ME.BECS.Editor.AwaitPackageImport", System.IO.Path.GetFileNameWithoutExtension(templateJson.package));
+            EditorPrefs.SetString("ME.BECS.Editor.AwaitPackageImportData", JsonUtility.ToJson(new PackageImport() {
+                projectName = projectName,
+                mode = templateJson,
+                targetPath = targetPath,
+            }));
+            
+            // unpack template
+            AssetDatabase.importPackageFailed += (packageName, error) => {
+                Debug.LogError(error);
+                EditorUtility.ClearProgressBar();
+            };
+            AssetDatabase.importPackageCompleted += (packageName) => {
+                OnScriptReloaded();
+            };
+            AssetDatabase.ImportPackage($"{templatePath}/{templateJson.package}", false);
 
-            System.IO.Directory.CreateDirectory(path);
-
-        }
-
-        private static string WriteFile(string assetPath, string scriptContent) {
-            System.IO.File.WriteAllText(assetPath, scriptContent);
-            UnityEditor.AssetDatabase.ImportAsset(assetPath);
-            UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextAsset>(assetPath), out var guid, out long localId);
-            var metaAssetPath = $"{assetPath}.meta";
-            var meta = EditorUtils.LoadResource<UnityEngine.TextAsset>($"ME.BECS.Resources/Templates/DefaultScriptMeta-Template.txt").text;
-            meta = meta.Replace("{{GUID}}", guid);
-            System.IO.File.WriteAllText(metaAssetPath, meta);
-            UnityEditor.AssetDatabase.ImportAsset(assetPath);
-            return guid;
         }
 
         private static void CreateAssembly(string targetPath, string projectName, string[] dependencies) {
@@ -468,6 +478,14 @@ namespace ME.BECS.Editor {
         
         private void UpdateButton(Button createButton) {
             bool state = EditorUtils.IsValidProjectName(this.projectName);
+            if (System.IO.Directory.Exists($"{this.path}/{this.projectName}") == true) {
+                state = false;
+            }
+            if (state == false) {
+                this.projectNameField.AddToClassList("fail");
+            } else {
+                this.projectNameField.RemoveFromClassList("fail");
+            }
             if (this.genreIndex == -1) {
                 state = false;
             }

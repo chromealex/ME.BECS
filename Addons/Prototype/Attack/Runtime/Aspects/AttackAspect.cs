@@ -44,7 +44,16 @@ namespace ME.BECS.Attack {
 
         public readonly uint CurrentTargetIndex => this.ent.Read<ME.BECS.Bullets.FirePointComponent>().index;
 
-        public bool HasAnyTarget => this.target.IsAlive() == true || this.targets.Count > 0;
+        public bool HasAnyTarget {
+            get {
+                if (this.target.IsAlive() == true) return true;
+                for (uint i = 0u; i < this.targets.Count; ++i) {
+                    if (this.targets[i].IsAlive() == true) return true;
+                }
+                return false;
+            }
+        }
+
         public readonly uint Damage {
             get {
                 if (this.ent.Has<ME.BECS.Bullets.DamageOverrideComponent>() == true) return this.ent.Read<ME.BECS.Bullets.DamageOverrideComponent>().damage;

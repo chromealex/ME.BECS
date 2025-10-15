@@ -2,7 +2,9 @@ namespace ME.BECS.Network.Editor {
     
     using ME.BECS.Editor;
 
-    public class CreateDefaultModule : ME.BECS.Features.Editor.CreateProjectDefaultModule {
+    public class CreateDefaultModule : CreateProjectDefaultModule {
+
+        public override ModeSupport mode => ModeSupport.Multiplayer;
 
         public override string CreateModule(string projectPath, string projectName) {
             

@@ -28,8 +28,10 @@ namespace ME.BECS {
 
         public void Update() {
 
-            if (this.featuresGraph == null) return;
             this.previousFrameDependsOn.Complete();
+            this.previousFrameDependsOn = State.NextTick(this.world.state, this.previousFrameDependsOn);
+            
+            if (this.featuresGraph == null) return;
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             this.previousFrameDependsOn.Complete();
 
