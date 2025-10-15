@@ -5,12 +5,12 @@
         {
             "mode": 0,
             "dependencies": [ "Unity.Collections", "Unity.Burst", "ME.BECS.Players", "ME.BECS.Trees", "ME.BECS.Pathfinding", "ME.BECS.Commands", "ME.BECS.Units", "ME.BECS.Attack", "ME.BECS.Transforms", "ME.BECS.Views", "Unity.Mathematics" ],
-            "package": "rts-singleplayer.unitypackage"
+            "package": "rts-singleplayer.becs.txt"
         },
         {
             "mode": 1,
             "dependencies": [ "Unity.Collections", "Unity.Burst", "ME.BECS.Players", "ME.BECS.Trees", "ME.BECS.Pathfinding", "ME.BECS.Commands", "ME.BECS.Units", "ME.BECS.Attack", "ME.BECS.Transforms", "ME.BECS.Views", "ME.BECS.Network" ],
-            "package": "rts-multiplayer.unitypackage"
+            "package": "rts-multiplayer.becs.txt"
         }
     ]
 }
