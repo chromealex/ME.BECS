@@ -21,7 +21,7 @@ namespace ME.BECS {
             [AOT.MonoPInvokeCallbackAttribute(typeof(MethodMaskCallerDelegate))]
             public static void Call(in UnsafeEntityConfig config, void* component, void* configComponent, void* mask, in Ent ent) {
 
-                WorldStaticCallbacks.RaiseConfigComponentMaskCallback<T>(in config, component, configComponent, *(BitArray*)mask, in ent);
+                WorldStaticCallbacks.RaiseConfigComponentMaskCallback<T>(in config, component, configComponent, mask, in ent);
 
             }
 

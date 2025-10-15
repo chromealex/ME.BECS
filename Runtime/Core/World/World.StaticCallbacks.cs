@@ -20,7 +20,7 @@ namespace ME.BECS {
 
     public class WorldStaticConfigComponentCallbacksTypes {
 
-        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentCallbacksTypes>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentCallbackDelegate>>>.align, 20001);
+        public static readonly SharedStatic<Array<FunctionPointer<UnsafeEntityConfig.MethodCallerDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<UnsafeEntityConfig.MethodCallerDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentCallbacksTypes>(TAlign<Array<FunctionPointer<UnsafeEntityConfig.MethodCallerDelegate>>>.align, 20001);
 
     }
 
@@ -32,7 +32,7 @@ namespace ME.BECS {
 
     public class WorldStaticConfigComponentMaskCallbacksTypes {
 
-        public static readonly SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentMaskCallbackDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentMaskCallbackDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentMaskCallbacksTypes>(TAlign<Array<FunctionPointer<WorldStaticCallbacks.ConfigComponentMaskCallbackDelegate>>>.align, 20003);
+        public static readonly SharedStatic<Array<FunctionPointer<UnsafeEntityConfig.MethodMaskCallerDelegate>>> callbacks = SharedStatic<Array<FunctionPointer<UnsafeEntityConfig.MethodMaskCallerDelegate>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldStaticConfigComponentMaskCallbacksTypes>(TAlign<Array<FunctionPointer<UnsafeEntityConfig.MethodMaskCallerDelegate>>>.align, 20003);
 
     }
 
@@ -56,8 +56,6 @@ namespace ME.BECS {
         }
 
         public delegate void CallbackDelegate<T>(ref T data) where T : unmanaged;
-        public unsafe delegate void ConfigComponentCallbackDelegate(in UnsafeEntityConfig config, void* componentPtr, in Ent ent);
-        public unsafe delegate void ConfigComponentMaskCallbackDelegate(in UnsafeEntityConfig config, void* componentPtr, void* configComponent, in BitArray mask, in Ent ent);
         public unsafe delegate void CopyFromComponentCallbackDelegate(void* componentPtr, in Ent ent);
 
         public static void RegisterCopyFromComponentCallback<T>(CopyFromComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
@@ -76,7 +74,7 @@ namespace ME.BECS {
 
         }
 
-        public static void RegisterConfigComponentCallback<T>(ConfigComponentCallbackDelegate callback) where T : unmanaged, IComponentBase {
+        public static void RegisterConfigComponentCallback<T>(UnsafeEntityConfig.MethodCallerDelegate callback) where T : unmanaged, IComponentBase {
 
             var maxTypeId = StaticTypes.counter;
             WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Resize(maxTypeId + 1u);
@@ -92,7 +90,7 @@ namespace ME.BECS {
 
         }
 
-        public static void RegisterConfigComponentMaskCallback<T>(ConfigComponentMaskCallbackDelegate callback) where T : unmanaged, IComponentBase {
+        public static void RegisterConfigComponentMaskCallback<T>(UnsafeEntityConfig.MethodMaskCallerDelegate callback) where T : unmanaged, IComponentBase {
 
             var maxTypeId = StaticTypes.counter;
             WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Resize(maxTypeId + 1u);
@@ -100,11 +98,11 @@ namespace ME.BECS {
 
         }
 
-        public static unsafe void RaiseConfigComponentMaskCallback<T>(in UnsafeEntityConfig config, void* component, void* configComponent, in BitArray mask, in Ent ent) where T : unmanaged, IComponentBase {
+        public static unsafe void RaiseConfigComponentMaskCallback<T>(in UnsafeEntityConfig config, void* component, void* configComponent, void* mask, in Ent ent) where T : unmanaged, IComponentBase {
 
             if (WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Length == 0u) return;
             var callback = WorldStaticConfigComponentMaskCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId);
-            if (callback.IsCreated == true) callback.Invoke(in config, component, configComponent, in mask, in ent);
+            if (callback.IsCreated == true) callback.Invoke(in config, component, configComponent, mask, in ent);
 
         }
 
