@@ -42,25 +42,32 @@ namespace ME.BECS.Editor {
             public string caption;
             public string description;
             public string template;
-            public Mode[] modes;
+            public TemplateInfoJson.ModeJson[] modes;
             public Mode mode;
+            public string templatePath;
 
             public TemplateInfo(string path, TemplateInfoJson json) {
                 this.caption = json.caption;
                 this.description = json.description;
-                this.icon = EditorUtils.LoadResource<Texture2D>($"{System.IO.Path.GetDirectoryName(path)}/icon.png", isRequired: false);
+                this.templatePath = System.IO.Path.GetDirectoryName(path);
+                this.icon = EditorUtils.LoadResource<Texture2D>($"{this.templatePath}/icon.png", isRequired: false);
                 if (this.icon == null) this.icon = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/Templates/Other.png");
                 this.template = System.IO.Path.GetFileNameWithoutExtension(System.IO.Path.GetDirectoryName(path));
-                this.modes = new Mode[json.modes.Length];
-                for (int i = 0; i < json.modes.Length; ++i) {
-                    this.modes[i] = (Mode)json.modes[i].mode;
-                }
+                this.modes = json.modes;
                 this.mode = default;
             }
 
             public scg::List<TemplateInfo> GetModes(TemplateInfo[] allModes) {
                 var modes = this.modes;
-                return allModes.Where(x => System.Array.IndexOf(modes, x.mode) >= 0).ToList();
+                var templatePath = this.templatePath;
+                return allModes.Where(x => {
+                    foreach (var m in modes) {
+                        if (System.IO.File.Exists($"{templatePath}/{m.package}") == true && m.mode == (int)x.mode) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }).ToList();
             }
             
         }
@@ -71,6 +78,7 @@ namespace ME.BECS.Editor {
             public struct ModeJson {
 
                 public int mode;
+                public string package;
 
             }
 
@@ -313,7 +321,7 @@ namespace ME.BECS.Editor {
                 };
                 templatesContainer.bindItem = (element, i) => {
 
-                    var template = modes[i];
+                    var template = (TemplateInfo)this.modesList.itemsSource[i];
                     element.Q<Label>(className: "caption").text = template.caption;
                     element.Q<Label>(className: "description").text = template.description;
                     element.Q<Image>(className: "icon").image = template.icon;
