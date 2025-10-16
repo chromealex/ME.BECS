@@ -375,7 +375,7 @@ namespace ME.BECS.Editor {
                 //EditorUtility.DisplayProgressBar("Creating Project", "Patching", 0f);
 
                 // patch files
-                var index = 0;
+                //var index = 0;
                 foreach (var file in allFiles) {
 
                     //EditorUtility.DisplayProgressBar("Creating Project", "Patching", ++index / (float)allFiles.Count);
