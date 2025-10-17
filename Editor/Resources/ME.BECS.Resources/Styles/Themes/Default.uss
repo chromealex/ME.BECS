@@ -1,7 +1,7 @@
 :root {
     --main-color: #3c165c;
     --dark-color: #1f0337;
-    --highlight-color: #981eff;
+    --highlight-color: #7922c1;
     --highlight-text-color: #E0BBFF;
     --toolbar-color: #3c165c;
     --content-background-color: rgb(55, 55, 55);
@@ -17,4 +17,31 @@
     --toolbar-buttons-background-color-hover: rgba(0, 0, 0, 0.7);
     --grid-lines-color: rgba(255, 255, 255, 0.1);
     --grid-lines-thick-color: rgba(255, 255, 255, 0.2);
+}
+
+.unity-base-slider__dragger {
+    background-color: var(--main-color);
+    border-color: var(--dark-color);
+}
+
+.unity-scroller #unity-low-button,
+.unity-scroller #unity-high-button {
+    display: none;
+}
+
+#unity-slider {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.unity-scroller #unity-low-button {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    -unity-background-image-tint-color: var(--main-color);
+}
+
+.unity-scroller #unity-high-button {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    -unity-background-image-tint-color: var(--main-color);
 }

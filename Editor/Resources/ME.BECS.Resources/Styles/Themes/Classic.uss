@@ -1,8 +1,8 @@
 :root {
     --main-color: rgb(45, 45, 45);
-    --highlight-color: #808080;
-    --highlight-text-color: #bcbcbc;
-    --dark-color: #1f0337;
+    --highlight-color: #676767;
+    --highlight-text-color: #dfdfdf;
+    --dark-color: #232323;
     --toolbar-color: rgb(45, 45, 45);
     --content-background-color: rgb(55, 55, 55);
     --content-border-color: rgba(0, 0, 0, 0.3);

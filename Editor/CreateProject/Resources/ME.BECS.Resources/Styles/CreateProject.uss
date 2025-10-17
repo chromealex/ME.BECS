@@ -10,6 +10,12 @@
     color: var(--highlight-text-color);
 }
 
+ListView {
+    border-width: 1px;
+    border-color: var(--content-border-color);
+    background-color: var(--content-background-color);
+}
+
 .bottom-container {
     position: absolute;
     bottom: 0px;
@@ -39,6 +45,8 @@
 .header {
     font-size: 14px;
     padding: 10px;
+    border-radius: var(--content-border-radius);
+    background-color: var(--toolbar-buttons-background-color);
     color: var(--highlight-text-color);
 }
 
@@ -57,13 +65,34 @@
 .templates-container {
     width: 300px;
     height: 100%;
-    margin: 10px;
+    margin: 0px;
+    padding: 10px;
 }
 
 .templates-container .template-container {
     padding: 10px 15px;
     padding-left: 50px;
     border-radius: 5px;
+}
+.templates-container .template-container-toggle {
+    padding: 10px 15px;
+    border-radius: 5px;
+}
+.templates-container .template-container-toggle Toggle {
+    padding-top: 10px;
+    -unity-font-style: bold;
+}
+.templates-container .template-container-toggle Label {
+    white-space: normal;
+}
+.templates-container .template-container-toggle Toggle Label {
+    padding-left: 5px;
+}
+.templates-container .template-container-toggle .description {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: var(--highlight-text-color);
+    font-size: 11px;
 }
 .templates-container .template-container .icon {
     position: absolute;
@@ -76,7 +105,8 @@
     padding-top: 10px;
 }
 .templates-container .template-container:checked {
-    background-color: var(--dark-color);
+    background-color: var(--highlight-color);
+    color: var(--highlight-text-color);
 }
 
 .template-container .caption {

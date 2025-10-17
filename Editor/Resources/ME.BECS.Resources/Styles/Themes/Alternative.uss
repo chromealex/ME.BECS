@@ -1,7 +1,7 @@
 :root {
     --main-color: #16545c;
     --dark-color: #033735;
-    --highlight-color: #1ee5ff;
+    --highlight-color: #21a0b1;
     --highlight-text-color: #bbefff;
     --toolbar-color: #16545c;
     --content-background-color: rgba(0, 0, 0, 0.3);
