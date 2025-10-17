@@ -21,7 +21,7 @@ namespace ME.BECS.Units {
         public const float UINT_TO_FLOAT = 1f / FLOAT_TO_UINT;
 
         [INLINE(256)]
-        public static float3 GetSpiralPosition(in float3 center, int index, float radius) {
+        public static float3 GetSpiralPosition(in float3 center, int index, tfloat radius) {
             if (index == 0) return center;
             // (dx, dy) is a vector - direction in which we move right now
             int dx = 0;

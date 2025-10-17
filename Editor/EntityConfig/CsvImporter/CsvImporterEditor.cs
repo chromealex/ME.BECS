@@ -138,6 +138,7 @@ namespace ME.BECS.Editor.CsvImporter {
                 
             }
 
+            EditorUtility.DisplayProgressBar("CSV Importer", "Loading csv files...", 0f);
             UnityEditor.EditorApplication.delayCall += OnDelayCall;
             return;
 
@@ -152,82 +153,97 @@ namespace ME.BECS.Editor.CsvImporter {
                     }
                 }
 
+                EditorUtility.DisplayProgressBar("CSV Importer", "Loading csv files...", completed / (float)urls.Length);
                 this.loadingIndicator.text = this.GetLoaderText();
                 this.completeLabel.text = $"{completed}/{urls.Length} Completed";
                 if (allDone == false) {
                     UnityEditor.EditorApplication.delayCall += OnDelayCall;
                 } else {
-                    var hasErrors = false;
-                    var err = string.Empty;
-                    var configs = new scg::List<ConfigFile>();
-                    var csvs = new scg::List<scg::List<string[]>>();
-                    var configsPerItem = new scg::List<scg::List<ConfigFile>>();
-                    var data = new scg::List<string>();
-                    var versions = new scg::List<string>();
-                    foreach (var item in list) {
-                        hasErrors = item.responseCode != 200 || string.IsNullOrEmpty(item.error) == false;
-                        if (hasErrors == true) {
-                            err = item.error;
-                            break;
+
+                    try {
+                        EditorUtility.DisplayProgressBar("CSV Importer", "Parse CSV", 0f);
+                        var hasErrors = false;
+                        var err = string.Empty;
+                        var configs = new scg::List<ConfigFile>();
+                        var csvs = new scg::List<scg::List<string[]>>();
+                        var configsPerItem = new scg::List<scg::List<ConfigFile>>();
+                        var data = new scg::List<string>();
+                        var versions = new scg::List<string>();
+                        foreach (var item in list) {
+                            hasErrors = item.responseCode != 200 || string.IsNullOrEmpty(item.error) == false;
+                            if (hasErrors == true) {
+                                err = item.error;
+                                break;
+                            }
+
+                            data.Add(item.downloadHandler.text);
                         }
 
-                        data.Add(item.downloadHandler.text);
-                    }
+                        foreach (var item in data) {
+                            var csv = CSVParser.ReadCSV(item);
+                            csvs.Add(csv);
+                            var configFiles = ParseConfigs(csv, targetDir, out var ver, out var name);
+                            configsPerItem.Add(configFiles);
+                            configs.AddRange(configFiles);
+                            versions.Add(ver);
+                            Debug.Log($"Configs from list {name} with version {ver} has been updated");
+                        }
 
-                    foreach (var item in data) {
-                        var csv = CSVParser.ReadCSV(item);
-                        csvs.Add(csv);
-                        var configFiles = ParseConfigs(csv, targetDir, out var ver, out var name);
-                        configsPerItem.Add(configFiles);
-                        configs.AddRange(configFiles);
-                        versions.Add(ver);
-                        Debug.Log($"Configs from list {name} with version {ver} has been updated");
-                    }
-
-                    { // add project configs
-                        ObjectReferenceValidate.Validate();
-                        foreach (var item in ObjectReferenceRegistry.data.objects) {
-                            var obj = new ObjectItem(item.data);
-                            if (obj.Is<EntityConfig>() == true) {
-                                configs.Add(new ConfigFile(obj.Load<EntityConfig>()));
+                        EditorUtility.DisplayProgressBar("CSV Importer", "Add configs", 0f);
+                        { // add project configs
+                            ObjectReferenceValidate.Validate();
+                            foreach (var item in ObjectReferenceRegistry.data.objects) {
+                                var obj = new ObjectItem(item.data);
+                                if (obj.Is<EntityConfig>() == true) {
+                                    configs.Add(new ConfigFile(obj.Load<EntityConfig>()));
+                                }
                             }
                         }
-                    }
-                    
-                    foreach (var config in configs) {
-                        CreateConfig(config);
-                    }
-                    
-                    for (var index = 0; index < data.Count; ++index) {
-                        ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
-                    }
 
-                    { // assign configs to ObjectReferenceRegistry
-                        var startIndex = -1;
-                        var count = 0;
+                        EditorUtility.DisplayProgressBar("CSV Importer", "Create configs", 0f);
                         foreach (var config in configs) {
-                            ObjectReferenceRegistry.data.Add(config.instance, out var isNew);
-                            if (isNew == true) {
-                                if (startIndex == -1) startIndex = ObjectReferenceRegistry.data.objects.Length - 1;
-                                ++count;
-                            }
+                            CreateConfig(config);
                         }
-                        if (startIndex >= 0) ObjectReferenceValidate.Validate(startIndex, count);
-                    }
-                    
-                    for (var index = 0; index < data.Count; ++index) {
-                        Parse(configs, configsPerItem[index], csvs[index]);
+
+                        for (var index = 0; index < data.Count; ++index) {
+                            EditorUtility.DisplayProgressBar("CSV Importer", "Parse base configs", index / (float)data.Count);
+                            ParseBaseConfigs(configs, configsPerItem[index], csvs[index]);
+                        }
+
+                        EditorUtility.DisplayProgressBar("CSV Importer", "Add configs", 0f);
+                        { // assign configs to ObjectReferenceRegistry
+                            var startIndex = -1;
+                            var count = 0;
+                            foreach (var config in configs) {
+                                ObjectReferenceRegistry.data.Add(config.instance, out var isNew);
+                                if (isNew == true) {
+                                    if (startIndex == -1) startIndex = ObjectReferenceRegistry.data.objects.Length - 1;
+                                    ++count;
+                                }
+                            }
+
+                            if (startIndex >= 0) ObjectReferenceValidate.Validate(startIndex, count);
+                        }
+
+                        for (var index = 0; index < data.Count; ++index) {
+                            EditorUtility.DisplayProgressBar("CSV Importer", "Parse configs", index / (float)data.Count);
+                            Parse(configs, configsPerItem[index], csvs[index]);
+                        }
+
+                        if (hasErrors == true) {
+                            this.result.AddToClassList("failed");
+                            this.result.text = err;
+                        } else {
+                            Link(configs);
+                            this.result.AddToClassList("success");
+                            this.result.text = $"Operation succeed. Version has been updated to {string.Join(", ", versions)}.";
+                        }
+
+                    } catch (System.Exception ex) {
+                        Debug.LogException(ex);
                     }
 
-                    if (hasErrors == true) {
-                        this.result.AddToClassList("failed");
-                        this.result.text = err;
-                    } else {
-                        Link(configs);
-                        this.result.AddToClassList("success");
-                        this.result.text = $"Operation succeed. Version has been updated to {string.Join(", ", versions)}.";
-                    }
-
+                    EditorUtility.ClearProgressBar();
                     EditorApplication.delayCall += () => { this.result.AddToClassList("hide"); };
 
                     callback.Invoke();
