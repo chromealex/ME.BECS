@@ -32,6 +32,8 @@
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Editor Features
 
+<img align="left" src="https://github.com/chromealex/chromealex.github.io/blob/main/NewProject.png?raw=true" width="100%" />
+
 <img align="left" src="https://github.com/chromealex/chromealex.github.io/blob/main/Hierarchy.png?raw=true" width="400" />
 
 ### Hierarchy
@@ -66,7 +68,7 @@ and filter them using the search bar.
 Replays window allows you to see local and remote input actions, remove them if it is nessesary, and allows you to choose ticks in a past or in the future at runtime.
 <div></div>
 
-<img align="right" src="https://github.com/chromealex/chromealex.github.io/blob/main/ComponentsViewer.png?raw=true" width="300" />
+<img align="right" src="https://github.com/chromealex/chromealex.github.io/blob/main/ComponentsViewer.png?raw=true" width="400" />
 
 ### Components Viewer
 Components Viewer allows you to see all components and aspects in the project. This window shows type of components, allows you to leave editor comments for them and shows
