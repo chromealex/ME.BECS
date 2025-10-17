@@ -194,7 +194,7 @@ namespace ME.BECS.Editor {
             root.styleSheets.Add(this.styleSheet);
 
             var createButton = new Button(() => {
-                CreateProject(this.path, this.projectName, genres[this.genreIndex].template, (Mode)this.modeIndex);
+                CreateProject(this.path, this.projectName, genres[this.genreIndex].template, ((TemplateInfo)this.modesList.itemsSource[this.modeIndex]).mode);
             });
 
             var top = new VisualElement();
@@ -363,6 +363,7 @@ namespace ME.BECS.Editor {
 
         private static void OnPackageImport(PackageImport packageImport) {
             AssetDatabase.Refresh();
+            Debug.Log("Importing package...");
             var root = "Assets/__template";
             //try {
                 // complete
@@ -462,9 +463,9 @@ namespace ME.BECS.Editor {
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptReloaded() {
             if (EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == false) return;
-            var data = EditorPrefs.GetString("ME.BECS.Editor.AwaitPackageImportData");
-            EditorPrefs.DeleteKey("ME.BECS.Editor.AwaitPackageImportData");
             EditorApplication.delayCall += () => {
+                var data = EditorPrefs.GetString("ME.BECS.Editor.AwaitPackageImportData");
+                EditorPrefs.DeleteKey("ME.BECS.Editor.AwaitPackageImportData");
                 OnPackageImport(JsonUtility.FromJson<PackageImport>(data));
             };
         }
