@@ -37,7 +37,7 @@ namespace NativeTrees {
         public PrecomputedRay(Ray ray) {
             this.origin = (float3)ray.origin;
             this.dir = (float3)ray.direction;
-            this.invDir = 1 / this.dir;
+            this.invDir = 1f / this.dir;
         }
 
         /// <summary>

@@ -18,6 +18,25 @@ namespace ME.BECS {
     using static Cuts;
 
     [ComponentGroup(typeof(OctreeComponentGroup))]
+    public struct OctreeBoxObject : IConfigComponent, IConfigInitialize {
+
+        public tfloat sizeX;
+        public tfloat sizeY;
+        public tfloat height;
+        public int treeIndex;
+        
+        public void OnInitialize(in Ent ent) {
+
+            var qt = ent.Set<OctreeAspect>();
+            qt.treeIndex = this.treeIndex;
+            qt.SetAsRectWithSize(this.sizeX, this.sizeY);
+            qt.SetHeight(this.height);
+
+        }
+
+    }
+
+    [ComponentGroup(typeof(OctreeComponentGroup))]
     [StructLayout(LayoutKind.Explicit)]
     public struct OctreeElement : IComponent {
 
@@ -109,8 +128,9 @@ namespace ME.BECS {
                     height = heightComponent.height;
                 }
                 var size = aspect.rectSize;
-                var halfSize = new float3(size.x * 0.5f, 0f, size.y * 0.5f);
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - halfSize, pos + new float3(halfSize.x, height, halfSize.z)));
+                var halfSize = new float3(size.x * 0.5f, height * 0.5f, size.y * 0.5f);
+                var rot = tr.rotation;
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - halfSize, pos + halfSize, rot));
                 
             }
 
@@ -127,13 +147,9 @@ namespace ME.BECS {
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (aspect.readOctreeElement.ignoreY == 1) pos.y = 0f;
-                tfloat height = 0f;
-                if (ent.TryRead(out OctreeHeightComponent heightComponent) == true) {
-                    height = heightComponent.height;
-                }
                 var radius = aspect.readOctreeElement.radius;
-
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - aspect.readOctreeElement.radius, pos + new float3(radius, height, radius)));
+                var rot = tr.rotation;
+                tree.ptr->Add(tr.ent, new NativeTrees.AABB(pos - radius, pos + radius, rot));
                 
             }
 
@@ -177,7 +193,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public int AddTree() {
 
-            var size = new NativeTrees.AABB(this.mapPosition, this.mapPosition + this.mapSize);
+            var size = new NativeTrees.AABB(this.mapPosition, this.mapPosition + this.mapSize, quaternion.identity);
             this.trees.Add((safe_ptr)_make(new NativeTrees.NativeOctree<Ent>(size, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator)));
             return this.trees.Length - 1;
 
@@ -389,7 +405,7 @@ namespace ME.BECS {
                         var range = math.sqrt(rangeSqr);
                         var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
                         marker.Begin();
-                        var bounds = new NativeTrees.AABB(worldPos - range, worldPos + range);
+                        var bounds = new NativeTrees.AABB(worldPos - range, worldPos + range, quaternion.identity);
                         if (ignoreY == true) {
                             bounds.min.y = tfloat.MinValue;
                             bounds.max.y = tfloat.MaxValue;

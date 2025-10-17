@@ -162,7 +162,7 @@ namespace NativeTrees {
         /// This insertion method is significantly faster than the insertion with an AABB.
         /// </summary>
         public void InsertPoint(T obj, float3 point) {
-            var objWrapper = new ObjWrapper(obj, new AABB(point, point));
+            var objWrapper = new ObjWrapper(obj, new AABB(point, point, quaternion.identity));
 
             // We can (mainly) do without recursion for this insertion method. Except for when an octant needs to subdivide.
             var extents = new QuarterSizeBounds(this.boundsCenter, this.boundsQuarterSize);
@@ -468,7 +468,7 @@ namespace NativeTrees {
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static AABB GetBounds(in ExtentsBounds ce) {
-                return new AABB(ce.nodeCenter - ce.nodeExtents, ce.nodeCenter + ce.nodeExtents);
+                return new AABB(ce.nodeCenter - ce.nodeExtents, ce.nodeCenter + ce.nodeExtents, quaternion.identity);
             }
 
         }
