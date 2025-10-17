@@ -161,33 +161,6 @@ namespace ME.BECS.Editor {
                     }
                 } catch (System.Exception) {}
             }
-            /*
-            var genres = new TemplateInfo[] {
-                new TemplateInfo() {
-                    caption = "RTS",
-                    description = "Real-time strategy template",
-                    icon = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/Templates/RTS.png"),
-                    template = "RTS",
-                },
-                new TemplateInfo() {
-                    caption = "Top-down",
-                    description = "Top-down shooter template",
-                    icon = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/Templates/TopDown.png"),
-                    template = "TopDown",
-                },
-                new TemplateInfo() {
-                    caption = "FPS",
-                    description = "First person shooter template",
-                    icon = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/Templates/FPS.png"),
-                    template = "FPS",
-                },
-                new TemplateInfo() {
-                    caption = "Other",
-                    description = "Other game template (Empty template)",
-                    icon = EditorUtils.LoadResource<Texture2D>("ME.BECS.Resources/Icons/Templates/Other.png"),
-                    template = "Empty",
-                },
-            };*/
             
             var root = this.rootVisualElement;
             EditorUIUtils.ApplyDefaultStyles(root);

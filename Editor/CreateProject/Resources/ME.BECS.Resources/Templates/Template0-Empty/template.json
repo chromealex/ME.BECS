@@ -1,0 +1,17 @@
+{
+    "caption": "Empty",
+    "description": "Empty template",
+    "modes": [
+        {
+            "mode": 0,
+            "dependencies": [ "Unity.Collections", "Unity.Burst", "Unity.Mathematics" ],
+            "package": "empty-singleplayer.becs.txt"
+        },
+        {
+            "mode": 1,
+            "dependencies": [ "Unity.Collections", "Unity.Burst", "ME.BECS.Network" ],
+            "package": "empty-multiplayer.becs.txt",
+            "defines": [ "FIXED_POINT" ]
+        }
+    ]
+}

@@ -30,8 +30,7 @@ namespace ME.BECS.Features.Editor {
             }
             if (pathRoot != null) {
                 ME.BECS.Editor.CreateProjectEditorWindow.ShowWindow(pathRoot);
-                return;
-                var newProject = UnityEngine.ScriptableObject.CreateInstance<EndCreateProject>();
+                /*var newProject = UnityEngine.ScriptableObject.CreateInstance<EndCreateProject>();
                 newProject.onCreated = (path) => {
                     path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(path);
                     var newName = System.IO.Path.GetFileName(path);
@@ -52,10 +51,12 @@ namespace ME.BECS.Features.Editor {
                     }
                 };
                 UnityEditor.ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, newProject, pathRoot + "/NewProject", UnityEditor.EditorGUIUtility.FindTexture("d_Folder Icon"), "", true);
+                */
             }
 
         }
         
+        /*
         private static ME.BECS.FeaturesGraph.SystemsGraph CreateDefaultFeaturesGraph(string path, string name) {
 
             var graph = ME.BECS.FeaturesGraph.SystemsGraph.CreateInstance<ME.BECS.FeaturesGraph.SystemsGraph>();
@@ -116,7 +117,7 @@ namespace ME.BECS.Features.Editor {
             System.IO.File.WriteAllText(assetPath, asmContent);
             UnityEditor.AssetDatabase.ImportAsset(assetPath);
 
-        }
+        }*/
 
     }
 
