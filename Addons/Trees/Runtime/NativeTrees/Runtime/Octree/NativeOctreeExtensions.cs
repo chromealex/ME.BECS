@@ -34,7 +34,7 @@ namespace NativeTrees {
         /// Performs a raycast on the octree just using the bounds of the objects in it
         /// </summary>
         public static bool RaycastAABB<T>(this NativeOctree<T> octree, Ray ray, out OctreeRaycastHit<T> hit, tfloat maxDistance) where T : unmanaged, IComparable<T> {
-            return octree.Raycast<RayAABBIntersecter<T>>(ray, out hit, maxDistance: maxDistance);
+            return octree.Raycast<RayAABBIntersecter<T>>(ray, float2.zero, out hit, maxDistance: maxDistance);
         }
 
         private struct RayAABBIntersecter<T> : IOctreeRayIntersecter<T> {
@@ -43,6 +43,20 @@ namespace NativeTrees {
                 return objBounds.IntersectsRay(ray, out distance);
             }
 
+        }
+
+        /// <summary>
+        /// Performs a sphere cast on the octree just using the bounds of the objects in it
+        /// </summary>
+        public static bool SphereCast<T>(this NativeOctree<T> octree, Ray ray, float2 radius, out OctreeRaycastHit<T> hit) where T : unmanaged, IComparable<T> {
+            return octree.SphereCast<T>(ray, radius, out hit, tfloat.PositiveInfinity);
+        }
+        
+        /// <summary>
+        /// Performs a sphere cast on the octree just using the bounds of the objects in it
+        /// </summary>
+        public static bool SphereCast<T>(this NativeOctree<T> octree, Ray ray, float2 radius, out OctreeRaycastHit<T> hit, tfloat maxDistance) where T : unmanaged, IComparable<T> {
+            return octree.Raycast<RayAABBIntersecter<T>>(ray, radius, out hit, maxDistance: maxDistance);
         }
 
         /// <summary>

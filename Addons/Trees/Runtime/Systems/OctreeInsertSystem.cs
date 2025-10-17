@@ -15,6 +15,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using ME.BECS.Transforms;
     using Unity.Jobs;
+    using NativeTrees;
     using static Cuts;
 
     [ComponentGroup(typeof(OctreeComponentGroup))]
@@ -443,6 +444,35 @@ namespace ME.BECS {
 
             }
 
+        }
+
+        public bool Raycast(UnityEngine.Ray ray, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+            return this.Raycast(ray, float2.zero, mask, distance, out raycastHit, ignoreSorting);
+        }
+
+        public bool Raycast(UnityEngine.Ray ray, float2 radius, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+            raycastHit = default;
+            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.OctreeRaycastHitMinNode<Ent>>(this.treesCount, Constants.ALLOCATOR_TEMP);
+            for (int i = 0; i < this.treesCount; ++i) {
+                if ((mask & (1 << i)) == 0) {
+                    continue;
+                }
+
+                var tree = this.GetTree(i).ptr;
+                if (tree->SphereCast(ray, radius, out var hitResult, distance) == true) {
+                    if (ignoreSorting == true) return true;
+                    heap.Push(new NativeTrees.OctreeRaycastHitMinNode<Ent>() {
+                        data = hitResult,
+                        cost = math.distancesq((float3)ray.origin, hitResult.point),
+                    });
+                }
+            }
+
+            if (ignoreSorting == false && heap.TryPop(out var result)) {
+                raycastHit = result.data;
+                return true;
+            }
+            return false;
         }
 
         public void OnDrawGizmos(ref SystemContext context) {

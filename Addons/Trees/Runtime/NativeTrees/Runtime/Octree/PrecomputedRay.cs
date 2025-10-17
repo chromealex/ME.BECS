@@ -33,11 +33,14 @@ namespace NativeTrees {
         /// One over the direction of the ray
         /// </summary>
         public readonly float3 invDir;
+        
+        public readonly float2 radius;
 
-        public PrecomputedRay(Ray ray) {
+        public PrecomputedRay(Ray ray, float2 radius) {
             this.origin = (float3)ray.origin;
             this.dir = (float3)ray.direction;
             this.invDir = 1f / this.dir;
+            this.radius = radius;
         }
 
         /// <summary>
@@ -46,15 +49,8 @@ namespace NativeTrees {
         public PrecomputedRay(PrecomputedRay source, float3 newOrigin) {
             this.dir = source.dir;
             this.invDir = source.invDir;
+            this.radius = source.radius;
             this.origin = newOrigin;
-        }
-
-        public static explicit operator PrecomputedRay(Ray ray) {
-            return new PrecomputedRay(ray);
-        }
-
-        public static explicit operator Ray(PrecomputedRay ray) {
-            return new Ray((Vector3)ray.origin, (Vector3)ray.dir);
         }
 
     }

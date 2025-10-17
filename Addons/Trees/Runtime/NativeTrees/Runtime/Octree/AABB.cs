@@ -167,18 +167,13 @@ namespace NativeTrees {
         /// and may return a false positive in that case. See https://tavianator.com/2011/ray_box.html and https://tavianator.com/2015/ray_box_nan.html</remarks>
         /// <returns>Wether the ray intersects this bounding box</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in Ray ray) {
-            return this.IntersectsRay((PrecomputedRay)ray);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IntersectsRay(in PrecomputedRay ray) {
-            return this.IntersectsRay(ray.origin, ray.invDir, out _);
+            return this.IntersectsRay(ray.origin, in ray.dir, ray.radius, ray.invDir, out _);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IntersectsRay(in PrecomputedRay ray, out float3 point) {
-            if (this.IntersectsRay(ray.origin, ray.invDir, out var tMin)) {
+            if (this.IntersectsRay(ray.origin, in ray.dir, ray.radius, ray.invDir, out var tMin)) {
                 point = ray.origin + ray.dir * tMin;
                 return true;
             }
@@ -189,7 +184,7 @@ namespace NativeTrees {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IntersectsRay(in PrecomputedRay ray, out tfloat tMin) {
-            return this.IntersectsRay(ray.origin, ray.invDir, out tMin);
+            return this.IntersectsRay(ray.origin, in ray.dir, ray.radius, ray.invDir, out tMin);
         }
 
         /// <summary>
@@ -199,35 +194,34 @@ namespace NativeTrees {
         /// and may return a false positive in that case. See https://tavianator.com/2011/ray_box.html and https://tavianator.com/2015/ray_box_nan.html</remarks>
         /// <returns>Wether the ray intersects this bounding box</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IntersectsRay(in float3 rayPos, in float3 rayInvDir, out tfloat tMin) {
+        public bool IntersectsRay(float3 rayPos, in float3 rayDir, float2 radius, float3 rayInvDir, out tfloat tMin) {
 
-            if (math.all(this.rotation.value == new float4(0f, 0f, 0f, 1f)) == true) {
-                var t1 = (this.min - rayPos) * rayInvDir;
-                var t2 = (this.max - rayPos) * rayInvDir;
-                var tMin1 = min(t1, t2);
-                var tMax1 = max(t1, t2);
-                tMin = max(0, cmax(tMin1));
-                var tMax = cmin(tMax1);
-                return tMax >= tMin;
-            } else {
-                quaternion invRot = math.inverse(this.rotation);
-
-                float3 localRayOrigin = math.mul(invRot, rayPos);
-                float3 localRayDirInv = math.mul(invRot, rayInvDir);
-
-                float3 t1 = (this.min - localRayOrigin) * localRayDirInv;
-                float3 t2 = (this.max - localRayOrigin) * localRayDirInv;
-
-                float3 tMin3 = math.min(t1, t2);
-                float3 tMax3 = math.max(t1, t2);
-
-                var tNear = math.cmax(tMin3);
-                var tFar = math.cmin(tMax3);
-
-                tMin = tNear;
-
-                return tFar >= math.max(tNear, 0.0f);
+            float3 localMin = this.min - new float3(radius.x, radius.y, radius.x);
+            float3 localMax = this.max + new float3(radius.x, radius.y, radius.x);
+            if (math.all(this.rotation.value == new float4(0f, 0f, 0f, 1f)) == false) {
+                float3 center = (this.min + this.max) * 0.5f;
+                float3 extents = (this.max - this.min) * 0.5f;
+                quaternion invRot = inverse(this.rotation);
+                float3 localOrigin = mul(invRot, rayPos - center);
+                float3 localDir = mul(invRot, rayDir);
+                localMin = -extents - new float3(radius.x, radius.y, radius.x);
+                localMax = extents + new float3(radius.x, radius.y, radius.x);
+                rayInvDir = new float3(
+                    math.abs(localDir.x) < 1e-8f ? float.PositiveInfinity : 1f / localDir.x,
+                    math.abs(localDir.y) < 1e-8f ? float.PositiveInfinity : 1f / localDir.y,
+                    math.abs(localDir.z) < 1e-8f ? float.PositiveInfinity : 1f / localDir.z
+                );
+                rayPos = localOrigin;
             }
+            
+            var t1 = (localMin - rayPos) * rayInvDir;
+            var t2 = (localMax - rayPos) * rayInvDir;
+            var tMin1 = math.min(t1, t2);
+            var tMax1 = math.max(t1, t2);
+            tMin = math.max(0, cmax(tMin1));
+            var tMax = cmin(tMax1);
+            return tMax >= tMin;
+            
         }
 
         /// <summary>

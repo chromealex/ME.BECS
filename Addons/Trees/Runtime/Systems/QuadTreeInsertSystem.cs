@@ -15,6 +15,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using ME.BECS.Transforms;
     using Unity.Jobs;
+    using NativeTrees;
     using static Cuts;
 
     [ComponentGroup(typeof(QuadTreeComponentGroup))]
@@ -441,6 +442,33 @@ namespace ME.BECS {
 
             }
 
+        }
+
+        public bool Raycast(UnityEngine.Ray2D ray, int mask, sfloat distance, out QuadtreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+            
+            raycastHit = default;
+            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.QuadtreeRaycastHitMinNode<Ent>>(this.treesCount, Constants.ALLOCATOR_TEMP);
+            for (int i = 0; i < this.treesCount; ++i) {
+                if ((mask & (1 << i)) == 0) {
+                    continue;
+                }
+
+                var tree = this.GetTree(i).ptr;
+                if (tree->RaycastAABB(ray, out var hitResult, distance) == true) {
+                    if (ignoreSorting == true) return true;
+                    heap.Push(new NativeTrees.QuadtreeRaycastHitMinNode<Ent>() {
+                        data = hitResult,
+                        cost = math.distancesq((float2)ray.origin, hitResult.point),
+                    });
+                }
+            }
+
+            if (ignoreSorting == false && heap.TryPop(out var result)) {
+                raycastHit = result.data;
+                return true;
+            }
+            return false;
+            
         }
 
         public void OnDrawGizmos(ref SystemContext context) {

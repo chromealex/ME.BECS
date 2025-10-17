@@ -25,20 +25,21 @@ namespace NativeTrees {
         /// Perform a raycast against the octree
         /// </summary>
         /// <param name="ray">Input ray</param>
+        /// <param name="radius">Ray radius</param>
         /// <param name="hit">The resulting hit</param>
         /// <param name="intersecter">Delegate to compute ray intersections against the objects or AABB's</param>
         /// <param name="maxDistance">Max distance from the ray's origin a hit may occur</param>
         /// <typeparam name="U">Type of intersecter</typeparam>
         /// <returns>True when a hit has occured</returns>
-        public bool Raycast<U>(Ray ray, out OctreeRaycastHit<T> hit, U intersecter = default, tfloat? maxDistance = null)
+        public bool Raycast<U>(Ray ray, float2 radius, out OctreeRaycastHit<T> hit, U intersecter = default, tfloat? maxDistance = null)
             where U : struct, IOctreeRayIntersecter<T> {
             
             if (maxDistance == null) maxDistance = tfloat.PositiveInfinity;
             
-            var computedRay = new PrecomputedRay(ray);
+            var computedRay = new PrecomputedRay(ray, radius);
 
             // check if ray even hits the boundary, and if so, we use the intersectin point to transpose our ray
-            if (!this.bounds.IntersectsRay(computedRay.origin, computedRay.invDir, out var tMin) || tMin > maxDistance) {
+            if (!this.bounds.IntersectsRay(computedRay.origin, in computedRay.dir, computedRay.radius, computedRay.invDir, out var tMin) || tMin > maxDistance) {
                 hit = default;
                 return false;
             }
@@ -150,7 +151,7 @@ namespace NativeTrees {
                     } while (this.objects.TryGetNextValue(out wrappedObj, ref it));
                 }
 
-                if (didHit) {
+                if (didHit == true) {
                     hit.point = ray.origin + ray.dir * closest;
                     return true;
                 }
