@@ -475,12 +475,13 @@ namespace ME.BECS.Editor {
                                     var addContainers = new System.Collections.Generic.List<VisualElement>();
                                     var so = new SerializedObject(this.targets);
                                     var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
-                                    if (maskValues.arraySize != list.Count) {
+                                    /*if (maskValues.arraySize != list.Count) {
                                         so.Update();
                                         maskValues.arraySize = list.Count;
+                                        UnityEngine.Debug.Log("RESIZE: " + maskValues.arraySize);
                                         so.ApplyModifiedProperties();
                                         so.Update();
-                                    }
+                                    }*/
                                     for (int i = 0; i < list.Count; ++i) {
                                         var savedIndex = i;
                                         var item = list[i];
@@ -509,6 +510,9 @@ namespace ME.BECS.Editor {
                                         toggle.RegisterValueChangedCallback(evt => {
                                             so.Update();
                                             var maskValues = so.FindProperty(dataPropertyPath).FindPropertyRelative("masks").GetArrayElementAtIndex(idx).FindPropertyRelative(nameof(ComponentsStorageBitMask.mask));
+                                            if (maskValues.arraySize != list.Count) {
+                                                maskValues.arraySize = list.Count;
+                                            }
                                             maskValues.GetArrayElementAtIndex(savedIndex).boolValue = evt.newValue;
                                             so.ApplyModifiedProperties();
                                             so.Update();
