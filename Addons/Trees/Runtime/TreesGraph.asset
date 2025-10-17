@@ -21,6 +21,8 @@ MonoBehaviour:
   - rid: 8346928920201003092
   - rid: 8346928920201003094
   - rid: 8346928920201003095
+  - rid: 7199769621873033635
+  - rid: 7199769621873033637
   edges:
   - GUID: 1b015626-5e9c-4259-bd04-ac1aac331be3
     owner: {fileID: 11400000}
@@ -46,6 +48,46 @@ MonoBehaviour:
     outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
+  - GUID: 80a52c82-9dd9-443e-9ef4-8111dabd6a6b
+    owner: {fileID: 11400000}
+    inputNodeGUID: 624af1eb-f4c1-4d59-b0a5-31f320905845
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 75cc868a-5efb-411e-95df-3f4da3b5bea5
+    owner: {fileID: 11400000}
+    inputNodeGUID: d8ee0aa9-2b0b-4070-8ccf-3c74fd231aa3
+    outputNodeGUID: 624af1eb-f4c1-4d59-b0a5-31f320905845
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 05549843-9a33-4db2-ac29-94b92bee5f73
+    owner: {fileID: 11400000}
+    inputNodeGUID: ba3c93bb-57b4-4a71-8dcc-b0fd897f8d88
+    outputNodeGUID: 624af1eb-f4c1-4d59-b0a5-31f320905845
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: c3e16aed-230e-4c25-9b02-2a468d4ca467
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: ba3c93bb-57b4-4a71-8dcc-b0fd897f8d88
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 03b95e08-a1f9-4d0f-b0ac-b30d93899a04
+    owner: {fileID: 11400000}
+    inputNodeGUID: ba3c93bb-57b4-4a71-8dcc-b0fd897f8d88
+    outputNodeGUID: 1a0504b3-a3db-4476-920a-0bcdd5a6f50b
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
   groups: []
   stackNodes: []
   pinnedElements: []
@@ -56,7 +98,71 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 8346928920201003090
+    - rid: 7199769621873033635
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 4
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 5
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        syncPoint: 0
+        syncCount: 1
+        nodeCustomName: 
+        GUID: 624af1eb-f4c1-4d59-b0a5-31f320905845
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 129
+          y: -144.5
+          width: 300
+          height: 194.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 7199769621873033636
+    - rid: 7199769621873033636
+      type: {class: OctreeInsertSystem, ns: ME.BECS, asm: ME.BECS.Trees}
+      data:
+        mapPosition:
+          x:
+            rawValue: 0
+          y:
+            rawValue: 0
+          z:
+            rawValue: 0
+        mapSize:
+          x:
+            rawValue: 1128792064
+          y:
+            rawValue: 1128792064
+          z:
+            rawValue: 1128792064
+    - rid: 7199769621873033637
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
         syncPoints:
@@ -67,19 +173,19 @@ MonoBehaviour:
         - method: 1
           syncPoint: 1
           syncCount: 0
-          hasMethod: 1
+          hasMethod: 0
         - method: 2
           syncPoint: 1
           syncCount: 0
           hasMethod: 0
         - method: 3
-          syncPoint: 1
-          syncCount: 0
+          syncPoint: 0
+          syncCount: 2
           hasMethod: 1
         - method: 4
           syncPoint: 1
           syncCount: 0
-          hasMethod: 1
+          hasMethod: 0
         - method: 5
           syncPoint: 1
           syncCount: 0
@@ -87,15 +193,65 @@ MonoBehaviour:
         syncPoint: 1
         syncCount: 0
         nodeCustomName: 
+        GUID: ba3c93bb-57b4-4a71-8dcc-b0fd897f8d88
+        groupGUID: 
+        computeOrder: 4
+        position:
+          serializedVersion: 2
+          x: 480.5
+          y: -144.5
+          width: 300
+          height: 224
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 7199769621873033638
+    - rid: 7199769621873033638
+      type: {class: OctreeQuerySystem, ns: ME.BECS, asm: ME.BECS.Trees}
+      data: 
+    - rid: 8346928920201003090
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 4
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        - method: 5
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 1
+        syncPoint: 0
+        syncCount: 1
+        nodeCustomName: 
         GUID: 1a0504b3-a3db-4476-920a-0bcdd5a6f50b
         groupGUID: 
         computeOrder: 1
         position:
           serializedVersion: 2
-          x: 130
-          y: 0
+          x: 129
+          y: 108.5
           width: 300
-          height: 106.5
+          height: 198.5
         expanded: 1
         enabled: 1
         debug: 0
@@ -107,11 +263,15 @@ MonoBehaviour:
       type: {class: QuadTreeInsertSystem, ns: ME.BECS, asm: ME.BECS.Trees}
       data:
         mapPosition:
-          x: 0
-          y: 0
+          x:
+            rawValue: 0
+          y:
+            rawValue: 0
         mapSize:
-          x: 0
-          y: 0
+          x:
+            rawValue: 1128792064
+          y:
+            rawValue: 1128792064
     - rid: 8346928920201003092
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -129,8 +289,8 @@ MonoBehaviour:
           syncCount: 0
           hasMethod: 0
         - method: 3
-          syncPoint: 1
-          syncCount: 0
+          syncPoint: 0
+          syncCount: 2
           hasMethod: 1
         - method: 4
           syncPoint: 1
@@ -145,13 +305,13 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: d8ee0aa9-2b0b-4070-8ccf-3c74fd231aa3
         groupGUID: 
-        computeOrder: 2
+        computeOrder: 3
         position:
           serializedVersion: 2
-          x: 484.5
-          y: 0
+          x: 480.5
+          y: 108.5
           width: 300
-          height: 106.5
+          height: 228
         expanded: 1
         enabled: 1
         debug: 0
@@ -188,10 +348,10 @@ MonoBehaviour:
           hasMethod: 0
         - method: 5
           syncPoint: 0
-          syncCount: 1
+          syncCount: 2
           hasMethod: 0
         syncPoint: 0
-        syncCount: 1
+        syncCount: 2
         nodeCustomName: 
         GUID: StartNode
         groupGUID: 
@@ -241,7 +401,7 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: EndNode
         groupGUID: 
-        computeOrder: 3
+        computeOrder: 5
         position:
           serializedVersion: 2
           x: 866

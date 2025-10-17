@@ -10,11 +10,21 @@ using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
 
-namespace NativeTrees
-{
-    public struct QuadtreeRaycastHit<T>
-    {
+namespace NativeTrees {
+    
+    public struct QuadtreeRaycastHit<T> {
         public float2 point;
         public T obj;
     }
+
+    public struct QuadtreeRaycastHitMinNode<T> : ME.BECS.NativeCollections.IMinHeapNode {
+
+        public QuadtreeRaycastHit<T> data;
+        public tfloat cost;
+
+        public sfloat ExpectedCost => this.cost;
+        public int Next { get; set; }
+
+    }
+    
 }

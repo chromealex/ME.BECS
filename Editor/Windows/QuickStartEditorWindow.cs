@@ -30,9 +30,9 @@ namespace ME.BECS.Editor {
             public Texture2D texture;
             
         }
-        
+
         private StyleSheet styleSheet;
-        
+
         public static void SetShowOnStartUp(bool state) {
             EditorPrefs.SetBool("ME.BECS.Editor.QuickStartEditorWindow.ShowOnStartUp", state);
         }

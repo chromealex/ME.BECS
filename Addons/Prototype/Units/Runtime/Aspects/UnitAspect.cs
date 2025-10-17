@@ -62,7 +62,7 @@ namespace ME.BECS.Units {
             [INLINE(256)]
             set => this.ent.SetTag<UnitIsCollideWithEnd>(value);
         }
-
+        
         public readonly ref tfloat minSightRangeSqr => ref this.component.sightRange.minRangeSqr;
         public readonly ref tfloat sightRangeSqr => ref this.component.sightRange.rangeSqr;
         public readonly ref tfloat sector => ref this.component.sightRange.sector;

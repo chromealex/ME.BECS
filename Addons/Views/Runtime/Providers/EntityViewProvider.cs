@@ -172,7 +172,10 @@ namespace ME.BECS.Views {
         private scg::List<HeapReference> heaps;
         private TransformAccessArray renderingOnSceneTransforms;
         private int batchPerRoot;
-        //private UnityEngine.Transform disabledRoot;
+        
+        // Used for unity hierarchy
+        private UnityEngine.Transform disabledRoot;
+        private scg::HashSet<Ent> parentAwait;
 
         [INLINE(256)]
         public void Query(ref QueryBuilder builder) {
@@ -180,13 +183,26 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
+        public IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) {
+            if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(data.ptr->viewsWorld.state.ptr->allocator, entity.id, out var index) == true) {
+                var info = data.ptr->renderingOnScene[data.ptr->viewsWorld.state.ptr->allocator, index];
+                return (IView)System.Runtime.InteropServices.GCHandle.FromIntPtr(info.obj).Target;
+            }
+            return null;
+        }
+
+        [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
             UnsafeViewsModule.RegisterProviderType<EntityViewProviderTag>(providerId);
-            
-            //this.disabledRoot = new UnityEngine.GameObject("[Views Module] Disabled Root").transform;
-            //if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
-            //this.disabledRoot.localScale = UnityEngine.Vector3.zero;
+
+            if (properties.useUnityHierarchy == true) {
+                this.disabledRoot = new UnityEngine.GameObject("[Views Module] Disabled Root").transform;
+                if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
+                this.disabledRoot.gameObject.SetActive(false);
+                this.parentAwait = new System.Collections.Generic.HashSet<Ent>();
+            }
+
             this.heaps = new scg::List<HeapReference>();
             this.prefabIdToPool = new scg::Dictionary<ulong, scg::Stack<Item>>();
             this.tempViews = new scg::HashSet<EntityView>();
@@ -211,7 +227,10 @@ namespace ME.BECS.Views {
                 marker.Begin();
                 dependsOn.Complete();
                 foreach (var instance in this.tempViews) {
-                    //instance.transform.SetParent(this.disabledRoot);
+                    if (data.ptr->properties.useUnityHierarchy == true) {
+                        // move object to disabled root
+                        instance.transform.SetParent(this.disabledRoot);
+                    }
                     instance.gameObject.SetActive(false);
                     this.UnassignRoot(instance.rootInfo);
                 }
@@ -274,10 +293,12 @@ namespace ME.BECS.Views {
                         currentTick = data.ptr->connectedWorld.CurrentTick,
                         tickTime = data.ptr->beginFrameState.ptr->tickTime,
                         currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
+                        useUnityHierarchy = data.ptr->properties.useUnityHierarchy,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);
                 } else {
                     dependsOn = new Jobs.JobUpdateTransforms() {
                         renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                        useUnityHierarchy = data.ptr->properties.useUnityHierarchy,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);
                 }
 
@@ -329,7 +350,7 @@ namespace ME.BECS.Views {
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
                 var item = data.ptr->toAddTemp[i];
-                var instanceInfo = this.Spawn(item.prefabInfo.info, in item.ent, out var isNew);
+                var instanceInfo = this.Spawn(data, item.prefabInfo.info, in item.ent, out var isNew);
                 data.ptr->renderingOnScene.Add(ref data.ptr->viewsWorld.state.ptr->allocator, instanceInfo);
             }
 
@@ -351,7 +372,7 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public SceneInstanceInfo Spawn(safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, out bool isNew) {
+        public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, out bool isNew) {
 
             var customViewId = ent.Read<ViewCustomIdComponent>().uniqueId;
             System.IntPtr objPtr;
@@ -420,6 +441,10 @@ namespace ME.BECS.Views {
 
             }
 
+            if (data.ptr->properties.useUnityHierarchy == true) {
+                this.ValidateParent(data, in ent, objInstance);
+            }
+
             SceneInstanceInfo info;
             {
                 this.renderingOnSceneTransforms.Add(objInstance.transform);
@@ -450,6 +475,23 @@ namespace ME.BECS.Views {
 
             return info;
             
+        }
+
+        [INLINE(256)]
+        private bool ValidateParent(safe_ptr<ViewsModuleData> data, in Ent ent, EntityView objInstance) {
+
+            if (ent.TryRead(out ME.BECS.Transforms.ParentComponent parentComponent) == false) return false;
+            var tr = objInstance.transform;
+            var view = this.GetViewByEntity(data, parentComponent.value);
+            if (view is EntityView entityView) {
+                tr.SetParent(entityView.transform);
+                return true;
+            } else {
+                // awaits parent
+                this.parentAwait.Add(ent);
+                return false;
+            }
+
         }
 
         [INLINE(256)]
@@ -502,7 +544,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent) {
+        public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
 
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
@@ -521,7 +563,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+        public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
             
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
@@ -534,6 +576,12 @@ namespace ME.BECS.Views {
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
             mainMarker.End();
             
+            if (data.ptr->properties.useUnityHierarchy == true && this.parentAwait.Contains(ent) == true) {
+                if (this.ValidateParent(data, in ent, instanceObj) == true) {
+                    this.parentAwait.Remove(ent);
+                }
+            }
+
         }
 
         [INLINE(256)]

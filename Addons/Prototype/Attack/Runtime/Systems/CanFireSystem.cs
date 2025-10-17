@@ -25,6 +25,8 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect) {
 
+                if (aspect.HasAnyTarget == false) return;
+
                 if (aspect.componentRuntimeFire.fireTimer <= 0f && aspect.IsAnyTargetInSector() == false) {
                     return;
                 }

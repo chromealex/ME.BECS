@@ -19,4 +19,14 @@ namespace NativeTrees {
 
     }
 
+    public struct OctreeRaycastHitMinNode<T> : ME.BECS.NativeCollections.IMinHeapNode {
+
+        public OctreeRaycastHit<T> data;
+        public tfloat cost;
+
+        public sfloat ExpectedCost => this.cost;
+        public int Next { get; set; }
+
+    }
+
 }

@@ -20,13 +20,15 @@ namespace ME.BECS.Views {
         /// </summary>
         JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
         void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data);
-        void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent);
-        void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
+        void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
+        void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
 
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data);
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
 
         void Query(ref QueryBuilder queryBuilder);
+
+        IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity);
 
     }
 
@@ -73,6 +75,7 @@ namespace ME.BECS.Views {
             viewsGameObjects = true,
             viewsDrawMeshes = true,
             interpolateState = true,
+            useUnityHierarchy = false,
         };
 
         [UnityEngine.Tooltip("How many unique prefabs will be registered.")]
@@ -87,6 +90,9 @@ namespace ME.BECS.Views {
 
         [UnityEngine.Tooltip("Use automatic state interpolation between start and end of the frame. Useful with Network Module only.")]
         public bool interpolateState;
+
+        [UnityEngine.Tooltip("Use Unity hierarchy for objects. All transforms on scene will be added into their parents.")]
+        public bool useUnityHierarchy;
 
     }
 
@@ -669,7 +675,7 @@ namespace ME.BECS.Views {
                         var ent = entData.element;
                         if (entData.version != ent.Version) {
                             entData.version = ent.Version;
-                            this.provider.ApplyState(in view, in ent);
+                            this.provider.ApplyState(this.data, in view, in ent);
                         }
                     }
                     marker.End();
@@ -686,7 +692,7 @@ namespace ME.BECS.Views {
                         var view = this.data.ptr->renderingOnScene[in allocator, idx];
                         var ent = entData.element;
                         if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
-                            this.provider.OnUpdate(in view, in ent, dt);
+                            this.provider.OnUpdate(this.data, in view, in ent, dt);
                         }
                     }
                     marker.End();
@@ -703,12 +709,7 @@ namespace ME.BECS.Views {
         }
 
         public IView GetViewByEntity(in Ent entity) {
-            if (this.data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(this.data.ptr->viewsWorld.state.ptr->allocator, entity.id, out var index) == true) {
-                var info = this.data.ptr->renderingOnScene[this.data.ptr->viewsWorld.state.ptr->allocator, index];
-                return (IView)System.Runtime.InteropServices.GCHandle.FromIntPtr(info.obj).Target;
-            }
-
-            return null;
+            return this.provider.GetViewByEntity(this.data, in entity);
         }
 
     }

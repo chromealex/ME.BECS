@@ -1,12 +1,6 @@
 
 namespace ME.BECS.Features.Editor {
 
-    public abstract class CreateProjectDefaultModule {
-
-        public abstract string CreateModule(string projectPath, string projectName);
-
-    }
-    
     public static class CreateProjectMenu {
 
         [UnityEditor.MenuItem("ME.BECS/\u26DC Features Graph...", priority = 10000)]
@@ -35,7 +29,8 @@ namespace ME.BECS.Features.Editor {
                 pathRoot = UnityEditor.AssetDatabase.GetAssetPath(dirObject);
             }
             if (pathRoot != null) {
-                var newProject = UnityEngine.ScriptableObject.CreateInstance<EndCreateProject>();
+                ME.BECS.Editor.CreateProjectEditorWindow.ShowWindow(pathRoot);
+                /*var newProject = UnityEngine.ScriptableObject.CreateInstance<EndCreateProject>();
                 newProject.onCreated = (path) => {
                     path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath(path);
                     var newName = System.IO.Path.GetFileName(path);
@@ -47,19 +42,21 @@ namespace ME.BECS.Features.Editor {
                         var guid = CreateTemplateScript(dirPath, newName);
                         var graph = CreateDefaultFeaturesGraph(dirPath, newName);
                         var modules = new System.Collections.Generic.List<string>();
-                        var customModules = UnityEditor.TypeCache.GetTypesDerivedFrom<CreateProjectDefaultModule>();
+                        var customModules = UnityEditor.TypeCache.GetTypesDerivedFrom<ME.BECS.Editor.CreateProjectDefaultModule>();
                         foreach (var moduleType in customModules) {
-                            var instance = (CreateProjectDefaultModule)System.Activator.CreateInstance(moduleType);
+                            var instance = (ME.BECS.Editor.CreateProjectDefaultModule)System.Activator.CreateInstance(moduleType);
                             modules.Add(instance.CreateModule(dirPath, newName));
                         }
                         CreateObjectOnScene(dirPath, newName, graph, guid, modules);
                     }
                 };
                 UnityEditor.ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, newProject, pathRoot + "/NewProject", UnityEditor.EditorGUIUtility.FindTexture("d_Folder Icon"), "", true);
+                */
             }
 
         }
         
+        /*
         private static ME.BECS.FeaturesGraph.SystemsGraph CreateDefaultFeaturesGraph(string path, string name) {
 
             var graph = ME.BECS.FeaturesGraph.SystemsGraph.CreateInstance<ME.BECS.FeaturesGraph.SystemsGraph>();
@@ -120,7 +117,7 @@ namespace ME.BECS.Features.Editor {
             System.IO.File.WriteAllText(assetPath, asmContent);
             UnityEditor.AssetDatabase.ImportAsset(assetPath);
 
-        }
+        }*/
 
     }
 

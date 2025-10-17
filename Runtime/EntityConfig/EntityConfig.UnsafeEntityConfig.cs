@@ -41,7 +41,7 @@ namespace ME.BECS {
 
             public void Dispose() {
                     
-                this.handle.Free();
+                //if (this.handle.IsAllocated == true) this.handle.Free();
                 this = default;
 
             }
@@ -64,7 +64,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    this.handle.Free();
+                    //if (this.handle.IsAllocated == true) this.handle.Free();
                     this = default;
 
                 }
@@ -209,7 +209,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    this.handle.Free();
+                    //if (this.handle.IsAllocated == true) this.handle.Free();
                     this = default;
 
                 }
@@ -418,7 +418,7 @@ namespace ME.BECS {
 
                 public void Dispose() {
                     
-                    this.handle.Free();
+                    //if (this.handle.IsAllocated == true) this.handle.Free();
                     this = default;
 
                 }

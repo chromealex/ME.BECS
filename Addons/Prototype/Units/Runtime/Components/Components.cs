@@ -47,9 +47,10 @@ namespace ME.BECS.Units {
         public float3 desiredDirection;
         public float3 randomVector;
         public float3 velocity;
+        public float3 manualDirection;
 
         public Ent attackSensor;
-
+        
     }
 
     [EditorComment("Current unit agent speed values")]

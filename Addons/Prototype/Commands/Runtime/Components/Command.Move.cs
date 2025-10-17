@@ -18,6 +18,7 @@ namespace ME.BECS.Commands {
         public float3 TargetPosition => this.targetPosition;
 
         public float3 targetPosition;
+        public ListAuto<float3> targets;
 
     }
 

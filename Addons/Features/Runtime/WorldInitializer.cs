@@ -11,7 +11,7 @@ namespace ME.BECS {
 
         protected override void DoWorldAwake() {
             
-            if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null) {
+            if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null && this.featuresGraphLateUpdate == null) {
                 Logger.Features.Error("Graphs are null");
                 return;
             }
@@ -28,8 +28,10 @@ namespace ME.BECS {
 
         public void Update() {
 
-            if (this.featuresGraph == null) return;
             this.previousFrameDependsOn.Complete();
+            this.previousFrameDependsOn = State.NextTick(this.world.state, this.previousFrameDependsOn);
+            
+            if (this.featuresGraph == null) return;
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             this.previousFrameDependsOn.Complete();
 

@@ -97,7 +97,7 @@ namespace ME.BECS.Attack {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref UnitAttackOnMoveCommandComponent target) {
 
-                var t = unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId];
+                var t = unit.HasCommandGroup() == true ? unit.readUnitCommandGroup.GetAspect<UnitCommandGroupAspect>().readTargets[unit.readTypeId] : default;
                 if (unit.HasCommandGroup() == false || t.IsAlive() == false || t.Read<TargetPathComponent>().path.IsCreated == false) {
                     return;
                 }

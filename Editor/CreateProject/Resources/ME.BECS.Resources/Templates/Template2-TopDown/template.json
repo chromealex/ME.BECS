@@ -1,0 +1,17 @@
+{
+    "caption": "TopDown",
+    "description": "TopDown shooter template",
+    "modes": [
+        {
+            "mode": 0,
+            "dependencies": [ "Unity.Collections", "Unity.Burst", "ME.BECS.Players", "ME.BECS.Trees", "ME.BECS.Pathfinding", "ME.BECS.Commands", "ME.BECS.Units", "ME.BECS.Attack", "ME.BECS.Transforms", "ME.BECS.Views", "Unity.Mathematics" ],
+            "package": "topdown-singleplayer.becs.txt"
+        },
+        {
+            "mode": 1,
+            "dependencies": [ "Unity.Collections", "Unity.Burst", "ME.BECS.Players", "ME.BECS.Trees", "ME.BECS.Pathfinding", "ME.BECS.Commands", "ME.BECS.Units", "ME.BECS.Attack", "ME.BECS.Transforms", "ME.BECS.Views", "ME.BECS.Network" ],
+            "package": "topdown-multiplayer.becs.txt",
+            "defines": [ "FIXED_POINT" ]
+        }
+    ]
+}

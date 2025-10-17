@@ -100,7 +100,10 @@ namespace ME.BECS.Views {
         public void Query(ref QueryBuilder builder) {
             builder.With<DrawMeshProviderTag>();
         }
-        
+
+        [INLINE(256)]
+        public IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) => null;
+
         [INLINE(256)]
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
@@ -295,12 +298,12 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public void ApplyState(in SceneInstanceInfo instanceInfo, in Ent ent) {
+        public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
             
         }
 
         [INLINE(256)]
-        public void OnUpdate(in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+        public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
             
         }
 

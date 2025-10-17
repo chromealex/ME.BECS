@@ -256,7 +256,7 @@ namespace ME.BECS {
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
                     if (child.data.ptr->graph.ptr != null) {
-                        if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
+                        if (updateType == 0 || child.data.ptr->graph.ptr->updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
 
                             //UnityEngine.Debug.Log("RaiseOnUpdate Call: " + SystemsStaticOnUpdate.dic.Data.Count + ", child.data.ptr->graph.ptr->graphId: " + child.data.ptr->graph.ptr->graphId + ", updateType: " + updateType);
                             if (SystemsStaticOnUpdate.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
