@@ -28,6 +28,31 @@ namespace ME.BECS {
         }
 
     }
+
+    public interface IGraphInitialize {
+
+        void Initialize(ref SystemGroup group, ref World world);
+
+    }
+
+    public abstract class BaseWorldInitializer<T> : BaseWorldInitializer where T : IGraphInitialize {
+
+        [System.Serializable]
+        public struct Graphs {
+
+            public T[] items;
+
+            public void Initialize(ref SystemGroup group, ref World world) {
+                foreach (var graph in this.items) {
+                    graph.Initialize(ref group, ref world);
+                }
+            }
+
+        }
+
+        public Graphs graphs;
+        
+    }
     
     public abstract class BaseWorldInitializer : MonoBehaviour {
 

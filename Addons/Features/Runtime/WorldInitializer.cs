@@ -3,7 +3,48 @@ using UnityEngine;
 namespace ME.BECS {
     
     [DefaultExecutionOrder(-10_000)]
-    public class WorldInitializer : BaseWorldInitializer {
+    public class WorldInitializer : BaseWorldInitializer<WorldInitializer.Graph> {
+
+        [System.Serializable]
+        public struct Graph : IGraphInitialize {
+
+            [OptionalGraph]
+            public FeaturesGraph.SystemsGraph awake;
+            [OptionalGraph]
+            public FeaturesGraph.SystemsGraph start;
+            [OptionalGraph]
+            public FeaturesGraph.SystemsGraph update;
+            [OptionalGraph]
+            public FeaturesGraph.SystemsGraph fixedUpdate;
+            [OptionalGraph]
+            public FeaturesGraph.SystemsGraph lateUpdate;
+
+            public void Initialize(ref SystemGroup group, ref World world) {
+                if (this.awake != null) group.Add(this.awake.DoAwake(ref world, UpdateType.AWAKE));
+                if (this.start != null) group.Add(this.start.DoAwake(ref world, UpdateType.START));
+                if (this.update != null) {
+                    // add update graph as start and awake if no overrides
+                    if (this.awake == null) group.Add(this.update.DoAwake(ref world, UpdateType.AWAKE));
+                    if (this.start == null) group.Add(this.update.DoAwake(ref world, UpdateType.START));
+                    group.Add(this.update.DoAwake(ref world, UpdateType.UPDATE));
+                }
+
+                if (this.fixedUpdate != null) {
+                    // add update graph as start and awake if no overrides
+                    if (this.awake == null) group.Add(this.fixedUpdate.DoAwake(ref world, UpdateType.AWAKE));
+                    if (this.start == null) group.Add(this.fixedUpdate.DoAwake(ref world, UpdateType.START));
+                    group.Add(this.fixedUpdate.DoAwake(ref world, UpdateType.FIXED_UPDATE));
+                }
+
+                if (this.lateUpdate != null) {
+                    // add update graph as start and awake if no overrides
+                    if (this.awake == null) group.Add(this.lateUpdate.DoAwake(ref world, UpdateType.AWAKE));
+                    if (this.start == null) group.Add(this.lateUpdate.DoAwake(ref world, UpdateType.START));
+                    group.Add(this.lateUpdate.DoAwake(ref world, UpdateType.LATE_UPDATE));
+                }
+            }
+
+        }
 
         [OptionalGraph]
         public FeaturesGraph.SystemsGraph featuresGraphAwake;
@@ -15,12 +56,8 @@ namespace ME.BECS {
 
         protected override void DoWorldAwake() {
             
-            if (this.featuresGraphUpdate == null && this.featuresGraphFixedUpdate == null && this.featuresGraphLateUpdate == null) {
-                Logger.Features.Error("Graphs are null");
-                return;
-            }
-
             var group = SystemGroup.Create(UpdateType.ANY);
+            this.graphs.Initialize(ref group, ref this.world);
             if (this.featuresGraphAwake != null) group.Add(this.featuresGraphAwake.DoAwake(ref this.world, UpdateType.AWAKE));
             if (this.featuresGraphStart != null) group.Add(this.featuresGraphStart.DoAwake(ref this.world, UpdateType.START));
             if (this.featuresGraphUpdate != null) {

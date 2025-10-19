@@ -26,7 +26,7 @@ namespace ME.BECS.Editor {
 
             {
                 var obj = property.FindPropertyRelative("obj");
-                var field = new UnityEditor.UIElements.ObjectField(property.displayName);
+                var field = new UnityEditor.UIElements.ObjectField(string.Empty);
                 field.value = obj.objectReferenceValue;
                 field.AddToClassList("systems-graph-field");
                 if (field.value != null) field.AddToClassList("set");

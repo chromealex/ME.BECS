@@ -10,14 +10,22 @@ using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
 
-    [CustomPropertyDrawer(typeof(BaseWorldInitializer.Modules))]
-    public class ModulesDrawer : PropertyDrawer {
+    public class GraphTNull : IGraphInitialize {
+        
+        public void Initialize(ref SystemGroup group, ref World world) {
+            
+        }
+
+    }
+    
+    [CustomPropertyDrawer(typeof(BaseWorldInitializer<>.Graphs))]
+    public class GraphsDrawer : PropertyDrawer {
 
         private static StyleSheet styleSheetBase;
         
         private void LoadStyle() {
-            if (ModulesDrawer.styleSheetBase == null) {
-                ModulesDrawer.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/WorldProperties.uss");
+            if (GraphsDrawer.styleSheetBase == null) {
+                GraphsDrawer.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/WorldProperties.uss");
             }
         }
 
@@ -26,7 +34,7 @@ namespace ME.BECS.Editor {
             this.LoadStyle();
             var rootVisualElement = new VisualElement();
             rootVisualElement.Clear();
-            rootVisualElement.styleSheets.Add(ModulesDrawer.styleSheetBase);
+            rootVisualElement.styleSheets.Add(GraphsDrawer.styleSheetBase);
 
             this.Draw(rootVisualElement, property);
             
@@ -36,22 +44,11 @@ namespace ME.BECS.Editor {
 
         private void Draw(VisualElement root, SerializedProperty property) {
 
-            var prop = property.FindPropertyRelative(nameof(BaseWorldInitializer.modules.list));
+            var prop = property.FindPropertyRelative(nameof(BaseWorldInitializer<GraphTNull>.graphs.items));
             var container = new PropertyField(prop, property.displayName);
             container.AddToClassList("foldout");
             container.BindProperty(prop);
-            //foldout.Add(container);
-            /*
-            var foldout = new Foldout();
-            foldout.AddToClassList("foldout");
-            foldout.text = "Modules";
-            { // List
-                var prop = property.FindPropertyRelative(nameof(WorldInitializer.modules.list));
-                var container = new PropertyField(prop);
-                container.AddToClassList("properties-block");
-                container.BindProperty(prop);
-                foldout.Add(container);
-            }*/
+            
             root.Add(container);
 
         }
