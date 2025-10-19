@@ -73,7 +73,7 @@ namespace ME.BECS {
             world.Awake(default, 0).Complete();
         }
 
-        public static JobHandle Awake(this ref World world, JobHandle dependsOn, ushort subId = 0) {
+        public static JobHandle Awake(this ref World world, JobHandle dependsOn, ushort updateType = 0) {
             
             E.IS_CREATED(world);
             dependsOn = Batches.Apply(dependsOn, in world);
@@ -82,9 +82,9 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
                 
                 // if we have static data
-                if (SystemsStatic.RaiseOnAwake(in rootGroup, subId, 0u, ref world, ref dependsOn) == false) {
+                if (SystemsStatic.RaiseOnAwake(in rootGroup, updateType, 0u, ref world, ref dependsOn) == false) {
 
-                    dependsOn = rootGroup.Awake(ref world, subId, dependsOn);
+                    dependsOn = rootGroup.Awake(ref world, updateType, dependsOn);
 
                 }
                 
@@ -94,7 +94,7 @@ namespace ME.BECS {
 
         }
 
-        public static JobHandle Start(this ref World world, JobHandle dependsOn, ushort subId = 0) {
+        public static JobHandle Start(this ref World world, JobHandle dependsOn, ushort updateType = 0) {
             
             E.IS_CREATED(world);
             dependsOn = Batches.Apply(dependsOn, in world);
@@ -103,9 +103,9 @@ namespace ME.BECS {
             if (WorldSystemRegistry.systemGroups.TryGetValue(address, out var rootGroup) == true) {
                 
                 // if we have static data
-                if (SystemsStatic.RaiseOnStart(in rootGroup, subId, 0u, ref world, ref dependsOn) == false) {
+                if (SystemsStatic.RaiseOnStart(in rootGroup, updateType, 0u, ref world, ref dependsOn) == false) {
 
-                    dependsOn = rootGroup.Start(ref world, subId, dependsOn);
+                    dependsOn = rootGroup.Start(ref world, updateType, dependsOn);
 
                 }
                 

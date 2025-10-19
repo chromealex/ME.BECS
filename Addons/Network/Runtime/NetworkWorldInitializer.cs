@@ -5,18 +5,29 @@ namespace ME.BECS.Network {
     [UnityEngine.DefaultExecutionOrder(-10_000)]
     public class NetworkWorldInitializer : BaseWorldInitializer {
 
-        public FeaturesGraph.SystemsGraph featuresGraph;
+        [OptionalGraph]
+        public FeaturesGraph.SystemsGraph featuresGraphAwake;
+        [OptionalGraph]
+        public FeaturesGraph.SystemsGraph featuresGraphStart;
+        [UnityEngine.Serialization.FormerlySerializedAsAttribute("featuresGraph")] public FeaturesGraph.SystemsGraph featuresGraphUpdate;
         protected NetworkModule networkModule;
         
         protected override void DoWorldAwake() {
             
-            if (this.featuresGraph == null) {
+            if (this.featuresGraphUpdate == null) {
                 Logger.Features.Error("Graph is null");
                 return;
             }
 
             var group = SystemGroup.Create(UpdateType.ANY);
-            if (this.featuresGraph != null) group.Add(this.featuresGraph.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
+            if (this.featuresGraphAwake != null) group.Add(this.featuresGraphAwake.DoAwake(ref this.world, UpdateType.AWAKE));
+            if (this.featuresGraphStart != null) group.Add(this.featuresGraphStart.DoAwake(ref this.world, UpdateType.START));
+            if (this.featuresGraphUpdate != null) {
+                // add update graph as start and awake if no overrides
+                if (this.featuresGraphAwake == null) group.Add(this.featuresGraphUpdate.DoAwake(ref this.world, UpdateType.AWAKE));
+                if (this.featuresGraphStart == null) group.Add(this.featuresGraphUpdate.DoAwake(ref this.world, UpdateType.START));
+                group.Add(this.featuresGraphUpdate.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
+            }
             this.world.AssignRootSystemGroup(group);
 
             this.networkModule = this.modules.Get<NetworkModule>();

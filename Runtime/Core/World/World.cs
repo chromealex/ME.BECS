@@ -11,8 +11,10 @@ namespace ME.BECS {
         public const ushort UPDATE = 1;
         public const ushort FIXED_UPDATE = 2;
         public const ushort LATE_UPDATE = 3;
+        public const ushort AWAKE = 4;
+        public const ushort START = 5;
 
-        public const ushort MAX = 4;
+        public const ushort MAX = 6;
 
     }
 

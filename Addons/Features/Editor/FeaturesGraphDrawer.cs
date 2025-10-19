@@ -1,3 +1,4 @@
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
@@ -35,6 +36,7 @@ namespace ME.BECS.Editor {
             var field = new ObjectField(property.displayName);
             field.value = property.objectReferenceValue;
             field.AddToClassList("systems-graph-field");
+            if (this.fieldInfo.GetCustomAttribute<OptionalGraphAttribute>() != null) field.AddToClassList("optional");
             if (field.value != null) field.AddToClassList("set");
             field.allowSceneObjects = false;
             field.objectType = typeof(ME.BECS.FeaturesGraph.SystemsGraph);

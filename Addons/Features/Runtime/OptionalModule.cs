@@ -9,5 +9,7 @@ namespace ME.BECS {
         public bool IsEnabled() => this.enabled == true && this.obj != null;
 
     }
+    
+    public class OptionalGraphAttribute : System.Attribute {}
 
 }

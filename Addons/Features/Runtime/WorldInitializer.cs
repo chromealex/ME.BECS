@@ -5,21 +5,44 @@ namespace ME.BECS {
     [DefaultExecutionOrder(-10_000)]
     public class WorldInitializer : BaseWorldInitializer {
 
-        public FeaturesGraph.SystemsGraph featuresGraph;
+        [OptionalGraph]
+        public FeaturesGraph.SystemsGraph featuresGraphAwake;
+        [OptionalGraph]
+        public FeaturesGraph.SystemsGraph featuresGraphStart;
+        [UnityEngine.Serialization.FormerlySerializedAsAttribute("featuresGraph")] public FeaturesGraph.SystemsGraph featuresGraphUpdate;
         public FeaturesGraph.SystemsGraph featuresGraphFixedUpdate;
         public FeaturesGraph.SystemsGraph featuresGraphLateUpdate;
 
         protected override void DoWorldAwake() {
             
-            if (this.featuresGraph == null && this.featuresGraphFixedUpdate == null && this.featuresGraphLateUpdate == null) {
+            if (this.featuresGraphUpdate == null && this.featuresGraphFixedUpdate == null && this.featuresGraphLateUpdate == null) {
                 Logger.Features.Error("Graphs are null");
                 return;
             }
 
             var group = SystemGroup.Create(UpdateType.ANY);
-            if (this.featuresGraph != null) group.Add(this.featuresGraph.DoAwake(ref this.world, UpdateType.UPDATE));
-            if (this.featuresGraphFixedUpdate != null) group.Add(this.featuresGraphFixedUpdate.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
-            if (this.featuresGraphLateUpdate != null) group.Add(this.featuresGraphLateUpdate.DoAwake(ref this.world, UpdateType.LATE_UPDATE));
+            if (this.featuresGraphAwake != null) group.Add(this.featuresGraphAwake.DoAwake(ref this.world, UpdateType.AWAKE));
+            if (this.featuresGraphStart != null) group.Add(this.featuresGraphStart.DoAwake(ref this.world, UpdateType.START));
+            if (this.featuresGraphUpdate != null) {
+                // add update graph as start and awake if no overrides
+                if (this.featuresGraphAwake == null) group.Add(this.featuresGraphUpdate.DoAwake(ref this.world, UpdateType.AWAKE));
+                if (this.featuresGraphStart == null) group.Add(this.featuresGraphUpdate.DoAwake(ref this.world, UpdateType.START));
+                group.Add(this.featuresGraphUpdate.DoAwake(ref this.world, UpdateType.UPDATE));
+            }
+
+            if (this.featuresGraphFixedUpdate != null) {
+                // add update graph as start and awake if no overrides
+                if (this.featuresGraphAwake == null) group.Add(this.featuresGraphFixedUpdate.DoAwake(ref this.world, UpdateType.AWAKE));
+                if (this.featuresGraphStart == null) group.Add(this.featuresGraphFixedUpdate.DoAwake(ref this.world, UpdateType.START));
+                group.Add(this.featuresGraphFixedUpdate.DoAwake(ref this.world, UpdateType.FIXED_UPDATE));
+            }
+
+            if (this.featuresGraphLateUpdate != null) {
+                // add update graph as start and awake if no overrides
+                if (this.featuresGraphAwake == null) group.Add(this.featuresGraphLateUpdate.DoAwake(ref this.world, UpdateType.AWAKE));
+                if (this.featuresGraphStart == null) group.Add(this.featuresGraphLateUpdate.DoAwake(ref this.world, UpdateType.START));
+                group.Add(this.featuresGraphLateUpdate.DoAwake(ref this.world, UpdateType.LATE_UPDATE));
+            }
             this.world.AssignRootSystemGroup(group);
 
             base.DoWorldAwake();
@@ -31,7 +54,7 @@ namespace ME.BECS {
             this.previousFrameDependsOn.Complete();
             this.previousFrameDependsOn = State.NextTick(this.world.state, this.previousFrameDependsOn);
             
-            if (this.featuresGraph == null) return;
+            if (this.featuresGraphUpdate == null) return;
             this.previousFrameDependsOn = this.DoUpdate(UpdateType.UPDATE, this.previousFrameDependsOn);
             this.previousFrameDependsOn.Complete();
 

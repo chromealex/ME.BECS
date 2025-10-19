@@ -9,6 +9,10 @@
     border-color: #af3733;
 }
 
+.systems-graph-field.optional {
+    border-color: #858585;
+}
+
 .systems-graph-field.set {
     border-color: #82af33;
 }

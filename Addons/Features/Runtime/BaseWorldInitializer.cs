@@ -109,7 +109,7 @@ namespace ME.BECS {
 
             this.OnAwake();
 
-            this.previousFrameDependsOn = this.world.Awake(this.previousFrameDependsOn);
+            this.previousFrameDependsOn = this.world.Awake(this.previousFrameDependsOn, UpdateType.AWAKE);
             
         }
 
@@ -139,7 +139,7 @@ namespace ME.BECS {
 
         protected virtual void DoWorldStart() {
             
-            this.previousFrameDependsOn = this.world.Start(this.previousFrameDependsOn);
+            this.previousFrameDependsOn = this.world.Start(this.previousFrameDependsOn, UpdateType.START);
             
         }
 
