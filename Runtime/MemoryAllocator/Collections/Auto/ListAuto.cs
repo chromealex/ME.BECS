@@ -347,6 +347,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public unsafe bool RemoveAt(uint index) {
+            
+            return this.RemoveAt(ref this.ent.World.state.ptr->allocator, index);
+
+        }
+
+        [INLINE(256)]
+        public bool RemoveAtFast(uint index) {
+            
+            return this.RemoveAtFast(in this.ent.World.state.ptr->allocator, index);
+
+        }
+
+        [INLINE(256)]
         public void AddRange(in ListAuto<T> collection) {
             
             this.AddRange(in collection, 0u, collection.Count);
