@@ -235,6 +235,7 @@ namespace ME.BECS {
         /// <returns>The value of the bit at the specified index.</returns>
         [INLINE(256)]
         public readonly bool IsSet(in MemoryAllocator allocator, int index) {
+            if (index >= this.Length) return false;
             E.RANGE(index, 0, this.Length);
             var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
             var idx = index >> 6;

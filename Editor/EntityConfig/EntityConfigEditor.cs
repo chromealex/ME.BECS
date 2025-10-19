@@ -518,7 +518,7 @@ namespace ME.BECS.Editor {
                                             so.Update();
                                             ApplyState(item, evt.newValue);
                                         });
-                                        toggle.value = maskValues.GetArrayElementAtIndex(i).boolValue;
+                                        if (i < maskValues.arraySize) toggle.value = maskValues.GetArrayElementAtIndex(i).boolValue;
                                         ApplyState(item, toggle.value);
                                         toggle.AddToClassList("toggle-mask-field");
                                         addContainers.Add(toggle);
