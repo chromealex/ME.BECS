@@ -167,7 +167,12 @@ namespace ME.BECS {
                 }
             }
             foreach (var obj in removedObjects) {
+                UnityEngine.Debug.Log("Removed: " + obj, obj);
                 UnityEditor.AssetDatabase.DeleteAsset(UnityEditor.AssetDatabase.GetAssetPath(obj));
+            }
+
+            if (result == true) {
+                this.Validate();
             }
             return result;
         }

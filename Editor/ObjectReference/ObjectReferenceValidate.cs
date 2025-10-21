@@ -11,7 +11,7 @@ namespace ME.BECS.Editor {
         }
 
         [InitializeOnLoadMethod]
-        [MenuItem("ME.BECS/Validate Resources", priority = 100)]
+        [MenuItem("ME.BECS/Resources/Validate", priority = 100)]
         public static void Validate() {
             if (ObjectReferenceRegistry.data == null) {
                 ObjectReferenceRegistry.LoadForced();
@@ -24,9 +24,15 @@ namespace ME.BECS.Editor {
 
             var items = ObjectReferenceRegistry.data.objects;
             Validate(0, items.Length);
+        }
+
+        [MenuItem("ME.BECS/Resources/Validate (Removed)", priority = 101)]
+        public static void ValidateRemoved() {
+            
             if (ObjectReferenceRegistry.data.ValidateRemoved() == true) {
                 EditorUtility.SetDirty(ObjectReferenceRegistry.data);
             }
+            
         }
         
         public static void Validate(int offset, int count) {
