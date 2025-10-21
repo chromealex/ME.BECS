@@ -161,16 +161,16 @@ namespace ME.BECS {
         public void OnValidate() {
 
             var newObjects = new System.Collections.Generic.List<ItemInfo>();
-            var removedObjects = new System.Collections.Generic.List<ObjectReferenceRegistryItem>();
+            //var removedObjects = new System.Collections.Generic.List<ObjectReferenceRegistryItem>();
             {
                 var list = this.objects.ToList();
                 list.RemoveAll(x => x == null);
                 this.objects = list.ToArray();
-                foreach (var obj in this.objects) {
+                /*foreach (var obj in this.objects) {
                     if (obj.IsValid() == false) {
                         removedObjects.Add(obj);
                     }
-                }
+                }*/
             }
             foreach (var item in this.items) {
                 var found = false;
@@ -194,9 +194,9 @@ namespace ME.BECS {
                     System.IO.Directory.CreateDirectory(dir);
                 }
 
-                foreach (var obj in removedObjects) {
+                /*foreach (var obj in removedObjects) {
                     UnityEditor.AssetDatabase.DeleteAsset(UnityEditor.AssetDatabase.GetAssetPath(obj));
-                }
+                }*/
 
                 foreach (var obj in newObjects) {
                     var instance = UnityEngine.ScriptableObject.CreateInstance<ObjectReferenceRegistryItem>();
