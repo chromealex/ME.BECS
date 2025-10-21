@@ -33,7 +33,12 @@ namespace ME.BECS {
                     foreach (var item in ObjectReferenceRegistry.data.objects) {
                         if (item.data.Is<EntityConfig>() == true) {
                             var obj = new ObjectItem(item.data);
-                            var unsafeConfig = obj.Load<EntityConfig>().AsUnsafeConfig();
+                            var config = obj.Load<EntityConfig>();
+                            if (config == null) {
+                                UnityEngine.Debug.LogWarning($"Config is null while loading #{obj.sourceId}");
+                                continue;
+                            }
+                            var unsafeConfig = config.AsUnsafeConfig();
                             if (unsafeConfig.IsValid() == false) continue;
                             configs.Data.TryAdd(item.data.sourceId, unsafeConfig);
                         }
