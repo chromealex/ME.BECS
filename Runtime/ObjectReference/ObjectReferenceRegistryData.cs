@@ -157,20 +157,29 @@ namespace ME.BECS {
         internal uint sourceId;
         private readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
 
+        public bool ValidateRemoved() {
+            var result = false;
+            var removedObjects = new System.Collections.Generic.List<ObjectReferenceRegistryItem>();
+            foreach (var obj in this.objects) {
+                if (obj.IsValid() == false) {
+                    removedObjects.Add(obj);
+                    result = true;
+                }
+            }
+            foreach (var obj in removedObjects) {
+                UnityEditor.AssetDatabase.DeleteAsset(UnityEditor.AssetDatabase.GetAssetPath(obj));
+            }
+            return result;
+        }
+        
         [UnityEngine.ContextMenu("Call OnValidate")]
-        public void OnValidate() {
+        public void Validate() {
 
             var newObjects = new System.Collections.Generic.List<ItemInfo>();
-            //var removedObjects = new System.Collections.Generic.List<ObjectReferenceRegistryItem>();
             {
                 var list = this.objects.ToList();
                 list.RemoveAll(x => x == null);
                 this.objects = list.ToArray();
-                /*foreach (var obj in this.objects) {
-                    if (obj.IsValid() == false) {
-                        removedObjects.Add(obj);
-                    }
-                }*/
             }
             foreach (var item in this.items) {
                 var found = false;
@@ -193,10 +202,6 @@ namespace ME.BECS {
                 if (System.IO.Directory.Exists(dir) == false) {
                     System.IO.Directory.CreateDirectory(dir);
                 }
-
-                /*foreach (var obj in removedObjects) {
-                    UnityEditor.AssetDatabase.DeleteAsset(UnityEditor.AssetDatabase.GetAssetPath(obj));
-                }*/
 
                 foreach (var obj in newObjects) {
                     var instance = UnityEngine.ScriptableObject.CreateInstance<ObjectReferenceRegistryItem>();
@@ -283,7 +288,7 @@ namespace ME.BECS {
                     this.itemLookup.Add(nextId, item);
                 }
                 #if UNITY_EDITOR
-                this.OnValidate();
+                this.Validate();
                 #endif
                 return nextId;
             }

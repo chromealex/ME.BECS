@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace ME.BECS.Editor {
     
     using UnityEditor;
@@ -9,7 +7,7 @@ namespace ME.BECS.Editor {
     public static class ObjectReferenceValidate {
 
         static ObjectReferenceValidate() {
-            Validate();
+            EditorApplication.delayCall += () => Validate();
         }
 
         [InitializeOnLoadMethod]
@@ -26,6 +24,9 @@ namespace ME.BECS.Editor {
 
             var items = ObjectReferenceRegistry.data.objects;
             Validate(0, items.Length);
+            if (ObjectReferenceRegistry.data.ValidateRemoved() == true) {
+                EditorUtility.SetDirty(ObjectReferenceRegistry.data);
+            }
         }
         
         public static void Validate(int offset, int count) {
@@ -89,7 +90,7 @@ namespace ME.BECS.Editor {
             if (isDirty == true) {
                 ObjectReferenceRegistry.data.objects = items;
                 EditorUtility.SetDirty(ObjectReferenceRegistry.data);
-                ObjectReferenceRegistry.data.OnValidate();
+                ObjectReferenceRegistry.data.Validate();
             }
             
         }
