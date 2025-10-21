@@ -159,6 +159,7 @@ namespace ME.BECS {
 
         public bool ValidateRemoved() {
             var result = false;
+            #if UNITY_EDITOR
             var removedObjects = new System.Collections.Generic.List<ObjectReferenceRegistryItem>();
             foreach (var obj in this.objects) {
                 if (obj.IsValid() == false) {
@@ -174,6 +175,7 @@ namespace ME.BECS {
             if (result == true) {
                 this.Validate();
             }
+            #endif
             return result;
         }
         
