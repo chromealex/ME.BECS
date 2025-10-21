@@ -281,10 +281,12 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode.ptr != null) {
+                var tempSet = new UnsafeHashSet<int>((int)rootGroup.rootNode.ptr->childrenIndex, Constants.ALLOCATOR_TEMP);
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
                     if (child.data.ptr->graph.ptr != null) {
                         
+                        if (tempSet.Add(child.data.ptr->graph.ptr->graphId) == false) continue;
                         if (SystemsStaticOnDrawGizmos.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
                             var func = new Unity.Burst.FunctionPointer<OnDrawGizmos>(ptr);
@@ -305,11 +307,13 @@ namespace ME.BECS {
 
             var result = false;
             if (rootGroup.rootNode.ptr != null) {
+                var tempSet = new UnsafeHashSet<int>((int)rootGroup.rootNode.ptr->childrenIndex, Constants.ALLOCATOR_TEMP);
                 for (uint i = 0u; i < rootGroup.rootNode.ptr->childrenIndex; ++i) {
                     var child = rootGroup.rootNode.ptr->children[i];
                     if (child.data.ptr->graph.ptr != null) {
                         if (updateType == 0 || child.data.ptr->graph.ptr->updateType == updateType) {
 
+                            if (tempSet.Add(child.data.ptr->graph.ptr->graphId) == false) continue;
                             if (SystemsStaticOnDestroy.dic.Data.TryGetValue(child.data.ptr->graph.ptr->graphId, out var ptr) == true) {
 
                                 var func = new Unity.Burst.FunctionPointer<OnDestroy>(ptr);
