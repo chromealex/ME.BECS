@@ -9,14 +9,16 @@ namespace ME.BECS {
         public static void CleanUpEntity(safe_ptr<State> state, in Ent ent) {
 
             ref var components = ref state.ptr->entities.entityToComponents[in state.ptr->allocator, ent.id];
-            var e = components.GetEnumerator(state);
+            components.lockSpinner.Lock();
+            var e = components.entities.GetEnumerator(state);
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
                 ref var ptr = ref state.ptr->components.items[state, typeId];
                 ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
                 storage.CleanUpEntity(state, ent.id, typeId);
             }
-            components.Dispose(ref state.ptr->allocator);
+            components.entities.Dispose(ref state.ptr->allocator);
+            components.lockSpinner.Unlock();
 
         }
         #endif

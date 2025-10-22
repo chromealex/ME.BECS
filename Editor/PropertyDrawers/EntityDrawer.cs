@@ -473,7 +473,9 @@ namespace ME.BECS.Editor {
             var cnt = 0;
             {
                 #if ENABLE_BECS_FLAT_QUIERIES
-                var components = world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                item.lockSpinner.Lock();
+                var components = item.entities;
                 #else
                 var components = arch.components;
                 #endif
@@ -482,6 +484,9 @@ namespace ME.BECS.Editor {
                     var cId = e.Current;
                     if (StaticTypesLoadedManaged.loadedTypes.ContainsKey(cId) == true) ++cnt;
                 }
+                #if ENABLE_BECS_FLAT_QUIERIES
+                item.lockSpinner.Unlock();
+                #endif
             }
 
             if (this.tempObject.data != null &&
@@ -490,7 +495,9 @@ namespace ME.BECS.Editor {
                 {
                     var i = 0;
                     #if ENABLE_BECS_FLAT_QUIERIES
-                    var components = world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                    ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                    item.lockSpinner.Lock();
+                    var components = item.entities;
                     #else
                     var components = arch.components;
                     #endif
@@ -508,6 +515,9 @@ namespace ME.BECS.Editor {
                             ++i;
                         }
                     }
+                    #if ENABLE_BECS_FLAT_QUIERIES
+                    item.lockSpinner.Unlock();
+                    #endif
                 }
             } else {
                 
@@ -516,7 +526,9 @@ namespace ME.BECS.Editor {
                 {
                     var i = 0;
                     #if ENABLE_BECS_FLAT_QUIERIES
-                    var components = world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                    ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
+                    item.lockSpinner.Lock();
+                    var components = item.entities;
                     #else
                     var components = arch.components;
                     #endif
@@ -534,6 +546,9 @@ namespace ME.BECS.Editor {
                             ++i;
                         }
                     }
+                    #if ENABLE_BECS_FLAT_QUIERIES
+                    item.lockSpinner.Unlock();
+                    #endif
                 }
             }
 

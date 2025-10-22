@@ -80,7 +80,7 @@ namespace ME.BECS {
                 locksPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, entityCapacity),
                 readWriteSpinner = ReadWriteSpinner.Create(state),
                 #if ENABLE_BECS_FLAT_QUIERIES
-                entityToComponents = new MemArray<HashSet<uint>>(ref state.ptr->allocator, entityCapacity),
+                entityToComponents = new MemArray<LockedEntityToComponent>(ref state.ptr->allocator, entityCapacity),
                 #endif
             };
             //var ptr = (uint*)ents.free.GetUnsafePtr(in state.ptr->allocator);
@@ -142,7 +142,7 @@ namespace ME.BECS {
                 state.ptr->entities.versions[in state.ptr->allocator, ent.id] = version;
                 state.ptr->entities.aliveBits.SetThreaded(in state.ptr->allocator, ent.id, true);
                 #if ENABLE_BECS_FLAT_QUIERIES
-                state.ptr->entities.entityToComponents[in state.ptr->allocator, ent.id] = new HashSet<uint>(ref state.ptr->allocator, 8u);
+                state.ptr->entities.entityToComponents[in state.ptr->allocator, ent.id] = new LockedEntityToComponent(ref state.ptr->allocator, 8u);
                 #endif
             }
 
@@ -202,7 +202,7 @@ namespace ME.BECS {
                 var groupsIndex = (StaticTypesTrackedBurst.maxId + 1u) * idx;
                 _memclear((safe_ptr<byte>)state.ptr->entities.versionsGroup.GetUnsafePtr(in state.ptr->allocator) + groupsIndex * TSize<ushort>.size, (StaticTypesTrackedBurst.maxId + 1u) * TSize<ushort>.size);
                 #if ENABLE_BECS_FLAT_QUIERIES
-                state.ptr->entities.entityToComponents[in state.ptr->allocator, idx] = new HashSet<uint>(ref state.ptr->allocator, 8u);
+                state.ptr->entities.entityToComponents[in state.ptr->allocator, idx] = new LockedEntityToComponent(ref state.ptr->allocator, 8u);
                 #endif
                 state.ptr->entities.aliveBits.SetThreaded(in state.ptr->allocator, idx, true);
                 state.ptr->entities.readWriteSpinner.ReadEnd(state);
@@ -229,7 +229,7 @@ namespace ME.BECS {
                 state.ptr->entities.aliveBits.SetThreaded(in state.ptr->allocator, idx, true);
                 #if ENABLE_BECS_FLAT_QUIERIES
                 state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, idx + 1u, 2);
-                state.ptr->entities.entityToComponents[in state.ptr->allocator, idx] = new HashSet<uint>(ref state.ptr->allocator, 8u);
+                state.ptr->entities.entityToComponents[in state.ptr->allocator, idx] = new LockedEntityToComponent(ref state.ptr->allocator, 8u);
                 #endif
                 state.ptr->entities.readWriteSpinner.WriteEnd();
                 return ent;
