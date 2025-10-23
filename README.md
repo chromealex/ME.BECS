@@ -5,9 +5,6 @@
 ### ME.BECS: Bursted Entity Component System
 ###### Recommened version Unity 6
 
-> [!IMPORTANT]
-> Currently ME.BECS is in beta version, if you need stable ECS with rollbacks use [ME.ECS](https://github.com/chromealex/ecs)
-
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
 - Clone/Serialize world very fast;
