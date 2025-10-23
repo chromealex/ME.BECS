@@ -105,6 +105,31 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.HashSet<System.Type> searchTypes = new System.Collections.Generic.HashSet<System.Type>();
         private readonly System.Collections.Generic.HashSet<string> searchNames = new System.Collections.Generic.HashSet<string>();
         private VisualElement tagsBackground;
+        private readonly System.Collections.Generic.List<Renderer> currentObjects = new System.Collections.Generic.List<Renderer>();
+        private bool alignSceneViewToObject = false;
+        private bool pause;
+
+        private readonly System.Collections.Generic.List<Element> elements = new System.Collections.Generic.List<Element>();
+        private readonly System.Collections.Generic.HashSet<Ent> selected = new System.Collections.Generic.HashSet<Ent>();
+        internal readonly System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem> uniqueGroups = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
+        internal readonly System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem> ignoredGroups = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
+        private readonly System.Collections.Generic.Dictionary<Ent, bool> foldout = new System.Collections.Generic.Dictionary<Ent, bool>();
+        private readonly System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<EditorUtils.ComponentGroupItem>> entToTags = new System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<EditorUtils.ComponentGroupItem>>();
+        private readonly System.Collections.Generic.Dictionary<Ent, uint> entToComponentsCount = new System.Collections.Generic.Dictionary<Ent, uint>();
+        private readonly System.Collections.Generic.Dictionary<Ent, uint> entToVersions = new System.Collections.Generic.Dictionary<Ent, uint>();
+        internal bool settingsChanged;
+
+        private System.Collections.Generic.List<Ent> cache = new System.Collections.Generic.List<Ent>();
+        private int tagsCount;
+        private GradientAnimated logoLine;
+
+        private readonly System.Collections.Generic.HashSet<Ent> current = new System.Collections.Generic.HashSet<Ent>();
+        private readonly System.Collections.Generic.List<Ent> createEntities = new System.Collections.Generic.List<Ent>();
+        private readonly System.Collections.Generic.HashSet<Ent> allEntities = new System.Collections.Generic.HashSet<Ent>();
+        private readonly System.Collections.Generic.HashSet<Ent> removeEntities = new System.Collections.Generic.HashSet<Ent>();
+        private readonly System.Collections.Generic.Dictionary<Ent, Element> entsToElements = new System.Collections.Generic.Dictionary<Ent, Element>();
+        private readonly System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<Ent>> awaitForParent = new System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<Ent>>();
+        private bool rawHierarchy;
 
         [MenuItem("ME.BECS/\u2637 Hierarchy...", priority = 10000)]
         public static void ShowWindow() {
@@ -165,8 +190,6 @@ namespace ME.BECS.Editor {
             
         }
 
-        private readonly System.Collections.Generic.List<Renderer> currentObjects = new System.Collections.Generic.List<Renderer>();
-        private bool alignSceneViewToObject = false;
         private void OnSceneGUI(SceneView obj) {
             
             if (this.selected.Count > 0) {
@@ -212,7 +235,6 @@ namespace ME.BECS.Editor {
             
         }
 
-        private bool pause;
         private void Update() {
 
             if (this.pause == true) return;
@@ -226,17 +248,49 @@ namespace ME.BECS.Editor {
             
         }
 
+        private void Move(int delta, Ent current, out Element newElement, bool addToSelection = false) {
+            newElement = null;
+            if (this.entsToElements.TryGetValue(current, out var element) == true) {
+                if (delta > 0) {
+                    newElement = element;
+                    while (delta > 0) {
+                        var bounds = newElement.toggle.worldBound;
+                        var height = bounds.height;
+                        foreach (var item in this.entsToElements) {
+                            if (item.Value.Contains(new Vector2(bounds.center.x, bounds.center.y + height)) == true) {
+                                newElement = item.Value;
+                                if (addToSelection == false) this.selected.Clear();
+                                this.selected.Add(newElement.value);
+                                break;
+                            }
+                        }
+                        --delta;
+                    }
+                } else if (delta < 0) {
+                    newElement = element;
+                    while (delta < 0) {
+                        var bounds = newElement.toggle.worldBound;
+                        var height = bounds.height;
+                        foreach (var item in this.entsToElements) {
+                            if (item.Value.Contains(new Vector2(bounds.center.x, bounds.center.y - height)) == true) {
+                                newElement = item.Value;
+                                if (addToSelection == false) this.selected.Clear();
+                                this.selected.Add(newElement.value);
+                                break;
+                            }
+                        }
+                        ++delta;
+                    }
+                }
+            }
+        }
+        
         private bool Move(int delta, out Element newElement, bool addToSelection = false) {
             newElement = null;
-            var first = (delta > 0 ? this.selected.OrderBy(x => x.id).LastOrDefault() : this.selected.OrderBy(x => x.id).FirstOrDefault());
+            var first = (delta > 0 ? this.selected.OrderBy(x => this.entsToElements[x].worldBounds.y).LastOrDefault() : this.selected.OrderBy(x => this.entsToElements[x].worldBounds.y).FirstOrDefault());
             if (first.IsAlive() == true) {
-                var elem = this.elements.FindIndex(x => x.value == first);
-                if (elem >= 0 && elem + delta < this.elements.Count && elem + delta >= 0) {
-                    if (addToSelection == false) this.selected.Clear();
-                    newElement = this.elements[elem + delta];
-                    this.selected.Add(newElement.value);
-                    return true;
-                }
+                this.Move(delta, first, out newElement, addToSelection);
+                return true;
             }
             return false;
         }
@@ -244,25 +298,17 @@ namespace ME.BECS.Editor {
         private bool UnfoldSelection(out System.Collections.Generic.List<Element> newElement) {
             newElement = null;
             var count = 0;
-            for (int i = this.elements.Count - 1; i >= 0; --i) {
-                var elem = this.elements[i];
-                if (this.selected.Contains(elem.value) == true) { 
-                    if (newElement == null) newElement = new System.Collections.Generic.List<Element>();
-                    if (elem.IsFoldout == false) {
-                        elem.IsFoldout = true;
-                        newElement.Add(elem);
-                        ++count;
-                    } else if (i < this.elements.Count - 1) {
-                        // Move to child if it has one
-                        var curLevel = elem.level;
-                        var next = this.elements[i + 1];
-                        if (next.level == curLevel + 1) {
-                            this.selected.Remove(elem.value);
-                            this.selected.Add(next.value);
-                            newElement.Add(next);
-                            ++count;
-                        }
-                    }
+            foreach (var selection in this.selected) {
+                if (newElement == null) newElement = new System.Collections.Generic.List<Element>();
+                if (this.entsToElements.TryGetValue(selection, out var elem) == false) continue;
+                if (elem.IsFoldout == false) {
+                    elem.IsFoldout = true;
+                    newElement.Add(elem);
+                    ++count;
+                } else {
+                    // Move to child if it has one
+                    this.Move(1, selection, out var nextElement, false);
+                    ++count;
                 }
             }
 
@@ -272,28 +318,33 @@ namespace ME.BECS.Editor {
         private bool FoldSelection(out System.Collections.Generic.List<Element> newElement) {
             newElement = null;
             var count = 0;
-            for (int i = 0; i < this.elements.Count; ++i) {
-                var elem = this.elements[i];
-                if (this.selected.Contains(elem.value) == true) { 
-                    if (newElement == null) newElement = new System.Collections.Generic.List<Element>();
-                    if (elem.IsFoldout == true) {
-                        elem.IsFoldout = false;
-                        newElement.Add(elem);
+            var toAdd = new Unity.Collections.NativeList<Ent>(Unity.Collections.Allocator.Temp);
+            var toRemove = new Unity.Collections.NativeList<Ent>(Unity.Collections.Allocator.Temp);
+            foreach (var selection in this.selected) {
+                if (newElement == null) newElement = new System.Collections.Generic.List<Element>();
+                if (this.entsToElements.TryGetValue(selection, out var elem) == false) continue;
+                if (elem.IsFoldout == true) {
+                    elem.IsFoldout = false;
+                    newElement.Add(elem);
+                    ++count;
+                } else {
+                    // Move to child if it has one
+                    if (elem.parent != null) {
+                        toRemove.Add(selection);
+                        toAdd.Add(elem.value);
                         ++count;
-                    } else if (i > 0) {
-                        // Move to parent if it has one
-                        var curLevel = elem.level;
-                        var next = this.elements[i - 1];
-                        if (next.level == curLevel - 1) {
-                            this.selected.Remove(elem.value);
-                            this.selected.Add(next.value);
-                            newElement.Add(next);
-                            ++count;
-                        }
                     }
                 }
             }
 
+            foreach (var item in toRemove) {
+                this.selected.Remove(item);
+            }
+
+            foreach (var item in toAdd) {
+                this.selected.Add(item);
+            }
+            
             return count > 0;
         }
 
@@ -520,6 +571,9 @@ namespace ME.BECS.Editor {
         public class Element {
 
             public Ent value;
+            public Element parent;
+            public Element prev;
+            public Element next;
             public VisualElement container;
             public Label versionLabel;
             public Foldout foldout;
@@ -529,12 +583,14 @@ namespace ME.BECS.Editor {
 
             public bool IsFoldout {
                 set {
+                    if (this.foldout.contentContainer.childCount == 0) return;
                     if (this.window.foldout.TryAdd(this.value, value) == false) {
                         this.window.foldout[this.value] = value;
                     }
                     this.foldout.value = value;
                 }
                 get {
+                    if (this.foldout.contentContainer.childCount == 0) return false;
                     if (this.window.foldout.TryGetValue(this.value, out var val) == true) {
                         return val;
                     }
@@ -542,6 +598,20 @@ namespace ME.BECS.Editor {
                 }
             }
             public int level;
+            public VisualElement toggle;
+            public Rect worldBounds => this.toggle.worldBound;
+
+            public void UpdateLevel() {
+
+                var level = 0;
+                var element = this.parent;
+                while (element != null) {
+                    ++level;
+                    element = element.parent;
+                }
+                this.level = level;
+            
+            }
 
             public Element(WorldHierarchyEditorWindow window) {
                 this.window = window;
@@ -557,20 +627,13 @@ namespace ME.BECS.Editor {
                     versionChanged = true;
                 }
 
-                if (this.value.IsActive() == true) {
-                    this.container.RemoveFromClassList("inactive");
-                    this.container.AddToClassList("active");
-                } else {
-                    this.container.RemoveFromClassList("active");
-                    this.container.AddToClassList("inactive");
-                }
-                
                 if (versionChanged == true) {
                     this.foldout.text = this.value.ToString(withWorld: false, withVersion: false, withGen: false).ToString();
                     this.versionLabel.text = this.value.Version.ToString();
-                    this.foldout.style.paddingLeft = new StyleLength(0f + 20f * this.level);
                     this.RedrawTags(force);
                 }
+
+                this.toggle.style.paddingLeft = new StyleLength(0f + 20f * this.level);
 
                 if (this.window.selected.Contains(this.value) == true) {
                     this.container.AddToClassList("selected");
@@ -666,22 +729,15 @@ namespace ME.BECS.Editor {
                 
             }
 
+            public bool Contains(Vector2 position) {
+                return this.toggle.worldBound.Contains(position);
+            }
+
         }
 
         private float GetTagsWidth() {
             return TAG_WIDTH * this.tagsCount + 4f + 2f + 8f + 6f;
         }
-
-        private readonly System.Collections.Generic.List<Element> elements = new System.Collections.Generic.List<Element>();
-        private readonly System.Collections.Generic.HashSet<Ent> selected = new System.Collections.Generic.HashSet<Ent>();
-        internal readonly System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem> uniqueGroups = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
-        internal readonly System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem> ignoredGroups = new System.Collections.Generic.HashSet<EditorUtils.ComponentGroupItem>();
-        private readonly System.Collections.Generic.Dictionary<Ent, bool> foldout = new System.Collections.Generic.Dictionary<Ent, bool>();
-        private readonly System.Collections.Generic.Dictionary<Ent, Element> entToElement = new System.Collections.Generic.Dictionary<Ent, Element>();
-        private readonly System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<EditorUtils.ComponentGroupItem>> entToTags = new System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<EditorUtils.ComponentGroupItem>>();
-        private readonly System.Collections.Generic.Dictionary<Ent, uint> entToComponentsCount = new System.Collections.Generic.Dictionary<Ent, uint>();
-        private readonly System.Collections.Generic.Dictionary<Ent, uint> entToVersions = new System.Collections.Generic.Dictionary<Ent, uint>();
-        internal bool settingsChanged;
 
         [CustomEditor(typeof(Entity))]
         public class EntityEditor : UnityEditor.Editor {
@@ -728,7 +784,7 @@ namespace ME.BECS.Editor {
                 Selection.activeObject = this.currentInspector;
             }
         }
-        
+
         private Element MakeElement(Ent ent) {
             var element = new Element(this) {
                 value = ent,
@@ -740,7 +796,7 @@ namespace ME.BECS.Editor {
             tagsContainer.AddToClassList("tags");
             tagsContainer.pickingMode = PickingMode.Ignore;
             element.tagsContainer = tagsContainer;
-            foldout.text = "-";
+            foldout.text = ent.ToString(false, false, true).ToString();
             foldout.value = false;
             container.Add(foldout);
             foldoutText.Add(tagsContainer);
@@ -791,16 +847,24 @@ namespace ME.BECS.Editor {
             foldout.Q(className: Foldout.toggleUssClassName).pickingMode = PickingMode.Ignore;
             foldout.Q(className: Foldout.textUssClassName).pickingMode = PickingMode.Ignore;
             foldout.Q(className: Foldout.checkmarkUssClassName).pickingMode = PickingMode.Position;
-            foldout.RegisterCallback<MouseOverEvent>(evt => {
+            var toggle = foldout.Q(className: "unity-toggle");
+            element.toggle = toggle;
+            container.RegisterCallback<MouseOverEvent>(evt => {
+                if (toggle.worldBound.Contains(evt.mousePosition) == false) {
+                    container.RemoveFromClassList("hover");
+                    return;
+                }
                 container.AddToClassList("hover");
             });
-            foldout.RegisterCallback<MouseOutEvent>(evt => {
+            container.RegisterCallback<MouseOutEvent>(evt => {
                 container.RemoveFromClassList("hover");
             });
             foldout.RegisterValueChangedCallback((evt) => {
+                if (container.ClassListContains("hover") == false) return;
                 element.IsFoldout = evt.newValue;
             });
             container.RegisterCallback<MouseDownEvent>(evt => {
+                if (toggle.worldBound.Contains(evt.mousePosition) == false) return;
                 if (evt.clickCount == 2) {
                     this.alignSceneViewToObject = true;
                 }
@@ -813,13 +877,13 @@ namespace ME.BECS.Editor {
                 } else if (evt.shiftKey == true) {
                     if (this.selected.Count > 0) {
                         var first = this.selected.First();
-                        var elem = this.entToElement[first];
+                        var elem = this.entsToElements[first];
                         var rect = new Bounds(elem.container.worldBound.center, elem.container.worldBound.size * 0.5f);
                         rect.Encapsulate(((VisualElement)evt.target).worldBound.center);
                         var found = false;
-                        for (int i = 0; i < this.elements.Count; ++i) {
-                            var e = this.elements[i];
-                            var wb = e.container.worldBound;
+                        foreach (var kv in this.entsToElements) {
+                            var e = kv.Value;
+                            var wb = e.toggle.worldBound;
                             var b = new Bounds(wb.center, wb.size);
                             if (rect.Intersects(b) == true) {
                                 this.selected.Add(e.value);
@@ -845,168 +909,208 @@ namespace ME.BECS.Editor {
             element.foldout = foldout;
             element.container = container;
             element.versionLabel = versionLabel;
+            var children = ent.Read<ChildrenComponent>();
+            if (children.list.Count > 0) {
+                element.container.AddToClassList("has-children");
+            } else {
+                element.container.RemoveFromClassList("has-children");
+            }
             return element;
         }
         
-        private System.Collections.Generic.List<Ent> cache = new System.Collections.Generic.List<Ent>();
-        private int tagsCount;
-        private GradientAnimated logoLine;
-
         private void DrawEntities(VisualElement root) {
             
             this.cache.Clear();
-            #if ENABLE_BECS_FLAT_QUIERIES
-            var bits = new TempBitArray(this.selectedWorld.state.ptr->entities.aliveBits.Length, allocator: Constants.ALLOCATOR_TEMP);
-            bits.Union(in this.selectedWorld.state.ptr->allocator, in this.selectedWorld.state.ptr->entities.aliveBits);
-            var trueBits = bits.GetTrueBitsTemp();
-            for (uint i = 0u; i < trueBits.Length; ++i) {
-                var entId = trueBits[(int)i];
-                var ent = new Ent(entId, this.selectedWorld);
-                if (ent.Read<ParentComponent>().value == default) {
-                    this.cache.Add(ent);
-                }
-            }
-            #else
-            for (uint i = 0u; i < this.selectedWorld.state.ptr->archetypes.list.Count; ++i) {
-                var arch = this.selectedWorld.state.ptr->archetypes.list[this.selectedWorld.state, i];
-                for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
-                    var entId = arch.entitiesList[this.selectedWorld.state.ptr->allocator, j];
-                    var ent = new Ent(entId, this.selectedWorld);
-                    if (ent.Read<ParentComponent>().value == default) {
-                        this.cache.Add(ent);
+            this.createEntities.Clear();
+            this.allEntities.Clear();
+            this.removeEntities.Clear();
+            this.rawHierarchy = false;
+            if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) {
+                
+            } else {
+                #if ENABLE_BECS_FLAT_QUIERIES
+                var bits = new TempBitArray(this.selectedWorld.state.ptr->entities.aliveBits.Length, allocator: Constants.ALLOCATOR_TEMP);
+                bits.Union(in this.selectedWorld.state.ptr->allocator, in this.selectedWorld.state.ptr->entities.aliveBits);
+                var trueBits = bits.GetTrueBitsTemp();
+                for (uint i = 0u; i < trueBits.Length; ++i) {
+                    var entId = trueBits[(int)i];
+                #else
+                for (uint i = 0u; i < this.selectedWorld.state.ptr->archetypes.list.Count; ++i) {
+                    var arch = this.selectedWorld.state.ptr->archetypes.list[this.selectedWorld.state, i];
+                    for (uint j = 0u; j < arch.entitiesList.Count; ++j) {
+                        var entId = arch.entitiesList[this.selectedWorld.state.ptr->allocator, j];
+                #endif
+                        var ent = new Ent(entId, this.selectedWorld);
+
+                        var found = true;
+                        if (this.searchTypes.Count > 0 || this.searchNames.Count > 0) {
+                            var containsType = false;
+                            var state = ent.World.state;
+                            foreach (var type in this.searchTypes) {
+                                if (StaticTypesGroups.groups.TryGetValue(type, out var groupId) == true) {
+                                    if (groupId > 0u) {
+                                        containsType = true;
+                                        break;
+                                    }
+                                } else if (StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var id) == true) {
+                                    if (Components.HasUnknownType(state, id, ent.id, ent.gen, true) == true) {
+                                        containsType = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            var containsName = false;
+                            var name = ent.EditorName;
+                            {
+                                var idName = $"#{ent.id}";
+                                var n = name.IsEmpty == false ? name.ToString() : null;
+                                foreach (var searchName in this.searchNames) {
+                                    if ((n == null || n.Contains(searchName, System.StringComparison.InvariantCultureIgnoreCase) == false) && idName.Contains(searchName) == false)
+                                        continue;
+                                    containsName = true;
+                                    break;
+                                }
+                            }
+
+                            found = (containsType == true || containsName == true);
+                            this.rawHierarchy = true;
+                        }
+
+                        if (found == false) continue;
+
+                        if (this.current.Contains(ent) == false) {
+                            // new
+                            this.createEntities.Add(ent);
+                        }
+
+                        this.allEntities.Add(ent);
+                    #if !ENABLE_BECS_FLAT_QUIERIES
                     }
+                    #endif
                 }
             }
-            #endif
 
-            var k = 0;
-            this.DrawEntities(ref k, 0, root, this.cache);
+            this.allEntities.IntersectWith(this.current);
             
-            for (int i = k; i < this.elements.Count; ++i) {
-                this.elements[i].Hide();
+            foreach (var ent in this.current) {
+                if (this.allEntities.Contains(ent) == false) {
+                    this.removeEntities.Add(ent);
+                }
+            }
+            
+            foreach (var ent in this.removeEntities) {
+                this.current.Remove(ent);
+                this.Remove(root, ent);
             }
 
+            foreach (var ent in this.createEntities) {
+                this.current.Add(ent);
+                this.Add(root, ent);
+            }
+
+            this.Draw(root);
+            
             if (this.settingsChanged == true) {
                 this.SaveSettings();
             }
             this.settingsChanged = false;
-
+            
         }
-        
-        private void DrawEntities(ref int k, int level, VisualElement root, System.Collections.Generic.List<Ent> list) {
 
-            if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) return;
+        private void Remove(VisualElement root, Ent ent) {
+            this.entsToElements.Remove(ent, out var element);
+            if (element.prev != null) element.prev.next = element.next;
+            if (element.next != null) element.next.prev = element.prev;
+            element.container.RemoveFromHierarchy();
+            if (element.parent != null) {
+                this.AddAwaitParent(element.parent.value, ent);
+                element.parent = null;
+                element.UpdateLevel();
+            }
+        }
 
-            var rawHierarchy = false;
-            foreach (var ent in list) {
-                if (this.entToTags.TryGetValue(ent, out var tags) == true) {
-                    var ignore = false;
-                    foreach (var tag in tags) {
-                        if (this.ignoredGroups.Contains(tag) == false) continue;
-                        ignore = true;
-                        break;
-                    }
-                    if (ignore == true) continue;
-                }
+        private void AddAwaitParent(Ent parentEnt, Ent current) {
+            if (this.awaitForParent.TryGetValue(parentEnt, out var list) == true) {
+                list.Add(current);
+            } else {
+                list = new System.Collections.Generic.List<Ent>();
+                list.Add(current);
+                this.awaitForParent.Add(parentEnt, list);
+            }
+        }
 
-                var found = true;
-                if (this.searchTypes.Count > 0 || this.searchNames.Count > 0) {
-                    var containsType = false;
-                    var state = ent.World.state;
-                    foreach (var type in this.searchTypes) {
-                        if (StaticTypesGroups.groups.TryGetValue(type, out var groupId) == true) {
-                            if (groupId > 0u) {
-                                containsType = true;
-                                break;
+        private void Add(VisualElement root, Ent ent) {
+            var id = ent.pack;
+            var element = this.MakeElement(ent);
+            element.container.name = id.ToString();
+            element.container.userData = element;
+            
+            this.entsToElements.Add(ent, element);
+            
+            {
+                if (this.awaitForParent.TryGetValue(ent, out var list) == true) {
+                    for (var index = list.Count - 1; index >= 0; --index) {
+                        var item = list[index];
+                        if (this.AddParent(item, element) == true) {
+                            list.RemoveAt(index);
+                            if (list.Count == 0) {
+                                this.awaitForParent.Remove(ent);
                             }
-                        } else if (StaticTypesLoadedManaged.typeToId.TryGetValue(type, out var id) == true) {
-                            if (Components.HasUnknownType(state, id, ent.id, ent.gen, true) == true) {
-                                containsType = true;
-                                break;
-                            }
+                            element.UpdateLevel();
                         }
-                    }
-
-                    var containsName = false;
-                    var name = ent.EditorName;
-                    {
-                        var idName = $"#{ent.id}";
-                        var n = name.IsEmpty == false ? name.ToString() : null;
-                        foreach (var searchName in this.searchNames) {
-                            if ((n == null || n.Contains(searchName, System.StringComparison.InvariantCultureIgnoreCase) == false) && idName.Contains(searchName) == false) continue;
-                            containsName = true;
-                            break;
-                        }
-                    }
-                    
-                    found = (containsType == true || containsName == true);
-                    rawHierarchy = true;
-                }
-
-                if (found == true) {
-
-                    Element element;
-                    if (k >= this.elements.Count) {
-                        this.elements.Add(this.MakeElement(ent));
-                        this.logoLine.ThinkOnce();
-                    }
-
-                    {
-                        element = this.elements[k];
-                        if (element.value != ent) {
-                            element.Reset();
-                            this.entToElement.Remove(element.value);
-                            element.value = ent;
-                        }
-
-                        element.Redraw(true);
-                        this.elements[k] = element;
-                    }
-                    if (element.container.parent == null || element.container.parent != root) root.Add(element.container);
-                    if (this.entToElement.TryAdd(element.value, element) == false) {
-                        this.entToElement[element.value] = element;
-                    }
-
-                    element.level = level;
-                    ++k;
-                    {
-                        var children = ent.Read<ChildrenComponent>().list;
-                        if (children.Count > 0u) {
-                            if (rawHierarchy == false) {
-                                if (element.container.ClassListContains("raw-hierarchy") == true) element.container.RemoveFromClassList("raw-hierarchy");
-                            } else {
-                                if (element.container.ClassListContains("raw-hierarchy") == false) element.container.AddToClassList("raw-hierarchy");
-                            }
-                            if (children.Count != element.childrenCount) {
-                                element.container.AddToClassList("has-children");
-                            }
-                            if (element.IsFoldout == true || rawHierarchy == true) {
-                                var childList = new System.Collections.Generic.List<Ent>();
-                                foreach (var child in children) childList.Add(child);
-                                this.DrawEntities(ref k, level + 1, root, childList);
-                            }
-                        } else {
-                            if (children.Count != element.childrenCount) element.container.RemoveFromClassList("has-children");
-                        }
-
-                        element.childrenCount = children.Count;
-                    }
-
-                } else if (rawHierarchy == true) {
-                    var children = ent.Read<ChildrenComponent>().list;
-                    if (children.Count > 0u) {
-                        var childList = new System.Collections.Generic.List<Ent>();
-                        foreach (var child in children) childList.Add(child);
-                        this.DrawEntities(ref k, level + 1, root, childList);
                     }
                 }
-
             }
             
-            this.tagsBackground.style.width = new StyleLength(this.GetTagsWidth());
-            
+            var hasParent = false;
+            var parentEnt = ent.Read<ParentComponent>().value;
+            if (parentEnt.IsAlive() == true) {
+                if (this.entsToElements.TryGetValue(parentEnt, out var parentElement) == false) {
+                    this.AddAwaitParent(parentEnt, ent);
+                    hasParent = true;
+                } else if (this.AddParent(ent, parentElement) == true) {
+                    hasParent = true;
+                    element.UpdateLevel();
+                }
+            }
+
+            if (hasParent == false) {
+                {
+                    var childCount = root.childCount;
+                    if (childCount > 0) {
+                        element.prev = (Element)root[childCount - 1].userData;
+                        element.next = null;
+                        element.prev.next = element;
+                    }
+                }
+                root.Add(element.container);
+            }
+
+            element.UpdateLevel();
+
         }
 
+        private bool AddParent(Ent childEnt, Element element) {
+            if (this.entsToElements.TryGetValue(childEnt, out var child) == true) {
+                child.parent = element;
+                child.UpdateLevel();
+                element.foldout.Add(child.container);
+                return true;
+            }
+            return false;
+        }
+
+        private void Draw(VisualElement root) {
+
+            foreach (var item in this.current) {
+                if (this.entsToElements.TryGetValue(item, out var element) == true) {
+                    element.Redraw(false);
+                }
+            }
+            
+        }
+        
     }
 
 }
