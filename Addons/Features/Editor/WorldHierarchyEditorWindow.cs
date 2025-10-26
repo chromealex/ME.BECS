@@ -129,7 +129,7 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.HashSet<Ent> removeEntities = new System.Collections.Generic.HashSet<Ent>();
         private readonly System.Collections.Generic.Dictionary<Ent, Element> entsToElements = new System.Collections.Generic.Dictionary<Ent, Element>();
         private readonly System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<Ent>> awaitForParent = new System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<Ent>>();
-        private bool rawHierarchy;
+        //private bool rawHierarchy;
 
         [MenuItem("ME.BECS/\u2637 Hierarchy...", priority = 10000)]
         public static void ShowWindow() {
@@ -924,7 +924,7 @@ namespace ME.BECS.Editor {
             this.createEntities.Clear();
             this.allEntities.Clear();
             this.removeEntities.Clear();
-            this.rawHierarchy = false;
+            //this.rawHierarchy = false;
             if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) {
                 
             } else {
@@ -974,7 +974,7 @@ namespace ME.BECS.Editor {
                             }
 
                             found = (containsType == true || containsName == true);
-                            this.rawHierarchy = true;
+                            //this.rawHierarchy = true;
                         }
 
                         if (found == false) continue;
