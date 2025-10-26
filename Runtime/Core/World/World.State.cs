@@ -7,6 +7,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using Jobs;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [Unity.Collections.GenerateTestsForBurstCompatibility]
     [BURST]
@@ -68,7 +69,7 @@ namespace ME.BECS {
             return _make(state);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static safe_ptr<State> CreateDefault(AllocatorProperties allocatorProperties) {
             var state = new State() {
                 allocator = new MemoryAllocator().Initialize(allocatorProperties.sizeInBytesCapacity),
@@ -95,7 +96,7 @@ namespace ME.BECS {
             dstState.ptr->CopyFromComplete(in *srcState.ptr, index);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
             this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);

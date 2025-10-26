@@ -9,6 +9,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using static Cuts;
     using Unity.Jobs.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     public unsafe partial struct OneShotTasks {
 
@@ -30,8 +31,7 @@ namespace ME.BECS {
         
         private MemArrayThreadCacheLine<ThreadItem> threadItems;
 
-        [INLINE(256)]
-        [NotThreadSafe]
+        [INLINE(256)][NotThreadSafe][IgnoreProfiler]
         public static OneShotTasks Create(safe_ptr<State> state, uint capacity) {
             var tasks = new OneShotTasks() {
                 threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),

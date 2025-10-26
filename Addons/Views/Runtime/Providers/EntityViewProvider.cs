@@ -8,7 +8,6 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Views {
     
-    using System.Linq;
     using Unity.Jobs;
     using UnityEngine.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
@@ -16,6 +15,7 @@ namespace ME.BECS.Views {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using System.Runtime.InteropServices;
+    using UnityEngine.Pool;
 
     public struct ViewRoot {
 
@@ -74,7 +74,11 @@ namespace ME.BECS.Views {
             private scg::Dictionary<EntityView, scg::List<ModuleItem<T>>> methods;
 
             public void Initialize() {
-                this.methods = new System.Collections.Generic.Dictionary<EntityView, System.Collections.Generic.List<ModuleItem<T>>>();
+                this.methods = DictionaryPool<EntityView, System.Collections.Generic.List<ModuleItem<T>>>.Get();
+            }
+
+            public void Dispose() {
+                DictionaryPool<EntityView, System.Collections.Generic.List<ModuleItem<T>>>.Release(this.methods);
             }
 
             [INLINE(256)]
@@ -200,15 +204,16 @@ namespace ME.BECS.Views {
                 this.disabledRoot = new UnityEngine.GameObject("[Views Module] Disabled Root").transform;
                 if (UnityEngine.Application.isPlaying == true) UnityEngine.GameObject.DontDestroyOnLoad(this.disabledRoot.gameObject);
                 this.disabledRoot.gameObject.SetActive(false);
-                this.parentAwait = new System.Collections.Generic.HashSet<Ent>();
+                this.parentAwait = HashSetPool<Ent>.Get();
             }
 
-            this.heaps = new scg::List<HeapReference>();
-            this.prefabIdToPool = new scg::Dictionary<ulong, scg::Stack<Item>>();
-            this.tempViews = new scg::HashSet<EntityView>();
-            this.roots = new scg::List<ViewRoot>();
-            this.renderingOnSceneTransforms = new TransformAccessArray((int)properties.renderingObjectsCapacity, JobsUtility.JobWorkerCount);
             this.batchPerRoot = BATCH_PER_ROOT;
+            
+            this.heaps = ListPool<HeapReference>.Get();
+            this.prefabIdToPool = DictionaryPool<ulong, scg::Stack<Item>>.Get();
+            this.tempViews = HashSetPool<EntityView>.Get();
+            this.roots = ListPool<ViewRoot>.Get();
+            this.renderingOnSceneTransforms = new TransformAccessArray((int)properties.renderingObjectsCapacity, JobsUtility.JobWorkerCount);
 
             this.applyStateModules.Initialize();
             this.updateModules.Initialize();
@@ -630,6 +635,19 @@ namespace ME.BECS.Views {
 
             if (this.renderingOnSceneTransforms.isCreated == true) this.renderingOnSceneTransforms.Dispose();
             
+            if (this.parentAwait != null) HashSetPool<Ent>.Release(this.parentAwait);
+            ListPool<HeapReference>.Release(this.heaps);
+            DictionaryPool<ulong, scg::Stack<Item>>.Release(this.prefabIdToPool);
+            HashSetPool<EntityView>.Release(this.tempViews);
+            ListPool<ViewRoot>.Release(this.roots);
+            
+            this.applyStateModules.Dispose();
+            this.updateModules.Dispose();
+            this.enableModules.Dispose();
+            this.disableModules.Dispose();
+            this.initializeModules.Dispose();
+            this.deinitializeModules.Dispose();
+
         }
         
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
@@ -677,12 +695,12 @@ namespace ME.BECS.Views {
                     isLoaded = true,
                     flags = 0,
                 };
-                info.HasUpdateModules = prefab.viewModules.Any(x => x is IViewUpdate);
-                info.HasApplyStateModules = prefab.viewModules.Any(x => x is IViewApplyState);
-                info.HasInitializeModules = prefab.viewModules.Any(x => x is IViewInitialize);
-                info.HasDeInitializeModules = prefab.viewModules.Any(x => x is IViewDeInitialize);
-                info.HasEnableFromPoolModules = prefab.viewModules.Any(x => x is IViewEnableFromPool);
-                info.HasDisableToPoolModules = prefab.viewModules.Any(x => x is IViewDisableToPool);
+                info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.viewModules);
+                info.HasApplyStateModules = ProvidersHelper.HasAny<IViewApplyState>(prefab.viewModules);
+                info.HasInitializeModules = ProvidersHelper.HasAny<IViewInitialize>(prefab.viewModules);
+                info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.viewModules);
+                info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.viewModules);
+                info.HasDisableToPoolModules = ProvidersHelper.HasAny<IViewDisableToPool>(prefab.viewModules);
                 
                 viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 

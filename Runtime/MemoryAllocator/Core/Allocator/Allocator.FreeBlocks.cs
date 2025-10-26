@@ -6,6 +6,7 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Mathematics;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public unsafe struct FreeBlocks {
         
@@ -15,13 +16,13 @@ namespace ME.BECS {
 
             public UnsafeList<MemPtr> freeBlocks;
 
-            [INLINE(256)]
+            [INLINE(256)][IgnoreProfiler]
             public void Add(MemoryAllocator.BlockHeader* header, in MemPtr memPtr) {
                 header->freeIndex = (uint)this.freeBlocks.Length;
                 this.freeBlocks.Add(memPtr);
             }
 
-            [INLINE(256)]
+            [INLINE(256)][IgnoreProfiler]
             public void Remove(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header) {
                 var last = this.freeBlocks[this.freeBlocks.Length - 1];
                 var lastHeader = (MemoryAllocator.BlockHeader*)allocator.GetPtr(last);
@@ -29,7 +30,7 @@ namespace ME.BECS {
                 this.freeBlocks.RemoveAtSwapBack((int)header->freeIndex);
             }
 
-            [INLINE(256)]
+            [INLINE(256)][IgnoreProfiler]
             public MemPtr Pop(in MemoryAllocator allocator, uint size, bool iterateAll = false) {
                 if (this.freeBlocks.Length == 0) return MemPtr.Invalid;
                 if (iterateAll == true) {
@@ -52,7 +53,7 @@ namespace ME.BECS {
                 }
             }
 
-            [INLINE(256)]
+            [INLINE(256)][IgnoreProfiler]
             public void Dispose() {
                 this.freeBlocks.Dispose();
             }
@@ -66,7 +67,7 @@ namespace ME.BECS {
             set => this.freeBlocks.Allocator = value;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Initialize(int capacity, Allocator allocator) {
             this.freeBlocks = new UnsafeList<Block>((int)FreeBlocks.POTS, allocator);
             for (int i = 0; i < FreeBlocks.POTS; ++i) {
@@ -76,7 +77,7 @@ namespace ME.BECS {
             }
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Dispose() {
             for (int i = 0; i < this.freeBlocks.Length; ++i) {
                 this.freeBlocks[i].Dispose();
@@ -84,7 +85,7 @@ namespace ME.BECS {
             this.freeBlocks.Dispose();
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void CopyFrom(in FreeBlocks other) {
             
             this.freeBlocks.Resize(other.freeBlocks.Length, NativeArrayOptions.ClearMemory);
@@ -97,7 +98,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Serialize(ref StreamBufferWriter writer) {
             writer.Write(this.freeBlocks.Length);
             for (int i = 0; i < this.freeBlocks.Length; ++i) {
@@ -108,7 +109,7 @@ namespace ME.BECS {
             }
         }
         
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Deserialize(ref StreamBufferReader reader, Allocator allocator) {
             var freeBlocksLength = 0;
             reader.Read(ref freeBlocksLength);
@@ -127,7 +128,7 @@ namespace ME.BECS {
             }
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private readonly ref Block GetBlockExact(uint size) {
             var pot = Helpers.NextPot(size);
             var index = (uint)math.log2(pot) - 1u;
@@ -137,7 +138,7 @@ namespace ME.BECS {
             return ref UnsafeUtility.ArrayElementAsRef<Block>(this.freeBlocks.Ptr, (int)index);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private readonly ref Block GetBlockMin(uint size, ref uint index) {
             var pot = Helpers.NextPot(size);
             if (index == 0u) index = (uint)math.log2(pot) - 1;
@@ -154,19 +155,19 @@ namespace ME.BECS {
             }
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Add(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header, uint zoneId) {
             ref var block = ref this.GetBlockExact(header->size);
             block.Add(header, allocator.GetSafePtr((byte*)header, zoneId));
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Add(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header, MemPtr memPtr) {
             ref var block = ref this.GetBlockExact(header->size);
             block.Add(header, memPtr);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public MemPtr Pop(in MemoryAllocator allocator, uint size) {
             var index = 0u;
             while (true) {
@@ -185,13 +186,13 @@ namespace ME.BECS {
             }
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public void Remove(in MemoryAllocator allocator, MemoryAllocator.BlockHeader* header) {
             ref var block = ref this.GetBlockExact(header->size);
             block.Remove(in allocator, header);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public readonly MemPtr GetPtr(in MemoryAllocator.BlockHeader header) {
             ref var block = ref this.GetBlockExact(header.size);
             return block.freeBlocks[(int)header.freeIndex];

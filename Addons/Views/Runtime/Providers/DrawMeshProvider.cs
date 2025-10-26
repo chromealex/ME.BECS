@@ -8,11 +8,11 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Views {
     
-    using System.Linq;
     using Unity.Collections;
     using Unity.Jobs;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using UnityEngine.Pool;
 
     [ComponentGroup(typeof(ViewsComponentGroup))]
     public struct DrawMeshProviderTag : IComponent {}
@@ -110,7 +110,8 @@ namespace ME.BECS.Views {
             UnsafeViewsModule.RegisterProviderType<DrawMeshProviderTag>(providerId);
 
             this.properties = properties;
-            this.objectsPerMeshAndMaterial = new System.Collections.Generic.Dictionary<Info, ObjectsPerInfo>((int)properties.instancesRegistryCapacity);
+            this.objectsPerMeshAndMaterial = DictionaryPool<Info, ObjectsPerInfo>.Get();
+            this.objectsPerMeshAndMaterial.EnsureCapacity((int)properties.instancesRegistryCapacity);
 
         }
 
@@ -316,6 +317,8 @@ namespace ME.BECS.Views {
 
             }
             
+            DictionaryPool<Info, ObjectsPerInfo>.Release(this.objectsPerMeshAndMaterial);
+            
         }
         
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, ObjectReferenceRegistryData data) {
@@ -364,12 +367,12 @@ namespace ME.BECS.Views {
                     sceneSource = sceneSource,
                     flags = 0,
                 };
-                info.HasUpdateModules = prefab.viewModules.Any(x => x is IViewUpdate);
-                info.HasApplyStateModules = prefab.viewModules.Any(x => x is IViewApplyState);
-                info.HasInitializeModules = prefab.viewModules.Any(x => x is IViewInitialize);
-                info.HasDeInitializeModules = prefab.viewModules.Any(x => x is IViewDeInitialize);
-                info.HasEnableFromPoolModules = prefab.viewModules.Any(x => x is IViewEnableFromPool);
-                info.HasDisableToPoolModules = prefab.viewModules.Any(x => x is IViewDisableToPool);
+                info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.viewModules);
+                info.HasApplyStateModules = ProvidersHelper.HasAny<IViewApplyState>(prefab.viewModules);
+                info.HasInitializeModules = ProvidersHelper.HasAny<IViewInitialize>(prefab.viewModules);
+                info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.viewModules);
+                info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.viewModules);
+                info.HasDisableToPoolModules = ProvidersHelper.HasAny<IViewDisableToPool>(prefab.viewModules);
                 
                 viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 

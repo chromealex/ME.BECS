@@ -41,6 +41,13 @@ namespace ME.BECS.Views {
 
         }
 
+        public static bool HasAny<T>(IViewModule[] arr) {
+            foreach (var item in arr) {
+                if (item is T) return true;
+            }
+            return false;
+        }
+
         public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, in Ent parentEnt, in World world) {
 
             var queue = new System.Collections.Generic.Queue<TransformItem>();

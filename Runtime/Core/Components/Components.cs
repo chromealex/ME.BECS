@@ -8,7 +8,7 @@ namespace ME.BECS {
 
     public unsafe partial struct Components {
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         public static Components Create(safe_ptr<State> state, in StateProperties stateProperties) {
 
             var components = new Components() {

@@ -3,6 +3,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(AllocatorDebugProxy))]
     public unsafe partial struct MemoryAllocator {
@@ -59,12 +60,12 @@ namespace ME.BECS {
             this.allocatorLabel = allocator;
         }
 
-        [NotThreadSafe]
+        [NotThreadSafe][IgnoreProfiler]
         public MemoryAllocator Initialize(uint initialSize) {
             return this.Initialize(DEFAULT_ZONES_CAPACITY, initialSize, Constants.ALLOCATOR_PERSISTENT);
         }
 
-        [NotThreadSafe]
+        [NotThreadSafe][IgnoreProfiler]
         public MemoryAllocator Initialize(uint zonesCapacity, uint initialSize, Unity.Collections.Allocator allocator, bool ignoreSizeRestrictions = false) {
             if (ignoreSizeRestrictions == false && zonesCapacity < 1u) zonesCapacity = 1u;
             if (ignoreSizeRestrictions == false && initialSize < MIN_ZONE_SIZE) initialSize = MIN_ZONE_SIZE;
@@ -78,18 +79,18 @@ namespace ME.BECS {
             return this;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private static safe_ptr<safe_ptr<Zone>> MakeZones(uint zonesCapacity, Unity.Collections.Allocator allocator) {
             return _make(zonesCapacity * (uint)sizeof(safe_ptr<Zone>), 8, allocator);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private void AddZone(uint initialSize) {
             var zoneId = this.zonesCount++;
             this.zones[zoneId] = this.CreateZone(initialSize, zoneId);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private safe_ptr<Zone> CreateZone(uint size, uint zoneId) {
             if (size < this.initialSize) size = this.initialSize;
             var zone = this.CreateZoneRaw(ref size);
@@ -102,12 +103,12 @@ namespace ME.BECS {
             return zone;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private safe_ptr<Zone> CreateZoneRaw(uint size) {
             return this.CreateZoneRaw(ref size);
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private safe_ptr<Zone> CreateZoneRaw(ref uint size) {
             var s = TSize<BlockHeader>.size + size + ZONE_HEADER_OFFSET;
             var zone = (safe_ptr<Zone>)_make(sizeof(Zone), TAlign<Zone>.alignInt, this.allocatorLabel);
@@ -117,7 +118,7 @@ namespace ME.BECS {
             return zone;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private MemPtr AllocFromFreeBlocks(uint size, out safe_ptr ptr) {
             // look up through free blocks
             var memPtr = this.freeBlocks.Pop(in this, size);
@@ -155,13 +156,13 @@ namespace ME.BECS {
             return MemPtr.Invalid;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private void RemoveFromFree(BlockHeader* header) {
             this.freeBlocks.Remove(in this, header);
             header->freeIndex = uint.MaxValue;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][IgnoreProfiler]
         private static uint Align(uint size) {
             return ((size + 3u) & ~3u);
         }
