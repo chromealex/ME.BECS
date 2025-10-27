@@ -104,7 +104,7 @@ namespace ME.BECS.Editor {
                     this.type = type;
                     this.file = null;
                     this.isBuiltIn = type != null ? type.AssemblyQualifiedName.Contains("ME.BECS") : false;
-                    if (this.isBuiltIn == false) {
+                    if (this.isBuiltIn == false && type != null) {
                         EditorUtils.FindComponentFromStructName(type.Name, type.Namespace, (x, lineNumber, columnNumber) => {
                             this.file = x;
                             this.lineNumber = lineNumber;
@@ -116,6 +116,7 @@ namespace ME.BECS.Editor {
                 }
 
                 public string GetEditorComment() {
+                    if (this.type == null) return string.Empty;
                     var result = string.IsNullOrEmpty(this.editorComment) == true ? this.defaultEditorComment : this.editorComment;
                     if (string.IsNullOrEmpty(result) == false) {
                         return $"<b>{this.type.Name}</b>\n{result}";
@@ -125,7 +126,7 @@ namespace ME.BECS.Editor {
                 }
 
                 public FieldInfo[] GetFields() {
-                    return this.type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    return this.type != null ? this.type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) : new FieldInfo[0];
                 }
 
                 public string GetTooltip() {
