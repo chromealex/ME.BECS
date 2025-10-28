@@ -89,6 +89,7 @@ namespace ME.BECS.Editor {
 
                 if (isDirty == true || items[i].data.Equals(item) == false) {
                     items[i].data = item;
+                    EditorUtility.SetDirty(items[i]);
                     isDirty = true;
                 }
             }
