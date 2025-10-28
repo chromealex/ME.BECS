@@ -42,8 +42,11 @@ namespace ME.BECS {
             var nextId = ObjectReferenceRegistry.GetId(config);
 
             if (nextId == 0u) {
-                //nextId = ObjectReferenceRegistry.AddRuntimeObject(config);
-                throw new System.Exception($"ObjectReferenceRegistry does not contain Config {config.name}");
+                if (UnityEngine.Application.isPlaying == true) {
+                    nextId = ObjectReferenceRegistry.AddRuntimeObject(config);
+                } else {
+                    throw new System.Exception($"ObjectReferenceRegistry does not contain Config {config.name}");
+                }
             }
             
             lockSpinner.Lock();
