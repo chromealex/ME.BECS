@@ -89,21 +89,21 @@ namespace ME.BECS.Editor.Aspects {
                     if (typeof(IUnmanagedList).IsAssignableFrom(fieldType) == true) {
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        var typeStr = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
+                        var closedType = EditorUtils.GetDataTypeName(fieldType);
                         var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
                         content.Add("{");
                         content.Add($"var component = ({strType}*)componentPtr;");
-                        content.Add($"var addr = ({typeStr}*)((byte*)component + {fieldOffset});");
+                        content.Add($"var addr = ({closedType}*)((byte*)component + {fieldOffset});");
                         content.Add($"var res = config.GetCollectionById(component->{field.Name}.GetConfigId(), out var data, out var length);");
                         content.Add("if (addr->IsCreated == true) addr->Dispose();");
                         content.Add("if (res == true) {");
-                        content.Add($"*addr = new {typeStr}(in ent, data, length);");
+                        content.Add($"*addr = new {closedType}(in ent, data, length);");
                         if (typeof(IMemList).IsAssignableFrom(fieldType) == true) {
                             content.Add("} else {");
-                            content.Add($"*addr = new {typeStr}(in ent, 1u);");
+                            content.Add($"*addr = new {closedType}(in ent, 1u);");
                         } else if (typeof(IMemArray).IsAssignableFrom(fieldType) == true) {
                             content.Add("} else {");
-                            content.Add($"*addr = {typeStr}.Empty;");
+                            content.Add($"*addr = {closedType}.Empty;");
                         }
                         content.Add("}");
                         content.Add("}");
