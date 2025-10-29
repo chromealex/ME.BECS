@@ -15,6 +15,9 @@ namespace ME.BECS {
         public RefRO<T> valueRO;
         
         public AspectDataPtr(in World world) {
+            if (StaticTypes<T>.typeId == 0u) {
+                StaticTypes<T>.Validate(isTag: false);
+            }
             this.value = world.state.ptr->components.GetRW<T>(world.state, world.id);
             this.valueRO = world.state.ptr->components.GetRO<T>(world.state, world.id);
         }
