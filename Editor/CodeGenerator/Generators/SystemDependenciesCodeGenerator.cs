@@ -86,7 +86,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnUpdate:");
+                            content.Add($"// |- OnUpdate:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -116,7 +116,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnAwake:");
+                            content.Add($"// |- OnAwake:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -152,7 +152,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnStart:");
+                            content.Add($"// |- OnStart:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -188,7 +188,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnDestroy:");
+                            content.Add($"// |- OnDestroy:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
