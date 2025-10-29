@@ -429,6 +429,19 @@ namespace ME.BECS.Editor {
 
         }
 
+        private static bool IsOpenGeneric(System.Type type) {
+            return type != null && type.IsGenericType && type.ContainsGenericParameters;
+        }
+
+        private static string CleanGenericDuplicates(string code) {
+            code = System.Text.RegularExpressions.Regex.Replace(
+                code,
+                @"(\b[\w\.\+]+)<([^>]+)><\2>",
+                "$1<$2>"
+            );
+            return code;
+        }
+
         private static void OnLogAdded(string condition, string stackTrace, UnityEngine.LogType type) {
 
             /*if (type == UnityEngine.LogType.Exception ||
@@ -588,14 +601,12 @@ namespace ME.BECS.Editor {
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
-
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
-                        if (editorAssembly == false && info.isEditor == true) continue;
+                        if (EditorUtils.IsValidTypeForAssembly(editorAssembly, component, asms) == false) continue;
 
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        if (IsOpenGeneric(component)) continue;
+                        var type = EditorUtils.GetDataTypeName(component);
                         {
                             var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
                             typesContent.Add(str);
@@ -613,6 +624,105 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
+                    var openGenericComponents = UnityEditor.TypeCache
+                        .GetTypesDerivedFrom(typeof(IComponent))
+                        .OrderBy(x => x.FullName)
+                        .Where(t => t.IsValueType == true && t.IsGenericTypeDefinition == true && EditorUtils.IsValidTypeForAssembly(editorAssembly, t, asms))
+                        .ToArray();
+                 
+                    var candidateArgs = UnityEditor.TypeCache
+                        .GetTypesDerivedFrom(typeof(IComponent))
+                        .OrderBy(x => x.FullName)
+                        .Where(t => t.IsValueType == true && t.IsGenericType == false && t.ContainsGenericParameters == false && EditorUtils.IsValidTypeForAssembly(editorAssembly, t, asms))
+                        .ToArray();
+
+                    bool IsUnmanagedType(System.Type type) {
+                        if (!type.IsValueType) return false;
+                        if (type.IsPrimitive || type.IsPointer || type.IsEnum) return true;
+                        
+                        var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                        foreach (var field in fields) {
+                            if (!IsUnmanagedType(field.FieldType)) return false;
+                        }
+                        return true;
+                    }
+
+                    bool SatisfiesConstraints(System.Type genericParam, System.Type arg) {
+                        var attrs = genericParam.GenericParameterAttributes;
+                        var constraints = genericParam.GetGenericParameterConstraints();
+                        
+                        var hasUnmanagedAttribute = genericParam.GetCustomAttributes()
+                            .Any(x => x.GetType().FullName == "System.Runtime.CompilerServices.IsUnmanagedAttribute");
+                        
+                        if ((attrs & System.Reflection.GenericParameterAttributes.NotNullableValueTypeConstraint) != 0) {
+                            if (arg.IsValueType == false) {
+                                return false;
+                            }
+                            
+                            if (hasUnmanagedAttribute && !IsUnmanagedType(arg)) {
+                                return false;
+                            }
+                        }
+                        
+                        if ((attrs & System.Reflection.GenericParameterAttributes.ReferenceTypeConstraint) != 0 && arg.IsClass == false) {
+                            return false;
+                        }
+                        
+                        if ((attrs & System.Reflection.GenericParameterAttributes.DefaultConstructorConstraint) != 0 && arg.GetConstructor(System.Type.EmptyTypes) == null) {
+                            return false;
+                        }
+                        
+                        foreach (var c in constraints) {
+                            if (c.IsAssignableFrom(arg) == false) {
+                                return false;
+                            }
+                        }
+                        
+                        return true;
+                    }
+
+                    foreach (var openGen in openGenericComponents) {
+                        var ga = openGen.GetGenericArguments();
+                        if (ga.Length != 1) continue;
+
+                        var genParam = ga[0];
+                        foreach (var arg in candidateArgs) {
+                            if (SatisfiesConstraints(genParam, arg) == false) continue;
+
+                            System.Type closed;
+                            try {
+                                closed = openGen.MakeGenericType(arg);
+                            } catch {
+                                continue;
+                            }
+
+                            if (closed == null || closed.ContainsGenericParameters) continue;
+                            if (closed.IsValueType == false) continue;
+                            if (typeof(IComponent).IsAssignableFrom(closed) == false && typeof(IComponentBase).IsAssignableFrom(closed) == false) continue;
+
+                            if (EditorUtils.IsValidTypeForAssembly(editorAssembly, closed, asms) == false) continue;
+
+                            if (componentTypes.Contains(closed)) continue;
+
+                            var isTagType = IsTagType(closed);
+                            var isTag = isTagType.ToString().ToLower();
+                            var typeName = EditorUtils.GetDataTypeName(closed);
+
+                            typesContent.Add($"StaticTypes<{typeName}>.Validate(isTag: {isTag});");
+                            componentTypes.Add(closed);
+
+                            if (isTagType == false) {
+                                var prop = closed.GetProperty("Default", BindingFlags.Static | BindingFlags.Public);
+                                if (prop != null) {
+                                    typesContent.Add($"StaticTypes<{typeName}>.SetDefaultValue({typeName}.Default);");
+                                }
+                            }
+
+                            aotContent.Add($"StaticTypes<{typeName}>.AOT();");
+                        }
+                    }
+                }
+                {
                     var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
@@ -624,7 +734,8 @@ namespace ME.BECS.Editor {
 
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        if (IsOpenGeneric(component)) continue;
+                        var type = EditorUtils.GetDataTypeName(component);
                         var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -643,8 +754,9 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
+                        if (IsOpenGeneric(component)) continue;
                         var hasCustomHash = HasComponentCustomSharedHash(component);
-                        var type = EditorUtils.GetTypeName(component);
+                        var type = EditorUtils.GetDataTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -663,7 +775,8 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        if (IsOpenGeneric(component)) continue;
+                        var type = EditorUtils.GetDataTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -682,7 +795,8 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        if (IsOpenGeneric(component)) continue;
+                        var type = EditorUtils.GetDataTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -729,6 +843,104 @@ namespace ME.BECS.Editor {
                                                     $"{(x.burstCompile == true ? "[BURST]" : string.Empty)} {(string.IsNullOrEmpty(x.pInvoke) == false ? $"[AOT.MonoPInvokeCallbackAttribute(typeof({x.pInvoke}))]" : string.Empty)} public static unsafe void {x.methodName}({x.definition}) {{\n{x.content}\n}}")
                                             .ToArray();
 
+                {
+                    if (editorAssembly == false) {
+                        publicContent.Insert(0, @"private static readonly bool __typesPreloaded = __PreloadTypes();
+private static bool __PreloadTypes() { StaticTypesInitializer.Load(); return true; }");
+                    }
+                    var extraTypes = componentTypes
+                        .Where(t => t != null && typeof(IComponentBase).IsAssignableFrom(t) && t.IsValueType)
+                        .Distinct()
+                        .ToArray();
+                    var prependTypes = new scg::List<string>();
+                    var prependAot = new scg::List<string>();
+                    foreach (var t in extraTypes) {
+                        if (IsOpenGeneric(t)) continue;
+                        var typeName = EditorUtils.GetDataTypeName(t);
+                        if (typesContent.Contains($"StaticTypes<{typeName}>.Validate(isTag: false);") == false &&
+                            typesContent.Contains($"StaticTypes<{typeName}>.Validate(isTag: true);") == false) {
+                            var isTag = IsTagType(t).ToString().ToLower();
+                            prependTypes.Add($"StaticTypes<{typeName}>.Validate(isTag: {isTag});");
+                            prependAot.Add($"StaticTypes<{typeName}>.AOT();");
+                        }
+                    }
+                    if (prependTypes.Count > 0) {
+                        typesContent.InsertRange(0, prependTypes);
+                    }
+                    if (prependAot.Count > 0) {
+                        aotContent.InsertRange(0, prependAot);
+                    }
+                    
+                    if (editorAssembly == false) {
+                        var allOpenGenericComponentDefs = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>()
+                            .Where(t => {
+                                if (!t.IsGenericTypeDefinition) return false;
+                                var asm = t.Assembly.GetName().Name;
+                                var info = asms.FirstOrDefault(x => x.name == asm);
+                                return !(editorAssembly == false && info.isEditor == true);
+                            })
+                            .ToArray();
+                        
+                        var allNonGenericComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()
+                            .Where(t => {
+                                if (t.IsGenericType || !t.IsValueType) return false;
+                                var asm = t.Assembly.GetName().Name;
+                                var info = asms.FirstOrDefault(x => x.name == asm);
+                                return !(editorAssembly == false && info.isEditor == true);
+                            })
+                            .ToArray();
+                        
+                        var candidateArgTypes = allNonGenericComponents.ToArray();
+                        
+                        foreach (var genericTypeDef in allOpenGenericComponentDefs) {
+                            var genericParams = genericTypeDef.GetGenericArguments();
+                            if (genericParams.Length != 1) {
+                                continue;
+                            }
+                            
+                            var genericParam = genericParams[0];
+                            
+                            var candidatesForThisParam = new scg::List<System.Type>();
+                            foreach (var argType in candidateArgTypes) {
+                                if (SatisfiesConstraints(genericParam, argType)) {
+                                    candidatesForThisParam.Add(argType);
+                                }
+                            }
+                            
+                            foreach (var argType in candidatesForThisParam) {
+                                try {
+                                    var closedType = genericTypeDef.MakeGenericType(argType);
+                                    
+                                    var closedAsm = closedType.Assembly.GetName().Name;
+                                    var closedInfo = asms.FirstOrDefault(x => x.name == closedAsm);
+                                    if (editorAssembly == false && closedInfo.isEditor == true) {
+                                        continue;
+                                    }
+                                    
+                                    var closedTypeName = EditorUtils.GetDataTypeName(closedType);
+                                    var isTag = IsTagType(closedType).ToString().ToLower();
+                                    
+                                    var validateLine = $"StaticTypes<{closedTypeName}>.Validate(isTag: {isTag});";
+                                    var aotLine = $"StaticTypes<{closedTypeName}>.AOT();";
+                                    
+                                    if (!typesContent.Contains(validateLine)) {
+                                        prependTypes.Add(validateLine);
+                                        prependAot.Add(aotLine);
+                                    }
+                                } catch (System.Exception) {
+                                }
+                            }
+                        }
+                        
+                        if (prependTypes.Count > 0) {
+                            typesContent.InsertRange(0, prependTypes);
+                        }
+                        if (prependAot.Count > 0) {
+                            aotContent.InsertRange(0, prependAot);
+                        }
+                    }
+                }
+
                 var newContent = template.Replace("{{CONTENT}}", string.Join("\n", aotContent));
                 newContent = newContent.Replace("{{CUSTOM_METHOD_REGISTRY}}", string.Join("\n", methodRegistryContents));
                 newContent = newContent.Replace("{{CUSTOM_METHODS}}", string.Join("\n", publicContent) + "\n" + string.Join("\n", methodContents));
@@ -737,6 +949,7 @@ namespace ME.BECS.Editor {
                 {
                     var prevContent = System.IO.File.Exists(path) == true ? System.IO.File.ReadAllText(path) : string.Empty;
                     newContent = EditorUtils.ReFormatCode(newContent);
+                    newContent = CleanGenericDuplicates(newContent);
                     if (prevContent != newContent) {
                         System.IO.File.WriteAllText(path, newContent);
                         UnityEditor.AssetDatabase.ImportAsset(path);
@@ -764,6 +977,7 @@ namespace ME.BECS.Editor {
                             var filepath = $"{filesPath}/{file.filename}.cs";
                             var prevContent = System.IO.File.Exists(filepath) == true ? System.IO.File.ReadAllText(filepath) : string.Empty;
                             newContent = EditorUtils.ReFormatCode(fileTemplate.Replace("{{CONTENT}}", file.content));
+                            newContent = CleanGenericDuplicates(newContent);
                             if (prevContent != newContent) {
                                 System.IO.File.WriteAllText(filepath, newContent);
                                 UnityEditor.AssetDatabase.ImportAsset(filepath);
@@ -871,6 +1085,45 @@ namespace ME.BECS.Editor {
 
             }
 
+        }
+        
+        private static bool IsUnmanagedType(System.Type type) {
+            if (type == null) return false;
+            if (type.IsPrimitive || type.IsPointer || type.IsEnum) return true;
+            
+            var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            foreach (var field in fields) {
+                if (!IsUnmanagedType(field.FieldType)) return false;
+            }
+            return true;
+        }
+        
+        public static bool SatisfiesConstraints(System.Type genericParam, System.Type arg) {
+            var attrs = genericParam.GenericParameterAttributes;
+            var constraints = genericParam.GetGenericParameterConstraints();
+            
+            var hasUnmanagedAttribute = genericParam.GetCustomAttributes()
+                .Any(x => x.GetType().FullName == "System.Runtime.CompilerServices.IsUnmanagedAttribute");
+            
+            if ((attrs & System.Reflection.GenericParameterAttributes.NotNullableValueTypeConstraint) != 0) {
+                if (arg.IsValueType == false) {
+                    return false;
+                }
+                
+                if (hasUnmanagedAttribute) {
+                    if (!IsUnmanagedType(arg)) {
+                        return false;
+                    }
+                }
+            }
+            
+            foreach (var constraint in constraints) {
+                if (!constraint.IsAssignableFrom(arg)) {
+                    return false;
+                }
+            }
+            
+            return true;
         }
 
     }

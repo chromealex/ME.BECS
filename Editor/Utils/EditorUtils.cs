@@ -1014,22 +1014,63 @@ namespace ME.BECS.Editor {
             return $"{value.Substring(0, 1).ToUpper()}{value.Substring(1)}";
         }
 
-        public static string GetTypeName(System.Type type, bool useFullName = true, bool showGenericType = true) {
-            var name = type.Name;
-            if (useFullName == true) {
-                name = type.FullName;
-            }
-            if (type.IsGenericType == true) {
-                var first = name.Split('[')[0].Replace("+", ".");
-                if (type.GenericTypeArguments.Length == 0 || showGenericType == false) return $"{first.Replace("`1", "")}<>";
-                return $"{first.Replace("`1", $"<{GetTypeName(type.GenericTypeArguments[0], useFullName)}>")}";
-            }
-            return name.Replace("+", ".").Replace("`1", "");
-        }
+		public static string GetTypeName(System.Type type, bool useFullName = true, bool showGenericType = true) {
+			if (type == null) return string.Empty;
+			if (type.IsGenericParameter) return type.Name;
 
-        public static string GetDataTypeName(System.Type type) {
-            return type.Namespace + "." + type.Name.Replace("+", ".").Replace("`1", "");
-        }
+			string name;
+			if (type.IsNested) {
+				var declaringTypeName = GetTypeName(type.DeclaringType, useFullName, showGenericType);
+				
+				var nestedName = type.Name;
+				int backtickIndex = nestedName.LastIndexOf('`');
+				if (backtickIndex > 0) {
+					nestedName = nestedName.Remove(backtickIndex);
+				}
+				name = declaringTypeName + "." + nestedName.Replace('+', '.');
+			} else {
+				name = useFullName && !string.IsNullOrEmpty(type.Namespace)
+					? type.Namespace + "." + type.Name
+					: type.Name;
+			}
+
+			if (type.IsGenericType == true) {
+				int backtickIndex = name.LastIndexOf('`');
+				if (backtickIndex > 0) {
+					name = name.Remove(backtickIndex);
+				}
+
+				if (type.IsGenericTypeDefinition) {
+					return name + (showGenericType ? "<>" : string.Empty);
+				}
+
+				var genericArgs = type.GetGenericArguments();
+				
+				int declaringTypeArgCount = 0;
+				if (type.IsNested && type.DeclaringType != null && type.DeclaringType.IsGenericType) {
+					 declaringTypeArgCount = type.DeclaringType.GetGenericArguments().Length;
+				}
+
+				if (genericArgs.Length > declaringTypeArgCount) {
+					var args = new System.Collections.Generic.List<string>();
+					for (int i = declaringTypeArgCount; i < genericArgs.Length; i++) {
+						var argName = GetTypeName(genericArgs[i], useFullName, showGenericType);
+						args.Add(argName);
+					}
+					if (args.Count > 0 && showGenericType) {
+						return name + "<" + string.Join(", ", args) + ">";
+					}
+				}
+				
+				return name; 
+			}
+
+			return name.Replace("+", ".");
+		}
+
+		public static string GetDataTypeName(System.Type type) {
+			return GetTypeName(type, useFullName: true, showGenericType: true);
+		}
 
         public static string FormatCode(string[] content, int indentSize = 4, int defaultIndent = 2) {
 
