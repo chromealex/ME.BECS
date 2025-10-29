@@ -44,10 +44,7 @@ namespace ME.BECS.Editor.Systems {
                 //UnityEngine.Debug.Log("Processing: " + sys.FullName);
 
                 var system = sys;
-                if (system.IsGenericType == true) {
-                    system = system.GetGenericTypeDefinition();
-                    system = EditorUtils.MakeGenericConstraintType(system);
-                }
+                if (system.ContainsGenericParameters == true) continue;
                 if (tempItems.ContainsKey(system) == true) continue;
                 tempItems.Add(system, new Item());
                 
@@ -73,15 +70,15 @@ namespace ME.BECS.Editor.Systems {
                         content.Add($"// system: {system.FullName}");
                         content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
                         content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
-                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system)}), list);");
-                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system)}), errors);");
+                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetDataTypeName(system)}), list);");
+                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetDataTypeName(system)}), errors);");
 
                         {
                             var method = system.GetMethod("OnUpdate");
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnUpdate:");
+                            content.Add($"// |- OnUpdate:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -111,7 +108,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnAwake:");
+                            content.Add($"// |- OnAwake:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -147,7 +144,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnStart:");
+                            content.Add($"// |- OnStart:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -183,7 +180,7 @@ namespace ME.BECS.Editor.Systems {
                             if (method != null) {
                                 var deps = this.GetDeps(method);
                                 if (deps.ops != null && deps.ops.Count > 0) {
-                                    content.Add($"// |- OnDestroy:");
+                            content.Add($"// |- OnDestroy:");
                                     foreach (var dep in deps.ops) {
                                         content.Add($"// |--- {dep.op}: {dep.type.FullName}");
                                         systemToComponents.Add(dep);
@@ -315,14 +312,19 @@ namespace ME.BECS.Editor.Systems {
                     str.Append("systemDependenciesGraph.Add(");
                     {
                         str.Append("typeof(");
-                        str.Append(EditorUtils.GetTypeName(this.system, showGenericType: false));
+                        str.Append(EditorUtils.GetDataTypeName(this.system));
                         str.Append(")");
                     }
                     str.Append(",");
                     if (this.dependencies.Count > 0) {
-                        str.Append("new s::HashSet<System.Type>() {\ntypeof(" +
-                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetTypeName(x, showGenericType: false)).ToArray()) +
-                                   ")\n}");
+                        var deps = this.dependencies.Where(x => x != null && x.ContainsGenericParameters == false)
+                                                     .Select(x => EditorUtils.GetDataTypeName(x))
+                                                     .ToArray();
+                        if (deps.Length > 0) {
+                            str.Append("new s::HashSet<System.Type>() {\ntypeof(" + string.Join("),\ntypeof(", deps) + ")\n}");
+                        } else {
+                            str.Append("null");
+                        }
                     } else {
                         str.Append("null");
                     }
