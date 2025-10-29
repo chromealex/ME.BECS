@@ -8,7 +8,39 @@ namespace ME.BECS.Editor.Aspects {
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
-            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray();
+			var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray();
+			var componentsToValidate = new System.Collections.Generic.HashSet<System.Type>();
+            
+            foreach (var aspect in aspects) {
+                if (aspect.IsValueType == false) continue;
+                if (aspect.IsVisible == false) continue;
+                if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
+                
+                var fields = aspect.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                foreach (var field in fields) {
+                    var fieldType = field.FieldType;
+                    if (typeof(IAspectData).IsAssignableFrom(fieldType) == true) {
+                        var gType = fieldType.GenericTypeArguments[0];
+                        if (gType.IsVisible == false) continue;
+                        if (gType.IsValueType && typeof(IComponentBase).IsAssignableFrom(gType)) {
+                            componentsToValidate.Add(gType);
+                        }
+                    }
+                }
+            }
+            
+            if (componentsToValidate.Count > 0) {
+                var validations = componentsToValidate
+                    .Where(t => t != null && t.IsValueType && typeof(IComponentBase).IsAssignableFrom(t))
+                    .OrderBy(t => t.FullName)
+                    .Select(t => {
+                        var isTag = IsTagTypeLocal(t).ToString().ToLower();
+                        var typeName = EditorUtils.GetDataTypeName(t);
+                        return $"StaticTypes<{typeName}>.Validate(isTag: {isTag});";
+                    });
+                content.AddRange(validations);
+            }
+            
             foreach (var aspect in aspects) {
 
                 if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(aspect, out var cacheData) == true) {
@@ -32,10 +64,12 @@ namespace ME.BECS.Editor.Aspects {
                     if (typeof(IAspectData).IsAssignableFrom(fieldType) == true &&
                         field.GetCustomAttribute(typeof(QueryWithAttribute)) != null) {
                         ++fieldsCount;
-                        var gType = fieldType.GenericTypeArguments[0];
-                        if (gType.IsVisible == false) continue;
+						var gType = fieldType.GenericTypeArguments[0];
+						if (gType.IsVisible == false) continue;
+						componentsToValidate.Add(gType);
                         types.Add(EditorUtils.GetTypeName(gType));
                         references.Add(gType);
+                        content.Add($"StaticTypes<{EditorUtils.GetTypeName(gType)}>.Validate(isTag: false);");
                     }
                 }
 
@@ -85,8 +119,9 @@ namespace ME.BECS.Editor.Aspects {
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
                         var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
-                        var t = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
-                        types.Add($"*(({t}*)(addr + {fieldOffset})) = new ME.BECS.AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
+                        var gTypeName = EditorUtils.GetDataTypeName(gType);
+                        var ptrTypeName = $"ME.BECS.AspectDataPtr<{gTypeName}>";
+                        types.Add($"*(({ptrTypeName}*)(addr + {fieldOffset})) = new {ptrTypeName}(in world);");
                     }
                 }
 
@@ -101,7 +136,8 @@ var addr = (byte*)_addressPtr(ref aspect);
                 
             }
             
-            var def = new CodeGenerator.MethodDefinition() {
+
+			var def = new CodeGenerator.MethodDefinition() {
                 methodName = "AspectsConstruct",
                 type = "World",
                 registerMethodName = "RegisterCallback",
@@ -110,6 +146,19 @@ var addr = (byte*)_addressPtr(ref aspect);
             };
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
 
+        }
+
+        private static bool IsTagTypeLocal(System.Type type) {
+            if (type == null || type.IsGenericParameter || type.ContainsGenericParameters) return false;
+            try {
+                if (System.Runtime.InteropServices.Marshal.SizeOf(type) <= 1 &&
+                    type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).Length == 0) {
+                    return true;
+                }
+            } catch {
+                return false;
+            }
+            return false;
         }
 
     }
