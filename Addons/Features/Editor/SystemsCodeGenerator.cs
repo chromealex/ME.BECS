@@ -530,18 +530,9 @@ namespace ME.BECS.Editor.Systems {
                                             if (systemType.IsGenericType == true) {
                                                 systemType = systemType.GetGenericTypeDefinition();
                                                 
-                                                var candidateSet = new scg::HashSet<System.Type>();
-                                                foreach (var gp in systemType.GetGenericArguments()) {
-                                                    foreach (var c in gp.GetGenericParameterConstraints()) {
-                                                        foreach (var t in UnityEditor.TypeCache.GetTypesDerivedFrom(c)) {
-                                                            if (t.IsValueType && !t.IsGenericType) candidateSet.Add(t);
-                                                        }
-                                                    }
-                                                }
-                                                foreach (var t in UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()) {
-                                                    if (t.IsValueType && !t.IsGenericType) candidateSet.Add(t);
-                                                }
-                                                var allCandidateTypes = candidateSet.ToArray();
+                                                var allCandidateTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()
+                                                    .Where(t => !t.IsGenericType && t.IsValueType)
+                                                    .ToArray();
                                                 
                                                 var genericParams = systemType.GetGenericArguments();
                                                 if (genericParams.Length == 1) {
@@ -916,18 +907,9 @@ namespace ME.BECS.Editor.Systems {
         }
 
         private static int GetGenericSystemsCount(System.Type genericTypeDefinition) {
-            var candidateSet = new scg::HashSet<System.Type>();
-            foreach (var gp in genericTypeDefinition.GetGenericArguments()) {
-                foreach (var c in gp.GetGenericParameterConstraints()) {
-                    foreach (var t in UnityEditor.TypeCache.GetTypesDerivedFrom(c)) {
-                        if (t.IsValueType && !t.IsGenericType) candidateSet.Add(t);
-                    }
-                }
-            }
-            foreach (var t in UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()) {
-                if (t.IsValueType && !t.IsGenericType) candidateSet.Add(t);
-            }
-            var allCandidateTypes = candidateSet.ToArray();
+            var allCandidateTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()
+                .Where(t => !t.IsGenericType && t.IsValueType)
+                .ToArray();
             
             var genericParams = genericTypeDefinition.GetGenericArguments();
             if (genericParams.Length != 1) return 0;
@@ -981,24 +963,12 @@ namespace ME.BECS.Editor.Systems {
                                 content.Add($"// Generic system found: {systemType.FullName}, creating closed versions");
                             }
                             systemType = systemType.GetGenericTypeDefinition();
-
-                            // Build candidate pool from constraints + IComponentBase fallback
-                            var genericParams = systemType.GetGenericArguments();
-                            var candidateSetInit = new scg::HashSet<System.Type>();
-                            if (genericParams.Length > 0) {
-                                foreach (var gp in genericParams) {
-                                    foreach (var c in gp.GetGenericParameterConstraints()) {
-                                        foreach (var t in UnityEditor.TypeCache.GetTypesDerivedFrom(c)) {
-                                            if (t.IsValueType && !t.IsGenericType) candidateSetInit.Add(t);
-                                        }
-                                    }
-                                }
-                            }
-                            foreach (var t in UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()) {
-                                if (t.IsValueType && !t.IsGenericType) candidateSetInit.Add(t);
-                            }
-                            var allCandidateTypes = candidateSetInit.ToArray();
                             
+                            var allCandidateTypes = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>()
+                                .Where(t => !t.IsGenericType && t.IsValueType)
+                                .ToArray();
+                            
+                            var genericParams = systemType.GetGenericArguments();
                             if (genericParams.Length == 1) {
                                 var genericParam = genericParams[0];
                                 
@@ -1116,94 +1086,22 @@ namespace ME.BECS.Editor.Systems {
             CollectJobsTypes(systemType.GetMethod(nameof(IUpdate.OnUpdate), flags), types);
             CollectJobsTypes(systemType.GetMethod(nameof(IDestroy.OnDestroy), flags), types);
             CollectJobsTypes(systemType.GetMethod(nameof(IDrawGizmos.OnDrawGizmos), flags), types);
-            var closedJobTypes = new scg::List<System.Type>();
             foreach (var jobType in types) {
                 if (jobType.IsVisible == false) continue;
-                var jobFullName = jobType.FullName ?? jobType.Name;
-                if ((jobType.ContainsGenericParameters == true) ||
-                    (jobType.DeclaringType != null && jobType.DeclaringType.ContainsGenericParameters == true)) {
-                    if (systemType.IsGenericType == true && systemType.IsGenericTypeDefinition == false) {
-                        var declaringDef = jobType.DeclaringType ?? jobType;
-                        if (declaringDef.IsGenericTypeDefinition == true) {
-                            try {
-                                var genericArgs = systemType.GetGenericArguments();
-                                var closedDeclaring = declaringDef.MakeGenericType(genericArgs);
-                                var baseName = jobType.Name;
-                                var tick = baseName.IndexOf('`');
-                                if (tick >= 0) baseName = baseName.Substring(0, tick);
-                                var nested = closedDeclaring.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
-                                foreach (var n in nested) {
-                                    var nName = n.Name;
-                                    var t2 = nName.IndexOf('`');
-                                    if (t2 >= 0) nName = nName.Substring(0, t2);
-                                    if (nName != baseName) continue;
-                                    var candidate = n;
-                                    if (candidate.IsGenericTypeDefinition) {
-                                        try {
-                                            candidate = candidate.MakeGenericType(genericArgs);
-                                        } catch (System.Exception ex) {
-                                            UnityEngine.Debug.LogError($"[SystemsCodeGen-JOB] -> MakeGenericType failed: {ex.Message}");
-                                        }
-                                    }
-                                    if (candidate != null && candidate.ContainsGenericParameters == false) {
-                                        closedJobTypes.Add(candidate);
-                                        break;
-                                    } else {
-                                        UnityEngine.Debug.LogWarning($"[SystemsCodeGen-JOB] ✗ Rejected (contains generic): {candidate?.FullName}");
-                                    }
-                                }
-                            } catch (System.Exception ex) {
-                                UnityEngine.Debug.LogError($"[SystemsCodeGen-JOB] Exception: {ex.Message}");
-                            }
-                        }
-                    } else {
-                        UnityEngine.Debug.LogWarning($"[SystemsCodeGen-JOB] Cannot resolve: systemType is not closed generic");
-                    }
-                    continue;
-                }
-                closedJobTypes.Add(jobType);
-            }
-            foreach (var cj in closedJobTypes) {
-            }
-            if (closedJobTypes.Count == 0 && types.Count > 0 && systemType.IsGenericType == true && systemType.IsGenericTypeDefinition == false) {
-                try {
-                    var nested = systemType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
-                    foreach (var n in nested) {
-                        var hasDelta = n.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                            .Any(f => f.GetCustomAttribute<InjectDeltaTimeAttribute>() != null);
-                        if (hasDelta == true && n.ContainsGenericParameters == false) {
-                            closedJobTypes.Add(n);
-                        }
-                    }
-                } catch { }
-            }
-            foreach (var jobType in closedJobTypes) {
-                if (jobType.IsVisible == false) continue;
-                if (jobType.ContainsGenericParameters == true) continue;
+                if (jobType.ContainsGenericParameters) continue;
+                if (jobType.DeclaringType != null && jobType.DeclaringType.ContainsGenericParameters) continue;
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var containsBool = false;
                 localContent.Clear();
-                string jobTypeStr;
-                if (systemType.IsGenericType == true && systemType.IsGenericTypeDefinition == false) {
-                    var baseName = jobType.Name;
-                    var tickIdx = baseName.IndexOf('`');
-                    if (tickIdx >= 0) baseName = baseName.Substring(0, tickIdx);
-                    jobTypeStr = EditorUtils.GetTypeName(systemType) + "." + baseName;
-                } else {
-                    jobTypeStr = EditorUtils.GetDataTypeName(jobType);
-                }
-                var needsInit = false;
                 foreach (var field in fields) {
                     if (field.FieldType == typeof(bool)) {
                         containsBool = true;
                     }
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
-                        needsInit = true;
+                        var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                        localContent.Add($"JobInject<{jobTypeStr}>.Init();");
                         break;
                     }
-                }
-                if (needsInit == true) {
-                    localContent.Add($"JobInject<{jobTypeStr}>.Init();");
                 }
                 
                 if (containsBool == true && localContent.Count > 0) {
@@ -1213,19 +1111,12 @@ namespace ME.BECS.Editor.Systems {
                 }
             }
 
-            foreach (var jobType in closedJobTypes) {
+            foreach (var jobType in types) {
                 if (jobType.IsVisible == false) continue;
-                if (jobType.ContainsGenericParameters == true) continue;
+                if (jobType.ContainsGenericParameters) continue;
+                if (jobType.DeclaringType != null && jobType.DeclaringType.ContainsGenericParameters) continue;
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                string jobTypeStr;
-                if (systemType.IsGenericType == true && systemType.IsGenericTypeDefinition == false) {
-                    var baseName = jobType.Name;
-                    var tickIdx = baseName.IndexOf('`');
-                    if (tickIdx >= 0) baseName = baseName.Substring(0, tickIdx);
-                    jobTypeStr = EditorUtils.GetTypeName(systemType) + "." + baseName;
-                } else {
-                    jobTypeStr = EditorUtils.GetDataTypeName(jobType);
-                }
+                var jobTypeStr = EditorUtils.GetTypeName(jobType);
                 var containsBool = false;
                 localContent.Clear();
                 foreach (var field in fields) {
