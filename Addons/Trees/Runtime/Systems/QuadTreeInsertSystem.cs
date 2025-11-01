@@ -444,7 +444,7 @@ namespace ME.BECS {
 
         }
 
-        public bool Raycast(UnityEngine.Ray2D ray, int mask, sfloat distance, out QuadtreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(UnityEngine.Ray2D ray, int mask, tfloat distance, out QuadtreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.QuadtreeRaycastHitMinNode<Ent>>(this.treesCount, Constants.ALLOCATOR_TEMP);
