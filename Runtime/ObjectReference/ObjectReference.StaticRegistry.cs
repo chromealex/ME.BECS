@@ -45,6 +45,7 @@ namespace ME.BECS {
             
             {
                 // Validate Resources directory
+                UnityEngine.Debug.Log("[ ME.BECS ObjectReference ] Loading...");
                 #if UNITY_EDITOR
                 const string dir = "Resources";
                 const string path = "Assets/Resources/ObjectReferenceRegistry.asset";
@@ -52,7 +53,6 @@ namespace ME.BECS {
                     UnityEditor.AssetDatabase.CreateFolder("Assets", dir);
                 }
 
-                UnityEngine.Debug.Log("[ ME.BECS ObjectReference ] Loading...");
                 var obj = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
                 if (obj == null && System.IO.File.Exists(path) == false) {
                     var file = UnityEngine.ScriptableObject.CreateInstance<ObjectReferenceRegistryData>();

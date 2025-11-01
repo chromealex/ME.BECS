@@ -28,6 +28,7 @@ namespace ME.BECS {
 
             try {
 
+                UnityEngine.Debug.Log("[ ME.BECS ] Loading entity configs...");
                 configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.objects.Length, Constants.ALLOCATOR_DOMAIN);
                 if (isEditor == false) {
                     foreach (var item in ObjectReferenceRegistry.data.objects) {
@@ -44,6 +45,7 @@ namespace ME.BECS {
                         }
                     }
                 }
+                UnityEngine.Debug.Log("[ ME.BECS ] Loaded entity configs");
 
             } catch (System.Exception ex) {
 
