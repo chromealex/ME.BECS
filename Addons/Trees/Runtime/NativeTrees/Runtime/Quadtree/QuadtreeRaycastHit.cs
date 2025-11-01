@@ -22,7 +22,7 @@ namespace NativeTrees {
         public QuadtreeRaycastHit<T> data;
         public tfloat cost;
 
-        public sfloat ExpectedCost => this.cost;
+        public tfloat ExpectedCost => this.cost;
         public int Next { get; set; }
 
     }
