@@ -83,7 +83,14 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                var entsInfo = GetJobEntInfo(jobType);
+                this.cache.SetKey("JobEntInfo");
+                NewEntInfo entsInfo;
+                if (this.cache.TryGetValue<NewEntInfo>(jobType, out var cachedEntInfo) == false) {
+                    entsInfo = GetJobEntInfo(jobType);
+                    this.cache.Add(jobType, entsInfo);
+                } else {
+                    entsInfo = cachedEntInfo;
+                }
                 if (entsInfo.count > 0 || entsInfo.brCount > 0) {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
@@ -116,7 +123,14 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
                 
-                var weightsInfo = GetJobWeightsInfo(jobType);
+                this.cache.SetKey("JobWeightsInfo");
+                WeightsInfo weightsInfo;
+                if (this.cache.TryGetValue<WeightsInfo>(jobType, out var cachedWeightsInfo) == false) {
+                    weightsInfo = GetJobWeightsInfo(jobType);
+                    this.cache.Add(jobType, weightsInfo);
+                } else {
+                    weightsInfo = cachedWeightsInfo;
+                }
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.opsWeight = {weightsInfo.weight}u;");
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
 
