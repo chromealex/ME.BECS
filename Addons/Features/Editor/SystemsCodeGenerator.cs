@@ -914,8 +914,22 @@ namespace ME.BECS.Editor.Systems {
             return index;
         }
 
-        public static int InitializeGraph(CustomCodeGenerator generator, scg::Dictionary<System.Type, string> systemTypeToVar, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
-            for (int idx = 0; idx < graph.nodes.Count; ++idx) {
+        public static int InitializeGraph(
+            CustomCodeGenerator generator,
+            scg::Dictionary<System.Type, string> systemTypeToVar,
+            scg::List<string> content,
+            SystemsGraph graph,
+            int rootGraphId,
+            int index
+        )
+        {
+            var allCandidateTypes = UnityEditor
+                .TypeCache.GetTypesDerivedFrom<IComponentBase>()
+                .Where(t => t.IsValueType && !t.IsGenericType)
+                .ToArray();
+            
+            for (int idx = 0; idx < graph.nodes.Count; ++idx)
+            {
                 var node = graph.nodes[idx];
                 if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                     var system = systemNode.system;
@@ -942,7 +956,9 @@ namespace ME.BECS.Editor.Systems {
                                     ++index;
                                 }
                             }
-                        } else {
+                        }
+                        else
+                        {
                             var systemTypeStr = EditorUtils.GetTypeName(systemType);
                             content.Add("{");
                             content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
@@ -955,8 +971,17 @@ namespace ME.BECS.Editor.Systems {
                             ++index;
                         }
                     }
-                } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                    index = InitializeGraph(generator, systemTypeToVar, content, graphNode.graphValue, rootGraphId, index);
+                }
+                else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode)
+                {
+                    index = InitializeGraph(
+                        generator,
+                        systemTypeToVar,
+                        content,
+                        graphNode.graphValue,
+                        rootGraphId,
+                        index
+                    );
                 }
             }
 
