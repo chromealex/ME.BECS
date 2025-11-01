@@ -400,6 +400,10 @@ namespace ME.BECS.Editor {
 
         }
 
+        private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _isTagTypeCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
+        private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _hasCustomHashCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
+        private static readonly System.Collections.Generic.Dictionary<System.Type, string> _typeNameCache = new System.Collections.Generic.Dictionary<System.Type, string>();
+        private static readonly System.Collections.Generic.Dictionary<System.Type, string> _assemblyNameCache = new System.Collections.Generic.Dictionary<System.Type, string>();
         private static void CleanCache() {
             
             if (System.IO.Directory.Exists($"Assets/{ECS}.Gen/Runtime/Cache") == false) return;
@@ -409,25 +413,50 @@ namespace ME.BECS.Editor {
         }
 
         private static bool HasComponentCustomSharedHash(System.Type type) {
-
+            if (_hasCustomHashCache.TryGetValue(type, out var cached)) {
+                return cached;
+            }
             var m = type.GetMethod(nameof(IComponentShared.GetHash), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            bool result;
             if (m == null) {
                 var hasMethod = type.GetInterfaceMap(typeof(IComponentShared)).TargetMethods.Any(m => m.IsPrivate == true && m.Name == typeof(IComponentShared).FullName + "." + nameof(IComponentShared.GetHash));
-                return hasMethod;
+                result = hasMethod;
+            } else {
+                result = true;
             }
-            return true;
-
+            _hasCustomHashCache[type] = result;
+            return result;
         }
 
         private static bool IsTagType(System.Type type) {
-
+            if (_isTagTypeCache.TryGetValue(type, out var cached)) {
+                return cached;
+            }
+            bool result = false;
             if (System.Runtime.InteropServices.Marshal.SizeOf(type) <= 1 &&
                 type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Length == 0) {
-                return true;
+                result = true;
             }
+            _isTagTypeCache[type] = result;
+            return result;
+        }
 
-            return false;
+        private static string GetCachedTypeName(System.Type type) {
+            if (_typeNameCache.TryGetValue(type, out var cached)) {
+                return cached;
+            }
+            var name = EditorUtils.GetTypeName(type);
+            _typeNameCache[type] = name;
+            return name;
+        }
 
+        private static string GetCachedAssemblyName(System.Type type) {
+            if (_assemblyNameCache.TryGetValue(type, out var cached)) {
+                return cached;
+            }
+            var name = type.Assembly.GetName().Name;
+            _assemblyNameCache[type] = name;
+            return name;
         }
 
         private static void OnLogAdded(string condition, string stackTrace, UnityEngine.LogType type) {
@@ -451,12 +480,19 @@ namespace ME.BECS.Editor {
 
         private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
 
+            _isTagTypeCache.Clear();
+            _hasCustomHashCache.Clear();
+            _typeNameCache.Clear();
+            _assemblyNameCache.Clear();
+
             string postfix;
             if (editorAssembly == true) {
                 postfix = "Editor";
             } else {
                 postfix = "Runtime";
             }
+
+            var asmsDict = asms.ToDictionary(x => x.name, x => x);
 
             var customCodeGenerators = UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>().OrderBy(x => x.FullName);
             var generators = customCodeGenerators.Select(x => (CustomCodeGenerator)System.Activator.CreateInstance(x)).ToArray();
@@ -505,14 +541,13 @@ namespace ME.BECS.Editor {
 
                     var type = types[index];
                     if (type.IsValueType == false) continue;
-                    var asm = type.Assembly;
-                    var name = asm.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == name);
+                    var asmName = GetCachedAssemblyName(type);
+                    if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                     if (editorAssembly == false && info.isEditor == true) continue;
 
                     if (type.IsVisible == false) continue;
 
-                    var systemType = EditorUtils.GetTypeName(type);
+                    var systemType = GetCachedTypeName(type);
                     aotContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
                     typesContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
 
@@ -571,13 +606,13 @@ namespace ME.BECS.Editor {
                 var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
                 foreach (var component in components) {
 
-                    var asm = component.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    var asmName = GetCachedAssemblyName(component);
+                    if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                     if (editorAssembly == false && info.isEditor == true) continue;
 
                     var attr = (ComponentGroupAttribute)component.GetCustomAttribute(typeof(ComponentGroupAttribute));
-                    var systemType = EditorUtils.GetTypeName(component);
-                    var groupType = EditorUtils.GetTypeName(attr.groupType);
+                    var systemType = GetCachedTypeName(component);
+                    var groupType = GetCachedTypeName(attr.groupType);
                     var str = $"StaticTypes<{systemType}>.ApplyGroup(typeof({groupType}));";
                     typesContent.Add(str);
                     componentTypes.Add(component);
@@ -591,13 +626,13 @@ namespace ME.BECS.Editor {
                         if (component.IsValueType == false) continue;
                         if (component.IsGenericTypeDefinition) continue;
 
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var asmName = GetCachedAssemblyName(component);
+                        if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        var type = GetCachedTypeName(component);
                         {
                             var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
                             typesContent.Add(str);
@@ -620,13 +655,13 @@ namespace ME.BECS.Editor {
 
                         if (component.IsValueType == false) continue;
 
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var asmName = GetCachedAssemblyName(component);
+                        if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTagType = IsTagType(component);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        var type = GetCachedTypeName(component);
                         var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -640,13 +675,13 @@ namespace ME.BECS.Editor {
 
                         if (component.IsValueType == false) continue;
 
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var asmName = GetCachedAssemblyName(component);
+                        if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
                         var hasCustomHash = HasComponentCustomSharedHash(component);
-                        var type = EditorUtils.GetTypeName(component);
+                        var type = GetCachedTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -660,12 +695,12 @@ namespace ME.BECS.Editor {
 
                         if (component.IsValueType == false) continue;
 
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var asmName = GetCachedAssemblyName(component);
+                        if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        var type = GetCachedTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -679,12 +714,12 @@ namespace ME.BECS.Editor {
 
                         if (component.IsValueType == false) continue;
 
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var asmName = GetCachedAssemblyName(component);
+                        if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
+                        var type = GetCachedTypeName(component);
                         var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
@@ -735,15 +770,15 @@ namespace ME.BECS.Editor {
                         if (typeof(IComponent).IsAssignableFrom(addedType) == false) continue;
                         if (validatedTypes.Contains(addedType)) continue;
                             
-                        var asm = addedType.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var asmName = GetCachedAssemblyName(addedType);
+                        if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                         if (editorAssembly == false && info.isEditor == true) continue;
                         if (addedType.IsVisible == false) continue;
                             
                         validatedTypes.Add(addedType);
                         var isTagType = IsTagType(addedType);
                         var isTag = isTagType.ToString().ToLower();
-                        var type = EditorUtils.GetDataTypeName(addedType);
+                        var type = GetCachedTypeName(addedType);
                         var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
                         typesContent.Add(str);
                         aotContent.Add($"StaticTypes<{type}>.AOT();");
@@ -837,25 +872,25 @@ namespace ME.BECS.Editor {
                 var content = new scg::HashSet<string>();
                 var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem));
                 foreach (var type in types) {
-                    var asm = type.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    var asmName = GetCachedAssemblyName(type);
+                    if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                     if (editorAssembly == false && info.isEditor == true) continue;
-                    content.Add(asm);
+                    content.Add(asmName);
                 }
 
                 foreach (var type in componentTypes) {
-                    var asm = type.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    var asmName = GetCachedAssemblyName(type);
+                    if (!asmsDict.TryGetValue(asmName, out var info)) continue;
                     if (editorAssembly == false && info.isEditor == true) continue;
-                    content.Add(asm);
+                    content.Add(asmName);
                 }
 
                 // load references
                 foreach (var asm in content.ToArray()) {
-                    var asmInfo = asms.FirstOrDefault(x => x.name == asm);
+                    if (!asmsDict.TryGetValue(asm, out var asmInfo)) continue;
                     if (asmInfo.references != null) {
                         foreach (var refAsm in asmInfo.references) {
-                            var info = asms.FirstOrDefault(x => x.name == refAsm);
+                            if (!asmsDict.TryGetValue(refAsm, out var info)) continue;
                             if (editorAssembly == false && info.isEditor == true) continue;
                             content.Add(refAsm);
                         }
