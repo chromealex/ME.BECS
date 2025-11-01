@@ -7,7 +7,7 @@ namespace ME.BECS {
     public class EntityConfigsRegistry {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
-
+        
         public static void Initialize(bool isEditor = false) {
 
             if (StaticTypes.tracker.IsCreated == false) return;
@@ -28,7 +28,7 @@ namespace ME.BECS {
 
             try {
 
-                UnityEngine.Debug.Log("[ ME.BECS ] Loading entity configs...");
+                Logger.Core.Log("[ ME.BECS ] Loading entity configs...");
                 configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.objects.Length, Constants.ALLOCATOR_DOMAIN);
                 if (isEditor == false) {
                     foreach (var item in ObjectReferenceRegistry.data.objects) {
@@ -36,7 +36,7 @@ namespace ME.BECS {
                             var obj = new ObjectItem(item.data);
                             var config = obj.Load<EntityConfig>();
                             if (config == null) {
-                                UnityEngine.Debug.LogWarning($"Config is null while loading #{obj.sourceId}");
+                                Logger.Core.Warning($"Config is null while loading #{obj.sourceId}");
                                 continue;
                             }
                             var unsafeConfig = config.AsUnsafeConfig();
@@ -45,12 +45,12 @@ namespace ME.BECS {
                         }
                     }
                 }
-                UnityEngine.Debug.Log("[ ME.BECS ] Loaded entity configs");
+                Logger.Core.Log("[ ME.BECS ] Loaded entity configs");
 
             } catch (System.Exception ex) {
 
-                UnityEngine.Debug.LogError("Error while initializing configs");
-                UnityEngine.Debug.LogException(ex);
+                Logger.Core.Error("Error while initializing configs");
+                Logger.Core.Exception(ex);
 
             }
 

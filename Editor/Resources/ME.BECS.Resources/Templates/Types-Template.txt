@@ -32,7 +32,7 @@ namespace ME.BECS {
         [UnityEngine.Scripting.PreserveAttribute] 
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Load() {
-            UnityEngine.Debug.Log("[ ME.BECS ] Loading...");
+            Logger.Core.Log("[ ME.BECS ] Loading...");
             Worlds.Initialize();
             SystemsStatic.Initialize();
             StaticTypesInitializer.Load();
@@ -43,7 +43,7 @@ namespace ME.BECS {
             EntityConfigsRegistry.Initialize();
             CustomModules.InvokeFirstPass();
             CustomModules.InvokeSecondPass();
-            UnityEngine.Debug.Log("[ ME.BECS ] Loaded");
+            Logger.Core.Log("[ ME.BECS ] Loaded");
         }
         {{CUSTOM_METHODS}}
     }

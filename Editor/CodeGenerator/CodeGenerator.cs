@@ -380,7 +380,7 @@ namespace ME.BECS.Editor {
             if (UnityEngine.Application.isBatchMode == true && forced == false) return;
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
-            UnityEngine.Debug.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
+            Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
             
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
 

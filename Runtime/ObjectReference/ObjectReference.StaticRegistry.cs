@@ -45,7 +45,6 @@ namespace ME.BECS {
             
             {
                 // Validate Resources directory
-                UnityEngine.Debug.Log("[ ME.BECS ObjectReference ] Loading...");
                 #if UNITY_EDITOR
                 const string dir = "Resources";
                 const string path = "Assets/Resources/ObjectReferenceRegistry.asset";
@@ -59,10 +58,9 @@ namespace ME.BECS {
                     UnityEditor.AssetDatabase.CreateAsset(file, path);
                     UnityEditor.AssetDatabase.ImportAsset(path);
                 } else if (obj == null) {
-                    UnityEngine.Debug.LogError("ObjectReferenceRegistry can not be loaded");
+                    Logger.Core.Error("ObjectReferenceRegistry can not be loaded");
                 }
                 #endif
-                UnityEngine.Debug.Log("[ ME.BECS ObjectReference ] Loaded");
             }
 
             ObjectReferenceRegistry.data = UnityEngine.Resources.Load<ObjectReferenceRegistryData>("ObjectReferenceRegistry");
