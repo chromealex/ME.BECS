@@ -1072,6 +1072,67 @@ namespace ME.BECS.Editor {
 			return GetTypeName(type, useFullName: true, showGenericType: true);
 		}
 
+		public static string GetJobTypeName(System.Type jobType) {
+			if (!jobType.IsNested || jobType.DeclaringType == null || !jobType.DeclaringType.IsGenericType) {
+				return GetDataTypeName(jobType);
+			}
+
+			var declaringType = jobType.DeclaringType;
+			string declaringTypeName;
+			
+			if (declaringType.IsGenericTypeDefinition) {
+				var baseTypeName = GetTypeName(declaringType, useFullName: true, showGenericType: false);
+				var fullName = jobType.FullName;
+				
+				if (fullName != null && fullName.Contains('[') && fullName.Contains(']')) {
+					var startBracket = fullName.IndexOf('[');
+					var endBracket = fullName.LastIndexOf(']');
+					if (startBracket > 0 && endBracket > startBracket) {
+						var bracketContent = fullName.Substring(startBracket + 1, endBracket - startBracket - 1);
+						var args = System.Text.RegularExpressions.Regex.Matches(bracketContent, @"\[([^\]]+)\]");
+						if (args.Count > 0) {
+							var genericArgs = new System.Collections.Generic.List<string>();
+							foreach (System.Text.RegularExpressions.Match match in args) {
+								var typeNameStr = match.Groups[1].Value.Trim();
+								System.Type argType = null;
+								try {
+									argType = System.Type.GetType(typeNameStr);
+								} catch {}
+								if (argType == null && jobType.Assembly != null) {
+									try {
+										argType = jobType.Assembly.GetType(typeNameStr.Split(',')[0].Trim());
+									} catch {}
+								}
+								if (argType != null) {
+									genericArgs.Add(GetDataTypeName(argType));
+								}
+							}
+							if (genericArgs.Count > 0) {
+								declaringTypeName = $"{baseTypeName}<{string.Join(", ", genericArgs)}>";
+							} else {
+								declaringTypeName = baseTypeName + "<>";
+							}
+						} else {
+							declaringTypeName = baseTypeName + "<>";
+						}
+					} else {
+						declaringTypeName = baseTypeName + "<>";
+					}
+				} else {
+					declaringTypeName = baseTypeName + "<>";
+				}
+			} else {
+				declaringTypeName = GetDataTypeName(declaringType);
+			}
+			
+			var nestedName = jobType.Name;
+			int backtickIndex = nestedName.LastIndexOf('`');
+			if (backtickIndex > 0) {
+				nestedName = nestedName.Remove(backtickIndex);
+			}
+			return declaringTypeName + "." + nestedName;
+		}
+
         public static string FormatCode(string[] content, int indentSize = 4, int defaultIndent = 2) {
 
             var result = new System.Text.StringBuilder(content.Length * 256);
@@ -1262,6 +1323,11 @@ namespace ME.BECS.Editor {
 
         public static System.Type MakeGenericConstraintType(System.Type type) {
             return type.MakeGenericType(GetFirstGenericConstraintType(type));
+        }
+
+        public static string FormatGenericTypeWithSingleArgument(System.Type genericType, System.Type argumentType) {
+            var baseTypeName = GetTypeName(genericType.GetGenericTypeDefinition(), useFullName: true, showGenericType: false);
+            return $"{baseTypeName}<{GetTypeName(argumentType)}>";
         }
         
     }
