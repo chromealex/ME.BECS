@@ -44,9 +44,13 @@ namespace ME.BECS.Attack {
                             targetPosition = aspect.componentRuntimeFire.targets[0u];
                         }
 
-                        AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
+                        var bullet = AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                  aspect.readComponentVisual.muzzleView, jobInfo: jobInfo);
-
+                        if (ent.TryRead(out MaxHitCountComponent maxHitCountComponent) == true) {
+                            var attack = bullet.ent.GetAspect<QuadTreeQueryAspect>();
+                            attack.query.nearestCount = maxHitCountComponent.value;
+                        }
+                        
                         aspect.UseFire();
 
                     }
@@ -89,8 +93,12 @@ namespace ME.BECS.Attack {
                                 targetPosition = aspect.componentRuntimeFire.targets[i];
                             }
 
-                            AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
+                            var bullet = AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                      aspect.readComponentVisual.muzzleView, jobInfo: in jobInfo);
+                            if (ent.TryRead(out MaxHitCountComponent maxHitCountComponent) == true) {
+                                var attack = bullet.ent.GetAspect<QuadTreeQueryAspect>();
+                                attack.query.nearestCount = maxHitCountComponent.value;
+                            }
                         }
 
                         aspect.UseFire();

@@ -52,6 +52,13 @@ namespace ME.BECS.Attack {
     }
 
     [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct MaxHitCountComponent : IConfigComponent {
+
+        public ushort value;
+
+    }
+
+    [ComponentGroup(typeof(AttackComponentGroup))]
     public struct AttackRuntimeReloadComponent : IComponent {
 
         public tfloat reloadTimer;
