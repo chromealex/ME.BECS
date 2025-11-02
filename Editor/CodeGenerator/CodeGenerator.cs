@@ -674,6 +674,7 @@ namespace ME.BECS.Editor {
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
+                        if (component.IsGenericTypeDefinition) continue;
 
                         var asmName = GetCachedAssemblyName(component);
                         if (!asmsDict.TryGetValue(asmName, out var info)) continue;
@@ -694,6 +695,7 @@ namespace ME.BECS.Editor {
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
+                        if (component.IsGenericTypeDefinition) continue;
 
                         var asmName = GetCachedAssemblyName(component);
                         if (!asmsDict.TryGetValue(asmName, out var info)) continue;
@@ -713,6 +715,7 @@ namespace ME.BECS.Editor {
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
+                        if (component.IsGenericTypeDefinition) continue;
 
                         var asmName = GetCachedAssemblyName(component);
                         if (!asmsDict.TryGetValue(asmName, out var info)) continue;
