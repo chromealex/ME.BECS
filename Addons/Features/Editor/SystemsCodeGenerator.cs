@@ -244,12 +244,18 @@ namespace ME.BECS.Editor.Systems {
             }
 
             public string GetWriteOpString(string key) {
-                var index = this.keyToIndex[key];
+                if (this.keyToIndex.TryGetValue(key, out var index) == false) {
+                    this.Add(key);
+                    index = this.keyToIndex[key];
+                }
                 return $"dependencies[{index}] = {key};";
             }
 
             public string GetReadOpString(string key) {
-                var index = this.keyToIndex[key];
+                if (this.keyToIndex.TryGetValue(key, out var index) == false) {
+                    this.Add(key);
+                    index = this.keyToIndex[key];
+                }
                 return $"dependencies[{index}]";
             }
 
@@ -537,6 +543,7 @@ namespace ME.BECS.Editor.Systems {
                                                         var srcDep = index;
                                                         var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
                                                         methodContent.Add($"var depsGeneric{srcDep.ToString()} = new NativeArray<Unity.Jobs.JobHandle>({types.Length}, Constants.ALLOCATOR_TEMP);");
+                                                        collectedDeps.Add($"dep{srcDep.ToString()}");
                                                         var withoutSync = true;
                                                         foreach (var cType in types) {
                                                             var type = systemType.MakeGenericType(cType);
@@ -546,7 +553,6 @@ namespace ME.BECS.Editor.Systems {
                                                             methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
                                                             methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = systemContext.dependsOn;");
                                                             methodContent.Add("}");
-                                                            if (index.genericIndex == 0) collectedDeps.Add($"dep{indexStr}");
                                                             printedDependencies.Add($"dep{indexStr}");
                                                             if (withoutSync == true) {
                                                                 var syncState = IsSyncNotRequired(type);
@@ -571,15 +577,16 @@ namespace ME.BECS.Editor.Systems {
                                                             methodContent.Add("{");
                                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {prevIndex});");
                                                             methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
+                                                            collectedDeps.Add($"dep{indexStr}");
                                                             var withoutSync = IsSyncNotRequired(type);
                                                             AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{indexStr}"), forceWithoutSync: withoutSync);
                                                             methodContent.Add("}");
-                                                            collectedDeps.Add($"dep{indexStr}");
                                                             printedDependencies.Add($"dep{indexStr}");
-                                                            prevIndex = $"dep{indexStr}";
+                                                            prevIndex = collectedDeps.GetReadOpString($"dep{indexStr}");
                                                             index.AddGeneric();
                                                         }
-                                                        methodContent.Add($"dep{srcDep.ToString()} = {prevIndex};");
+                                                        collectedDeps.Add($"dep{srcDep.ToString()}");
+                                                        methodContent.Add($"{collectedDeps.GetReadOpString($"dep{srcDep.ToString()}")} = {prevIndex};");
                                                         index = srcDep;
                                                     }
                                                 }
