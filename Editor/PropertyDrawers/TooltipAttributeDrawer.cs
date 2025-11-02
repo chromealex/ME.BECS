@@ -10,6 +10,7 @@ namespace ME.BECS.Editor {
 
             var attr = (TooltipAttribute)this.attribute;
             var container = new UnityEngine.UIElements.VisualElement();
+            container.AddToClassList("tooltip-decorator");
             EditorUIUtils.DrawTooltip(container, attr.text);
             return container;
 

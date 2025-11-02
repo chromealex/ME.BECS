@@ -22,6 +22,7 @@ namespace ME.BECS.Bullets {
         /// <summary>
         /// Damage value (min)
         /// </summary>
+        [Tooltip("Useful with hitRangeSqr only, used for fade damage range calculations.")]
         public uint damageMin;
         /// <summary>
         /// Damage value (max)

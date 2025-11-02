@@ -21,6 +21,13 @@
     display: none;
 }
 
+.tooltip-decorator {
+    position: absolute;
+    height: 18px;
+    width: 100%;
+    margin-left: -20px;
+}
+
 .has-tooltip .tooltip-text.custom-width {
     border-bottom-left-radius: 7px;
 }
