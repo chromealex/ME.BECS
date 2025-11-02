@@ -20,7 +20,11 @@ namespace ME.BECS.Bullets {
     public struct BulletConfigComponent : IConfigComponent {
 
         /// <summary>
-        /// Damage value
+        /// Damage value (min)
+        /// </summary>
+        public uint damageMin;
+        /// <summary>
+        /// Damage value (max)
         /// </summary>
         public uint damage;
 

@@ -1,5 +1,3 @@
-
-using System;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -300,11 +298,16 @@ namespace ME.BECS.Attack {
                 bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
                 bullet.component.sourceUnit = sourceUnit;
 
+                if (attackAspect.ent.Has<DamageMinOverrideComponent>() == true) {
+                    bullet.damageMin = attackAspect.ent.Read<DamageMinOverrideComponent>().damage;
+                }
                 if (attackAspect.ent.Has<DamageOverrideComponent>() == true) {
                     bullet.damage = attackAspect.ent.Read<DamageOverrideComponent>().damage;
                 } else if (attackAspect.ent.Has<DamageMultiplierComponent>() == true) {
-                    ref var dmg = ref ent.Get<BulletConfigComponent>().damage;
-                    dmg = (uint)math.floor(dmg * attackAspect.ent.Read<DamageMultiplierComponent>().factor);
+                    ref var dmg = ref ent.Get<BulletConfigComponent>();
+                    var factor = attackAspect.ent.Read<DamageMultiplierComponent>().factor;
+                    dmg.damage = (uint)math.floor(dmg.damage * factor);
+                    dmg.damageMin = (uint)math.floor(dmg.damageMin * factor);
                 }
                 return bullet;
             }

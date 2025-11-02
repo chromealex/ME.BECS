@@ -34,6 +34,13 @@ namespace ME.BECS.Bullets {
     }
     
     [ComponentGroup(typeof(BulletComponentGroup))]
+    public struct DamageMinOverrideComponent : IComponent {
+
+        public uint damage;
+
+    }
+    
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct DamageMultiplierComponent : IComponent {
 
         public static DamageMultiplierComponent Default => new DamageMultiplierComponent() { factor = 1f };
