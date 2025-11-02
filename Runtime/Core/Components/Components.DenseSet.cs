@@ -16,10 +16,13 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using static Cuts;
     using Unity.Collections.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct DataDenseSet {
 
+        [IgnoreProfiler]
         [StructLayout(LayoutKind.Sequential)]
         public struct Page {
 

@@ -3,7 +3,9 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public struct SparseSet {
 
         public MemArray<uint> dense;

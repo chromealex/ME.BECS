@@ -15,7 +15,9 @@ namespace ME.BECS {
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(BitArrayDebugView))]
     public unsafe struct BitArray : IIsCreated {
 

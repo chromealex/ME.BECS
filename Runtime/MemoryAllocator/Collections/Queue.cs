@@ -1,7 +1,9 @@
 namespace ME.BECS {
 
     using MemPtr = System.Int64;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(QueueProxy<>))]
     public unsafe struct Queue<T> where T : unmanaged {
 

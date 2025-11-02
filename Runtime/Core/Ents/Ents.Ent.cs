@@ -6,6 +6,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxy(typeof(EntProxy))]
     [StructLayout(LayoutKind.Explicit, Size = 8)]

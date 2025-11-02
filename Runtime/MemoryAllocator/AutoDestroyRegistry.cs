@@ -4,6 +4,7 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [BURST]
     public static unsafe class AutoDestroyRegistryStatic<T> where T : unmanaged, IComponentDestroy {
@@ -18,6 +19,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     public unsafe struct AutoDestroyRegistry {
 
         public delegate void DestroyDelegate(byte* comp);

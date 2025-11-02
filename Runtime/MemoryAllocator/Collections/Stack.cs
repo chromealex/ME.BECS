@@ -3,7 +3,9 @@ namespace ME.BECS {
     using MemPtr = System.Int64;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(StackProxy<>))]
     public unsafe struct Stack<T> where T : unmanaged {
 

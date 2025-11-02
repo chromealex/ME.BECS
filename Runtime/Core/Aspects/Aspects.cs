@@ -28,6 +28,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public class SafetyCheckAttribute : System.Attribute {
 
         public RefOp Op { get; set; }
@@ -38,6 +39,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     public unsafe struct SafetyComponentContainerRO<T> where T : unmanaged, IComponentBase {
 
         [Unity.Collections.ReadOnly]
@@ -49,6 +51,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     public unsafe struct SafetyComponentContainerWO<T> where T : unmanaged, IComponentBase {
@@ -73,6 +76,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     public unsafe struct SafetyComponentContainerRW<T> where T : unmanaged, IComponentBase {
@@ -97,6 +101,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     public unsafe struct RefROSafe<T> : IRefOp where T : unmanaged, IComponentBase {
@@ -147,6 +152,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     public unsafe struct RefRWSafe<T> : IRefOp where T : unmanaged, IComponentBase {
@@ -208,6 +214,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct RefRW<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
         public RefOp Op => RefOp.ReadWrite;
@@ -268,6 +275,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct RefRO<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
         public RefOp Op => RefOp.ReadOnly;
@@ -296,6 +304,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct AspectStorage<T> where T : unmanaged, IAspect {
 
         [INLINE(256)][IgnoreProfiler]
@@ -315,6 +324,7 @@ namespace ME.BECS {
 
     } 
 
+    [IgnoreProfiler]
     public static unsafe class AspectExt {
 
         [INLINE(256)]

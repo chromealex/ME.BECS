@@ -5,10 +5,13 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [BURST]
+    [IgnoreProfiler]
     public static unsafe class ArchetypeQueries {
 
+        [IgnoreProfiler]
         public struct QueryCompose {
 
             internal UnsafeList<uint> with;

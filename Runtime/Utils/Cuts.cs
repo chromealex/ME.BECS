@@ -5,6 +5,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public readonly unsafe struct safe_ptr {
 
         [NativeDisableUnsafePtrRestriction]
@@ -123,6 +124,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public readonly unsafe struct safe_ptr<T> where T : unmanaged {
 
         [NativeDisableUnsafePtrRestriction]
@@ -253,6 +255,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public static unsafe class Cuts {
 
         public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN;

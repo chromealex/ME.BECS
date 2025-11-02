@@ -4,6 +4,7 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public static class UpdateType {
 
@@ -25,6 +26,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe partial struct World : System.IDisposable, System.IEquatable<World> {
 
         public bool isCreated => Worlds.IsAlive(this.id);

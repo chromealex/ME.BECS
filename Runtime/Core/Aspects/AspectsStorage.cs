@@ -3,12 +3,14 @@ namespace ME.BECS {
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [System.AttributeUsageAttribute(System.AttributeTargets.Field)]
     public class QueryWithAttribute : System.Attribute {}
     
     public interface IAspectData {}
 
+    [IgnoreProfiler]
     public unsafe struct AspectDataPtr<T> : IAspectData where T : unmanaged, IComponent {
 
         public RefRW<T> value;
@@ -30,6 +32,8 @@ namespace ME.BECS {
         }
 
     }
+    
+    [IgnoreProfiler]
     public struct AspectTypeInfoLoadedManaged {
 
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> loadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
@@ -37,6 +41,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     public struct AspectTypeInfo {
 
         public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<AspectTypeInfo>();
@@ -50,12 +55,14 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct AspectTypeInfoId<T> where T : unmanaged, IAspect {
 
         public static readonly Unity.Burst.SharedStatic<uint> typeIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<AspectTypeInfoId<T>>();
 
     }
     
+    [IgnoreProfiler]
     public struct AspectTypeInfo<T> where T : unmanaged, IAspect {
 
         public static ref uint typeId => ref AspectTypeInfoId<T>.typeIdBurst.Data;
@@ -78,6 +85,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct WorldAspectStorage {
 
         public static readonly Unity.Burst.SharedStatic<Internal.Array<UnsafeAspectsStorage>> storage = Unity.Burst.SharedStatic<Internal.Array<UnsafeAspectsStorage>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldAspectStorage>(TAlign<Internal.Array<UnsafeAspectsStorage>>.align, 109L);
@@ -114,6 +122,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct UnsafeAspectsStorage {
 
         public struct Aspect {

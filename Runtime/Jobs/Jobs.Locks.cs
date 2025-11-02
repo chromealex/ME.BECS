@@ -5,8 +5,10 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using System.Runtime.InteropServices;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [BURST]
+    [IgnoreProfiler]
     public unsafe struct ReadWriteNativeSpinner : IIsCreated {
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
@@ -126,6 +128,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     [BURST]
     [StructLayout(LayoutKind.Sequential)]
     public unsafe struct ReadWriteSpinner : IIsCreated {
@@ -266,6 +269,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     [BURST]
     public struct Spinner {
         
@@ -331,6 +335,7 @@ namespace ME.BECS {
         }
     }
 
+    [IgnoreProfiler]
     [BURST]
     public struct LockSpinner {
 

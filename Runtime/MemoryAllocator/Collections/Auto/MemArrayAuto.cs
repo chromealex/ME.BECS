@@ -9,7 +9,9 @@ namespace ME.BECS {
     using Unity.Jobs;
     using static Cuts;
     using System.Runtime.InteropServices;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [StructLayout(LayoutKind.Sequential)]
     [System.Serializable]
     public struct MemArrayAutoData {
@@ -32,6 +34,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayAutoProxy<>))]
     public unsafe struct MemArrayAuto<T> : IMemArray, IUnmanagedList, System.IEquatable<MemArrayAuto<T>> where T : unmanaged {

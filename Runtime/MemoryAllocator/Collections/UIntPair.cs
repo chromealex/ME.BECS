@@ -1,7 +1,9 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public readonly struct UIntPair : System.IEquatable<UIntPair> {
 
         public readonly uint typeId1;

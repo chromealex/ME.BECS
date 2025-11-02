@@ -2,7 +2,9 @@
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe struct CollectionsRegistry {
 
         private MemArray<List<MemPtr>> list;

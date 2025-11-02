@@ -3,6 +3,7 @@
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using System.Runtime.InteropServices;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public enum ClearOptions {
 
@@ -25,6 +26,7 @@
 
     }
 
+    [IgnoreProfiler]
     [StructLayout(LayoutKind.Sequential)]
     public readonly struct MemPtr : System.IEquatable<MemPtr> {
 
@@ -85,6 +87,7 @@
 
     }
     
+    [IgnoreProfiler]
     public unsafe struct MemAllocatorPtr {
 
         internal MemPtr ptr;
@@ -141,6 +144,7 @@
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct MemAllocatorPtr<T> where T : unmanaged {
 
         internal MemPtr ptr;

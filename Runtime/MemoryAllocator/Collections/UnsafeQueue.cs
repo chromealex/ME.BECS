@@ -4,7 +4,9 @@ namespace ME.BECS {
 
     using Unity.Collections;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe struct UnsafeQueue<T> : IIsCreated where T : unmanaged {
 
         public struct Enumerator : System.Collections.Generic.IEnumerator<T> {

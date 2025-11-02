@@ -14,7 +14,9 @@ namespace ME.BECS {
 
     using Unity.Collections;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     internal unsafe struct Bitwise {
 
         private const int ULONG_SIZE = sizeof(ulong);
@@ -443,6 +445,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UnsafeBitArrayDebugView))]
     public unsafe struct MemBitArray {
 

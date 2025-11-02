@@ -6,9 +6,12 @@ namespace ME.BECS {
     using Unity.Burst;
     using Unity.Collections.LowLevel.Unsafe;
     using System.Diagnostics;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe class LeakDetectorData {
 
+        [IgnoreProfiler]
         public struct Item : System.IEquatable<Item> {
 
             public System.IntPtr ptr;

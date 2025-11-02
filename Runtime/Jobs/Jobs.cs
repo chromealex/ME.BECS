@@ -15,6 +15,7 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using Unity.Collections;
     using Unity.Jobs;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [System.Flags]
     public enum ScheduleFlags {
@@ -167,6 +168,7 @@ namespace ME.BECS {
         
     }
     
+    [IgnoreProfiler]
     public unsafe struct JobInfo : IIsCreated {
 
         public uint count;
@@ -266,6 +268,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public static unsafe class JobUtils {
 
         public const uint CacheLineSize = JobsUtility.CacheLineSize;

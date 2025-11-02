@@ -1,7 +1,9 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UIntDictionaryProxy<>))]
     public unsafe struct UIntDictionary<TValue> where TValue : unmanaged {
 

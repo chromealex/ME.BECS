@@ -1,7 +1,9 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    [IgnoreProfiler]
     public static class Utils {
 
         [INLINE(256)]

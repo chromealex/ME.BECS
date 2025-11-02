@@ -4,7 +4,9 @@ namespace ME.BECS {
 
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe struct UIntListHash : IIsCreated {
 
         private MemArray<uint> arr;

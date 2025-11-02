@@ -10,7 +10,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
     using System.Runtime.InteropServices;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    [IgnoreProfiler]
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public readonly unsafe struct CachedPtr {
         
@@ -79,6 +81,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayProxy<>))]
     public unsafe struct MemArray<T> : IIsCreated where T : unmanaged {
 

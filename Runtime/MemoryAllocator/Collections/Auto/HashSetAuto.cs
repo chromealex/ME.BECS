@@ -1,7 +1,9 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe struct HashSetAuto<T> : IIsCreated where T : unmanaged, System.IEquatable<T> {
 
         public struct Enumerator {

@@ -13,6 +13,7 @@ namespace ME.BECS {
         public const uint MIN_ZONE_SIZE_IN_KB = MIN_ZONE_SIZE / 1024u;
         public const uint DEFAULT_ZONES_CAPACITY = 10u;
 
+        [IgnoreProfiler]
         public struct BlockHeader {
 
             // Header
@@ -42,6 +43,7 @@ namespace ME.BECS {
 
         }
         
+        [IgnoreProfiler]
         public struct Zone {
 
             public safe_ptr data;

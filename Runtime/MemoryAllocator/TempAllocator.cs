@@ -5,14 +5,18 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
+using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
 namespace ME.BECS {
 
+    [IgnoreProfiler]
     [BurstCompile]
     public unsafe struct TempAllocator : AllocatorManager.IAllocator {
 
+        [IgnoreProfiler]
         public struct Block {
 
+            [IgnoreProfiler]
             public struct MemoryBlock {
 
                 private byte* data;

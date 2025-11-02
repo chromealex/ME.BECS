@@ -9,7 +9,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [System.SerializableAttribute]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ListAutoProxy<>))]
     public unsafe struct ListAuto<T> : IMemList, IUnmanagedList, System.IEquatable<ListAuto<T>> where T : unmanaged {

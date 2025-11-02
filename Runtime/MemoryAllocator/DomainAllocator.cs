@@ -4,7 +4,9 @@ namespace ME.BECS {
     using Unity.Collections;
     using Unity.Burst;
     using AOT;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     [BURST]
     public unsafe struct DomainAllocator : AllocatorManager.IAllocator {
         

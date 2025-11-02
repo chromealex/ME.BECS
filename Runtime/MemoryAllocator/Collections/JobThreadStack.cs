@@ -2,7 +2,9 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe struct JobThreadStack<T> : IIsCreated where T : unmanaged {
 
         private const uint DEFAULT_CAPACITY = 4u;

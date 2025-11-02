@@ -7,7 +7,13 @@ namespace ME.BECS {
     public class EntityConfigsRegistry {
 
         private static readonly SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>> configs = SharedStatic<UnsafeHashMap<uint, UnsafeEntityConfig>>.GetOrCreate<EntityConfigsRegistry>();
-        
+
+        public static void Test() {
+            UnsafeEntityConfig.GenericCache.cache.Clear();
+            EntityConfigRegistryShared.staticWorld.Data.Dispose();
+            EntityConfigRegistry.Initialize();
+            LoadForced(false);
+        }
         public static void Initialize(bool isEditor = false) {
 
             if (StaticTypes.tracker.IsCreated == false) return;

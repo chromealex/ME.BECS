@@ -4,7 +4,9 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Mathematics;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public class FullFillBits {
 
         public const uint FILL_BITS_COUNT = 2048u;

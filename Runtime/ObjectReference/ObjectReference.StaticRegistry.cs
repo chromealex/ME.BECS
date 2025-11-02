@@ -1,3 +1,5 @@
+using CollectionExtensions = System.Collections.Generic.CollectionExtensions;
+
 namespace ME.BECS {
 
     public static class ObjectReferenceRegistry {
@@ -94,6 +96,7 @@ namespace ME.BECS {
                 sourceId = nextId + (++nextRuntimeId),
             };
             additionalRuntimeObjects.Add(item);
+            ObjectReferenceRegistry.data.objectLookup.Add(obj, item.sourceId);
 
             return item.sourceId;
 
@@ -136,17 +139,9 @@ namespace ME.BECS {
         public static uint GetId(UnityEngine.Object obj) {
 
             if (obj == null) return 0u;
-            
-            foreach (var item in ObjectReferenceRegistry.data.objects) {
-                if (item.data.Is(obj) == true) return item.data.sourceId;
-            }
 
-            foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
-                if (item.Is(obj) == true) return item.sourceId;
-            }
+            return CollectionExtensions.GetValueOrDefault(ObjectReferenceRegistry.data.objectLookup, obj, 0u);
 
-            return 0u;
-            
         }
 
     }

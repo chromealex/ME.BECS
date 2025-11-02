@@ -11,6 +11,7 @@ namespace ME.BECS {
     using Unity.Jobs.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    [IgnoreProfiler]
     public unsafe partial struct OneShotTasks {
 
         [StructLayout(LayoutKind.Sequential)]

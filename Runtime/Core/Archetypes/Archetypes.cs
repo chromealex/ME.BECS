@@ -16,8 +16,10 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using CND = System.Diagnostics.ConditionalAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
     #if !ENABLE_BECS_FLAT_QUIERIES
+    [IgnoreProfiler]
     public readonly ref struct ComponentsFastTrack {
 
         public readonly TempBitArray root;
@@ -55,8 +57,10 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct Archetypes {
 
+        [IgnoreProfiler]
         public struct Archetype {
 
             public UIntListHash entitiesList;

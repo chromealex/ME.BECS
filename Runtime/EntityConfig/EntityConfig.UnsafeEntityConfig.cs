@@ -6,9 +6,51 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public readonly unsafe struct UnsafeEntityConfig : IIsCreated {
 
+        public static class GenericCache {
+
+            public struct Key : System.IEquatable<Key> {
+
+                public System.Type type1;
+                public System.Type type2;
+                public string methodName;
+
+                public bool Equals(Key other) {
+                    return Equals(this.type1, other.type1) && Equals(this.type2, other.type2) && this.methodName == other.methodName;
+                }
+
+                public override bool Equals(object obj) {
+                    return obj is Key other && this.Equals(other);
+                }
+
+                public override int GetHashCode() {
+                    return System.HashCode.Combine(this.type1, this.type2, this.methodName);
+                }
+
+            }
+
+            internal static readonly System.Collections.Generic.Dictionary<Key, System.Delegate> cache = new System.Collections.Generic.Dictionary<Key, System.Delegate>();
+
+            public static System.Delegate Get(System.Type objType, System.Type callerType, string methodName, System.Type delegateType) {
+                var key = new Key() {
+                    type1 = callerType,
+                    type2 = objType,
+                    methodName = methodName,
+                };
+                if (cache.TryGetValue(key, out var result) == false) {
+                    var gType = callerType.MakeGenericType(objType);
+                    var method = gType.GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    result = System.Delegate.CreateDelegate(delegateType, null, method);
+                    cache.Add(key, result);
+                }
+                return result;
+            }
+
+        }
+        
         [System.Runtime.InteropServices.UnmanagedFunctionPointerAttribute(System.Runtime.InteropServices.CallingConvention.Cdecl)]
         public delegate void MethodCallerDelegate(in UnsafeEntityConfig config, void* component, in Ent ent);
         
@@ -30,7 +72,6 @@ namespace ME.BECS {
         private struct FuncMask {
 
             public System.IntPtr pointer;
-            public System.Runtime.InteropServices.GCHandle handle;
 
             public bool IsValid() => this.pointer != System.IntPtr.Zero;
 
@@ -53,7 +94,6 @@ namespace ME.BECS {
             private struct Func {
 
                 public System.IntPtr pointer;
-                public System.Runtime.InteropServices.GCHandle handle;
 
                 public bool IsValid() => this.pointer != System.IntPtr.Zero;
 
@@ -123,21 +163,16 @@ namespace ME.BECS {
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
-                    var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
+                    var ptr = (safe_ptr)UnsafeUtility.PinGCObjectAndGetAddress(comp, out var gcHandle);
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
                     if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
-                        var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
-                        var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        var del = System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
-                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
+                        var del = GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         this.functionPointers[i] = new Func() {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
-                            handle = handle,
                         };
                     }
-                    gcHandle.Free();
+                    UnsafeUtility.ReleaseGCObject(gcHandle);
                 }
 
             }
@@ -198,7 +233,6 @@ namespace ME.BECS {
             private struct Func {
 
                 public System.IntPtr pointer;
-                public System.Runtime.InteropServices.GCHandle handle;
 
                 public bool IsValid() => this.pointer != System.IntPtr.Zero;
 
@@ -275,32 +309,23 @@ namespace ME.BECS {
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
-                    var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), elemSize);
+                    var ptr = (safe_ptr)UnsafeUtility.PinGCObjectAndGetAddress(comp, out var gcHandle);
                     if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
-                        var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
-                        var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        var del = System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
-                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
+                        var del = GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         this.functionPointers[i] = new Func() {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
-                            handle = handle,
                         };
                     }
 
                     if (masks != null) {
-                        var caller = typeof(MethodComponentMaskCaller<>).MakeGenericType(comp.GetType());
-                        var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        var del = System.Delegate.CreateDelegate(typeof(MethodMaskCallerDelegate), null, method);
-                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
+                        var del = GenericCache.Get(comp.GetType(), typeof(MethodComponentMaskCaller<>), "Call", typeof(MethodMaskCallerDelegate));
                         this.functionMaskPointers[i] = new FuncMask() {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
-                            handle = handle,
                         };
                     }
-                    gcHandle.Free();
+                    UnsafeUtility.ReleaseGCObject(gcHandle);
                 }
 
             }
@@ -409,7 +434,6 @@ namespace ME.BECS {
             private struct Func {
 
                 public System.IntPtr pointer;
-                public System.Runtime.InteropServices.GCHandle handle;
 
                 public void Call(in UnsafeEntityConfig config, void* comp, in Ent ent) {
                     var del = new Unity.Burst.FunctionPointer<MethodCallerDelegate>(this.pointer);
@@ -466,13 +490,9 @@ namespace ME.BECS {
                     this.data[i] = item;
                     {
                         var type = GetItemType(config, item);
-                        var caller = typeof(MethodCaller<>).MakeGenericType(type);
-                        var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        var del = System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
-                        var handle = System.Runtime.InteropServices.GCHandle.Alloc(del);
+                        var del = GenericCache.Get(type, typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         this.functionPointers[i] = new Func() {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
-                            handle = handle,
                         };
                     }
                 }
@@ -634,10 +654,9 @@ namespace ME.BECS {
                     };
                     var offset = 0u;
                     foreach (var obj in item.array) {
-                        var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
-                        var ptr = new safe_ptr((void*)gcHandle.AddrOfPinnedObject(), sizeOfElement);
+                        var ptr = (safe_ptr)UnsafeUtility.PinGCObjectAndGetAddress(obj, out var gcHandle);
                         _memcpy(ptr, collection.array + offset, sizeOfElement);
-                        gcHandle.Free();
+                        UnsafeUtility.ReleaseGCObject(gcHandle);
                         offset += sizeOfElement;
                     }
 
@@ -668,6 +687,7 @@ namespace ME.BECS {
 
         }
 
+        [IgnoreProfiler]
         internal readonly struct StaticData {
 
             internal static class MethodCaller<T> where T : unmanaged, IConfigComponentStatic {
@@ -700,17 +720,14 @@ namespace ME.BECS {
                     this.typeIds[i] = typeId;
                     StaticTypesGroups.tracker.TryGetValue(type, out var trackerIndex);
                     var groupId = trackerIndex == 0 ? 0u : StaticTypes.tracker.Get(trackerIndex);
-                    var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
-                    var ptr = gcHandle.AddrOfPinnedObject();
+                    var ptr = UnsafeUtility.PinGCObjectAndGetAddress(comp, out var gcHandle);
                     Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
                     var newPtr = Components.GetUnknownType(this.staticDataEnt.World.state, typeId, groupId, in this.staticDataEnt, out _, default);
                     {
-                        var caller = typeof(MethodCaller<>).MakeGenericType(comp.GetType());
-                        var method = caller.GetMethod("Call", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                        var del = (MethodCallerDelegate)System.Delegate.CreateDelegate(typeof(MethodCallerDelegate), null, method);
+                        var del = (MethodCallerDelegate)GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         del.Invoke(in config, newPtr, in this.staticDataEnt);
                     }
-                    gcHandle.Free();
+                    UnsafeUtility.ReleaseGCObject(gcHandle);
                 }
 
             }

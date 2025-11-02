@@ -3,7 +3,9 @@ namespace ME.BECS {
 
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public struct StaticTypesGroups {
 
         public static System.Collections.Generic.Dictionary<System.Type, ushort> groups = new System.Collections.Generic.Dictionary<System.Type, ushort>();
@@ -14,6 +16,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesGroupsBurst {
 
         public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroupsBurst>();
@@ -21,6 +24,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesTrackedBurst {
 
         public static readonly Unity.Burst.SharedStatic<uint> maxIdBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesTrackedBurst>();
@@ -28,6 +32,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct StaticTypes {
 
         public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypes>();
@@ -60,6 +65,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct StaticSharedTypes {
 
         public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticSharedTypes>();
@@ -67,6 +73,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct StaticStaticTypes {
 
         public static readonly Unity.Burst.SharedStatic<uint> counterBurst = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticStaticTypes>();
@@ -74,6 +81,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesLoadedManaged {
 
         public static readonly System.Collections.Generic.Dictionary<uint, System.Type> allLoadedTypes = new System.Collections.Generic.Dictionary<uint, System.Type>();
@@ -85,61 +93,68 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct SharedStaticDefault<T> where T : unmanaged {
 
         private static readonly T ptr;
         
         public ref readonly T Data {
             [INLINE(256)]
-            get {
-                return ref ptr;
-            }
+            get => ref ptr;
         }
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesGroupId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesGroupId<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesTrackId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesTrackId<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesId<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesIsTag<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesIsTag<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesSharedTypeId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesSharedTypeId<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesSharedCustomHash<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesSharedCustomHash<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesStaticTypeId<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<uint> value = Unity.Burst.SharedStatic<uint>.GetOrCreate<StaticTypesStaticTypeId<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesShared<T> where T : unmanaged, IComponentShared {
 
         public static void AOT() {
@@ -147,6 +162,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesStatic<T> where T : unmanaged, IConfigComponentStatic {
 
         public static unsafe void AOT() {
@@ -155,6 +171,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct ConfigInitializeTypes<T> where T : unmanaged, IConfigInitialize {
 
         public static void AOT() {
@@ -163,24 +180,28 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesHasDefaultValue<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesHasDefaultValue<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticDefaultValue<T> where T : unmanaged {
 
         public static readonly T defaultValue = default;
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesDestroyRegistry {
 
         public static readonly Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>> registry = Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>>.GetOrCreate<StaticTypesDestroyRegistry>();
 
     }
     
+    [IgnoreProfiler]
     public struct StaticTypesDestroy<T> where T : unmanaged, IComponentDestroy {
 
         [INLINE(256)]
@@ -194,18 +215,21 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesNames<T> {
 
         public static readonly Unity.Burst.SharedStatic<Unity.Collections.FixedString512Bytes> name = Unity.Burst.SharedStatic<Unity.Collections.FixedString512Bytes>.GetOrCreate<StaticTypesNames<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypesDefault<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<T> defaultValue = Unity.Burst.SharedStatic<T>.GetOrCreate<StaticTypesDefault<T>>();
 
     }
 
+    [IgnoreProfiler]
     public struct StaticTypes<T> where T : unmanaged, IComponentBase {
 
         private static readonly T defaultZero = default;

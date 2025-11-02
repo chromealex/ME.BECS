@@ -10,7 +10,9 @@ namespace ME.BECS {
     using Jobs;
     using System.Runtime.InteropServices;
     using Unity.Jobs.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public static class BatchesExt {
 
         [INLINE(256)]
@@ -31,6 +33,7 @@ namespace ME.BECS {
     }
     
     #if !ENABLE_BECS_FLAT_QUIERIES
+    [IgnoreProfiler]
     public struct BatchList {
 
         public TempBitArray list;
@@ -84,6 +87,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     public unsafe struct BatchItem {
 
         private BatchList addItems;
@@ -157,6 +161,7 @@ namespace ME.BECS {
     }
     #endif
     
+    [IgnoreProfiler]
     [BURST]
     public unsafe partial struct Batches {
 

@@ -2,7 +2,9 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe struct ClassPtr<T> : System.IEquatable<ClassPtr<T>> where T : class {
 
         [NativeDisableUnsafePtrRestriction]

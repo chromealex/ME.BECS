@@ -2,7 +2,9 @@ namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Jobs;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public static class JobsExt {
 
         [INLINE(256)]

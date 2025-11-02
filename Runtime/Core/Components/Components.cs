@@ -6,6 +6,7 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public unsafe partial struct Components {
 
         [INLINE(256)][IgnoreProfiler]

@@ -155,7 +155,8 @@ namespace ME.BECS {
         public ObjectReferenceRegistryItem[] objects = System.Array.Empty<ObjectReferenceRegistryItem>();
 
         internal uint sourceId;
-        private readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
+        internal readonly Dictionary<uint, ItemInfo> itemLookup = new Dictionary<uint, ItemInfo>();
+        internal readonly Dictionary<UnityEngine.Object, uint> objectLookup = new Dictionary<UnityEngine.Object, uint>();
 
         public bool ValidateRemoved() {
             var result = false;
@@ -233,6 +234,7 @@ namespace ME.BECS {
         
         public void Initialize() {
             this.itemLookup.Clear();
+            this.objectLookup.Clear();
             this.sourceId = 0u;
             foreach (var item in this.objects) {
                 if (this.itemLookup.TryAdd(item.data.sourceId, item.data) == false) {
@@ -294,6 +296,7 @@ namespace ME.BECS {
                 } else {
                     this.itemLookup.Add(nextId, item);
                 }
+                this.objectLookup.Add(source, nextId);
                 #if UNITY_EDITOR
                 this.Validate();
                 #endif

@@ -8,6 +8,7 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
+    [IgnoreProfiler]
     public ref struct QueryContext {
 
         internal safe_ptr<State> state;
@@ -27,6 +28,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public static class APIExt {
 
         public static QueryBuilder Query(this in SystemContext context) {
@@ -47,6 +49,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public static class API {
 
         public static QueryBuilder Query(in World world, JobHandle dependsOn = default) {

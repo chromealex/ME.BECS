@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
@@ -7,11 +5,13 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Mathematics;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
-
+    
+    [IgnoreProfiler]
     public unsafe struct FreeBlocks {
         
         public const uint POTS = 16u;
 
+        [IgnoreProfiler]
         public struct Block {
 
             public UnsafeList<MemPtr> freeBlocks;
