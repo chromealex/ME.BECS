@@ -9,7 +9,9 @@ using Unity.Mathematics;
 namespace ME.BECS.Transforms {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
+    [IgnoreProfiler]
     public static unsafe class Transform3DExt {
 
         [INLINE(256)]

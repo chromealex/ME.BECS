@@ -16,6 +16,7 @@ namespace ME.BECS {
     [ComponentGroup(typeof(CoreComponentGroup))]
     public struct IsInactive : IComponent { }
     
+    [IgnoreProfiler]
     public static unsafe partial class EntExt {
 
         /// <summary>
