@@ -407,7 +407,6 @@ namespace ME.BECS.Editor {
             
         }
 
-        private static bool HasComponentCustomSharedHash(System.Type type) {
         private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _isTagTypeCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
         private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _hasCustomHashCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
         private static readonly System.Collections.Generic.Dictionary<System.Type, string> _typeNameCache = new System.Collections.Generic.Dictionary<System.Type, string>();
