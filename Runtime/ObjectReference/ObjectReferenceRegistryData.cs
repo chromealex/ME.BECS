@@ -296,7 +296,7 @@ namespace ME.BECS {
                 } else {
                     this.itemLookup.Add(nextId, item);
                 }
-                this.objectLookup.Add(source, nextId);
+                this.objectLookup.TryAdd(source, nextId);
                 #if UNITY_EDITOR
                 this.Validate();
                 #endif

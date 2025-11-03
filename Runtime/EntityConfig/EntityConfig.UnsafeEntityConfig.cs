@@ -17,9 +17,10 @@ namespace ME.BECS {
                 public System.Type type1;
                 public System.Type type2;
                 public string methodName;
+                public System.Type delegateType;
 
                 public bool Equals(Key other) {
-                    return Equals(this.type1, other.type1) && Equals(this.type2, other.type2) && this.methodName == other.methodName;
+                    return Equals(this.type1, other.type1) && Equals(this.type2, other.type2) && this.methodName == other.methodName && Equals(this.delegateType, other.delegateType);
                 }
 
                 public override bool Equals(object obj) {
@@ -27,7 +28,7 @@ namespace ME.BECS {
                 }
 
                 public override int GetHashCode() {
-                    return System.HashCode.Combine(this.type1, this.type2, this.methodName);
+                    return System.HashCode.Combine(this.type1, this.type2, this.methodName, this.delegateType);
                 }
 
             }
@@ -39,6 +40,7 @@ namespace ME.BECS {
                     type1 = callerType,
                     type2 = objType,
                     methodName = methodName,
+                    delegateType = delegateType,
                 };
                 if (cache.TryGetValue(key, out var result) == false) {
                     var gType = callerType.MakeGenericType(objType);
@@ -163,16 +165,19 @@ namespace ME.BECS {
 
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
-                    var ptr = (safe_ptr)UnsafeUtility.PinGCObjectAndGetAddress(comp, out var gcHandle);
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
+                    if (elemSize > 0u) {
+                        var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
+                        var ptr = (safe_ptr)(void*)gcHandle.AddrOfPinnedObject();
+                        _memcpy(ptr, this.data + this.offsets[i], elemSize);
+                        gcHandle.Free();
+                    }
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
                         var del = GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         this.functionPointers[i] = new Func() {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
                         };
                     }
-                    UnsafeUtility.ReleaseGCObject(gcHandle);
                 }
 
             }
@@ -310,8 +315,13 @@ namespace ME.BECS {
                 for (uint i = 0u; i < components.Length; ++i) {
                     var comp = components[i];
                     var elemSize = StaticTypes.sizes.Get(this.typeIds[i]);
-                    var ptr = (safe_ptr)UnsafeUtility.PinGCObjectAndGetAddress(comp, out var gcHandle);
-                    if (elemSize > 0u) _memcpy(ptr, this.data + this.offsets[i], elemSize);
+                    if (elemSize > 0u) {
+                        var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
+                        var ptr = (safe_ptr)(void*)gcHandle.AddrOfPinnedObject();
+                        _memcpy(ptr, this.data + this.offsets[i], elemSize);
+                        gcHandle.Free();
+                    }
+
                     if (StaticTypes.collectionsCount.Get(this.typeIds[i]) > 0u) {
                         var del = GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         this.functionPointers[i] = new Func() {
@@ -325,7 +335,6 @@ namespace ME.BECS {
                             pointer = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(del),
                         };
                     }
-                    UnsafeUtility.ReleaseGCObject(gcHandle);
                 }
 
             }
@@ -654,9 +663,10 @@ namespace ME.BECS {
                     };
                     var offset = 0u;
                     foreach (var obj in item.array) {
-                        var ptr = (safe_ptr)UnsafeUtility.PinGCObjectAndGetAddress(obj, out var gcHandle);
+                        var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
+                        var ptr = (safe_ptr)(void*)gcHandle.AddrOfPinnedObject();
                         _memcpy(ptr, collection.array + offset, sizeOfElement);
-                        UnsafeUtility.ReleaseGCObject(gcHandle);
+                        gcHandle.Free();
                         offset += sizeOfElement;
                     }
 
@@ -720,14 +730,15 @@ namespace ME.BECS {
                     this.typeIds[i] = typeId;
                     StaticTypesGroups.tracker.TryGetValue(type, out var trackerIndex);
                     var groupId = trackerIndex == 0 ? 0u : StaticTypes.tracker.Get(trackerIndex);
-                    var ptr = UnsafeUtility.PinGCObjectAndGetAddress(comp, out var gcHandle);
+                    var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
+                    var ptr = gcHandle.AddrOfPinnedObject();
                     Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
                     var newPtr = Components.GetUnknownType(this.staticDataEnt.World.state, typeId, groupId, in this.staticDataEnt, out _, default);
                     {
                         var del = (MethodCallerDelegate)GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
                         del.Invoke(in config, newPtr, in this.staticDataEnt);
                     }
-                    UnsafeUtility.ReleaseGCObject(gcHandle);
+                    gcHandle.Free();
                 }
 
             }

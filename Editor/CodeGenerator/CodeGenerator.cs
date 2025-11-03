@@ -378,10 +378,13 @@ namespace ME.BECS.Editor {
 
         public static void RegenerateBurstAOT(bool forced = false) {
 
-            if (UnityEngine.Application.isBatchMode == true && forced == false) return;
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
+
+            if (forced == true) {
+                CleanCache();
+            }
             
             UnityEditor.EditorPrefs.SetInt("ME.BECS.CodeGenerator.TempError", UnityEditor.EditorPrefs.GetInt("ME.BECS.CodeGenerator.TempError", 0) + 1);
 
@@ -397,6 +400,14 @@ namespace ME.BECS.Editor {
 
         }
 
+        private static void CleanCache() {
+            
+            System.IO.Directory.Delete($"Assets/{ECS}.Gen/Runtime/Cache", true);
+            System.IO.Directory.Delete($"Assets/{ECS}.Gen/Editor/Cache", true);
+            
+        }
+
+        private static bool HasComponentCustomSharedHash(System.Type type) {
         private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _isTagTypeCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
         private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _hasCustomHashCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
         private static readonly System.Collections.Generic.Dictionary<System.Type, string> _typeNameCache = new System.Collections.Generic.Dictionary<System.Type, string>();
