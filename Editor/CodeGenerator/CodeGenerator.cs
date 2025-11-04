@@ -735,6 +735,7 @@ namespace ME.BECS.Editor {
                 var publicContent = new scg::List<string>();
                 var filesContent = new scg::List<FileContent[]>();
                 {
+                    var initBeforeCount = componentTypes.Count;
                     var cache = new Cache();
                     for (var index = 0; index < generators.Length; ++index) {
                         var customCodeGenerator = generators[index];
@@ -764,7 +765,6 @@ namespace ME.BECS.Editor {
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
                     
-                    var initBeforeCount = componentTypes.Count;
                     var validatedTypes = new System.Collections.Generic.HashSet<System.Type>();
                     for (int i = initBeforeCount; i < componentTypes.Count; ++i) {
                         var addedType = componentTypes[i];
@@ -779,12 +779,15 @@ namespace ME.BECS.Editor {
                         if (addedType.IsVisible == false) continue;
                             
                         validatedTypes.Add(addedType);
-                        var isTagType = IsTagType(addedType);
-                        var isTag = isTagType.ToString().ToLower();
                         var type = GetCachedTypeName(addedType);
-                        var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
-                        typesContent.Add(str);
-                        aotContent.Add($"StaticTypes<{type}>.AOT();");
+                        
+                        if (typeof(IConfigComponentStatic).IsAssignableFrom(addedType)) {
+                            aotContent.Add($"StaticTypesStatic<{type}>.AOT();");
+                        } else if (typeof(IComponentShared).IsAssignableFrom(addedType)) {
+                            aotContent.Add($"StaticTypesShared<{type}>.AOT();");
+                        } else {
+                            aotContent.Add($"StaticTypes<{type}>.AOT();");
+                        }
                     }
                 }
 
