@@ -26,7 +26,7 @@ namespace ME.BECS.Editor.Aspects {
                 var type = aspect;
                 AspectCacheData aspectData;
                 if (this.cache.TryGetValue<AspectCacheData>(aspect, out var cachedData) == false) {
-                    var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).OrderBy(x => x.FieldType.FullName).ToArray();
+                    var fields = CodeGenerator.GetCachedFields(type, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).OrderBy(x => x.FieldType.FullName).ToArray();
                     
                     var contentItem = new System.Collections.Generic.List<string>();
                     var componentTypesFromAspect = new System.Collections.Generic.List<System.Type>();
@@ -108,15 +108,16 @@ namespace ME.BECS.Editor.Aspects {
                 if (!validatedComponentTypes.Add(componentType)) continue;
 
                 var componentTypeName = EditorUtils.GetDataTypeName(componentType);
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
                 var isTag = (System.Runtime.InteropServices.Marshal.SizeOf(componentType) <= 1 &&
-                             componentType.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).Length == 0).ToString().ToLower();
+                             CodeGenerator.GetCachedFields(componentType, flags).Length == 0).ToString().ToLower();
 
                 string validationCall;
                 if (typeof(IConfigComponentStatic).IsAssignableFrom(componentType)) {
                     validationCall = $"StaticTypes<{componentTypeName}>.ValidateStatic(isTag: {isTag});";
                 } else if (typeof(IComponentShared).IsAssignableFrom(componentType)) {
-                    var hasCustomHash = componentType.GetMethod(nameof(IComponentShared.GetHash), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic) != null ||
-                                        componentType.GetInterfaceMap(typeof(IComponentShared)).TargetMethods.Any(m => m.IsPrivate == true && m.Name == typeof(IComponentShared).FullName + "." + nameof(IComponentShared.GetHash));
+                    var hasCustomHash = CodeGenerator.GetCachedMethod(componentType, nameof(IComponentShared.GetHash), flags) != null ||
+                                        CodeGenerator.GetCachedInterfaceMap(componentType, typeof(IComponentShared)).TargetMethods.Any(m => m.IsPrivate == true && m.Name == typeof(IComponentShared).FullName + "." + nameof(IComponentShared.GetHash));
                     validationCall = $"StaticTypes<{componentTypeName}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
                 } else {
                     validationCall = $"StaticTypes<{componentTypeName}>.Validate(isTag: {isTag});";
@@ -125,6 +126,11 @@ namespace ME.BECS.Editor.Aspects {
             }
             dataList.AddRange(aspectValidations);
             
+        }
+
+        private struct AspectMethodCacheData {
+            public string content;
+            public string[] componentTypeNames;
         }
 
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
@@ -142,10 +148,12 @@ namespace ME.BECS.Editor.Aspects {
 
                 var type = aspect;
                 string aspectMethodContent;
-                if (this.cache.TryGetValue<string>(aspect, out var cachedContent) == false) {
+                AspectMethodCacheData cacheData;
+                if (this.cache.TryGetValue<AspectMethodCacheData>(aspect, out cacheData) == false) {
                     var strType = EditorUtils.GetTypeName(type);
                     var types = new System.Collections.Generic.List<string>();
                     var fieldsCount = 0;
+                    var componentTypesFromAspect = new System.Collections.Generic.List<System.Type>();
                     var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).OrderBy(x => x.FieldType.FullName).ToArray();
                     foreach (var field in fields) {
                         var fieldType = field.FieldType;
@@ -157,6 +165,7 @@ namespace ME.BECS.Editor.Aspects {
                         if (gType.IsGenericTypeDefinition) continue;
                         if (this.IsValidTypeForAssembly(gType) == false) continue;
                         if (typeof(IComponent).IsAssignableFrom(gType)) {
+                            componentTypesFromAspect.Add(gType);
                             componentsFromMethods.Add(gType);
                             if (references.Contains(gType) == false) {
                                 references.Add(gType);
@@ -173,21 +182,21 @@ ref var aspect = ref world.InitializeAspect<{strType}>();
 var addr = (byte*)_addressPtr(ref aspect);
 {string.Join("\n", types)}
 }}";
-                        this.cache.Add(aspect, aspectMethodContent);
+                        cacheData = new AspectMethodCacheData {
+                            content = aspectMethodContent,
+                            componentTypeNames = componentTypesFromAspect.Select(t => t.AssemblyQualifiedName).ToArray()
+                        };
+                        this.cache.Add(aspect, cacheData);
                     } else {
                         aspectMethodContent = null;
+                        cacheData = default;
                     }
                 } else {
-                    aspectMethodContent = cachedContent;
-                    var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).OrderBy(x => x.FieldType.FullName).ToArray();
-                    foreach (var field in fields) {
-                        var fieldType = field.FieldType;
-                        if (typeof(IAspectData).IsAssignableFrom(fieldType) == true) {
-                            var gType = fieldType.GenericTypeArguments[0];
-                            if (gType.IsVisible == false) continue;
-                            if (gType.IsGenericTypeDefinition) continue;
-                            if (this.IsValidTypeForAssembly(gType) == false) continue;
-                            if (typeof(IComponent).IsAssignableFrom(gType)) {
+                    aspectMethodContent = cacheData.content;
+                    if (cacheData.componentTypeNames != null) {
+                        foreach (var typeName in cacheData.componentTypeNames) {
+                            var gType = System.Type.GetType(typeName);
+                            if (gType != null) {
                                 componentsFromMethods.Add(gType);
                                 if (references.Contains(gType) == false) {
                                     references.Add(gType);

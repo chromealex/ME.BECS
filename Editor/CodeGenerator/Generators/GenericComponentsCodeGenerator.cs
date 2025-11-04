@@ -94,15 +94,16 @@ namespace ME.BECS.Editor.Generators {
                 ValidationInfo validationInfo;
                 if (cache.TryGetValue<ValidationInfo>(componentType, out var cachedValidation) == false) {
                     var componentTypeName = EditorUtils.GetDataTypeName(componentType);
+                    var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
                     var isTag = (System.Runtime.InteropServices.Marshal.SizeOf(componentType) <= 1 &&
-                                 componentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Length == 0).ToString().ToLower();
+                                 CodeGenerator.GetCachedFields(componentType, flags).Length == 0).ToString().ToLower();
 
                     string validationCall;
                     if (typeof(IConfigComponentStatic).IsAssignableFrom(componentType)) {
                         validationCall = $"StaticTypes<{componentTypeName}>.ValidateStatic(isTag: {isTag});";
                     } else if (typeof(IComponentShared).IsAssignableFrom(componentType)) {
-                        var hasCustomHash = componentType.GetMethod(nameof(IComponentShared.GetHash), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) != null ||
-                                            componentType.GetInterfaceMap(typeof(IComponentShared)).TargetMethods.Any(m => m.IsPrivate == true && m.Name == typeof(IComponentShared).FullName + "." + nameof(IComponentShared.GetHash));
+                        var hasCustomHash = CodeGenerator.GetCachedMethod(componentType, nameof(IComponentShared.GetHash), flags) != null ||
+                                            CodeGenerator.GetCachedInterfaceMap(componentType, typeof(IComponentShared)).TargetMethods.Any(m => m.IsPrivate == true && m.Name == typeof(IComponentShared).FullName + "." + nameof(IComponentShared.GetHash));
                         validationCall = $"StaticTypes<{componentTypeName}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
                     } else {
                         validationCall = $"StaticTypes<{componentTypeName}>.Validate(isTag: {isTag});";

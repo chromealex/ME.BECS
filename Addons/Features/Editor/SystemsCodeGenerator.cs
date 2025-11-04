@@ -10,6 +10,18 @@ namespace ME.BECS.Editor.Systems {
     
     public class SystemsCodeGenerator : CustomCodeGenerator {
 
+        private static string[] _cachedGraphGuids;
+        private static System.DateTime _graphsCacheTime;
+
+        private static string[] GetCachedGraphGuids() {
+            var now = System.DateTime.Now;
+            if (_cachedGraphGuids == null || (now - _graphsCacheTime).TotalSeconds > 5) {
+                _cachedGraphGuids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
+                _graphsCacheTime = now;
+            }
+            return _cachedGraphGuids;
+        }
+
         private void AddMethod<T>(SystemsGraph graph, string baseName, string methodName, Method method, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
             //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
             content = new scg::List<string>();
@@ -48,7 +60,7 @@ namespace ME.BECS.Editor.Systems {
 
             var content = new scg::List<string>();
             if (this.editorAssembly == false) {
-                var graphs = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
+                var graphs = GetCachedGraphGuids();
                 if (filesContent != null) {
                     foreach (var guid in graphs) {
                         var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
@@ -163,6 +175,7 @@ namespace ME.BECS.Editor.Systems {
                     content.Add("}");
                     content.Add("[UnityEngine.Scripting.PreserveAttribute]");
                     content.Add("public static void SystemsLoad() {");
+                    graphs = GetCachedGraphGuids();
                     foreach (var guid in graphs) {
                         var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
                         var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
@@ -541,7 +554,7 @@ namespace ME.BECS.Editor.Systems {
                                                         customAttr = "[ PARALLEL ]";
                                                         // Parallel mode
                                                         var srcDep = index;
-                                                        var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
+                                                        var types = CodeGenerator.GetCachedTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
                                                         methodContent.Add($"var depsGeneric{srcDep.ToString()} = new NativeArray<Unity.Jobs.JobHandle>({types.Length}, Constants.ALLOCATOR_TEMP);");
                                                         collectedDeps.Add($"dep{srcDep.ToString()}");
                                                         var withoutSync = true;
@@ -570,7 +583,7 @@ namespace ME.BECS.Editor.Systems {
                                                         customAttr = "[ ONE-BY-ONE ]";
                                                         var srcDep = index;
                                                         var prevIndex = dependsOn;
-                                                        var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
+                                                        var types = CodeGenerator.GetCachedTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
                                                         foreach (var cType in types) {
                                                             var type = systemType.MakeGenericType(cType);
                                                             var indexStr = index.ToString();
@@ -904,7 +917,7 @@ namespace ME.BECS.Editor.Systems {
                         if (systemNode.system.GetType().IsGenericType == true) {
                             var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
                             if (typeGen != null) {
-                                index += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
+                                index += CodeGenerator.GetCachedTypesDerivedFrom(typeGen).Length;
                             }
                         } else {
                             ++index;
@@ -930,8 +943,8 @@ namespace ME.BECS.Editor.Systems {
             int index
         )
         {
-            var allCandidateTypes = UnityEditor
-                .TypeCache.GetTypesDerivedFrom<IComponentBase>()
+            var allCandidateTypes = CodeGenerator
+                .GetCachedTypesDerivedFrom(typeof(IComponentBase))
                 .Where(t => t.IsValueType && !t.IsGenericType)
                 .ToArray();
             
@@ -948,7 +961,7 @@ namespace ME.BECS.Editor.Systems {
                             systemType = systemType.GetGenericTypeDefinition();
                             var genType = EditorUtils.GetFirstInterfaceConstraintType(systemType);
                             if (genType != null) {
-                                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
+                                var types = CodeGenerator.GetCachedTypesDerivedFrom(genType).OrderBy(x => x.FullName).ToArray();
                                 foreach (var cType in types) {
                                     var type = systemType.MakeGenericType(cType);
                                     var systemTypeStr = EditorUtils.GetTypeName(type);
@@ -1003,7 +1016,7 @@ namespace ME.BECS.Editor.Systems {
                         if (systemNode.system.GetType().IsGenericType == true) {
                             var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
                             if (typeGen != null) {
-                                cnt += UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).Count;
+                                cnt += CodeGenerator.GetCachedTypesDerivedFrom(typeGen).Length;
                             }
                         } else {
                             ++cnt;
@@ -1143,7 +1156,8 @@ namespace ME.BECS.Editor.Systems {
             var visited = new scg::HashSet<System.Reflection.MethodInfo>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
-                var instructions = body.GetInstructions();
+                var instructions = CodeGenerator.GetCachedInstructions(body);
+                if (instructions == null) continue;
                 foreach (var inst in instructions) {
                     if (inst.Operand is MethodInfo methodInfo) {
                         if ((methodInfo.Name == "Schedule" || methodInfo.Name == "ScheduleSingleWithInject" || methodInfo.Name == "ScheduleSingleWithInjectByRef") && methodInfo.IsGenericMethod == true) {
