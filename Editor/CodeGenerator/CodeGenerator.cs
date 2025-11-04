@@ -878,6 +878,7 @@ namespace ME.BECS.Editor {
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
                     
+                    var componentValidationsToInsert = new System.Collections.Generic.List<string>();
                     var validatedTypes = new System.Collections.Generic.HashSet<System.Type>();
                     for (int i = initBeforeCount; i < componentTypes.Count; ++i) {
                         var addedType = componentTypes[i];
@@ -892,14 +893,29 @@ namespace ME.BECS.Editor {
                         if (addedType.IsVisible == false) continue;
                             
                         validatedTypes.Add(addedType);
+                        var isTagType = IsTagType(addedType);
+                        var isTag = isTagType.ToString().ToLower();
                         var type = GetCachedTypeName(addedType);
                         
                         if (typeof(IConfigComponentStatic).IsAssignableFrom(addedType)) {
+                            componentValidationsToInsert.Add($"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});");
                             aotContent.Add($"StaticTypesStatic<{type}>.AOT();");
                         } else if (typeof(IComponentShared).IsAssignableFrom(addedType)) {
+                            var hasCustomHash = HasComponentCustomSharedHash(addedType);
+                            componentValidationsToInsert.Add($"StaticTypes<{type}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});");
                             aotContent.Add($"StaticTypesShared<{type}>.AOT();");
                         } else {
+                            componentValidationsToInsert.Add($"StaticTypes<{type}>.Validate(isTag: {isTag});");
                             aotContent.Add($"StaticTypes<{type}>.AOT();");
+                        }
+                    }
+                    
+                    if (componentValidationsToInsert.Count > 0) {
+                        var aspectValidationIndex = typesContent.FindIndex(x => x.Contains("AspectTypeInfo<") && x.Contains(".Validate()"));
+                        if (aspectValidationIndex >= 0) {
+                            typesContent.InsertRange(aspectValidationIndex, componentValidationsToInsert);
+                        } else {
+                            typesContent.AddRange(componentValidationsToInsert);
                         }
                     }
                 }
