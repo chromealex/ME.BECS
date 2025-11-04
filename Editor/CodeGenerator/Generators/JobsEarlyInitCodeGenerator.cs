@@ -51,7 +51,7 @@ namespace ME.BECS.Editor.Jobs {
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
 
             this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
-            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            var jobsComponents = CodeGenerator.GetCachedTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
 
@@ -68,7 +68,7 @@ namespace ME.BECS.Editor.Jobs {
                 var jobTypeFullName = EditorUtils.GetJobTypeName(jobType);
                 var components = new System.Collections.Generic.List<string>();
                 var componentsTypes = new System.Collections.Generic.List<System.Type>();
-                var jobInterfaces = jobType.GetInterfaces();
+                var jobInterfaces = CodeGenerator.GetCachedInterfaces(jobType);
                 System.Type workInterface = null;
                 foreach (var i in jobInterfaces) {
                     if (i.IsGenericType == true) {
@@ -351,7 +351,7 @@ namespace ME.BECS.Editor.Jobs {
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             this.cache.SetKey(typeof(TJobBase).Name);
-            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            var jobsComponents = CodeGenerator.GetCachedTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
                 if (jobType.IsValueType == false) continue;
@@ -384,7 +384,7 @@ namespace ME.BECS.Editor.Jobs {
                 var components = new System.Collections.Generic.List<string>();
                 var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
                 var componentsType = new System.Collections.Generic.HashSet<System.Type>();
-                var interfaces = jobType.GetInterfaces();
+                var interfaces = CodeGenerator.GetCachedInterfaces(jobType);
                 System.Type workInterface = null;
                 foreach (var i in interfaces) {
                     if (i.IsGenericType == true) {
@@ -572,7 +572,8 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                var instructions = body.GetInstructions();
+                var instructions = CodeGenerator.GetCachedInstructions(body);
+                if (instructions == null) continue;
                 foreach (var inst in instructions) {
                     var continueTraverse = true;
                     if (onInstruction?.Invoke(inst) == true) continue;
@@ -656,10 +657,20 @@ namespace ME.BECS.Editor.Jobs {
         }
         
         public static NewEntInfo GetJobEntInfo(System.Type jobType) {
+            if (CodeGenerator._jobEntInfoCache.TryGetValue(jobType, out var cached)) {
+                return cached;
+            }
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var root = jobType.GetMethod("Execute");
             var visited = new System.Collections.Generic.HashSet<MethodInfo>();
-            var instructions = root.GetInstructions().ToList();
+            var instructionsList = CodeGenerator.GetCachedInstructions(root);
+            NewEntInfo result;
+            if (instructionsList == null) {
+                result = new NewEntInfo { count = 0, brCount = 0 };
+                CodeGenerator._jobEntInfoCache[jobType] = result;
+                return result;
+            }
+            var instructions = instructionsList.ToList();
             var brOpen = 0;
             var count = 0;
             var brCount = 0;
@@ -679,7 +690,10 @@ namespace ME.BECS.Editor.Jobs {
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
-                            instructions.InsertRange(i + 1, member.GetInstructions());
+                            var memberInstructions = CodeGenerator.GetCachedInstructions(member);
+                            if (memberInstructions != null) {
+                                instructions.InsertRange(i + 1, memberInstructions);
+                            }
                         }
                     }
                 }
@@ -704,10 +718,12 @@ namespace ME.BECS.Editor.Jobs {
                 }
             }
 
-            return new NewEntInfo() {
+            result = new NewEntInfo() {
                 count = count,
                 brCount = brCount,
             };
+            CodeGenerator._jobEntInfoCache[jobType] = result;
+            return result;
         }
 
         public struct WeightsInfo {
@@ -724,6 +740,9 @@ namespace ME.BECS.Editor.Jobs {
         }
         
         public static WeightsInfo GetJobWeightsInfo(System.Type jobType) {
+            if (CodeGenerator._jobWeightsInfoCache.TryGetValue(jobType, out var cached)) {
+                return cached;
+            }
             var config = new System.Collections.Generic.List<MethodWeightInfo>();
             config.Add(new MethodWeightInfo() {
                 methods = new [] { typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public) },
@@ -755,20 +774,30 @@ namespace ME.BECS.Editor.Jobs {
             });
             var root = jobType.GetMethod("Execute");
             var visited = new System.Collections.Generic.HashSet<MethodInfo>();
-            var instructions = root.GetInstructions().ToList();
+            var instructionsList = CodeGenerator.GetCachedInstructions(root);
+            WeightsInfo weightsResult;
+            if (instructionsList == null) {
+                weightsResult = new WeightsInfo { weight = 0 };
+                CodeGenerator._jobWeightsInfoCache[jobType] = weightsResult;
+                return weightsResult;
+            }
+            var instructions = instructionsList.ToList();
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
                     if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
-                            instructions.InsertRange(i + 1, member.GetInstructions());
+                            var memberInstructions = CodeGenerator.GetCachedInstructions(member);
+                            if (memberInstructions != null) {
+                                instructions.InsertRange(i + 1, memberInstructions);
+                            }
                         }
                     }
                 }
             }
 
-            var weight = (uint)jobType.GetInterfaces().Sum(x => x.GenericTypeArguments.Length);
+            var weight = (uint)CodeGenerator.GetCachedInterfaces(jobType).Sum(x => x.GenericTypeArguments.Length);
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if (inst.Operand is MethodInfo methodInfo) {
@@ -784,9 +813,11 @@ namespace ME.BECS.Editor.Jobs {
                 }
             }
 
-            return new WeightsInfo() {
+            weightsResult = new WeightsInfo() {
                 weight = weight,
             };
+            CodeGenerator._jobWeightsInfoCache[jobType] = weightsResult;
+            return weightsResult;
         }
         
         public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Predicate<Instruction> onInstruction = null) {
