@@ -358,7 +358,7 @@ namespace ME.BECS {
         public void SetSeed(safe_ptr<State> state, uint seed) {
 
             for (uint i = 0; i < state.ptr->entities.seeds.Length; ++i) {
-                state.ptr->entities.seeds[in state.ptr->allocator, i] += seed;
+                state.ptr->entities.seeds[in state.ptr->allocator, i] = i + seed;
             }
             
         }
