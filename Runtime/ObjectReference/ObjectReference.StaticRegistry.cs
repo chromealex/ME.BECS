@@ -140,6 +140,18 @@ namespace ME.BECS {
 
             if (obj == null) return 0u;
 
+            if (UnityEngine.Application.isPlaying == false) {
+                
+                foreach (var item in ObjectReferenceRegistry.data.objects) {
+                    if (item.data.Is(obj) == true) return item.data.sourceId;
+                }
+
+                foreach (var item in ObjectReferenceRegistry.additionalRuntimeObjects) {
+                    if (item.Is(obj) == true) return item.sourceId;
+                }
+                
+            }
+            
             return CollectionExtensions.GetValueOrDefault(ObjectReferenceRegistry.data.objectLookup, obj, 0u);
 
         }
