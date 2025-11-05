@@ -122,7 +122,7 @@ namespace ME.BECS.Pathfinding {
 
             { // Apply to graphs
                 var mask = ent.Read<GraphMaskRuntimeComponent>();
-                mask.Destroy();
+                mask.Destroy(in ent);
             }
             ent.DestroyHierarchy();
 

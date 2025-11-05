@@ -628,7 +628,7 @@ namespace ME.BECS.Editor {
                         var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
-                        aotContent.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(null);");
+                        aotContent.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(default, null);");
 
                     }
                 }
