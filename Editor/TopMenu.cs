@@ -79,14 +79,14 @@ namespace ME.BECS.Editor {
         [MenuItem(MENU_NAME, priority = 100)]
         private static void Run() {
             
-            CodeGenerator.RegenerateBurstAOT();
+            CodeGenerator.RegenerateBurstAOT(true, false);
 
         }
 
         [MenuItem(MENU_NAME_CLEAN, priority = 101)]
         private static void RunAndClean() {
             
-            CodeGenerator.RegenerateBurstAOT(true);
+            CodeGenerator.RegenerateBurstAOT(true, true);
 
         }
 

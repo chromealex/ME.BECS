@@ -375,13 +375,13 @@ namespace ME.BECS.Editor {
             }
         }
 
-        public static void RegenerateBurstAOT(bool forced = false) {
+        public static void RegenerateBurstAOT(bool forced = false, bool cleanCache = false) {
 
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
 
-            if (forced == true) {
+            if (cleanCache == true) {
                 CleanCache();
             }
             
@@ -401,6 +401,7 @@ namespace ME.BECS.Editor {
 
         private static void CleanCache() {
             
+            if (System.IO.Directory.Exists($"Assets/{ECS}.Gen/Runtime/Cache") == false) return;
             System.IO.Directory.Delete($"Assets/{ECS}.Gen/Runtime/Cache", true);
             System.IO.Directory.Delete($"Assets/{ECS}.Gen/Editor/Cache", true);
             
