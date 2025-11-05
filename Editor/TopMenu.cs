@@ -68,7 +68,8 @@ namespace ME.BECS.Editor {
 
     public static class CodeGeneratorMenu {
 
-        private const string MENU_NAME = "ME.BECS/Code Generator/Run &R";
+        private const string MENU_NAME = "ME.BECS/Code Generator/Run &r";
+        private const string MENU_NAME_CLEAN = "ME.BECS/Code Generator/Run and Clean #&r";
         private const string MENU_NAME_AUTO = "ME.BECS/Code Generator/Run Automatically";
         private const string MENU_NAME_IMPORT_CACHE = "ME.BECS/Code Generator/Generate Import Cache";
         
@@ -78,11 +79,18 @@ namespace ME.BECS.Editor {
         [MenuItem(MENU_NAME, priority = 100)]
         private static void Run() {
             
-            CodeGenerator.RegenerateBurstAOT(true);
+            CodeGenerator.RegenerateBurstAOT(true, false);
 
         }
 
-        [MenuItem(MENU_NAME_AUTO, priority = 101)]
+        [MenuItem(MENU_NAME_CLEAN, priority = 101)]
+        private static void RunAndClean() {
+            
+            CodeGenerator.RegenerateBurstAOT(true, true);
+
+        }
+
+        [MenuItem(MENU_NAME_AUTO, priority = 102)]
         private static void RunAuto() {
             EditorPrefs.SetBool(MENU_NAME_AUTO, !IsEnabledAuto);
         }
@@ -93,7 +101,7 @@ namespace ME.BECS.Editor {
             return true;
         }
 
-        [MenuItem(MENU_NAME_IMPORT_CACHE, priority = 102)]
+        [MenuItem(MENU_NAME_IMPORT_CACHE, priority = 103)]
         private static void RunImportCache() {
             EditorPrefs.SetBool(MENU_NAME_IMPORT_CACHE, !IsEnabledImportCache);
         }

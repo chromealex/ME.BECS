@@ -36,7 +36,7 @@ namespace ME.BECS.Pathfinding {
         public ListAuto<GraphNodeMemory> nodes;
         public LockSpinner nodesLock;
         
-        public unsafe void Destroy() {
+        public unsafe void Destroy(in Ent ent) {
 
             var nextTick = this.nodes.ent.World.CurrentTick + 1UL;
             this.nodesLock.Lock();

@@ -18,7 +18,7 @@ namespace ME.BECS {
 
     public interface IComponentDestroy : IComponent {
 
-        void Destroy();
+        void Destroy(in Ent ent);
 
     }
 

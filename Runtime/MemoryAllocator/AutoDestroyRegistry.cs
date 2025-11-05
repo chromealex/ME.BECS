@@ -11,9 +11,9 @@ namespace ME.BECS {
 
         [BURST]
         [AOT.MonoPInvokeCallback(typeof(AutoDestroyRegistry.DestroyDelegate))]
-        public static void Destroy(byte* comp) {
+        public static void Destroy(in Ent ent, byte* comp) {
 
-            _ref((T*)comp).Destroy();
+            _ref((T*)comp).Destroy(in ent);
             
         }
 
@@ -22,7 +22,7 @@ namespace ME.BECS {
     [IgnoreProfiler]
     public unsafe struct AutoDestroyRegistry {
 
-        public delegate void DestroyDelegate(byte* comp);
+        public delegate void DestroyDelegate(in Ent ent, byte* comp);
 
         private MemArray<List<uint>> list;
         private MemArray<LockSpinner> readWriteSpinnerPerEntity;
@@ -66,7 +66,7 @@ namespace ME.BECS {
                         if (exists == true) {
                             // component exists - call destroy method
                             var func = new Unity.Burst.FunctionPointer<DestroyDelegate>(StaticTypesDestroyRegistry.registry.Data.Get(typeId));
-                            func.Invoke(comp);
+                            func.Invoke(ent, comp);
                         }
                     }
 
