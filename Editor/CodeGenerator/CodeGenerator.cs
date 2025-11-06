@@ -447,10 +447,6 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _isTagTypeCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
-        private static readonly System.Collections.Generic.Dictionary<System.Type, bool> _hasCustomHashCache = new System.Collections.Generic.Dictionary<System.Type, bool>();
-        private static readonly System.Collections.Generic.Dictionary<System.Type, string> _typeNameCache = new System.Collections.Generic.Dictionary<System.Type, string>();
-        private static readonly System.Collections.Generic.Dictionary<System.Type, string> _assemblyNameCache = new System.Collections.Generic.Dictionary<System.Type, string>();
         private static void CleanCache() {
             
             if (System.IO.Directory.Exists($"Assets/{ECS}.Gen/Runtime/Cache") == false) return;
