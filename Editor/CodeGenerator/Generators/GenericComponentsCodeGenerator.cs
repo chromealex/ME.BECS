@@ -17,7 +17,6 @@ namespace ME.BECS.Editor.Generators {
 
         private struct ValidationInfo {
             public string validationCall;
-            public string defaultValueCall;
         }
 
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<Type> references) {
@@ -93,17 +92,12 @@ namespace ME.BECS.Editor.Generators {
                 if (!validatedTypes.Add(componentType)) continue;
 
                 ValidationInfo validationInfo;
-                var componentTypeName = EditorUtils.GetDataTypeName(componentType);
-                var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-                var isTagType = System.Runtime.InteropServices.Marshal.SizeOf(componentType) <= 1 &&
-                                CodeGenerator.GetCachedFields(componentType, flags).Length == 0;
-                var isTag = isTagType.ToString().ToLower();
+                if (cache.TryGetValue<ValidationInfo>(componentType, out var cachedValidation) == false) {
+                    var componentTypeName = EditorUtils.GetDataTypeName(componentType);
+                    var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+                    var isTag = (System.Runtime.InteropServices.Marshal.SizeOf(componentType) <= 1 &&
+                                 CodeGenerator.GetCachedFields(componentType, flags).Length == 0).ToString().ToLower();
 
-                var cacheKeyType = componentType.IsGenericType && !componentType.IsGenericTypeDefinition 
-                    ? componentType.GetGenericTypeDefinition() 
-                    : componentType;
-
-                if (cache.TryGetValue<ValidationInfo>(cacheKeyType, out var cachedValidation) == false) {
                     string validationCall;
                     if (typeof(IConfigComponentStatic).IsAssignableFrom(componentType)) {
                         validationCall = $"StaticTypes<{componentTypeName}>.ValidateStatic(isTag: {isTag});";
@@ -115,33 +109,15 @@ namespace ME.BECS.Editor.Generators {
                         validationCall = $"StaticTypes<{componentTypeName}>.Validate(isTag: {isTag});";
                     }
 
-                    string defaultValueCall = null;
-                    if (isTagType == false) {
-                        var defaultProperty = cacheKeyType.GetProperty("Default", BindingFlags.Static | BindingFlags.Public);
-                        if (defaultProperty != null) {
-                            defaultValueCall = $"StaticTypes<{componentTypeName}>.SetDefaultValue({componentTypeName}.Default);";
-                        }
-                    }
-
                     validationInfo = new ValidationInfo {
-                        validationCall = validationCall,
-                        defaultValueCall = defaultValueCall
+                        validationCall = validationCall
                     };
-                    cache.Add(cacheKeyType, validationInfo);
+                    cache.Add(componentType, validationInfo);
                 } else {
                     validationInfo = cachedValidation;
-                    if (validationInfo.defaultValueCall == null && isTagType == false) {
-                        if (cacheKeyType.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
-                            validationInfo.defaultValueCall = $"StaticTypes<{componentTypeName}>.SetDefaultValue({componentTypeName}.Default);";
-                            cache.Add(cacheKeyType, validationInfo);
-                        }
-                    }
                 }
                 
                 dataList.Add(validationInfo.validationCall);
-                if (validationInfo.defaultValueCall != null) {
-                    dataList.Add(validationInfo.defaultValueCall);
-                }
             }
             
         }
