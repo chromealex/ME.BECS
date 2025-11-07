@@ -41,7 +41,7 @@ namespace ME.BECS {
                             }
                             var unsafeConfig = config.AsUnsafeConfig();
                             if (unsafeConfig.IsValid() == false) continue;
-                            configs.Data.TryAdd(item.data.sourceId, unsafeConfig);
+                            TryAdd(item.data.sourceId, unsafeConfig);
                         }
                     }
                 }

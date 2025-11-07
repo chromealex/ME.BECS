@@ -12,7 +12,7 @@ namespace ME.BECS.Views.Editor {
 
             var sourceId = property.FindPropertyRelative(nameof(Config.sourceId));
             if (sourceId == null) return null;
-            EntityConfigsRegistry.Initialize();
+            if (UnityEngine.Application.isPlaying == false) EntityConfigsRegistry.Initialize();
             
             var container = new UnityEngine.UIElements.VisualElement();
             ME.BECS.Editor.EditorUIUtils.ApplyDefaultStyles(container);
@@ -44,7 +44,7 @@ namespace ME.BECS.Views.Editor {
                 return;
             }
 
-            EntityConfigsRegistry.Initialize();
+            if (UnityEngine.Application.isPlaying == false) EntityConfigsRegistry.Initialize();
             
             var currentConfig = EntityConfigsRegistry.GetEntityConfigBySourceId(sourceId.uintValue);
 
