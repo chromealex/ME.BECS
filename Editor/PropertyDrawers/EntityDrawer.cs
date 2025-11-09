@@ -123,22 +123,19 @@ namespace ME.BECS.Editor {
                 
             }
 
+            EditorApplication.update += this.OnUpdate;
+
             return this.rootVisualElement;
 
         }
         
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
-            
-            this.OnUpdate();
-            
-        }
-
         private bool prevState;
         private SerializedProperty property;
         private string propertyPath;
         private SerializedObject propertySerializedObject;
         public void OnUpdate() {
 
+            EditorApplication.update -= this.OnUpdate;
             if (PropertyEditorUtils.IsValid(this.property) == false) {
                 return;
             }
@@ -161,6 +158,8 @@ namespace ME.BECS.Editor {
             } else if (newState == true) {
                 this.UpdateData();
             }
+            
+            EditorApplication.update += this.OnUpdate;
             
         }
 
