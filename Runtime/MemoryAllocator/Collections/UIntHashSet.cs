@@ -271,7 +271,7 @@ namespace ME.BECS {
             }
         }
 
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         [INLINE(256)]
         public void Remove(ref MemoryAllocator allocator, in BatchList other) {
             var slotsPtr = (safe_ptr<Slot>)this.slots.GetUnsafePtrCached(in allocator);

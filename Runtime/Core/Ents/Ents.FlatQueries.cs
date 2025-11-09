@@ -4,7 +4,7 @@ namespace ME.BECS {
     
     public unsafe partial struct Ents {
 
-        #if ENABLE_BECS_FLAT_QUIERIES
+        #if ENABLE_BECS_FLAT_QUERIES
         public struct LockedEntityToComponent {
 
             public HashSet<uint> entities;

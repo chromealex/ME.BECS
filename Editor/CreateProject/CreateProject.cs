@@ -152,7 +152,7 @@ namespace ME.BECS.Editor.CreateProject {
                 action = (state) => {
                     if (state == true) {
                         NewProject.AddDefines(new[] {
-                            "ENABLE_BECS_FLAT_QUIERIES",
+                            "ENABLE_BECS_FLAT_QUERIES",
                         });
                     }
                 },

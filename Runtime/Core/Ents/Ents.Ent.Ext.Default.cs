@@ -66,7 +66,7 @@ namespace ME.BECS {
             {
                 Components.ClearShared(state, ent.id);
             }
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             {
                 Batches.Clear(ent.worldId, in ent);
             }

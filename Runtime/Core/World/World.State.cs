@@ -17,7 +17,7 @@ namespace ME.BECS {
         public Ents entities;
         public OneShotTasks oneShotTasks;
         public Components components;
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         public Archetypes archetypes;
         public Queries queries;
         #endif
@@ -102,7 +102,7 @@ namespace ME.BECS {
             this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
             this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             this.queries = Queries.Create(statePtr, stateProperties.queriesCapacity);
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             #endif
@@ -153,7 +153,7 @@ namespace ME.BECS {
 
                 this.state.ptr->entities.BurstMode(this.state.ptr->allocator, this.mode);
                 this.state.ptr->components.BurstMode(this.state.ptr->allocator, this.mode);
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 this.state.ptr->archetypes.BurstMode(this.state.ptr->allocator, this.mode);
                 #endif
 

@@ -109,7 +109,7 @@ namespace ME.BECS {
                     Ents.Unlock(world.state, in newEnt);
                 }
             }
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             {
                 Ents.Lock(world.state, in newEnt);
                 Archetypes.AddEntity(world.state, newEnt);

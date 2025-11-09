@@ -575,7 +575,7 @@ namespace ME.BECS {
             return handle;
         }
         
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         [BURST]
         private struct FromQueryDataJob : IJob {
 
@@ -654,7 +654,7 @@ namespace ME.BECS {
 
             public void Execute() {
 
-                #if ENABLE_BECS_FLAT_QUIERIES
+                #if ENABLE_BECS_FLAT_QUERIES
                 var allCount = (this.state.ptr->entities.Capacity + DataDenseSet.ENTITIES_PER_PAGE_MASK) / DataDenseSet.ENTITIES_PER_PAGE * DataDenseSet.ENTITIES_PER_PAGE;
                 var tempBits = new TempBitArray(allCount, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP);
                 tempBits.Union(in this.state.ptr->allocator, in this.state.ptr->entities.aliveBits);

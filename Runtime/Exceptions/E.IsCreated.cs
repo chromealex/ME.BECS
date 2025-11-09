@@ -64,7 +64,7 @@ namespace ME.BECS {
             NotCreatedException.Throw(world);
         }
 
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_CREATED(in Query query) {

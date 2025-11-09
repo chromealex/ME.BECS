@@ -3,7 +3,7 @@ using Unity.Jobs;
 
 namespace ME.BECS.Tests {
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     public unsafe class Tests_Archetypes {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]

@@ -68,7 +68,7 @@ namespace ME.BECS {
         private ReadWriteSpinner readWriteSpinner;
         private readonly uint dataSize;
         private MemArray<Page> dataPages;
-        #if ENABLE_BECS_FLAT_QUIERIES
+        #if ENABLE_BECS_FLAT_QUERIES
         internal BitArray bits;
         #endif
 
@@ -124,7 +124,7 @@ namespace ME.BECS {
             this.dataSize = dataSize;
             this.dataPages = new MemArray<Page>(ref state.ptr->allocator, pages);
             this.readWriteSpinner = ReadWriteSpinner.Create(state);
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             this.bits = new BitArray(ref state.ptr->allocator, pages * ENTITIES_PER_PAGE, ClearOptions.ClearMemory, true);
             #endif
             MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
@@ -149,7 +149,7 @@ namespace ME.BECS {
             if (newSize > this.dataPages.Length) {
                 this.readWriteSpinner.WriteBegin(state);
                 if (newSize > this.dataPages.Length) {
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     this.bits.Resize(ref state.ptr->allocator, newSize * ENTITIES_PER_PAGE, growFactor: 2);
                     #endif
                     this.dataPages.Resize(ref state.ptr->allocator, newSize, 2);
@@ -163,7 +163,7 @@ namespace ME.BECS {
             this.Resize(state, entityId + 1u);
         }
 
-        #if ENABLE_BECS_FLAT_QUIERIES
+        #if ENABLE_BECS_FLAT_QUERIES
         [INLINE(256)]
         public void CleanUpEntity(safe_ptr<State> state, uint entityId, uint typeId) {
             this.readWriteSpinner.ReadBegin(state);
@@ -183,14 +183,14 @@ namespace ME.BECS {
                 page.Lock();
                 if (value == true && *val.ptr == 1) {
                     // if we want to enable component and it was disabled
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     this.bits.SetThreaded(state.ptr->allocator, entityId, true);
                     #endif
                     changed = true;
                     *val.ptr = 0;
                 } else if (value == false && *val.ptr == 0) {
                     // if we want to disable component and it was enabled
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     this.bits.SetThreaded(state.ptr->allocator, entityId, false);
                     #endif
                     changed = true;
@@ -354,7 +354,7 @@ namespace ME.BECS {
             return gen == entityGen && disableState == 0;
         }
 
-        #if ENABLE_BECS_FLAT_QUIERIES
+        #if ENABLE_BECS_FLAT_QUERIES
         [INLINE(256)]
         public void SetBit(safe_ptr<State> state, uint entityId, bool value, uint typeId) {
             var pageIndex = _pageIndex(entityId);

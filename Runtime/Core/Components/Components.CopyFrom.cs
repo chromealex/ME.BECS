@@ -8,7 +8,7 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public static void CopyFrom(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) {
 
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             ref var list = ref sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
             list.lockSpinner.Lock();
             var e = list.entities.GetEnumerator(sourceState);
@@ -21,7 +21,7 @@ namespace ME.BECS {
                 var typeId = e.Current;
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
             }
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             list.lockSpinner.Unlock();
             #endif
             
@@ -31,7 +31,7 @@ namespace ME.BECS {
         public static void CopyFrom<TIgnore0>(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) where TIgnore0 : unmanaged, IComponent {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             ref var list = ref sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
             list.lockSpinner.Lock();
             var e = list.entities.GetEnumerator(sourceState);
@@ -45,7 +45,7 @@ namespace ME.BECS {
                 if (ignore0 == typeId) continue;
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
             }
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             list.lockSpinner.Unlock();
             #endif
             
@@ -56,7 +56,7 @@ namespace ME.BECS {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
             var ignore1 = StaticTypes<TIgnore1>.typeId;
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             ref var list = ref sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
             list.lockSpinner.Lock();
             var e = list.entities.GetEnumerator(sourceState);
@@ -70,7 +70,7 @@ namespace ME.BECS {
                 if (ignore0 == typeId || ignore1 == typeId) continue;
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
             }
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             list.lockSpinner.Unlock();
             #endif
             

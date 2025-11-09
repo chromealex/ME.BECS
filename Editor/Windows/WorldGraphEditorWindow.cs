@@ -7,7 +7,7 @@ namespace ME.BECS.Editor {
 
     using scg = System.Collections.Generic;
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     public static class Arrange {
         
         private static bool TestNodes(scg::List<GNode> nodes) {
@@ -847,7 +847,7 @@ namespace ME.BECS.Editor {
                     this.CreateGUI();
                 }
 
-                #if ENABLE_BECS_FLAT_QUIERIES
+                #if ENABLE_BECS_FLAT_QUERIES
                 if (this.world.isCreated == true) {
                     if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
                     if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
@@ -904,14 +904,14 @@ namespace ME.BECS.Editor {
         }
 
         private Rect prevRect;
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         private float zoom = 1f;
         private GGraph graph;
         #endif
         private Label filteredEntitiesCount;
         private Label filteredArchetypesCount;
         private Label entitiesCount;
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         private Label archetypesCount;
         #endif
         private Label memoryUsed;
@@ -924,7 +924,7 @@ namespace ME.BECS.Editor {
             if (world.isCreated == false) return;
             
             this.entitiesCount.text = world.state.ptr->entities.EntitiesCount.ToString();
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             this.archetypesCount.text = world.state.ptr->archetypes.Count.ToString();
             #endif
             var usedBytes = world.state.ptr->allocator.GetUsedSize();
@@ -932,7 +932,7 @@ namespace ME.BECS.Editor {
             var reservedBytes = world.state.ptr->allocator.GetReservedSize();
             this.memoryReserved.text = EditorUtils.BytesToString(reservedBytes);
         
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             if (this.graph.lastQueryStopwatch != null) this.stopwatchValue.text = (this.graph.lastQueryStopwatch.ElapsedTicks / 10_000d).ToString("0.00") + "ms";
             
             if (this.graph.IsAnyHighlighted() == true) {
@@ -1005,7 +1005,7 @@ namespace ME.BECS.Editor {
                 //this.rootVisualElement.Add(container);
                 this.newRootContainer = EditorUIUtils.AddWindowContent(this.rootVisualElement, container);
                 this.rootContainer = container;
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 var world = this.world;
                 var graph = this.CreateGraph();
                 graph.RegisterOnSelectArchetypeCallback(this.OnSelectArchetype);
@@ -1142,7 +1142,7 @@ namespace ME.BECS.Editor {
             
             this.allocatorWindow = null;
             this.world = world;
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             this.currentNode = null;
             #endif
             this.CreateGUI();
@@ -1206,7 +1206,7 @@ namespace ME.BECS.Editor {
 
         private VisualElement prevArchetype;
         private VisualElement entitiesList;
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         private GNode currentNode;
         private void OnSelectArchetype(GNode node) {
 
@@ -1230,7 +1230,7 @@ namespace ME.BECS.Editor {
         private scg::List<uint> tempEntitiesList = new scg::List<uint>();
         private string searchStr;
         private string[] searchItems = System.Array.Empty<string>();
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         private void RedrawArchetype(GNode node) {
 
             var world = this.world;
@@ -1642,7 +1642,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         public void UpdateGraph(GGraph graph) {
 
             if (this.world.isCreated == true) {

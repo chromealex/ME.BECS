@@ -646,7 +646,7 @@ namespace ME.BECS.Editor {
                 var changed = true;
                 var state = this.value.World.state;
                 if (force == false) {
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     var componentsCount = state.ptr->entities.entityToComponents[state, this.value.id].entities.Count;
                     #else
                     var componentsCount = state.ptr->archetypes.list[state, state.ptr->archetypes.entToArchetypeIdx[state, this.value.id]].componentsCount;
@@ -928,7 +928,7 @@ namespace ME.BECS.Editor {
             if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) {
                 
             } else {
-                #if ENABLE_BECS_FLAT_QUIERIES
+                #if ENABLE_BECS_FLAT_QUERIES
                 var bits = new TempBitArray(this.selectedWorld.state.ptr->entities.aliveBits.Length, allocator: Constants.ALLOCATOR_TEMP);
                 bits.Union(in this.selectedWorld.state.ptr->allocator, in this.selectedWorld.state.ptr->entities.aliveBits);
                 var trueBits = bits.GetTrueBitsTemp();
@@ -985,7 +985,7 @@ namespace ME.BECS.Editor {
                         }
 
                         this.allEntities.Add(ent);
-                    #if !ENABLE_BECS_FLAT_QUIERIES
+                    #if !ENABLE_BECS_FLAT_QUERIES
                     }
                     #endif
                 }

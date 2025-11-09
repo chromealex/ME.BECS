@@ -74,7 +74,7 @@ namespace ME.BECS {
 
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesCount = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99000);
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> componentsSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99001);
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> batchesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99002);
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> archetypesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99003);
         #endif
@@ -96,7 +96,7 @@ namespace ME.BECS {
             var categoryAllocator = new ProfilerCategory(categoryAllocatorCaption);
             entitiesCount.Data = new("Entities Count", category, ProfilerMarkerDataUnit.Count);
             componentsSize.Data = new ("Components Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             batchesSize.Data = new ("Batches Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
             archetypesSize.Data = new ("Archetypes Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
             #endif
@@ -138,7 +138,7 @@ namespace ME.BECS {
             using (new ProfilerMarker("Components").Auto()) {
                 ProfilerCountersDefinition.componentsSize.Data.Sample(Components.GetReservedSizeInBytes(world.state));
             }
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             using (new ProfilerMarker("Archetypes").Auto()) {
                 ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state.ptr->archetypes.GetReservedSizeInBytes(world.state));
             }

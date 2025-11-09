@@ -363,7 +363,7 @@ namespace ME.BECS.Editor.Systems {
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }
-                            #if ENABLE_BECS_FLAT_QUIERIES
+                            #if ENABLE_BECS_FLAT_QUERIES
                             var tag = "[   SET   ]";
                             #else
                             var tag = "[  SYNC   ]";

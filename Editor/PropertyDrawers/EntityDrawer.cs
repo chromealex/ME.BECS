@@ -11,7 +11,49 @@ namespace ME.BECS.Editor {
     [CustomPropertyDrawer(typeof(Ent))]
     public unsafe class EntityDrawer : PropertyDrawer {
 
-        public static Dictionary<ulong, TempObject> tempObjects = new Dictionary<ulong, TempObject>();
+        private struct MethodsCache {
+
+            private static readonly System.Reflection.MethodInfo methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
+            private static readonly System.Reflection.MethodInfo methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
+            
+            private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> read = new Dictionary<System.Type, System.Reflection.MethodInfo>();
+            private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> has = new Dictionary<System.Type, System.Reflection.MethodInfo>();
+
+            private object[] entParams;
+            
+            public object Read(System.Type type) {
+
+                if (read.TryGetValue(type, out var methodInfo) == true) {
+                    return methodInfo.Invoke(null, this.entParams);
+                } else {
+                    methodInfo = methodRead.MakeGenericMethod(type);
+                    read.Add(type, methodInfo);
+                    return methodInfo.Invoke(null, this.entParams);
+                }
+
+            }
+
+            public bool Has(System.Type type) {
+                
+                if (has.TryGetValue(type, out var methodInfo) == true) {
+                    return (bool)methodInfo.Invoke(null, this.entParams);
+                } else {
+                    methodInfo = methodHas.MakeGenericMethod(type);
+                    has.Add(type, methodInfo);
+                    return (bool)methodInfo.Invoke(null, this.entParams);
+                }
+
+            }
+
+            public void SetEntity(Ent ent) {
+                if (this.entParams == null) this.entParams = new object[1] { null };
+                this.entParams[0] = ent;
+            }
+
+        }
+
+        private static readonly Dictionary<ulong, TempObject> tempObjects = new Dictionary<ulong, TempObject>();
+        private MethodsCache cache = new MethodsCache();
         
         private static StyleSheet styleSheetBase;
         private static StyleSheet styleSheet;
@@ -43,7 +85,6 @@ namespace ME.BECS.Editor {
 
         ~EntityDrawer() {
 
-            this.Dispose();
             this.propertyPath = null;
             this.property = null;
             this.propertySerializedObject = null;
@@ -82,27 +123,20 @@ namespace ME.BECS.Editor {
                 
             }
 
-            EditorApplication.update -= this.OnUpdate;
             EditorApplication.update += this.OnUpdate;
 
             return this.rootVisualElement;
 
         }
-
-        public void Dispose() {
-            
-            EditorApplication.update -= this.OnUpdate;
-            
-        }
-
+        
         private bool prevState;
         private SerializedProperty property;
         private string propertyPath;
         private SerializedObject propertySerializedObject;
         public void OnUpdate() {
 
+            EditorApplication.update -= this.OnUpdate;
             if (PropertyEditorUtils.IsValid(this.property) == false) {
-                EditorApplication.update -= this.OnUpdate;
                 return;
             }
 
@@ -116,7 +150,7 @@ namespace ME.BECS.Editor {
             }
             var newState = this.GetState(world);
             if (this.prevState != newState
-                #if !ENABLE_BECS_FLAT_QUIERIES 
+                #if !ENABLE_BECS_FLAT_QUERIES 
                 || (newState == true && this.archId != this.GetArchId())
                 #endif
                 ) {
@@ -124,6 +158,8 @@ namespace ME.BECS.Editor {
             } else if (newState == true) {
                 this.UpdateData();
             }
+            
+            EditorApplication.update += this.OnUpdate;
             
         }
 
@@ -142,7 +178,7 @@ namespace ME.BECS.Editor {
 
         private Label versionLabel;
 
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         private uint GetArchId() {
             var world = this.entity.World;
             return world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
@@ -328,7 +364,7 @@ namespace ME.BECS.Editor {
                 this.prevState = true;
                 root.RemoveFromClassList("entity-not-alive");
         
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 {
                     var archContainer = new VisualElement();
                     archContainer.AddToClassList("entity-arch-container");
@@ -446,7 +482,8 @@ namespace ME.BECS.Editor {
             DrawFields(this.entity, this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.tempObject.dataSharedHas, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
             
         }
-        
+
+        private static bool fetchDataState;
         private void FetchDataFromEntity(World world) {
 
             this.version = this.entity.Version;
@@ -456,23 +493,23 @@ namespace ME.BECS.Editor {
                 this.serializedObj = new SerializedObject(this.tempObject);
             }
 
+            fetchDataState = true;
             this.FetchComponentsFromEntity(world);
             this.FetchSharedComponentsFromEntity(world);
-            
+            EditorApplication.delayCall += () => { fetchDataState = false; };
+
         }
         
         private void FetchComponentsFromEntity(World world) {
             
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             var archId = world.state.ptr->archetypes.entToArchetypeIdx[world.state.ptr->allocator, this.entity.id];
             var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
             #endif
             
-            var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
-            var methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
             var cnt = 0;
             {
-                #if ENABLE_BECS_FLAT_QUIERIES
+                #if ENABLE_BECS_FLAT_QUERIES
                 ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
                 item.lockSpinner.Lock();
                 var components = item.entities;
@@ -484,17 +521,19 @@ namespace ME.BECS.Editor {
                     var cId = e.Current;
                     if (StaticTypesLoadedManaged.loadedTypes.ContainsKey(cId) == true) ++cnt;
                 }
-                #if ENABLE_BECS_FLAT_QUIERIES
+                #if ENABLE_BECS_FLAT_QUERIES
                 item.lockSpinner.Unlock();
                 #endif
             }
+
+            this.cache.SetEntity(this.entity);
 
             if (this.tempObject.data != null &&
                 this.tempObject.data.Length == cnt) {
                 
                 {
                     var i = 0;
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
                     item.lockSpinner.Lock();
                     var components = item.entities;
@@ -506,16 +545,13 @@ namespace ME.BECS.Editor {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
                             {
-                                var gMethod = methodRead.MakeGenericMethod(type);
-                                var gMethodHas = methodHas.MakeGenericMethod(type);
-                                var val = gMethod.Invoke(null, new object[] { this.entity });
-                                this.tempObject.data[i] = val;
-                                this.tempObject.dataHas[i] = (bool)gMethodHas.Invoke(null, new object[] { this.entity });
+                                this.tempObject.data[i] = this.cache.Read(type);
+                                this.tempObject.dataHas[i] = this.cache.Has(type);
                             }
                             ++i;
                         }
                     }
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     item.lockSpinner.Unlock();
                     #endif
                 }
@@ -525,7 +561,7 @@ namespace ME.BECS.Editor {
                 this.tempObject.dataHas = new bool[cnt];
                 {
                     var i = 0;
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
                     item.lockSpinner.Lock();
                     var components = item.entities;
@@ -537,16 +573,13 @@ namespace ME.BECS.Editor {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
                             {
-                                var gMethod = methodRead.MakeGenericMethod(type);
-                                var gMethodHas = methodHas.MakeGenericMethod(type);
-                                var val = gMethod.Invoke(null, new object[] { this.entity });
-                                this.tempObject.data[i] = val;
-                                this.tempObject.dataHas[i] = (bool)gMethodHas.Invoke(null, new object[] { this.entity });
+                                this.tempObject.data[i] = this.cache.Read(type);
+                                this.tempObject.dataHas[i] = this.cache.Has(type);
                             }
                             ++i;
                         }
                     }
-                    #if ENABLE_BECS_FLAT_QUIERIES
+                    #if ENABLE_BECS_FLAT_QUERIES
                     item.lockSpinner.Unlock();
                     #endif
                 }
@@ -640,6 +673,7 @@ namespace ME.BECS.Editor {
                                 child.userData = propertyField.userData;
                                 child.RegisterValueChangeCallback((evt) => {
 
+                                    if (fetchDataState == true) return;
                                     if (evt.target == null) return;
                                     if (world.isCreated == false || entity.IsAlive() == false) return;
                                     var userData = ((PropertyField)evt.target).userData;
