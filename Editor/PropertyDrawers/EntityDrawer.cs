@@ -446,7 +446,8 @@ namespace ME.BECS.Editor {
             DrawFields(this.entity, this.componentContainerSharedComponentsRoot, this.componentContainerSharedComponents, this.cachedFieldsSharedComponents, world, this.tempObject.dataShared, this.tempObject.dataSharedHas, this.serializedObj, nameof(TempObject.dataShared), methodSetSharedComponent, methodReadSharedComponent);
             
         }
-        
+
+        private static bool fetchDataState;
         private void FetchDataFromEntity(World world) {
 
             this.version = this.entity.Version;
@@ -456,8 +457,10 @@ namespace ME.BECS.Editor {
                 this.serializedObj = new SerializedObject(this.tempObject);
             }
 
+            fetchDataState = true;
             this.FetchComponentsFromEntity(world);
             this.FetchSharedComponentsFromEntity(world);
+            fetchDataState = false;
             
         }
         
@@ -640,6 +643,7 @@ namespace ME.BECS.Editor {
                                 child.userData = propertyField.userData;
                                 child.RegisterValueChangeCallback((evt) => {
 
+                                    if (fetchDataState == true) return;
                                     if (evt.target == null) return;
                                     if (world.isCreated == false || entity.IsAlive() == false) return;
                                     var userData = ((PropertyField)evt.target).userData;
