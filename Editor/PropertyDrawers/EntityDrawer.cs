@@ -502,8 +502,8 @@ namespace ME.BECS.Editor {
             fetchDataState = true;
             this.FetchComponentsFromEntity(world);
             this.FetchSharedComponentsFromEntity(world);
-            fetchDataState = false;
-            
+            EditorApplication.delayCall += () => { fetchDataState = false; };
+
         }
         
         private void FetchComponentsFromEntity(World world) {
@@ -513,8 +513,6 @@ namespace ME.BECS.Editor {
             var arch = world.state.ptr->archetypes.list[world.state.ptr->allocator, archId];
             #endif
             
-            var methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
-            var methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
             var cnt = 0;
             {
                 #if ENABLE_BECS_FLAT_QUIERIES
