@@ -200,7 +200,27 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>> registry = Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>>.GetOrCreate<StaticTypesDestroyRegistry>();
 
     }
-    
+
+    [IgnoreProfiler]
+    public struct StaticTypesAutoDestroy<T> {
+
+        public static readonly Unity.Burst.SharedStatic<bool> registry = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesAutoDestroy<T>>();
+
+    }
+
+    [IgnoreProfiler]
+    public struct StaticTypesAutoDestroy {
+
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<bbool>> registry = Unity.Burst.SharedStatic<Internal.Array<bbool>>.GetOrCreate<StaticTypesAutoDestroy>();
+
+        [INLINE(256)]
+        public static bool Is(uint typeId) {
+            if (typeId >= registry.Data.Length) return false;
+            return registry.Data.Get(typeId);
+        }
+
+    }
+
     [IgnoreProfiler]
     public struct StaticTypesDestroy<T> where T : unmanaged, IComponentDestroy {
 
@@ -210,6 +230,9 @@ namespace ME.BECS {
             var typeId = StaticTypes<T>.typeId;
             StaticTypesDestroyRegistry.registry.Data.Resize(typeId + 1);
             StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer<AutoDestroyRegistry.DestroyDelegate>(AutoDestroyRegistryStatic<T>.Destroy).Value;
+            StaticTypesAutoDestroy<T>.registry.Data = true;
+            StaticTypesAutoDestroy.registry.Data.Resize(typeId + 1);
+            StaticTypesAutoDestroy.registry.Data.Get(typeId) = true;
 
         }
 
