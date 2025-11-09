@@ -11,7 +11,49 @@ namespace ME.BECS.Editor {
     [CustomPropertyDrawer(typeof(Ent))]
     public unsafe class EntityDrawer : PropertyDrawer {
 
-        public static Dictionary<ulong, TempObject> tempObjects = new Dictionary<ulong, TempObject>();
+        private struct MethodsCache {
+
+            private static readonly System.Reflection.MethodInfo methodRead = typeof(Components).GetMethod(nameof(Components.ReadDirect));
+            private static readonly System.Reflection.MethodInfo methodHas = typeof(Components).GetMethod(nameof(Components.HasDirectEnabled));
+            
+            private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> read = new Dictionary<System.Type, System.Reflection.MethodInfo>();
+            private static readonly Dictionary<System.Type, System.Reflection.MethodInfo> has = new Dictionary<System.Type, System.Reflection.MethodInfo>();
+
+            private object[] entParams;
+            
+            public object Read(System.Type type) {
+
+                if (read.TryGetValue(type, out var methodInfo) == true) {
+                    return methodInfo.Invoke(null, this.entParams);
+                } else {
+                    methodInfo = methodRead.MakeGenericMethod(type);
+                    read.Add(type, methodInfo);
+                    return methodInfo.Invoke(null, this.entParams);
+                }
+
+            }
+
+            public bool Has(System.Type type) {
+                
+                if (has.TryGetValue(type, out var methodInfo) == true) {
+                    return (bool)methodInfo.Invoke(null, this.entParams);
+                } else {
+                    methodInfo = methodHas.MakeGenericMethod(type);
+                    has.Add(type, methodInfo);
+                    return (bool)methodInfo.Invoke(null, this.entParams);
+                }
+
+            }
+
+            public void SetEntity(Ent ent) {
+                if (this.entParams == null) this.entParams = new object[1] { null };
+                this.entParams[0] = ent;
+            }
+
+        }
+
+        private static readonly Dictionary<ulong, TempObject> tempObjects = new Dictionary<ulong, TempObject>();
+        private MethodsCache cache = new MethodsCache();
         
         private static StyleSheet styleSheetBase;
         private static StyleSheet styleSheet;
@@ -492,6 +534,8 @@ namespace ME.BECS.Editor {
                 #endif
             }
 
+            this.cache.SetEntity(this.entity);
+
             if (this.tempObject.data != null &&
                 this.tempObject.data.Length == cnt) {
                 
@@ -509,11 +553,8 @@ namespace ME.BECS.Editor {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
                             {
-                                var gMethod = methodRead.MakeGenericMethod(type);
-                                var gMethodHas = methodHas.MakeGenericMethod(type);
-                                var val = gMethod.Invoke(null, new object[] { this.entity });
-                                this.tempObject.data[i] = val;
-                                this.tempObject.dataHas[i] = (bool)gMethodHas.Invoke(null, new object[] { this.entity });
+                                this.tempObject.data[i] = this.cache.Read(type);
+                                this.tempObject.dataHas[i] = this.cache.Has(type);
                             }
                             ++i;
                         }
@@ -540,11 +581,8 @@ namespace ME.BECS.Editor {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
                             {
-                                var gMethod = methodRead.MakeGenericMethod(type);
-                                var gMethodHas = methodHas.MakeGenericMethod(type);
-                                var val = gMethod.Invoke(null, new object[] { this.entity });
-                                this.tempObject.data[i] = val;
-                                this.tempObject.dataHas[i] = (bool)gMethodHas.Invoke(null, new object[] { this.entity });
+                                this.tempObject.data[i] = this.cache.Read(type);
+                                this.tempObject.dataHas[i] = this.cache.Has(type);
                             }
                             ++i;
                         }
