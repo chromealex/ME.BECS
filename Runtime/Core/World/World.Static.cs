@@ -550,7 +550,7 @@ namespace ME.BECS {
             WorldsPersistentAllocator.Initialize(worldId);
             
             WorldAspectStorage.AddWorld(in world);
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             WorldBatches.AddWorld(in world);
             #endif
             
@@ -566,7 +566,7 @@ namespace ME.BECS {
             worldsStorage.Get(world.id).Dispose();
             worldsStorage.Get(world.id) = default;
             
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             WorldBatches.DisposeWorld(in world);
             #endif
             WorldAspectStorage.DisposeWorld(in world);

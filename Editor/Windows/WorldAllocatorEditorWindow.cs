@@ -173,7 +173,7 @@ namespace ME.BECS.Editor {
             this.reservedSize.text = EditorUtils.BytesToString(reservedSize);
             this.usedSize.text = EditorUtils.BytesToString(usedSize);
             this.componentsSize.text = EditorUtils.BytesToString((int)Components.GetReservedSizeInBytes(this.world.state));
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             this.archetypesSize.text = EditorUtils.BytesToString((int)this.world.state.ptr->archetypes.GetReservedSizeInBytes(this.world.state));
             this.batchesSize.text = EditorUtils.BytesToString((int)Batches.GetReservedSizeInBytes(this.world.id));
             #endif
@@ -194,7 +194,7 @@ namespace ME.BECS.Editor {
         private Label reservedSize;
         private Label usedSize;
         private Label componentsSize;
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         private Label archetypesSize;
         private Label batchesSize;
         #endif
@@ -210,7 +210,7 @@ namespace ME.BECS.Editor {
             this.reservedSize = this.AddCounter(container, "Reserved Size");
             this.usedSize = this.AddCounter(container, "Used Size");
             this.componentsSize = this.AddCounter(container, "Components Size", className: "small-counter");
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             this.archetypesSize = this.AddCounter(container, "Archetypes Size", className: "small-counter");
             this.batchesSize = this.AddCounter(container, "Batches Size", className: "small-counter", true);
             #endif

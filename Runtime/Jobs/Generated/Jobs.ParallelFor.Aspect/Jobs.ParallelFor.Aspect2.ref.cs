@@ -22,7 +22,7 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         public static JobHandle Schedule<T, T0,T1>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobParallelForAspects<T0,T1> where T0 : unmanaged, IAspect where T1 : unmanaged, IAspect {
             return staticQuery.Schedule<T, T0,T1>(in job, in context.world, context.dependsOn);
         }

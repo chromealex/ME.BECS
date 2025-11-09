@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace ME.BECS.Tests {
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     public unsafe class Tests_Batches {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]

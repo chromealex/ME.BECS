@@ -91,7 +91,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 if (this.queryData.ptr->archetypesBits.IsCreated == false) this.queryData.ptr->archetypesBits = new TempBitArray(in this.state.ptr->allocator, this.state.ptr->archetypes.allArchetypesForQuery, this.allocator);
                 
                 if (this.query.with.Length > 0) {
@@ -212,7 +212,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 var temp = new TempBitArray(this.state.ptr->archetypes.archetypesWithTypeIdBits.Length, allocator: Constants.ALLOCATOR_TEMP);
                 if (this.typeId1 > 0u && this.typeId1 < this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) {
                     var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId1];
@@ -276,7 +276,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 ref var arch = ref this.state.ptr->archetypes;
                 if (this.typeId >= arch.archetypesWithTypeIdBits.Length) {
                     this.queryData.ptr->archetypesBits.Clear();
@@ -305,7 +305,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 for (int i = 0; i < this.typeIdArr.Length; ++i) {
 
                     var typeId = this.typeIdArr.Get(i);
@@ -338,7 +338,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 for (int i = 0; i < this.typeIdArr.Length; ++i) {
 
                     var typeId = this.typeIdArr.Get(i);
@@ -369,7 +369,7 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Execute() {
                 
-                #if !ENABLE_BECS_FLAT_QUIERIES
+                #if !ENABLE_BECS_FLAT_QUERIES
                 if (this.typeId >= this.state.ptr->archetypes.archetypesWithTypeIdBits.Length) return;
 
                 var list = this.state.ptr->archetypes.archetypesWithTypeIdBits[this.state, this.typeId];

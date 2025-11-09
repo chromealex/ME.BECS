@@ -7,7 +7,7 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Jobs;
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     public unsafe struct QueryBuilderDisposable {
 
         [BURST]

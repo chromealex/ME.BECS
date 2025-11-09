@@ -32,7 +32,7 @@ namespace ME.BECS {
 
     }
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     [IgnoreProfiler]
     public struct BatchList {
 
@@ -165,7 +165,7 @@ namespace ME.BECS {
     [BURST]
     public unsafe partial struct Batches {
 
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         [StructLayout(LayoutKind.Sequential)]
         public struct ThreadItem {
 
@@ -353,7 +353,7 @@ namespace ME.BECS {
         [BURST]
         [INLINE(256)]
         public static void Apply(ushort worldId, in safe_ptr<State> state) {
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             new ApplyJob() {
                 worldId = worldId,
                 state = state,
@@ -369,7 +369,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, ushort worldId, safe_ptr<State> state) {
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             var handle1 = new ApplyJob() { 
                 state = state,
                 worldId = worldId,
@@ -384,7 +384,7 @@ namespace ME.BECS {
             var handle3 = new ApplyDestroyedJob() { 
                 state = state,
             }.ScheduleSingle(jobHandle);
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             var handle = JobHandle.CombineDependencies(handle2, handle3);
             #else
             var handle = JobHandle.CombineDependencies(handle1, handle2, handle3);
@@ -395,7 +395,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, in World world) {
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             var state = world.state;
             state.ptr->lastApplyHandle = JobHandle.CombineDependencies(state.ptr->lastApplyHandle, jobHandle);
             return jobHandle;
@@ -406,7 +406,7 @@ namespace ME.BECS {
 
     }
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     public struct WorldBatches {
 
         public static readonly Unity.Burst.SharedStatic<Internal.Array<Batches>> storage = Unity.Burst.SharedStatic<Internal.Array<Batches>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldBatches>(TAlign<Internal.Array<Batches>>.align, 110L);
@@ -435,7 +435,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void OnEntityAdd(ushort worldId, uint entId, byte growFactor = 2) {
 
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             ref var batches = ref WorldBatches.storage.Data.Get(worldId);
             if (entId >= batches.arr.Length) {
                 batches.lockReadWrite.WriteBegin();
@@ -458,7 +458,7 @@ namespace ME.BECS {
             
             if (ent.IsAlive() == false) return;
 
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             {
                 var state = ent.World.state;
                 state.ptr->entities.OnAddComponent(state, ent.id, typeId);
@@ -498,7 +498,7 @@ namespace ME.BECS {
             
             if (ent.IsAlive() == false) return;
             
-            #if ENABLE_BECS_FLAT_QUIERIES
+            #if ENABLE_BECS_FLAT_QUERIES
             {
                 var state = ent.World.state;
                 state.ptr->entities.OnRemoveComponent(state, ent.id, typeId);

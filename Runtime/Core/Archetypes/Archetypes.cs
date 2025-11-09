@@ -18,7 +18,7 @@ namespace ME.BECS {
     using CND = System.Diagnostics.ConditionalAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
-    #if !ENABLE_BECS_FLAT_QUIERIES
+    #if !ENABLE_BECS_FLAT_QUERIES
     [IgnoreProfiler]
     public readonly ref struct ComponentsFastTrack {
 

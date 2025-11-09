@@ -14,7 +14,7 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         public static JobHandle Schedule<T>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobForComponents {
             return staticQuery.Schedule<T>(in job, in context.world, context.dependsOn);
         }

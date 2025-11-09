@@ -356,7 +356,7 @@ namespace ME.BECS.Tests {
                 ME.BECS.Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
             #endif
 
@@ -384,7 +384,7 @@ namespace ME.BECS.Tests {
                 ME.BECS.Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
-            #if !ENABLE_BECS_FLAT_QUIERIES
+            #if !ENABLE_BECS_FLAT_QUERIES
             Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
             #endif
             
