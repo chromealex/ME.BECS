@@ -85,7 +85,6 @@ namespace ME.BECS.Editor {
 
         ~EntityDrawer() {
 
-            this.Dispose();
             this.propertyPath = null;
             this.property = null;
             this.propertySerializedObject = null;
@@ -124,16 +123,13 @@ namespace ME.BECS.Editor {
                 
             }
 
-            EditorApplication.update -= this.OnUpdate;
-            EditorApplication.update += this.OnUpdate;
-
             return this.rootVisualElement;
 
         }
-
-        public void Dispose() {
+        
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
             
-            EditorApplication.update -= this.OnUpdate;
+            this.OnUpdate();
             
         }
 
@@ -144,7 +140,6 @@ namespace ME.BECS.Editor {
         public void OnUpdate() {
 
             if (PropertyEditorUtils.IsValid(this.property) == false) {
-                EditorApplication.update -= this.OnUpdate;
                 return;
             }
 
