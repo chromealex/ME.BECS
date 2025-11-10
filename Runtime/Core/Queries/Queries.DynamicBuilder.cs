@@ -572,8 +572,8 @@ namespace ME.BECS {
                     allocator = allocator,
                 };
             } else {
-                array.dependsOn = this.builderDependsOn;
                 array.Clear();
+                array.dependsOn = this.builderDependsOn;
             }
 
             array.dependsOn = new OnDemandJob() {
