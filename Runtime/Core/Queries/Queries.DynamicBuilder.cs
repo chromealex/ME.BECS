@@ -33,6 +33,69 @@ namespace ME.BECS {
 
     }
 
+    public unsafe struct OnDemandArray : IIsCreated {
+
+        internal struct Data {
+
+            public Unity.Collections.NativeList<Ent> results;
+
+        }
+            
+        internal JobHandle dependsOn;
+        internal safe_ptr<Data> data;
+        internal Allocator allocator;
+
+        public int Length {
+            [INLINE(256)]
+            get {
+                E.IS_CREATED(this);
+                this.dependsOn.Complete();
+                return this.data.ptr->results.Length;
+            }
+        }
+
+        public bool IsCreated => this.allocator != Allocator.Invalid;
+
+        [INLINE(256)]
+        public NativeArray<Ent> GetResults() {
+            E.IS_CREATED(this);
+            this.dependsOn.Complete();
+            return this.data.ptr->results.AsArray();
+        }
+
+        public Ent this[int index] {
+            [INLINE(256)]
+            get {
+                E.IS_CREATED(this);
+                this.dependsOn.Complete();
+                return this.data.ptr->results[index];
+            }
+        }
+
+        public NativeArray<Ent>.Enumerator GetEnumerator() {
+            E.IS_CREATED(this);
+            this.dependsOn.Complete();
+            return this.data.ptr->results.GetEnumerator();
+        }
+
+        [INLINE(256)]
+        public void Dispose() {
+            if (this.allocator == Allocator.Invalid) return;
+            this.dependsOn.Complete();
+            this.data.ptr->results.Dispose();
+            _free(this.data, this.allocator);
+            this = default;
+        }
+
+        [INLINE(256)]
+        public void Clear() {
+            E.IS_CREATED(this);
+            this.dependsOn.Complete();
+            this.data.ptr->results.Clear();
+        }
+
+    }
+
     [BURST]
     public unsafe ref struct QueryBuilder {
         
@@ -448,7 +511,79 @@ namespace ME.BECS {
             return result;
 
         }
+
+        [BURST]
+        public struct OnDemandJob : IJob {
+
+            public OnDemandArray handle;
+            public safe_ptr<CommandBuffer> commandBuffer;
+            
+            public void Execute() {
+                
+                var cnt = (int)this.commandBuffer.ptr->count;
+                for (int i = 0; i < cnt; ++i) {
+                    var entId = this.commandBuffer.ptr->entities[i];
+                    this.handle.data.ptr->results.Add(new Ent(entId, in Worlds.GetWorld(this.commandBuffer.ptr->worldId)));
+                }
+                
+            }
+
+        }
         
+        /// <summary>
+        /// Schedule query and returns its handle
+        /// When you need to get results - call handle.GetResults()
+        /// To dispose results use handle.Dispose()
+        /// </summary>
+        /// <returns>OnDemandHandle</returns>
+        public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+            
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
+            var handle = new OnDemandArray() {
+                dependsOn = this.builderDependsOn,
+                data = _makeDefault(new OnDemandArray.Data() {
+                    results = new Unity.Collections.NativeList<Ent>(allocator),
+                }, allocator),
+                allocator = allocator,
+            };
+            handle.dependsOn = new OnDemandJob() {
+                handle = handle,
+                commandBuffer = this.commandBuffer,
+            }.Schedule(handle.dependsOn);
+            return handle;
+            
+        }
+
+        /// <summary>
+        /// Schedule query and returns its handle
+        /// When you need to get results - call handle.GetResults()
+        /// To dispose results use handle.Dispose()
+        /// </summary>
+        /// <returns>OnDemandHandle</returns>
+        public OnDemandArray ToArrayOnDemand(ref OnDemandArray array, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+            
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
+            if (array.IsCreated == false) {
+                array = new OnDemandArray() {
+                    dependsOn = this.builderDependsOn,
+                    data = _makeDefault(new OnDemandArray.Data() {
+                        results = new Unity.Collections.NativeList<Ent>(allocator),
+                    }, allocator),
+                    allocator = allocator,
+                };
+            } else {
+                array.dependsOn = this.builderDependsOn;
+                array.Clear();
+            }
+
+            array.dependsOn = new OnDemandJob() {
+                handle = array,
+                commandBuffer = this.commandBuffer,
+            }.Schedule(array.dependsOn);
+            return array;
+            
+        }
+
         /// <summary>
         /// [ QUERY END POINT ]
         /// </summary>
