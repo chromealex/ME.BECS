@@ -1,3 +1,4 @@
+#pragma warning disable CS0618
 using NUnit.Framework;
 using Unity.Jobs;
 using ME.BECS.Jobs;
@@ -842,7 +843,7 @@ namespace ME.BECS.Tests {
 
                 var arr = API.Query(world, Batches.Apply(default, world))
                                 .With<TestComponent>()
-                                .ParallelFor(300)
+                                .AsParallel(300)
                                 .ToArray();
                 foreach (var item in arr) result.Add(item);
 
@@ -899,7 +900,7 @@ namespace ME.BECS.Tests {
                             .WithAny<TestComponent, Test2Component>()
                             .WithAspect<TestAspect>()
                             .Step(10, 2)
-                            .ParallelFor(64)
+                            .AsParallel(64)
                             .ForEach((in CommandBufferJob commandBuffer) => { ++count; });
 
             handle = API.Query(world, handle)
@@ -908,7 +909,7 @@ namespace ME.BECS.Tests {
                .With<TestComponent>()
                .Without<Test3Component>()
                .WithAspect<TestAspect>()
-               .ParallelFor(64)
+               .AsParallel(64)
                .ForEach((in CommandBufferJob commandBuffer) => {
                    
                });

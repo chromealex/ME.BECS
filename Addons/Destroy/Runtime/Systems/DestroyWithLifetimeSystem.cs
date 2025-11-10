@@ -51,10 +51,10 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
             
-            var childHandle = context.Query().AsParallel().Schedule<LifetimeJob, DestroyWithLifetime>(new LifetimeJob() {
+            var childHandle = context.Query().AsParallel(4).Schedule<LifetimeJob, DestroyWithLifetime>(new LifetimeJob() {
                 deltaTime = context.deltaTime,
             });
-            var childHandleMs = context.Query().AsParallel().Schedule<LifetimeMsJob, DestroyWithLifetimeMs>(new LifetimeMsJob() {
+            var childHandleMs = context.Query().AsParallel(4).Schedule<LifetimeMsJob, DestroyWithLifetimeMs>(new LifetimeMsJob() {
                 deltaTimeMs = context.deltaTimeMs,
             });
             context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(childHandleMs, childHandle));

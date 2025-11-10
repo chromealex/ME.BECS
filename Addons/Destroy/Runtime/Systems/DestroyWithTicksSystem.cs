@@ -24,7 +24,7 @@ namespace ME.BECS {
 
         public void OnUpdate(ref SystemContext context) {
             
-            var childHandle = context.Query().AsParallel().Schedule<Job, DestroyWithTicks>();
+            var childHandle = context.Query().AsParallel(4).Schedule<Job, DestroyWithTicks>();
             context.SetDependency(childHandle);
             
         }

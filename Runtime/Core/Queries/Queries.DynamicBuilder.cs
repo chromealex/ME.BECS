@@ -142,17 +142,19 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public QueryBuilder AsParallel() {
+        public QueryBuilder AsParallel(uint batch = 0u) {
             E.IS_CREATED(this);
+            this.parallelForBatch = batch;
             this.scheduleMode = ScheduleMode.Parallel;
             return this;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][System.Obsolete("ParallelFor is obsolete, use AsParallel(batch) instead.")]
         public QueryBuilder ParallelFor(uint batch) {
             E.IS_CREATED(this);
             E.QUERY_BUILDER_AS_JOB(this.asJob);
             this.parallelForBatch = batch;
+            this.scheduleMode = ScheduleMode.Parallel;
             return this;
         }
 
