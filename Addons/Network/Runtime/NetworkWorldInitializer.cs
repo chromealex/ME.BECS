@@ -145,7 +145,6 @@ namespace ME.BECS.Network {
         }
 
         public void RedrawVisual() {
-            this.previousFrameDependsOn = this.world.RaiseEvents(this.previousFrameDependsOn);
             // Update visual - once per frame
             this.previousFrameDependsOn = this.OnUpdate(this.previousFrameDependsOn);
             for (var i = 0; i < this.modules.list.Length; ++i) {
