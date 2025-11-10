@@ -33,14 +33,54 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct OnDemandArray : IIsCreated {
+    public unsafe struct OnDemandCount : IIsCreated {
 
+        internal struct Data {
+
+            public int results;
+
+        }
+
+        internal JobHandle dependsOn;
+        internal safe_ptr<Data> data;
+        internal Allocator allocator;
+
+        public int Length {
+            [INLINE(256)]
+            get {
+                E.IS_CREATED(this);
+                this.dependsOn.Complete();
+                return this.data.ptr->results;
+            }
+        }
+
+        public bool IsCreated => this.allocator != Allocator.Invalid;
+
+        [INLINE(256)]
+        public void Dispose() {
+            if (this.allocator == Allocator.Invalid) return;
+            this.dependsOn.Complete();
+            _free(this.data, this.allocator);
+            this = default;
+        }
+
+        [INLINE(256)]
+        public void Clear() {
+            E.IS_CREATED(this);
+            this.dependsOn.Complete();
+            this.data.ptr->results = 0;
+        }
+
+    }
+
+    public unsafe struct OnDemandArray : IIsCreated {
+        
         internal struct Data {
 
             public Unity.Collections.NativeList<Ent> results;
 
         }
-            
+        
         internal JobHandle dependsOn;
         internal safe_ptr<Data> data;
         internal Allocator allocator;
@@ -497,6 +537,7 @@ namespace ME.BECS {
         /// [ QUERY END POINT ]
         /// </summary>
         /// <returns></returns>
+        [System.Obsolete("Use ToArrayOnDemand() instead.")]
         public Unity.Collections.NativeArray<Ent> ToArray(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
@@ -529,28 +570,43 @@ namespace ME.BECS {
             }
 
         }
-        
+
+        [BURST]
+        public struct OnDemandCountJob : IJob {
+
+            public OnDemandCount handle;
+            public safe_ptr<CommandBuffer> commandBuffer;
+            
+            public void Execute() {
+                
+                this.handle.data.ptr->results = (int)this.commandBuffer.ptr->count;
+                
+            }
+
+        }
+
         /// <summary>
         /// Schedule query and returns its handle
         /// When you need to get results - call handle.GetResults()
         /// To dispose results use handle.Dispose()
         /// </summary>
-        /// <returns>OnDemandHandle</returns>
+        /// <returns>OnDemandArray</returns>
         public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
-            var handle = new OnDemandArray() {
+            var array = new OnDemandArray() {
                 dependsOn = this.builderDependsOn,
                 data = _makeDefault(new OnDemandArray.Data() {
                     results = new Unity.Collections.NativeList<Ent>(allocator),
                 }, allocator),
                 allocator = allocator,
             };
-            handle.dependsOn = new OnDemandJob() {
-                handle = handle,
+            array.dependsOn = new OnDemandJob() {
+                handle = array,
                 commandBuffer = this.commandBuffer,
-            }.Schedule(handle.dependsOn);
-            return handle;
+            }.Schedule(array.dependsOn);
+            array.dependsOn = this.Dispose(array.dependsOn);
+            return array;
             
         }
 
@@ -559,7 +615,7 @@ namespace ME.BECS {
         /// When you need to get results - call handle.GetResults()
         /// To dispose results use handle.Dispose()
         /// </summary>
-        /// <returns>OnDemandHandle</returns>
+        /// <returns>OnDemandArray</returns>
         public OnDemandArray ToArrayOnDemand(ref OnDemandArray array, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
@@ -580,14 +636,41 @@ namespace ME.BECS {
                 handle = array,
                 commandBuffer = this.commandBuffer,
             }.Schedule(array.dependsOn);
+            array.dependsOn = this.Dispose(array.dependsOn);
             return array;
             
         }
 
         /// <summary>
+        /// Schedule query and returns its handle
+        /// call handle.Length to get results length
+        /// To dispose results use handle.Dispose()
+        /// </summary>
+        /// <returns>OnDemandCount</returns>
+        public OnDemandCount CountOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+            
+            this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
+            var array = new OnDemandCount() {
+                dependsOn = this.builderDependsOn,
+                data = _makeDefault(new OnDemandCount.Data() {
+                    results = 0,
+                }, allocator),
+                allocator = allocator,
+            };
+            array.dependsOn = new OnDemandCountJob() {
+                handle = array,
+                commandBuffer = this.commandBuffer,
+            }.Schedule(array.dependsOn);
+            array.dependsOn = this.Dispose(array.dependsOn);
+            return array;
+            
+        }
+        
+        /// <summary>
         /// [ QUERY END POINT ]
         /// </summary>
         /// <returns></returns>
+        [System.Obsolete("Use CountOnDemand() instead.")]
         public uint Count() {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, false, this.builderDependsOn);
@@ -596,10 +679,12 @@ namespace ME.BECS {
             return (uint)cnt;
 
         }
+        
         /// <summary>
         /// [ QUERY END POINT ]
         /// </summary>
         /// <returns></returns>
+        [System.Obsolete("Use ToArrayOnDemand() instead.")]
         public Enumerator GetEnumerator() {
 
             Enumerator e = default;
