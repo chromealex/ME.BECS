@@ -292,14 +292,20 @@ namespace ME.BECS.Views {
                 marker.Begin();
                 // Update positions
                 if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
-                    dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
+                    var results = new Unity.Collections.NativeArray<Jobs.InterpolationTempData>(this.renderingOnSceneTransforms.length, Constants.ALLOCATOR_TEMPJOB);
+                    dependsOn = new Jobs.JobUpdateTransformsInterpolationPrepare() {
                         renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
                         beginFrameState = data.ptr->beginFrameState.ptr->state,
                         currentTick = data.ptr->connectedWorld.CurrentTick,
                         tickTime = data.ptr->beginFrameState.ptr->tickTime,
                         currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
                         useUnityHierarchy = data.ptr->properties.useUnityHierarchy,
+                        results = results,
+                    }.Schedule(results.Length, 32, dependsOn);
+                    dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
+                        results = results,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);
+                    dependsOn = results.Dispose(dependsOn);
                 } else {
                     dependsOn = new Jobs.JobUpdateTransforms() {
                         renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,

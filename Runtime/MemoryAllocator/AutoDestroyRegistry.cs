@@ -13,8 +13,12 @@ namespace ME.BECS {
         [AOT.MonoPInvokeCallback(typeof(AutoDestroyRegistry.DestroyDelegate))]
         public static void Destroy(in Ent ent, byte* comp) {
 
-            _ref((T*)comp).Destroy(in ent);
-            
+            if (comp == null) {
+                default(T).Destroy(in ent);
+            } else {
+                _ref((T*)comp).Destroy(in ent);
+            }
+
         }
 
     }
@@ -62,7 +66,13 @@ namespace ME.BECS {
                 if (list.IsCreated == true) {
                     for (uint i = 0; i < list.Count; ++i) {
                         var typeId = list[in state.ptr->allocator, i];
-                        var comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out var exists);
+                        byte* comp = null;
+                        var exists = true;
+                        if (StaticTypes.sizes.Get(typeId) > 0) {
+                            comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);;
+                        } else {
+                            exists = Components.HasUnknownType(state, typeId, ent.id, ent.gen, false);
+                        }
                         if (exists == true) {
                             // component exists - call destroy method
                             var func = new Unity.Burst.FunctionPointer<DestroyDelegate>(StaticTypesDestroyRegistry.registry.Data.Get(typeId));
@@ -78,6 +88,37 @@ namespace ME.BECS {
             
         }
         
+        [INLINE(256)]
+        public static void Destroy(safe_ptr<State> state, in Ent ent, uint typeId) {
+
+            byte* comp = null;
+            var exists = true;
+            if (StaticTypes.sizes.Get(typeId) > 0) {
+                comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);;
+            } else {
+                exists = Components.HasUnknownType(state, typeId, ent.id, ent.gen, false);
+            }
+            if (exists == true) {
+                // component exists - call destroy method
+                var func = new Unity.Burst.FunctionPointer<DestroyDelegate>(StaticTypesDestroyRegistry.registry.Data.Get(typeId));
+                func.Invoke(ent, comp);
+                
+                // clean up list
+                state.ptr->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
+                ref var list = ref state.ptr->autoDestroyRegistry.list[in state.ptr->allocator, ent.id];
+                if (list.IsCreated == true) {
+                    ref var entitySpinner = ref state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
+                    entitySpinner.Lock();
+                    if (list.IsCreated == true) {
+                        list.Remove(ref state.ptr->allocator, ent.id);
+                    }
+                    entitySpinner.Unlock();
+                }
+                state.ptr->autoDestroyRegistry.readWriteSpinner.ReadEnd(state);
+            }
+            
+        }
+
         [INLINE(256)]
         public static void Add(safe_ptr<State> state, in Ent ent, uint typeId) {
             

@@ -162,18 +162,42 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST]
-        public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
+        public struct InterpolationTempData {
 
+            public UnityEngine.Vector3 position;
+            public UnityEngine.Quaternion rotation;
+            public UnityEngine.Vector3 localScale;
+            public bbool isLocal;
+
+            public void SetLocalPositionAndRotation(UnityEngine.Vector3 pos, UnityEngine.Quaternion rot) {
+                this.isLocal = true;
+                this.position = pos;
+                this.rotation = rot;
+            }
+
+            public void SetPositionAndRotation(UnityEngine.Vector3 pos, UnityEngine.Quaternion rot) {
+                this.isLocal = false;
+                this.position = pos;
+                this.rotation = rot;
+            }
+
+        }
+
+        [BURST]
+        public struct JobUpdateTransformsInterpolationPrepare : IJobParallelFor {
+
+            [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
             public safe_ptr<State> beginFrameState;
             public ulong currentTick;
             public float tickTime;
             public double currentTimeSinceStart;
             public bbool useUnityHierarchy;
+            public NativeArray<InterpolationTempData> results;
 
-            public void Execute(int index, TransformAccess transform) {
+            public void Execute(int index) {
                 
+                ref var transform = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafePtr(), index);
                 var entityData = this.renderingOnSceneEnts[index];
                 var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 
@@ -239,6 +263,27 @@ namespace ME.BECS.Views {
                     }
 
                 }
+                
+            }
+
+        }
+
+        [BURST]
+        public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
+
+            [ReadOnly]
+            public NativeArray<InterpolationTempData> results;
+
+            public void Execute(int index, TransformAccess transform) {
+                
+                ref var trData = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafeReadOnlyPtr(), index);
+
+                if (trData.isLocal == true) {
+                    transform.SetLocalPositionAndRotation(trData.position, trData.rotation);
+                } else {
+                    transform.SetPositionAndRotation(trData.position, trData.rotation);
+                }
+                transform.localScale = trData.localScale;
                 
             }
 

@@ -56,8 +56,12 @@ namespace ME.BECS {
             
             E.IS_IN_TICK(state);
             
+            var typeId = StaticTypes<T>.typeId;
+            if (StaticTypesAutoDestroy.Is(typeId) == true) {
+                AutoDestroyRegistry.Destroy(state, in ent, typeId);
+                AutoDestroyRegistry.Add(state, in ent, typeId);
+            }
             if (Components.Set(state, in ent, in data) == true) {
-                var typeId = StaticTypes<T>.typeId;
                 Batches.Set_INTERNAL(typeId, in ent);
                 return true;
             }
@@ -72,6 +76,10 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             var groupId = StaticTypes.tracker.IsCreated == true ? StaticTypes.tracker.Get(typeId) : default;
+            if (StaticTypesAutoDestroy.Is(typeId) == true) {
+                AutoDestroyRegistry.Destroy(state, in ent, typeId);
+                AutoDestroyRegistry.Add(state, in ent, typeId);
+            }
             if (Components.SetUnknownType(state, typeId, groupId, in ent, data) == true) {
                 Batches.Set_INTERNAL(typeId, in ent);
                 return true;
@@ -86,8 +94,9 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
+            var typeId = StaticTypes<T>.typeId;
+            if (StaticTypesAutoDestroy<T>.registry.Data == true) AutoDestroyRegistry.Destroy(state, in ent, typeId);
             if (Components.Remove<T>(state, in ent) == true) {
-                var typeId = StaticTypes<T>.typeId;
                 Batches.Remove_INTERNAL(typeId, in ent);
                 return true;
             }
@@ -102,6 +111,7 @@ namespace ME.BECS {
             E.IS_IN_TICK(state);
             
             var groupId = StaticTypes.tracker.Get(typeId);
+            if (StaticTypesAutoDestroy.Is(typeId) == true) AutoDestroyRegistry.Destroy(state, in ent, typeId);
             if (Components.Remove(state, in ent, typeId, groupId) == true) {
                 Batches.Remove_INTERNAL(typeId, in ent);
                 return true;
