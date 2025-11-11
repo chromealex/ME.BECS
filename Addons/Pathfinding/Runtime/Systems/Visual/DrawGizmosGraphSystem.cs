@@ -60,7 +60,7 @@ namespace ME.BECS.Pathfinding {
 
             if (this.drawPath == true) {
                 
-                var arr = API.Query(in logicWorld, context.dependsOn).With<ME.BECS.Units.CommandGroupComponent>().ToArray();
+                var arr = API.Query(in logicWorld, context.dependsOn).With<ME.BECS.Units.CommandGroupComponent>().ToArrayOnDemand();
                 foreach (var group in arr) {
 
                     var groupAspect = group.GetAspect<ME.BECS.Units.UnitCommandGroupAspect>();
@@ -101,6 +101,7 @@ namespace ME.BECS.Pathfinding {
                     }
 
                 }
+                arr.Dispose();
 
             }
 
