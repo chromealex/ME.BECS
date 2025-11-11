@@ -81,10 +81,32 @@ namespace ME.BECS {
 
         }
         
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS
+        internal AtomicSafetyHandle m_Safety;
+        internal static readonly Unity.Burst.SharedStatic<int> s_staticSafetyId = Unity.Burst.SharedStatic<int>.GetOrCreate<OnDemandArray>();
+        #endif
+        
         internal JobHandle dependsOn;
         internal safe_ptr<Data> data;
         internal Allocator allocator;
 
+        public OnDemandArray(JobHandle dependsOn, AllocatorManager.AllocatorHandle allocator) {
+            
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            this.m_Safety = CollectionHelper.CreateSafetyHandle(allocator.Handle);
+            if (UnsafeUtility.IsNativeContainerType<Ent>()) AtomicSafetyHandle.SetNestedContainer(this.m_Safety, true);
+            CollectionHelper.SetStaticSafetyId<OnDemandArray>(ref this.m_Safety, ref s_staticSafetyId.Data);
+            AtomicSafetyHandle.SetBumpSecondaryVersionOnScheduleWrite(this.m_Safety, true);
+            #endif
+
+            this.dependsOn = dependsOn;
+            this.data = _makeDefault(new OnDemandArray.Data() {
+                results = new UnsafeList<Ent>(4, allocator),
+            }, allocator.ToAllocator);
+            this.allocator = allocator.ToAllocator;
+
+        }
+        
         public int Length {
             [INLINE(256)]
             get {
@@ -100,7 +122,16 @@ namespace ME.BECS {
         public NativeArray<Ent> GetResults() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
-            return NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Ent>(this.data.ptr->results.Ptr, this.data.ptr->results.Length, Allocator.None);
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckGetSecondaryDataPointerAndThrow(this.m_Safety);
+            var arraySafety = this.m_Safety;
+            AtomicSafetyHandle.UseSecondaryVersion(ref arraySafety);
+            #endif
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Ent>(this.data.ptr->results.Ptr, this.data.ptr->results.Length, Allocator.None);
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, arraySafety);
+            #endif
+            return array;
         }
 
         public Ent this[int index] {
@@ -594,13 +625,7 @@ namespace ME.BECS {
         public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
-            var array = new OnDemandArray() {
-                dependsOn = this.builderDependsOn,
-                data = _makeDefault(new OnDemandArray.Data() {
-                    results = new UnsafeList<Ent>(4, allocator),
-                }, allocator),
-                allocator = allocator,
-            };
+            var array = new OnDemandArray(this.builderDependsOn, allocator);
             array.dependsOn = new OnDemandJob() {
                 handle = array,
                 commandBuffer = this.commandBuffer,
@@ -620,13 +645,7 @@ namespace ME.BECS {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             if (array.IsCreated == false) {
-                array = new OnDemandArray() {
-                    dependsOn = this.builderDependsOn,
-                    data = _makeDefault(new OnDemandArray.Data() {
-                        results = new UnsafeList<Ent>(4, allocator),
-                    }, allocator),
-                    allocator = allocator,
-                };
+                array = new OnDemandArray(this.builderDependsOn, this.allocator);
             } else {
                 array.Clear();
                 array.dependsOn = this.builderDependsOn;
