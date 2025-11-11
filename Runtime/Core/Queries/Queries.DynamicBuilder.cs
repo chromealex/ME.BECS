@@ -77,7 +77,7 @@ namespace ME.BECS {
         
         internal struct Data {
 
-            public Unity.Collections.NativeList<Ent> results;
+            public UnsafeList<Ent> results;
 
         }
         
@@ -100,7 +100,7 @@ namespace ME.BECS {
         public NativeArray<Ent> GetResults() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
-            return this.data.ptr->results.AsArray();
+            return NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Ent>(this.data.ptr->results.Ptr, this.data.ptr->results.Length, Allocator.None);
         }
 
         public Ent this[int index] {
@@ -112,7 +112,7 @@ namespace ME.BECS {
             }
         }
 
-        public NativeArray<Ent>.Enumerator GetEnumerator() {
+        public UnsafeList<Ent>.Enumerator GetEnumerator() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
             return this.data.ptr->results.GetEnumerator();
@@ -597,7 +597,7 @@ namespace ME.BECS {
             var array = new OnDemandArray() {
                 dependsOn = this.builderDependsOn,
                 data = _makeDefault(new OnDemandArray.Data() {
-                    results = new Unity.Collections.NativeList<Ent>(allocator),
+                    results = new UnsafeList<Ent>(4, allocator),
                 }, allocator),
                 allocator = allocator,
             };
@@ -623,7 +623,7 @@ namespace ME.BECS {
                 array = new OnDemandArray() {
                     dependsOn = this.builderDependsOn,
                     data = _makeDefault(new OnDemandArray.Data() {
-                        results = new Unity.Collections.NativeList<Ent>(allocator),
+                        results = new UnsafeList<Ent>(4, allocator),
                     }, allocator),
                     allocator = allocator,
                 };
