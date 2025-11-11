@@ -34,8 +34,9 @@ namespace ME.BECS.Editor.Aspects {
                             contentItem.Add("/*{");
                             contentItem.Add($"var source = ({strType}*)componentPtr;");
                             contentItem.Add($"ref var target = ref ent.Get<{strType}>();");
+                            var typeStr = EditorUtils.FormatGenericTypeWithSingleArgument(fieldType, gType);
                             contentItem.Add(
-                                $"target.{field.Name} = new {EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>(in ent, in source->{field.Name});");
+                                $"target.{field.Name} = new {typeStr}(in ent, in source->{field.Name});");
                             var cloneMethod = gType.GetMethod("CopyFrom");
                             if (cloneMethod != null && cloneMethod.GetParameters().Length == 2) {
                                 var p = cloneMethod.GetParameters();
