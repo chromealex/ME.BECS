@@ -144,14 +144,18 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
             if (this.nodeTarget is ME.BECS.FeaturesGraph.Nodes.SystemNode node && node.system != null) {
                 var type = System.Type.GetType("ME.BECS.Editor.StaticMethods, ME.BECS.Gen.Editor");
                 if (type != null) {
+                    var systemType = node.system.GetType();
+                    if (systemType.IsGenericType == true) {
+                        systemType = systemType.GetGenericTypeDefinition();
+                    }
                     {
                         var errors = (System.Collections.Generic.List<ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>)type
-                            .GetMethod("GetSystemDependenciesErrors").Invoke(null, new object[] { node.system.GetType() });
+                            .GetMethod("GetSystemDependenciesErrors").Invoke(null, new object[] { systemType });
                         if (errors.Count > 0) {
                             var container = new VisualElement();
                             container.AddToClassList("errors");
                             foreach (var err in errors) {
-                                var lbl = new Label("<color=red>\u26A0</color> " + err.message);
+                                var lbl = new Label($"<color=red>\u26a0</color> {err.message}");
                                 container.Add(lbl);
                             }
 
@@ -160,10 +164,10 @@ namespace ME.BECS.Editor.FeaturesGraph.Nodes {
                     }
 
                     var list = (System.Collections.Generic.List<ComponentDependencyGraphInfo>)type.GetMethod("GetSystemComponentsDependencies")
-                                                                                                  .Invoke(null, new object[] { node.system.GetType() });
+                                                                                                  .Invoke(null, new object[] { systemType });
                     var requiredContainer = new Foldout();
-                    requiredContainer.value = UnityEditor.EditorPrefs.GetBool($"Foldouts.graphs.{node.system.GetType().FullName}");
-                    requiredContainer.RegisterValueChangedCallback(evt => { UnityEditor.EditorPrefs.SetBool($"Foldouts.graphs.{node.system.GetType().FullName}", evt.newValue); });
+                    requiredContainer.value = UnityEditor.EditorPrefs.GetBool($"Foldouts.graphs.{systemType.FullName}");
+                    requiredContainer.RegisterValueChangedCallback(evt => { UnityEditor.EditorPrefs.SetBool($"Foldouts.graphs.{systemType.FullName}", evt.newValue); });
                     requiredContainer.AddToClassList("required-dependencies");
                     this.container.Add(requiredContainer);
                     var ro = 0;

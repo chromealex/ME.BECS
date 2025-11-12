@@ -73,8 +73,8 @@ namespace ME.BECS.Editor.Systems {
                         content.Add($"// system: {system.FullName}");
                         content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
                         content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
-                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system)}), list);");
-                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system)}), errors);");
+                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system, showGenericType: false)}), list);");
+                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system, showGenericType: false)}), errors);");
 
                         {
                             var method = system.GetMethod("OnUpdate");
