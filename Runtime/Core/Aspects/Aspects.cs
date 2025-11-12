@@ -137,6 +137,17 @@ namespace ME.BECS {
             return ref this.data.Read(entId, gen);
         }
 
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckReadAndThrow(this.m_Safety);
+            if (entId < this.m_MinIndex || entId > this.m_MaxIndex) this.ThrowMinMax(entId);
+            #endif
+            return this.data.ReadPtr(entId, gen);
+        }
+
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         [INLINE(256)]
         private readonly void ThrowMinMax(uint entId) {
@@ -197,6 +208,17 @@ namespace ME.BECS {
             if (entId < this.m_MinIndex || entId > this.m_MaxIndex) this.ThrowMinMax(entId);
             #endif
             return ref this.data.Read(entId, gen);
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            //AtomicSafetyHandle.CheckReadAndThrow(this.m_Safety);
+            if (entId < this.m_MinIndex || entId > this.m_MaxIndex) this.ThrowMinMax(entId);
+            #endif
+            return this.data.ReadPtr(entId, gen);
         }
 
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
@@ -273,6 +295,18 @@ namespace ME.BECS {
             return ref res;
         }
 
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            var typeId = StaticTypes<T>.typeId;
+            E.IS_NOT_TAG(typeId);
+            var res = (T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
+            if (exists == false) return null;
+            return res;
+        }
+
     }
 
     [IgnoreProfiler]
@@ -301,7 +335,19 @@ namespace ME.BECS {
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
         }
-        
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            var typeId = StaticTypes<T>.typeId;
+            E.IS_NOT_TAG(typeId);
+            var res = (T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
+            if (exists == false) return null;
+            return res;
+        }
+
     }
 
     [IgnoreProfiler]

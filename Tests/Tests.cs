@@ -37,6 +37,7 @@ namespace ME.BECS.Tests {
         public ref Test3Component data3 => ref this.dataPtr3.Get(this.ent.id, this.ent.gen);
         public ref Test4Component data4 => ref this.dataPtr4.Get(this.ent.id, this.ent.gen);
         public ref Test5Component data5 => ref this.dataPtr5.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly TestComponent dataRead => ref this.dataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref readonly Test5Component data5read => ref this.dataPtr5.Read(this.ent.id, this.ent.gen);
 
         public static void TestInitialize(in World world) {
