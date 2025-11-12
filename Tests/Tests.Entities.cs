@@ -381,7 +381,7 @@ namespace ME.BECS.Tests {
 
             {
                 CreateHugeAmountBurstMethod(ref world, amount);
-                ME.BECS.Batches.Apply(world);
+                Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
             #if !ENABLE_BECS_FLAT_QUERIES
@@ -395,6 +395,7 @@ namespace ME.BECS.Tests {
                 job = ME.BECS.Batches.Apply(job, in world);
                 JobUtils.RunScheduled();
                 job.Complete();
+                Batches.Apply(world);
             }
             Assert.AreEqual(0, world.state.ptr->entities.EntitiesCount);
             Assert.AreEqual(amount, world.state.ptr->entities.FreeCount);
