@@ -640,7 +640,7 @@ namespace ME.BECS {
         /// To dispose results use handle.Dispose()
         /// </summary>
         /// <returns>OnDemandArray</returns>
-        public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+        public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             var array = new OnDemandArray(this.builderDependsOn, allocator);
@@ -659,7 +659,7 @@ namespace ME.BECS {
         /// To dispose results use handle.Dispose()
         /// </summary>
         /// <returns>OnDemandArray</returns>
-        public OnDemandArray ToArrayOnDemand(ref OnDemandArray array, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+        public OnDemandArray ToArrayOnDemand(ref OnDemandArray array, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             if (array.IsCreated == false) {
@@ -684,7 +684,7 @@ namespace ME.BECS {
         /// To dispose results use handle.Dispose()
         /// </summary>
         /// <returns>OnDemandCount</returns>
-        public OnDemandCount CountOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+        public OnDemandCount CountOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             var array = new OnDemandCount() {
@@ -924,7 +924,7 @@ namespace ME.BECS {
                             var typeId = this.composeJob.query.with[i];
                             ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
                             ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                            var bits = storage.bits;
+                            var bits = storage.GetBits();
                             tempBits.Intersect(in this.state.ptr->allocator, in bits, allCount);
                         }
                     }
@@ -935,13 +935,13 @@ namespace ME.BECS {
                             if (typeIdPair.Key > 0u) {
                                 ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Key];
                                 ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.bits;
+                                var bits = storage.GetBits();
                                 temp.Union(in this.state.ptr->allocator, in bits);
                             }
                             if (typeIdPair.Value > 0u) {
                                 ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Value];
                                 ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.bits;
+                                var bits = storage.GetBits();
                                 temp.Union(in this.state.ptr->allocator, in bits);
                             }
                         }
@@ -951,7 +951,7 @@ namespace ME.BECS {
                         var typeId = this.composeJob.query.without[i];
                         ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
                         ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                        var bits = storage.bits;
+                        var bits = storage.GetBits();
                         tempBits.Remove(in this.state.ptr->allocator, bits);
                     }
                     marker.End();

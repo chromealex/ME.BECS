@@ -29,6 +29,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static void Copy(ref MemoryAllocator allocator, in BitArray fromArr, ref BitArray arr) {
+            NativeArrayUtils.Copy(ref allocator, fromArr, ref arr, fromArr.Length);
+        }
+
+        [INLINE(256)]
         public static void CopyExact<T>(ref MemoryAllocator allocator, in MemArray<T> fromArr, ref MemArray<T> arr) where T : unmanaged {
             NativeArrayUtils.Copy(ref allocator, fromArr, 0, ref arr, 0, fromArr.Length, true);
         }
@@ -36,6 +41,33 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void CopyExact<T>(in MemArrayAuto<T> fromArr, ref MemArrayAuto<T> arr) where T : unmanaged {
             NativeArrayUtils.Copy(fromArr, 0, ref arr, 0, fromArr.Length, true);
+        }
+
+        [INLINE(256)]
+        public static void Copy(ref MemoryAllocator allocator,
+                                   in BitArray fromArr,
+                                   ref BitArray arr,
+                                   uint length,
+                                   bool copyExact = false) {
+
+            switch (fromArr.IsCreated) {
+                case false when arr.IsCreated == false:
+                    return;
+                case false when arr.IsCreated == true:
+                    arr.Dispose(ref allocator);
+                    arr = default;
+                    return;
+            }
+
+            if (arr.IsCreated == false || (copyExact == false ? arr.Length < fromArr.Length : arr.Length != fromArr.Length)) {
+                if (arr.IsCreated == true) arr.Dispose(ref allocator);
+                arr = new BitArray(ref allocator, fromArr.Length);
+            }
+
+            var sizeInBytes = (uint)Bitwise.AlignUp((int)length, 64) / 8u;
+            allocator.MemMove(arr.ptr, 0, fromArr.ptr, 0, sizeInBytes);
+            Copy(ref allocator, fromArr.locks, ref arr.locks);
+
         }
 
         [INLINE(256)]
