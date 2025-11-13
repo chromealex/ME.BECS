@@ -922,9 +922,9 @@ namespace ME.BECS {
                     if (this.composeJob.query.with.Length > 0) {
                         for (int i = 0; i < this.composeJob.query.with.Length; ++i) {
                             var typeId = this.composeJob.query.with[i];
-                            ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
-                            ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                            var bits = storage.GetBits();
+                            var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
+                            var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                            var bits = storage.ptr->GetBits();
                             tempBits.Intersect(in this.state.ptr->allocator, in bits, allCount);
                         }
                     }
@@ -933,15 +933,15 @@ namespace ME.BECS {
                         for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
                             var typeIdPair = this.composeJob.query.withAny[i];
                             if (typeIdPair.Key > 0u) {
-                                ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Key];
-                                ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.GetBits();
+                                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeIdPair.Key);
+                                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                                var bits = storage.ptr->GetBits();
                                 temp.Union(in this.state.ptr->allocator, in bits);
                             }
                             if (typeIdPair.Value > 0u) {
-                                ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Value];
-                                ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.GetBits();
+                                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeIdPair.Value);
+                                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                                var bits = storage.ptr->GetBits();
                                 temp.Union(in this.state.ptr->allocator, in bits);
                             }
                         }
@@ -949,9 +949,9 @@ namespace ME.BECS {
                     }
                     for (int i = 0; i < this.composeJob.query.without.Length; ++i) {
                         var typeId = this.composeJob.query.without[i];
-                        ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
-                        ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                        var bits = storage.GetBits();
+                        var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
+                        var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                        var bits = storage.ptr->GetBits();
                         tempBits.Remove(in this.state.ptr->allocator, bits);
                     }
                     marker.End();

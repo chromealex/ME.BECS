@@ -79,9 +79,9 @@ namespace ME.BECS {
         [INLINE(256)]
         private static void CopyFrom_INTERNAL(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt, uint typeId) {
             var groupId = StaticTypes.tracker.Get(typeId);
-            ref var ptr = ref sourceState.ptr->components.items[in sourceState.ptr->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in sourceState.ptr->allocator);
-            var data = storage.Read(sourceState, ent.id, ent.gen, out _);
+            var ptr = sourceState.ptr->components.items.GetUnsafePtr(in sourceState.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in sourceState.ptr->allocator);
+            var data = storage.ptr->Read(sourceState, ent.id, ent.gen, out _);
             if (Components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data) == true) {
                 Batches.Set_INTERNAL(typeId, in targetEnt);
             }

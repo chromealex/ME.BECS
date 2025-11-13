@@ -269,6 +269,22 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public readonly safe_ptr<T> GetUnsafePtr(in MemoryAllocator allocator, uint index) {
+
+            E.IS_CREATED(this);
+            return (safe_ptr<T>)allocator.GetUnsafePtr(this.data.arrPtr) + index;
+
+        }
+
+        [INLINE(256)]
+        public readonly safe_ptr<T> GetUnsafePtr(safe_ptr<State> state, uint index) {
+
+            E.IS_CREATED(this);
+            return (safe_ptr<T>)state.ptr->allocator.GetUnsafePtr(this.data.arrPtr) + index;
+
+        }
+
+        [INLINE(256)]
         public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
 
             E.IS_CREATED(this);

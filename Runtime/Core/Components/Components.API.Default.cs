@@ -198,10 +198,10 @@ namespace ME.BECS {
             E.IS_VALID_TYPE_ID(typeId);
 
             var state = ent.World.state;
-            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
             fixed (T* dataPtr = &data) {
-                storage.Set(state, ent.id, ent.gen, dataPtr, out var changed);
+                storage.ptr->Set(state, ent.id, ent.gen, dataPtr, out var changed);
             }
 
         }
