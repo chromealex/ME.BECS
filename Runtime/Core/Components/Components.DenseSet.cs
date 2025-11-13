@@ -26,12 +26,13 @@ namespace ME.BECS {
         [StructLayout(LayoutKind.Sequential)]
         public struct Page {
 
+            public const int SIZE = MemPtr.SIZE + LockSpinner.SIZE + sizeof(byte);
+
             // [ushort-gen][byte-state][byte-align][data]
             public MemPtr entIdToData;
             public LockSpinner lockSpinner;
             public volatile byte isCreated;
-            public bool IsCreated => this.isCreated == 1;
-
+            
             [INLINE(256)]
             public void Lock() {
                 this.lockSpinner.Lock();
@@ -43,20 +44,20 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public static void Create(ref Page page, safe_ptr<State> state, uint dataSize, uint length) {
+            public static void Create(safe_ptr<Page> page, safe_ptr<State> state, uint dataSize, uint length) {
                 var blockSize = _blockSize(dataSize);
-                page = new Page() {
-                    lockSpinner = page.lockSpinner,
+                *page.ptr = new Page() {
+                    lockSpinner = page.ptr->lockSpinner,
                 };
-                page.entIdToData = state.ptr->allocator.AllocArray(length, blockSize);
-                state.ptr->allocator.MemClear(page.entIdToData, 0L, length * blockSize);
-                page.isCreated = 1;
+                page.ptr->entIdToData = state.ptr->allocator.AllocArray(length, blockSize);
+                state.ptr->allocator.MemClear(page.ptr->entIdToData, 0L, length * blockSize);
+                page.ptr->isCreated = 1;
             }
 
             public uint GetReservedSizeInBytes(uint dataSize, uint entitiesPerPage) {
-                if (this.IsCreated == false) return TSize<Page>.size;
+                if (this.isCreated == 0) return SIZE;
                 var blockSize = _blockSize(dataSize);
-                return blockSize * entitiesPerPage + TSize<Page>.size;
+                return blockSize * entitiesPerPage + SIZE;
             }
 
         }
@@ -89,7 +90,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         private static uint _headerSize() {
-            return TSize<ushort>.size + TSize<byte>.size + TSize<byte>.size;
+            return TSize_ushort.size + TSize_byte.size + TSize_byte.size;
         }
 
         [INLINE(256)]
@@ -99,7 +100,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         private static safe_ptr _offsetState(safe_ptr<byte> block) {
-            return block + TSize<ushort>.size;
+            return block + TSize_ushort.size;
         }
 
         [INLINE(256)]
@@ -108,9 +109,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private static safe_ptr _getBlock(safe_ptr<State> state, in Page page, uint entityId, uint dataSize) {
+        private static safe_ptr _getBlock(safe_ptr<State> state, safe_ptr<Page> page, uint entityId, uint dataSize) {
             var dataIndex = _dataIndex(entityId);
-            return state.ptr->allocator.GetUnsafePtr(in page.entIdToData, _blockSize(dataSize) * dataIndex);
+            return state.ptr->allocator.GetUnsafePtr(in page.ptr->entIdToData, _blockSize(dataSize) * dataIndex);
         }
 
         [INLINE(256)]
@@ -177,10 +178,10 @@ namespace ME.BECS {
             var changed = false;
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            ref var page = ref this.dataPages[state, pageIndex];
-            var val = _offsetState(_getBlock(state, in page, entityId, this.dataSize));
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
+            var val = _offsetState(_getBlock(state, page, entityId, this.dataSize));
             if ((value == true && *val.ptr == 1) || (value == false && *val.ptr == 0)) {
-                page.Lock();
+                page.ptr->Lock();
                 if (value == true && *val.ptr == 1) {
                     // if we want to enable component and it was disabled
                     #if ENABLE_BECS_FLAT_QUERIES
@@ -196,7 +197,7 @@ namespace ME.BECS {
                     changed = true;
                     *val.ptr = 1;
                 }
-                page.Unlock();
+                page.ptr->Unlock();
             }
             this.readWriteSpinner.ReadEnd(state);
             return changed;
@@ -206,8 +207,8 @@ namespace ME.BECS {
         public bool ReadState(safe_ptr<State> state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            ref var page = ref this.dataPages[state, pageIndex];
-            var val = _offsetState(_getBlock(state, in page, entityId, this.dataSize));
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
+            var val = _offsetState(_getBlock(state, page, entityId, this.dataSize));
             var res = *val.ptr == 0 ? true : false;
             this.readWriteSpinner.ReadEnd(state);
             return res;
@@ -219,17 +220,17 @@ namespace ME.BECS {
             var isNew = false;
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            ref var page = ref this.dataPages[state, pageIndex];
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
             { // create page if not exist
-                if (page.isCreated == 0) {
-                    page.Lock();
-                    if (page.isCreated == 0) {
-                        Page.Create(ref page, state, this.dataSize, ENTITIES_PER_PAGE);
+                if (page.ptr->isCreated == 0) {
+                    page.ptr->Lock();
+                    if (page.ptr->isCreated == 0) {
+                        Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
                     }
-                    page.Unlock();
+                    page.ptr->Unlock();
                 }
             }
-            var ptr = _getBlock(state, in page, entityId, this.dataSize);
+            var ptr = _getBlock(state, page, entityId, this.dataSize);
             if (this.dataSize > 0u) { // set data
                 if (data == null) {
                     changed = true;
@@ -242,13 +243,13 @@ namespace ME.BECS {
             { // update gen
                 var gen = _offsetGen(ptr);
                 if (*gen.ptr != entityGen) {
-                    page.Lock();
+                    page.ptr->Lock();
                     if (*gen.ptr != entityGen) {
                         *gen.ptr = entityGen;
                         changed = true;
                         isNew = true;
                     }
-                    page.Unlock();
+                    page.ptr->Unlock();
                 }
             }
             this.readWriteSpinner.ReadEnd(state);
@@ -258,35 +259,27 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public byte* Get(safe_ptr<State> state, uint entityId, ushort entityGen, bool isReadonly, out bool isNew, safe_ptr defaultValue) {
+        public byte* Get(safe_ptr<State> state, uint entityId, ushort entityGen, out bool isNew, safe_ptr defaultValue) {
             isNew = false;
             if (this.dataSize == 0u) return null;
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            ref var page = ref this.dataPages[state, pageIndex];
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
             { // create page if not exist
-                if (page.isCreated == 0) {
-                    if (isReadonly == true) {
-                        this.readWriteSpinner.ReadEnd(state);
-                        return null;
+                if (page.ptr->isCreated == 0) {
+                    page.ptr->Lock();
+                    if (page.ptr->isCreated == 0) {
+                        Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
                     }
-                    page.Lock();
-                    if (page.isCreated == 0) {
-                        Page.Create(ref page, state, this.dataSize, ENTITIES_PER_PAGE);
-                    }
-                    page.Unlock();
+                    page.ptr->Unlock();
                 }
             }
-            var ptr = _getBlock(state, in page, entityId, this.dataSize);
+            var ptr = _getBlock(state, page, entityId, this.dataSize);
             var dataPtr = _offsetData(ptr);
             { // update gen
                 var gen = _offsetGen(ptr);
                 if (*gen.ptr != entityGen) {
-                    if (isReadonly == true) {
-                        this.readWriteSpinner.ReadEnd(state);
-                        return null;
-                    }
-                    page.Lock();
+                    page.ptr->Lock();
                     if (*gen.ptr != entityGen) {
                         *gen.ptr = entityGen;
                         if (this.dataSize > 0u) {
@@ -298,7 +291,34 @@ namespace ME.BECS {
                         }
                         isNew = true;
                     }
-                    page.Unlock();
+                    page.ptr->Unlock();
+                }
+            }
+            this.readWriteSpinner.ReadEnd(state);
+
+            return dataPtr.ptr;
+        }
+
+        [INLINE(256)]
+        public byte* Read(safe_ptr<State> state, uint entityId, ushort entityGen, out bool isNew) {
+            isNew = false;
+            if (this.dataSize == 0u) return null;
+            var pageIndex = _pageIndex(entityId);
+            this.readWriteSpinner.ReadBegin(state);
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
+            { // create page if not exist
+                if (page.ptr->isCreated == 0) {
+                    this.readWriteSpinner.ReadEnd(state);
+                    return null;
+                }
+            }
+            var ptr = _getBlock(state, page, entityId, this.dataSize);
+            var dataPtr = _offsetData(ptr);
+            { // update gen
+                var gen = _offsetGen(ptr);
+                if (*gen.ptr != entityGen) {
+                    this.readWriteSpinner.ReadEnd(state);
+                    return null;
                 }
             }
             this.readWriteSpinner.ReadEnd(state);
@@ -310,23 +330,23 @@ namespace ME.BECS {
         public bool Remove(safe_ptr<State> state, uint entityId, ushort entityGen) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            ref var page = ref this.dataPages[state, pageIndex];
-            if (page.IsCreated == false) {
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
+            if (page.ptr->isCreated == 0) {
                 this.readWriteSpinner.ReadEnd(state);
                 return false;
             }
             
-            var ptr = _getBlock(state, in page, entityId, this.dataSize);
+            var ptr = _getBlock(state, page, entityId, this.dataSize);
             { // update gen
                 var gen = _offsetGen(ptr);
                 if (*gen.ptr == entityGen) {
                     var hasRemoved = false;
-                    page.Lock();
+                    page.ptr->Lock();
                     if (*gen.ptr == entityGen) {
                         *gen.ptr = 0;
                         hasRemoved = true;
                     }
-                    page.Unlock();
+                    page.ptr->Unlock();
                     this.readWriteSpinner.ReadEnd(state);
                     return hasRemoved;
                 }
@@ -342,12 +362,12 @@ namespace ME.BECS {
                 return false;
             }
             this.readWriteSpinner.ReadBegin(state);
-            var page = this.dataPages[state, pageIndex];
-            if (page.IsCreated == false) {
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
+            if (page.ptr->isCreated == 0) {
                 this.readWriteSpinner.ReadEnd(state);
                 return false;
             }
-            var ptr = _getBlock(state, in page, entityId, this.dataSize);
+            var ptr = _getBlock(state, page, entityId, this.dataSize);
             var gen = *_offsetGen(ptr).ptr;
             var disableState = checkEnabled == true ? *_offsetState(ptr).ptr : (byte)0;
             this.readWriteSpinner.ReadEnd(state);
@@ -359,10 +379,10 @@ namespace ME.BECS {
         public void SetBit(safe_ptr<State> state, uint entityId, bool value, uint typeId) {
             var pageIndex = _pageIndex(entityId);
             this.readWriteSpinner.ReadBegin(state);
-            ref var page = ref this.dataPages[state, pageIndex];
-            page.Lock();
+            var page = (safe_ptr<Page>)this.dataPages.GetUnsafePtr(in state.ptr->allocator) + pageIndex;
+            page.ptr->Lock();
             this.bits.SetThreaded(state.ptr->allocator, entityId, value);
-            page.Unlock();
+            page.ptr->Unlock();
             this.readWriteSpinner.ReadEnd(state);
         }
         #endif

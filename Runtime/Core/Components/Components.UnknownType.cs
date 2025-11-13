@@ -96,7 +96,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, false, out isNew, defaultValue);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, out isNew, defaultValue);
             Ents.UpVersion(state, in ent, groupId);
             return data;
 
@@ -134,7 +134,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, entId, gen, true, out _, default);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Read(state, entId, gen, out _);
             exists = data != null;
             return data;
 

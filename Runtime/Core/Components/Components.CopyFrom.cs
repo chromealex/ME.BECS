@@ -81,7 +81,7 @@ namespace ME.BECS {
             var groupId = StaticTypes.tracker.Get(typeId);
             ref var ptr = ref sourceState.ptr->components.items[in sourceState.ptr->allocator, typeId];
             ref var storage = ref ptr.As<DataDenseSet>(in sourceState.ptr->allocator);
-            var data = storage.Get(sourceState, ent.id, ent.gen, true, out _, default);
+            var data = storage.Read(sourceState, ent.id, ent.gen, out _);
             if (Components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data) == true) {
                 Batches.Set_INTERNAL(typeId, in targetEnt);
             }

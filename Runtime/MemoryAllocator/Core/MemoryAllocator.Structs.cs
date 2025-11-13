@@ -12,11 +12,20 @@
 
     }
 
+    public struct TSize_byte { public const uint size = sizeof(byte); }
+    public struct TSize_sbyte { public const uint size = sizeof(sbyte); }
+    public struct TSize_ushort { public const uint size = sizeof(ushort); }
+    public struct TSize_short { public const uint size = sizeof(short); }
+    public struct TSize_int { public const uint size = sizeof(int); }
+    public struct TSize_uint { public const uint size = sizeof(uint); }
+    public struct TSize_long { public const uint size = sizeof(long); }
+    public struct TSize_ulong { public const uint size = sizeof(ulong); }
+
     public struct TSize<T> where T : struct {
 
         public static readonly uint size = (uint)_sizeOf<T>();
         public static readonly int sizeInt = _sizeOf<T>();
-
+        
     }
 
     public struct TAlign<T> where T : struct {
