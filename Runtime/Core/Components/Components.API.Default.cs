@@ -83,7 +83,7 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             var data = Components.ReadUnknownType(state, typeId, entId, gen, out exists);
-            if (exists == false) return default;
+            if (exists == false) return (T*)StaticTypes<T>.defaultValuePtr.ptr;
             return (T*)data;
 
         }
@@ -93,7 +93,7 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             var data = Components.ReadUnknownType(state, typeId, entId, gen, out var exists);
-            if (exists == false) return default;
+            if (exists == false) return (T*)StaticTypes<T>.defaultValuePtr.ptr;
             return (T*)data;
 
         }
