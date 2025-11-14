@@ -80,6 +80,14 @@ namespace ME.BECS.Editor.Systems {
                         var systemTypeName = EditorUtils.GetDataTypeName(system);
                         content.Add($"systemDependenciesComponentsGraph.Add(typeof({systemTypeName}), list);");
                         content.Add($"systemDependenciesGraphErrors.Add(typeof({systemTypeName}), errors);");
+                        if (system.IsGenericType == true && !system.IsGenericTypeDefinition) {
+                            content.Add($"if (systemDependenciesComponentsGraph.ContainsKey(typeof({systemTypeName}).GetGenericTypeDefinition()) == false) {{");
+                            content.Add($"systemDependenciesComponentsGraph.Add(typeof({systemTypeName}).GetGenericTypeDefinition(), list);");
+                            content.Add($"}}");
+                            content.Add($"if (systemDependenciesGraphErrors.ContainsKey(typeof({systemTypeName}).GetGenericTypeDefinition()) == false) {{");
+                            content.Add($"systemDependenciesGraphErrors.Add(typeof({systemTypeName}).GetGenericTypeDefinition(), errors);");
+                            content.Add($"}}");
+                        }
 
                         {
                             var method = system.GetMethod("OnUpdate");
@@ -277,9 +285,9 @@ namespace ME.BECS.Editor.Systems {
             str.AppendLine("private static s::Dictionary<System.Type, s::HashSet<System.Type>> systemDependenciesGraph;");
             str.AppendLine("private static s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>> systemDependenciesComponentsGraph;");
             str.AppendLine("private static s::Dictionary<System.Type, s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>> systemDependenciesGraphErrors;");
-            str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph[type]; }");
-            str.AppendLine("public static s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> GetSystemDependenciesErrors(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraphErrors[type]; }");
-            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph[type]; }");
+            str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph.TryGetValue(type, out var result) ? result : new s::List<ComponentDependencyGraphInfo>(); }");
+            str.AppendLine("public static s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> GetSystemDependenciesErrors(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraphErrors.TryGetValue(type, out var result) ? result : new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>(); }");
+            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph.TryGetValue(type, out var result) ? result : new s::HashSet<System.Type>(); }");
             str.AppendLine("public static void InitializeSystemDependenciesInfo() {");
             str.AppendLine("if (systemDependenciesGraph != null) return;");
             str.AppendLine("systemDependenciesGraph = new s::Dictionary<System.Type, s::HashSet<System.Type>>();");
