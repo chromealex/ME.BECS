@@ -15,7 +15,7 @@ namespace ME.BECS.Units {
         [QueryWith]
         public AspectDataPtr<SelectionGroupComponent> groupDataPtr;
 
-        public readonly ref ListAuto<Ent> units => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).units;
+        public readonly ref ListAuto<Ent> units => ref this.groupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).units;
 
         public readonly ref readonly ListAuto<Ent> readUnits => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).units;
 

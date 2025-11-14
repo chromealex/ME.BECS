@@ -6,12 +6,27 @@ namespace ME.BECS {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]
+    public struct StaticUtils {
+
+        private const uint FILL_SIZE = 2048 * 10;
+
+        public static readonly Unity.Burst.SharedStatic<safe_ptr> zero = Unity.Burst.SharedStatic<safe_ptr>.GetOrCreate<StaticUtils>();
+
+        public static void Initialize() {
+
+            zero.Data = _calloc(FILL_SIZE);
+
+        }
+
+    }
+
+    [IgnoreProfiler]
     public struct StaticTypesGroups {
 
-        public static System.Collections.Generic.Dictionary<System.Type, ushort> groups = new System.Collections.Generic.Dictionary<System.Type, ushort>();
+        public static readonly System.Collections.Generic.Dictionary<System.Type, ushort> groups = new System.Collections.Generic.Dictionary<System.Type, ushort>();
         public static ushort nextGroupId;
 
-        public static System.Collections.Generic.Dictionary<System.Type, ushort> tracker = new System.Collections.Generic.Dictionary<System.Type, ushort>();
+        public static readonly System.Collections.Generic.Dictionary<System.Type, ushort> tracker = new System.Collections.Generic.Dictionary<System.Type, ushort>();
         public static ushort nextTrackId;
 
     }

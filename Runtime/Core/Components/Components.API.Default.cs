@@ -129,6 +129,16 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)][IgnoreProfiler]
+        public static T* GetOrThrow<T>(safe_ptr<State> state, in Ent ent, out bool isNew) where T : unmanaged, IComponent {
+            
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.trackerIndex;
+            var data = Components.GetOrThrowUnknownType(state, typeId, groupId, in ent, out isNew, StaticTypes<T>.defaultValuePtr);
+            return (T*)data;
+
+        }
+
         [IgnoreProfiler]
         public static bool HasStaticDirect<T>(Ent ent) where T : unmanaged, IConfigComponentStatic {
 

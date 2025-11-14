@@ -24,7 +24,7 @@ namespace ME.BECS.Attack {
         public AspectDataPtr<AttackTargetsComponent> targetsDataPtr;
         public AspectDataPtr<AttackVisualComponent> attackVisualDataPtr;
 
-        public readonly ref AttackComponent component => ref this.attackDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref AttackComponent component => ref this.attackDataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref AttackVisualComponent componentVisual => ref this.attackVisualDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackVisualComponent readComponentVisual => ref this.attackVisualDataPtr.Read(this.ent.id, this.ent.gen);

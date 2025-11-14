@@ -11,7 +11,7 @@ namespace ME.BECS {
             public RequiredComponentException(string str) : base(str) { }
 
             [HIDE_CALLSTACK]
-            public static void Throw<T>(in Ent ent) where T : unmanaged, IComponent {
+            public static void Throw<T>(in Ent ent) where T : unmanaged, IComponentBase {
                 ThrowNotBurst<T>(in ent);
                 throw new RequiredComponentException("Entity has no component, but it is required");
             }
@@ -31,6 +31,14 @@ namespace ME.BECS {
         public static void REQUIRED<T>(in Ent ent) where T : unmanaged, IComponent {
             
             if (ent.Has<T>(checkEnabled: false) == true) return;
+            RequiredComponentException.Throw<T>(in ent);
+            
+        }
+
+        [Conditional(COND.EXCEPTIONS)]
+        [HIDE_CALLSTACK]
+        public static void THROW_REQUIRED<T>(in Ent ent) where T : unmanaged, IComponentBase {
+            
             RequiredComponentException.Throw<T>(in ent);
             
         }

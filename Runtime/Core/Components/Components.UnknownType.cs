@@ -81,6 +81,39 @@ namespace ME.BECS {
         }
 
         [INLINE(256)][IgnoreProfiler]
+        public static byte* GetOrThrowUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+            E.IS_NOT_TAG(typeId);
+
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            return GetOrThrowUnknownType(state, ptr, typeId, groupId, in ent, out isNew, defaultValue);
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* GetOrThrowUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var data = storage.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->GetOrThrow(state, ent.id, ent.gen, out isNew, defaultValue);
+            Ents.UpVersion(state, in ent, groupId);
+            return data;
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* GetOrThrowUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->GetOrThrow(state, ent.id, ent.gen, out isNew, defaultValue);
+            Ents.UpVersion(state, in ent, groupId);
+            return data;
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
         public static byte* GetUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
 
             E.IS_VALID_TYPE_ID(typeId);

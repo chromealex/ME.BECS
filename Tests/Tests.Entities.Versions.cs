@@ -26,17 +26,17 @@ namespace ME.BECS.Tests {
                 ent.Set(new TestComponent());
                 Assert.AreEqual(2, ent.Version);
                 ent.Set(new TestComponent());
+                Assert.AreEqual(2, ent.Version);
+                ent.Get<TestComponent>().data = 1;
                 Assert.AreEqual(3, ent.Version);
-                ent.Get<TestComponent>().data = 1;
-                Assert.AreEqual(4, ent.Version);
                 var val = ent.Read<TestComponent>().data;
-                Assert.AreEqual(4, ent.Version);
+                Assert.AreEqual(3, ent.Version);
                 ent.Remove<TestComponent>();
-                Assert.AreEqual(5, ent.Version);
+                Assert.AreEqual(4, ent.Version);
                 var val2 = ent.Read<TestComponent>().data;
-                Assert.AreEqual(5, ent.Version);
+                Assert.AreEqual(4, ent.Version);
                 ent.Get<TestComponent>().data = 1;
-                Assert.AreEqual(6, ent.Version);
+                Assert.AreEqual(5, ent.Version);
             }
 
         }

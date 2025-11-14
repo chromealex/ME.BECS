@@ -17,14 +17,14 @@ namespace ME.BECS.Units {
         [QueryWith]
         public AspectDataPtr<CommandGroupComponent> groupDataPtr;
 
-        public readonly ref ListAuto<Ent> units => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).units;
+        public readonly ref ListAuto<Ent> units => ref this.groupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).units;
         public readonly ref readonly ListAuto<Ent> readUnits => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).units;
-        public readonly ref MemArrayAuto<Ent> targets => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).targets;
+        public readonly ref MemArrayAuto<Ent> targets => ref this.groupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).targets;
         public readonly ref readonly MemArrayAuto<Ent> readTargets => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).targets;
-        public readonly ref uint volume => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).volume;
+        public readonly ref uint volume => ref this.groupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).volume;
         public readonly ref readonly uint readVolume => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).volume;
-        public readonly ref Ent nextChainTarget => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).nextChainTarget;
-        public readonly ref Ent prevChainTarget => ref this.groupDataPtr.Get(this.ent.id, this.ent.gen).prevChainTarget;
+        public readonly ref Ent nextChainTarget => ref this.groupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).nextChainTarget;
+        public readonly ref Ent prevChainTarget => ref this.groupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).prevChainTarget;
         public readonly ref readonly Ent readNextChainTarget => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).nextChainTarget;
         public readonly ref readonly Ent readPrevChainTarget => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).prevChainTarget;
         

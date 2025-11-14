@@ -275,6 +275,24 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        public readonly ref T GetOrThrow(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            E.IS_IN_TICK(this.state);
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.trackerIndex;
+            var ent = new Ent(entId, gen, this.worldId);
+            ref var res = ref *(T*)Components.GetOrThrowUnknownType(this.state, this.storage, typeId, groupId, in ent, out var isNew, StaticTypes<T>.defaultValuePtr);
+            if (isNew == true) {
+                E.THROW_REQUIRED<T>(in ent);
+            } else {
+                Journal.UpdateComponent<T>(in ent, in res);
+            }
+            return ref res;
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
         internal readonly ref T GetReadonly(uint entId, ushort gen) {
             E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;

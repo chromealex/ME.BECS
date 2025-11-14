@@ -136,12 +136,12 @@ namespace ME.BECS.Transforms {
         
         public readonly ref float3 localPosition {
             [INLINE(256)]
-            get => ref this.localPositionData.Get(this.ent.id, this.ent.gen).value;
+            get => ref this.localPositionData.GetOrThrow(this.ent.id, this.ent.gen).value;
         }
 
         public readonly ref quaternion localRotation {
             [INLINE(256)]
-            get => ref this.localRotationData.Get(this.ent.id, this.ent.gen).value;
+            get => ref this.localRotationData.GetOrThrow(this.ent.id, this.ent.gen).value;
         }
 
         public readonly ref float3 localScale {
@@ -154,8 +154,8 @@ namespace ME.BECS.Transforms {
         public readonly ref readonly float3 readLocalScale => ref this.localScaleData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly Ent parent => ref this.parentData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly ListAuto<Ent> children => ref this.childrenData.Read(this.ent.id, this.ent.gen).list;
-        public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.Get(this.ent.id, this.ent.gen).value;
-        public readonly ref float4x4 localMatrix => ref this.localMatrixData.Get(this.ent.id, this.ent.gen).value;
+        public readonly ref float4x4 worldMatrix => ref this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).value;
+        public readonly ref float4x4 localMatrix => ref this.localMatrixData.GetOrThrow(this.ent.id, this.ent.gen).value;
 
         public readonly ref readonly float4x4 readWorldMatrix => ref this.worldMatrixData.Read(this.ent.id, this.ent.gen).value;
         public readonly ref readonly float4x4 readLocalMatrix => ref this.localMatrixData.Read(this.ent.id, this.ent.gen).value;
@@ -167,7 +167,7 @@ namespace ME.BECS.Transforms {
             [INLINE(256)]
             get => this.worldMatrixData.Read(this.ent.id, this.ent.gen).isTickCalculated;
             [INLINE(256)]
-            set => this.worldMatrixData.Get(this.ent.id, this.ent.gen).isTickCalculated = value;
+            set => this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).isTickCalculated = value;
         }
         
         public readonly float3 position {
@@ -316,12 +316,12 @@ namespace ME.BECS.Transforms {
 
         [INLINE(256)]
         public readonly void LockWorldMatrix() {
-            this.worldMatrixData.Get(this.ent.id, this.ent.gen).spinner.Lock();
+            this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).spinner.Lock();
         }
 
         [INLINE(256)]
         public readonly void UnlockWorldMatrix() {
-            this.worldMatrixData.Get(this.ent.id, this.ent.gen).spinner.Unlock();
+            this.worldMatrixData.GetOrThrow(this.ent.id, this.ent.gen).spinner.Unlock();
         }
 
     }

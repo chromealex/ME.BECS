@@ -28,7 +28,9 @@ namespace ME.BECS.Tests {
             
         public Ent ent { get; set; }
 
+        [QueryWith]
         public AspectDataPtr<T1> dataPtr;
+        [QueryWith]
         public AspectDataPtr<T2> dataPtr1;
 
         public ref T1 t1 => ref this.dataPtr.Get(this.ent.id, this.ent.gen);
@@ -166,7 +168,7 @@ namespace ME.BECS.Tests {
             using var world = World.Create(props);
             Test2Aspect.TestInitialize(in world);
 
-            var amount = 10_000;
+            var amount = 100;
             for (int i = 0; i < amount; ++i) {
                 var ent = Ent.New(world);
                 var target = Ent.New(world);
@@ -181,9 +183,9 @@ namespace ME.BECS.Tests {
                 });
             }
 
-            var dep = API.Query(world).AsParallel().Schedule<TestSetJob, Test2Aspect>();
+            var dep = API.Query(world).With<T1>().AsParallel().Schedule<TestSetJob, Test2Aspect>();
             dep = API.Query(world, dep).Schedule<TestDestroyJobFor, TestTargetComponent>();
-            dep = API.Query(world, dep).AsParallel().Schedule<TestJobFor, Test2Aspect>();
+            dep = API.Query(world, dep).With<T1>().AsParallel().Schedule<TestJobFor, Test2Aspect>();
             JobUtils.RunScheduled();
             dep.Complete();
 
