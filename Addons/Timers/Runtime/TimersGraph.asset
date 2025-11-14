@@ -238,8 +238,7 @@ MonoBehaviour:
         system:
           rid: 3699021144449876427
     - rid: 3699021144449876427
-      type: {class: 'TimersUpdateSystem`1[[ME.BECS.Timers.DefaultTimerComponent, ME.BECS.Timers]]',
-        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      type: {class: 'TimersUpdateSystem`1[[ME.BECS.Timers.DefaultTimerComponent, ME.BECS.Timers]]', ns: ME.BECS.Timers, asm: ME.BECS.Timers}
       data: 
     - rid: 3699021144449876428
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -289,8 +288,7 @@ MonoBehaviour:
         system:
           rid: 3699021144449876429
     - rid: 3699021144449876429
-      type: {class: 'TimersMsUpdateSystem`1[[ME.BECS.Timers.DefaultTimerMsComponent, ME.BECS.Timers]]',
-        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      type: {class: 'TimersMsUpdateSystem`1[[ME.BECS.Timers.DefaultTimerMsComponent, ME.BECS.Timers]]', ns: ME.BECS.Timers, asm: ME.BECS.Timers}
       data: 
     - rid: 3699021144449876430
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -340,8 +338,7 @@ MonoBehaviour:
         system:
           rid: 3699021144449876431
     - rid: 3699021144449876431
-      type: {class: 'TimersAutoDestroyUpdateSystem`1[[ME.BECS.Timers.DefaultTimerAutoDestroyComponent, ME.BECS.Timers]]',
-        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      type: {class: 'TimersAutoDestroyUpdateSystem`1[[ME.BECS.Timers.DefaultTimerAutoDestroyComponent, ME.BECS.Timers]]', ns: ME.BECS.Timers, asm: ME.BECS.Timers}
       data: 
     - rid: 3699021144449876432
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -391,6 +388,5 @@ MonoBehaviour:
         system:
           rid: 3699021144449876433
     - rid: 3699021144449876433
-      type: {class: 'TimersMsAutoDestroyUpdateSystem`1[[ME.BECS.Timers.DefaultTimerMsAutoDestroyComponent, ME.BECS.Timers]]',
-        ns: ME.BECS.Timers, asm: ME.BECS.Timers}
+      type: {class: 'TimersMsAutoDestroyUpdateSystem`1[[ME.BECS.Timers.DefaultTimerMsAutoDestroyComponent, ME.BECS.Timers]]', ns: ME.BECS.Timers, asm: ME.BECS.Timers}
       data: 

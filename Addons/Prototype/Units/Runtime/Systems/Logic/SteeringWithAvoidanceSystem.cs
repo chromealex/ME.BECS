@@ -190,7 +190,7 @@ namespace ME.BECS.Units {
 
             if (this.drawGizmos == false) return;
             
-            var arr = context.Query().AsParallel().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<TransformAspect>().ToArray();
+            var arr = context.Query().AsParallel().Without<IsUnitStaticComponent>().Without<UnitHoldComponent>().WithAspect<UnitAspect>().WithAspect<TransformAspect>().ToArrayOnDemand();
             foreach (var unitEnt in arr) {
 
                 var tr = unitEnt.GetAspect<TransformAspect>();
@@ -198,6 +198,7 @@ namespace ME.BECS.Units {
                 UnityEngine.Gizmos.DrawWireSphere((UnityEngine.Vector3)tr.position, (float)unit.readRadius);
 
             }
+            arr.Dispose();
             
         }
 

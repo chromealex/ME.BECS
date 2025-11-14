@@ -137,6 +137,17 @@ namespace ME.BECS {
             return ref this.data.Read(entId, gen);
         }
 
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckReadAndThrow(this.m_Safety);
+            if (entId < this.m_MinIndex || entId > this.m_MaxIndex) this.ThrowMinMax(entId);
+            #endif
+            return this.data.ReadPtr(entId, gen);
+        }
+
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         [INLINE(256)]
         private readonly void ThrowMinMax(uint entId) {
@@ -199,6 +210,17 @@ namespace ME.BECS {
             return ref this.data.Read(entId, gen);
         }
 
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            //AtomicSafetyHandle.CheckReadAndThrow(this.m_Safety);
+            if (entId < this.m_MinIndex || entId > this.m_MaxIndex) this.ThrowMinMax(entId);
+            #endif
+            return this.data.ReadPtr(entId, gen);
+        }
+
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         [INLINE(256)]
         private readonly void ThrowMinMax(uint entId) {
@@ -253,6 +275,24 @@ namespace ME.BECS {
         #if !NO_INLINE
         [INLINE(256)]
         #endif
+        public readonly ref T GetOrThrow(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            E.IS_IN_TICK(this.state);
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.trackerIndex;
+            var ent = new Ent(entId, gen, this.worldId);
+            ref var res = ref *(T*)Components.GetOrThrowUnknownType(this.state, this.storage, typeId, groupId, in ent, out var isNew, StaticTypes<T>.defaultValuePtr);
+            if (isNew == true) {
+                E.THROW_REQUIRED<T>(in ent);
+            } else {
+                Journal.UpdateComponent<T>(in ent, in res);
+            }
+            return ref res;
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
         internal readonly ref T GetReadonly(uint entId, ushort gen) {
             E.IS_CREATED(this);
             var typeId = StaticTypes<T>.typeId;
@@ -271,6 +311,18 @@ namespace ME.BECS {
             ref var res = ref *(T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
+        }
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            var typeId = StaticTypes<T>.typeId;
+            E.IS_NOT_TAG(typeId);
+            var res = (T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
+            if (exists == false) return null;
+            return res;
         }
 
     }
@@ -301,7 +353,19 @@ namespace ME.BECS {
             if (exists == false) return ref StaticTypes<T>.defaultValue;
             return ref res;
         }
-        
+
+        #if !NO_INLINE
+        [INLINE(256)]
+        #endif
+        public readonly T* ReadPtr(uint entId, ushort gen) {
+            E.IS_CREATED(this);
+            var typeId = StaticTypes<T>.typeId;
+            E.IS_NOT_TAG(typeId);
+            var res = (T*)Components.ReadUnknownType(this.state, this.storage, typeId, entId, gen, out var exists);
+            if (exists == false) return null;
+            return res;
+        }
+
     }
 
     [IgnoreProfiler]

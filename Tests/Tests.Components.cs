@@ -3,6 +3,7 @@ using Unity.Jobs;
 
 namespace ME.BECS.Tests {
 
+    [Unity.Burst.BurstCompileAttribute]
     public unsafe class Tests_Components {
 
         [UnityEngine.TestTools.UnitySetUpAttribute]
@@ -323,6 +324,152 @@ namespace ME.BECS.Tests {
             Assert.AreEqual(1, ent.Read<TestComponent>().data);
             Assert.AreEqual(0, ent.Read<Test2Component>().data);
 
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void ReadAspectPerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            ent.Set(new TestComponent() {
+                data = 1,
+            });
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstReadAspect(ent.GetAspect<TestAspect>());
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void ReadAspectInlinePerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            ent.Set(new TestComponent() {
+                data = 1,
+            });
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstReadAspectInline(ent);
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void ReadPerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            ent.Set(new TestComponent() {
+                data = 1,
+            });
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstRead(in ent);
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void ReadPtrPerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            ent.Set(new TestComponent() {
+                data = 1,
+            });
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstReadPtr(in ent);
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static void BurstReadAspect(in TestAspect ent) {
+            for (int i = 0; i < 100_000; ++i) {
+                var data = ent.dataRead.data;
+            }
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static void BurstReadAspectInline(in Ent ent) {
+            var aspect = ent.GetAspect<TestAspect>();
+            for (int i = 0; i < 100_000; ++i) {
+                aspect.ent = ent;
+                var data = aspect.dataRead.data;
+            }
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static int BurstRead(in Ent ent) {
+            var sum = 0;
+            for (int i = 0; i < 100_000; ++i) {
+                sum += ent.Read<TestComponent>().data;
+            }
+            return sum;
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static void BurstReadPtr(in Ent ent) {
+            for (int i = 0; i < 100_000; ++i) {
+                var data = ent.ReadPtr<TestComponent>()->data;
+            }
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void SetPerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstSet(in ent);
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static void BurstSet(in Ent ent) {
+            for (int i = 0; i < 100_000; ++i) {
+                ent.Set(new TestComponent() {
+                    data = i,
+                });
+            }
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void GetPerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstGet(in ent);
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static void BurstGet(in Ent ent) {
+            for (int i = 0; i < 100_000; ++i) {
+                ref var data = ref ent.Get<TestComponent>();
+                data.data = i;
+            }
+        }
+
+        [Test][Unity.PerformanceTesting.PerformanceAttribute]
+        public void GetPtrPerformance() {
+            
+            using var world = World.Create();
+            var ent = Ent.New();
+            Unity.PerformanceTesting.Measure.Method(() => {
+                BurstGetPtr(in ent);
+            }).MeasurementCount(10).WarmupCount(10).Run();
+
+        }
+
+        [Unity.Burst.BurstCompileAttribute]
+        private static void BurstGetPtr(in Ent ent) {
+            for (int i = 0; i < 100_000; ++i) {
+                var data = ent.GetPtr<TestComponent>();
+                data->data = i;
+            }
         }
 
         [Test]

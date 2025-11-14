@@ -364,6 +364,7 @@ namespace ME.BECS {
             WorldsDomainAllocator.Initialize();
             
             FullFillBits.Initialize();
+            StaticUtils.Initialize();
 
             if (WorldsStorage.worlds.Length > 0u) WorldsStorage.worlds.Dispose();
             ResetWorldsCounter();

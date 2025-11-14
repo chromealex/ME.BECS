@@ -13,9 +13,9 @@ namespace ME.BECS {
             var e = components.entities.GetEnumerator(state);
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
-                ref var ptr = ref state.ptr->components.items[state, typeId];
-                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.CleanUpEntity(state, ent.id, typeId);
+                var ptr = state.ptr->components.items.GetUnsafePtr(state, typeId);
+                var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+                storage.ptr->CleanUpEntity(state, ent.id, typeId);
             }
             components.entities.Dispose(ref state.ptr->allocator);
             components.lockSpinner.Unlock();

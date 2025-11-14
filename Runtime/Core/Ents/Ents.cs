@@ -325,11 +325,8 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void UpVersion(safe_ptr<State> state, in Ent ent, uint groupId) {
 
-            Ents.UpVersion(state, in ent);
-
-            if (groupId > 0u) {
-                Ents.UpVersionGroup(state, ent.id, groupId);
-            }
+            Ents.UpVersion(state, in ent); 
+            Ents.UpVersionGroup(state, ent.id, groupId);
 
         }
 

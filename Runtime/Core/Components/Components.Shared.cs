@@ -118,11 +118,11 @@ namespace ME.BECS {
             if (exist == false) ptr.Set(ref state.ptr->allocator, new SharedComponentStorageUnknown(state, (safe_ptr)data, dataSize));
 
             // update data in storage
-            ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
-            var dataMemPtr = storage.data.ptr;
+            var storage = ptr.AsPtr<SharedComponentStorageUnknown>(in state.ptr->allocator);
+            var dataMemPtr = storage.ptr->data.ptr;
             dataPtr = state.ptr->allocator.GetUnsafePtr(in dataMemPtr);
             if (dataSize > 0u) _memcpy((safe_ptr)data, dataPtr, dataSize);
-            var added = storage.entities.Add(ref state.ptr->allocator, ent.id);
+            var added = storage.ptr->entities.Add(ref state.ptr->allocator, ent.id);
             
             // update indexer
             SetSharedHash(state, ref state.ptr->components, ent.id, sharedTypeId, hash);
@@ -149,11 +149,11 @@ namespace ME.BECS {
                 }
             
                 // get data from storage
-                ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
-                var exist = storage.entities.Remove(ref state.ptr->allocator, entId);
-                if (exist == true && storage.entities.Count == 0u) {
+                var storage = ptr.AsPtr<SharedComponentStorageUnknown>(in state.ptr->allocator);
+                var exist = storage.ptr->entities.Remove(ref state.ptr->allocator, entId);
+                if (exist == true && storage.ptr->entities.Count == 0u) {
                     // remove data from storage
-                    storage.Dispose(ref state.ptr->allocator);
+                    storage.ptr->Dispose(ref state.ptr->allocator);
                     ptr.Dispose(ref state.ptr->allocator);
                     state.ptr->components.sharedData.Remove(in state.ptr->allocator, hash);
                 }
@@ -177,11 +177,11 @@ namespace ME.BECS {
             }
             
             // get data from storage
-            ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
-            var exist = storage.entities.Remove(ref state.ptr->allocator, ent.id);
-            if (exist == true && storage.entities.Count == 0u) {
+            var storage = ptr.AsPtr<SharedComponentStorageUnknown>(in state.ptr->allocator);
+            var exist = storage.ptr->entities.Remove(ref state.ptr->allocator, ent.id);
+            if (exist == true && storage.ptr->entities.Count == 0u) {
                 // remove data from storage
-                storage.Dispose(ref state.ptr->allocator);
+                storage.ptr->Dispose(ref state.ptr->allocator);
                 ptr.Dispose(ref state.ptr->allocator);
                 state.ptr->components.sharedData.Remove(in state.ptr->allocator, hash);
             }
@@ -200,9 +200,9 @@ namespace ME.BECS {
             hash = GetSharedHash(default(T), state, in state.ptr->components, entId, hash);
 
             if (state.ptr->components.sharedData.TryGetValue(in state.ptr->allocator, hash, out var ptr) == true) {
-                ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
-                if (storage.entities.Contains(in state.ptr->allocator, entId) == false) return ref StaticTypes<T>.defaultValue;
-                return ref *storage.data.AsPtr<T>(in state.ptr->allocator).ptr;
+                var storage = ptr.AsPtr<SharedComponentStorageUnknown>(in state.ptr->allocator);
+                if (storage.ptr->entities.Contains(in state.ptr->allocator, entId) == false) return ref StaticTypes<T>.defaultValue;
+                return ref *storage.ptr->data.AsPtr<T>(in state.ptr->allocator).ptr;
             } else {
                 return ref StaticTypes<T>.defaultValue;
             }
@@ -222,14 +222,14 @@ namespace ME.BECS {
             if (exist == false) ptr.Set(ref state.ptr->allocator, new SharedComponentStorageUnknown(state, default, TSize<T>.size));
 
             // get data from storage
-            ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
-            if (storage.entities.Add(ref state.ptr->allocator, ent.id) == true) {
+            var storage = ptr.AsPtr<SharedComponentStorageUnknown>(in state.ptr->allocator);
+            if (storage.ptr->entities.Add(ref state.ptr->allocator, ent.id) == true) {
                 isNew = true;
             }
 
             Ents.UpVersion<T>(state, in ent);
             state.ptr->components.lockSharedIndex.Unlock();
-            return ref *storage.data.AsPtr<T>(in state.ptr->allocator).ptr;
+            return ref *storage.ptr->data.AsPtr<T>(in state.ptr->allocator).ptr;
             
         }
 
@@ -241,8 +241,8 @@ namespace ME.BECS {
 
             if (state.ptr->components.sharedData.TryGetValue(in state.ptr->allocator, hash, out var ptr) == true) {
                 
-                ref var storage = ref ptr.As<SharedComponentStorageUnknown>(in state.ptr->allocator);
-                return storage.entities.Contains(in state.ptr->allocator, entId);
+                var storage = ptr.AsPtr<SharedComponentStorageUnknown>(in state.ptr->allocator);
+                return storage.ptr->entities.Contains(in state.ptr->allocator, entId);
 
             }
 

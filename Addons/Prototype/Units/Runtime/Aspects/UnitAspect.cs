@@ -71,10 +71,10 @@ namespace ME.BECS.Units {
         public readonly ref readonly tfloat readSector => ref this.readComponent.sightRange.sector;
         public readonly ref tfloat height => ref this.componentRuntime.properties.height;
         public readonly ref readonly tfloat readHeight => ref this.readComponentRuntime.properties.height;
-        public readonly ref Ent owner => ref this.ownerDataPtr.Get(this.ent.id, this.ent.gen).ent;
+        public readonly ref Ent owner => ref this.ownerDataPtr.GetOrThrow(this.ent.id, this.ent.gen).ent;
         public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
-        public readonly ref uint health => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).health;
-        public readonly ref uint healthMax => ref this.healthDataPtr.Get(this.ent.id, this.ent.gen).healthMax;
+        public readonly ref uint health => ref this.healthDataPtr.GetOrThrow(this.ent.id, this.ent.gen).health;
+        public readonly ref uint healthMax => ref this.healthDataPtr.GetOrThrow(this.ent.id, this.ent.gen).healthMax;
         public readonly ref readonly uint readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
         public readonly ref readonly uint readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
         public readonly ref AgentType agentProperties => ref this.componentRuntime.properties;
@@ -95,13 +95,13 @@ namespace ME.BECS.Units {
         public readonly ref readonly tfloat readDecelerationSpeed => ref this.readComponent.decelerationSpeed;
         public readonly ref tfloat rotationSpeed => ref this.component.rotationSpeed;
         public readonly ref readonly tfloat readRotationSpeed => ref this.readComponent.rotationSpeed;
-        public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.Get(this.ent.id, this.ent.gen).unitCommandGroup;
-        public readonly ref Ent unitSelectionGroup => ref this.unitSelectionGroupDataPtr.Get(this.ent.id, this.ent.gen).unitSelectionGroup;
+        public readonly ref Ent unitCommandGroup => ref this.unitCommandGroupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).unitCommandGroup;
+        public readonly ref Ent unitSelectionGroup => ref this.unitSelectionGroupDataPtr.GetOrThrow(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitCommandGroup => ref this.unitCommandGroupDataPtr.Read(this.ent.id, this.ent.gen).unitCommandGroup;
         
         public readonly float3 randomVector => this.componentRuntime.randomVector;
-        public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentComponent readComponent => ref this.navAgentDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentRuntimeComponent readComponentRuntime => ref this.navAgentRuntimeDataPtr.Read(this.ent.id, this.ent.gen);

@@ -31,12 +31,13 @@ namespace ME.BECS.Tests {
         public AspectDataPtr<Test4Component> dataPtr4;
         public AspectDataPtr<Test5Component> dataPtr5;
 
-        public ref TestComponent data => ref this.dataPtr.Get(this.ent.id, this.ent.gen);
+        public ref TestComponent data => ref this.dataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public ref Test1Component data1 => ref this.dataPtr1.Get(this.ent.id, this.ent.gen);
         public ref Test2Component data2 => ref this.dataPtr2.Get(this.ent.id, this.ent.gen);
         public ref Test3Component data3 => ref this.dataPtr3.Get(this.ent.id, this.ent.gen);
         public ref Test4Component data4 => ref this.dataPtr4.Get(this.ent.id, this.ent.gen);
         public ref Test5Component data5 => ref this.dataPtr5.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly TestComponent dataRead => ref this.dataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref readonly Test5Component data5read => ref this.dataPtr5.Read(this.ent.id, this.ent.gen);
 
         public static void TestInitialize(in World world) {

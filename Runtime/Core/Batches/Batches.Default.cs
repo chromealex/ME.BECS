@@ -43,11 +43,24 @@ namespace ME.BECS {
 
             E.IS_IN_TICK(state);
             
-            var result = Components.Get<T>(state, in ent, out var isNew);
+            var result = Components.GetOrThrow<T>(state, in ent, out var isNew);
             if (isNew == true) {
-                E.REQUIRED<T>(in ent);
+                E.THROW_REQUIRED<T>(in ent);
             }
             return ref *result;
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static T* GetPtrOrThrow<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
+
+            E.IS_IN_TICK(state);
+            
+            var result = Components.GetOrThrow<T>(state, in ent, out var isNew);
+            if (isNew == true) {
+                E.THROW_REQUIRED<T>(in ent);
+            }
+            return result;
 
         }
 

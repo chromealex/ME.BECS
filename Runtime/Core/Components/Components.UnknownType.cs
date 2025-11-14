@@ -13,9 +13,9 @@ namespace ME.BECS {
             var size = 0u;
             var c = StaticTypes.counter;
             for (uint i = 1u; i <= c; ++i) {
-                ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, i];
-                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                size += storage.GetReservedSizeInBytes(state);
+                var ptr = state.ptr->components.items.GetUnsafePtr(state, i);
+                var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+                size += storage.ptr->GetReservedSizeInBytes(state);
             }
             
             return size;
@@ -27,9 +27,9 @@ namespace ME.BECS {
 
             var c = StaticTypes.counter;
             for (uint i = 1u; i <= c; ++i) {
-                ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, i];
-                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.OnEntityAdd(state, entityId);
+                var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, i);
+                var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+                storage.ptr->OnEntityAdd(state, entityId);
             }
 
         }
@@ -39,9 +39,9 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-            var isNew = storage.Set(state, ent.id, ent.gen, data, out var changed);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+            var isNew = storage.ptr->Set(state, ent.id, ent.gen, data, out var changed);
             if (changed == true) Ents.UpVersion(state, in ent, groupId);
             return isNew;
 
@@ -61,9 +61,9 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
             
-            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-            var res = storage.SetState(state, ent.id, ent.gen, value);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+            var res = storage.ptr->SetState(state, ent.id, ent.gen, value);
             Ents.UpVersion(state, in ent, groupId);
             return res;
 
@@ -74,9 +74,42 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
             
-            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-            return storage.ReadState(state, ent.id, ent.gen);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+            return storage.ptr->ReadState(state, ent.id, ent.gen);
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* GetOrThrowUnknownType(safe_ptr<State> state, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+            E.IS_NOT_TAG(typeId);
+
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            return GetOrThrowUnknownType(state, ptr, typeId, groupId, in ent, out isNew, defaultValue);
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* GetOrThrowUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var data = storage.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->GetOrThrow(state, ent.id, ent.gen, out isNew, defaultValue);
+            Ents.UpVersion(state, in ent, groupId);
+            return data;
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* GetOrThrowUnknownType(safe_ptr<State> state, in MemAllocatorPtr storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->GetOrThrow(state, ent.id, ent.gen, out isNew, defaultValue);
+            Ents.UpVersion(state, in ent, groupId);
+            return data;
 
         }
 
@@ -86,8 +119,19 @@ namespace ME.BECS {
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
 
-            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            return GetUnknownType(state, in ptr, typeId, groupId, in ent, out isNew, defaultValue);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            return GetUnknownType(state, ptr, typeId, groupId, in ent, out isNew, defaultValue);
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* GetUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint groupId, in Ent ent, out bool isNew, safe_ptr defaultValue) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var data = storage.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, out isNew, defaultValue);
+            Ents.UpVersion(state, in ent, groupId);
+            return data;
 
         }
 
@@ -96,7 +140,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, false, out isNew, defaultValue);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, out isNew, defaultValue);
             Ents.UpVersion(state, in ent, groupId);
             return data;
 
@@ -107,9 +151,9 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
             
-            ref var ptr = ref state.ptr->components.items[state, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-            if (storage.Remove(state, ent.id, ent.gen) == true) {
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+            if (storage.ptr->Remove(state, ent.id, ent.gen) == true) {
                 Ents.UpVersion(state, in ent, groupId);
                 return true;
             }
@@ -124,9 +168,20 @@ namespace ME.BECS {
             E.IS_VALID_TYPE_ID(typeId);
             E.IS_NOT_TAG(typeId);
 
-            ref var ptr = ref state.ptr->components.items[state, typeId];
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
             return ReadUnknownType(state, ptr, typeId, entId, gen, out exists);
             
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static byte* ReadUnknownType(safe_ptr<State> state, safe_ptr<MemAllocatorPtr> storage, uint typeId, uint entId, ushort gen, out bool exists) {
+
+            E.IS_VALID_TYPE_ID(typeId);
+
+            var data = storage.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Read(state, entId, gen, out _);
+            exists = data != null;
+            return data;
+
         }
 
         [INLINE(256)][IgnoreProfiler]
@@ -134,7 +189,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, entId, gen, true, out _, default);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Read(state, entId, gen, out _);
             exists = data != null;
             return data;
 
@@ -145,9 +200,9 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            ref var ptr = ref state.ptr->components.items[state, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-            return storage.Has(state, entId, gen, checkEnabled);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+            return storage.ptr->Has(state, entId, gen, checkEnabled);
             
         }
 

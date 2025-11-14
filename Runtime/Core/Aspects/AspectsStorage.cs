@@ -30,6 +30,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        [SafetyCheck(RefOp.ReadWrite)] public readonly ref T GetOrThrow(uint entId, ushort gen) {
+            return ref this.value.GetOrThrow(entId, gen);
+        }
+
+        [INLINE(256)]
         [SafetyCheck(RefOp.ReadOnly)] public readonly ref readonly T Read(uint entId, ushort gen) {
             return ref this.valueRO.Read(entId, gen);
         }

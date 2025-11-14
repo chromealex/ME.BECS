@@ -89,6 +89,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public void CopyFrom(ref MemoryAllocator allocator, in BitArray other) {
+
+            if (other.ptr == this.ptr) return;
+            if (this.ptr.IsValid() == false && other.ptr.IsValid() == false) return;
+            if (this.ptr.IsValid() == true && other.ptr.IsValid() == false) {
+                this.Dispose(ref allocator);
+                return;
+            }
+            if (this.ptr.IsValid() == false) this = new BitArray(ref allocator, other.Length);
+            
+            NativeArrayUtils.Copy(ref allocator, in other, ref this);
+            
+        }
+
+        [INLINE(256)]
         public void Set(ref MemoryAllocator allocator, BitArray source) {
 
             var sizeInBytes = (uint)Bitwise.AlignUp((int)source.Length, 64) / 8u;

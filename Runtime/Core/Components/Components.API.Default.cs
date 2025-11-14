@@ -83,7 +83,7 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             var data = Components.ReadUnknownType(state, typeId, entId, gen, out exists);
-            if (exists == false) return default;
+            if (exists == false) return (T*)StaticTypes<T>.defaultValuePtr.ptr;
             return (T*)data;
 
         }
@@ -93,7 +93,7 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             var data = Components.ReadUnknownType(state, typeId, entId, gen, out var exists);
-            if (exists == false) return default;
+            if (exists == false) return (T*)StaticTypes<T>.defaultValuePtr.ptr;
             return (T*)data;
 
         }
@@ -125,6 +125,16 @@ namespace ME.BECS {
             var typeId = StaticTypes<T>.typeId;
             var groupId = StaticTypes<T>.trackerIndex;
             var data = Components.GetUnknownType(state, typeId, groupId, in ent, out isNew, StaticTypes<T>.defaultValuePtr);
+            return (T*)data;
+
+        }
+
+        [INLINE(256)][IgnoreProfiler]
+        public static T* GetOrThrow<T>(safe_ptr<State> state, in Ent ent, out bool isNew) where T : unmanaged, IComponent {
+            
+            var typeId = StaticTypes<T>.typeId;
+            var groupId = StaticTypes<T>.trackerIndex;
+            var data = Components.GetOrThrowUnknownType(state, typeId, groupId, in ent, out isNew, StaticTypes<T>.defaultValuePtr);
             return (T*)data;
 
         }
@@ -198,10 +208,10 @@ namespace ME.BECS {
             E.IS_VALID_TYPE_ID(typeId);
 
             var state = ent.World.state;
-            ref var ptr = ref state.ptr->components.items[in state.ptr->allocator, typeId];
-            ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
+            var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+            var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
             fixed (T* dataPtr = &data) {
-                storage.Set(state, ent.id, ent.gen, dataPtr, out var changed);
+                storage.ptr->Set(state, ent.id, ent.gen, dataPtr, out var changed);
             }
 
         }

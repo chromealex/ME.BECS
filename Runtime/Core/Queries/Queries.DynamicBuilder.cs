@@ -18,7 +18,7 @@ namespace ME.BECS {
     using Unity.Collections;
     using ME.BECS.NativeCollections;
     
-    public unsafe struct QueryData {
+    public struct QueryData {
 
         internal TempBitArray archetypesBits;
         internal safe_ptr<uint> archetypes;
@@ -33,7 +33,7 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct OnDemandCount : IIsCreated {
+    public struct OnDemandCount : IIsCreated {
 
         internal struct Data {
 
@@ -41,8 +41,13 @@ namespace ME.BECS {
 
         }
 
-        internal JobHandle dependsOn;
-        internal safe_ptr<Data> data;
+        public JobHandle dependsOn {
+            set => this.jobHandle.Value = value;
+            get => this.jobHandle.Value;
+        }
+
+        internal NativeReference<Data> data;
+        internal NativeReference<JobHandle> jobHandle;
         internal Allocator allocator;
 
         public int Length {
@@ -50,17 +55,17 @@ namespace ME.BECS {
             get {
                 E.IS_CREATED(this);
                 this.dependsOn.Complete();
-                return this.data.ptr->results;
+                return this.data.Value.results;
             }
         }
 
-        public bool IsCreated => this.allocator != Allocator.Invalid;
+        public bool IsCreated => this.data.IsCreated;
 
         [INLINE(256)]
         public void Dispose() {
             if (this.allocator == Allocator.Invalid) return;
             this.dependsOn.Complete();
-            _free(this.data, this.allocator);
+            this.data.Dispose();
             this = default;
         }
 
@@ -68,7 +73,9 @@ namespace ME.BECS {
         public void Clear() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
-            this.data.ptr->results = 0;
+            var value = this.data.Value;
+            value.results = 0;
+            this.data.Value = value;
         }
 
     }
@@ -77,30 +84,66 @@ namespace ME.BECS {
         
         internal struct Data {
 
-            public Unity.Collections.NativeList<Ent> results;
+            public UnsafeList<Ent> results;
 
         }
         
-        internal JobHandle dependsOn;
-        internal safe_ptr<Data> data;
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS
+        internal AtomicSafetyHandle m_Safety;
+        internal static readonly Unity.Burst.SharedStatic<int> s_staticSafetyId = Unity.Burst.SharedStatic<int>.GetOrCreate<OnDemandArray>();
+        #endif
+        
+        internal NativeReference<Data> data;
+        internal NativeReference<JobHandle> jobHandle;
         internal Allocator allocator;
 
+        public JobHandle dependsOn {
+            set => this.jobHandle.Value = value;
+            get => this.jobHandle.Value;
+        }
+
+        public OnDemandArray(JobHandle dependsOn, AllocatorManager.AllocatorHandle allocator) {
+            
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            this.m_Safety = CollectionHelper.CreateSafetyHandle(allocator.Handle);
+            if (UnsafeUtility.IsNativeContainerType<Ent>()) AtomicSafetyHandle.SetNestedContainer(this.m_Safety, true);
+            CollectionHelper.SetStaticSafetyId<OnDemandArray>(ref this.m_Safety, ref s_staticSafetyId.Data);
+            AtomicSafetyHandle.SetBumpSecondaryVersionOnScheduleWrite(this.m_Safety, true);
+            #endif
+
+            this.jobHandle = new NativeReference<JobHandle>(dependsOn, allocator);
+            this.data = new NativeReference<Data>(new OnDemandArray.Data() {
+                results = new UnsafeList<Ent>(4, allocator),
+            }, allocator.ToAllocator);
+            this.allocator = allocator.ToAllocator;
+
+        }
+        
         public int Length {
             [INLINE(256)]
             get {
                 E.IS_CREATED(this);
                 this.dependsOn.Complete();
-                return this.data.ptr->results.Length;
+                return this.data.Value.results.Length;
             }
         }
 
-        public bool IsCreated => this.allocator != Allocator.Invalid;
+        public bool IsCreated => this.data.IsCreated;
 
         [INLINE(256)]
         public NativeArray<Ent> GetResults() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
-            return this.data.ptr->results.AsArray();
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckGetSecondaryDataPointerAndThrow(this.m_Safety);
+            var arraySafety = this.m_Safety;
+            AtomicSafetyHandle.UseSecondaryVersion(ref arraySafety);
+            #endif
+            var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Ent>(this.data.Value.results.Ptr, this.data.Value.results.Length, Allocator.None);
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, arraySafety);
+            #endif
+            return array;
         }
 
         public Ent this[int index] {
@@ -108,22 +151,22 @@ namespace ME.BECS {
             get {
                 E.IS_CREATED(this);
                 this.dependsOn.Complete();
-                return this.data.ptr->results[index];
+                return this.data.Value.results[index];
             }
         }
 
-        public NativeArray<Ent>.Enumerator GetEnumerator() {
+        public UnsafeList<Ent>.Enumerator GetEnumerator() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
-            return this.data.ptr->results.GetEnumerator();
+            return this.data.Value.results.GetEnumerator();
         }
 
         [INLINE(256)]
         public void Dispose() {
             if (this.allocator == Allocator.Invalid) return;
             this.dependsOn.Complete();
-            this.data.ptr->results.Dispose();
-            _free(this.data, this.allocator);
+            this.data.Value.results.Dispose();
+            this.data.Dispose();
             this = default;
         }
 
@@ -131,7 +174,9 @@ namespace ME.BECS {
         public void Clear() {
             E.IS_CREATED(this);
             this.dependsOn.Complete();
-            this.data.ptr->results.Clear();
+            var value = this.data.Value;
+            value.results.Clear();
+            this.data.Value = value;
         }
 
     }
@@ -556,7 +601,7 @@ namespace ME.BECS {
         [BURST]
         public struct OnDemandJob : IJob {
 
-            public OnDemandArray handle;
+            internal NativeReference<OnDemandArray.Data> handle;
             public safe_ptr<CommandBuffer> commandBuffer;
             
             public void Execute() {
@@ -564,7 +609,9 @@ namespace ME.BECS {
                 var cnt = (int)this.commandBuffer.ptr->count;
                 for (int i = 0; i < cnt; ++i) {
                     var entId = this.commandBuffer.ptr->entities[i];
-                    this.handle.data.ptr->results.Add(new Ent(entId, in Worlds.GetWorld(this.commandBuffer.ptr->worldId)));
+                    var value = this.handle.Value;
+                    value.results.Add(new Ent(entId, in Worlds.GetWorld(this.commandBuffer.ptr->worldId)));
+                    this.handle.Value = value;
                 }
                 
             }
@@ -574,13 +621,15 @@ namespace ME.BECS {
         [BURST]
         public struct OnDemandCountJob : IJob {
 
-            public OnDemandCount handle;
+            internal NativeReference<OnDemandCount.Data> handle;
             public safe_ptr<CommandBuffer> commandBuffer;
             
             public void Execute() {
                 
-                this.handle.data.ptr->results = (int)this.commandBuffer.ptr->count;
-                
+                var value = this.handle.Value;
+                value.results = (int)this.commandBuffer.ptr->count;
+                this.handle.Value = value;
+
             }
 
         }
@@ -591,18 +640,12 @@ namespace ME.BECS {
         /// To dispose results use handle.Dispose()
         /// </summary>
         /// <returns>OnDemandArray</returns>
-        public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+        public OnDemandArray ToArrayOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
-            var array = new OnDemandArray() {
-                dependsOn = this.builderDependsOn,
-                data = _makeDefault(new OnDemandArray.Data() {
-                    results = new Unity.Collections.NativeList<Ent>(allocator),
-                }, allocator),
-                allocator = allocator,
-            };
+            var array = new OnDemandArray(this.builderDependsOn, allocator);
             array.dependsOn = new OnDemandJob() {
-                handle = array,
+                handle = array.data,
                 commandBuffer = this.commandBuffer,
             }.Schedule(array.dependsOn);
             array.dependsOn = this.Dispose(array.dependsOn);
@@ -616,24 +659,18 @@ namespace ME.BECS {
         /// To dispose results use handle.Dispose()
         /// </summary>
         /// <returns>OnDemandArray</returns>
-        public OnDemandArray ToArrayOnDemand(ref OnDemandArray array, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+        public OnDemandArray ToArrayOnDemand(ref OnDemandArray array, Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             if (array.IsCreated == false) {
-                array = new OnDemandArray() {
-                    dependsOn = this.builderDependsOn,
-                    data = _makeDefault(new OnDemandArray.Data() {
-                        results = new Unity.Collections.NativeList<Ent>(allocator),
-                    }, allocator),
-                    allocator = allocator,
-                };
+                array = new OnDemandArray(this.builderDependsOn, allocator);
             } else {
                 array.Clear();
                 array.dependsOn = this.builderDependsOn;
             }
 
             array.dependsOn = new OnDemandJob() {
-                handle = array,
+                handle = array.data,
                 commandBuffer = this.commandBuffer,
             }.Schedule(array.dependsOn);
             array.dependsOn = this.Dispose(array.dependsOn);
@@ -647,18 +684,16 @@ namespace ME.BECS {
         /// To dispose results use handle.Dispose()
         /// </summary>
         /// <returns>OnDemandCount</returns>
-        public OnDemandCount CountOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMP) {
+        public OnDemandCount CountOnDemand(Unity.Collections.Allocator allocator = Constants.ALLOCATOR_TEMPJOB) {
             
             this.builderDependsOn = this.SetEntities(this.commandBuffer, this.useSort, this.builderDependsOn);
             var array = new OnDemandCount() {
                 dependsOn = this.builderDependsOn,
-                data = _makeDefault(new OnDemandCount.Data() {
-                    results = 0,
-                }, allocator),
+                data = new NativeReference<OnDemandCount.Data>(new OnDemandCount.Data(), allocator),
                 allocator = allocator,
             };
             array.dependsOn = new OnDemandCountJob() {
-                handle = array,
+                handle = array.data,
                 commandBuffer = this.commandBuffer,
             }.Schedule(array.dependsOn);
             array.dependsOn = this.Dispose(array.dependsOn);
@@ -887,9 +922,9 @@ namespace ME.BECS {
                     if (this.composeJob.query.with.Length > 0) {
                         for (int i = 0; i < this.composeJob.query.with.Length; ++i) {
                             var typeId = this.composeJob.query.with[i];
-                            ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
-                            ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                            var bits = storage.bits;
+                            var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
+                            var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                            var bits = storage.ptr->GetBits();
                             tempBits.Intersect(in this.state.ptr->allocator, in bits, allCount);
                         }
                     }
@@ -898,15 +933,15 @@ namespace ME.BECS {
                         for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
                             var typeIdPair = this.composeJob.query.withAny[i];
                             if (typeIdPair.Key > 0u) {
-                                ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Key];
-                                ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.bits;
+                                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeIdPair.Key);
+                                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                                var bits = storage.ptr->GetBits();
                                 temp.Union(in this.state.ptr->allocator, in bits);
                             }
                             if (typeIdPair.Value > 0u) {
-                                ref var ptr = ref this.state.ptr->components.items[this.state, typeIdPair.Value];
-                                ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.bits;
+                                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeIdPair.Value);
+                                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                                var bits = storage.ptr->GetBits();
                                 temp.Union(in this.state.ptr->allocator, in bits);
                             }
                         }
@@ -914,9 +949,9 @@ namespace ME.BECS {
                     }
                     for (int i = 0; i < this.composeJob.query.without.Length; ++i) {
                         var typeId = this.composeJob.query.without[i];
-                        ref var ptr = ref this.state.ptr->components.items[this.state, typeId];
-                        ref var storage = ref ptr.As<DataDenseSet>(in this.state.ptr->allocator);
-                        var bits = storage.bits;
+                        var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
+                        var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                        var bits = storage.ptr->GetBits();
                         tempBits.Remove(in this.state.ptr->allocator, bits);
                     }
                     marker.End();

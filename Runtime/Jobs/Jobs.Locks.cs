@@ -14,7 +14,6 @@ namespace ME.BECS {
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
         private Unity.Collections.Allocator allocator;
         private safe_ptr value;
-        private int readValue;
         private int writeValue;
         
         public bool IsCreated => this.value.ptr != null;
@@ -135,7 +134,6 @@ namespace ME.BECS {
 
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
         private MemPtr value;
-        private int readValue;
         private int writeValue;
         #if USE_CACHE_PTR
         private int* ptr;
@@ -177,7 +175,7 @@ namespace ME.BECS {
             #if EXCEPTIONS_INTERNAL
             var i = 100_000_000;
             #endif
-            while (System.Threading.Volatile.Read(ref this.writeValue) == 1) {
+            while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 0) == 1) {
                 #if EXCEPTIONS_INTERNAL
                 --i;
                 if (i == 0) {

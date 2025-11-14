@@ -177,7 +177,7 @@ namespace ME.BECS.Tests {
             handle.Complete();
 
             {
-                var arr = API.Query(world, handle).With<TestComponent>().ToArray();
+                var arr = API.Query(world, handle).With<TestComponent>().ToArrayOnDemand();
                 foreach (var ent in arr) {
                     if (ent.id <= count / 2) {
                         Assert.AreEqual(4, ent.Read<TestComponent>().data);
@@ -185,6 +185,7 @@ namespace ME.BECS.Tests {
                         Assert.AreEqual(5, ent.Read<TestComponent>().data);
                     }
                 }
+                arr.Dispose();
             }
             
             world.Dispose();

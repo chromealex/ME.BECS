@@ -462,9 +462,9 @@ namespace ME.BECS {
             {
                 var state = ent.World.state;
                 state.ptr->entities.OnAddComponent(state, ent.id, typeId);
-                var ptr = state.ptr->components.items[in state.ptr->allocator, typeId];
-                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.SetBit(state, ent.id, true, typeId);
+                var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+                var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+                storage.ptr->SetBit(state, ent.id, true, typeId);
             }
             #else
             var worldId = ent.worldId;
@@ -502,9 +502,9 @@ namespace ME.BECS {
             {
                 var state = ent.World.state;
                 state.ptr->entities.OnRemoveComponent(state, ent.id, typeId);
-                var ptr = state.ptr->components.items[in state.ptr->allocator, typeId];
-                ref var storage = ref ptr.As<DataDenseSet>(in state.ptr->allocator);
-                storage.SetBit(state, ent.id, false, typeId);
+                var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
+                var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+                storage.ptr->SetBit(state, ent.id, false, typeId);
             }
             #else
             var worldId = ent.worldId;
