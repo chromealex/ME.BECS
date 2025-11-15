@@ -76,9 +76,9 @@ namespace ME.BECS {
                 this.dataPagesA = new MemArray<Page>(ref state.ptr->allocator, pages);
                 #if ENABLE_BECS_FLAT_QUERIES
                 this.bitsA = new BitArray(ref state.ptr->allocator, pages * ENTITIES_PER_PAGE, ClearOptions.ClearMemory, true);
+                this.bitsB = default;
                 #endif
                 this.dataPagesB = default;
-                this.bitsB = default;
                 this.active = 0;
             }
 
