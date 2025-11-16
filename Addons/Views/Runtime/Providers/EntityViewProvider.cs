@@ -62,6 +62,10 @@ namespace ME.BECS.Views {
             return this.handle.IsValid() == true && this.handle.IsDone == true;
         }
 
+        public void Dispose() {
+            if (this.handle.IsValid() == true) this.assetReference.ReleaseAsset();
+        }
+
     }
 
     [BURST]
@@ -625,7 +629,7 @@ namespace ME.BECS.Views {
 
         [INLINE(256)]
         public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
-
+            
             for (uint i = 0u; i < data.ptr->renderingOnScene.Count; ++i) {
                 var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
@@ -650,6 +654,9 @@ namespace ME.BECS.Views {
             }
 
             foreach (var heap in this.heaps) {
+                if (heap.handle.Target is AssetOp assetOp) {
+                    assetOp.Dispose();
+                }
                 heap.Dispose();
             }
 
