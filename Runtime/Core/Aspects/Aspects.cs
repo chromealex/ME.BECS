@@ -239,7 +239,7 @@ namespace ME.BECS {
     }
 
     [IgnoreProfiler]
-    [LAYOUT(LayoutKind.Sequential, Size = 24)]
+    [LAYOUT(LayoutKind.Sequential, Size = 24, Pack = 4)]
     public unsafe struct RefRW<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
         public RefOp Op => RefOp.ReadWrite;

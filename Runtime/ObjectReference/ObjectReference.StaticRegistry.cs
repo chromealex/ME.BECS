@@ -106,6 +106,14 @@ namespace ME.BECS {
             additionalRuntimeObjects.Clear();
         }
 
+        public static UnityEngine.Awaitable<T> LoadAsync<T>(uint sourceId) where T : UnityEngine.Object {
+            
+            if (ObjectReferenceRegistry.data == null) return null;
+            
+            return ObjectReferenceRegistry.data.GetObjectBySourceId(sourceId).LoadAsync<T>();
+
+        }
+
         public static T GetObjectBySourceId<T>(uint sourceId) where T : UnityEngine.Object {
 
             if (ObjectReferenceRegistry.data == null) return null;

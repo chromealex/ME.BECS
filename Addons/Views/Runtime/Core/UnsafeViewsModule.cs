@@ -32,40 +32,6 @@ namespace ME.BECS.Views {
 
     }
 
-    public struct HeapReference<T> {
-
-        public System.Runtime.InteropServices.GCHandle handle;
-
-        [INLINE(256)]
-        public HeapReference(T obj) {
-            this.handle = System.Runtime.InteropServices.GCHandle.Alloc(obj);
-        }
-
-        public T Value => (T)this.handle.Target;
-
-        [INLINE(256)]
-        public void Dispose() {
-            if (this.handle.IsAllocated == true) this.handle.Free();
-        }
-
-    }
-
-    public struct HeapReference {
-
-        public System.Runtime.InteropServices.GCHandle handle;
-
-        [INLINE(256)]
-        public HeapReference(object obj) {
-            this.handle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
-        }
-
-        [INLINE(256)]
-        public void Dispose() {
-            if (this.handle.IsAllocated == true) this.handle.Free();
-        }
-
-    }
-
     [System.Serializable]
     public struct ViewsModuleProperties {
 
@@ -115,8 +81,8 @@ namespace ME.BECS.Views {
             public System.IntPtr prefabPtr;
             public uint prefabId;
             public ViewTypeInfo typeInfo;
-            public bool sceneSource;
-            public bool isLoaded;
+            public bbool sceneSource;
+            public bbool isLoaded;
             
             public TypeFlags flags;
 
@@ -300,6 +266,7 @@ namespace ME.BECS.Views {
         public uint renderingOnSceneCount;
         public UnsafeList<SceneInstanceInfo> toRemoveTemp;
         public UnsafeList<SpawnInstanceInfo> toAddTemp;
+        public UnsafeHashSet<uint> loadingRequests;
 
         public ViewsModuleProperties properties;
         
@@ -339,6 +306,7 @@ namespace ME.BECS.Views {
                 dirty = new UnsafeList<byte>((int)properties.renderingObjectsCapacity, allocatorPersistent),
                 toRemoveTemp = new UnsafeList<SceneInstanceInfo>((int)properties.renderingObjectsCapacity, allocatorPersistent),
                 toAddTemp = new UnsafeList<SpawnInstanceInfo>((int)properties.renderingObjectsCapacity, allocatorPersistent),
+                loadingRequests = new UnsafeHashSet<uint>((int)properties.renderingObjectsCapacity, allocatorPersistent),
             };
 
         }

@@ -1,6 +1,8 @@
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
+    using FO = System.Runtime.InteropServices.FieldOffsetAttribute;
     using Unity.Jobs;
     using static Cuts;
     using Unity.Collections;
@@ -31,24 +33,49 @@ namespace ME.BECS {
     /// Provides system injection into Systems and Jobs 
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public readonly struct InjectSystem<T> : IIsCreated, IInject where T : unmanaged {
+    public readonly unsafe struct InjectSystem<T> : IIsCreated, IInject where T : unmanaged {
 
-        private readonly SystemLink<T> link;
+        private readonly SystemLinkPtr link;
 
         internal InjectSystem(SystemLink<T> link) {
-            this.link = link;
+            this.link = new SystemLinkPtr(link.ptr);
         }
         
         public bool IsCreated => this.link.IsCreated;
 
-        public ref T Value => ref this.link.Value;
+        public ref T Value => ref this.link.GetValue<T>();
+
+    }
+
+    [LAYOUT(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 8)]
+    public readonly unsafe struct SystemLinkPtr : IIsCreated {
+
+        [FO(0)]
+        private readonly ulong alignment;
+        
+        [NativeDisableUnsafePtrRestriction]
+        [FO(0)]
+        private readonly void* ptr;
+
+        public bool IsCreated => this.ptr != null;
+        
+        internal SystemLinkPtr(void* ptr) {
+            this.alignment = default;
+            this.ptr = ptr;
+        }
+
+        [INLINE(256)]
+        public ref T GetValue<T>() where T : unmanaged {
+            E.IS_CREATED(this);
+            return ref *(T*)this.ptr;
+        }
 
     }
 
     public readonly unsafe struct SystemLink<T> : IIsCreated where T : unmanaged {
 
         [NativeDisableUnsafePtrRestriction]
-        private readonly T* ptr;
+        internal readonly T* ptr;
 
         public bool IsCreated => this.ptr != null;
         

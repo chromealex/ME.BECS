@@ -40,6 +40,30 @@ namespace ME.BECS.Views {
 
     }
     
+    internal class AssetOp {
+
+        public UnityEngine.AddressableAssets.AssetReference assetReference;
+        public UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> handle;
+
+        public AssetOp(UnityEngine.AddressableAssets.AssetReference assetReference) {
+            this.assetReference = assetReference;
+            this.handle = default;
+        }
+            
+        public bool IsLoading() {
+            return this.handle.IsValid();
+        }
+
+        public void StartLoading() {
+            this.handle = this.assetReference.LoadAssetAsync<UnityEngine.GameObject>();
+        }
+
+        public bool IsLoaded() {
+            return this.handle.IsValid() == true && this.handle.IsDone == true;
+        }
+
+    }
+
     [BURST]
     public unsafe struct EntityViewProvider : IViewProvider<EntityView> {
 
@@ -317,6 +341,26 @@ namespace ME.BECS.Views {
                 marker.End();
             }
 
+            {
+                ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
+                foreach (var prefabId in data.ptr->loadingRequests) {
+                    if (data.ptr->prefabIdToInfo.TryGetValue(in allocator, prefabId, out var prefabInfo) == true) {
+                        var handle = GCHandle.FromIntPtr(prefabInfo.info.ptr->prefabPtr);
+                        var assetRef = (AssetOp)handle.Target;
+                        if (assetRef.IsLoading() == false) {
+                            assetRef.StartLoading();
+                        } else if (assetRef.IsLoaded() == true) {
+                            prefabInfo.info.ptr->isLoaded = true;
+                            var go = (UnityEngine.GameObject)assetRef.assetReference.Asset;
+                            handle = new HeapReference<EntityView>(go.GetComponent<EntityView>()).handle;
+                            prefabInfo.info.ptr->prefabPtr = GCHandle.ToIntPtr(handle);
+                            data.ptr->gcHandles.Add(ref data.ptr->viewsWorld.state.ptr->allocator, handle);
+                        }
+                    }
+                }
+                data.ptr->loadingRequests.Clear();
+            }
+            
             return dependsOn;
 
         }
@@ -412,23 +456,7 @@ namespace ME.BECS.Views {
                     var root = this.AssignToRoot(in ent);
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                     if (prefabInfo.ptr->isLoaded == false) {
-                        // Object is addressable
-                        EntityView instance;
-                        var assetRef = (UnityEngine.AddressableAssets.AssetReference)handle.Target;
-                        if (assetRef.OperationHandle.IsValid() == true) {
-                            var go = (UnityEngine.GameObject)assetRef.OperationHandle.Result;
-                            instance = EntityView.Instantiate(go.GetComponent<EntityView>(), root.tr);
-                        } else {
-                            var op = assetRef.InstantiateAsync(root.tr);
-                            // For now, we need to wait for the task completion
-                            // Maybe later we can refactor this part to store async ops in some container
-                            op.WaitForCompletion();
-                            var go = op.Result;
-                            instance = go.GetComponent<EntityView>();
-                        }
-
-                        instance.rootInfo = root;
-                        objInstance = instance;
+                        throw new System.Exception("Prefab was not loaded, but we are trying to instantiate it.");
                     } else {
                         var prefab = (EntityView)handle.Target;
                         var instance = EntityView.Instantiate(prefab, root.tr);
@@ -748,7 +776,7 @@ namespace ME.BECS.Views {
                     handle = new HeapReference<EntityView>((EntityView)prefab.source).handle;
                     isLoaded = true;
                 } else {
-                    handle = new HeapReference<UnityEngine.AddressableAssets.AssetReference>(prefab.sourceReference).handle;
+                    handle = new HeapReference<AssetOp>(new AssetOp(prefab.sourceReference)).handle;
                     isLoaded = false;
                 }
 

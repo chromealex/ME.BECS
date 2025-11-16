@@ -97,6 +97,7 @@ namespace ME.BECS.Editor.Systems {
                             {
                                 graphInitializeContent.Add($"// {graph.name}");
                                 graphInitializeContent.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
+                                graphInitializeContent.Add($"if (graphNodes{id}_{this.GetType().Name}.IsCreated == true) graphNodes{id}_{this.GetType().Name}.Dispose();");
                                 graphInitializeContent.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
                                 InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
                                 InitializeInjections(graphInitializeContent, systemTypeToVar);
@@ -1012,7 +1013,7 @@ namespace ME.BECS.Editor.Systems {
                         var v = typeToVar[injectType];
                         var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(systemType, field.Name);
                         localContent.Add("{");
-                        localContent.Add($"var addr = (byte*)_addressPtr(ref *(({src}*){variable})) + {fieldOffset};");
+                        localContent.Add($"var addr = (byte*)({src}*){variable} + {fieldOffset};");
                         localContent.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
                         localContent.Add("}");
                         /*if (field.IsPublic == false) {

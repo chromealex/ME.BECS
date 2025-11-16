@@ -23,6 +23,10 @@ namespace ME.BECS {
             set => this.id = value;
         }
 
+        public HeapReference<UnityEngine.Awaitable<T>> LoadAsync() {
+            return new HeapReference<UnityEngine.Awaitable<T>>(ObjectReferenceRegistry.LoadAsync<T>(this.id));
+        }
+
     }
 
 }

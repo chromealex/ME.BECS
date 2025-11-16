@@ -1,10 +1,12 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     
     public class ConfigDrawerAttribute : UnityEngine.PropertyAttribute {}
     
     [System.Serializable]
+    [LAYOUT(System.Runtime.InteropServices.LayoutKind.Sequential, Size = 8)]
     public struct Config : System.IEquatable<Config> {
 
         public enum JoinOptions {
@@ -26,6 +28,10 @@ namespace ME.BECS {
         }
         
         public uint sourceId;
+        /// <summary>
+        /// Field is used for correct alignment on 32x platforms (like WebGL)
+        /// </summary>
+        private uint alignment;
 
         public bool IsValid => this.sourceId > 0u && this.UnsafeConfig.IsValid() == true;
 

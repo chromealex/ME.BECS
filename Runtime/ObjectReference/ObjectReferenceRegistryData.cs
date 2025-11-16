@@ -29,6 +29,10 @@ namespace ME.BECS {
         }
 
         public T Load<T>() where T : UnityEngine.Object {
+            return this.LoadAsync<T>().GetAwaiter().GetResult();
+        }
+
+        public async UnityEngine.Awaitable<T> LoadAsync<T>() where T : UnityEngine.Object {
             if (this.source != null) {
                 if (this.source is T obj) return obj;
                 return null;
@@ -49,7 +53,7 @@ namespace ME.BECS {
                     op = this.sourceReference.OperationHandle.Convert<UnityEngine.Object>();
                 } else {
                     op = this.sourceReference.LoadAssetAsync<UnityEngine.Object>();
-                    op.WaitForCompletion();
+                    await op.Task;
                 }
 
                 if (op.Result is UnityEngine.GameObject go) {
@@ -62,7 +66,7 @@ namespace ME.BECS {
                     op = this.sourceReference.OperationHandle.Convert<T>();
                 } else {
                     op = this.sourceReference.LoadAssetAsync<T>();
-                    op.WaitForCompletion();
+                    await op.Task;
                 }
                 return op.Result;
             }

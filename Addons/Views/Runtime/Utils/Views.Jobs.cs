@@ -41,6 +41,11 @@ namespace ME.BECS.Views {
                         var viewComponent = viewEnt.Read<ViewComponent>();
                         // Create new view from prefab
                         if (this.data.ptr->prefabIdToInfo.TryGetValue(in allocator, viewComponent.source.prefabId, out var prefabInfo) == true) {
+                            if (prefabInfo.info.ptr->isLoaded == false) {
+                                // Create unique prefab loading request
+                                this.data.ptr->loadingRequests.Add(viewComponent.source.prefabId);
+                                return;
+                            }
                             this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
                                 ent = viewEnt,
                                 prefabInfo = prefabInfo,
