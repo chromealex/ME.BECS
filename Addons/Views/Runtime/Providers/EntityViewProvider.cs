@@ -40,37 +40,6 @@ namespace ME.BECS.Views {
 
     }
     
-    internal class AssetOp {
-
-        public UnityEngine.AddressableAssets.AssetReference assetReference;
-        public UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> handle;
-
-        public AssetOp(UnityEngine.AddressableAssets.AssetReference assetReference) {
-            this.assetReference = assetReference;
-            this.handle = default;
-        }
-            
-        public bool IsLoading() {
-            return this.handle.IsValid();
-        }
-
-        public void StartLoading() {
-            if (this.assetReference.OperationHandle.IsValid() == true) {
-                this.assetReference.ReleaseAsset();
-            }
-            this.handle = this.assetReference.LoadAssetAsync<UnityEngine.GameObject>();
-        }
-
-        public bool IsLoaded() {
-            return this.handle.IsValid() == true && this.handle.IsDone == true;
-        }
-
-        public void Dispose() {
-            if (this.handle.IsValid() == true) this.assetReference.ReleaseAsset();
-        }
-
-    }
-
     [BURST]
     public unsafe struct EntityViewProvider : IViewProvider<EntityView> {
 
@@ -657,9 +626,6 @@ namespace ME.BECS.Views {
             }
 
             foreach (var heap in this.heaps) {
-                if (heap.handle.Target is AssetOp assetOp) {
-                    assetOp.Dispose();
-                }
                 heap.Dispose();
             }
 

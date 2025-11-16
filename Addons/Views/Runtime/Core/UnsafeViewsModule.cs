@@ -2,13 +2,13 @@ using Unity.Collections;
 
 namespace ME.BECS.Views {
 
-    using g = System.Collections.Generic;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;
     using Unity.Jobs;
     using static Cuts;
+    using System.Runtime.InteropServices;
 
     public unsafe interface IViewProvider<TEntityView> where TEntityView : IView {
 
@@ -59,6 +59,34 @@ namespace ME.BECS.Views {
 
         [UnityEngine.Tooltip("Use Unity hierarchy for objects. All transforms on scene will be added into their parents.")]
         public bool useUnityHierarchy;
+
+    }
+
+    internal class AssetOp {
+
+        public UnityEngine.AddressableAssets.AssetReference assetReference;
+        public UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> handle;
+
+        public AssetOp(UnityEngine.AddressableAssets.AssetReference assetReference) {
+            this.assetReference = assetReference;
+            this.handle = default;
+        }
+            
+        public bool IsLoading() {
+            return this.handle.IsValid();
+        }
+
+        public void StartLoading() {
+            this.handle = this.assetReference.LoadAssetAsync<UnityEngine.GameObject>();
+        }
+
+        public bool IsLoaded() {
+            return this.handle.IsValid() == true && this.handle.IsDone == true;
+        }
+
+        public void Dispose() {
+            if (this.handle.IsValid() == true) this.assetReference.ReleaseAsset();
+        }
 
     }
 
@@ -221,7 +249,7 @@ namespace ME.BECS.Views {
 
     }
 
-    public unsafe struct BeginFrameState {
+    public struct BeginFrameState {
 
         public safe_ptr<State> state;
         public float tickTime;
@@ -229,7 +257,7 @@ namespace ME.BECS.Views {
 
     }
 
-    public unsafe struct ViewsModuleData {
+    public struct ViewsModuleData {
 
         public struct EntityData {
 
@@ -289,7 +317,7 @@ namespace ME.BECS.Views {
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
                 renderingOnScene = new List<SceneInstanceInfo>(ref allocator, properties.renderingObjectsCapacity),
-                gcHandles = new List<System.Runtime.InteropServices.GCHandle>(ref allocator, properties.renderingObjectsCapacity),
+                gcHandles = new List<GCHandle>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyState = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
@@ -325,7 +353,12 @@ namespace ME.BECS.Views {
 
             for (uint i = 0u; i < this.gcHandles.Count; ++i) {
                 var handle = this.gcHandles[state, i];
-                if (handle.IsAllocated == true) handle.Free();
+                if (handle.IsAllocated == true) {
+                    if (handle.Target is AssetOp assetOp) {
+                        assetOp.Dispose();
+                    }
+                    handle.Free();
+                }
             }
             
             _free(ref this.beginFrameState);
