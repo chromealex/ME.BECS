@@ -65,7 +65,7 @@ namespace ME.BECS.Views {
     internal class AssetOp {
 
         public UnityEngine.AddressableAssets.AssetReference assetReference;
-        public UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> handle;
+        public UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle handle;
 
         public AssetOp(UnityEngine.AddressableAssets.AssetReference assetReference) {
             this.assetReference = assetReference;
@@ -78,9 +78,10 @@ namespace ME.BECS.Views {
 
         public void StartLoading() {
             if (this.assetReference.OperationHandle.IsValid() == true) {
-                this.assetReference.ReleaseAsset();
+                this.handle = this.assetReference.OperationHandle;
+            } else {
+                this.handle = this.assetReference.LoadAssetAsync<UnityEngine.GameObject>();
             }
-            this.handle = this.assetReference.LoadAssetAsync<UnityEngine.GameObject>();
         }
 
         public bool IsLoaded() {
