@@ -293,15 +293,26 @@ namespace ME.BECS.Views {
                 // Update positions
                 if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
                     var results = new Unity.Collections.NativeArray<Jobs.InterpolationTempData>(this.renderingOnSceneTransforms.length, Constants.ALLOCATOR_TEMPJOB);
-                    dependsOn = new Jobs.JobUpdateTransformsInterpolationPrepare() {
-                        renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
-                        beginFrameState = data.ptr->beginFrameState.ptr->state,
-                        currentTick = data.ptr->connectedWorld.CurrentTick,
-                        tickTime = data.ptr->beginFrameState.ptr->tickTime,
-                        currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
-                        useUnityHierarchy = data.ptr->properties.useUnityHierarchy,
-                        results = results,
-                    }.Schedule(results.Length, 32, dependsOn);
+                    if (data.ptr->properties.useUnityHierarchy == true) {
+                        dependsOn = new Jobs.JobUpdateTransformsInterpolationPrepare() {
+                            renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                            beginFrameState = data.ptr->beginFrameState.ptr->state,
+                            currentTick = data.ptr->connectedWorld.CurrentTick,
+                            tickTime = data.ptr->beginFrameState.ptr->tickTime,
+                            currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
+                            results = results,
+                        }.Schedule(results.Length, 32, dependsOn);
+                    } else {
+                        dependsOn = new Jobs.JobUpdateTransformsInterpolationNoHierarchyPrepare() {
+                            renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                            beginFrameState = data.ptr->beginFrameState.ptr->state,
+                            currentTick = data.ptr->connectedWorld.CurrentTick,
+                            tickTime = data.ptr->beginFrameState.ptr->tickTime,
+                            currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
+                            results = results,
+                        }.Schedule(results.Length, 32, dependsOn);
+                    }
+                    
                     dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
                         results = results,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);

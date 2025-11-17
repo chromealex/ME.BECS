@@ -18,6 +18,8 @@ namespace ME.BECS.Views {
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Collections;
     using ME.BECS.Jobs;
+    using ME.BECS.Transforms;
+    using um = Unity.Mathematics;
     using static CutsPool;
     
     [BURST]
@@ -151,17 +153,17 @@ namespace ME.BECS.Views {
             public void Execute(int index, TransformAccess transform) {
 
                 var entityData = this.renderingOnSceneEnts[index];
-                var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                var tr = entityData.element.GetAspect<TransformAspect>();
                 
-                if (this.useUnityHierarchy == true && entityData.element.Has<ME.BECS.Transforms.ParentComponent>() == true) {
+                if (this.useUnityHierarchy == true && entityData.element.Has<ParentComponent>() == true) {
                     // sync local matrix
-                    transform.SetLocalPositionAndRotation((UnityEngine.Vector3)ME.BECS.Transforms.MatrixUtils.GetPosition(tr.readLocalMatrix), (UnityEngine.Quaternion)ME.BECS.Transforms.MatrixUtils.GetRotation(tr.readLocalMatrix));
-                    transform.localScale = (UnityEngine.Vector3)ME.BECS.Transforms.MatrixUtils.GetScale(tr.readLocalMatrix);
+                    transform.SetLocalPositionAndRotation((UnityEngine.Vector3)MatrixUtils.GetPosition(tr.readLocalMatrix), (UnityEngine.Quaternion)MatrixUtils.GetRotation(tr.readLocalMatrix));
+                    transform.localScale = (UnityEngine.Vector3)MatrixUtils.GetScale(tr.readLocalMatrix);
                     return;
                 }
 
-                transform.SetLocalPositionAndRotation((UnityEngine.Vector3)ME.BECS.Transforms.MatrixUtils.GetPosition(tr.readWorldMatrix), (UnityEngine.Quaternion)ME.BECS.Transforms.MatrixUtils.GetRotation(tr.readWorldMatrix));
-                transform.localScale = (UnityEngine.Vector3)ME.BECS.Transforms.MatrixUtils.GetScale(tr.readWorldMatrix);
+                transform.SetLocalPositionAndRotation((UnityEngine.Vector3)MatrixUtils.GetPosition(tr.readWorldMatrix), (UnityEngine.Quaternion)MatrixUtils.GetRotation(tr.readWorldMatrix));
+                transform.localScale = (UnityEngine.Vector3)MatrixUtils.GetScale(tr.readWorldMatrix);
 
             }
 
@@ -188,7 +190,7 @@ namespace ME.BECS.Views {
 
         }
 
-        [BURST]
+        [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public struct JobUpdateTransformsInterpolationPrepare : IJobParallelFor {
 
             [ReadOnly]
@@ -197,19 +199,18 @@ namespace ME.BECS.Views {
             public ulong currentTick;
             public float tickTime;
             public double currentTimeSinceStart;
-            public bbool useUnityHierarchy;
             public NativeArray<InterpolationTempData> results;
 
             public void Execute(int index) {
                 
                 ref var transform = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafePtr(), index);
                 var entityData = this.renderingOnSceneEnts[index];
-                var tr = entityData.element.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                var tr = entityData.element.GetAspect<TransformAspect>();
                 
                 var interpolate = true;
-                ME.BECS.Transforms.WorldMatrixComponent sourceData;
-                if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
-                    sourceData = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
+                WorldMatrixComponent sourceData;
+                if (Components.Has<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
+                    sourceData = Components.Read<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
                     if (sourceData.isTickCalculated == false) {
                         interpolate = false;
                     }
@@ -217,63 +218,106 @@ namespace ME.BECS.Views {
                     sourceData = default;
                     interpolate = false;
                 }
+
+                float factor = 1f;
+                if (interpolate == true) factor = this.GetFactor();
                 
-                if (this.useUnityHierarchy == true && entityData.element.Has<ME.BECS.Transforms.ParentComponent>() == true) {
-                    
-                    var pos = ME.BECS.Transforms.MatrixUtils.GetPosition(tr.readLocalMatrix);
-                    var rot = ME.BECS.Transforms.MatrixUtils.GetRotation(tr.readLocalMatrix);
-                    var scale = ME.BECS.Transforms.MatrixUtils.GetScale(tr.readLocalMatrix);
+                if (entityData.element.Has<ParentComponent>() == true) {
+
+                    var localMatrix = tr.readLocalMatrix;
+                    var pos = (um::float3)MatrixUtils.GetPosition(localMatrix);
+                    var rot = (um::quaternion)MatrixUtils.GetRotation(localMatrix);
+                    var scale = MatrixUtils.GetScale(localMatrix);
 
                     // sync local matrix
-                    if (interpolate == false) {
-                        transform.SetLocalPositionAndRotation((UnityEngine.Vector3)pos, (UnityEngine.Quaternion)rot);
-                        transform.localScale = (UnityEngine.Vector3)scale;
-                    } else {
-                        var prevTick = this.beginFrameState.ptr->tick;
-                        var currentTick = this.currentTick;
-                        var tickTime = (double)this.tickTime;
-                        var prevTime = prevTick * tickTime;
-                        var currentTime = currentTick * tickTime;
-                        var currentWorldTime = this.currentTimeSinceStart;
-                        var factor = (tfloat)Unity.Mathematics.math.select(0d, Unity.Mathematics.math.clamp(Unity.Mathematics.math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
-                        var sourceRot = ME.BECS.Transforms.MatrixUtils.GetRotation(sourceData.value);
-                        transform.SetLocalPositionAndRotation((UnityEngine.Vector3)math.lerp(ME.BECS.Transforms.MatrixUtils.GetPosition(sourceData.value), pos, factor), (UnityEngine.Quaternion)math.slerp(sourceRot, rot, factor));
-                        transform.localScale = (UnityEngine.Vector3)math.lerp(ME.BECS.Transforms.MatrixUtils.GetScale(sourceData.value), scale, factor);
-                    }
+                    var sourceRot = (um::quaternion)MatrixUtils.GetRotation(sourceData.value);
+                    transform.SetLocalPositionAndRotation(um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, factor), Math.FastSlerp(sourceRot, rot, factor));
+                    transform.localScale = um::math.lerp(MatrixUtils.GetScale(sourceData.value), scale, factor);
                     
                 } else {
+
+                    var worldMatrix = tr.readWorldMatrix;
+                    var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
+                    var rot = (um::quaternion)MatrixUtils.GetRotation(worldMatrix);
+
+                    var sourceRot = (um::quaternion)MatrixUtils.GetRotation(sourceData.value);
+                    transform.SetLocalPositionAndRotation(um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, factor), Math.FastSlerp(sourceRot, rot, factor));
+                    transform.localScale = um::math.lerp(MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
                     
-                    var pos = tr.GetWorldMatrixPosition();
-                    var rot = tr.GetWorldMatrixRotation();
-
-                    if (interpolate == false) {
-                        transform.SetPositionAndRotation((UnityEngine.Vector3)pos, (UnityEngine.Quaternion)rot);
-                        transform.localScale = (UnityEngine.Vector3)tr.readLocalScale;
-                        return;
-                    }
-
-                    var prevTick = this.beginFrameState.ptr->tick;
-                    var currentTick = this.currentTick;
-                    var tickTime = (double)this.tickTime;
-                    var prevTime = prevTick * tickTime;
-                    var currentTime = currentTick * tickTime;
-                    var currentWorldTime = this.currentTimeSinceStart;
-                    var factor = (tfloat)Unity.Mathematics.math.select(0d, Unity.Mathematics.math.clamp(Unity.Mathematics.math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
-                    {
-                        var sourceRot = ME.BECS.Transforms.MatrixUtils.GetRotation(sourceData.value);
-                        transform.SetLocalPositionAndRotation((UnityEngine.Vector3)math.lerp(ME.BECS.Transforms.MatrixUtils.GetPosition(sourceData.value), pos, factor), (UnityEngine.Quaternion)math.slerp(sourceRot, rot, factor));
-                    }
-                    {
-                        transform.localScale = (UnityEngine.Vector3)math.lerp(ME.BECS.Transforms.MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
-                    }
-
                 }
                 
             }
 
+            private float GetFactor() {
+                var prevTick = this.beginFrameState.ptr->tick;
+                var currentTick = this.currentTick;
+                var tickTime = (double)this.tickTime;
+                var prevTime = prevTick * tickTime;
+                var currentTime = currentTick * tickTime;
+                var currentWorldTime = this.currentTimeSinceStart;
+                return (float)um::math.select(0d, um::math.clamp(um::math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
+            }
+
         }
 
-        [BURST]
+        [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
+        public struct JobUpdateTransformsInterpolationNoHierarchyPrepare : IJobParallelFor {
+
+            [ReadOnly]
+            public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
+            public safe_ptr<State> beginFrameState;
+            public ulong currentTick;
+            public float tickTime;
+            public double currentTimeSinceStart;
+            public NativeArray<InterpolationTempData> results;
+
+            public void Execute(int index) {
+                
+                ref var transform = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafePtr(), index);
+                var entityData = this.renderingOnSceneEnts[index];
+                var tr = entityData.element.GetAspect<TransformAspect>();
+                
+                var interpolate = true;
+                WorldMatrixComponent sourceData;
+                if (Components.Has<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
+                    sourceData = Components.Read<WorldMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen);
+                    if (sourceData.isTickCalculated == false) {
+                        interpolate = false;
+                    }
+                } else {
+                    sourceData = default;
+                    interpolate = false;
+                }
+
+                float factor = 0f;
+                if (interpolate == true) factor = this.GetFactor();
+                
+                var worldMatrix = tr.readWorldMatrix;
+                var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
+                var rot = (um::quaternion)MatrixUtils.GetRotation(worldMatrix);
+                var scale = (um::float3)tr.readLocalScale;
+                var position = interpolate == true ? um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, factor) : pos;
+                var rotation = interpolate == true ? Math.FastSlerp((um::quaternion)MatrixUtils.GetRotation(sourceData.value), rot, factor) : rot;
+                var localScale = interpolate == true ? um::math.lerp(MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor) : scale;
+
+                transform.SetLocalPositionAndRotation(position, rotation);
+                transform.localScale = localScale;
+                
+            }
+
+            private float GetFactor() {
+                var prevTick = this.beginFrameState.ptr->tick;
+                var currentTick = this.currentTick;
+                var tickTime = (double)this.tickTime;
+                var prevTime = prevTick * tickTime;
+                var currentTime = currentTick * tickTime;
+                var currentWorldTime = this.currentTimeSinceStart;
+                return (float)um::math.select(0d, um::math.clamp(um::math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
+            }
+
+        }
+
+        [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
 
             [ReadOnly]
@@ -540,7 +584,7 @@ namespace ME.BECS.Views {
                 var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
                 if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
                     var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
-                    var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
+                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
                     var isVisible = CameraUtils.IsVisible(in camera, in bounds);
                     this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling[in this.state.ptr->allocator, entId] = isVisible == false;
@@ -563,7 +607,7 @@ namespace ME.BECS.Views {
                 var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
                 if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumOnUpdateOnly) {
                     var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
-                    var bounds = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().GetBounds();
+                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
                     var isVisible = CameraUtils.IsVisible(in camera, in bounds);
                     this.viewsModuleData.ptr->renderingOnSceneUpdateCulling[in this.state.ptr->allocator, entId] = isVisible == false;

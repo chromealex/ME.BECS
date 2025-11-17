@@ -13,6 +13,7 @@ using Rect = UnityEngine.Rect;
 namespace ME.BECS {
     
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using um = Unity.Mathematics;
 
     public static class Math {
 
@@ -347,7 +348,59 @@ namespace ME.BECS {
             return false; // No collision
             
         }
-        
+
+        [INLINE(256)]
+        public static quaternion FastSlerp(quaternion a, quaternion b, tfloat t) {
+            tfloat dot = math.dot(a.value, b.value);
+            if (dot < 0f) {
+                b.value = -b.value;
+                dot = -dot;
+            }
+
+            if (dot > 0.9995f) {
+                float4 result = math.lerp(a.value, b.value, t);
+                return new quaternion(math.normalize(result));
+            }
+
+            tfloat theta0 = math.acos(dot);
+            tfloat theta = theta0 * t;
+
+            tfloat sinTheta = math.sin(theta);
+            tfloat sinTheta0 = math.sin(theta0);
+
+            tfloat s0 = math.cos(theta) - dot * (sinTheta / sinTheta0);
+            tfloat s1 = sinTheta / sinTheta0;
+
+            float4 outv = a.value * s0 + b.value * s1;
+            return new quaternion(outv);
+        }
+
+        [INLINE(256)]
+        public static um::quaternion FastSlerp(um::quaternion a, um::quaternion b, float t) {
+            float dot = um::math.dot(a.value, b.value);
+            if (dot < 0f) {
+                b.value = -b.value;
+                dot = -dot;
+            }
+
+            if (dot > 0.9995f) {
+                um::float4 result = um::math.lerp(a.value, b.value, t);
+                return new um::quaternion(um::math.normalize(result));
+            }
+
+            float theta0 = um::math.acos(dot);
+            float theta = theta0 * t;
+
+            float sinTheta = um::math.sin(theta);
+            float sinTheta0 = um::math.sin(theta0);
+
+            float s0 = um::math.cos(theta) - dot * (sinTheta / sinTheta0);
+            float s1 = sinTheta / sinTheta0;
+
+            um::float4 outv = a.value * s0 + b.value * s1;
+            return new um::quaternion(outv);
+        }
+
     }
 
 }
