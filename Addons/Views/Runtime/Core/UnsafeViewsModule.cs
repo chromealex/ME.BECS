@@ -77,6 +77,9 @@ namespace ME.BECS.Views {
         }
 
         public void StartLoading() {
+            if (this.assetReference.OperationHandle.IsValid() == true) {
+                this.assetReference.ReleaseAsset();
+            }
             this.handle = this.assetReference.LoadAssetAsync<UnityEngine.GameObject>();
         }
 
