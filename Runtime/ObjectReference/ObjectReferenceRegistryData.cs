@@ -48,18 +48,15 @@ namespace ME.BECS {
             }
             #endif
             if (this.isGameObject == true) {
-                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.Object> op;
+                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> op;
                 if (this.sourceReference.OperationHandle.IsValid() == true) {
-                    op = this.sourceReference.OperationHandle.Convert<UnityEngine.Object>();
+                    op = this.sourceReference.OperationHandle.Convert<UnityEngine.GameObject>();
                 } else {
-                    op = this.sourceReference.LoadAssetAsync<UnityEngine.Object>();
+                    op = this.sourceReference.LoadAssetAsync<UnityEngine.GameObject>();
                     await op.Task;
                 }
-
-                if (op.Result is UnityEngine.GameObject go) {
-                    return go.GetComponent<T>();
-                }
-                return op.Result as T;
+                
+                return op.Result.GetComponent<T>();
             } else {
                 UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<T> op;
                 if (this.sourceReference.OperationHandle.IsValid() == true) {
