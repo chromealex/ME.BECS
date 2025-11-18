@@ -47,7 +47,7 @@ namespace ME.BECS {
             }
         }
 
-        public static bool IsLoaded() => EntityConfigsRegistryLoaded.isLoaded.Data;
+        public static bool IsLoaded() => EntityConfigsRegistryLoaded.isLoaded.Data == true || UnityEngine.Application.isPlaying == false;
         
         private static void LoadForced(bool isEditor) {
 
