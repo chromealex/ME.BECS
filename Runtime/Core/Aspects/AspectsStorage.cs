@@ -127,7 +127,7 @@ namespace ME.BECS {
             return storage.Data.Get(worldId).Initialize(typeId, size);
 
         }
-
+        
     }
 
     [IgnoreProfiler]

@@ -30,7 +30,7 @@ namespace ME.BECS.Editor.Aspects {
                     
                     var contentItem = new System.Collections.Generic.List<string>();
                     var componentTypesFromAspect = new System.Collections.Generic.List<System.Type>();
-                    var strType = EditorUtils.GetTypeName(type);
+                    var strType = EditorUtils.GetDataTypeName(type);
                     var types = new System.Collections.Generic.List<string>();
                     var fieldsCount = 0;
                     foreach (var field in fields) {
@@ -150,7 +150,7 @@ namespace ME.BECS.Editor.Aspects {
                 string aspectMethodContent;
                 AspectMethodCacheData cacheData;
                 if (this.cache.TryGetValue<AspectMethodCacheData>(aspect, out cacheData) == false) {
-                    var strType = EditorUtils.GetTypeName(type);
+                    var strType = EditorUtils.GetDataTypeName(type);
                     var types = new System.Collections.Generic.List<string>();
                     var fieldsCount = 0;
                     var componentTypesFromAspect = new System.Collections.Generic.List<System.Type>();
@@ -172,7 +172,7 @@ namespace ME.BECS.Editor.Aspects {
                             }
                         }
                         var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
-                        var t = EditorUtils.FormatGenericTypeWithSingleArgument(fieldType, gType);
+                        var t = EditorUtils.FormatGenericTypeWithSingleArgument(fieldType.GetGenericTypeDefinition(), gType);
                         types.Add($"*(({t}*)(addr + {fieldOffset})) = new ME.BECS.AspectDataPtr<{EditorUtils.GetDataTypeName(gType)}>(in world);");
                     }
 

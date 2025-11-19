@@ -2,6 +2,40 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
+    public struct HeapReference<T> {
+
+        public System.Runtime.InteropServices.GCHandle handle;
+
+        [INLINE(256)]
+        public HeapReference(T obj) {
+            this.handle = System.Runtime.InteropServices.GCHandle.Alloc(obj);
+        }
+
+        public T Value => (T)this.handle.Target;
+
+        [INLINE(256)]
+        public void Dispose() {
+            if (this.handle.IsAllocated == true) this.handle.Free();
+        }
+
+    }
+
+    public struct HeapReference {
+
+        public System.Runtime.InteropServices.GCHandle handle;
+
+        [INLINE(256)]
+        public HeapReference(object obj) {
+            this.handle = System.Runtime.InteropServices.GCHandle.Alloc(obj, System.Runtime.InteropServices.GCHandleType.Pinned);
+        }
+
+        [INLINE(256)]
+        public void Dispose() {
+            if (this.handle.IsAllocated == true) this.handle.Free();
+        }
+
+    }
+
     [System.Serializable]
     public struct RuntimeObjectReference<T> where T : UnityEngine.Object {
 

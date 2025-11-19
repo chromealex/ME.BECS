@@ -6,6 +6,8 @@ namespace ME.BECS {
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
+    using System.Runtime.InteropServices;
+    using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     
     public interface IAspect {
 
@@ -108,7 +110,7 @@ namespace ME.BECS {
 
         public RefOp Op => RefOp.ReadOnly;
         
-        private ME.BECS.RefRO<T> data;
+        private RefRO<T> data;
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         private AtomicSafetyHandle m_Safety;
         private int m_Length;
@@ -170,7 +172,7 @@ namespace ME.BECS {
 
         public RefOp Op => RefOp.ReadWrite;
 
-        private ME.BECS.RefRW<T> data;
+        private RefRW<T> data;
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         private AtomicSafetyHandle m_Safety;
         private int m_Length;
@@ -237,6 +239,7 @@ namespace ME.BECS {
     }
 
     [IgnoreProfiler]
+    [LAYOUT(LayoutKind.Sequential, Size = 24, Pack = 4)]
     public unsafe struct RefRW<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
         public RefOp Op => RefOp.ReadWrite;
@@ -328,6 +331,7 @@ namespace ME.BECS {
     }
 
     [IgnoreProfiler]
+    [LAYOUT(LayoutKind.Sequential, Size = 16)]
     public unsafe struct RefRO<T> : IRefOp, IIsCreated where T : unmanaged, IComponentBase {
 
         public RefOp Op => RefOp.ReadOnly;

@@ -29,6 +29,10 @@ namespace ME.BECS {
         }
 
         public T Load<T>() where T : UnityEngine.Object {
+            return this.LoadAsync<T>().GetAwaiter().GetResult();
+        }
+
+        public async UnityEngine.Awaitable<T> LoadAsync<T>() where T : UnityEngine.Object {
             if (this.source != null) {
                 if (this.source is T obj) return obj;
                 return null;
@@ -44,25 +48,22 @@ namespace ME.BECS {
             }
             #endif
             if (this.isGameObject == true) {
-                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.Object> op;
+                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> op;
                 if (this.sourceReference.OperationHandle.IsValid() == true) {
-                    op = this.sourceReference.OperationHandle.Convert<UnityEngine.Object>();
+                    op = this.sourceReference.OperationHandle.Convert<UnityEngine.GameObject>();
                 } else {
-                    op = this.sourceReference.LoadAssetAsync<UnityEngine.Object>();
-                    op.WaitForCompletion();
+                    op = this.sourceReference.LoadAssetAsync<UnityEngine.GameObject>();
+                    await op.Task;
                 }
-
-                if (op.Result is UnityEngine.GameObject go) {
-                    return go.GetComponent<T>();
-                }
-                return op.Result as T;
+                
+                return op.Result.GetComponent<T>();
             } else {
                 UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<T> op;
                 if (this.sourceReference.OperationHandle.IsValid() == true) {
                     op = this.sourceReference.OperationHandle.Convert<T>();
                 } else {
                     op = this.sourceReference.LoadAssetAsync<T>();
-                    op.WaitForCompletion();
+                    await op.Task;
                 }
                 return op.Result;
             }

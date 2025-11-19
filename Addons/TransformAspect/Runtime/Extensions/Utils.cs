@@ -33,19 +33,16 @@ namespace ME.BECS.Transforms {
  
         [INLINE(256)]
         public static quaternion GetRotation(in float4x4 matrix) {
-            float3 forward = matrix.c2.xyz;
-            float3 upwards = matrix.c1.xyz;
-            //if (forward.x * forward.y * forward.z == 0f && upwards.x * upwards.y * upwards.z == 0f) return quaternion.identity;
-            return quaternion.LookRotationSafe(forward, upwards);
+            return quaternion.LookRotationSafe(matrix.c2.xyz, matrix.c1.xyz);
         }
         
         [INLINE(256)]
         public static float3 GetScale(in float4x4 matrix) {
-            float3 scale;
-            scale.x = math.length(matrix.c0);
-            scale.y = math.length(matrix.c1);
-            scale.z = math.length(matrix.c2);
-            return scale;
+            return new float3(
+                math.length(matrix.c0),
+                math.length(matrix.c1),
+                math.length(matrix.c2)
+            );
         }
 
     }

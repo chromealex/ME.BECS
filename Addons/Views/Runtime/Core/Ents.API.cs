@@ -2,8 +2,10 @@ namespace ME.BECS.Views {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
+    using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     
     [System.Serializable]
+    [LAYOUT(System.Runtime.InteropServices.LayoutKind.Sequential, Size = 8)]
     public struct ViewSource : System.IEquatable<ViewSource> {
 
         public uint providerId;

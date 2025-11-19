@@ -293,15 +293,26 @@ namespace ME.BECS.Views {
                 // Update positions
                 if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
                     var results = new Unity.Collections.NativeArray<Jobs.InterpolationTempData>(this.renderingOnSceneTransforms.length, Constants.ALLOCATOR_TEMPJOB);
-                    dependsOn = new Jobs.JobUpdateTransformsInterpolationPrepare() {
-                        renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
-                        beginFrameState = data.ptr->beginFrameState.ptr->state,
-                        currentTick = data.ptr->connectedWorld.CurrentTick,
-                        tickTime = data.ptr->beginFrameState.ptr->tickTime,
-                        currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
-                        useUnityHierarchy = data.ptr->properties.useUnityHierarchy,
-                        results = results,
-                    }.Schedule(results.Length, 32, dependsOn);
+                    if (data.ptr->properties.useUnityHierarchy == true) {
+                        dependsOn = new Jobs.JobUpdateTransformsInterpolationPrepare() {
+                            renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                            beginFrameState = data.ptr->beginFrameState.ptr->state,
+                            currentTick = data.ptr->connectedWorld.CurrentTick,
+                            tickTime = data.ptr->beginFrameState.ptr->tickTime,
+                            currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
+                            results = results,
+                        }.Schedule(results.Length, 32, dependsOn);
+                    } else {
+                        dependsOn = new Jobs.JobUpdateTransformsInterpolationNoHierarchyPrepare() {
+                            renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                            beginFrameState = data.ptr->beginFrameState.ptr->state,
+                            currentTick = data.ptr->connectedWorld.CurrentTick,
+                            tickTime = data.ptr->beginFrameState.ptr->tickTime,
+                            currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart,
+                            results = results,
+                        }.Schedule(results.Length, 32, dependsOn);
+                    }
+                    
                     dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
                         results = results,
                     }.Schedule(this.renderingOnSceneTransforms, dependsOn);
@@ -317,6 +328,26 @@ namespace ME.BECS.Views {
                 marker.End();
             }
 
+            {
+                ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
+                foreach (var prefabId in data.ptr->loadingRequests) {
+                    if (data.ptr->prefabIdToInfo.TryGetValue(in allocator, prefabId, out var prefabInfo) == true) {
+                        var handle = GCHandle.FromIntPtr(prefabInfo.info.ptr->prefabPtr);
+                        var assetRef = (AssetOp)handle.Target;
+                        if (assetRef.IsLoading() == false) {
+                            assetRef.StartLoading();
+                        } else if (assetRef.IsLoaded() == true) {
+                            prefabInfo.info.ptr->isLoaded = true;
+                            var go = (UnityEngine.GameObject)assetRef.assetReference.Asset;
+                            handle = new HeapReference<EntityView>(go.GetComponent<EntityView>()).handle;
+                            prefabInfo.info.ptr->prefabPtr = GCHandle.ToIntPtr(handle);
+                            data.ptr->gcHandles.Add(ref data.ptr->viewsWorld.state.ptr->allocator, handle);
+                        }
+                    }
+                }
+                data.ptr->loadingRequests.Clear();
+            }
+            
             return dependsOn;
 
         }
@@ -412,23 +443,7 @@ namespace ME.BECS.Views {
                     var root = this.AssignToRoot(in ent);
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                     if (prefabInfo.ptr->isLoaded == false) {
-                        // Object is addressable
-                        EntityView instance;
-                        var assetRef = (UnityEngine.AddressableAssets.AssetReference)handle.Target;
-                        if (assetRef.OperationHandle.IsValid() == true) {
-                            var go = (UnityEngine.GameObject)assetRef.OperationHandle.Result;
-                            instance = EntityView.Instantiate(go.GetComponent<EntityView>(), root.tr);
-                        } else {
-                            var op = assetRef.InstantiateAsync(root.tr);
-                            // For now, we need to wait for the task completion
-                            // Maybe later we can refactor this part to store async ops in some container
-                            op.WaitForCompletion();
-                            var go = op.Result;
-                            instance = go.GetComponent<EntityView>();
-                        }
-
-                        instance.rootInfo = root;
-                        objInstance = instance;
+                        throw new System.Exception("Prefab was not loaded, but we are trying to instantiate it.");
                     } else {
                         var prefab = (EntityView)handle.Target;
                         var instance = EntityView.Instantiate(prefab, root.tr);
@@ -597,7 +612,7 @@ namespace ME.BECS.Views {
 
         [INLINE(256)]
         public void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data) {
-
+            
             for (uint i = 0u; i < data.ptr->renderingOnScene.Count; ++i) {
                 var instance = data.ptr->renderingOnScene[in state.ptr->allocator, i];
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
@@ -748,7 +763,7 @@ namespace ME.BECS.Views {
                     handle = new HeapReference<EntityView>((EntityView)prefab.source).handle;
                     isLoaded = true;
                 } else {
-                    handle = new HeapReference<UnityEngine.AddressableAssets.AssetReference>(prefab.sourceReference).handle;
+                    handle = new HeapReference<AssetOp>(new AssetOp(prefab.sourceReference)).handle;
                     isLoaded = false;
                 }
 
