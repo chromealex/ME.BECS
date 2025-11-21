@@ -100,7 +100,7 @@ namespace ME.BECS.Editor.Systems {
                                 graphInitializeContent.Add($"if (graphNodes{id}_{this.GetType().Name}.IsCreated == true) graphNodes{id}_{this.GetType().Name}.Dispose();");
                                 graphInitializeContent.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
                                 InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
-                                InitializeInjections(graphInitializeContent, systemTypeToVar);
+                                InitializeInjections(graph, graphInitializeContent, systemTypeToVar);
                             }
                             graphInitializeContent.Add("}");
                         }
@@ -987,15 +987,15 @@ namespace ME.BECS.Editor.Systems {
         }
 
         
-        public static void InitializeInjections(scg::List<string> content, scg::Dictionary<System.Type, string> systemTypeToVar) {
+        public static void InitializeInjections(SystemsGraph graph, scg::List<string> content, scg::Dictionary<System.Type, string> systemTypeToVar) {
             content.Add("// Injections:");
             foreach (var kv in systemTypeToVar) {
                 var type = kv.Key;
-                InjectDependencies(content, systemTypeToVar, type);
+                InjectDependencies(graph, content, systemTypeToVar, type);
             }
         }
 
-        public static void InjectDependencies(scg::List<string> content, scg::Dictionary<System.Type, string> typeToVar, System.Type systemType) {
+        public static void InjectDependencies(SystemsGraph graph, scg::List<string> content, scg::Dictionary<System.Type, string> typeToVar, System.Type systemType) {
             var localContent = new scg::List<string>();
             {
                 var variable = typeToVar[systemType];
@@ -1025,7 +1025,7 @@ namespace ME.BECS.Editor.Systems {
                 }
 
                 if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {systemType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {
                     content.AddRange(localContent);
                 }
@@ -1058,7 +1058,7 @@ namespace ME.BECS.Editor.Systems {
                 }
                 
                 if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {
                     content.AddRange(localContent);
                 }
@@ -1080,7 +1080,7 @@ namespace ME.BECS.Editor.Systems {
                         if (typeToVar.TryGetValue(injectType, out var v) == true) {
                             content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
                         } else {
-                            UnityEngine.Debug.LogError($"[CodeGenerator] Failed to inject system {injectType.Name} because it's missing in current graph");
+                            UnityEngine.Debug.LogError($"[CodeGenerator] {graph.name} failed to inject system {injectType.Name} because it's missing in current graph. If this graph is inner, use `Is Inner Graph` flag on graph object.");
                         }
                     }
                     var attr = field.GetCustomAttribute<InjectDeltaTimeAttribute>();
@@ -1097,7 +1097,7 @@ namespace ME.BECS.Editor.Systems {
                     }
                 }
                 if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
+                    UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {
                     content.AddRange(localContent);
                 }
