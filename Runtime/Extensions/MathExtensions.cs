@@ -350,7 +350,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static quaternion FastSlerp(quaternion a, quaternion b, tfloat t) {
+        public static quaternion FastSlerp(quaternion a, quaternion b, sfloat t) {
             tfloat dot = math.dot(a.value, b.value);
             if (dot < 0f) {
                 b.value = -b.value;
@@ -358,12 +358,12 @@ namespace ME.BECS {
             }
 
             if (dot > 0.9995f) {
-                float4 result = math.lerp(a.value, b.value, t);
+                float4 result = math.lerp(a.value, b.value, (tfloat)t);
                 return new quaternion(math.normalize(result));
             }
 
             tfloat theta0 = math.acos(dot);
-            tfloat theta = theta0 * t;
+            tfloat theta = theta0 * (tfloat)t;
 
             tfloat sinTheta = math.sin(theta);
             tfloat sinTheta0 = math.sin(theta0);
