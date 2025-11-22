@@ -807,6 +807,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public UnsafeEntityConfig(EntityConfig config, uint id = 0u, Ent staticDataEnt = default, bool autoRegisterConfig = true) {
 
+            E.ValidateConfig(config);
             this = default;
             this.id = id > 0u || autoRegisterConfig == false ? id : EntityConfigRegistry.Register(config, out _);
             this.data = new Data(ref staticDataEnt.World.state.ptr->allocator, config.data.components, config.maskable == true ? config.data.masks : null);

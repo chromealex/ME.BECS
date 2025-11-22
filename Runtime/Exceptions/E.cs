@@ -23,6 +23,7 @@ namespace ME.BECS {
         public const string LEAK_DETECTION_ALLOCATOR = "LEAK_DETECTION_ALLOCATOR";
         public const string LEAK_DETECTION_COUNTER = "LEAK_DETECTION_COUNTER";
         public const string MEMORY_ALLOCATOR_BOUNDS_CHECK = "MEMORY_ALLOCATOR_BOUNDS_CHECK";
+        public const string EDITOR = "UNITY_EDITOR";
 
     }
 
