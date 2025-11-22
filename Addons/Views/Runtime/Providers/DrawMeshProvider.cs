@@ -299,12 +299,22 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
+        public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
+            
+        }
+
+        [INLINE(256)]
         public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
             
         }
 
         [INLINE(256)]
         public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+            
+        }
+
+        [INLINE(256)]
+        public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
             
         }
 
@@ -368,7 +378,9 @@ namespace ME.BECS.Views {
                     flags = 0,
                 };
                 info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.viewModules);
+                info.HasUpdateParallelModules = ProvidersHelper.HasAny<IViewUpdateParallel>(prefab.viewModules);
                 info.HasApplyStateModules = ProvidersHelper.HasAny<IViewApplyState>(prefab.viewModules);
+                info.HasApplyStateParallelModules = ProvidersHelper.HasAny<IViewApplyStateParallel>(prefab.viewModules);
                 info.HasInitializeModules = ProvidersHelper.HasAny<IViewInitialize>(prefab.viewModules);
                 info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.viewModules);
                 info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.viewModules);

@@ -25,6 +25,48 @@ namespace ME.BECS.Views {
     [BURST]
     public unsafe struct Jobs {
 
+        public struct ApplyStateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
+
+            public safe_ptr<ViewsModuleData> data;
+            public MemoryAllocator allocator;
+            public ClassPtr<IViewProvider<TEntityView>> provider;
+
+            public void Execute(int i) {
+                var entId = this.data.ptr->renderingOnSceneApplyStateParallel.sparseSet.dense[in this.allocator, i];
+                if (this.data.ptr->renderingOnSceneApplyStateParallelCulling[in this.allocator, entId] == true) return;
+                var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in this.allocator, entId);
+                ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
+                var view = this.data.ptr->renderingOnScene[in this.allocator, idx];
+                var ent = entData.element;
+                if (entData.versionParallel != ent.Version) {
+                    entData.versionParallel = ent.Version;
+                    this.provider.Value.ApplyStateParallel(this.data, in view, in ent);
+                }
+            }
+
+        }
+
+        public struct UpdateParallelJob<TEntityView> : IJobParallelForDefer where TEntityView : IView {
+
+            public safe_ptr<ViewsModuleData> data;
+            public MemoryAllocator allocator;
+            public ClassPtr<IViewProvider<TEntityView>> provider;
+            public float dt;
+
+            public void Execute(int i) {
+                var entId = this.data.ptr->renderingOnSceneUpdateParallel.sparseSet.dense[in this.allocator, i];
+                if (this.data.ptr->renderingOnSceneUpdateParallelCulling[in this.allocator, entId] == true) return;
+                var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in this.allocator, entId);
+                ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
+                var view = this.data.ptr->renderingOnScene[in this.allocator, idx];
+                var ent = entData.element;
+                if (view.prefabInfo.ptr->typeInfo.HasUpdateParallel == true || view.prefabInfo.ptr->HasUpdateParallelModules == true) {
+                    this.provider.Value.OnUpdateParallel(this.data, in view, in ent, this.dt);
+                }
+            }
+
+        }
+
         [BURST]
         public struct JobSpawnViews : IJob {
 
@@ -54,7 +96,15 @@ namespace ME.BECS.Views {
                             });
                             var updateIdx = this.data.ptr->renderingOnSceneCount++;
                             this.data.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] = false;
+                            this.data.ptr->renderingOnSceneApplyStateParallelCulling[in allocator, entId] = false;
                             this.data.ptr->renderingOnSceneUpdateCulling[in allocator, entId] = false;
+                            this.data.ptr->renderingOnSceneUpdateParallelCulling[in allocator, entId] = false;
+                            
+                            if (prefabInfo.info.ptr->typeInfo.HasApplyStateParallel == true || prefabInfo.info.ptr->HasApplyStateParallelModules == true) {
+                                this.data.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, entId);
+                                *this.data.ptr->applyStateParallelCounter.ptr = this.data.ptr->renderingOnSceneApplyStateParallel.Count;
+                            }
+
                             if (prefabInfo.info.ptr->typeInfo.HasApplyState == true || prefabInfo.info.ptr->HasApplyStateModules == true) {
                                 this.data.ptr->renderingOnSceneApplyState.Add(ref allocator, entId);
                                 *this.data.ptr->applyStateCounter.ptr = this.data.ptr->renderingOnSceneApplyState.Count;
@@ -64,6 +114,12 @@ namespace ME.BECS.Views {
                                 this.data.ptr->renderingOnSceneUpdate.Add(ref allocator, entId);
                                 *this.data.ptr->updateCounter.ptr = this.data.ptr->renderingOnSceneUpdate.Count;
                             }
+
+                            if (prefabInfo.info.ptr->typeInfo.HasUpdateParallel == true || prefabInfo.info.ptr->HasUpdateParallelModules == true) {
+                                this.data.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, entId);
+                                *this.data.ptr->updateParallelCounter.ptr = this.data.ptr->renderingOnSceneUpdateParallel.Count;
+                            }
+
                             this.data.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, entId) = updateIdx;
                             this.data.ptr->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = entId;
                             this.data.ptr->renderingOnSceneBits.Set((int)entId, true);
@@ -71,6 +127,7 @@ namespace ME.BECS.Views {
                             this.data.ptr->renderingOnSceneEnts.Add(new ViewsModuleData.EntityData() {
                                 element = viewEnt,
                                 version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
+                                versionParallel = viewEnt.Version - 1,
                             });
                         } else {
                             Logger.Views.Error("Item not found");
@@ -108,7 +165,15 @@ namespace ME.BECS.Views {
                             {
                                 // Remove and swap back
                                 this.data.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] = false;
+                                this.data.ptr->renderingOnSceneApplyStateParallelCulling[in allocator, entId] = false;
                                 this.data.ptr->renderingOnSceneUpdateCulling[in allocator, entId] = false;
+                                this.data.ptr->renderingOnSceneUpdateParallelCulling[in allocator, entId] = false;
+                                
+                                if (info.prefabInfo.ptr->typeInfo.HasApplyStateParallel == true || info.prefabInfo.ptr->HasApplyStateParallelModules == true) {
+                                    this.data.ptr->renderingOnSceneApplyStateParallel.Remove(in allocator, entId);
+                                    *this.data.ptr->applyStateParallelCounter.ptr = this.data.ptr->renderingOnSceneApplyStateParallel.Count;
+                                }
+
                                 if (info.prefabInfo.ptr->typeInfo.HasApplyState == true || info.prefabInfo.ptr->HasApplyStateModules == true) {
                                     this.data.ptr->renderingOnSceneApplyState.Remove(in allocator, entId);
                                     *this.data.ptr->applyStateCounter.ptr = this.data.ptr->renderingOnSceneApplyState.Count;
@@ -118,6 +183,12 @@ namespace ME.BECS.Views {
                                     this.data.ptr->renderingOnSceneUpdate.Remove(in allocator, entId);
                                     *this.data.ptr->updateCounter.ptr = this.data.ptr->renderingOnSceneUpdate.Count;
                                 }
+
+                                if (info.prefabInfo.ptr->typeInfo.HasUpdateParallel == true || info.prefabInfo.ptr->HasUpdateParallelModules == true) {
+                                    this.data.ptr->renderingOnSceneUpdateParallel.Remove(in allocator, entId);
+                                    *this.data.ptr->updateParallelCounter.ptr = this.data.ptr->renderingOnSceneUpdateParallel.Count;
+                                }
+
                                 --this.data.ptr->renderingOnSceneCount;
                                 this.data.ptr->renderingOnScene.RemoveAtFast(in allocator, idx);
                                 this.data.ptr->renderingOnSceneEnts.RemoveAtSwapBack(index);
@@ -364,6 +435,7 @@ namespace ME.BECS.Views {
                         ref var entData = ref this.viewsModuleData.ptr->renderingOnSceneEnts.Ptr[updateIdx];
                         entData.element = ent;
                         entData.version = ent.Version - 1;
+                        entData.versionParallel = ent.Version - 1;
                     }
 
                     var srcHasViewComponent = false;
@@ -552,7 +624,9 @@ namespace ME.BECS.Views {
                 var entitiesCapacity = this.connectedWorld.state.ptr->entities.Capacity;
                 this.viewsModuleData.ptr->renderingOnSceneBits.Resize(entitiesCapacity, allocator);
                 this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
+                this.viewsModuleData.ptr->renderingOnSceneApplyStateParallelCulling.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
                 this.viewsModuleData.ptr->renderingOnSceneUpdateCulling.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
+                this.viewsModuleData.ptr->renderingOnSceneUpdateParallelCulling.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
                 if (entitiesCapacity > this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId.Length) {
                     this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId.Resize(ref this.state.ptr->allocator, entitiesCapacity, 2);
                 }
@@ -567,6 +641,52 @@ namespace ME.BECS.Views {
                 if (entitiesCapacity > this.viewsModuleData.ptr->toChange.Capacity) this.viewsModuleData.ptr->toChange.Capacity = (int)entitiesCapacity;
                 if (entitiesCapacity > this.viewsModuleData.ptr->toAssign.Capacity) this.viewsModuleData.ptr->toAssign.Capacity = (int)entitiesCapacity;
                 
+            }
+
+        }
+
+        [BURST]
+        public struct UpdateCullingApplyStateParallelJob : IJobParallelForDefer {
+
+            public safe_ptr<State> state;
+            public safe_ptr<ViewsModuleData> viewsModuleData;
+            
+            public void Execute(int index) {
+
+                var entId = this.viewsModuleData.ptr->renderingOnSceneApplyStateParallel.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
+                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
+                var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
+                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
+                    var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
+                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
+                    var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
+                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
+                    this.viewsModuleData.ptr->renderingOnSceneApplyStateParallelCulling[in this.state.ptr->allocator, entId] = isVisible == false;
+                }
+
+            }
+
+        }
+
+        [BURST]
+        public struct UpdateCullingUpdateParallelJob : IJobParallelForDefer {
+
+            public safe_ptr<State> state;
+            public safe_ptr<ViewsModuleData> viewsModuleData;
+            
+            public void Execute(int index) {
+
+                var entId = this.viewsModuleData.ptr->renderingOnSceneUpdateParallel.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
+                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
+                var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
+                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
+                    var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
+                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
+                    var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
+                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
+                    this.viewsModuleData.ptr->renderingOnSceneUpdateParallelCulling[in this.state.ptr->allocator, entId] = isVisible == false;
+                }
+
             }
 
         }

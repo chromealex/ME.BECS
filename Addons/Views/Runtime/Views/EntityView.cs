@@ -54,12 +54,19 @@ namespace ME.BECS.Views {
         void ApplyState(in EntRO ent);
     }
 
+    public interface IViewApplyStateParallel : IViewModule {
+        void ApplyStateParallel(in EntRO ent);
+    }
+
     public interface IViewUpdate : IViewModule {
         void OnUpdate(in EntRO ent, float dt);
     }
 
-    public enum CullingType {
+    public interface IViewUpdateParallel : IViewModule {
+        void OnUpdateParallel(in EntRO ent, float dt);
+    }
 
+    public enum CullingType {
         /// <summary>
         /// Apply frustum culling for ApplyState/OnUpdate methods
         /// </summary>
@@ -76,7 +83,6 @@ namespace ME.BECS.Views {
         /// Apply frustum culling for ApplyState method only
         /// </summary>
         FrustumApplyStateOnly = 3,
-
     }
     
     public abstract class EntityView : MonoBehaviour, IView {
@@ -97,7 +103,11 @@ namespace ME.BECS.Views {
         [SerializeField][HideInInspector]
         internal int[] applyStateModules;
         [SerializeField][HideInInspector]
+        internal int[] applyStateParallelModules;
+        [SerializeField][HideInInspector]
         internal int[] updateModules;
+        [SerializeField][HideInInspector]
+        internal int[] updateParallelModules;
 
         public CullingType cullingType;
         public GroupChangedTracker groupChangedTracker;
@@ -150,12 +160,29 @@ namespace ME.BECS.Views {
         }
 
         /// <summary>
+        /// Called every time ent has been changed, but in parallel job
+        /// </summary>
+        /// <param name="ent"></param>
+        public void DoApplyStateParallel(in EntRO ent) {
+            this.ApplyStateParallel(in ent);
+        }
+
+        /// <summary>
         /// Called every frame
         /// </summary>
         /// <param name="ent"></param>
         /// <param name="dt"></param>
         public void DoOnUpdate(in EntRO ent, float dt) {
             this.OnUpdate(in ent, dt);
+        }
+        
+        /// <summary>
+        /// Called every frame, but in parallel job
+        /// </summary>
+        /// <param name="ent"></param>
+        /// <param name="dt"></param>
+        public void DoOnUpdateParallel(in EntRO ent, float dt) {
+            this.OnUpdateParallel(in ent, dt);
         }
 
         protected internal virtual void OnEnableFromPool(in EntRO ent) { }
@@ -168,13 +195,19 @@ namespace ME.BECS.Views {
 
         protected internal virtual void ApplyState(in EntRO ent) { }
 
+        protected internal virtual void ApplyStateParallel(in EntRO ent) { }
+
         protected internal virtual void OnUpdate(in EntRO ent, float dt) { }
+
+        protected internal virtual void OnUpdateParallel(in EntRO ent, float dt) { }
 
         public virtual void OnValidate() {
 
             this.ValidateModules<IViewInitialize>(ref this.initializeModules);
             this.ValidateModules<IViewApplyState>(ref this.applyStateModules);
+            this.ValidateModules<IViewApplyStateParallel>(ref this.applyStateParallelModules);
             this.ValidateModules<IViewUpdate>(ref this.updateModules);
+            this.ValidateModules<IViewUpdateParallel>(ref this.updateParallelModules);
             this.ValidateModules<IViewDeInitialize>(ref this.deInitializeModules);
             this.ValidateModules<IViewDisableToPool>(ref this.disableToPoolModules);
             this.ValidateModules<IViewEnableFromPool>(ref this.enableFromPoolModules);

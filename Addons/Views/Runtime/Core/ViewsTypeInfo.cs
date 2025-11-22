@@ -2,14 +2,14 @@ namespace ME.BECS.Views {
 
     [System.Flags]
     public enum TypeFlags : byte {
-
-        Initialize = 1 << 0,
-        DeInitialize = 1 << 1,
-        EnableFromPool = 1 << 2,
-        DisableToPool = 1 << 3,
-        ApplyState = 1 << 4,
-        Update = 1 << 5,
-
+        Initialize         = 1 << 0,
+        DeInitialize       = 1 << 1,
+        EnableFromPool     = 1 << 2,
+        DisableToPool      = 1 << 3,
+        ApplyState         = 1 << 4,
+        Update             = 1 << 5,
+        ApplyStateParallel = 1 << 6,
+        UpdateParallel     = 1 << 7,
     }
     
     [System.Serializable]
@@ -24,7 +24,9 @@ namespace ME.BECS.Views {
         public bool HasEnableFromPool => (this.flags & TypeFlags.EnableFromPool) != 0;
         public bool HasDisableToPool => (this.flags & TypeFlags.DisableToPool) != 0;
         public bool HasApplyState => (this.flags & TypeFlags.ApplyState) != 0;
+        public bool HasApplyStateParallel => (this.flags & TypeFlags.ApplyStateParallel) != 0;
         public bool HasUpdate => (this.flags & TypeFlags.Update) != 0;
+        public bool HasUpdateParallel => (this.flags & TypeFlags.UpdateParallel) != 0;
 
     }
     
