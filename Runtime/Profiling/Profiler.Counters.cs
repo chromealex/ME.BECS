@@ -8,19 +8,58 @@ namespace ME.BECS {
 
     public class ProfilerCountersDefinition {
 
-        public readonly struct Counter<T> where T : unmanaged {
+        public readonly unsafe struct Counter<T> where T : unmanaged {
 
-            private readonly ProfilerCounter<T> count;
+            [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
+            [System.NonSerializedAttribute]
+            private readonly System.IntPtr ptr;
+            [System.NonSerializedAttribute]
+            private readonly byte type;
             
             public Counter(string name, ProfilerCategory category, ProfilerMarkerDataUnit unit) {
 
-                this.count = new ProfilerCounter<T>(category, name, unit);
+                this.type = GetProfilerMarkerDataType();
+                this.ptr = Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateMarker(name, category, Unity.Profiling.LowLevel.MarkerFlags.Counter, 1);
+                Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SetMarkerMetadata(this.ptr, 0, null, this.type, (byte)unit);
                 
             }
 
+            public static byte GetProfilerMarkerDataType() {
+                switch (System.Type.GetTypeCode(typeof(T))) {
+                    case System.TypeCode.Int32:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.Int32;
+
+                    case System.TypeCode.UInt32:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.UInt32;
+
+                    case System.TypeCode.Int64:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.Int64;
+
+                    case System.TypeCode.UInt64:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.UInt64;
+
+                    case System.TypeCode.Single:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.Float;
+
+                    case System.TypeCode.Double:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.Double;
+
+                    case System.TypeCode.String:
+                        return (byte)Unity.Profiling.LowLevel.ProfilerMarkerDataType.String16;
+
+                    default:
+                        throw new System.ArgumentException($"Type {typeof(T)} is unsupported by ProfilerCounter.");
+                }
+            }
+                        
             public void Sample(T value) {
                 
-                this.count.Sample(value);
+                var data = new Unity.Profiling.LowLevel.Unsafe.ProfilerMarkerData {
+                    Type = this.type,
+                    Size = (uint)Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>(),
+                    Ptr = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref value),
+                };
+                Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SingleSampleWithMetadata(this.ptr, 1, &data);
                 
             }
 
