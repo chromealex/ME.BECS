@@ -57,7 +57,7 @@ namespace ME.BECS.Views {
 
             public readonly T module;
             public GroupChangedTracker tracker;
-            public string name => ViewsTracker.Tracker<T>.name;
+            public string name => ViewsTracker.Tracker.names[this.module.GetType()];
 
             public ModuleItem(T module, GroupChangedTracker tracker) {
                 this.module = module;
@@ -587,12 +587,15 @@ namespace ME.BECS.Views {
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
+                    var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                    updateMain.Begin();
                     instanceObj.DoApplyStateParallel(in entRo);
+                    updateMain.End();
                 }
             }
             if (instanceInfo.prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Invoke(instanceObj, in entRo, static (IViewApplyStateParallel module, in EntRO e) => module.ApplyStateParallel(in e));
             mainMarker.End();
-
+            
         }
 
         [INLINE(256)]
@@ -605,12 +608,15 @@ namespace ME.BECS.Views {
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
+                    var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                    updateMain.Begin();
                     instanceObj.DoApplyState(in entRo);
+                    updateMain.End();
                 }
             }
             if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in entRo, static (IViewApplyState module, in EntRO e) => module.ApplyState(in e));
             mainMarker.End();
-
+            
         }
 
         [INLINE(256)]
@@ -621,7 +627,10 @@ namespace ME.BECS.Views {
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdate");
             mainMarker.Begin();
             {
+                var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                updateMain.Begin();
                 instanceObj.DoOnUpdate(in entRo, dt);
+                updateMain.End();
             }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
             mainMarker.End();
@@ -642,7 +651,10 @@ namespace ME.BECS.Views {
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdateParallel");
             mainMarker.Begin();
             {
+                var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                updateMain.Begin();
                 instanceObj.DoOnUpdateParallel(in entRo, dt);
+                updateMain.End();
             }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateParallelModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdateParallel module, in EntRO e, float dt) => module.OnUpdateParallel(in e, dt));
             mainMarker.End();
