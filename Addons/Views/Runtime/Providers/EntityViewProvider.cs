@@ -582,19 +582,27 @@ namespace ME.BECS.Views {
 
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyStateParallel");
             mainMarker.Begin();
+            #endif
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
+                    #if ENABLE_PROFILER
                     var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                     updateMain.Begin();
+                    #endif
                     instanceObj.DoApplyStateParallel(in entRo);
+                    #if ENABLE_PROFILER
                     updateMain.End();
+                    #endif
                 }
             }
             if (instanceInfo.prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Invoke(instanceObj, in entRo, static (IViewApplyStateParallel module, in EntRO e) => module.ApplyStateParallel(in e));
+            #if ENABLE_PROFILER
             mainMarker.End();
+            #endif
             
         }
 
@@ -603,19 +611,27 @@ namespace ME.BECS.Views {
 
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyState");
             mainMarker.Begin();
+            #endif
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
+                    #if ENABLE_PROFILER
                     var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                     updateMain.Begin();
+                    #endif
                     instanceObj.DoApplyState(in entRo);
+                    #if ENABLE_PROFILER
                     updateMain.End();
+                    #endif
                 }
             }
             if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in entRo, static (IViewApplyState module, in EntRO e) => module.ApplyState(in e));
+            #if ENABLE_PROFILER
             mainMarker.End();
+            #endif
             
         }
 
@@ -624,16 +640,24 @@ namespace ME.BECS.Views {
             
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdate");
             mainMarker.Begin();
+            #endif
             {
+                #if ENABLE_PROFILER
                 var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                 updateMain.Begin();
+                #endif
                 instanceObj.DoOnUpdate(in entRo, dt);
+                #if ENABLE_PROFILER
                 updateMain.End();
+                #endif
             }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
+            #if ENABLE_PROFILER
             mainMarker.End();
+            #endif
             
             if (data.ptr->properties.useUnityHierarchy == true && this.parentAwait.Contains(ent) == true) {
                 if (this.ValidateParent(data, in ent, instanceObj) == true) {
@@ -648,16 +672,24 @@ namespace ME.BECS.Views {
             
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdateParallel");
             mainMarker.Begin();
+            #endif
             {
+                #if ENABLE_PROFILER
                 var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                 updateMain.Begin();
+                #endif
                 instanceObj.DoOnUpdateParallel(in entRo, dt);
+                #if ENABLE_PROFILER
                 updateMain.End();
+                #endif
             }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateParallelModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdateParallel module, in EntRO e, float dt) => module.OnUpdateParallel(in e, dt));
+            #if ENABLE_PROFILER
             mainMarker.End();
+            #endif
             
         }
 
