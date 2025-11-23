@@ -10,12 +10,19 @@ namespace ME.BECS {
 
         public readonly unsafe struct Counter<T> where T : unmanaged {
 
-            //private readonly ProfilerCounter<T> count;
             [Unity.Collections.LowLevel.Unsafe.NativeDisableUnsafePtrRestrictionAttribute]
             [System.NonSerializedAttribute]
-            readonly System.IntPtr m_Ptr;
+            private readonly System.IntPtr ptr;
             [System.NonSerializedAttribute]
-            readonly byte m_Type;
+            private readonly byte type;
+            
+            public Counter(string name, ProfilerCategory category, ProfilerMarkerDataUnit unit) {
+
+                this.type = GetProfilerMarkerDataType();
+                this.ptr = Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateMarker(name, category, Unity.Profiling.LowLevel.MarkerFlags.Counter, 1);
+                Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SetMarkerMetadata(this.ptr, 0, null, this.type, (byte)unit);
+                
+            }
 
             public static byte GetProfilerMarkerDataType() {
                 switch (System.Type.GetTypeCode(typeof(T))) {
@@ -44,33 +51,22 @@ namespace ME.BECS {
                         throw new System.ArgumentException($"Type {typeof(T)} is unsupported by ProfilerCounter.");
                 }
             }
-
-            public Counter(string name, ProfilerCategory category, ProfilerMarkerDataUnit unit) {
-
-                this.m_Type = GetProfilerMarkerDataType();
-                this.m_Ptr = Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.CreateMarker(name, category, Unity.Profiling.LowLevel.MarkerFlags.Counter, 1);
-                Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SetMarkerMetadata(this.m_Ptr, 0, null, this.m_Type, (byte)unit);
-                //this.count = new ProfilerCounter<T>(category, name, unit);
-                
-            }
-
+                        
             public void Sample(T value) {
                 
                 var data = new Unity.Profiling.LowLevel.Unsafe.ProfilerMarkerData {
-                    Type = this.m_Type,
+                    Type = this.type,
                     Size = (uint)Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>(),
                     Ptr = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.AddressOf(ref value),
                 };
-                Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SingleSampleWithMetadata(this.m_Ptr, 1, &data);
-                //this.count.Sample(value);
+                Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility.SingleSampleWithMetadata(this.ptr, 1, &data);
                 
             }
 
         }
 
         private const string caption = "<b><color=#888>ME.BECS</color></b>";
-        private const string categoryNetworkCaption = "<b><color=#888>ME.BECS</color></b>: Network";
-        private const string categoryAllocatorCaption = "<b><color=#888>ME.BECS</color></b>: Network";
+        private const string categoryAllocatorCaption = "<b><color=#888>ME.BECS</color></b>: Allocator";
 
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesCount = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99000);
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> componentsSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99001);
@@ -80,31 +76,31 @@ namespace ME.BECS {
         #endif
         public static readonly Unity.Burst.SharedStatic<Counter<uint>> entitiesSize = Unity.Burst.SharedStatic<Counter<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99004);
         
-        public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorReserved = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99006);
-        public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorUsed = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99007);
-        public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorFree = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<uint>>.align, 99008);
+        public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorReserved = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99006);
+        public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorUsed = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99007);
+        public static readonly Unity.Burst.SharedStatic<Counter<int>> memoryAllocatorFree = Unity.Burst.SharedStatic<Counter<int>>.GetOrCreatePartiallyUnsafeWithHashCode<ProfilerCountersDefinition>(TAlign<Counter<int>>.align, 99008);
         
-        private static bool initialized = false;
+        public static readonly Unity.Burst.SharedStatic<bool> initialized = Unity.Burst.SharedStatic<bool>.GetOrCreate<ProfilerCountersDefinition>(TAlign<Counter<bool>>.align);
+
         [Conditional("ENABLE_PROFILER")]
         public static void Initialize() {
 
-            if (initialized == true) return;
-            initialized = true;
+            if (initialized.Data == true) return;
+            initialized.Data = true;
             
             var category = new ProfilerCategory(caption);
-            var categoryNetwork = new ProfilerCategory(categoryNetworkCaption);
             var categoryAllocator = new ProfilerCategory(categoryAllocatorCaption);
-            entitiesCount.Data = new("Entities Count", category, ProfilerMarkerDataUnit.Count);
-            componentsSize.Data = new ("Components Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
+            entitiesCount.Data = new Counter<uint>("Entities Count", category, ProfilerMarkerDataUnit.Count);
+            componentsSize.Data = new Counter<uint>("Components Size", category, ProfilerMarkerDataUnit.Bytes);
             #if !ENABLE_BECS_FLAT_QUERIES
-            batchesSize.Data = new ("Batches Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
-            archetypesSize.Data = new ("Archetypes Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
+            batchesSize.Data = new ("Batches Size", category, ProfilerMarkerDataUnit.Bytes);
+            archetypesSize.Data = new ("Archetypes Size", category, ProfilerMarkerDataUnit.Bytes);
             #endif
-            entitiesSize.Data = new ("Entities Size (bytes)", category, ProfilerMarkerDataUnit.Bytes);
+            entitiesSize.Data = new Counter<uint>("Entities Size", category, ProfilerMarkerDataUnit.Bytes);
             
-            memoryAllocatorReserved.Data = new ("Allocator: Reserved (bytes)", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
-            memoryAllocatorUsed.Data = new ("Allocator: Used (bytes)", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
-            memoryAllocatorFree.Data = new("Allocator: Free (bytes)", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
+            memoryAllocatorReserved.Data = new Counter<int>("Allocator: Reserved", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
+            memoryAllocatorUsed.Data = new Counter<int>("Allocator: Used", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
+            memoryAllocatorFree.Data = new Counter<int>("Allocator: Free", categoryAllocator, ProfilerMarkerDataUnit.Bytes);
 
         }
         
@@ -128,37 +124,20 @@ namespace ME.BECS {
         [Unity.Burst.BurstCompile]
         public static void SampleWorldEndFrame(in World world) {
 
-            var marker = new ProfilerMarker("Profiler::CollectStats");
-            marker.Begin();
-            
-            using (new ProfilerMarker("EntitiesCount").Auto()) {
-                ProfilerCountersDefinition.entitiesCount.Data.Sample(world.state.ptr->entities.EntitiesCount);
-            }
-
-            using (new ProfilerMarker("Components").Auto()) {
-                ProfilerCountersDefinition.componentsSize.Data.Sample(Components.GetReservedSizeInBytes(world.state));
-            }
+            if (ProfilerCountersDefinition.initialized.Data == false) return;
+            ProfilerCountersDefinition.entitiesCount.Data.Sample(world.state.ptr->entities.EntitiesCount);
+            ProfilerCountersDefinition.componentsSize.Data.Sample(Components.GetReservedSizeInBytes(world.state));
             #if !ENABLE_BECS_FLAT_QUERIES
-            using (new ProfilerMarker("Archetypes").Auto()) {
-                ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state.ptr->archetypes.GetReservedSizeInBytes(world.state));
-            }
-            using (new ProfilerMarker("Batches").Auto()) {
-                ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.id));
-            }
+            ProfilerCountersDefinition.archetypesSize.Data.Sample(world.state.ptr->archetypes.GetReservedSizeInBytes(world.state));
+            ProfilerCountersDefinition.batchesSize.Data.Sample(Batches.GetReservedSizeInBytes(world.id));
             #endif
-            using (new ProfilerMarker("Entities").Auto()) {
-                ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state.ptr->entities.GetReservedSizeInBytes(world.state));
-            }
+            ProfilerCountersDefinition.entitiesSize.Data.Sample(world.state.ptr->entities.GetReservedSizeInBytes(world.state));
             
-            using (new ProfilerMarker("Allocator").Auto()) {
-                world.state.ptr->allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);
-                ProfilerCountersDefinition.memoryAllocatorReserved.Data.Sample((int)reservedSize);
-                ProfilerCountersDefinition.memoryAllocatorUsed.Data.Sample((int)usedSize);
-                ProfilerCountersDefinition.memoryAllocatorFree.Data.Sample((int)freeSize);
-            }
-
-            marker.End();
-
+            world.state.ptr->allocator.GetSize(out var reservedSize, out var usedSize, out var freeSize);
+            ProfilerCountersDefinition.memoryAllocatorReserved.Data.Sample((int)reservedSize);
+            ProfilerCountersDefinition.memoryAllocatorUsed.Data.Sample((int)usedSize);
+            ProfilerCountersDefinition.memoryAllocatorFree.Data.Sample((int)freeSize);
+            
         }
 
     }
