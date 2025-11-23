@@ -29,7 +29,40 @@ namespace ME.BECS {
         }
 
         public T Load<T>() where T : UnityEngine.Object {
-            return this.LoadAsync<T>().GetAwaiter().GetResult();
+            if (this.source != null) {
+                if (this.source is T obj) return obj;
+                return null;
+            }
+            if (this.sourceReference == null || string.IsNullOrEmpty(this.sourceReference.AssetGUID) == true) return null;
+            #if UNITY_EDITOR
+            if (UnityEditor.EditorApplication.isPlaying == false) {
+                var obj = this.sourceReference.editorAsset;
+                if (this.isGameObject == true && obj is UnityEngine.GameObject goEditor) {
+                    return goEditor.GetComponent<T>();
+                }
+                return obj as T;
+            }
+            #endif
+            if (this.isGameObject == true) {
+                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<UnityEngine.GameObject> op;
+                if (this.sourceReference.OperationHandle.IsValid() == true) {
+                    op = this.sourceReference.OperationHandle.Convert<UnityEngine.GameObject>();
+                } else {
+                    op = this.sourceReference.LoadAssetAsync<UnityEngine.GameObject>();
+                    op.WaitForCompletion();
+                }
+                
+                return op.Result.GetComponent<T>();
+            } else {
+                UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<T> op;
+                if (this.sourceReference.OperationHandle.IsValid() == true) {
+                    op = this.sourceReference.OperationHandle.Convert<T>();
+                } else {
+                    op = this.sourceReference.LoadAssetAsync<T>();
+                    op.WaitForCompletion();
+                }
+                return op.Result;
+            }
         }
 
         public async UnityEngine.Awaitable<T> LoadAsync<T>() where T : UnityEngine.Object {
