@@ -7,9 +7,11 @@ namespace ME.BECS.Views.Editor {
     public class ViewsCodeGenerator : CustomCodeGenerator {
 
         private delegate void UpdateViewInfo(ref ViewTypeInfo viewTypeInfo);
-        private static System.Collections.Generic.KeyValuePair<string, UpdateViewInfo>[] methods = new System.Collections.Generic.KeyValuePair<string, UpdateViewInfo>[] {
+        private static readonly System.Collections.Generic.KeyValuePair<string, UpdateViewInfo>[] methods = new System.Collections.Generic.KeyValuePair<string, UpdateViewInfo>[] {
             new (nameof(EntityView.ApplyState), (ref ViewTypeInfo x) => x.flags |= TypeFlags.ApplyState),
+            new (nameof(EntityView.ApplyStateParallel), (ref ViewTypeInfo x) => x.flags |= TypeFlags.ApplyStateParallel),
             new (nameof(EntityView.OnUpdate), (ref ViewTypeInfo x) => x.flags |= TypeFlags.Update),
+            new (nameof(EntityView.OnUpdateParallel), (ref ViewTypeInfo x) => x.flags |= TypeFlags.UpdateParallel),
             new (nameof(EntityView.OnInitialize), (ref ViewTypeInfo x) => x.flags |= TypeFlags.Initialize),
             new (nameof(EntityView.OnDeInitialize), (ref ViewTypeInfo x) => x.flags |= TypeFlags.DeInitialize),
             new (nameof(EntityView.OnEnableFromPool), (ref ViewTypeInfo x) => x.flags |= TypeFlags.EnableFromPool),

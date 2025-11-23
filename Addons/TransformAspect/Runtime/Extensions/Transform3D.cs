@@ -116,7 +116,14 @@ namespace ME.BECS.Transforms {
         public static void CalculateMatrix(in TransformAspect parent, in TransformAspect ent) {
 
             ent.worldMatrix = math.mul(parent.readWorldMatrix, ent.readLocalMatrix);
-            if (ent.IsStatic == true) ent.ent.SetTag<IsTransformStaticCalculatedComponent>(true);
+            
+        }
+
+        [INLINE(256)]
+        public static void CalculateMatrixStatic(in TransformAspect parent, in TransformAspect ent) {
+
+            ent.worldMatrix = math.mul(parent.readWorldMatrix, ent.readLocalMatrix);
+            ent.ent.SetTag<IsTransformStaticCalculatedComponent>(true);
             
         }
 
@@ -212,6 +219,19 @@ namespace ME.BECS.Transforms {
         }
 
         [INLINE(256)]
+        public static void CalculateWorldMatrixLevelStatic(in TransformAspect parent, in TransformAspect ent) {
+            
+            if (parent.IsWorldMatrixTickCalculated == false) {
+                // Calculate parent matrix
+                if (ent.ent.worldId != parent.ent.worldId) return;
+            }
+
+            CalculateMatrixStatic(in parent, in ent);
+            ent.IsWorldMatrixTickCalculated = true;
+            
+        }
+
+        [INLINE(256)]
         public static void CalculateWorldMatrixParent(in TransformAspect parent, in TransformAspect ent) {
             
             /*var stack = new Unity.Collections.LowLevel.Unsafe.UnsafeList<TransformAspect>(8, Constants.ALLOCATOR_TEMP);
@@ -248,7 +268,11 @@ namespace ME.BECS.Transforms {
             if (ent.IsWorldMatrixTickCalculated == false) {
                 ent.LockWorldMatrix();
                 if (ent.IsWorldMatrixTickCalculated == false) {
-                    CalculateMatrix(in parent, in ent);
+                    if (ent.IsStatic == true) {
+                        CalculateMatrixStatic(in parent, in ent);
+                    } else {
+                        CalculateMatrix(in parent, in ent);
+                    }
                     ent.IsWorldMatrixTickCalculated = true;
                 }
                 ent.UnlockWorldMatrix();

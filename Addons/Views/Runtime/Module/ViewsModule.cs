@@ -18,6 +18,7 @@ namespace ME.BECS {
 
         public static class Tracker {
             public static uint id;
+            public static readonly System.Collections.Generic.Dictionary<System.Type, string> names = new System.Collections.Generic.Dictionary<System.Type, string>();
         }
 
         public static class Tracker<T> {
@@ -39,6 +40,7 @@ namespace ME.BECS {
             info[idx] = viewInfo;
             typeToIndex.Add(typeof(T), idx);
             Tracker<T>.name = typeof(T).Name;
+            Tracker.names.TryAdd(typeof(T), Tracker<T>.name);
 
         }
 
@@ -49,6 +51,7 @@ namespace ME.BECS {
             info[idx] = viewInfo;
             typeToIndex.Add(typeof(T), idx);
             Tracker<T>.name = typeof(T).Name;
+            Tracker.names.TryAdd(typeof(T), Tracker<T>.name);
             
         }
 

@@ -20,8 +20,10 @@ namespace ME.BECS.Views {
         /// </summary>
         JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
         void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data);
+        void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
         void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
         void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
+        void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
 
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data);
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
@@ -129,6 +131,17 @@ namespace ME.BECS.Views {
                 }
             }
 
+            public bool HasApplyStateParallelModules {
+                get => (this.flags & TypeFlags.ApplyStateParallel) != 0;
+                set {
+                    if (value == true) {
+                        this.flags |= TypeFlags.ApplyStateParallel;
+                    } else {
+                        this.flags &= ~TypeFlags.ApplyStateParallel;
+                    }
+                }
+            }
+
             public bool HasUpdateModules {
                 get => (this.flags & TypeFlags.Update) != 0;
                 set {
@@ -136,6 +149,17 @@ namespace ME.BECS.Views {
                         this.flags |= TypeFlags.Update;
                     } else {
                         this.flags &= ~TypeFlags.Update;
+                    }
+                }
+            }
+
+            public bool HasUpdateParallelModules {
+                get => (this.flags & TypeFlags.UpdateParallel) != 0;
+                set {
+                    if (value == true) {
+                        this.flags |= TypeFlags.UpdateParallel;
+                    } else {
+                        this.flags &= ~TypeFlags.UpdateParallel;
                     }
                 }
             }
@@ -267,6 +291,7 @@ namespace ME.BECS.Views {
 
             public Ent element;
             public uint version;
+            public uint versionParallel;
 
         }
         
@@ -288,12 +313,18 @@ namespace ME.BECS.Views {
         public List<System.Runtime.InteropServices.GCHandle> gcHandles;
         
         public RenderingSparseList renderingOnSceneApplyState;
+        public RenderingSparseList renderingOnSceneApplyStateParallel;
         public RenderingSparseList renderingOnSceneUpdate;
+        public RenderingSparseList renderingOnSceneUpdateParallel;
         public safe_ptr<uint> applyStateCounter;
+        public safe_ptr<uint> applyStateParallelCounter;
         public safe_ptr<uint> updateCounter;
+        public safe_ptr<uint> updateParallelCounter;
 
         public MemArray<bool> renderingOnSceneApplyStateCulling;
+        public MemArray<bool> renderingOnSceneApplyStateParallelCulling;
         public MemArray<bool> renderingOnSceneUpdateCulling;
+        public MemArray<bool> renderingOnSceneUpdateParallelCulling;
 
         public uint renderingOnSceneCount;
         public UnsafeList<SceneInstanceInfo> toRemoveTemp;
@@ -316,16 +347,22 @@ namespace ME.BECS.Views {
                 properties = properties,
                 beginFrameState = _make(new BeginFrameState()),
                 applyStateCounter = _make<uint>(0u),
+                applyStateParallelCounter = _make<uint>(0u),
                 updateCounter = _make<uint>(0u),
+                updateParallelCounter = _make<uint>(0u),
                 prefabIdToInfo = new UIntDictionary<SourceRegistry.InfoRef>(ref allocator, properties.instancesRegistryCapacity),
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
                 renderingOnScene = new List<SceneInstanceInfo>(ref allocator, properties.renderingObjectsCapacity),
                 gcHandles = new List<GCHandle>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyState = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
+                renderingOnSceneApplyStateParallel = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
+                renderingOnSceneUpdateParallel = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
+                renderingOnSceneApplyStateParallelCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
                 renderingOnSceneUpdateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
+                renderingOnSceneUpdateParallelCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
                 renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, allocatorPersistent),
                 renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: allocatorPersistent),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
@@ -367,7 +404,9 @@ namespace ME.BECS.Views {
             
             _free(ref this.beginFrameState);
             _free(ref this.applyStateCounter);
+            _free(ref this.applyStateParallelCounter);
             _free(ref this.updateCounter);
+            _free(ref this.updateParallelCounter);
             if (this.renderingOnSceneEnts.IsCreated == true) this.renderingOnSceneEnts.Dispose();
             if (this.renderingOnSceneBits.IsCreated == true) this.renderingOnSceneBits.Dispose();
             if (this.toRemove.IsCreated == true) this.toRemove.Dispose();
@@ -470,7 +509,7 @@ namespace ME.BECS.Views {
     public unsafe struct UnsafeViewsModule<TEntityView> where TEntityView : IView {
 
         public safe_ptr<ViewsModuleData> data;
-        private IViewProvider<TEntityView> provider;
+        private ClassPtr<IViewProvider<TEntityView>> provider;
         
         public static UnsafeViewsModule<TEntityView> Create<T>(uint providerId, ref World connectedWorld, T provider, uint entitiesCapacity, ViewsModuleProperties properties) where T : IViewProvider<TEntityView> {
             
@@ -486,12 +525,12 @@ namespace ME.BECS.Views {
 
             var module = new UnsafeViewsModule<TEntityView> {
                 data = _make(ViewsModuleData.Create(ref viewsWorld.state.ptr->allocator, viewsWorld.id, entitiesCapacity, properties)),
-                provider = provider,
+                provider = new ClassPtr<IViewProvider<TEntityView>>(provider),
             };
             module.data.ptr->connectedWorld = connectedWorld;
             module.data.ptr->viewsWorld = viewsWorld;
             WorldStaticCallbacks.RaiseCallback(ref *module.data.ptr);
-            module.provider.Load(module.data, ObjectReferenceRegistry.data);
+            module.provider.Value.Load(module.data, ObjectReferenceRegistry.data);
             Context.Switch(in prevContext);
             return module;
 
@@ -500,7 +539,8 @@ namespace ME.BECS.Views {
         public void Dispose() {
 
             var world = this.data.ptr->viewsWorld;
-            this.provider.Dispose(this.data.ptr->viewsWorld.state, this.data);
+            this.provider.Value.Dispose(this.data.ptr->viewsWorld.state, this.data);
+            this.provider.Dispose();
             this.data.ptr->Dispose(this.data.ptr->viewsWorld.state);
             _free(this.data);
             world.Dispose();
@@ -516,13 +556,13 @@ namespace ME.BECS.Views {
         
         public ViewSource RegisterViewSource(TEntityView prefab) {
 
-            return this.provider.Register(this.data, prefab);
+            return this.provider.Value.Register(this.data, prefab);
 
         }
 
         internal ViewSource RegisterViewSource(TEntityView prefab, bool checkPrefab, bool sceneSource = false) {
 
-            return this.provider.Register(this.data, prefab, checkPrefab: checkPrefab, sceneSource: sceneSource);
+            return this.provider.Value.Register(this.data, prefab, checkPrefab: checkPrefab, sceneSource: sceneSource);
 
         }
 
@@ -552,7 +592,7 @@ namespace ME.BECS.Views {
                 {
                     // Assign views first
                     var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).AsReadonly();
-                    this.provider.Query(ref query);
+                    this.provider.Value.Query(ref query);
                     var toAssignJob = query.Schedule<Jobs.JobAssignViews, AssignViewComponent>(new Jobs.JobAssignViews() {
                         viewsWorld = this.data.ptr->viewsWorld,
                         viewsModuleData = this.data,
@@ -565,7 +605,7 @@ namespace ME.BECS.Views {
                 {
                     // DestroyView() case: Remove views from the scene which don't have ViewComponent, but contained in renderingOnSceneBits (DestroyView called)
                     var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).AsReadonly().Without<IsViewRequested>();
-                    this.provider.Query(ref query);
+                    this.provider.Value.Query(ref query);
                     toRemoveJob = query.AsParallel().Schedule<Jobs.JobRemoveFromScene, ViewComponent>(new Jobs.JobRemoveFromScene() {
                         viewsModuleData = this.data,
                         toRemove = this.data.ptr->toRemove.AsParallelWriter(),
@@ -576,7 +616,7 @@ namespace ME.BECS.Views {
                 {
                     // InstantiateView() case: Add views to the scene which have ViewComponent, but not contained in renderingOnSceneBits
                     var query = API.Query(in this.data.ptr->connectedWorld, dependsOn).AsReadonly().WithAspect<Transforms.TransformAspect>();
-                    this.provider.Query(ref query);
+                    this.provider.Value.Query(ref query);
                     toAddJob = query.AsParallel().Schedule<Jobs.JobAddToScene, IsViewRequested>(new Jobs.JobAddToScene() {
                         state = this.data.ptr->viewsWorld.state,
                         viewsModuleData = this.data,
@@ -625,17 +665,28 @@ namespace ME.BECS.Views {
             
             if (this.data.ptr->camera.IsAlive() == true) { // Update culling
 
-                var cullingApplyState = new Jobs.UpdateCullingApplyStateJob() {
+                var depends = new NativeArray<JobHandle>(4, Constants.ALLOCATOR_TEMP);
+                depends[0] = new Jobs.UpdateCullingApplyStateParallelJob() {
+                    state = this.data.ptr->viewsWorld.state,
+                    viewsModuleData = this.data,
+                }.Schedule((int*)this.data.ptr->applyStateParallelCounter.ptr, 64, dependsOn);
+
+                depends[1] = new Jobs.UpdateCullingApplyStateJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
                 }.Schedule((int*)this.data.ptr->applyStateCounter.ptr, 64, dependsOn);
 
-                var cullingUpdateState = new Jobs.UpdateCullingUpdateJob() {
+                depends[2] = new Jobs.UpdateCullingUpdateParallelJob() {
+                    state = this.data.ptr->viewsWorld.state,
+                    viewsModuleData = this.data,
+                }.Schedule((int*)this.data.ptr->updateParallelCounter.ptr, 64, dependsOn);
+
+                depends[3] = new Jobs.UpdateCullingUpdateJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
                 }.Schedule((int*)this.data.ptr->updateCounter.ptr, 64, dependsOn);
 
-                dependsOn = JobHandle.CombineDependencies(cullingApplyState, cullingUpdateState);
+                dependsOn = JobHandle.CombineDependencies(depends);
 
             }
 
@@ -645,28 +696,48 @@ namespace ME.BECS.Views {
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Provider::Despawn");
                     marker.Begin();
-                    dependsOn = this.provider.Despawn(this.data, dependsOn);
+                    dependsOn = this.provider.Value.Despawn(this.data, dependsOn);
                     marker.End();
                 }
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Provider::Spawn");
                     marker.Begin();
-                    dependsOn = this.provider.Spawn(this.data, dependsOn);
+                    dependsOn = this.provider.Value.Spawn(this.data, dependsOn);
                     marker.End();
                 }
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Provider::Commit");
                     marker.Begin();
-                    dependsOn = this.provider.Commit(this.data, dependsOn);
+                    dependsOn = this.provider.Value.Commit(this.data, dependsOn);
                     marker.End();
                 }
             }
             JobUtils.RunScheduled();
-            
+
             {
-                // Complete all previous systems to be sure that
-                // renderingOnSceneApplyState and renderingOnSceneUpdate set up has been complete
-                dependsOn.Complete();
+                var provider = this.provider.Value;
+                {
+                    // Update views logic in parallel mode
+                    var dependsOnApplyState = new Jobs.ApplyStateParallelJob<TEntityView>() {
+                        data = this.data,
+                        allocator = allocator,
+                        provider = this.provider,
+                    }.Schedule((int*)this.data.ptr->applyStateParallelCounter.ptr, 4, dependsOn);
+                    var dependsOnUpdate = new Jobs.UpdateParallelJob<TEntityView>() {
+                        data = this.data,
+                        allocator = allocator,
+                        provider = this.provider,
+                        dt = dt,
+                    }.Schedule((int*)this.data.ptr->updateParallelCounter.ptr, 4, dependsOn);
+                    dependsOn = JobHandle.CombineDependencies(dependsOnApplyState, dependsOnUpdate);
+                }
+
+                {
+                    // Complete all previous systems to be sure that
+                    // renderingOnSceneApplyState and renderingOnSceneUpdate set up has been complete
+                    dependsOn.Complete();
+                }
+
                 // Update views logic
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] ApplyState Views");
@@ -680,7 +751,7 @@ namespace ME.BECS.Views {
                         var ent = entData.element;
                         if (entData.version != ent.Version) {
                             entData.version = ent.Version;
-                            this.provider.ApplyState(this.data, in view, in ent);
+                            provider.ApplyState(this.data, in view, in ent);
                         }
                     }
                     marker.End();
@@ -697,7 +768,7 @@ namespace ME.BECS.Views {
                         var view = this.data.ptr->renderingOnScene[in allocator, idx];
                         var ent = entData.element;
                         if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
-                            this.provider.OnUpdate(this.data, in view, in ent, dt);
+                            provider.OnUpdate(this.data, in view, in ent, dt);
                         }
                     }
                     marker.End();
@@ -714,7 +785,7 @@ namespace ME.BECS.Views {
         }
 
         public IView GetViewByEntity(in Ent entity) {
-            return this.provider.GetViewByEntity(this.data, in entity);
+            return this.provider.Value.GetViewByEntity(this.data, in entity);
         }
 
     }

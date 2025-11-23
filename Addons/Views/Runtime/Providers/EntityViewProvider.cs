@@ -57,7 +57,7 @@ namespace ME.BECS.Views {
 
             public readonly T module;
             public GroupChangedTracker tracker;
-            public string name => ViewsTracker.Tracker<T>.name;
+            public string name => ViewsTracker.Tracker.names[this.module.GetType()];
 
             public ModuleItem(T module, GroupChangedTracker tracker) {
                 this.module = module;
@@ -164,7 +164,9 @@ namespace ME.BECS.Views {
         }
 
         private ModuleMethod<IViewApplyState> applyStateModules;
+        private ModuleMethod<IViewApplyStateParallel> applyStateParallelModules;
         private ModuleMethod<IViewUpdate> updateModules;
+        private ModuleMethod<IViewUpdateParallel> updateParallelModules;
         private ModuleMethod<IViewEnableFromPool> enableModules;
         private ModuleMethod<IViewDisableToPool> disableModules;
         private ModuleMethod<IViewInitialize> initializeModules;
@@ -216,7 +218,9 @@ namespace ME.BECS.Views {
             this.renderingOnSceneTransforms = new TransformAccessArray((int)properties.renderingObjectsCapacity, JobsUtility.JobWorkerCount);
 
             this.applyStateModules.Initialize();
+            this.applyStateParallelModules.Initialize();
             this.updateModules.Initialize();
+            this.updateParallelModules.Initialize();
             this.enableModules.Initialize();
             this.disableModules.Initialize();
             this.initializeModules.Initialize();
@@ -479,7 +483,9 @@ namespace ME.BECS.Views {
 
             objInstance.groupChangedTracker.Initialize(in prefabInfo.ptr->typeInfo.tracker);
             if (prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Register(objInstance, objInstance.applyStateModules);
+            if (prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Register(objInstance, objInstance.applyStateParallelModules);
             if (prefabInfo.ptr->HasUpdateModules == true) this.updateModules.Register(objInstance, objInstance.updateModules);
+            if (prefabInfo.ptr->HasUpdateParallelModules == true) this.updateParallelModules.Register(objInstance, objInstance.updateParallelModules);
             if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.Register(objInstance, objInstance.initializeModules);
             if (prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.Register(objInstance, objInstance.deInitializeModules);
             if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.Register(objInstance, objInstance.enableFromPoolModules);
@@ -536,7 +542,9 @@ namespace ME.BECS.Views {
             }
 
             this.applyStateModules.UnregisterMethods(instance);
+            this.applyStateParallelModules.UnregisterMethods(instance);
             this.updateModules.UnregisterMethods(instance);
+            this.updateParallelModules.UnregisterMethods(instance);
             this.initializeModules.UnregisterMethods(instance);
             this.deinitializeModules.UnregisterMethods(instance);
             this.enableModules.UnregisterMethods(instance);
@@ -570,22 +578,61 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
+        public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
+
+            EntRO entRo = ent;
+            var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
+            var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyStateParallel");
+            mainMarker.Begin();
+            #endif
+            {
+                var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
+                if (hasChanged == true) {
+                    #if ENABLE_PROFILER
+                    var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                    updateMain.Begin();
+                    #endif
+                    instanceObj.DoApplyStateParallel(in entRo);
+                    #if ENABLE_PROFILER
+                    updateMain.End();
+                    #endif
+                }
+            }
+            if (instanceInfo.prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Invoke(instanceObj, in entRo, static (IViewApplyStateParallel module, in EntRO e) => module.ApplyStateParallel(in e));
+            #if ENABLE_PROFILER
+            mainMarker.End();
+            #endif
+            
+        }
+
+        [INLINE(256)]
         public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
 
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyState");
             mainMarker.Begin();
+            #endif
             {
                 var hasChanged = instanceObj.groupChangedTracker.HasChanged(in entRo, in instanceInfo.prefabInfo.ptr->typeInfo.tracker);
                 if (hasChanged == true) {
+                    #if ENABLE_PROFILER
+                    var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                    updateMain.Begin();
+                    #endif
                     instanceObj.DoApplyState(in entRo);
-                    //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoApplyStateChildren(in entRo);
+                    #if ENABLE_PROFILER
+                    updateMain.End();
+                    #endif
                 }
             }
             if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in entRo, static (IViewApplyState module, in EntRO e) => module.ApplyState(in e));
+            #if ENABLE_PROFILER
             mainMarker.End();
-
+            #endif
+            
         }
 
         [INLINE(256)]
@@ -593,14 +640,24 @@ namespace ME.BECS.Views {
             
             EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdate");
             mainMarker.Begin();
+            #endif
             {
+                #if ENABLE_PROFILER
+                var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                updateMain.Begin();
+                #endif
                 instanceObj.DoOnUpdate(in entRo, dt);
-                //if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) instanceObj.DoOnUpdateChildren(ent, dt);
+                #if ENABLE_PROFILER
+                updateMain.End();
+                #endif
             }
             if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
+            #if ENABLE_PROFILER
             mainMarker.End();
+            #endif
             
             if (data.ptr->properties.useUnityHierarchy == true && this.parentAwait.Contains(ent) == true) {
                 if (this.ValidateParent(data, in ent, instanceObj) == true) {
@@ -608,6 +665,32 @@ namespace ME.BECS.Views {
                 }
             }
 
+        }
+
+        [INLINE(256)]
+        public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+            
+            EntRO entRo = ent;
+            var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
+            #if ENABLE_PROFILER
+            var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdateParallel");
+            mainMarker.Begin();
+            #endif
+            {
+                #if ENABLE_PROFILER
+                var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
+                updateMain.Begin();
+                #endif
+                instanceObj.DoOnUpdateParallel(in entRo, dt);
+                #if ENABLE_PROFILER
+                updateMain.End();
+                #endif
+            }
+            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateParallelModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdateParallel module, in EntRO e, float dt) => module.OnUpdateParallel(in e, dt));
+            #if ENABLE_PROFILER
+            mainMarker.End();
+            #endif
+            
         }
 
         [INLINE(256)]
@@ -663,7 +746,9 @@ namespace ME.BECS.Views {
             ListPool<ViewRoot>.Release(this.roots);
             
             this.applyStateModules.Dispose();
+            this.applyStateParallelModules.Dispose();
             this.updateModules.Dispose();
+            this.updateParallelModules.Dispose();
             this.enableModules.Dispose();
             this.disableModules.Dispose();
             this.initializeModules.Dispose();
@@ -717,7 +802,9 @@ namespace ME.BECS.Views {
                     flags = 0,
                 };
                 info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.viewModules);
+                info.HasUpdateParallelModules = ProvidersHelper.HasAny<IViewUpdateParallel>(prefab.viewModules);
                 info.HasApplyStateModules = ProvidersHelper.HasAny<IViewApplyState>(prefab.viewModules);
+                info.HasApplyStateParallelModules = ProvidersHelper.HasAny<IViewApplyStateParallel>(prefab.viewModules);
                 info.HasInitializeModules = ProvidersHelper.HasAny<IViewInitialize>(prefab.viewModules);
                 info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.viewModules);
                 info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.viewModules);
