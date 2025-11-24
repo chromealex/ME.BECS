@@ -1104,11 +1104,49 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
+        public struct MethodPointerData : System.IEquatable<MethodPointerData> {
+
+            public MethodInfo originalMethodInfo;
+
+            public MethodPointerData(MethodInfo originalMethodInfo) {
+                this.originalMethodInfo = originalMethodInfo;
+            }
+
+            public bool Equals(MethodPointerData other) {
+                if (this.originalMethodInfo.IsGenericMethod == true) {
+                    if (this.originalMethodInfo.Name == other.originalMethodInfo.Name &&
+                        this.originalMethodInfo.ReturnType == other.originalMethodInfo.ReturnType &&
+                        this.originalMethodInfo.MemberType == other.originalMethodInfo.MemberType &&
+                        this.originalMethodInfo.GetGenericMethodDefinition() == other.originalMethodInfo.GetGenericMethodDefinition()) {
+                        return true;
+                    }
+                }
+                return this.originalMethodInfo.Name == other.originalMethodInfo.Name &&
+                       this.originalMethodInfo.ReturnType == other.originalMethodInfo.ReturnType &&
+                       this.originalMethodInfo.DeclaringType == other.originalMethodInfo.DeclaringType &&
+                       this.originalMethodInfo.ReflectedType == other.originalMethodInfo.ReflectedType &&
+                       this.originalMethodInfo.MemberType == other.originalMethodInfo.MemberType &&
+                       this.originalMethodInfo.IsGenericMethod == other.originalMethodInfo.IsGenericMethod;
+            }
+
+            public override bool Equals(object obj) {
+                return obj is MethodPointerData other && this.Equals(other);
+            }
+
+            public override int GetHashCode() {
+                if (this.originalMethodInfo.IsGenericMethod == true) {
+                    return this.originalMethodInfo.Name.GetHashCode() ^ this.originalMethodInfo.ReturnType.GetHashCode() ^ this.originalMethodInfo.GetGenericMethodDefinition().GetHashCode();
+                }
+                return (this.originalMethodInfo != null ? this.originalMethodInfo.GetHashCode() : 0);
+            }
+
+        }
+
         private static void CollectJobsTypes(MethodInfo root, scg::HashSet<System.Type> types) {
             if (root == null) return;
             var q = new scg::Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
-            var visited = new scg::HashSet<System.Reflection.MethodInfo>();
+            var visited = new scg::HashSet<MethodPointerData>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
@@ -1123,7 +1161,7 @@ namespace ME.BECS.Editor.Systems {
                     }
 
                     if (inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if (visited.Add(new MethodPointerData(member)) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) {
                                 q.Enqueue(member);
                             }
