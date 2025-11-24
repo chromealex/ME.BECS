@@ -153,6 +153,14 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
     }
 
     /// <summary>
+    /// Converts an sfloat number to an integer
+    /// </summary>
+    public static explicit operator uint(sfloat f)
+    {
+        return (uint)(int)f;
+    }
+
+    /// <summary>
     /// Creates an sfloat number from an integer
     /// </summary>
     public static explicit operator sfloat(int value)
