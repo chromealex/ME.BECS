@@ -374,6 +374,8 @@ namespace ME.BECS {
 
             E.IS_CREATED(this);
             E.IS_CREATED(collection);
+
+            if (toIdx < fromIdx) return;
             
             var index = this.Count;
 
