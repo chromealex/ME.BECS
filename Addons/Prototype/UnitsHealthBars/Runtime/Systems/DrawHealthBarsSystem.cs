@@ -87,7 +87,7 @@ namespace ME.BECS.UnitsHealthBars {
                 var healthPerSection = unit.readHealthMax / barInfo.Sections;
                 var percent = unit.readHealth / unit.readHealthMax;
                 var healthPercent = math.clamp(unit.readHealth / (float)unit.readHealthMax - math.lerp(healthPerSection / (float)unit.readHealthMax * 2f, 0f, percent), 0f, 1f);
-                var sectionIndex = (byte)math.floor(healthPercent * barInfo.Sections);
+                var sectionIndex = (byte)(int)math.floor(healthPercent * barInfo.Sections);
                 this.bars.Add(new BarItem() {
                     settings = barInfo,
                     position = screenPoint.xy,

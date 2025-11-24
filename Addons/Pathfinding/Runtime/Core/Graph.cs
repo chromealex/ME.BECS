@@ -695,7 +695,7 @@ namespace ME.BECS.Pathfinding {
             var f = sign * math.lerp(0f, 254f / 8f * 0.5f, math.lerp(factorRight * factor, factorLeft * factor, factor + sign * 0.5f));
             if (f < 0f) f += 254f;
             if (f > 254f) f -= 254f;
-            return (byte)f;
+            return (byte)(int)f;
             
         }
 
@@ -707,11 +707,11 @@ namespace ME.BECS.Pathfinding {
             var dir = (Direction)direction;
             if (dir is Direction.UpLeft or Direction.UpRight or Direction.DownLeft or Direction.DownRight) {
 
-                return (byte)(baseDir + Graph.GetNeighbourSumDir(in world, node, width, height, gridChunks, chunksX, chunksY, dir));
+                return (byte)(int)(baseDir + Graph.GetNeighbourSumDir(in world, node, width, height, gridChunks, chunksX, chunksY, dir));
                 
             }
 
-            return (byte)baseDir;
+            return (byte)(int)baseDir;
 
         }
 
