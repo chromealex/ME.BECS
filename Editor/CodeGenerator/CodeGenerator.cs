@@ -9,6 +9,44 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using scg = System.Collections.Generic;
 
+    public struct MethodPointerData : System.IEquatable<MethodPointerData> {
+
+        public MethodInfo originalMethodInfo;
+
+        public MethodPointerData(MethodInfo originalMethodInfo) {
+            this.originalMethodInfo = originalMethodInfo;
+        }
+
+        public bool Equals(MethodPointerData other) {
+            if (this.originalMethodInfo.IsGenericMethod == true) {
+                if (this.originalMethodInfo.Name == other.originalMethodInfo.Name &&
+                    this.originalMethodInfo.ReturnType == other.originalMethodInfo.ReturnType &&
+                    this.originalMethodInfo.MemberType == other.originalMethodInfo.MemberType &&
+                    this.originalMethodInfo.GetGenericMethodDefinition() == other.originalMethodInfo.GetGenericMethodDefinition()) {
+                    return true;
+                }
+            }
+            return this.originalMethodInfo.Name == other.originalMethodInfo.Name &&
+                   this.originalMethodInfo.ReturnType == other.originalMethodInfo.ReturnType &&
+                   this.originalMethodInfo.DeclaringType == other.originalMethodInfo.DeclaringType &&
+                   this.originalMethodInfo.ReflectedType == other.originalMethodInfo.ReflectedType &&
+                   this.originalMethodInfo.MemberType == other.originalMethodInfo.MemberType &&
+                   this.originalMethodInfo.IsGenericMethod == other.originalMethodInfo.IsGenericMethod;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is MethodPointerData other && this.Equals(other);
+        }
+
+        public override int GetHashCode() {
+            if (this.originalMethodInfo.IsGenericMethod == true) {
+                return this.originalMethodInfo.Name.GetHashCode() ^ this.originalMethodInfo.ReturnType.GetHashCode() ^ this.originalMethodInfo.GetGenericMethodDefinition().GetHashCode();
+            }
+            return (this.originalMethodInfo != null ? this.originalMethodInfo.GetHashCode() : 0);
+        }
+
+    }
+    
     public struct FileContent {
 
         public string filename;

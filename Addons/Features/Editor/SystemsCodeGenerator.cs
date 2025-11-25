@@ -1148,12 +1148,12 @@ namespace ME.BECS.Editor.Systems {
                 }
             }
         }
-
+        
         private static void CollectJobsTypes(MethodInfo root, scg::HashSet<System.Type> types) {
             if (root == null) return;
             var q = new scg::Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
-            var visited = new scg::HashSet<System.Reflection.MethodInfo>();
+            var visited = new scg::HashSet<MethodPointerData>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var instructions = CodeGenerator.GetCachedInstructions(body);
@@ -1169,7 +1169,7 @@ namespace ME.BECS.Editor.Systems {
                     }
 
                     if (inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if (visited.Add(new MethodPointerData(member)) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) {
                                 q.Enqueue(member);
                             }

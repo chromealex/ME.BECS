@@ -139,6 +139,22 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
     /// <summary>
     /// Converts an sfloat number to an integer
     /// </summary>
+    public static explicit operator long(sfloat f)
+    {
+        if (f.Exponent < 0)
+        {
+            return 0;
+        }
+
+        int shift = MantissaBits - f.Exponent;
+        var mantissa = (int)(f.RawMantissa | (1 << MantissaBits));
+        int value = shift < 0 ? mantissa << -shift : mantissa >> shift;
+        return f.IsPositive() ? value : -value;
+    }
+
+    /// <summary>
+    /// Converts an sfloat number to an integer
+    /// </summary>
     public static explicit operator int(sfloat f)
     {
         if (f.Exponent < 0)
@@ -150,6 +166,14 @@ public struct sfloat : IEquatable<sfloat>, IComparable<sfloat>, IComparable, IFo
         var mantissa = (int)(f.RawMantissa | (1 << MantissaBits));
         int value = shift < 0 ? mantissa << -shift : mantissa >> shift;
         return f.IsPositive() ? value : -value;
+    }
+
+    /// <summary>
+    /// Converts an sfloat number to an integer
+    /// </summary>
+    public static explicit operator uint(sfloat f)
+    {
+        return (uint)(int)f;
     }
 
     /// <summary>

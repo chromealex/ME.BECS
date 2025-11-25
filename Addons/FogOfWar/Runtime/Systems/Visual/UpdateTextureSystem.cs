@@ -42,13 +42,13 @@ namespace ME.BECS.FogOfWar {
                     ref var color = ref this.currentBuffer[index];
                     if (this.useFade == 1) {
                         if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {
-                            color.r = (byte)(color.r + (255 - color.r) * this.dt * this.fadeInSpeed);
+                            color.r = (byte)(int)(color.r + (255 - color.r) * this.dt * this.fadeInSpeed);
                         } else {
-                            color.r = (byte)(color.r + (0 - color.r) * this.dt * this.fadeOutSpeed);
+                            color.r = (byte)(int)(color.r + (0 - color.r) * this.dt * this.fadeOutSpeed);
                         }
 
                         if (FogOfWarUtils.IsExplored(in this.props, in this.fow, fowX, fowY) == true) {
-                            color.g = (byte)(color.g + (255 - color.g) * this.dt * this.fadeInSpeed);
+                            color.g = (byte)(int)(color.g + (255 - color.g) * this.dt * this.fadeInSpeed);
                         }
                     } else {
                         if (FogOfWarUtils.IsVisible(in this.props, in this.fow, fowX, fowY) == true) {

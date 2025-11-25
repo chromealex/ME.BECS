@@ -464,7 +464,7 @@ namespace ME.BECS.Editor.Systems {
             var hasDirectComponentChange = false;
             var hasCompleteHandle = false;
             var hasInterestInstructions = false;
-            var visited = new System.Collections.Generic.HashSet<System.Reflection.MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var instructions = body.GetInstructions();
@@ -561,7 +561,7 @@ namespace ME.BECS.Editor.Systems {
                     }
                     
                     if (continueTraverse == true && inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(member) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if (visited.Add(new MethodPointerData(member)) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) {
                                 q.Enqueue(member);
                             }

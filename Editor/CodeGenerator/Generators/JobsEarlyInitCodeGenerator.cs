@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using ME.BECS.Mono.Reflection;
 using System.Reflection.Emit;
+using ME.BECS.Editor.Systems;
 
 namespace ME.BECS.Editor.Jobs {
     
@@ -453,7 +454,7 @@ namespace ME.BECS.Editor.Jobs {
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
             var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
-            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var deps = useAnalyzer == true ? ILAnalyzer.AnalyzeMethod(body) : null;
@@ -527,7 +528,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (continueTraverse == true && traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
-                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }
                     }
@@ -557,7 +558,7 @@ namespace ME.BECS.Editor.Jobs {
             }
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var root = jobType.GetMethod("Execute");
-            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             var instructionsList = CodeGenerator.GetCachedInstructions(root);
             NewEntInfo result;
             if (instructionsList == null) {
@@ -583,7 +584,7 @@ namespace ME.BECS.Editor.Jobs {
                     ++inst.loopInfo.closeCount;
                 }
                 if (inst.Operand is System.Reflection.MethodInfo member) {
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
                             var memberInstructions = CodeGenerator.GetCachedInstructions(member);
                             if (memberInstructions != null) {
@@ -668,7 +669,7 @@ namespace ME.BECS.Editor.Jobs {
                 weight = 1u,
             });
             var root = jobType.GetMethod("Execute");
-            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             var instructionsList = CodeGenerator.GetCachedInstructions(root);
             WeightsInfo weightsResult;
             if (instructionsList == null) {
@@ -681,7 +682,7 @@ namespace ME.BECS.Editor.Jobs {
                 var inst = instructions[i];
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
                             var memberInstructions = CodeGenerator.GetCachedInstructions(member);
                             if (memberInstructions != null) {
