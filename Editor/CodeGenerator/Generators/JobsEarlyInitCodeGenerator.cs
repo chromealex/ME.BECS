@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using ME.BECS.Mono.Reflection;
 using System.Reflection.Emit;
+using ME.BECS.Editor.Systems;
 
 namespace ME.BECS.Editor.Jobs {
     
@@ -409,7 +410,7 @@ namespace ME.BECS.Editor.Jobs {
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
             var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
-            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var deps = useAnalyzer == true ? ILAnalyzer.AnalyzeMethod(body) : null;
@@ -482,7 +483,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (continueTraverse == true && traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
-                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                             if (member.GetMethodBody() != null) q.Enqueue(member);
                         }
                     }
@@ -509,7 +510,7 @@ namespace ME.BECS.Editor.Jobs {
         public static NewEntInfo GetJobEntInfo(System.Type jobType) {
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var root = jobType.GetMethod("Execute");
-            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             var instructions = root.GetInstructions().ToList();
             var brOpen = 0;
             var count = 0;
@@ -528,7 +529,7 @@ namespace ME.BECS.Editor.Jobs {
                     ++inst.loopInfo.closeCount;
                 }
                 if (inst.Operand is System.Reflection.MethodInfo member) {
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
                             instructions.InsertRange(i + 1, member.GetInstructions());
                         }
@@ -605,13 +606,13 @@ namespace ME.BECS.Editor.Jobs {
                 weight = 1u,
             });
             var root = jobType.GetMethod("Execute");
-            var visited = new System.Collections.Generic.HashSet<MethodInfo>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
             var instructions = root.GetInstructions().ToList();
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(member) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
                             instructions.InsertRange(i + 1, member.GetInstructions());
                         }
