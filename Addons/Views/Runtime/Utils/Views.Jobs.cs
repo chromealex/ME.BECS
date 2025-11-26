@@ -88,7 +88,7 @@ namespace ME.BECS.Views {
                             if (prefabInfo.info.ptr->isLoaded == false) {
                                 // Create unique prefab loading request
                                 this.data.ptr->loadingRequests.Add(viewComponent.source.prefabId);
-                                return;
+                                continue;
                             }
                             this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
                                 ent = viewEnt,
