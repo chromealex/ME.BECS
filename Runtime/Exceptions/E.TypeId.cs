@@ -22,8 +22,33 @@ namespace ME.BECS {
             public IsTagException(string str) : base(str) { }
 
             [HIDE_CALLSTACK]
-            public static void Throw() {
+            public static void Throw(uint typeId) {
+                ThrowNotBurst(typeId);
                 throw new OutOfRangeException("Component is a tag which doesn't allow to access this method");
+            }
+
+            [BURST_DISCARD]
+            private static void ThrowNotBurst(uint typeId) {
+                var type = StaticTypesLoadedManaged.allLoadedTypes[typeId];
+                throw new OutOfRangeException($"Component {type.FullName} is a tag which doesn't allow to access this method");
+            }
+
+        }
+
+        public class IsStaticException : System.Exception {
+
+            public IsStaticException(string str) : base(str) { }
+
+            [HIDE_CALLSTACK]
+            public static void Throw(uint typeId) {
+                ThrowNotBurst(typeId);
+                throw new OutOfRangeException("Component is a static which doesn't allow to access this method");
+            }
+
+            [BURST_DISCARD]
+            private static void ThrowNotBurst(uint typeId) {
+                var type = StaticTypesLoadedManaged.allLoadedTypes[typeId];
+                throw new OutOfRangeException($"Component {type.FullName} is a static which doesn't allow to access this method");
             }
 
         }
@@ -32,18 +57,25 @@ namespace ME.BECS {
     
     public static partial class E {
 
-        [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
+        [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_VALID_TYPE_ID(uint typeId) {
             if (typeId > 0u && typeId <= StaticTypes.counter) return;
             InvalidTypeIdException.Throw();
         }
 
-        [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
+        [Conditional(COND.EXCEPTIONS)]
         [HIDE_CALLSTACK]
         public static void IS_NOT_TAG(uint typeId) {
             if (StaticTypes.sizes.Get(typeId) != 0u) return;
-            IsTagException.Throw();
+            IsTagException.Throw(typeId);
+        }
+
+        [Conditional(COND.EXCEPTIONS)]
+        [HIDE_CALLSTACK]
+        public static void IS_NOT_STATIC(uint typeId) {
+            if (typeId >= StaticTypes.staticTypeId.Length || StaticTypes.staticTypeId.Get(typeId) == 0u) return;
+            IsStaticException.Throw(typeId);
         }
 
     }
