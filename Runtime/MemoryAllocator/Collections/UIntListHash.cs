@@ -7,6 +7,11 @@ namespace ME.BECS {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct UIntListHash : IIsCreated {
 
         private MemArray<uint> arr;

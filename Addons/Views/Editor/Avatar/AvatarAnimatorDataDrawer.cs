@@ -106,7 +106,7 @@ namespace ME.BECS.Views.Editor {
                     viewSource.FindPropertyRelative(nameof(InstantiateAvatarViewComponent.animatorData.view.viewSource.prefabId)).uintValue);
                 if (entityView != null) {
 
-                    var animatorViewModule = (AnimatorViewModule)entityView.viewModules.FirstOrDefault(x => x is AnimatorViewModule);
+                    var animatorViewModule = (AnimatorViewModule)entityView.modules.FirstOrDefault(x => x is AnimatorViewModule);
                     if (animatorViewModule != null && animatorViewModule.animator != null) {
 
                         VisualElement pointsContainer = null;
@@ -270,7 +270,7 @@ namespace ME.BECS.Views.Editor {
                                     ren.sharedMaterial = defaultMaterial;
                                 }
 
-                                var module = (AnimatorViewModule)instance.GetComponent<EntityView>().viewModules.FirstOrDefault(x => x is AnimatorViewModule);
+                                var module = (AnimatorViewModule)instance.GetComponent<EntityView>().modules.FirstOrDefault(x => x is AnimatorViewModule);
                                 selectedModule = module;
                                 var colliders = instance.GetComponentsInChildren<Collider>(true);
                                 foreach (var collider in colliders) {

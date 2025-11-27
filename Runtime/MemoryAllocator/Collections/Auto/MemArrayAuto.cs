@@ -37,6 +37,11 @@ namespace ME.BECS {
     [IgnoreProfiler]
     [System.Serializable]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(MemArrayAutoProxy<>))]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct MemArrayAuto<T> : IMemArray, IUnmanagedList, System.IEquatable<MemArrayAuto<T>> where T : unmanaged {
 
         public static readonly MemArrayAuto<T> Empty = new MemArrayAuto<T>() {

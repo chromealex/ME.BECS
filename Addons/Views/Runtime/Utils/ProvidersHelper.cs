@@ -41,9 +41,9 @@ namespace ME.BECS.Views {
 
         }
 
-        public static bool HasAny<T>(IViewModule[] arr) {
-            foreach (var item in arr) {
-                if (item is T) return true;
+        public static bool HasAny<T>(ViewModules arr) {
+            foreach (var item in arr.items) {
+                if (item.enabled == true && item.module is T) return true;
             }
             return false;
         }

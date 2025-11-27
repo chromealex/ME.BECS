@@ -18,6 +18,11 @@ namespace ME.BECS.Views {
     public struct DrawMeshProviderTag : IComponent {}
 
     [BURST]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct DrawMeshProvider : IViewProvider<EntityView> {
 
         public struct Info : System.IEquatable<Info> {
@@ -377,14 +382,14 @@ namespace ME.BECS.Views {
                     sceneSource = sceneSource,
                     flags = 0,
                 };
-                info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.viewModules);
-                info.HasUpdateParallelModules = ProvidersHelper.HasAny<IViewUpdateParallel>(prefab.viewModules);
-                info.HasApplyStateModules = ProvidersHelper.HasAny<IViewApplyState>(prefab.viewModules);
-                info.HasApplyStateParallelModules = ProvidersHelper.HasAny<IViewApplyStateParallel>(prefab.viewModules);
-                info.HasInitializeModules = ProvidersHelper.HasAny<IViewInitialize>(prefab.viewModules);
-                info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.viewModules);
-                info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.viewModules);
-                info.HasDisableToPoolModules = ProvidersHelper.HasAny<IViewDisableToPool>(prefab.viewModules);
+                info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.modules);
+                info.HasUpdateParallelModules = ProvidersHelper.HasAny<IViewUpdateParallel>(prefab.modules);
+                info.HasApplyStateModules = ProvidersHelper.HasAny<IViewApplyState>(prefab.modules);
+                info.HasApplyStateParallelModules = ProvidersHelper.HasAny<IViewApplyStateParallel>(prefab.modules);
+                info.HasInitializeModules = ProvidersHelper.HasAny<IViewInitialize>(prefab.modules);
+                info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.modules);
+                info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.modules);
+                info.HasDisableToPoolModules = ProvidersHelper.HasAny<IViewDisableToPool>(prefab.modules);
                 
                 viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
 

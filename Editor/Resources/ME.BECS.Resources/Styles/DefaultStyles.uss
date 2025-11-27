@@ -7,6 +7,24 @@
     width: 10px;
 }
 
+.horizontal-group-stretch {
+    align-items: stretch;
+    flex-direction: row;
+}
+.horizontal-group-stretch > PropertyField {
+    flex-grow: 1;
+}
+.horizontal-group-stretch > PropertyField Foldout Toggle {
+    flex-grow: 1;
+    width: 100%;
+}
+
+.views-module Toggle {
+    padding-right: 5px;
+    padding-top: 5px;
+    align-self: flex-start;
+}
+
 .horizontal-group > ObjectField {
     flex-grow: 1;
 }
