@@ -1,9 +1,15 @@
 <table align="center"><tr><td><img align="center" src="Editor/Resources/ME.BECS.Resources/Icons/logo-512.png" width="294" /></td></tr></table>
 
-<table align="center"><tr><td width="320"><b><samp>Bursted Entity Component System</samp></b></td></tr></table>
+<table align="center"><tr><td>
+<h2>Bursted Entity Component System</h2>
 
-### ME.BECS: Bursted Entity Component System
-###### Recommened version Unity 6
+<h6>Recommened version Unity 6</h6>
+
+[![License: MIT](https://img.shields.io/github/license/chromealex/ME.BECS?style=flat&color=greenyellow)](https://github.com/chromealex/ME.BECS/blob/master/LICENSE)
+<a href="https://github.com/chromealex/ME.BECS"><img src="https://img.shields.io/github/package-json/v/chromealex/ME.BECS?style=flat&color=blue" /></a>
+<a href="https://github.com/chromealex/ME.BECS"><img src="https://img.shields.io/github/last-commit/chromealex/ME.BECS?style=flat&color=yellow" /></a>
+
+</td></tr></table>
 
 ## <img src="Editor/Resources/ME.BECS.Resources/Icons/logo-32.png" width="18px" height="18px" /> Benefits
 - You can use all API in Burst and in parallel mode without copying data to Native Arrays;
