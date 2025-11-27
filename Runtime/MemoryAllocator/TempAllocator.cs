@@ -11,9 +11,19 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [BurstCompile]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct TempAllocator : AllocatorManager.IAllocator {
 
         [IgnoreProfiler]
+        #if !BECS_IL2CPP_OPTIONS_DISABLE
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+        #endif
         public struct Block {
 
             [IgnoreProfiler]

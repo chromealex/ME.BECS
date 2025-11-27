@@ -19,6 +19,11 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(BitArrayDebugView))]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct BitArray : IIsCreated {
 
         private const int BITS_IN_ULONG = sizeof(ulong) * 8;

@@ -7,6 +7,11 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(StackProxy<>))]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct Stack<T> where T : unmanaged {
 
         public struct Enumerator : System.Collections.Generic.IEnumerator<T> {

@@ -20,10 +20,20 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [StructLayout(LayoutKind.Sequential)]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct DataDenseSet {
 
         [IgnoreProfiler]
         [StructLayout(LayoutKind.Sequential)]
+        #if !BECS_IL2CPP_OPTIONS_DISABLE
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+        #endif
         public struct Page {
 
             public const int SIZE = MemPtr.SIZE + LockSpinner.SIZE + sizeof(byte);
@@ -62,6 +72,11 @@ namespace ME.BECS {
 
         }
 
+        #if !BECS_IL2CPP_OPTIONS_DISABLE
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+        [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+        #endif
         private struct DoubleBuffer {
 
             private int active;

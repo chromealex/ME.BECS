@@ -17,6 +17,11 @@ namespace ME.BECS {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     internal unsafe struct Bitwise {
 
         private const int ULONG_SIZE = sizeof(ulong);
@@ -447,6 +452,11 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UnsafeBitArrayDebugView))]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct MemBitArray {
 
         /// <summary>

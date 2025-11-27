@@ -5,6 +5,11 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(ULongDictionaryAutoProxy<>))]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct ULongDictionaryAuto<TValue> : IIsCreated where TValue : unmanaged {
 
         public struct Enumerator {

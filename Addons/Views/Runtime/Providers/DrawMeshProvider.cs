@@ -18,6 +18,11 @@ namespace ME.BECS.Views {
     public struct DrawMeshProviderTag : IComponent {}
 
     [BURST]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct DrawMeshProvider : IViewProvider<EntityView> {
 
         public struct Info : System.IEquatable<Info> {

@@ -5,6 +5,11 @@ namespace ME.BECS {
 
     [IgnoreProfiler]
     [System.Diagnostics.DebuggerTypeProxyAttribute(typeof(UIntDictionaryProxy<>))]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public unsafe struct UIntDictionary<TValue> where TValue : unmanaged {
 
         public const int SIZE = MemArrayData.SIZE + MemArrayData.SIZE + 4 + 4 + 4 + 4;

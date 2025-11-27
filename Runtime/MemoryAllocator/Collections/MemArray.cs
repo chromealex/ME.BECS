@@ -14,6 +14,11 @@ namespace ME.BECS {
     
     [IgnoreProfiler]
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    #if !BECS_IL2CPP_OPTIONS_DISABLE
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
+    [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
+    #endif
     public readonly unsafe struct CachedPtr {
         
         internal readonly safe_ptr cachedPtr;
