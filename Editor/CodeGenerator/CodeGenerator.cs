@@ -901,8 +901,8 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
-                        var type = GetCachedTypeName(component);
-                        var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
+                        var type = EditorUtils.GetTypeName(component);
+                        var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
                         aotContent.Add($"ConfigInitializeTypes<{type}>.AOT();");

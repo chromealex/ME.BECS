@@ -19,19 +19,19 @@ namespace ME.BECS.Effects {
     public static class EffectUtils {
 
         [INLINE(256)]
-        public static void CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect) {
-            CreateEffect(in jobInfo, in position, quaternion.identity, in effect);
+        public static Ent CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect) {
+            return CreateEffect(in jobInfo, in position, quaternion.identity, in effect);
         }
 
         [INLINE(256)]
-        public static void CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect, in PlayerAspect owner) {
-            CreateEffect(in jobInfo, in position, quaternion.identity, in effect, owner);
+        public static Ent CreateEffect(in JobInfo jobInfo, in float3 position, in EffectConfig effect, in PlayerAspect owner) {
+            return CreateEffect(in jobInfo, in position, quaternion.identity, in effect, owner);
         }
 
         [INLINE(256)]
-        public static void CreateEffect(in JobInfo jobInfo, in float3 position, in quaternion rotation, in EffectConfig effect, in PlayerAspect owner = default) {
+        public static Ent CreateEffect(in JobInfo jobInfo, in float3 position, in quaternion rotation, in EffectConfig effect, in PlayerAspect owner = default) {
 
-            if (effect.config.IsValid == false) return;
+            if (effect.config.IsValid == false) return default;
             
             var ent = Ent.New(in jobInfo);
             var tr = ent.Set<TransformAspect>();
@@ -43,7 +43,8 @@ namespace ME.BECS.Effects {
                 PlayerUtils.SetOwner(in ent, in owner);
             }
             ent.Destroy(effect.lifetime);
-
+            return ent;
+            
         }
 
     }

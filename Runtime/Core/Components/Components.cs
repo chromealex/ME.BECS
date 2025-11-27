@@ -37,6 +37,7 @@ namespace ME.BECS {
 
         [INLINE(256)][IgnoreProfiler]
         public RefRW<T> GetRW<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+            E.IS_NOT_STATIC(StaticTypes<T>.typeId);
             return new RefRW<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -46,6 +47,7 @@ namespace ME.BECS {
 
         [INLINE(256)][IgnoreProfiler]
         public RefRO<T> GetRO<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+            E.IS_NOT_STATIC(StaticTypes<T>.typeId);
             return new RefRO<T>() {
                 state = state,
                 storage = Components.GetUnsafeSparseSetPtr(state, StaticTypes<T>.typeId),
@@ -54,11 +56,13 @@ namespace ME.BECS {
 
         [INLINE(256)][IgnoreProfiler]
         public RefRWSafe<T> GetRWSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+            E.IS_NOT_STATIC(StaticTypes<T>.typeId);
             return new RefRWSafe<T>(state, worldId);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public RefROSafe<T> GetROSafe<T>(safe_ptr<State> state, ushort worldId) where T : unmanaged, IComponentBase {
+            E.IS_NOT_STATIC(StaticTypes<T>.typeId);
             return new RefROSafe<T>(state, worldId);
         }
 
