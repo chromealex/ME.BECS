@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace ME.BECS.Views {
@@ -84,13 +85,71 @@ namespace ME.BECS.Views {
         /// </summary>
         FrustumApplyStateOnly = 3,
     }
+
+    [System.Serializable]
+    public struct ViewModules {
+
+        [System.Serializable]
+        public struct Module {
+
+            public bool enabled;
+            [SerializeReference]
+            [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes = false, runtimeAssembliesOnly = true)]
+            [SerializeField]
+            public IViewModule module;
+
+        }
+
+        public Module[] items;
+
+        public static ViewModules Create() {
+            return new ViewModules() {
+                items = System.Array.Empty<Module>(),
+            };
+        }
+
+        public void Validate(ref IViewModule[] oldModules) {
+            if (oldModules.Length == 0) return;
+            this.items = oldModules.Select(x => new Module() {
+                enabled = true,
+                module = x,
+            }).ToArray();
+            oldModules = System.Array.Empty<IViewModule>();
+        }
+
+        public void Validate(GameObject gameObject) {
+            foreach (var module in this.items) {
+                if (module.module is IViewOnValidate onValidate) {
+                    onValidate.OnValidate(gameObject);
+                }
+            }
+        }
+
+        public IViewModule FirstOrDefault(System.Func<IViewModule, bool> predicate) {
+            foreach (var item in this.items) {
+                if (predicate.Invoke(item.module) == true) return item.module;
+            }
+            return null;
+        }
+
+        public bool Any(System.Func<IViewModule, bool> predicate) {
+            foreach (var item in this.items) {
+                if (predicate.Invoke(item.module) == true) return true;
+            }
+            return false;
+        }
+
+    }
     
     public abstract class EntityView : MonoBehaviour, IView {
         
+        [HideInInspector]
         [SerializeReference]
         [ME.BECS.Extensions.SubclassSelector.SubclassSelectorAttribute(unmanagedTypes = false, runtimeAssembliesOnly = true)]
         [SerializeField]
         protected internal IViewModule[] viewModules = System.Array.Empty<IViewModule>();
+        [SerializeField]
+        protected internal ViewModules modules = ViewModules.Create();
 
         [SerializeField][HideInInspector]
         internal int[] initializeModules;
@@ -115,8 +174,8 @@ namespace ME.BECS.Views {
         public EntRO ent;
 
         public T GetModule<T>() where T : IViewModule {
-            foreach (var module in this.viewModules) {
-                if (module is T mod) return mod;
+            foreach (var module in this.modules.items) {
+                if (module.enabled == true && module.module is T mod) return mod;
             }
             return default;
         }
@@ -202,6 +261,8 @@ namespace ME.BECS.Views {
         protected internal virtual void OnUpdateParallel(in EntRO ent, float dt) { }
 
         public virtual void OnValidate() {
+            
+            this.modules.Validate(ref this.viewModules);
 
             this.ValidateModules<IViewInitialize>(ref this.initializeModules);
             this.ValidateModules<IViewApplyState>(ref this.applyStateModules);
@@ -212,12 +273,8 @@ namespace ME.BECS.Views {
             this.ValidateModules<IViewDisableToPool>(ref this.disableToPoolModules);
             this.ValidateModules<IViewEnableFromPool>(ref this.enableFromPoolModules);
             
-            foreach (var module in this.viewModules) {
-                if (module is IViewOnValidate onValidate) {
-                    onValidate.OnValidate(this.gameObject);
-                }
-            }
-
+            this.modules.Validate(this.gameObject);
+            
             var systems = this.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var system in systems) {
                 var main = system.main;
@@ -239,9 +296,9 @@ namespace ME.BECS.Views {
 
         private void ValidateModules<T>(ref int[] indexes) {
             var list = new System.Collections.Generic.List<int>();
-            for (int i = 0; i < this.viewModules.Length; ++i) {
-                var module = this.viewModules[i];
-                if (module is T) {
+            for (int i = 0; i < this.modules.items.Length; ++i) {
+                var module = this.modules.items[i];
+                if (module.enabled == true && module.module is T) {
                     list.Add(i);
                 }
             }

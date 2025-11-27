@@ -25,14 +25,14 @@ namespace ME.BECS.Views {
                 typeInfo = typeInfo,
                 flags = 0,
             };
-            info.HasUpdateModules = prefab.viewModules.Any(x => x is IViewUpdate);
-            info.HasUpdateParallelModules = prefab.viewModules.Any(x => x is IViewUpdateParallel);
-            info.HasApplyStateModules = prefab.viewModules.Any(x => x is IViewApplyState);
-            info.HasApplyStateParallelModules = prefab.viewModules.Any(x => x is IViewApplyStateParallel);
-            info.HasInitializeModules = prefab.viewModules.Any(x => x is IViewInitialize);
-            info.HasDeInitializeModules = prefab.viewModules.Any(x => x is IViewDeInitialize);
-            info.HasEnableFromPoolModules = prefab.viewModules.Any(x => x is IViewEnableFromPool);
-            info.HasDisableToPoolModules = prefab.viewModules.Any(x => x is IViewDisableToPool);
+            info.HasUpdateModules = prefab.modules.Any(x => x is IViewUpdate);
+            info.HasUpdateParallelModules = prefab.modules.Any(x => x is IViewUpdateParallel);
+            info.HasApplyStateModules = prefab.modules.Any(x => x is IViewApplyState);
+            info.HasApplyStateParallelModules = prefab.modules.Any(x => x is IViewApplyStateParallel);
+            info.HasInitializeModules = prefab.modules.Any(x => x is IViewInitialize);
+            info.HasDeInitializeModules = prefab.modules.Any(x => x is IViewDeInitialize);
+            info.HasEnableFromPoolModules = prefab.modules.Any(x => x is IViewEnableFromPool);
+            info.HasDisableToPoolModules = prefab.modules.Any(x => x is IViewDisableToPool);
             this.info = info;
 
         }
