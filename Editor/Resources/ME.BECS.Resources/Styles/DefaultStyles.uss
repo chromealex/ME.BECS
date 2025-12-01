@@ -14,7 +14,7 @@
 .horizontal-group-stretch > PropertyField {
     flex-grow: 1;
 }
-.horizontal-group-stretch > PropertyField Foldout Toggle {
+.horizontal-group-stretch .subclass-selector-container PropertyField > Foldout > Toggle {
     flex-grow: 1;
     width: 100%;
 }

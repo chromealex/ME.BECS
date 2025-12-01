@@ -23,6 +23,15 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         [SafetyCheck(RefOp.ReadOnly)] public static bool HasTag<T>(in this EntRO ent, bool value) where T : unmanaged, IComponent => ent.ent.HasTag<T>(value);
 
+        [INLINE(256)][IgnoreProfiler]
+        [SafetyCheck(RefOp.ReadOnly)] public static T ReadStatic<T>(in this EntRO ent) where T : unmanaged, IConfigComponentStatic => ent.ent.ReadStatic<T>();
+
+        [INLINE(256)][IgnoreProfiler]
+        [SafetyCheck(RefOp.ReadOnly)] public static bool HasStatic<T>(in this EntRO ent) where T : unmanaged, IConfigComponentStatic => ent.ent.HasStatic<T>();
+
+        [INLINE(256)][IgnoreProfiler]
+        [SafetyCheck(RefOp.ReadOnly)] public static bool TryReadStatic<T>(in this EntRO ent, out T component) where T : unmanaged, IConfigComponentStatic => ent.ent.TryReadStatic(out component);
+
     }
 
 }
