@@ -180,6 +180,8 @@ namespace ME.BECS.Views {
             return default;
         }
 
+        internal ViewModules GetAllModules() => this.modules;
+
         /// <summary>
         /// Called once when this view creates on scene
         /// </summary>
