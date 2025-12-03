@@ -417,6 +417,8 @@ namespace ME.BECS.Editor {
 
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
+            if (UnityEngine.Application.isBatchMode == true && forced == false) return;
+            
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
 
             if (cleanCache == true) {
