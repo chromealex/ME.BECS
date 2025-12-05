@@ -36,7 +36,10 @@ namespace ME.BECS.Bullets {
 
         public bool IsReached {
             get => this.ent.Has<TargetReachedComponent>();
-            set => this.ent.Set(new TargetReachedComponent());
+            set {
+                if (value == true) this.ent.Set(new TargetReachedComponent());
+                else this.ent.Remove<TargetReachedComponent>();
+            }
         }
 
         public uint CalculateDamage(float3 bulletPosition, float3 unitPosition) {
