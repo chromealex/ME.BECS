@@ -1,8 +1,8 @@
 using System.Linq;
 using ME.BECS.Transforms;
-using UnityEngine;
 using UnityEditor;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace ME.BECS.Editor {
@@ -155,6 +155,9 @@ namespace ME.BECS.Editor {
             SceneView.duringSceneGui -= OnSceneGUI;
             SceneView.duringSceneGui += OnSceneGUI;
             
+            EditorApplication.playModeStateChanged -= ClearWindowData;
+            EditorApplication.playModeStateChanged += ClearWindowData;
+            
             this.search = EditorPrefs.GetString("ME.BECS.WorldHierarchyEditorWindow.search", string.Empty);
 
             EditorUtility.DisplayProgressBar("Hierarchy", "Initialization", 0f);
@@ -176,6 +179,21 @@ namespace ME.BECS.Editor {
                 EditorUtility.ClearProgressBar();
             }
 
+        }
+        
+        private void ClearWindowData(PlayModeStateChange state) {
+            if (state is PlayModeStateChange.ExitingPlayMode) {
+                this.aliveWorlds.Clear();
+                this.selectedWorld = default;
+                foldout.Clear();
+                entToTags.Clear();
+                entsToElements.Clear();
+                entToVersions.Clear();
+                entToComponentsCount.Clear();
+                selected.Clear();
+                current.Clear();
+                CreateGUI();
+            }
         }
 
         internal void SaveSettings() {
@@ -371,6 +389,7 @@ namespace ME.BECS.Editor {
         
         private void CreateGUI() {
 
+            Selection.selectionChanged -= this.OnSelectionChanged;
             Selection.selectionChanged += this.OnSelectionChanged;
 
             this.LoadSettings();
