@@ -152,12 +152,12 @@ namespace ME.BECS.Editor {
 
         private void LoadSettings() {
             
-            SceneView.duringSceneGui -= OnSceneGUI;
-            SceneView.duringSceneGui += OnSceneGUI;
+            SceneView.duringSceneGui -= this.OnSceneGUI;
+            SceneView.duringSceneGui += this.OnSceneGUI;
             
-            EditorApplication.playModeStateChanged -= ClearWindowData;
-            EditorApplication.playModeStateChanged += ClearWindowData;
-            
+            EditorApplication.playModeStateChanged -= this.ClearWindowData;
+            EditorApplication.playModeStateChanged += this.ClearWindowData;
+
             this.search = EditorPrefs.GetString("ME.BECS.WorldHierarchyEditorWindow.search", string.Empty);
 
             EditorUtility.DisplayProgressBar("Hierarchy", "Initialization", 0f);
@@ -185,14 +185,14 @@ namespace ME.BECS.Editor {
             if (state is PlayModeStateChange.ExitingPlayMode) {
                 this.aliveWorlds.Clear();
                 this.selectedWorld = default;
-                foldout.Clear();
-                entToTags.Clear();
-                entsToElements.Clear();
-                entToVersions.Clear();
-                entToComponentsCount.Clear();
-                selected.Clear();
-                current.Clear();
-                CreateGUI();
+                this.foldout.Clear();
+                this.entToTags.Clear();
+                this.entsToElements.Clear();
+                this.entToVersions.Clear();
+                this.entToComponentsCount.Clear();
+                this.selected.Clear();
+                this.current.Clear();
+                this.CreateGUI();
             }
         }
 
