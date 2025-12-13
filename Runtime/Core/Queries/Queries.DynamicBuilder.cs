@@ -66,6 +66,7 @@ namespace ME.BECS {
             if (this.allocator == Allocator.Invalid) return;
             this.dependsOn.Complete();
             this.data.Dispose();
+            this.jobHandle.Dispose();
             this = default;
         }
 
@@ -167,6 +168,7 @@ namespace ME.BECS {
             this.dependsOn.Complete();
             this.data.Value.results.Dispose();
             this.data.Dispose();
+            this.jobHandle.Dispose();
             this = default;
         }
 
