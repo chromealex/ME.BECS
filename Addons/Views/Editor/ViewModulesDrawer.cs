@@ -40,7 +40,7 @@ namespace ME.BECS.Views.Editor {
             toggle.RegisterValueChangedCallback((evt) => {
                 if (evt.newValue != enabledState.boolValue) {
                     module.serializedObject.Update();
-                    property.FindPropertyRelative(nameof(ViewModules.Module.enabled)).boolValue = enabledState.boolValue;
+                    property.FindPropertyRelative(nameof(ViewModules.Module.enabled)).boolValue = evt.newValue;
                     module.serializedObject.ApplyModifiedProperties();
                     module.serializedObject.Update();
                 }
