@@ -140,7 +140,9 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Dispose() {
-                _free(this.constructedAspect);
+                if (this.constructedAspect.ptr != null) {
+                    _free(this.constructedAspect);
+                }
             }
 
         }
