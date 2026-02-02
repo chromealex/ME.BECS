@@ -295,6 +295,9 @@ namespace ME.BECS.Editor {
         [UnityEditor.Callbacks.DidReloadScripts]
         public static void OnScriptsReload() {
 
+            // Skip code generation if project creation is in progress
+            if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) return;
+
             UnityEngine.Application.logMessageReceived -= OnLogAdded;
             UnityEngine.Application.logMessageReceivedThreaded -= OnLogAdded;
             UnityEngine.Application.logMessageReceived += OnLogAdded;
@@ -414,6 +417,9 @@ namespace ME.BECS.Editor {
         }
 
         public static void RegenerateBurstAOT(bool forced = false, bool cleanCache = false) {
+
+            // Skip if project creation is in progress
+            if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) return;
 
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
