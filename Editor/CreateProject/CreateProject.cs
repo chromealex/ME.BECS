@@ -259,6 +259,12 @@ namespace ME.BECS.Editor.CreateProject {
             } finally */{
                 // remove template
                 AssetDatabase.DeleteAsset(root);
+
+                // Remove orphaned csproj file generated from template asmdef
+                var csprojPath = "NewProject.csproj";
+                if (System.IO.File.Exists(csprojPath)) {
+                    System.IO.File.Delete(csprojPath);
+                }
                 //EditorUtility.ClearProgressBar();
             }
             
@@ -267,6 +273,8 @@ namespace ME.BECS.Editor.CreateProject {
                 // Patch Unity serialized asset type references (YAML format)
                 text = text.Replace("ns: NewProject", $"ns: {projectName}");
                 text = text.Replace("asm: NewProject", $"asm: {projectName}");
+                // Patch assembly definition name (prevents regeneration with wrong name)
+                text = text.Replace("\"name\": \"NewProject\"", $"\"name\": \"{projectName}\"");
                 if (data.files != null) {
                     foreach (var file in data.files) {
                         var obj = AssetDatabase.LoadAssetAtPath<Object>($"{root}/{file.file}");
