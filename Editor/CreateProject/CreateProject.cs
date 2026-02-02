@@ -264,6 +264,9 @@ namespace ME.BECS.Editor.CreateProject {
             
             static string Patch(string root, string projectName, TemplateInnerJson data, string text) {
                 text = text.Replace("namespace NewProject", $"namespace {projectName}");
+                // Patch Unity serialized asset type references (YAML format)
+                text = text.Replace("ns: NewProject", $"ns: {projectName}");
+                text = text.Replace("asm: NewProject", $"asm: {projectName}");
                 if (data.files != null) {
                     foreach (var file in data.files) {
                         var obj = AssetDatabase.LoadAssetAtPath<Object>($"{root}/{file.file}");
