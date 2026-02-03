@@ -58,12 +58,27 @@ namespace ME.BECS.Network {
 
         private System.Collections.Generic.Queue<byte[]> receivedPackages;
 
+        private double serverSumTs;
+        private double serverTs;
+        private bool timeSynced;
+
         public byte[] Receive() {
             
             if (this.Status != TransportStatus.Connected) return null;
 
-            //UnityEngine.Debug.Log("Receive: " + Photon.Pun.PhotonNetwork.NetworkingClient.LoadBalancingPeer.ServerTimeInMilliSeconds);
-            this.ServerTime = Photon.Pun.PhotonNetwork.ServerTimestamp;
+            if (this.timeSynced == false && Photon.Pun.PhotonNetwork.ServerTimestamp > 0) {
+                this.networkModule.SetServerStartTime(Photon.Pun.PhotonNetwork.ServerTimestamp, this.world);
+                // UnityEngine.Debug.Log($"Server time initially set to {Photon.Pun.PhotonNetwork.ServerTimestamp}");
+                this.timeSynced = true;
+            }
+
+            if (this.timeSynced == true) {
+                if (Photon.Pun.PhotonNetwork.ServerTimestamp < this.serverTs) {
+                    this.serverSumTs += this.serverTs;
+                }
+                this.serverTs = Photon.Pun.PhotonNetwork.ServerTimestamp;
+                this.ServerTime = Photon.Pun.PhotonNetwork.ServerTimestamp + this.serverSumTs;
+            }
 
             if (this.receivedPackages.Count > 0) {
 
@@ -153,7 +168,6 @@ namespace ME.BECS.Network {
                 UnityEngine.Debug.Log("Connected Player: " + Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
                 this.Status = TransportStatus.Connected;
                 this.networkModule.SetLocalPlayerId((uint)Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
-                this.networkModule.SetServerStartTime(Photon.Pun.PhotonNetwork.ServerTimestamp, this.world);
             }
         }
 
