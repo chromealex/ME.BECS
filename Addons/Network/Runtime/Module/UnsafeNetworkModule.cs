@@ -24,6 +24,61 @@ namespace ME.BECS.Network {
     using static Cuts;
     using Jobs;
 
+    public unsafe struct SyncHashPackage : System.IComparable<SyncHashPackage>, System.IEquatable<SyncHashPackage> {
+
+        public ulong tick;
+        public uint playerId;
+        public int hash;
+        
+        public static SyncHashPackage Create(ref StreamBufferReader reader) {
+
+            var result = new SyncHashPackage();
+            reader.Read(ref result.tick);
+            reader.Read(ref result.playerId);
+            reader.Read(ref result.hash);
+            return result;
+
+        }
+
+        public void Serialize(ref StreamBufferWriter writeBufferWriter) {
+            
+            writeBufferWriter.Write(this.tick);
+            writeBufferWriter.Write(this.playerId);
+            writeBufferWriter.Write(this.hash);
+            
+        }
+        
+        public int CompareTo(SyncHashPackage other) {
+            var tickComparison = this.tick.CompareTo(other.tick);
+            if (tickComparison != 0) {
+                return tickComparison;
+            }
+
+            var playerIdComparison = this.playerId.CompareTo(other.playerId);
+            if (playerIdComparison != 0) {
+                return playerIdComparison;
+            }
+
+            return this.hash.CompareTo(other.hash);
+        }
+        public bool Equals(SyncHashPackage other) {
+            return this.tick == other.tick && this.playerId == other.playerId && this.hash == other.hash;
+        }
+
+        public override bool Equals(object obj) {
+            return obj is SyncHashPackage other && this.Equals(other);
+        }
+        
+        public override string ToString() {
+            return $"[ SYNC PACKAGE ] Tick: {this.tick}, playerId: {this.playerId}, hash: {this.hash}";
+        }
+        
+        public override int GetHashCode() {
+            return System.HashCode.Combine(this.tick, this.playerId, this.hash);
+        }
+        
+    }
+    
     public unsafe struct NetworkPackage : System.IComparable<NetworkPackage>, System.IEquatable<NetworkPackage> {
 
         /// <summary>
@@ -171,7 +226,12 @@ namespace ME.BECS.Network {
             var srcState = this.data.ptr->connectedWorld.state;
             var state = State.ClonePrepare(srcState);
             this.tempData.Value = (System.IntPtr)state.ptr;
-            this.data.ptr->statesStorage.Put(state);
+            var oldStateWasRemoved = this.data.ptr->statesStorage.Put(state, out var removedStateHash, out var removedStateTick);
+            if (oldStateWasRemoved == true) {
+                this.data.ptr->removedStateTick = removedStateTick;
+                this.data.ptr->removedStateHash = removedStateHash;
+                this.data.ptr->oldStateWasRemoved = true;
+            }
             
         }
         
@@ -474,16 +534,23 @@ namespace ME.BECS.Network {
                 }
             }
 
-            internal void Put(safe_ptr<State> state) {
+            internal bool Put(safe_ptr<State> state, out int removedStateHash, out ulong removedStateTick) {
 
                 if (this.resetState.ptr == null) this.SaveResetState();
                 
                 if (this.rover >= this.entries.Length) {
                     this.rover = 0u;
                 }
+
+                removedStateHash = 0;
+                removedStateTick = 0u;
+                var oldStateWasRemoved = false;
                 
                 ref var item = ref this.entries[this.rover];
                 if (item.state.ptr != null) {
+                    removedStateHash = item.state.ptr->Hash;
+                    removedStateTick = item.state.ptr->tick;
+                    oldStateWasRemoved = true;
                     item.state.ptr->Dispose();
                     _free(item.state);
                 }
@@ -495,6 +562,8 @@ namespace ME.BECS.Network {
                 if (this.rover >= this.entries.Length) {
                     this.rover = 0u;
                 }
+                
+                return oldStateWasRemoved;
 
             }
 
@@ -614,6 +683,156 @@ namespace ME.BECS.Network {
 
         }
 
+        public struct HashTableStorage {
+
+            public struct Entry {
+
+                public MemArray<int> hashes;
+                public MemArray<bool> hasHashFlags;
+
+                public void Dispose(safe_ptr<State> state) {
+                    this.hashes.Dispose(ref state.ptr->allocator);
+                    this.hasHashFlags.Dispose(ref state.ptr->allocator);
+                }
+
+            }
+            
+            public readonly NetworkModuleProperties.HashTableStorageProperties hashTableStorageProperties;
+            public readonly NetworkModuleProperties.StatesStorageProperties statesStorageProperties;
+
+            private MemArray<Entry> entries;
+            private ulong lastStoredTick;
+            private uint rover;
+            private safe_ptr<State> state;
+
+            public HashTableStorage(in World networkWorld, in NetworkModuleProperties.HashTableStorageProperties hashTableStorageProperties, in NetworkModuleProperties.StatesStorageProperties statesStorageProperties) {
+
+                this.hashTableStorageProperties = hashTableStorageProperties;
+                this.statesStorageProperties = statesStorageProperties;
+                this.lastStoredTick = 0u;
+                this.rover = 0u;
+                this.state = networkWorld.state;
+                this.entries = new MemArray<Entry>(ref this.state.ptr->allocator, this.hashTableStorageProperties.capacity);
+
+                for (var i = 0; i < this.entries.Length; ++i) {
+                    this.entries[this.state, i] = new Entry() {
+                        hashes = new MemArray<int>(ref this.state.ptr->allocator, 2u),
+                        hasHashFlags = new MemArray<bool>(ref this.state.ptr->allocator, 2u),
+                    };
+                }
+
+            }
+
+            private void InvalidateEntry(uint index) {
+                ref var entry = ref this.entries[this.state, index];
+                entry.hasHashFlags.Clear(ref this.state.ptr->allocator);
+            }
+
+            private bool PutAndValidateEntry(uint index, uint playerIndex, int hash) {
+
+                var length = playerIndex + 1u;
+                ref var entry = ref this.entries[this.state, index];
+                entry.hashes.Resize(ref this.state.ptr->allocator, length, 1);
+                entry.hasHashFlags.Resize(ref this.state.ptr->allocator, length, 1);
+
+                entry.hasHashFlags[this.state, playerIndex] = true;
+                entry.hashes[this.state, playerIndex] = hash;
+
+                for (var i = 0; i < entry.hashes.Length; ++i) {
+                    if (entry.hasHashFlags[this.state, i] == true) {
+                        if (entry.hashes[this.state, i] != hash) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+
+            }
+
+            /// <summary>
+            /// Adds hash sync package to the local hash sync table
+            /// </summary>
+            /// <param name="syncHashPackage"></param>
+            /// <param name="innerHashIndex">Inner index of hash table where new hash was added</param>
+            /// <returns>false if hash desync appeared on package addition</returns>
+            public bool AddPackage(SyncHashPackage syncHashPackage, out uint innerHashIndex) {
+                
+                var tickToStore = syncHashPackage.tick;
+                var playerId = syncHashPackage.playerId;
+                var hash = syncHashPackage.hash;
+                innerHashIndex = this.rover;
+
+                if (this.lastStoredTick == 0u) {
+                    this.lastStoredTick = tickToStore;
+                    this.rover = 0u;
+                }
+
+                // Special case - tick to store out of table in the past
+                if (tickToStore < this.lastStoredTick && (this.lastStoredTick - tickToStore) / this.statesStorageProperties.copyPerTick > this.entries.Length) {
+                    // Ignore
+                    return true;
+                }
+
+                var targetIndex = this.rover;
+
+                if (tickToStore > this.lastStoredTick) {
+
+                    for (var throughTick = this.lastStoredTick + this.statesStorageProperties.copyPerTick; throughTick <= tickToStore; throughTick += this.statesStorageProperties.copyPerTick) {
+                        this.rover = (this.rover + 1u) % this.entries.Length;
+                        this.lastStoredTick = throughTick;
+
+                        this.InvalidateEntry(this.rover);
+                    }
+                    
+                    targetIndex = this.rover;
+                    
+                }
+
+                if (tickToStore < this.lastStoredTick) {
+                    // Somewhere in the past, but in the range of stored ticks
+                    var indexDelta = (uint) (this.lastStoredTick - tickToStore) / this.statesStorageProperties.copyPerTick;
+                    var indexFrom = this.rover;
+                    while (indexDelta > indexFrom) {
+                        indexFrom += this.entries.Length;
+                    }
+                    targetIndex = indexFrom - indexDelta;
+                    
+                }
+
+                innerHashIndex = targetIndex;
+                var valid = this.PutAndValidateEntry(targetIndex, playerId, hash);
+                return valid;
+
+            }
+
+            public void PrepareDesyncData(uint hashTableIndex, out bool[] hasHashFlags, out int[] hashes) {
+
+                var entry = this.entries[this.state, hashTableIndex];
+                hasHashFlags = new bool[entry.hashes.Length];
+                hashes = new int[entry.hashes.Length];
+
+                for (int i = 0; i < entry.hasHashFlags.Length; i++) {
+                    hasHashFlags[i] = entry.hasHashFlags[this.state, i];
+                }
+
+                for (int i = 0; i < entry.hashes.Length; i++) {
+                    hashes[i] = entry.hashes[this.state, i];
+                }
+
+            }
+
+            public void Dispose() {
+                
+                for (var i = 0; i < this.entries.Length; ++i) {
+                    this.entries[this.state, i].Dispose(this.state);
+                }
+                this.entries.Dispose(ref this.state.ptr->allocator);
+
+            }
+            
+        }
+
         public struct Data {
 
             public double currentTimestamp;
@@ -629,10 +848,15 @@ namespace ME.BECS.Network {
             public EventsStorage eventsStorage;
             public StatesStorage statesStorage;
             public MethodsStorage methodsStorage;
+            public HashTableStorage hashTableStorage;
             public safe_ptr<Data> selfPtr;
             public ulong rollbackTargetTick;
 
             public safe_ptr<State> startFrameState;
+
+            public int removedStateHash;
+            public ulong removedStateTick;
+            public bool oldStateWasRemoved;
             
             [INLINE(256)]
             public Data(in World connectedWorld, NetworkModuleProperties properties) {
@@ -657,6 +881,7 @@ namespace ME.BECS.Network {
                 this.eventsStorage = new EventsStorage(in this.networkWorld, in this.connectedWorld, properties.eventsStorageProperties);
                 this.statesStorage = new StatesStorage(in this.networkWorld, in this.connectedWorld, properties.statesStorageProperties);
                 this.methodsStorage = new MethodsStorage(in this.networkWorld, in this.connectedWorld, properties.methodsStorageProperties);
+                this.hashTableStorage = new HashTableStorage(in this.networkWorld, properties.hashTableStorageProperties, properties.statesStorageProperties);
                 this.rollbackTargetTick = 0UL;
                 this.startFrameState = _make(new State());
 
@@ -781,6 +1006,7 @@ namespace ME.BECS.Network {
                 this.eventsStorage.Dispose();
                 this.statesStorage.Dispose();
                 this.methodsStorage.Dispose();
+                this.hashTableStorage.Dispose();
                 this.networkWorld.Dispose();
                 this.startFrameState.ptr->Dispose();
                 _free(ref this.startFrameState);
@@ -982,6 +1208,10 @@ namespace ME.BECS.Network {
         [INLINE(256)]
         public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
 
+            if (this.networkTransport is INetworkTransportPreUpdate networkTransportPreUpdate) {
+                networkTransportPreUpdate.PreUpdate();
+            }
+
             if (this.networkTransport.Status != TransportStatus.Connected) {
                 Logger.Network.Log($"Transport status: {this.networkTransport.Status}");
                 return dependsOn;
@@ -989,6 +1219,9 @@ namespace ME.BECS.Network {
             
             dependsOn.Complete();
             {
+
+                this.ReceiveHashState();
+                
                 var deltaTimeMs = this.GetDeltaTime();
                 var currentTick = world.state.ptr->tick;
                 var targetTick = this.GetTargetTick();
@@ -1032,6 +1265,8 @@ namespace ME.BECS.Network {
                     
                     marker.End();
 
+                    this.SendHashState();
+
                     if (this.data.ptr->IsRollbackRequired(tick) == true) {
                         break;
                     }
@@ -1047,6 +1282,55 @@ namespace ME.BECS.Network {
 
             return dependsOn;
 
+        }
+
+        private void SendHashState() {
+            
+            if (this.data.ptr->oldStateWasRemoved == true && this.data.ptr->removedStateTick != 0 && this.networkTransport is INetworkTransportHashSync networkTransportHashSync) {
+
+                var package = new SyncHashPackage() {
+                    hash = this.data.ptr->removedStateHash,
+                    playerId = this.data.ptr->localPlayerId,
+                    tick = this.data.ptr->removedStateTick,
+                };
+
+                this.AddSyncHashPackage(networkTransportHashSync, package);
+
+                this.data.ptr->writeBuffer.Reset();
+                package.Serialize(ref this.data.ptr->writeBuffer);
+                var bytes = this.data.ptr->writeBuffer.ToArray();
+                networkTransportHashSync.SendHashSync(bytes);
+
+            }
+            this.data.ptr->oldStateWasRemoved = false;
+            
+        }
+
+        private void ReceiveHashState() {
+
+            if (this.networkTransport is INetworkTransportHashSync networkTransportHashSync) {
+                while (true) {
+                    var bytes = networkTransportHashSync.ReceiveSyncHash();
+                    if (bytes != null) {
+                        var readBuffer = new StreamBufferReader(bytes);
+                        var package = SyncHashPackage.Create(ref readBuffer);
+                        this.AddSyncHashPackage(networkTransportHashSync, package);
+                        // UnityEngine.Debug.Log($"Received hash state {package}");
+                        readBuffer.Dispose();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+        }
+
+        private void AddSyncHashPackage(INetworkTransportHashSync networkTransportHashSync, SyncHashPackage package) {
+            var valid = this.data.ptr->hashTableStorage.AddPackage(package, out var innerHashIndex);
+            if (valid == false) {
+                this.data.ptr->hashTableStorage.PrepareDesyncData(innerHashIndex, out var hasHashFlags, out var hashes);
+                networkTransportHashSync.OnHashDesync(package.tick, hasHashFlags, hashes);
+            }
         }
 
         public byte[] SerializeAllEvents() {
