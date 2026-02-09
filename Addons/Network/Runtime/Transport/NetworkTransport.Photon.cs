@@ -1,9 +1,8 @@
-using ExitGames.Client.Photon;
-
 #if PHOTON_UNITY_NETWORKING
 
 namespace ME.BECS.Network {
-    
+
+    using ExitGames.Client.Photon;
     using static Cuts;
 
     public class PhotonTransport : INetworkTransport, Photon.Realtime.IConnectionCallbacks, Photon.Realtime.IInRoomCallbacks, Photon.Realtime.IOnEventCallback, Photon.Realtime.IMatchmakingCallbacks, Photon.Realtime.ILobbyCallbacks, INetworkTransportPreUpdate, INetworkTransportHashSync, INetworkTransportPing {
