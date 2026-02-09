@@ -26,6 +26,7 @@ namespace ME.BECS.Network {
 
     public unsafe struct SyncHashPackage : System.IComparable<SyncHashPackage>, System.IEquatable<SyncHashPackage> {
 
+        public byte packageType;
         public ulong tick;
         public uint playerId;
         public int hash;
@@ -33,6 +34,7 @@ namespace ME.BECS.Network {
         public static SyncHashPackage Create(ref StreamBufferReader reader) {
 
             var result = new SyncHashPackage();
+            reader.Read(ref result.packageType);
             reader.Read(ref result.tick);
             reader.Read(ref result.playerId);
             reader.Read(ref result.hash);
@@ -41,7 +43,8 @@ namespace ME.BECS.Network {
         }
 
         public void Serialize(ref StreamBufferWriter writeBufferWriter) {
-            
+
+            writeBufferWriter.Write(PackageTypeConst.Sync);
             writeBufferWriter.Write(this.tick);
             writeBufferWriter.Write(this.playerId);
             writeBufferWriter.Write(this.hash);
@@ -81,6 +84,7 @@ namespace ME.BECS.Network {
     
     public unsafe struct NetworkPackage : System.IComparable<NetworkPackage>, System.IEquatable<NetworkPackage> {
 
+        public byte packageType;
         /// <summary>
         /// Tick
         /// </summary>
@@ -124,6 +128,7 @@ namespace ME.BECS.Network {
         public static NetworkPackage Create(ref StreamBufferReader reader) {
 
             var result = new NetworkPackage();
+            reader.Read(ref result.packageType);
             reader.Read(ref result.tick);
             reader.Read(ref result.playerId);
             reader.Read(ref result.localOrder);
@@ -136,7 +141,8 @@ namespace ME.BECS.Network {
         }
 
         public void Serialize(ref StreamBufferWriter writeBufferWriter) {
-            
+
+            writeBufferWriter.Write(PackageTypeConst.Data);
             writeBufferWriter.Write(this.tick);
             writeBufferWriter.Write(this.playerId);
             writeBufferWriter.Write(this.localOrder);
