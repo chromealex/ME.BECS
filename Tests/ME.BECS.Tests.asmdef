@@ -9,7 +9,8 @@
         "Unity.Collections",
         "Unity.Mathematics",
         "Unity.PerformanceTesting",
-        "ME.BECS.Transforms"
+        "ME.BECS.Transforms",
+        "ME.BECS.Editor"
     ],
     "includePlatforms": [
         "Editor"
