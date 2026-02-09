@@ -80,7 +80,19 @@ namespace ME.BECS.Network {
         /// <summary>
         /// Called every update frame before connection state check and before send/receive
         /// </summary>
-        void PreUpdate();
+        /// <param name="dtMs">visual delta time</param>
+        void PreUpdate(uint dtMs);
+
+    }
+
+    /// <summary>
+    /// Do that network transport implements ping check
+    /// </summary>
+    public interface INetworkTransportPing {
+
+        uint Ping { get; }
+        uint PingMin { get; }
+        uint PingMax { get; }
 
     }
 

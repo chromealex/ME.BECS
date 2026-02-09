@@ -6,21 +6,28 @@ namespace ME.BECS.Network {
     
     using static Cuts;
 
-    public class PhotonTransport : INetworkTransport, Photon.Realtime.IConnectionCallbacks, Photon.Realtime.IInRoomCallbacks, Photon.Realtime.IOnEventCallback, Photon.Realtime.IMatchmakingCallbacks, Photon.Realtime.ILobbyCallbacks, INetworkTransportPreUpdate, INetworkTransportHashSync {
+    public class PhotonTransport : INetworkTransport, Photon.Realtime.IConnectionCallbacks, Photon.Realtime.IInRoomCallbacks, Photon.Realtime.IOnEventCallback, Photon.Realtime.IMatchmakingCallbacks, Photon.Realtime.ILobbyCallbacks, INetworkTransportPreUpdate, INetworkTransportHashSync, INetworkTransportPing {
 
         public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
-        public ulong InputLagInTicks { get; private set; }
+        public ulong InputLagInTicks => this.InputLagDependsOnPing();
 
         public TransportStatus Status { get; set; }
         public double ServerTime { get; private set; }
+        public uint Ping => this.pingStorage.median;
+        public uint PingMin => this.pingStorage.min;
+        public uint PingMax => this.pingStorage.max;
 
         private NetworkModule networkModule;
         private World world;
+
+        private uint pingTimer;
+        private PingStorage pingStorage;
 
         public void OnAwake() {
             this.Status = TransportStatus.Unknown;
             this.receivedPackages = new System.Collections.Generic.Queue<byte[]>();
             this.receivedSystemPackages = new System.Collections.Generic.Queue<byte[]>();
+            this.pingStorage = new PingStorage();
         }
 
         public void Dispose() {
@@ -205,7 +212,7 @@ namespace ME.BECS.Network {
             //UnityEngine.Debug.Log("OnLobbyStatisticsUpdate");
         }
 
-        public virtual void PreUpdate() {
+        public virtual void PreUpdate(uint dtMs) {
             
             if (this.waitForServerTime == true && Photon.Pun.PhotonNetwork.Time > 0) {
                 this.Status = TransportStatus.Connected;
@@ -213,8 +220,17 @@ namespace ME.BECS.Network {
                 UnityEngine.Debug.Log($"Server time initially set to {Photon.Pun.PhotonNetwork.Time}");
                 this.waitForServerTime = false;
             }
-            
+
+            if (this.Status == TransportStatus.Connected) {
+                this.pingTimer += dtMs;
+                if (this.pingTimer >= 1000) {
+                    this.pingTimer %= 1000;
+                    this.pingStorage.AddValue((uint)Photon.Pun.PhotonNetwork.GetPing());
+                }
+            }
+
         }
+
         public void SendHashSync(byte[] bytes) {
             
             if (this.Status != TransportStatus.Connected) {
@@ -253,6 +269,12 @@ namespace ME.BECS.Network {
             }
 
             UnityEngine.Debug.LogError(errStr);
+
+        }
+
+        private ulong InputLagDependsOnPing() {
+
+            return (this.Ping / 2) / this.networkModule.properties.tickTime + 1u;
 
         }
 

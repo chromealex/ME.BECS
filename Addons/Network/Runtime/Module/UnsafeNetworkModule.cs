@@ -1205,12 +1205,16 @@ namespace ME.BECS.Network {
 
         }
 
-        [INLINE(256)]
-        public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
+        public void PreUpdate(uint dtMs) {
 
             if (this.networkTransport is INetworkTransportPreUpdate networkTransportPreUpdate) {
-                networkTransportPreUpdate.PreUpdate();
+                networkTransportPreUpdate.PreUpdate(dtMs);
             }
+
+        }
+
+        [INLINE(256)]
+        public JobHandle Update(NetworkWorldInitializer initializer, JobHandle dependsOn, ref World world) {
 
             if (this.networkTransport.Status != TransportStatus.Connected) {
                 Logger.Network.Log($"Transport status: {this.networkTransport.Status}");
