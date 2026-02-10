@@ -30,7 +30,7 @@ namespace ME.BECS.Pathfinding {
             var bounds = renderer.bounds;
 
             var oldMatrix = UnityEngine.Gizmos.matrix;
-            UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS(this.transform.position, this.transform.rotation, UnityEngine.Vector3.one);
+            UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.lossyScale);
             UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
             UnityEngine.Gizmos.DrawWireCube(bounds.center, bounds.size);
             UnityEngine.Gizmos.matrix = oldMatrix;

@@ -60,7 +60,7 @@ namespace ME.BECS.Pathfinding {
 
         }
 
-        public void DrawGrid(float3 position, quaternion rotation) {
+        public void DrawGrid(float3 position, quaternion rotation, float3 scale) {
 
             var mesh = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh;
             var bounds = mesh.bounds;
@@ -84,14 +84,14 @@ namespace ME.BECS.Pathfinding {
                     var c = UnityEngine.Gizmos.color;
                     c.a = 0.2f;
                     UnityEngine.Gizmos.color = c;
-                    UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)position, (UnityEngine.Quaternion)rotation, (UnityEngine.Vector3)new float3(1f));
+                    UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)position, (UnityEngine.Quaternion)rotation, (UnityEngine.Vector3)scale);
                     var p = localOffset + new float3(0f, height, 0f);
                     var s = new float3(size.x, 0f, size.z);
                     UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)p, (UnityEngine.Vector3)s);
                     UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)p, (UnityEngine.Vector3)s);
                     c.a = 0.05f;
                     UnityEngine.Gizmos.color = c;
-                    UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)pos, (UnityEngine.Quaternion)rotation, (UnityEngine.Vector3)new float3(1f));
+                    UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)pos, (UnityEngine.Quaternion)rotation, (UnityEngine.Vector3)scale);
                     UnityEngine.Gizmos.DrawCube((UnityEngine.Vector3)float3.zero, (UnityEngine.Vector3)size);
                     UnityEngine.Gizmos.DrawWireCube((UnityEngine.Vector3)float3.zero, (UnityEngine.Vector3)size);
                 }
@@ -132,7 +132,7 @@ namespace ME.BECS.Pathfinding {
             var renderer = this.GetComponentInChildren<UnityEngine.MeshFilter>().sharedMesh;
             var bounds = renderer.bounds;
 
-            this.DrawGrid((float3)this.transform.position, (quaternion)this.transform.rotation);
+            this.DrawGrid((float3)this.transform.position, (quaternion)this.transform.rotation, (float3)this.transform.lossyScale);
             /*if (this.test != null) {
                 var rotation = this.transform.rotation;
                 var testPos = this.test.transform.position;
@@ -144,7 +144,7 @@ namespace ME.BECS.Pathfinding {
             }*/
 
             var oldMatrix = UnityEngine.Gizmos.matrix;
-            UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS(this.transform.position, this.transform.rotation, UnityEngine.Vector3.one);
+            UnityEngine.Gizmos.matrix = UnityEngine.Matrix4x4.TRS(this.transform.position, this.transform.rotation, this.transform.lossyScale);
             UnityEngine.Gizmos.color = UnityEngine.Color.yellow;
             UnityEngine.Gizmos.DrawWireCube(bounds.center, bounds.size);
             UnityEngine.Gizmos.matrix = oldMatrix;
