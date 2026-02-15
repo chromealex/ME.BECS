@@ -49,6 +49,7 @@ namespace ME.BECS.Editor {
 
         private static Data data;
         private static readonly System.Collections.Generic.Dictionary<string, Data.Item> cache = new System.Collections.Generic.Dictionary<string, Data.Item>();
+        private static readonly System.Collections.Generic.Dictionary<string, System.Type> _typeCache = new System.Collections.Generic.Dictionary<string, System.Type>();
 
         private static Data LoadData() {
             var dir = $"{CodeGenerator.ECS}.Cache";
@@ -336,12 +337,16 @@ namespace ME.BECS.Editor {
         }
 
         private static void AddClassName(string ns, string className, string assetPath) {
-            var type = System.Type.GetType(className);
-            if (type == null) {
-                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies()) {
-                    type = asm.GetType(className);
-                    if (type != null) break;
+            System.Type type = null;
+            if (_typeCache.TryGetValue(className, out type) == false) {
+                type = System.Type.GetType(className);
+                if (type == null) {
+                    foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies()) {
+                        type = asm.GetType(className);
+                        if (type != null) break;
+                    }
                 }
+                _typeCache[className] = type;
             }
             if (data.items == null) data.items = new System.Collections.Generic.List<Data.Item>();
             var item = new Data.Item() {

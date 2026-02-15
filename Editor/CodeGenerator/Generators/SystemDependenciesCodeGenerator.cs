@@ -44,9 +44,13 @@ namespace ME.BECS.Editor.Systems {
                 //UnityEngine.Debug.Log("Processing: " + sys.FullName);
 
                 var system = sys;
-                if (system.IsGenericType == true) {
-                    system = system.GetGenericTypeDefinition();
-                    system = EditorUtils.MakeGenericConstraintType(system);
+                if (system.IsGenericType == true && system.IsGenericTypeDefinition) {
+                    var concreteType = EditorUtils.MakeGenericConstraintType(system);
+                    if (concreteType != null && !concreteType.IsGenericTypeDefinition) {
+                        system = concreteType;
+                    } else {
+                        continue;
+                    }
                 }
                 if (tempItems.ContainsKey(system) == true) continue;
                 tempItems.Add(system, new Item());
@@ -73,8 +77,17 @@ namespace ME.BECS.Editor.Systems {
                         content.Add($"// system: {system.FullName}");
                         content.Add("var list = new s::List<ComponentDependencyGraphInfo>();");
                         content.Add("var errors = new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>();");
-                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({EditorUtils.GetTypeName(system, showGenericType: false)}), list);");
-                        content.Add($"systemDependenciesGraphErrors.Add(typeof({EditorUtils.GetTypeName(system, showGenericType: false)}), errors);");
+                        var systemTypeName = EditorUtils.GetDataTypeName(system);
+                        content.Add($"systemDependenciesComponentsGraph.Add(typeof({systemTypeName}), list);");
+                        content.Add($"systemDependenciesGraphErrors.Add(typeof({systemTypeName}), errors);");
+                        if (system.IsGenericType == true && !system.IsGenericTypeDefinition) {
+                            content.Add($"if (systemDependenciesComponentsGraph.ContainsKey(typeof({systemTypeName}).GetGenericTypeDefinition()) == false) {{");
+                            content.Add($"systemDependenciesComponentsGraph.Add(typeof({systemTypeName}).GetGenericTypeDefinition(), list);");
+                            content.Add($"}}");
+                            content.Add($"if (systemDependenciesGraphErrors.ContainsKey(typeof({systemTypeName}).GetGenericTypeDefinition()) == false) {{");
+                            content.Add($"systemDependenciesGraphErrors.Add(typeof({systemTypeName}).GetGenericTypeDefinition(), errors);");
+                            content.Add($"}}");
+                        }
 
                         {
                             var method = system.GetMethod("OnUpdate");
@@ -272,9 +285,9 @@ namespace ME.BECS.Editor.Systems {
             str.AppendLine("private static s::Dictionary<System.Type, s::HashSet<System.Type>> systemDependenciesGraph;");
             str.AppendLine("private static s::Dictionary<System.Type, s::List<ComponentDependencyGraphInfo>> systemDependenciesComponentsGraph;");
             str.AppendLine("private static s::Dictionary<System.Type, s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>> systemDependenciesGraphErrors;");
-            str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph[type]; }");
-            str.AppendLine("public static s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> GetSystemDependenciesErrors(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraphErrors[type]; }");
-            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph[type]; }");
+            str.AppendLine("public static s::List<ComponentDependencyGraphInfo> GetSystemComponentsDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesComponentsGraph.TryGetValue(type, out var result) ? result : new s::List<ComponentDependencyGraphInfo>(); }");
+            str.AppendLine("public static s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error> GetSystemDependenciesErrors(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraphErrors.TryGetValue(type, out var result) ? result : new s::List<Systems.SystemDependenciesCodeGenerator.MethodInfoDependencies.Error>(); }");
+            str.AppendLine("public static s::HashSet<System.Type> GetSystemDependencies(System.Type type) { InitializeSystemDependenciesInfo(); return systemDependenciesGraph.TryGetValue(type, out var result) ? result : new s::HashSet<System.Type>(); }");
             str.AppendLine("public static void InitializeSystemDependenciesInfo() {");
             str.AppendLine("if (systemDependenciesGraph != null) return;");
             str.AppendLine("systemDependenciesGraph = new s::Dictionary<System.Type, s::HashSet<System.Type>>();");
@@ -315,13 +328,13 @@ namespace ME.BECS.Editor.Systems {
                     str.Append("systemDependenciesGraph.Add(");
                     {
                         str.Append("typeof(");
-                        str.Append(EditorUtils.GetTypeName(this.system, showGenericType: false));
+                        str.Append(EditorUtils.GetDataTypeName(this.system));
                         str.Append(")");
                     }
                     str.Append(",");
                     if (this.dependencies.Count > 0) {
                         str.Append("new s::HashSet<System.Type>() {\ntypeof(" +
-                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetTypeName(x, showGenericType: false)).ToArray()) +
+                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetDataTypeName(x)).ToArray()) +
                                    ")\n}");
                     } else {
                         str.Append("null");
@@ -430,19 +443,19 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
+        private static readonly MethodInfo _completeHandleMethod = typeof(Unity.Jobs.JobHandle).GetMethod(nameof(Unity.Jobs.JobHandle.Complete));
+        private static readonly MethodInfo _getSystemMethod = typeof(SystemsWorldExt).GetMethod(nameof(SystemsWorldExt.GetSystemPtr));
+        private static readonly MethodInfo _withMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.With));
+        private static readonly MethodInfo _withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAny));
+        private static readonly MethodInfo _withoutMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.Without));
+        private static readonly MethodInfo _withAspectMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAspect));
+        private static readonly MethodInfo _asReadonlyMethod = typeof(QueryBuilder).GetMethod(nameof(QueryBuilder.AsReadonly));
+
         private MethodInfoDependencies GetDeps(MethodInfo root) {
 
             if (root == null) return default;
 
             var errors = new System.Collections.Generic.List<MethodInfoDependencies.Error>();
-            
-            var completeHandleMethod = typeof(Unity.Jobs.JobHandle).GetMethod(nameof(Unity.Jobs.JobHandle.Complete));
-            var getSystemMethod = typeof(SystemsWorldExt).GetMethod(nameof(SystemsWorldExt.GetSystemPtr));
-            var withMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.With));
-            var withAnyMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAny));
-            var withoutMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.Without));
-            var withAspectMethod = typeof(ArchetypeQueries.QueryCompose).GetMethod(nameof(ArchetypeQueries.QueryCompose.WithAspect));
-            var asReadonlyMethod = typeof(QueryBuilder).GetMethod(nameof(QueryBuilder.AsReadonly));
             
             var uniqueTypes = new System.Collections.Generic.HashSet<JobsEarlyInitCodeGenerator.TypeInfo>();
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
@@ -460,40 +473,39 @@ namespace ME.BECS.Editor.Systems {
                     var continueTraverse = true;
                     if (inst.Operand is MethodInfo methodInfo) {
                         if (hasCompleteHandle == false && hasInterestInstructions == false && body == root) {
-                            // search for Complete
-                            if (IsMethod(methodInfo, completeHandleMethod) == true) {
+                            if (IsMethod(methodInfo, _completeHandleMethod) == true) {
                                 hasCompleteHandle = true;
                             }
                         }
-                        if (IsMethod(methodInfo, getSystemMethod) == true) {
+                        if (IsMethod(methodInfo, _getSystemMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadWrite,
                             });
                             continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withMethod) == true) {
+                        } else if (IsMethod(methodInfo, _withMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
                             continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withAnyMethod) == true) {
+                        } else if (IsMethod(methodInfo, _withAnyMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
                             continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withoutMethod) == true) {
+                        } else if (IsMethod(methodInfo, _withoutMethod) == true) {
                             hasInterestInstructions = true;
                             uniqueTypes.Add(new JobsEarlyInitCodeGenerator.TypeInfo() {
                                 type = methodInfo.GetGenericArguments()[0],
                                 op = RefOp.ReadOnly,
                             });
                             continueTraverse = false;
-                        } else if (IsMethod(methodInfo, withAspectMethod) == true) {
+                        } else if (IsMethod(methodInfo, _withAspectMethod) == true) {
                             hasInterestInstructions = true;
                             var aspect = methodInfo.GetGenericArguments()[0];
                             var fields = aspect.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -507,7 +519,7 @@ namespace ME.BECS.Editor.Systems {
                                     continueTraverse = false;
                                 }
                             }
-                        } else if (IsMethod(methodInfo, asReadonlyMethod) == true) {
+                        } else if (IsMethod(methodInfo, _asReadonlyMethod) == true) {
                             hasInterestInstructions = true;
                             isReadonly = true;
                             continueTraverse = false;
