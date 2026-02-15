@@ -1413,8 +1413,8 @@ namespace ME.BECS.Pathfinding {
                         Graph.DrawGizmosArrow((UnityEngine.Vector3)pos - (UnityEngine.Vector3)(dir3d * 0.25f * cellSize), (UnityEngine.Vector3)dir3d * 0.5f, scale: (float)cellSize);
                     } else*/
                     #if UNITY_EDITOR
-                    UnityEditor.Handles.color = new UnityEngine.Color(1f, 1f, 1f, 0.3f);
-                    UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"<color=grey>{item.bestCost}</color>", gizmosStyle);
+                    //UnityEditor.Handles.color = new UnityEngine.Color(1f, 1f, 1f, 0.3f);
+                    //UnityEditor.Handles.Label((UnityEngine.Vector3)pos + UnityEngine.Vector3.back, $"<color=grey>{item.bestCost}</color>", gizmosStyle);
                     #endif
                     {
                         if (item.direction == Graph.TARGET_BYTE) {
