@@ -35,14 +35,6 @@ MonoBehaviour:
     outputFieldName: output
     inputPortIdentifier: 
     outputPortIdentifier: 
-  - GUID: ab22ab6e-aed3-4ea8-80cb-6265aebb1691
-    owner: {fileID: 11400000}
-    inputNodeGUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
-    outputNodeGUID: c94c0ee5-4e54-496f-b8fb-2d9ef726964b
-    inputFieldName: inputNodes
-    outputFieldName: outputNodes
-    inputPortIdentifier: 
-    outputPortIdentifier: 
   - GUID: 30a74e41-2273-49d3-b523-c60ea5ebf00a
     owner: {fileID: 11400000}
     inputNodeGUID: 66e29378-443a-4830-b0d7-fb461eeb3fc8
@@ -99,6 +91,14 @@ MonoBehaviour:
     outputFieldName: outputNodes
     inputPortIdentifier: 
     outputPortIdentifier: 
+  - GUID: b583eac5-1d8d-4428-8756-3426a62d1361
+    owner: {fileID: 11400000}
+    inputNodeGUID: b6f80336-a6a8-4db6-9118-4b6d54af3691
+    outputNodeGUID: c94c0ee5-4e54-496f-b8fb-2d9ef726964b
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
   groups: []
   stackNodes: []
   pinnedElements: []
@@ -126,8 +126,8 @@ MonoBehaviour:
           syncCount: 0
           hasMethod: 0
         - method: 3
-          syncPoint: 0
-          syncCount: 1
+          syncPoint: 1
+          syncCount: 0
           hasMethod: 1
         - method: 4
           syncPoint: 1
@@ -145,10 +145,10 @@ MonoBehaviour:
         computeOrder: 3
         position:
           serializedVersion: 2
-          x: -19
-          y: -106.5
+          x: -5
+          y: -13
           width: 300
-          height: 187
+          height: 228
         expanded: 1
         enabled: 1
         debug: 0
@@ -384,13 +384,13 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: c94c0ee5-4e54-496f-b8fb-2d9ef726964b
         groupGUID: 
-        computeOrder: 1
+        computeOrder: 2
         position:
           serializedVersion: 2
-          x: -19
-          y: 97.5
+          x: -347
+          y: 80.5
           width: 300
-          height: 79
+          height: 228
         expanded: 1
         enabled: 1
         debug: 0
@@ -434,7 +434,7 @@ MonoBehaviour:
         nodeCustomName: 
         GUID: 66e29378-443a-4830-b0d7-fb461eeb3fc8
         groupGUID: 
-        computeOrder: 2
+        computeOrder: 1
         position:
           serializedVersion: 2
           x: -347
@@ -460,27 +460,27 @@ MonoBehaviour:
           syncCount: 0
           hasMethod: 0
         - method: 1
-          syncPoint: 0
-          syncCount: -1
+          syncPoint: 1
+          syncCount: 0
           hasMethod: 0
         - method: 2
-          syncPoint: 0
-          syncCount: -1
+          syncPoint: 1
+          syncCount: 0
           hasMethod: 0
         - method: 3
           syncPoint: 1
           syncCount: 0
           hasMethod: 1
         - method: 4
-          syncPoint: 0
-          syncCount: -1
+          syncPoint: 1
+          syncCount: 0
           hasMethod: 0
         - method: 5
-          syncPoint: 0
-          syncCount: -1
+          syncPoint: 1
+          syncCount: 0
           hasMethod: 0
-        syncPoint: 0
-        syncCount: -1
+        syncPoint: 1
+        syncCount: 0
         nodeCustomName: 
         GUID: cea2317a-7d5c-41bd-9085-23357dc8dab4
         groupGUID: 

@@ -607,7 +607,7 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public void Dispose(in World world) {
-
+            
             for (uint i = 0; i < this.chunks.Length; ++i) {
                 var chunk = this.chunks[world.state, i];
                 chunk.flowField.Dispose(ref world.state.ptr->allocator);

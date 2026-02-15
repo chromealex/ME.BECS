@@ -160,18 +160,13 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public static void DestroyTargets(in UnitCommandGroupAspect unitCommandGroup) {
-            for (uint i = 0; i < unitCommandGroup.targets.Length; ++i) {
-                ref var target = ref unitCommandGroup.targets[i];
-                if (target.IsAlive() == false || target.Has<TargetPathComponent>() == false) continue;
-                var targetComponent = target.Read<TargetComponent>();
-                if (targetComponent.target.IsAlive() == false) continue;
-                ref var pathComponent = ref target.Get<TargetPathComponent>();
-                pathComponent.path.Dispose(in unitCommandGroup.ent.World);
-            }
-
-            for (uint i = 0; i < unitCommandGroup.targets.Length; ++i) {
+            for (uint i = 0u; i < unitCommandGroup.targets.Length; ++i) {
                 ref var target = ref unitCommandGroup.targets[i];
                 if (target.IsAlive() == false) continue;
+                var pathComponent = target.Read<TargetPathComponent>();
+                if (pathComponent.path.IsCreated == true) {
+                    pathComponent.path.Dispose(in unitCommandGroup.ent.World);
+                }
                 var targetComponent = target.Read<TargetComponent>();
                 if (targetComponent.target.IsAlive() == true) {
                     targetComponent.target.DestroyHierarchy();

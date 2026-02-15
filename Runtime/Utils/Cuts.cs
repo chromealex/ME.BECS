@@ -629,6 +629,7 @@ namespace ME.BECS {
                 LeakDetector.TrackCount(sptr.ptr, allocator);
                 return sptr;
             }
+
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
                 var sptr = new safe_ptr(ptr, size);
