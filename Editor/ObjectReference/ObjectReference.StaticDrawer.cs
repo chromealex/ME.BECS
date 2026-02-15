@@ -9,7 +9,7 @@ namespace ME.BECS.Editor {
 
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
-            ObjectReferenceRegistry.Initialize();
+            ObjectReferenceRegistry.Load();
             
             var id = property.FindPropertyRelative(nameof(ObjectReference<UnityEngine.Object>.id));
             var obj = ObjectReferenceRegistry.GetObjectBySourceId<UnityEngine.Object>(id.uintValue);
@@ -37,8 +37,8 @@ namespace ME.BECS.Editor {
 
         public override void OnGUI(UnityEngine.Rect position, SerializedProperty property, UnityEngine.GUIContent label) {
             
-            ObjectReferenceRegistry.Initialize();
-            
+            ObjectReferenceRegistry.Load();
+
             var id = property.FindPropertyRelative(nameof(ObjectReference<UnityEngine.Object>.id));
             var obj = ObjectReferenceRegistry.GetObjectBySourceId<UnityEngine.Object>(id.uintValue);
             
