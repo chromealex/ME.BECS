@@ -29,6 +29,7 @@ namespace ME.BECS.Units {
         public readonly ref readonly Ent readPrevChainTarget => ref this.groupDataPtr.Read(this.ent.id, this.ent.gen).prevChainTarget;
         
         public readonly void Add(in UnitAspect unit) => UnitUtils.AddToCommandGroup(in this, in unit);
+        public readonly void Add(in Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent> list) => UnitUtils.AddToCommandGroup(in this, in list);
 
         public bool IsPartOfChain => this.nextChainTarget.IsAlive() == true;
         public bool IsLocked => this.groupDataPtr.Get(this.ent.id, this.ent.gen).lockIndex.IsLocked;
