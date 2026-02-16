@@ -43,8 +43,6 @@ namespace ME.BECS.Pathfinding {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
-                var pos = tr.position;
-
                 if (unit.IsPathFollow == false) {
                     // just apply rvo direction
                     this.Move(ref tr, ref unit, in unit.componentRuntime.manualDirection, false);
@@ -74,6 +72,7 @@ namespace ME.BECS.Pathfinding {
                     return;
                 }
                 
+                var pos = tr.position;
                 var dir = Graph.GetDirection(in this.world, pos, in path, out var complete);
                 if ((unit.IsCollideWithEnd == true && PathUtils.HasArrived(in tr, in unit) == true) ||
                     (path.IsCreated == true && complete == true)) {

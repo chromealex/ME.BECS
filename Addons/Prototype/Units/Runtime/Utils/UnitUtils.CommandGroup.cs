@@ -69,11 +69,18 @@ namespace ME.BECS.Units {
 
             //E.THREAD_CHECK("AddToCommandGroup");
 
+            if (unit.readUnitCommandGroup == commandGroup.ent) {
+                for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
+                    var cmdUnit = commandGroup.readUnits[i];
+                    if (cmdUnit == unit.ent) return i;
+                }
+            }
+
             RemoveFromCommandGroup(in unit);
             commandGroup.ent.SetTag<IsCommandGroupDirty>(true);
-            commandGroup.Lock();
+            JobUtils.Increment(ref commandGroup.volume, UnitUtils.GetVolume(in unit));
             unit.unitCommandGroup = commandGroup.ent;
-            commandGroup.volume += UnitUtils.GetVolume(in unit);
+            commandGroup.Lock();
             var idx = commandGroup.units.Add(unit.ent) + 1u;
             commandGroup.Unlock();
             return idx;
