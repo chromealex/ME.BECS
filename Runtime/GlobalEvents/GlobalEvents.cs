@@ -179,7 +179,7 @@ namespace ME.BECS {
                 var elem = item.events[evt];
                 if (elem.data.ptr != null) {
                     fixed (void* dataPtr = &data) {
-                        _memcpy(elem.data, (safe_ptr)dataPtr, TSize<T>.size);
+                        _memcpy((safe_ptr)dataPtr, elem.data, TSize<T>.size);
                     }
                 } else {
                     elem.data = useData == true ? _make(data) : default;
