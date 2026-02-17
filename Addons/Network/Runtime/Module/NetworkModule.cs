@@ -151,7 +151,7 @@ namespace ME.BECS.Network {
                 
             }
 
-            this.network.PreUpdate(dtMs);
+            this.network.PreUpdate(dependsOn, dtMs);
 
             return this.network.Update(initializer, dependsOn, ref world);
             
