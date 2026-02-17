@@ -217,6 +217,7 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
         public readonly void FillAll(ref SpatialQueryAspect query, in TransformAspect tr) {
             
             if (tr.IsCalculated == false) return;
@@ -227,10 +228,10 @@ namespace ME.BECS {
             if (query.readResults.results.IsCreated == true) query.results.results.Clear();
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
 
-            for (int i = 0; i < this.treesCount; ++i) {
-                if ((q.treeMask & (1 << i)) == 0) {
-                    continue;
-                }
+            var mask = q.treeMask;
+            while (mask != 0) {
+                int i = math.tzcnt(mask);
+                mask &= mask - 1;
                 ref var tree = ref *this.GetTree(i).ptr;
                 var list = tree.tempObjects.ToList(Constants.ALLOCATOR_TEMP);
                 foreach (var item in list) {
@@ -239,6 +240,7 @@ namespace ME.BECS {
             }
         }
 
+        [INLINE(256)]
         public readonly void FillNearest<T>(ref SpatialQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
             if (tr.IsCalculated == false) return;
@@ -246,24 +248,19 @@ namespace ME.BECS {
             var q = query.readQuery;
             if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) return;
             
-            var marker = new Unity.Profiling.ProfilerMarker("Prepare");
-            marker.Begin();
             var worldPos = tr.GetWorldMatrixPosition();
-            var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().GetWorldMatrixRotation() : tr.GetWorldMatrixRotation();
-            var sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
+            MathSector sector = default;
+            if (query.readQuery.sector > 0 || query.readQuery.sector < 360) {
+                var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().GetWorldMatrixRotation() : tr.GetWorldMatrixRotation();
+                sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
+            }
+
             var ent = tr.ent;
-            marker.End();
             
             // clean up results
-            marker = new Unity.Profiling.ProfilerMarker("Prepare:Clear");
-            marker.Begin();
             if (query.readResults.results.IsCreated == true) query.results.results.Clear();
-            marker.End();
-            marker = new Unity.Profiling.ProfilerMarker("Prepare:Alloc");
-            marker.Begin();
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
-            marker.End();
-
+            
             if (q.nearestCount == 1u) {
                 var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
                 if (nearest.IsAlive() == true) query.results.results.Add(nearest);
@@ -273,61 +270,66 @@ namespace ME.BECS {
             
         }
         
+        [INLINE(256)]
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
                                             tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = false) {
             return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSpatialSubFilter());
         }
 
+        [INLINE(256)]
         public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
 
             const uint nearestCount = 1u;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
             var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
+            var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
+            marker.Begin();
+            var visitor = new SpatialNearestAABBVisitor<Ent, T>() {
+                subFilter = subFilter,
+                sector = sector,
+                ignoreSelf = ignoreSelf,
+                ignore = selfEnt,
+            };
+            Ent result = default;
             // for each tree
-            for (int i = 0; i < this.treesCount; ++i) {
-                if ((mask & (1 << i)) == 0) {
-                    continue;
-                }
-                ref var tree = ref *this.GetTree(i).ptr;
+            while (mask != 0) {
+                int i = math.tzcnt(mask);
+                mask &= mask - 1;
+                var tree = this.GetTree(i).ptr;
                 {
-                    var visitor = new SpatialNearestAABBVisitor<Ent, T>() {
-                        subFilter = subFilter,
-                        sector = sector,
-                        ignoreSelf = ignoreSelf,
-                        ignore = selfEnt,
-                    };
-                    var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
-                    marker.Begin();
-                    tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
+                    tree->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
                     if (visitor.found == true) {
                         if (ignoreSorting == true) {
-                            marker.End();
-                            return visitor.nearest;
+                            result = visitor.nearest;
+                            break;
                         }
-                        heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, math.lengthsq(worldPos - visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+
+                        var distSq = math.distancesq(worldPos, visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+                        heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, distSq));
+                        rangeSqr = math.min(rangeSqr, distSq);
                     }
-                    marker.End();
+                    visitor.Reset();
                 }
             }
+            marker.End();
             
             if (ignoreSorting == false) {
                 var max = math.min(nearestCount, heap.Count);
                 if (max > 0u) return heap[heap.Pop()].data;
             }
 
-            return default;
+            return result;
 
         }
 
+        [INLINE(256)]
         public bool Raycast(UnityEngine.Ray2D ray, int mask, sfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.SpatialRaycastHitMinNode>(this.treesCount, Constants.ALLOCATOR_TEMP);
-            for (int i = 0; i < this.treesCount; ++i) {
-                if ((mask & (1 << i)) == 0) {
-                    continue;
-                }
-
+            while (mask != 0) {
+                int i = math.tzcnt(mask);
+                mask &= mask - 1;
                 var tree = this.GetTree(i).ptr;
                 if (tree->RaycastAABB(ray, out var hitResult, distance) == true) {
                     if (ignoreSorting == true) return true;
@@ -346,56 +348,55 @@ namespace ME.BECS {
 
         }
 
+        [INLINE(256)]
         public readonly void GetNearest(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSpatialSubFilter());
         }
 
+        [INLINE(256)]
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
-            var bitsCount = math.countbits(mask);
             if (nearestCount > 0u) {
 
+                var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
+                var markerResultsUnsorted = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
+                var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
                 var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
                 var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
                 var resultsTemp = new UnsafeHashSet<Ent>(nearestCount, Constants.ALLOCATOR_TEMP);
+                var visitor = new SpatialKNearestAABBVisitor<Ent, T>() {
+                    subFilter = subFilter,
+                    sector = sector,
+                    results = resultsTemp,
+                    max = nearestCount,
+                    ignoreSelf = ignoreSelf,
+                    ignore = selfEnt,
+                };
+                marker.Begin();
                 // for each tree
-                for (int i = 0; i < this.treesCount; ++i) {
-                    if ((mask & (1 << i)) == 0) {
-                        continue;
-                    }
-                    ref var tree = ref *this.GetTree(i).ptr;
+                while (mask != 0) {
+                    int i = math.tzcnt(mask);
+                    mask &= mask - 1;
+                    var tree = this.GetTree(i).ptr;
                     {
-                        resultsTemp.Clear();
-                        var visitor = new SpatialKNearestAABBVisitor<Ent, T>() {
-                            subFilter = subFilter,
-                            sector = sector,
-                            results = resultsTemp,
-                            max = nearestCount,
-                            ignoreSelf = ignoreSelf,
-                            ignore = selfEnt,
-                        };
-                        var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
-                        marker.Begin();
-                        tree.Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
+                        tree->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
                         if (ignoreSorting == true) {
-                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
-                            markerResults.Begin();
+                            markerResultsUnsorted.Begin();
                             foreach (var item in visitor.results) {
                                 results.Add(item);
                             }
-                            markerResults.End();
+                            markerResultsUnsorted.End();
                         } else {
-                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
-                            markerResults.Begin();
+                            markerResultsSorted.Begin();
                             foreach (var item in visitor.results) {
-                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.distancesq(worldPos, item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                             }
-                            markerResults.End();
+                            markerResultsSorted.End();
                         }
-                        marker.End();
+                        visitor.Reset();
                     }
-                    if (bitsCount == 1) break;
                 }
+                marker.End();
                 resultsTemp.Dispose();
 
                 if (ignoreSorting == false) {
@@ -408,52 +409,50 @@ namespace ME.BECS {
 
             } else {
                 
+                var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
+                var markerResultsUnsorted = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
+                var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
                 // select all units
                 var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
                 var resultsTemp = new UnsafeHashSet<Ent>((int)this.treesCount, Constants.ALLOCATOR_TEMP);
+                var visitor = new RangeAABB2DSpatialUniqueVisitor<Ent, T>() {
+                    subFilter = subFilter,
+                    sector = sector,
+                    results = resultsTemp,
+                    rangeSqr = rangeSqr,
+                    max = nearestCount,
+                    ignoreSelf = ignoreSelf,
+                    ignore = selfEnt,
+                };
                 // for each tree
-                for (int i = 0; i < this.treesCount; ++i) {
-                    if ((mask & (1 << i)) == 0) {
-                        continue;
-                    }
-                    ref var tree = ref *this.GetTree(i).ptr;
+                marker.Begin();
+                while (mask != 0) {
+                    int i = math.tzcnt(mask);
+                    mask &= mask - 1;
+                    var tree = this.GetTree(i).ptr;
                     {
-                        resultsTemp.Clear();
-                        var visitor = new RangeAABB2DSpatialUniqueVisitor<Ent, T>() {
-                            subFilter = subFilter,
-                            sector = sector,
-                            results = resultsTemp,
-                            rangeSqr = rangeSqr,
-                            max = nearestCount,
-                            ignoreSelf = ignoreSelf,
-                            ignore = selfEnt,
-                        };
                         var range = math.sqrt(rangeSqr);
-                        var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
-                        marker.Begin();
                         var bounds = new NativeTrees.AABB2D(worldPos.xz - range, worldPos.xz + range);
-                        tree.Range(bounds, ref visitor);
+                        tree->Range(bounds, ref visitor);
                         if (ignoreSorting == true) {
-                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
-                            markerResults.Begin();
+                            markerResultsUnsorted.Begin();
                             results.EnsureCapacity(results.Count + (uint)visitor.results.Count);
                             foreach (var item in visitor.results) {
                                 results.Add(item);
                             }
-                            markerResults.End();
+                            markerResultsUnsorted.End();
                         } else {
-                            var markerResults = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
-                            markerResults.Begin();
+                            markerResultsSorted.Begin();
                             heap.EnsureCapacity((uint)visitor.results.Count);
                             foreach (var item in visitor.results) {
-                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.lengthsq(worldPos - item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.distancesq(worldPos, item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
                             }
-                            markerResults.End();
+                            markerResultsSorted.End();
                         }
-                        marker.End();
+                        visitor.Reset();
                     }
-                    if (bitsCount == 1) break;
                 }
+                marker.End();
                 resultsTemp.Dispose();
 
                 if (ignoreSorting == false) {

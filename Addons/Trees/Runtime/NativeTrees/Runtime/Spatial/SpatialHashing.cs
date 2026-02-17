@@ -14,6 +14,7 @@ using Rect = UnityEngine.Rect;
 
 namespace NativeTrees {
 
+    using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
@@ -39,6 +40,7 @@ namespace NativeTrees {
 
     public interface ISpatialNearestVisitor<T> {
 
+        [INLINE(256)]
         bool OnVisit(in T obj, in AABB2D bounds);
         uint Capacity { get; }
 
@@ -46,17 +48,20 @@ namespace NativeTrees {
 
     public interface ISpatialRangeVisitor<T> {
 
+        [INLINE(256)]
         bool OnVisit(in T obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange);
 
     }
 
     public interface ISpatialDistanceProvider<T> {
 
+        [INLINE(256)]
         tfloat DistanceSquared(in float2 point, in T obj, in AABB2D bounds);
 
     }
 
     public struct AABB2DSpatialDistanceSquaredProvider<T> : ISpatialDistanceProvider<T> {
+        [INLINE(256)]
         public tfloat DistanceSquared(in float2 point, in T obj, in NativeTrees.AABB2D bounds) => bounds.DistanceSquared(point);
     }
     
@@ -67,23 +72,28 @@ namespace NativeTrees {
             public readonly NativeTrees.AABB2D bounds;
             public readonly ME.BECS.Ent obj;
 
+            [INLINE(256)]
             public ObjWrapper(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
                 this.obj = obj;
                 this.bounds = bounds;
             }
 
+            [INLINE(256)]
             public int CompareTo(ObjWrapper other) {
                 return this.obj.CompareTo(other.obj);
             }
 
+            [INLINE(256)]
             public bool Equals(ObjWrapper other) {
                 return this.obj.Equals(other.obj);
             }
 
+            [INLINE(256)]
             public override bool Equals(object obj) {
                 return obj is ObjWrapper other && this.Equals(other);
             }
 
+            [INLINE(256)]
             public override int GetHashCode() {
                 return this.obj.GetHashCode();
             }
@@ -93,11 +103,13 @@ namespace NativeTrees {
         public NativeParallelMultiHashMap<uint, ObjWrapper> data;
         private Allocator allocator;
         private int cellSize;
+        private tfloat invCellSize;
         public NativeParallelList<ObjWrapper> tempObjects;
 
         public SpatialHashing(int capacity, int cellSize, Allocator allocator) {
             this.allocator = allocator;
             this.cellSize = cellSize;
+            this.invCellSize = 1f / cellSize;
             this.data = new NativeParallelMultiHashMap<uint, ObjWrapper>(capacity, allocator);
             this.tempObjects = new NativeParallelList<ObjWrapper>(capacity, allocator);
         }
@@ -106,27 +118,32 @@ namespace NativeTrees {
             this.data.Dispose();
         }
 
+        [INLINE(256)]
         public uint GetHash(float2 pos) {
-            var cx = (uint)math.floor(pos.x / this.cellSize);
-            var cy = (uint)math.floor(pos.y / this.cellSize);
+            var cx = (uint)math.floor(pos.x * this.invCellSize);
+            var cy = (uint)math.floor(pos.y * this.invCellSize);
             var hash = cx * 73856093 ^ cy * 19349663;
             return hash;
         }
 
+        [INLINE(256)]
         public void Clear() {
             this.tempObjects.Clear();
             this.data.Clear();
         }
         
+        [INLINE(256)]
         public void Insert(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
             var hash = this.GetHash(bounds.Center);
             this.data.Add(hash, new ObjWrapper(obj, bounds));
         }
 
+        [INLINE(256)]
         public void Add(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
             this.tempObjects.Add(new ObjWrapper(obj, bounds));
         }
 
+        [INLINE(256)]
         public void Rebuild() {
 
             var temp = this.tempObjects.ToList(Allocator.Temp);
@@ -141,11 +158,13 @@ namespace NativeTrees {
                 
         }
         
+        [INLINE(256)]
         public void Nearest<U, V>(float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V provider) where U : struct, ISpatialNearestVisitor<ME.BECS.Ent> where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
-            var rangeInt = (int)math.ceil(math.sqrt(maxDistanceSqr) / this.cellSize);
-            for (float x = -rangeInt; x <= rangeInt; ++x) {
-                for (float y = -rangeInt; y <= rangeInt; ++y) {
-                    var p = new float2(pos.x + x, pos.y + y);
+            if (this.tempObjects.Count == 0) return;
+            var rangeInt = (int)math.ceil(math.sqrt(maxDistanceSqr) * this.invCellSize);
+            for (int x = -rangeInt; x <= rangeInt; ++x) {
+                for (int y = -rangeInt; y <= rangeInt; ++y) {
+                    var p = new float2(pos.x + x * this.cellSize, pos.y + y * this.cellSize);
                     var hash = this.GetHash(p);
                     var e = this.data.GetValuesForKey(hash);
                     while (e.MoveNext() == true) {
@@ -157,17 +176,18 @@ namespace NativeTrees {
                             }
                         }
                     }
-                    e.Dispose();
                 }
             }
         }
 
+        [INLINE(256)]
         public void Range<U>(AABB2D range, ref U visitor) where U : struct, ISpatialRangeVisitor<ME.BECS.Ent> {
-            var rangeIntX = (int)math.ceil(range.Size.x * 0.5f / this.cellSize);
-            var rangeIntY = (int)math.ceil(range.Size.y * 0.5f / this.cellSize);
-            for (float x = -rangeIntX; x <= rangeIntX; ++x) {
-                for (float y = -rangeIntY; y <= rangeIntY; ++y) {
-                    var p = new float2(range.Center.x + x, range.Center.y + y);
+            if (this.tempObjects.Count == 0) return;
+            var rangeIntX = (int)math.ceil(range.Size.x * 0.5f * this.invCellSize);
+            var rangeIntY = (int)math.ceil(range.Size.y * 0.5f * this.invCellSize);
+            for (int x = -rangeIntX; x <= rangeIntX; ++x) {
+                for (int y = -rangeIntY; y <= rangeIntY; ++y) {
+                    var p = new float2(range.Center.x + x * this.cellSize, range.Center.y + y * this.cellSize);
                     var hash = this.GetHash(p);
                     var e = this.data.GetValuesForKey(hash);
                     while (e.MoveNext() == true) {
@@ -177,18 +197,19 @@ namespace NativeTrees {
                             return;
                         }
                     }
-                    e.Dispose();
                 }
             }
         }
 
+        [INLINE(256)]
         public int2 GetCoord(float2 position) {
-            return new int2((int)math.round(position.x / this.cellSize) * this.cellSize, (int)math.round(position.y / this.cellSize) * this.cellSize);
+            return new int2((int)math.round(position.x * this.invCellSize) * this.cellSize, (int)math.round(position.y * this.invCellSize) * this.cellSize);
         }
 
+        [INLINE(256)]
         public bool RaycastAABB(UnityEngine.Ray2D ray, out SpatialRaycastHit raycastHit, sfloat distance) {
-
             raycastHit = default;
+            if (this.tempObjects.Count == 0) return false;
 
             var precomputedRay2D = new PrecomputedRay2D(ray);
             var position = (float2)ray.origin;

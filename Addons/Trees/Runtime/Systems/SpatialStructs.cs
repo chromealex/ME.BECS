@@ -68,24 +68,31 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
-            if (this.subFilter.IsValid(in obj, in bounds) == false) {
-                return true;
-            } 
+            if (this.ignoreSelf == true) {
+                if (this.ignore.Equals(obj) == true) return true;
+            }
 
             if (this.sector.IsValid(bounds.Center) == false) {
                 return true;
             }
 
-            if (this.ignoreSelf == true) {
-                if (this.ignore.Equals(obj) == true) return true;
-            }
-            
+            if (this.subFilter.IsValid(in obj, in bounds) == false) {
+                return true;
+            } 
+
             this.found = true;
             this.nearest = obj;
         
             return false; // immediately stop iterating at first hit
             // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
         }
+
+        [INLINE(256)]
+        public void Reset() {
+            this.found = false;
+            this.nearest = default;
+        }
+
     }
 
     public struct SpatialKNearestAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
@@ -119,6 +126,12 @@ namespace ME.BECS {
             return this.results.Count < this.max; // immediately stop iterating at first hit
             // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
         }
+
+        [INLINE(256)]
+        public void Reset() {
+            this.results.Clear();
+        }
+
     }
     
     public struct RangeAABB2DSpatialUniqueVisitor<T, TSubFilter> : NativeTrees.ISpatialRangeVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
@@ -155,6 +168,12 @@ namespace ME.BECS {
 
             return true; // keep iterating
         }
+
+        [INLINE(256)]
+        public void Reset() {
+            this.results.Clear();
+        }
+
     }
     
 }

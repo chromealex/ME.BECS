@@ -47,6 +47,7 @@ namespace ME.BECS.Attack {
             attackQueryAspect.query.minRangeSqr = attackAspect.readMinAttackRangeSqr;
             attackQueryAspect.query.sector = attackAspect.readAttackSector;
             attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
+            attackQueryAspect.query.ignoreSorting = true;
             attackQueryAspect.query.nearestCount = 1;
             attackQueryAspect.query.updatePerTick = 2;
             var unsafeConfig = config.AsUnsafeConfig();
@@ -83,6 +84,7 @@ namespace ME.BECS.Attack {
             attackQueryAspect.query.minRangeSqr = attackAspect.readMinAttackRangeSqr;
             attackQueryAspect.query.sector = attackAspect.readAttackSector;
             attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
+            attackQueryAspect.query.ignoreSorting = true;
             attackQueryAspect.query.nearestCount = 1;
             attackQueryAspect.query.updatePerTick = 2;
             var unsafeConfig = config.AsUnsafeConfig();
