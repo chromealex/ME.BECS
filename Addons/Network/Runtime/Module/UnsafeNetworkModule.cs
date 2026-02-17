@@ -1211,10 +1211,10 @@ namespace ME.BECS.Network {
 
         }
 
-        public void PreUpdate(uint dtMs) {
+        public void PreUpdate(JobHandle dependsOn, uint dtMs) {
 
             if (this.networkTransport is INetworkTransportPreUpdate networkTransportPreUpdate) {
-                networkTransportPreUpdate.PreUpdate(dtMs);
+                networkTransportPreUpdate.PreUpdate(dependsOn, dtMs);
             }
 
         }

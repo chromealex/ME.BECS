@@ -81,7 +81,7 @@ namespace ME.BECS.Network {
         /// Called every update frame before connection state check and before send/receive
         /// </summary>
         /// <param name="dtMs">visual delta time</param>
-        void PreUpdate(uint dtMs);
+        void PreUpdate(Unity.Jobs.JobHandle dependsOn, uint dtMs);
 
     }
 

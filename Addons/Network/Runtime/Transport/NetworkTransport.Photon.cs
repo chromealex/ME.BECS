@@ -211,7 +211,7 @@ namespace ME.BECS.Network {
             //UnityEngine.Debug.Log("OnLobbyStatisticsUpdate");
         }
 
-        public virtual void PreUpdate(uint dtMs) {
+        public virtual void PreUpdate(Unity.Jobs.JobHandle dependsOn, uint dtMs) {
             
             if (this.waitForServerTime == true && Photon.Pun.PhotonNetwork.Time > 0) {
                 this.Status = TransportStatus.Connected;
