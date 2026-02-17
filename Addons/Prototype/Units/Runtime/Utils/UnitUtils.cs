@@ -93,6 +93,35 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
+        public static UnitAspect CreateUnitSpatial(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
+
+            var ent = Ent.New(in jobInfo, editorName: "Unit");
+            return CreateUnitSpatial(in ent, in agentType, treeIndex);
+            
+        }
+
+        [INLINE(256)]
+        public static UnitAspect CreateUnitSpatial(in Ent ent, in AgentType agentType, int treeIndex) {
+            
+            var unit = ent.GetOrCreateAspect<UnitAspect>();
+            var rnd = ent.GetRandomVector2OnCircle(1f);
+            var rndVec = new float3(rnd.x, 0f, rnd.y);
+            unit.componentRuntime.randomVector = rndVec;
+            ent.Set<TransformAspect>();
+            ent.Set<SpatialQueryAspect>(); // to query nearby units
+            var aspect = ent.GetOrCreateAspect<SpatialAspect>();
+            aspect.spatialElement.radius = agentType.radius;
+            aspect.spatialElement.treeIndex = treeIndex;
+            unit.agentProperties = agentType;
+            if (agentType.height > 0f) {
+                ent.Set(new SpatialHeightComponent() { height = agentType.height });
+            }
+
+            return ent.GetAspect<UnitAspect>();
+
+        }
+
+        [INLINE(256)]
         public static uint GetVolume(in UnitAspect unit) {
             return (uint)(VOLUME_FACTOR * math.PI * (unit.radius * unit.radius) * FLOAT_TO_UINT);
         }

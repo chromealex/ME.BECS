@@ -13,16 +13,14 @@ namespace ME.BECS.Attack {
     using ME.BECS.Jobs;
     using ME.BECS.Bullets;
 
-    [BURST]
-    [UnityEngine.Tooltip("Fire system")]
     public partial struct FireSystem : IUpdate {
 
         [BURST]
-        public struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public struct SpatialFireTargetJob : IJobForAspects<AttackAspect, TransformAspect, SpatialQueryAspect> {
 
             public tfloat dt;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref SpatialQueryAspect query) {
 
                 if (aspect.target.IsAlive() == true) {
 
@@ -47,7 +45,7 @@ namespace ME.BECS.Attack {
                         var bullet = AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                  aspect.readComponentVisual.muzzleView, jobInfo: jobInfo);
                         if (ent.TryRead(out MaxHitCountComponent maxHitCountComponent) == true) {
-                            var attack = bullet.ent.GetAspect<QuadTreeQueryAspect>();
+                            var attack = bullet.ent.GetAspect<SpatialQueryAspect>();
                             attack.query.nearestCount = maxHitCountComponent.value;
                         }
                         
@@ -62,11 +60,11 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct FireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
+        public struct SpatialFireTargetsJob : IJobForAspects<AttackAspect, TransformAspect, SpatialQueryAspect> {
 
             public tfloat dt;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref QuadTreeQueryAspect query) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref TransformAspect tr, ref SpatialQueryAspect query) {
 
                 if (aspect.targets.IsCreated == true) {
 
@@ -96,7 +94,7 @@ namespace ME.BECS.Attack {
                             var bullet = AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                      aspect.readComponentVisual.muzzleView, jobInfo: in jobInfo);
                             if (ent.TryRead(out MaxHitCountComponent maxHitCountComponent) == true) {
-                                var attack = bullet.ent.GetAspect<QuadTreeQueryAspect>();
+                                var attack = bullet.ent.GetAspect<SpatialQueryAspect>();
                                 attack.query.nearestCount = maxHitCountComponent.value;
                             }
                         }
@@ -111,16 +109,14 @@ namespace ME.BECS.Attack {
 
         }
 
-        public void OnUpdate(ref SystemContext context) {
+        public Unity.Jobs.JobHandle UpdateSpatial(ref SystemContext context, Unity.Jobs.JobHandle jobHandle) {
 
-            var spatialHandle = this.UpdateSpatial(ref context, context.dependsOn);
-
-            var target = context.Query()
+            var target = context.Query(jobHandle)
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()
                                 .With<AttackTargetComponent>()
-                                .Schedule<FireTargetJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetJob() {
+                                .Schedule<SpatialFireTargetJob, AttackAspect, TransformAspect, SpatialQueryAspect>(new SpatialFireTargetJob() {
                                     dt = context.deltaTime,
                                 });
             var targets = context.Query(target)
@@ -128,10 +124,10 @@ namespace ME.BECS.Attack {
                                 .With<CanFireComponent>()
                                 .Without<FireUsedComponent>()
                                 .With<AttackTargetsComponent>()
-                                .Schedule<FireTargetsJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetsJob() {
+                                .Schedule<SpatialFireTargetsJob, AttackAspect, TransformAspect, SpatialQueryAspect>(new SpatialFireTargetsJob() {
                                     dt = context.deltaTime,
                                 });
-            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(targets, spatialHandle));
+            return targets;
 
         }
 

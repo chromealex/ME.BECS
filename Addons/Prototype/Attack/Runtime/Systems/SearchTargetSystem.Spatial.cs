@@ -13,17 +13,14 @@ namespace ME.BECS.Attack {
     using ME.BECS.Transforms;
     using ME.BECS.Units;
 
-    [BURST]
-    [UnityEngine.Tooltip("Search Target system")]
-    [RequiredDependencies(typeof(QuadTreeQuerySystem))]
     public partial struct SearchTargetSystem : IUpdate {
 
         [BURST]
-        public struct SearchTargetJob : IJobForAspects<AttackAspect, QuadTreeQueryAspect, TransformAspect> {
+        public struct SpatialSearchTargetJob : IJobForAspects<AttackAspect, SpatialQueryAspect, TransformAspect> {
 
             public World world;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref SpatialQueryAspect query, ref TransformAspect tr) {
 
                 Ent requiredTarget = default;
                 if (tr.parent.TryRead(out ME.BECS.Commands.UnitAttackCommandComponent attackCommandComponent) == true) {
@@ -57,11 +54,11 @@ namespace ME.BECS.Attack {
         }
 
         [BURST]
-        public struct SearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent> {
+        public struct SpatialSearchTargetsJob : IJobFor3Aspects1Components<AttackAspect, SpatialQueryAspect, TransformAspect, AttackTargetsCountComponent> {
 
             public World world;
             
-            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref QuadTreeQueryAspect query, ref TransformAspect tr, ref AttackTargetsCountComponent targetsCountComponent) {
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref AttackAspect aspect, ref SpatialQueryAspect query, ref TransformAspect tr, ref AttackTargetsCountComponent targetsCountComponent) {
 
                 var hasTarget = true;
                 Ent requiredTarget = default;
@@ -96,17 +93,15 @@ namespace ME.BECS.Attack {
 
         }
 
-        public void OnUpdate(ref SystemContext context) {
+        public Unity.Jobs.JobHandle UpdateSpatial(ref SystemContext context) {
 
-            var handle = this.UpdateSpatial(ref context);
-            
-            var searchTarget = context.Query().AsParallel().AsUnsafe().Without<AttackTargetsCountComponent>().Schedule<SearchTargetJob, AttackAspect, QuadTreeQueryAspect, TransformAspect>(new SearchTargetJob() {
+            var searchTarget = context.Query().AsParallel().AsUnsafe().Without<AttackTargetsCountComponent>().Schedule<SpatialSearchTargetJob, AttackAspect, SpatialQueryAspect, TransformAspect>(new SpatialSearchTargetJob() {
                 world = context.world,
             });
-            var searchTargets = context.Query().AsParallel().AsUnsafe().Schedule<SearchTargetsJob, AttackAspect, QuadTreeQueryAspect, TransformAspect, AttackTargetsCountComponent>(new SearchTargetsJob() {
+            var searchTargets = context.Query().AsParallel().AsUnsafe().Schedule<SpatialSearchTargetsJob, AttackAspect, SpatialQueryAspect, TransformAspect, AttackTargetsCountComponent>(new SpatialSearchTargetsJob() {
                 world = context.world,
             });
-            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(searchTarget, searchTargets, handle));
+            return Unity.Jobs.JobHandle.CombineDependencies(searchTarget, searchTargets);
 
         }
 

@@ -16,20 +16,21 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
     
-    public struct AABBDistanceSquaredProvider<T> : NativeTrees.IOctreeDistanceProvider<T> {
-        public bool ignoreY;
+    public struct AABB2DSpatialDistanceSquaredProvider<T> : NativeTrees.ISpatialDistanceProvider<T> {
         // Just return the distance squared to our bounds
         [INLINE(256)]
-        public tfloat DistanceSquared(float3 point, T obj, NativeTrees.AABB bounds) => bounds.DistanceSquared(point, this.ignoreY);
+        public tfloat DistanceSquared(in float2 point, in T obj, in NativeTrees.AABB2D bounds) => bounds.DistanceSquared(point);
     }
 
-    public struct OctreeNearestIgnoreSelfAABBVisitor<T> : NativeTrees.IOctreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> {
+    public struct SpatialNearestIgnoreSelfAABBVisitor<T> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T> {
 
         public T ignoreSelf;
         public T nearest;
         public bool found;
+        public uint Capacity => 1u;
+        
         [INLINE(256)]
-        public bool OnVisit(T obj, NativeTrees.AABB bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.ignoreSelf.Equals(obj) == true) return true;
             this.found = true;
@@ -40,21 +41,21 @@ namespace ME.BECS {
         }
     }
 
-    public interface IOctreeSubFilter<T> where T : unmanaged {
+    public interface ISpatialSubFilter<T> where T : unmanaged {
 
         [INLINE(256)]
-        bool IsValid(in T ent, in NativeTrees.AABB bounds);
+        bool IsValid(in T ent, in NativeTrees.AABB2D bounds);
 
     }
 
-    public struct AlwaysTrueOctreeSubFilter : IOctreeSubFilter<Ent> {
+    public struct AlwaysTrueSpatialSubFilter : ISpatialSubFilter<Ent> {
 
         [INLINE(256)]
-        public bool IsValid(in Ent ent, in NativeTrees.AABB bounds) => ent.IsAlive();
+        public bool IsValid(in Ent ent, in NativeTrees.AABB2D bounds) => ent.IsAlive();
 
     }
     
-    public struct OctreeNearestAABBVisitor<T, TSubFilter> : NativeTrees.IOctreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, IOctreeSubFilter<T> {
+    public struct SpatialNearestAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
 
         public TSubFilter subFilter;
         public T nearest;
@@ -62,9 +63,10 @@ namespace ME.BECS {
         public MathSector sector;
         public bool ignoreSelf;
         public T ignore;
+        public uint Capacity => 1u;
 
         [INLINE(256)]
-        public bool OnVisit(T obj, NativeTrees.AABB bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
                 return true;
@@ -86,7 +88,7 @@ namespace ME.BECS {
         }
     }
 
-    public struct OctreeKNearestAABBVisitor<T, TSubFilter> : NativeTrees.IOctreeNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, IOctreeSubFilter<T> {
+    public struct SpatialKNearestAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
 
         public TSubFilter subFilter;
         public UnsafeHashSet<T> results;
@@ -94,9 +96,12 @@ namespace ME.BECS {
         public MathSector sector;
         public bool ignoreSelf;
         public T ignore;
+        public uint Capacity => (uint)this.results.Capacity;
 
         [INLINE(256)]
-        public bool OnVisit(T obj, NativeTrees.AABB bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
+
+            if (this.results.Contains(obj) == true) return true;
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
                 return true;
@@ -116,7 +121,7 @@ namespace ME.BECS {
         }
     }
     
-    public struct RangeAABBUniqueVisitor<T, TSubFilter> : NativeTrees.IOctreeRangeVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, IOctreeSubFilter<T> {
+    public struct RangeAABB2DSpatialUniqueVisitor<T, TSubFilter> : NativeTrees.ISpatialRangeVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
         
         public TSubFilter subFilter;
         public UnsafeHashSet<T> results;
@@ -127,7 +132,9 @@ namespace ME.BECS {
         public T ignore;
 
         [INLINE(256)]
-        public bool OnVisit(T obj, NativeTrees.AABB objBounds, NativeTrees.AABB queryRange) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
+
+            if (this.results.Contains(obj) == true) return true;
             
             if (this.subFilter.IsValid(in obj, in objBounds) == false) {
                 return true;

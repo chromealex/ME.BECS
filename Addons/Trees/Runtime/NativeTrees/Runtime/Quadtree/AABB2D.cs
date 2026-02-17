@@ -28,6 +28,8 @@ namespace NativeTrees {
         public float2 Center => 0.5f * (this.min + this.max);
         public float2 Size => this.max - this.min;
         public bool IsValid => all(this.max >= this.min);
+        
+        public override int GetHashCode() => this.min.GetHashCode() ^ this.max.GetHashCode();
 
         /// <summary>
         /// Construct an AABB

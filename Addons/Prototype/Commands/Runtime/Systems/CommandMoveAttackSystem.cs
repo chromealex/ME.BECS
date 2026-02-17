@@ -60,9 +60,22 @@ namespace ME.BECS.Commands {
                     var unit = commandGroup.readUnits[i];
                     if (unit.IsAlive() == false) continue;
                     Ent target = default;
-                    var query = unit.GetAspect<UnitAspect>().readComponentRuntime.attackSensor.GetAspect<QuadTreeQueryAspect>();
-                    if (query.readResults.results.Count > 0u) {
-                        target = query.readResults.results[0];
+                    var attackSensor = unit.GetAspect<UnitAspect>().readComponentRuntime.attackSensor;
+                    if (attackSensor.Has<QuadTreeQuery>() == true) {
+                        var query = attackSensor.GetAspect<QuadTreeQueryAspect>();
+                        if (query.readResults.results.Count > 0u) {
+                            target = query.readResults.results[0];
+                        }
+                    } else if (attackSensor.Has<OctreeQuery>() == true) {
+                        var query = attackSensor.GetAspect<OctreeQueryAspect>();
+                        if (query.readResults.results.Count > 0u) {
+                            target = query.readResults.results[0];
+                        }
+                    } else if (attackSensor.Has<SpatialQuery>() == true) {
+                        var query = attackSensor.GetAspect<SpatialQueryAspect>();
+                        if (query.readResults.results.Count > 0u) {
+                            target = query.readResults.results[0];
+                        }
                     }
 
                     if (target.IsAlive() == true) {
