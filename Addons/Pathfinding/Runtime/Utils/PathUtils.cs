@@ -189,10 +189,12 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static void SetArrived(in UnitAspect unit) {
 
+            if (unit.IsCollideWithEnd == true) return;
+            unit.IsCollideWithEnd = true;
+            
             var commandGroup = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
             ref var target = ref commandGroup.targets[unit.typeId].Read<TargetComponent>().target.Get<TargetInfoComponent>();
             JobUtils.Increment(ref target.volume, Units.UnitUtils.GetVolume(in unit));
-            unit.IsCollideWithEnd = true;
 
         }
 
