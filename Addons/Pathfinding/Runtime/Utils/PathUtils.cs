@@ -192,7 +192,8 @@ namespace ME.BECS.Pathfinding {
             var commandGroup = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
             ref var target = ref commandGroup.targets[unit.typeId].Read<TargetComponent>().target.Get<TargetInfoComponent>();
             JobUtils.Increment(ref target.volume, Units.UnitUtils.GetVolume(in unit));
-            
+            unit.IsCollideWithEnd = true;
+
         }
 
         [INLINE(256)]

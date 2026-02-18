@@ -19,20 +19,6 @@ namespace ME.BECS.Pathfinding {
     [RequiredDependencies(typeof(BuildGraphSystem))]
     public struct FollowPathSystem : IUpdate {
 
-        public static FollowPathSystem Default => new FollowPathSystem() {
-            collisionForce = 15f,
-            cohesionForce = 1f,
-            separationForce = 1f,
-            alignmentForce = 1f,
-            movementForce = 1f,
-        };
-
-        public tfloat collisionForce;
-        public tfloat cohesionForce;
-        public tfloat separationForce;
-        public tfloat alignmentForce;
-        public tfloat movementForce;
-        
         [BURST]
         public struct PathFollowJob : IJobForAspects<TransformAspect, UnitAspect> {
 
@@ -97,11 +83,10 @@ namespace ME.BECS.Pathfinding {
 
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
-                var vel = unit.readComponentRuntime.cohesionVector * this.followPathSystem.cohesionForce + 
-                          unit.readComponentRuntime.separationVector * this.followPathSystem.separationForce + 
-                          unit.readComponentRuntime.alignmentVector * this.followPathSystem.alignmentForce +
-                          unit.readComponentRuntime.collisionDirection * this.followPathSystem.collisionForce +
-                          movementDirection * this.followPathSystem.movementForce;
+                var vel = unit.readComponentRuntime.alignmentVector + 
+                                unit.readComponentRuntime.desiredDirection +
+                                unit.readComponentRuntime.velocity +
+                                movementDirection;
                 var desiredDirection = math.normalizesafe(vel);
 
                 unit.componentRuntime.desiredDirection = desiredDirection;
@@ -137,8 +122,7 @@ namespace ME.BECS.Pathfinding {
                     newPos = Math.MoveTowards(newPos, newPos + unit.componentRuntime.desiredDirection, unit.readSpeed * this.dt);
                     //newPos += unit.componentRuntime.collisionDirection * (this.followPathSystem.collisionForce * this.dt);
                     newPos = GraphUtils.GetPositionWithMapBorders(graph, out var collisionDirection, in newPos, in prevPos, in agent.filter);
-                    unit.velocity = newPos - prevPos;
-                    var delta = collisionDirection * this.followPathSystem.collisionForce * this.dt;
+                    var delta = collisionDirection * this.dt;
                     if (GraphUtils.GetPositionWithMapBordersNode(out var node, in graph, newPos + delta) == true) {
                         newPos += delta;
                     }

@@ -40,17 +40,14 @@ namespace ME.BECS.Units {
         public AgentType properties;
 
         public float3 collisionDirection;
-        public float3 separationVector;
         public float3 alignmentVector;
-        public float3 avoidanceVector;
-        public float3 cohesionVector;
         public float3 desiredDirection;
-        public float3 randomVector;
         public float3 velocity;
         public float3 manualDirection;
 
         public Ent attackSensor;
-        
+        public bbool collideWithEnd;
+
     }
 
     [EditorComment("Current unit agent speed values")]

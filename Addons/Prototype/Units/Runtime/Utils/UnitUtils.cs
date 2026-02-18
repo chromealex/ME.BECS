@@ -75,9 +75,6 @@ namespace ME.BECS.Units {
         public static UnitAspect CreateUnit(in Ent ent, in AgentType agentType, int treeIndex) {
             
             var unit = ent.GetOrCreateAspect<UnitAspect>();
-            var rnd = ent.GetRandomVector2OnCircle(1f);
-            var rndVec = new float3(rnd.x, 0f, rnd.y);
-            unit.componentRuntime.randomVector = rndVec;
             ent.Set<TransformAspect>();
             ent.Set<QuadTreeQueryAspect>(); // to query nearby units
             var aspect = ent.GetOrCreateAspect<QuadTreeAspect>();
@@ -104,9 +101,6 @@ namespace ME.BECS.Units {
         public static UnitAspect CreateUnitSpatial(in Ent ent, in AgentType agentType, int treeIndex) {
             
             var unit = ent.GetOrCreateAspect<UnitAspect>();
-            var rnd = ent.GetRandomVector2OnCircle(1f);
-            var rndVec = new float3(rnd.x, 0f, rnd.y);
-            unit.componentRuntime.randomVector = rndVec;
             ent.Set<TransformAspect>();
             ent.Set<SpatialQueryAspect>(); // to query nearby units
             var aspect = ent.GetOrCreateAspect<SpatialAspect>();
