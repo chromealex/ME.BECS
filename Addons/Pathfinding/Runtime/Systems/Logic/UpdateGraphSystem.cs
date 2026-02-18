@@ -125,7 +125,9 @@ namespace ME.BECS.Pathfinding {
                                                 obstacleRuntime.nodes.Add(new GraphNodeMemory(in graph, new Graph.TempNode() { chunkIndex = chunkIndex, nodeIndex = nodeIndex }, in node));
                                                 obstacleRuntime.nodesLock.Unlock();
                                                 JobUtils.SetIfGreater(ref node.cost, obstacle.cost);
+                                                #if PATHFINDING_HEIGHTS
                                                 JobUtils.SetIfGreater(ref node.height, totalHeight);
+                                                #endif
                                             }
                                         }
                                         node.obstacleChannel = obstacle.obstacleChannel;
