@@ -188,7 +188,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _HeightTransition: 0.25
-    - _IsEnabled: 1
+    - _IsEnabled: 0
     - _IsValid: 1
     - _Metallic: 0
     - _Metallic0: 0
