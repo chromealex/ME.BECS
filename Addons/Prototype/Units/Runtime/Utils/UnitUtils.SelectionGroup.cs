@@ -132,10 +132,6 @@ namespace ME.BECS.Units {
                 aspect.units.Remove(unit.ent);
                 unit.unitSelectionGroup = default;
 
-                if (aspect.readUnits.Count == 1u) {
-                    return RemoveFromSelectionGroup(aspect.readUnits[0u].GetAspect<UnitAspect>());
-                }
-                
                 if (aspect.readUnits.Count == 0u) {
                     // destroy group
                     aspect.ent.DestroyHierarchy();
