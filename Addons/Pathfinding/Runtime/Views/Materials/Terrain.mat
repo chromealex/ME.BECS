@@ -178,7 +178,7 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _Distance: 24
+    - _Distance: 10
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnableHeightBlend: 1
@@ -187,8 +187,8 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _HeightTransition: 0.5
-    - _IsEnabled: 0
+    - _HeightTransition: 0.25
+    - _IsEnabled: 1
     - _IsValid: 1
     - _Metallic: 0
     - _Metallic0: 0
@@ -221,11 +221,11 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GridColor: {r: 0.745283, g: 0.745283, b: 0.745283, a: 1}
     - _GridObstacleColor: {r: 0.4433962, g: 0.4433962, b: 0.4433962, a: 1}
-    - _GridOffset: {r: 0.5, g: 0.5, b: -1, a: -1}
-    - _GridSize: {r: 64, g: 64, b: 0, a: 0}
+    - _GridOffset: {r: 0.25, g: 0.25, b: -1, a: -1}
+    - _GridSize: {r: 256, g: 256, b: 0, a: 0}
     - _GridSlopeColor: {r: 0.5377358, g: 0.41964483, b: 0, a: 1}
-    - _ObjPos: {r: -0.5, g: 0, b: -0.5, a: 0}
-    - _Params: {r: 0.5, g: 0.5, b: 0.015625, a: 0}
+    - _ObjPos: {r: 17.82007, g: 0, b: 6.288776, a: 0}
+    - _Params: {r: 0.5, g: 0.5, b: 0.0078125, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

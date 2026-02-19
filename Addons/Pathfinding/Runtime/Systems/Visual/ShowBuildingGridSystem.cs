@@ -17,10 +17,13 @@ namespace ME.BECS.Pathfinding {
     using ME.BECS.Jobs;
     using static Cuts;
 
-    public unsafe struct ShowBuildingGridSystem : IUpdate, IDestroy {
+    public unsafe struct ShowBuildingGridSystem : IStart, IUpdate, IDestroy {
 
-        public View gridView;
+        private static UnityEngine.Texture2D tempTextureCache;
+        
+        //public View gridView;
         public uint2 gridSize;
+        public tfloat nodeSize;
         private Ent currentBuildingGrid;
         private ClassPtr<UnityEngine.Texture2D> texture;
         private Ent placeholder;
@@ -41,12 +44,24 @@ namespace ME.BECS.Pathfinding {
         }
         */
 
+        public void OnStart(ref SystemContext context) {
+            
+            var tex = new UnityEngine.Texture2D((int)this.gridSize.x, (int)this.gridSize.y, UnityEngine.TextureFormat.RGBA32, false);
+            tex.filterMode = UnityEngine.FilterMode.Point;
+            tex.wrapMode = UnityEngine.TextureWrapMode.Clamp;
+            this.texture = new ClassPtr<UnityEngine.Texture2D>(tex);
+            tempTextureCache = tex;
+
+        }
+
         [INLINE(256)]
         public void SetPlaceholder(in Ent placeholder) {
             this.placeholder = placeholder;
         }
         
         public UnityEngine.Texture2D GetTexture() => this.texture.Value;
+
+        public ClassPtr<UnityEngine.Texture2D> GetTexturePtr() => this.texture;
 
         [BURST]
         public struct ClearTextureJob : IJob {
@@ -111,7 +126,7 @@ namespace ME.BECS.Pathfinding {
             if (placeholder.IsAlive() == true) {
                 var objPosition = placeholder.GetAspect<TransformAspect>().position;
                 { // update texture
-                    var pathfinding = context.world.GetSystem<ME.BECS.Pathfinding.BuildGraphSystem>();
+                    var pathfinding = context.world.parent.GetSystem<ME.BECS.Pathfinding.BuildGraphSystem>();
                     var graph = pathfinding.GetGraphByTypeId(0u);
                     var root = graph.Read<ME.BECS.Pathfinding.RootGraphComponent>();
                     var globalGridPosition = ME.BECS.Pathfinding.Graph.GetGlobalCoord(in root, objPosition);
@@ -127,7 +142,7 @@ namespace ME.BECS.Pathfinding {
                         buffer = buffer,
                     }.Schedule(context.dependsOn);
                     handle = new UpdateTextureJob() {
-                        world = context.world,
+                        world = context.world.parent,
                         graph = graph,
                         gridSize = (int2)this.gridSize,
                         bottomLeft = bottomLeft,
@@ -135,23 +150,23 @@ namespace ME.BECS.Pathfinding {
                         objSize = objSize,
                         currentBuffer = bufferPtr,
                     }.Schedule(buffer.Length, (int)this.gridSize.x, handle);
-                    handle = new ApplyTextureJob() {
-                        texture = this.texture,
-                    }.Schedule(handle);
+                    handle.Complete();
+                    this.texture.Value.Apply(false);
                     context.SetDependency(handle);
-                    this.currentBuildingGrid.Set(placeholder.Read<ME.BECS.Units.UnitQuadSizeComponent>());
+                    //this.currentBuildingGrid.Set(placeholder.Read<ME.BECS.Units.UnitQuadSizeComponent>());
                 }
-                this.currentBuildingGrid.Set(new IsShowGridComponent());
+                /*this.currentBuildingGrid.Set(new IsShowGridComponent());
                 this.currentBuildingGrid.SetTag<PlaceholderInvalidTagComponent>(placeholder.Has<PlaceholderInvalidTagComponent>());
                 var gridTr = this.currentBuildingGrid.GetAspect<TransformAspect>();
-                gridTr.position = objPosition;
+                gridTr.position = objPosition;*/
             } else {
-                this.currentBuildingGrid.Remove<IsShowGridComponent>();
+                //this.currentBuildingGrid.Remove<IsShowGridComponent>();
             }
 
         }
 
         public void OnDestroy(ref SystemContext context) {
+            tempTextureCache = null;
             UnityEngine.Object.DestroyImmediate(this.texture.Value);
             this.texture.Dispose();
         }

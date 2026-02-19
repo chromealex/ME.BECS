@@ -88,6 +88,7 @@ namespace ME.BECS.Pathfinding {
                                 unit.readComponentRuntime.velocity +
                                 movementDirection;
                 var desiredDirection = math.normalizesafe(vel);
+                unit.velocity = movementDirection;
 
                 unit.componentRuntime.desiredDirection = desiredDirection;
                 var lengthSq = math.lengthsq(unit.readComponentRuntime.desiredDirection);
