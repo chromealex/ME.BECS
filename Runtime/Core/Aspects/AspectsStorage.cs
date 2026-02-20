@@ -137,7 +137,7 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Dispose() {
-                _free(this.constructedAspect);
+                _free(this.constructedAspect, Constants.ALLOCATOR_PERSISTENT);
             }
 
         }
@@ -148,7 +148,7 @@ namespace ME.BECS {
         public static UnsafeAspectsStorage Create() {
             var aspectsCount = AspectTypeInfo.counter + 1u;
             var storage = new UnsafeAspectsStorage() {
-                list = new Unity.Collections.NativeArray<Aspect>((int)aspectsCount, Constants.ALLOCATOR_DOMAIN),
+                list = new Unity.Collections.NativeArray<Aspect>((int)aspectsCount, Constants.ALLOCATOR_PERSISTENT),
             };
             return storage;
         }
@@ -176,7 +176,7 @@ namespace ME.BECS {
             if (item->constructedAspect.ptr == null) {
                 item->lockSpinner.Lock();
                 if (item->constructedAspect.ptr == null) {
-                    item->constructedAspect = _make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_DOMAIN);
+                    item->constructedAspect = _make(size, TAlign<byte>.alignInt, Constants.ALLOCATOR_PERSISTENT);
                 }
                 item->lockSpinner.Unlock();
             }

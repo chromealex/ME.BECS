@@ -132,7 +132,8 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> data = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<JobInject<TJob>>();
 
         public static void Init() {
-            if (data.Data.IsCreated == false) data.Data = new UnsafeHashMap<int, System.IntPtr>(10, Allocator.Domain);
+            if (data.Data.IsCreated == true) data.Data.Dispose();
+            data.Data = new UnsafeHashMap<int, System.IntPtr>(10, ALLOCATOR);
             data.Data.Clear();
         }
         

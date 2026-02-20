@@ -499,7 +499,7 @@ namespace ME.BECS {
             ref var arr = ref storage.endTickHandles;
             storage.endTickHandlesLock.Lock();
             if (arr.IsCreated == false) {
-                arr = new Unity.Collections.LowLevel.Unsafe.UnsafeList<JobHandle>(10, Constants.ALLOCATOR_DOMAIN);
+                arr = new Unity.Collections.LowLevel.Unsafe.UnsafeList<JobHandle>(10, Constants.ALLOCATOR_PERSISTENT);
             }
             arr.Add(handle);
             storage.endTickHandlesLock.Unlock();

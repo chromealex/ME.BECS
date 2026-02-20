@@ -31,6 +31,13 @@ namespace ME.BECS {
             return hash;
         }
 
+        public static unsafe void DisposePtrArray(Unity.Collections.NativeArray<System.IntPtr> array, Unity.Collections.AllocatorManager.AllocatorHandle allocator) {
+            foreach (var ptr in array) {
+                Unity.Collections.LowLevel.Unsafe.UnsafeUtility.Free((void*)ptr, allocator.ToAllocator);
+            }
+            array.Dispose();
+        }
+
     }
 
 }
