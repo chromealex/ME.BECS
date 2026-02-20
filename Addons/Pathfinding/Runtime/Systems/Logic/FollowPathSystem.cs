@@ -81,9 +81,12 @@ namespace ME.BECS.Pathfinding {
             [INLINE(256)]
             private void Move(ref TransformAspect tr, ref UnitAspect unit, in float3 movementDirection, bool isMoving) {
 
+                unit.componentRuntime.manualDirection = movementDirection;
+                
+                /*
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
-                var vel = unit.readComponentRuntime.desiredDirection + unit.readComponentRuntime.velocity + movementDirection;
+                var vel = unit.readComponentRuntime.desiredDirection + movementDirection;
                 unit.componentRuntime.desiredDirection = default;
                 var desiredDirection = math.normalizesafe(vel);
                 unit.velocity = movementDirection;
@@ -128,7 +131,7 @@ namespace ME.BECS.Pathfinding {
 
                     newPos.y = this.buildGraphSystem.heights.GetHeight(newPos);
                     tr.position = newPos;
-                }
+                }*/
 
             }
 

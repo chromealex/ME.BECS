@@ -71,9 +71,15 @@ namespace ME.BECS.Units {
         [BURST]
         public struct ApplyCollisionJob : IJobForAspects<TransformAspect, UnitAspect> {
 
+            [InjectDeltaTime]
+            public tfloat dt;
+            
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
-                tr.position += unit.readComponentRuntime.collisionDirection;
+                tr.position += unit.readComponentRuntime.collisionDirection + unit.readComponentRuntime.desiredDirection * this.dt;
+                unit.componentRuntime.velocity = unit.readComponentRuntime.desiredDirection;
+                unit.speed = math.length(unit.componentRuntime.velocity);
+                if (math.lengthsq(unit.readComponentRuntime.alignmentVector) > 0.1f) tr.rotation = math.slerp(tr.rotation, quaternion.LookRotationSafe(unit.readComponentRuntime.alignmentVector, new float3(0f, 1f, 0f)), unit.readRotationSpeed * this.dt);
                 if (unit.readComponentRuntime.collideWithEnd == true) unit.IsCollideWithEnd = true;
                 unit.componentRuntime.collisionDirection = default;
 
@@ -88,29 +94,30 @@ namespace ME.BECS.Units {
             var collideWithEnd = this.ResolveOverlap(in tr, in unit, list, dt);
             if (collideWithEnd == true || unit.IsPathFollow == false) {
                 newVelocity = float3.zero;
+                unit.componentRuntime.manualDirection = float3.zero;
                 unit.componentRuntime.collideWithEnd = collideWithEnd;
             } else {
-                var desiredVelocity = math.normalizesafe(unit.readVelocity) * unit.maxSpeed;
+                var desiredVelocity = math.normalizesafe(unit.readComponentRuntime.manualDirection) * unit.maxSpeed;
                 newVelocity = this.ComputeRVO(in tr, in unit, list, desiredVelocity, out tfloat danger);
-                var speedFactor = math.lerp(1f, this.minSpeedFactor, danger * this.brakeStrength);
+                var speedFactor = math.lerp(1f, this.minSpeedFactor, danger * unit.readDecelerationSpeed);
                 newVelocity *= speedFactor;
             }
 
-            unit.velocity = math.lerp(unit.readVelocity, newVelocity, dt * this.velocitySpeed);
-            unit.velocity.y = 0;
-            unit.speed = math.length(unit.readVelocity);
+            var velocity = math.lerp(unit.readVelocity, newVelocity, dt * unit.readAccelerationSpeed);
+            velocity.y = 0;
             
-            unit.componentRuntime.desiredDirection = unit.velocity * dt;
+            unit.componentRuntime.desiredDirection = velocity;
 
             unit.componentRuntime.alignmentVector = unit.readComponentRuntime.desiredDirection;
-            if (math.lengthsq(unit.readVelocity) > 0.01f) {
-                unit.componentRuntime.alignmentVector = math.normalizesafe(unit.readVelocity);
+            if (math.lengthsq(velocity) > 0.01f) {
+                unit.componentRuntime.alignmentVector = math.normalizesafe(velocity);
             }
 
         }
 
         private bool ResolveOverlap(in TransformAspect tr, in UnitAspect currentUnit, ListAuto<Ent> list, tfloat dt) {
             var collideWithEnd = false;
+            var collisionDirection = float3.zero;
             foreach (var unitEnt in list) {
                 var unit = unitEnt.GetAspect<UnitAspect>();
                 var unitTr = unitEnt.GetAspect<TransformAspect>();
@@ -123,14 +130,18 @@ namespace ME.BECS.Units {
                     var penetration = minDist - dist;
                     var pushDir = math.normalizesafe(diff);
 
-                    var delta = pushDir * (penetration * 0.5f);
-                    currentUnit.componentRuntime.collisionDirection += delta;
-                    unit.componentRuntime.collisionDirection -= delta;
+                    var delta = pushDir * penetration;
+                    var maxPush = unit.readMaxSpeed * dt;
+                    var len = math.length(delta);
+                    if (len > maxPush) delta = delta / len * maxPush;
+                    collisionDirection += delta;
                     if (collideWithEnd == false && unit.readUnitCommandGroup == currentUnit.readUnitCommandGroup) {
                         collideWithEnd = unit.IsCollideWithEnd;
                     }
                 }
             }
+
+            currentUnit.componentRuntime.collisionDirection = collisionDirection;
             return collideWithEnd;
         }
         
