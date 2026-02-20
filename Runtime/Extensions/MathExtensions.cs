@@ -256,6 +256,11 @@ namespace ME.BECS {
             return current + delta / dist * maxDistanceDelta;
         }
 
+        [INLINE(256)]
+        public static tfloat MoveTowards(tfloat current, tfloat target, tfloat maxDelta) {
+            return math.abs(target - current) <= maxDelta ? target : current + math.sign(target - current) * maxDelta;
+        }
+
         /*
         /// <summary>
         /// Converts quaternion representation to euler

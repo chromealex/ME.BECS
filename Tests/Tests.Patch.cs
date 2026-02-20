@@ -292,6 +292,25 @@ namespace ME.BECS.Tests {
 
         }
 
+        [Test]
+        public void PatchString() {
+            {
+                var srcArr  = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.";
+                var destArr = "Lorem Ipsum is simply dummy text of the printing and typesetting industry.";
+
+                var src = new StreamBufferReader(System.Text.Encoding.UTF8.GetBytes(srcArr));
+                var dest = new StreamBufferReader(System.Text.Encoding.UTF8.GetBytes(destArr));
+                var diff = ME.BECS.Patch.GetDiff(src, dest);
+                var writer = new StreamBufferWriter(10);
+                writer.Write(dest.GetPointer().ptr, dest.Length);
+                ME.BECS.Patch.Apply(diff, ref writer);
+                var str = System.Text.Encoding.UTF8.GetString(writer.ToArray());
+                UnityEngine.Debug.Log(str);
+                Assert.IsTrue(str == srcArr);
+                diff.Dispose();
+            }
+        }
+
     }
 
 }

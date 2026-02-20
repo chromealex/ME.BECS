@@ -9,6 +9,7 @@ using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
+using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
 namespace ME.BECS {
 
@@ -18,6 +19,7 @@ namespace ME.BECS {
     public struct AABBDistanceSquaredProvider<T> : NativeTrees.IOctreeDistanceProvider<T> {
         public bool ignoreY;
         // Just return the distance squared to our bounds
+        [INLINE(256)]
         public tfloat DistanceSquared(float3 point, T obj, NativeTrees.AABB bounds) => bounds.DistanceSquared(point, this.ignoreY);
     }
 
@@ -26,6 +28,7 @@ namespace ME.BECS {
         public T ignoreSelf;
         public T nearest;
         public bool found;
+        [INLINE(256)]
         public bool OnVisit(T obj, NativeTrees.AABB bounds) {
 
             if (this.ignoreSelf.Equals(obj) == true) return true;
@@ -39,12 +42,14 @@ namespace ME.BECS {
 
     public interface IOctreeSubFilter<T> where T : unmanaged {
 
+        [INLINE(256)]
         bool IsValid(in T ent, in NativeTrees.AABB bounds);
 
     }
 
     public struct AlwaysTrueOctreeSubFilter : IOctreeSubFilter<Ent> {
 
+        [INLINE(256)]
         public bool IsValid(in Ent ent, in NativeTrees.AABB bounds) => ent.IsAlive();
 
     }
@@ -58,6 +63,7 @@ namespace ME.BECS {
         public bool ignoreSelf;
         public T ignore;
 
+        [INLINE(256)]
         public bool OnVisit(T obj, NativeTrees.AABB bounds) {
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
@@ -89,6 +95,7 @@ namespace ME.BECS {
         public bool ignoreSelf;
         public T ignore;
 
+        [INLINE(256)]
         public bool OnVisit(T obj, NativeTrees.AABB bounds) {
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
@@ -119,6 +126,7 @@ namespace ME.BECS {
         public bool ignoreSelf;
         public T ignore;
 
+        [INLINE(256)]
         public bool OnVisit(T obj, NativeTrees.AABB objBounds, NativeTrees.AABB queryRange) {
             
             if (this.subFilter.IsValid(in obj, in objBounds) == false) {

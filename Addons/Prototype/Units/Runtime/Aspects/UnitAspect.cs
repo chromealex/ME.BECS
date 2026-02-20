@@ -100,7 +100,6 @@ namespace ME.BECS.Units {
         public readonly ref readonly Ent readUnitSelectionGroup => ref this.unitSelectionGroupDataPtr.Read(this.ent.id, this.ent.gen).unitSelectionGroup;
         public readonly ref readonly Ent readUnitCommandGroup => ref this.unitCommandGroupDataPtr.Read(this.ent.id, this.ent.gen).unitCommandGroup;
         
-        public readonly float3 randomVector => this.componentRuntime.randomVector;
         public readonly ref NavAgentComponent component => ref this.navAgentDataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentComponent readComponent => ref this.navAgentDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);

@@ -92,16 +92,26 @@ namespace ME.BECS {
             var stateWriter = new StreamBufferWriter(patch.newLength);
             state.ptr->Serialize(ref stateWriter);
             
+            Apply(in patch, ref stateWriter);
+
+            state.ptr->Deserialize(stateWriter.ToArray());
+
+        }
+
+        public static void Apply(in Patch patch, ref StreamBufferWriter stateWriter) {
+
             var data = new StreamBufferReader(patch.data.ToArray());
             while (data.Position < data.Length) {
                 byte type = default;
                 data.Read(ref type);
+                //UnityEngine.Debug.Log("READ TYPE: " + type);
                 uint pos = default;
                 data.Read(ref pos);
                 stateWriter.MoveTo(pos);
                 if (type == 0) {
                     uint count = default;
                     data.Read(ref count);
+                    //UnityEngine.Debug.Log("READ BLOCKS: " + count);
                     while (count > 0u) {
                         Unity.Burst.Intrinsics.v256 val = default;
                         data.Read(ref val);
@@ -111,6 +121,8 @@ namespace ME.BECS {
                 } else {
                     uint count = default;
                     data.Read(ref count);
+                    //UnityEngine.Debug.Log("READ COUNT: " + count);
+                    if (count > 10000) throw new System.Exception();
                     for (int i = 0; i < count; ++i) {
                         byte val = default;
                         data.Read(ref val);
@@ -118,8 +130,6 @@ namespace ME.BECS {
                     }
                 }
             }
-
-            state.ptr->Deserialize(stateWriter.ToArray());
 
         }
 
@@ -190,6 +200,8 @@ namespace ME.BECS {
                         stream.Write(1u);
                         ++patch.deltaCount;
                     }
+
+                    //UnityEngine.Debug.Log("BLOCK: " + currentCount + " :: " + headerPos);
                     // write delta
                     stream.Write(valSource);
                     ++currentCount;
@@ -199,6 +211,7 @@ namespace ME.BECS {
                     if (currentCount > 0u) {
                         pos = stream.Position;
                         stream.MoveTo(headerPos);
+                        //UnityEngine.Debug.Log("WRITE HEADER: " + currentCount + " :: " + headerPos);
                         stream.Write(currentCount);
                         stream.MoveTo(pos);
                     }
@@ -208,14 +221,23 @@ namespace ME.BECS {
                 length -= packSize;
             }
 
+            if (currentCount > 0u) {
+                var pos = stream.Position;
+                stream.MoveTo(headerPos);
+                //UnityEngine.Debug.Log("WRITE HEADER: " + currentCount + " :: " + headerPos);
+                stream.Write(currentCount);
+                stream.MoveTo(pos);
+            }
+            
             if (length > 0u) {
+                //UnityEngine.Debug.Log("TAIL: " + length);
                 patch.tailLength = length;
                 stream.Write((byte)1);
                 stream.Write(source.Position);
                 stream.Write(length);
                 for (uint i = 0u; i < length; ++i) {
                     byte b = default;
-                    dest.Read(ref b);
+                    source.Read(ref b);
                     stream.Write(b);
                 }
             }

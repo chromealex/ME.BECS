@@ -55,4 +55,45 @@ namespace ME.BECS.Network {
         
     }
 
+    /// <summary>
+    /// Handles states' hashes - exchanges older states hashes with other clients.
+    /// </summary>
+    public interface INetworkTransportHashSync {
+
+        void SendHashSync(byte[] bytes);
+        byte[] ReceiveSyncHash();
+        /// <summary>
+        /// called on any client hash mismatch
+        /// </summary>
+        /// <param name="tick">Tick when hash mismatch appeared</param>
+        /// <param name="hasHashFlag">do player under the index have stored hash</param>
+        /// <param name="hashes">indexed player's hash for given tick</param>
+        void OnHashDesync(ulong tick, bool[] hasHashFlag, int[] hashes);
+
+    }
+
+    /// <summary>
+    /// Used when need to perform update routine out of connected state
+    /// </summary>
+    public interface INetworkTransportPreUpdate {
+
+        /// <summary>
+        /// Called every update frame before connection state check and before send/receive
+        /// </summary>
+        /// <param name="dtMs">visual delta time</param>
+        void PreUpdate(Unity.Jobs.JobHandle dependsOn, uint dtMs);
+
+    }
+
+    /// <summary>
+    /// Do that network transport implements ping check
+    /// </summary>
+    public interface INetworkTransportPing {
+
+        uint Ping { get; }
+        uint PingMin { get; }
+        uint PingMax { get; }
+
+    }
+
 }

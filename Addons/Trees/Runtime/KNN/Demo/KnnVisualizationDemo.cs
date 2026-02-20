@@ -35,6 +35,10 @@ public class KnnVisualizationDemo : MonoBehaviour {
 	
 	NativeArray<RangeQueryResult> m_rangeResults;
 
+	void Update() {
+		KnnApiDemo.Demo();
+	}
+
 	/*void Start() {
 		m_system = GetComponent<ParticleSystem>();
 

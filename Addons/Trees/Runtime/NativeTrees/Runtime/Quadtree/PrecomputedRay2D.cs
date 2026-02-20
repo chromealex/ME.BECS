@@ -3,11 +3,13 @@ using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
+using Ray2D = ME.BECS.FixedPoint.Ray2D;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
+using Ray2D = UnityEngine.Ray2D;
 #endif
 
 using UnityEngine;
@@ -35,8 +37,8 @@ namespace NativeTrees {
         public readonly float2 invDir;
 
         public PrecomputedRay2D(Ray2D ray) {
-            this.origin = (float2)ray.origin;
-            this.dir = (float2)ray.direction;
+            this.origin = ray.origin;
+            this.dir = ray.direction;
             this.invDir = 1f / this.dir;
         }
 
@@ -54,7 +56,7 @@ namespace NativeTrees {
         }
 
         public static explicit operator Ray2D(PrecomputedRay2D ray) {
-            return new Ray2D((Vector2)ray.origin, (Vector2)ray.dir);
+            return new Ray2D(ray.origin, ray.dir);
         }
 
     }

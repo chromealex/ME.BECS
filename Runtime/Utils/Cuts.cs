@@ -258,7 +258,7 @@ namespace ME.BECS {
     [IgnoreProfiler]
     public static unsafe class Cuts {
 
-        public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_DOMAIN;
+        public static Unity.Collections.Allocator ALLOCATOR => Constants.ALLOCATOR_PERSISTENT;
         
         [INLINE(256)][IgnoreProfiler]
         public static ClassPtr<T> _classPtr<T>(T data) where T : class {
@@ -629,6 +629,7 @@ namespace ME.BECS {
                 LeakDetector.TrackCount(sptr.ptr, allocator);
                 return sptr;
             }
+
             {
                 var ptr = UnsafeUtility.Malloc(size, align, allocator);
                 var sptr = new safe_ptr(ptr, size);

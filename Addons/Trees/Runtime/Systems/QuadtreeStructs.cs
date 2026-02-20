@@ -9,6 +9,7 @@ using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
+using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
 namespace ME.BECS {
 
@@ -17,6 +18,7 @@ namespace ME.BECS {
     
     public struct AABB2DDistanceSquaredProvider<T> : NativeTrees.IQuadtreeDistanceProvider<T> {
         // Just return the distance squared to our bounds
+        [INLINE(256)]
         public tfloat DistanceSquared(in float2 point, in T obj, in NativeTrees.AABB2D bounds) => bounds.DistanceSquared(point);
     }
 
@@ -27,6 +29,7 @@ namespace ME.BECS {
         public bool found;
         public uint Capacity => 1u;
         
+        [INLINE(256)]
         public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.ignoreSelf.Equals(obj) == true) return true;
@@ -40,12 +43,14 @@ namespace ME.BECS {
 
     public interface ISubFilter<T> where T : unmanaged {
 
+        [INLINE(256)]
         bool IsValid(in T ent, in NativeTrees.AABB2D bounds);
 
     }
 
     public struct AlwaysTrueSubFilter : ISubFilter<Ent> {
 
+        [INLINE(256)]
         public bool IsValid(in Ent ent, in NativeTrees.AABB2D bounds) => ent.IsAlive();
 
     }
@@ -60,6 +65,7 @@ namespace ME.BECS {
         public T ignore;
         public uint Capacity => 1u;
 
+        [INLINE(256)]
         public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
@@ -92,6 +98,7 @@ namespace ME.BECS {
         public T ignore;
         public uint Capacity => (uint)this.results.Capacity;
 
+        [INLINE(256)]
         public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
 
             if (this.results.Contains(obj) == true) return true;
@@ -124,6 +131,7 @@ namespace ME.BECS {
         public bool ignoreSelf;
         public T ignore;
 
+        [INLINE(256)]
         public bool OnVisit(in T obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
 
             if (this.results.Contains(obj) == true) return true;

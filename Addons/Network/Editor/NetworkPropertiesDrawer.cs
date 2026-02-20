@@ -93,6 +93,17 @@ namespace ME.BECS.Network.Editor {
                     ME.BECS.Editor.EditorUIUtils.DrawUIntField(containerInner, bufferCapacity);
                     ME.BECS.Editor.EditorUIUtils.DrawUIntField(containerInner, localPlayersCapacity);
                 }
+                {
+                    var containerInner = new VisualElement();
+                    containerInner.AddToClassList("properties-block");
+                    foldout.Add(containerInner);
+                    var header = new Label("Hash Table Storage Properties");
+                    header.AddToClassList("properties-block-header");
+                    containerInner.Add(header);
+                    var hashTableStorageProperties = property.FindPropertyRelative(nameof(NetworkModuleProperties.hashTableStorageProperties));
+                    var capacity = hashTableStorageProperties.FindPropertyRelative(nameof(NetworkModuleProperties.hashTableStorageProperties.capacity));
+                    ME.BECS.Editor.EditorUIUtils.DrawUIntField(containerInner, capacity);
+                }
             }
             root.Add(foldout);
 

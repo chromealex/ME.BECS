@@ -32,6 +32,7 @@ namespace ME.BECS.Editor {
     public static unsafe class StaticMethods {
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void Load() {
+            StaticTypes.Dispose();
             Worlds.Initialize();
             SystemsStatic.Initialize();
             StaticTypesInitializer.Load();

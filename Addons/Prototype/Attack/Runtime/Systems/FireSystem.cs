@@ -15,7 +15,7 @@ namespace ME.BECS.Attack {
 
     [BURST]
     [UnityEngine.Tooltip("Fire system")]
-    public struct FireSystem : IUpdate {
+    public partial struct FireSystem : IUpdate {
 
         [BURST]
         public struct FireTargetJob : IJobForAspects<AttackAspect, TransformAspect, QuadTreeQueryAspect> {
@@ -113,6 +113,8 @@ namespace ME.BECS.Attack {
 
         public void OnUpdate(ref SystemContext context) {
 
+            var spatialHandle = this.UpdateSpatial(ref context, context.dependsOn);
+
             var target = context.Query()
                                 .With<ReloadedComponent>()
                                 .With<CanFireComponent>()
@@ -129,7 +131,7 @@ namespace ME.BECS.Attack {
                                 .Schedule<FireTargetsJob, AttackAspect, TransformAspect, QuadTreeQueryAspect>(new FireTargetsJob() {
                                     dt = context.deltaTime,
                                 });
-            context.SetDependency(targets);
+            context.SetDependency(Unity.Jobs.JobHandle.CombineDependencies(targets, spatialHandle));
 
         }
 

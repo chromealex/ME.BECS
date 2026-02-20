@@ -47,6 +47,44 @@ namespace ME.BECS.Attack {
             attackQueryAspect.query.minRangeSqr = attackAspect.readMinAttackRangeSqr;
             attackQueryAspect.query.sector = attackAspect.readAttackSector;
             attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
+            attackQueryAspect.query.ignoreSorting = true;
+            attackQueryAspect.query.nearestCount = 1;
+            attackQueryAspect.query.updatePerTick = 2;
+            var unsafeConfig = config.AsUnsafeConfig();
+            if (unsafeConfig.HasStatic<BulletViewPoint>() == true) {
+                var point = unsafeConfig.ReadStatic<BulletViewPoint>();
+                BulletUtils.RegisterFirePoint(in attackSensor, in point.position, in point.rotation, in jobInfo);    
+            } else if (unsafeConfig.HasStatic<BulletViewPoints>() == true) {
+                var points = unsafeConfig.ReadStatic<BulletViewPoints>().points;
+                for (uint i = 0u; i < points.Length; ++i) {
+                    var point = points[i];
+                    BulletUtils.RegisterFirePoint(in attackSensor, in point.position, in point.rotation, in jobInfo);
+                }
+            }
+            
+            return attackSensor;
+
+        }
+
+        [INLINE(256)]
+        public static Ent CreateAttackSensorSpatial(int targetsMask, Config config, in JobInfo jobInfo) {
+
+            var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
+            config.Apply(in attackSensor);
+            attackSensor.Set<SpatialQueryAspect>();
+            attackSensor.Set<AttackAspect>();
+            var trSensor = attackSensor.Set<TransformAspect>();
+            trSensor.localPosition = float3.zero;
+            trSensor.localRotation = quaternion.identity;
+            trSensor.IsStaticLocal = true;
+            var attackAspect = attackSensor.GetAspect<AttackAspect>();
+            var attackQueryAspect = attackSensor.GetAspect<SpatialQueryAspect>();
+            attackQueryAspect.query.treeMask = targetsMask;
+            attackQueryAspect.query.rangeSqr = attackAspect.readAttackRangeSqr;
+            attackQueryAspect.query.minRangeSqr = attackAspect.readMinAttackRangeSqr;
+            attackQueryAspect.query.sector = attackAspect.readAttackSector;
+            attackQueryAspect.query.ignoreSelf = attackAspect.readIgnoreSelf;
+            attackQueryAspect.query.ignoreSorting = true;
             attackQueryAspect.query.nearestCount = 1;
             attackQueryAspect.query.updatePerTick = 2;
             var unsafeConfig = config.AsUnsafeConfig();
@@ -352,6 +390,30 @@ namespace ME.BECS.Attack {
 
             var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
             var attack = bullet.ent.GetOrCreateAspect<QuadTreeQueryAspect>();
+            attack.query.ignoreSorting = true;
+            attack.query.treeMask = targetsMask; // Search for targets in this tree
+            attack.query.rangeSqr = math.max(1f, bullet.ent.Read<BulletConfigComponent>().hitRangeSqr);
+            if (bullet.readConfig.autoTarget == true) {
+                // Set nearest count to 1
+                attack.query.nearestCount = 1;
+            } else {
+                attack.query.nearestCount = 0;
+            }
+            return bullet;
+
+        }
+        
+        [INLINE(256)]
+        public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition,
+                                                       in Config config, in ME.BECS.Views.View muzzleView, in JobInfo jobInfo = default) {
+            return CreateBulletSpatial(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+        }
+        
+        [INLINE(256)]
+        public static BulletAspect CreateBulletSpatial(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
+
+            var bullet = CreateBullet_INTERNAL(in attackAspect, in position, in rotation, targetsMask, in target, in targetPosition, in config, in muzzleView, 200u, in jobInfo);
+            var attack = bullet.ent.GetOrCreateAspect<SpatialQueryAspect>();
             attack.query.ignoreSorting = true;
             attack.query.treeMask = targetsMask; // Search for targets in this tree
             attack.query.rangeSqr = math.max(1f, bullet.ent.Read<BulletConfigComponent>().hitRangeSqr);

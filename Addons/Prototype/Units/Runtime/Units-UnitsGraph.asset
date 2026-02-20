@@ -56,6 +56,20 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 1611526007721820233
+      type: {class: RVOSystem, ns: ME.BECS.Units, asm: ME.BECS.Units}
+      data:
+        timeHorizon:
+          rawValue: 1069547520
+        avoidanceWeight:
+          rawValue: 1069547520
+        velocitySpeed:
+          rawValue: 1084227584
+        brakeStrength:
+          rawValue: 1073741824
+        minSpeedFactor:
+          rawValue: 1050253722
+        drawGizmos: 0
     - rid: 8346928920201003080
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -100,8 +114,7 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
-          type: 2}
+        customRuntimeSystemRoot: {fileID: 0}
         isInstance: 0
     - rid: 8346928920201003081
       type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -147,8 +160,7 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
-          type: 2}
+        customRuntimeSystemRoot: {fileID: 0}
         isInstance: 0
     - rid: 8346928920201003082
       type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
@@ -194,8 +206,7 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
-          type: 2}
+        customRuntimeSystemRoot: {fileID: 0}
         system:
           rid: 8346928920201003083
     - rid: 8346928920201003083
@@ -245,14 +256,6 @@ MonoBehaviour:
         enabled: 1
         debug: 0
         nodeLock: 0
-        customRuntimeSystemRoot: {fileID: 11400000, guid: e377910e532084cfaa96b12247920e66,
-          type: 2}
+        customRuntimeSystemRoot: {fileID: 0}
         system:
-          rid: 8346928920201003085
-    - rid: 8346928920201003085
-      type: {class: SteeringSystem, ns: ME.BECS.Units, asm: ME.BECS.Units}
-      data:
-        calculateSeparation: 1
-        calculateCohesion: 1
-        calculateAlignment: 1
-        drawGizmos: 1
+          rid: 1611526007721820233

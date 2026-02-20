@@ -57,7 +57,8 @@ namespace ME.BECS {
 
                 Logger.Core.Log("[ ME.BECS ] Loading entity configs...");
                 var requested = UnityEngine.Pool.ListPool<ProcessItem>.Get();
-                configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.objects.Length, Constants.ALLOCATOR_DOMAIN);
+                if (configs.Data.IsCreated == true) configs.Data.Dispose();
+                configs.Data = new UnsafeHashMap<uint, UnsafeEntityConfig>(ObjectReferenceRegistry.data.objects.Length, Constants.ALLOCATOR_PERSISTENT);
                 if (isEditor == false) {
                     foreach (var item in ObjectReferenceRegistry.data.objects) {
                         if (item.data.Is<EntityConfig>() == true) {

@@ -52,11 +52,24 @@ namespace ME.BECS.Network {
             public uint copyPerTick;
 
         }
+        
+        [System.Serializable]
+        public struct HashTableStorageProperties {
+
+            public static HashTableStorageProperties Default => new HashTableStorageProperties() {
+                capacity = 10u,
+            };
+
+            [UnityEngine.Tooltip("How many hashes we need to store.")]
+            public uint capacity;
+
+        }
 
         public static NetworkModuleProperties Default => new NetworkModuleProperties() {
             eventsStorageProperties = EventsStorageProperties.Default,
             statesStorageProperties = StatesStorageProperties.Default,
             methodsStorageProperties = MethodsStorageProperties.Default,
+            hashTableStorageProperties = HashTableStorageProperties.Default,
             tickTime = 33u,
             maxFrameTime = 100u,
             inputLag = 1u,
@@ -76,6 +89,7 @@ namespace ME.BECS.Network {
         public EventsStorageProperties eventsStorageProperties;
         public StatesStorageProperties statesStorageProperties;
         public MethodsStorageProperties methodsStorageProperties;
+        public HashTableStorageProperties hashTableStorageProperties;
 
     }
     
@@ -136,6 +150,8 @@ namespace ME.BECS.Network {
                 dependsOn = this.Connect(dependsOn);
                 
             }
+
+            this.network.PreUpdate(dependsOn, dtMs);
 
             return this.network.Update(initializer, dependsOn, ref world);
             

@@ -79,6 +79,91 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
+        public static bool Raycast(in BuildGraphSystem system, in float3 position, in float3 direction, sfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
+
+            hitPoint = default;
+            for (uint i = 0u; i < system.graphs.Length; ++i) {
+                var graph = system.graphs[system.world.state, i];
+                if (Raycast(in graph, in position, in direction, distance, out hitPoint, minCost, maxCost, debug) == true) return true;
+            }
+
+            return false;
+            
+        }
+
+        [INLINE(256)]
+        public static bool Raycast(in Ent graph, in float3 position, in float3 direction, sfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
+            
+            var root = graph.Read<RootGraphComponent>();
+            var state = graph.World.state;
+
+            var dir = math.normalizesafe(direction);
+            var cell = Graph.GetGlobalCoord(in root, position);
+            var targetCell = Graph.GetGlobalCoord(in root, position + dir * distance);
+
+            var x0 = cell.x;
+            var x1 = targetCell.x;
+            
+            var y0 = cell.y;
+            var y1 = targetCell.y;
+            
+            var steep = math.abs(y1 - y0) > math.abs(x1 - x0);
+            if (steep == true) {
+                var t = x0;
+                x0 = y0;
+                y0 = t;
+                t = x1;
+                x1 = y1;
+                y1 = t;
+            }
+
+            if (x0 > x1) {
+                var t = x0;
+                x0 = x1;
+                x1 = t;
+                t = y0;
+                y0 = y1;
+                y1 = t;
+            }
+
+            var dx = x1 - x0;
+            var dy = math.abs(y1 - y0);
+            var error = dx / 2;
+            var ystep = y0 < y1 ? 1 : -1;
+            var y = y0;
+
+            hitPoint = default;
+            for (var x = x0; x <= x1; ++x) {
+
+                var px = (steep == true ? y : x);
+                var py = (steep == true ? x : y);
+
+                var tempNode = Graph.GetCoordInfo(in root, px, py);
+                var chunk = root.chunks[state, tempNode.chunkIndex];
+                ref var node = ref chunk.nodes[state, tempNode.nodeIndex];
+                if (debug == true) {
+                    var p = (UnityEngine.Vector3)Graph.GetPosition(in root, in chunk, tempNode.nodeIndex);
+                    UnityEngine.Debug.DrawLine(p, p + UnityEngine.Vector3.up * 2f, UnityEngine.Color.magenta);
+                }
+
+                if (node.cost >= minCost && node.cost <= maxCost) {
+                    hitPoint = Graph.GetPosition(in root, in chunk, tempNode.nodeIndex);
+                    return true;
+                }
+
+                error -= dy;
+
+                if (error < 0) {
+                    y += ystep;
+                    error += dx;
+                }
+            }
+            
+            return false;
+            
+        }
+        
+        [INLINE(256)]
         public static bool IsGraphMaskValid(in BuildGraphSystem system, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
             for (uint i = 0u; i < system.graphs.Length; ++i) {
@@ -91,7 +176,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static unsafe bool IsGraphMaskValid(in Ent graph, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
+        public static bool IsGraphMaskValid(in Ent graph, in float3 position, in quaternion rotation, uint2 size, byte minCost, byte maxCost) {
 
             var root = graph.Read<RootGraphComponent>();
             var state = graph.World.state;

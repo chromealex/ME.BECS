@@ -67,16 +67,38 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static uint AddToCommandGroup(in UnitCommandGroupAspect commandGroup, in UnitAspect unit) {
 
-            //E.THREAD_CHECK("AddToCommandGroup");
+            if (unit.readUnitCommandGroup == commandGroup.ent) {
+                for (uint i = 0u; i < commandGroup.readUnits.Count; ++i) {
+                    var cmdUnit = commandGroup.readUnits[i];
+                    if (cmdUnit == unit.ent) return i;
+                }
+            }
 
             RemoveFromCommandGroup(in unit);
             commandGroup.ent.SetTag<IsCommandGroupDirty>(true);
-            commandGroup.Lock();
+            JobUtils.Increment(ref commandGroup.volume, UnitUtils.GetVolume(in unit));
             unit.unitCommandGroup = commandGroup.ent;
-            commandGroup.volume += UnitUtils.GetVolume(in unit);
+            commandGroup.Lock();
             var idx = commandGroup.units.Add(unit.ent) + 1u;
             commandGroup.Unlock();
             return idx;
+
+        }
+        
+        [INLINE(256)]
+        public static void AddToCommandGroup(in UnitCommandGroupAspect commandGroup, in Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent> list) {
+
+            commandGroup.ent.SetTag<IsCommandGroupDirty>(true);
+            var sum = 0u;
+            foreach (var unit in list) {
+                var unitAspect = unit.GetAspect<UnitAspect>();
+                sum += UnitUtils.GetVolume(unitAspect);
+                unitAspect.unitCommandGroup = commandGroup.ent;
+            }
+            JobUtils.Increment(ref commandGroup.volume, sum);
+            commandGroup.Lock();
+            commandGroup.units.AddRange(list);
+            commandGroup.Unlock();
 
         }
 

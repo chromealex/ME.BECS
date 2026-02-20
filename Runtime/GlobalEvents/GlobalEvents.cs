@@ -106,7 +106,7 @@ namespace ME.BECS {
 
         public static void Initialize() {
             Dispose();
-            WorldEvents.readWriteSpinner.Data = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_DOMAIN);
+            WorldEvents.readWriteSpinner.Data = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_PERSISTENT);
         }
 
         public static void Dispose() {
@@ -169,7 +169,7 @@ namespace ME.BECS {
             if (item.events.IsCreated == false) {
                 item.Lock();
                 if (item.events.IsCreated == false) {
-                    item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_DOMAIN);
+                    item.events = new NativeHashMap<Event, GlobalEventsData.Item>(8, Constants.ALLOCATOR_PERSISTENT);
                 }
                 item.Unlock();
             }
@@ -179,7 +179,7 @@ namespace ME.BECS {
                 var elem = item.events[evt];
                 if (elem.data.ptr != null) {
                     fixed (void* dataPtr = &data) {
-                        _memcpy(elem.data, (safe_ptr)dataPtr, TSize<T>.size);
+                        _memcpy((safe_ptr)dataPtr, elem.data, TSize<T>.size);
                     }
                 } else {
                     elem.data = useData == true ? _make(data) : default;

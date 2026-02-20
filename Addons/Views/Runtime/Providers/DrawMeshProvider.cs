@@ -360,10 +360,6 @@ namespace ME.BECS.Views {
                 throw new System.Exception($"Value {prefab} is not a prefab");
             }
 
-            if (sceneSource == true) {
-                throw new System.Exception("sceneSource = false is not valid for this provider");
-            }
-
             var id = (uint)instanceId;
             if (prefabId > 0u || viewsModuleData.ptr->instanceIdToPrefabId.TryGetValue(in viewsModuleData.ptr->viewsWorld.state.ptr->allocator, id, out prefabId) == false) {
 
@@ -381,6 +377,7 @@ namespace ME.BECS.Views {
                     typeInfo = typeInfo,
                     sceneSource = sceneSource,
                     flags = 0,
+                    isLoaded = true,
                 };
                 info.HasUpdateModules = ProvidersHelper.HasAny<IViewUpdate>(prefab.modules);
                 info.HasUpdateParallelModules = ProvidersHelper.HasAny<IViewUpdateParallel>(prefab.modules);
@@ -400,6 +397,10 @@ namespace ME.BECS.Views {
                     providerId = ViewsModule.DRAW_MESH_PROVIDER_ID,
                 };
 
+            }
+
+            if (sceneSource == true) {
+                UnityEngine.Object.Destroy(prefab.gameObject);
             }
 
             return viewSource;

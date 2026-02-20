@@ -1,23 +1,32 @@
 #if PHOTON_UNITY_NETWORKING
 
 namespace ME.BECS.Network {
-    
+
+    using ExitGames.Client.Photon;
     using static Cuts;
 
-    public class PhotonTransport : INetworkTransport, Photon.Realtime.IConnectionCallbacks, Photon.Realtime.IInRoomCallbacks, Photon.Realtime.IOnEventCallback, Photon.Realtime.IMatchmakingCallbacks, Photon.Realtime.ILobbyCallbacks {
+    public class PhotonTransport : INetworkTransport, Photon.Realtime.IConnectionCallbacks, Photon.Realtime.IInRoomCallbacks, Photon.Realtime.IOnEventCallback, Photon.Realtime.IMatchmakingCallbacks, Photon.Realtime.ILobbyCallbacks, INetworkTransportPreUpdate, INetworkTransportHashSync, INetworkTransportPing {
 
         public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
-        public ulong InputLagInTicks { get; private set; }
+        public ulong InputLagInTicks => this.InputLagDependsOnPing();
 
         public TransportStatus Status { get; set; }
         public double ServerTime { get; private set; }
+        public uint Ping => this.pingStorage.median;
+        public uint PingMin => this.pingStorage.min;
+        public uint PingMax => this.pingStorage.max;
 
         private NetworkModule networkModule;
         private World world;
 
+        private uint pingTimer;
+        private PingStorage pingStorage;
+
         public void OnAwake() {
             this.Status = TransportStatus.Unknown;
             this.receivedPackages = new System.Collections.Generic.Queue<byte[]>();
+            this.receivedSystemPackages = new System.Collections.Generic.Queue<byte[]>();
+            this.pingStorage = new PingStorage();
         }
 
         public void Dispose() {
@@ -57,13 +66,20 @@ namespace ME.BECS.Network {
         }
 
         private System.Collections.Generic.Queue<byte[]> receivedPackages;
+        private System.Collections.Generic.Queue<byte[]> receivedSystemPackages;
+
+        private double serverSumTs;
+        private double serverTs;
 
         public byte[] Receive() {
             
             if (this.Status != TransportStatus.Connected) return null;
-
-            //UnityEngine.Debug.Log("Receive: " + Photon.Pun.PhotonNetwork.NetworkingClient.LoadBalancingPeer.ServerTimeInMilliSeconds);
-            this.ServerTime = Photon.Pun.PhotonNetwork.ServerTimestamp;
+            
+            if (Photon.Pun.PhotonNetwork.Time < this.serverTs) {
+                this.serverSumTs += this.serverTs;
+            }
+            this.serverTs = Photon.Pun.PhotonNetwork.Time;
+            this.ServerTime = Photon.Pun.PhotonNetwork.Time + this.serverSumTs;
 
             if (this.receivedPackages.Count > 0) {
 
@@ -131,6 +147,8 @@ namespace ME.BECS.Network {
             //UnityEngine.Debug.Log("OnEvent: " + eventData);
             if (eventData.Code == 1) {
                 this.receivedPackages.Enqueue((byte[])eventData.CustomData);
+            } else if (eventData.Code == 2) {
+                this.receivedSystemPackages.Enqueue((byte[])eventData.CustomData);
             }
 
         }
@@ -147,13 +165,13 @@ namespace ME.BECS.Network {
             //UnityEngine.Debug.Log("OnCreateRoomFailed");
         }
 
+        private bool waitForServerTime;
         public void OnJoinedRoom() {
             //UnityEngine.Debug.Log("OnJoinedRoom");
             {
                 UnityEngine.Debug.Log("Connected Player: " + Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
-                this.Status = TransportStatus.Connected;
                 this.networkModule.SetLocalPlayerId((uint)Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber);
-                this.networkModule.SetServerStartTime(Photon.Pun.PhotonNetwork.ServerTimestamp, this.world);
+                this.waitForServerTime = true;
             }
         }
 
@@ -191,6 +209,72 @@ namespace ME.BECS.Network {
 
         public void OnLobbyStatisticsUpdate(System.Collections.Generic.List<Photon.Realtime.TypedLobbyInfo> lobbyStatistics) {
             //UnityEngine.Debug.Log("OnLobbyStatisticsUpdate");
+        }
+
+        public virtual void PreUpdate(Unity.Jobs.JobHandle dependsOn, uint dtMs) {
+            
+            if (this.waitForServerTime == true && Photon.Pun.PhotonNetwork.Time > 0) {
+                this.Status = TransportStatus.Connected;
+                this.networkModule.SetServerStartTime(Photon.Pun.PhotonNetwork.Time, this.world);
+                UnityEngine.Debug.Log($"Server time initially set to {Photon.Pun.PhotonNetwork.Time}");
+                this.waitForServerTime = false;
+            }
+
+            if (this.Status == TransportStatus.Connected) {
+                this.pingTimer += dtMs;
+                if (this.pingTimer >= 1000) {
+                    this.pingTimer %= 1000;
+                    this.pingStorage.AddValue((uint)Photon.Pun.PhotonNetwork.GetPing());
+                }
+            }
+
+        }
+
+        public void SendHashSync(byte[] bytes) {
+            
+            if (this.Status != TransportStatus.Connected) {
+                throw new System.Exception("Transport is not connected");
+            }
+
+            //UnityEngine.Debug.Log("Send event: " + bytes.Length);
+            Photon.Pun.PhotonNetwork.NetworkingClient.LoadBalancingPeer.OpRaiseEvent(2, bytes,
+                new Photon.Realtime.RaiseEventOptions() { Receivers = Photon.Realtime.ReceiverGroup.Others },
+                new ExitGames.Client.Photon.SendOptions() { DeliveryMode = ExitGames.Client.Photon.DeliveryMode.UnreliableUnsequenced });
+
+        }
+        
+        public byte[] ReceiveSyncHash() {
+
+            if (this.Status != TransportStatus.Connected) return null;
+
+            if (this.receivedSystemPackages.Count > 0) {
+
+                var package = this.receivedSystemPackages.Dequeue();
+                return package;
+
+            }
+
+            return null;
+            
+        }
+
+        public virtual void OnHashDesync(ulong tick, bool[] hasHashFlag, int[] hashes) {
+
+            var errStr = $"[{nameof(PhotonTransport)}] Hash mismatch, tick {tick}, ";
+
+            for (var i = 0; i < hashes.Length; ++i) {
+                if (hasHashFlag.Length < i || hasHashFlag[i] == false) continue;
+                errStr += $"p{i}: {hashes[i]}, ";
+            }
+
+            UnityEngine.Debug.LogError(errStr);
+
+        }
+
+        private ulong InputLagDependsOnPing() {
+
+            return (this.Ping / 2) / this.networkModule.properties.tickTime + 1u;
+
         }
 
     }

@@ -109,7 +109,7 @@ namespace ME.BECS.Editor.Systems {
                             {
                                 graphInitializeContent.Add($"// {graph.name}");
                                 graphInitializeContent.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
-                                graphInitializeContent.Add($"if (graphNodes{id}_{this.GetType().Name}.IsCreated == true) graphNodes{id}_{this.GetType().Name}.Dispose();");
+                                graphInitializeContent.Add($"if (graphNodes{id}_{this.GetType().Name}.IsCreated == true) Utils.DisposePtrArray(graphNodes{id}_{this.GetType().Name}, allocator);");
                                 graphInitializeContent.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
                                 InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
                                 InitializeInjections(graph, graphInitializeContent, systemTypeToVar);

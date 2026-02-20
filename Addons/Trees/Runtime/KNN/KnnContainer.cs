@@ -40,7 +40,7 @@ using Unity.Jobs;
 using ME.BECS.NativeCollections;
 
 namespace KNN {
-	[NativeContainerSupportsDeallocateOnJobCompletion, NativeContainer, System.Diagnostics.DebuggerDisplay("Length = {Points.Length}")]
+	//[NativeContainerSupportsDeallocateOnJobCompletion, NativeContainer, System.Diagnostics.DebuggerDisplay("Length = {Points.Length}")]
 	public unsafe struct KnnContainer<T> : IDisposable where T : unmanaged, IComparable<T> {
 
 		public struct Node : IComparable<Node> {

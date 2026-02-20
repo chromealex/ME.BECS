@@ -172,7 +172,7 @@ namespace ME.BECS {
             var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr, ptr));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
-                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} which has been already freed or was never instantiated.");
+                UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} which has been already freed or was never instantiated.");
             }
             
         }
@@ -188,7 +188,7 @@ namespace ME.BECS {
             var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
-                throw new System.Exception($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
+                UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
             }
             
         }

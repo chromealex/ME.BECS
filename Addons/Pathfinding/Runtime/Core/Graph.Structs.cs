@@ -262,12 +262,23 @@ namespace ME.BECS.Pathfinding {
     public struct Node {
 
         public bool walkable => this.cost < Graph.UNWALKABLE;
-        public uint flags;
-        public tfloat height;
         public int cost;
         public ObstacleChannel obstacleChannel;
+        #if PATHFINDING_FLAGS
+        public uint flags;
+        #else
+        public uint flags => 0u;
+        #endif
         #if PATHFINDING_NORMALS
         public float3 normal;
+        #endif
+        #if PATHFINDING_HEIGHTS
+        public tfloat height;
+        #else
+        public tfloat height {
+            get => 0f;
+            set { }
+        }
         #endif
 
     }
@@ -607,7 +618,7 @@ namespace ME.BECS.Pathfinding {
 
         [INLINE(256)]
         public void Dispose(in World world) {
-
+            
             for (uint i = 0; i < this.chunks.Length; ++i) {
                 var chunk = this.chunks[world.state, i];
                 chunk.flowField.Dispose(ref world.state.ptr->allocator);

@@ -74,6 +74,18 @@ namespace ME.BECS {
         public static readonly Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>> trackerBurst = Unity.Burst.SharedStatic<ME.BECS.Internal.Array<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<StaticTypes>(TAlign<ME.BECS.Internal.Array<uint>>.align, 10207);
         public static ref ME.BECS.Internal.Array<uint> tracker => ref trackerBurst.Data;
 
+        public static void Dispose() {
+            if (StaticTypes.sizes.IsCreated == true) StaticTypes.sizes.Dispose();
+            if (StaticTypes.groups.IsCreated == true) StaticTypes.groups.Dispose();
+            if (StaticTypes.sharedTypeId.IsCreated == true) StaticTypes.sharedTypeId.Dispose();
+            if (StaticTypes.staticTypeId.IsCreated == true) StaticTypes.staticTypeId.Dispose();
+            if (StaticTypes.defaultValues.IsCreated == true) StaticTypes.defaultValues.Dispose();
+            if (StaticTypes.collectionsCount.IsCreated == true) StaticTypes.collectionsCount.Dispose();
+            if (StaticTypes.tracker.IsCreated == true) StaticTypes.tracker.Dispose();
+            if (StaticTypesDestroyRegistry.registry.Data.IsCreated == true) StaticTypesDestroyRegistry.registry.Data.Dispose();
+            if (StaticTypesAutoDestroy.registry.Data.IsCreated == true) StaticTypesAutoDestroy.registry.Data.Dispose();
+        }
+        
         public static void SetTracker(uint count) {
             tracker.Resize(StaticTypes.counter + 1u);
         }
@@ -360,9 +372,10 @@ namespace ME.BECS {
         [INLINE(256)]
         public static unsafe void SetDefaultValue(T data) {
 
-            StaticTypesHasDefaultValue<T>.value.Data = true; 
+            StaticTypesHasDefaultValue<T>.value.Data = true;
             var defaultValuePtr = (safe_ptr<T>)_make(TSize<T>.sizeInt, TAlign<T>.alignInt, Constants.ALLOCATOR_DOMAIN);
             *defaultValuePtr.ptr = data;
+            StaticTypes.defaultValues.Resize(StaticTypes<T>.typeId + 1u);
             StaticTypes.defaultValues.Get(StaticTypes<T>.typeId) = (System.IntPtr)defaultValuePtr.ptr;
             
         }

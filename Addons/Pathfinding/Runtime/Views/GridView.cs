@@ -22,6 +22,7 @@ namespace ME.BECS.Pathfinding.Views {
 
         public Material material;
         private uint2 gridSize;
+        private float nodeSize;
         private float2 viewWorldSize;
         private float4 objPos;
         public float2 offset;
@@ -30,6 +31,7 @@ namespace ME.BECS.Pathfinding.Views {
             
             var grid = ent.World.GetSystem<ShowBuildingGridSystem>();
             this.gridSize = grid.gridSize;
+            this.nodeSize = (float)grid.nodeSize;
             
         }
 
@@ -48,9 +50,9 @@ namespace ME.BECS.Pathfinding.Views {
             this.objPos = new float4(objPos, 0f);
             this.material.SetTexture(gridTex, grid.GetTexture());
             this.material.SetFloat(isEnabled, ent.Has<IsShowGridComponent>() == true ? 1f : 0f);
-            this.material.SetVector(_gridSize, new Vector4((float)this.viewWorldSize.x, (float)this.viewWorldSize.y, 0f, 0f));
+            this.material.SetVector(_gridSize, new Vector4((float)this.viewWorldSize.x * this.nodeSize, (float)this.viewWorldSize.y * this.nodeSize, 0f, 0f));
             this.material.SetFloat(isValid, ent.Has<PlaceholderInvalidTagComponent>() == true ? 0f : 1f);
-            this.material.SetVector(gridOffset, new Vector4(0.5f, 0.5f, objSize.x % 2 != 0 ? 1f : -1f, objSize.y % 2 != 0 ? 1f : -1f));
+            this.material.SetVector(gridOffset, new Vector4(0.5f / this.nodeSize, 0.5f / this.nodeSize, objSize.x % 2 != 0 ? 1f : -1f, objSize.y % 2 != 0 ? 1f : -1f));
 
         }
 
