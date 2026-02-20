@@ -1,14 +1,15 @@
-
 using NativeTrees;
 using UnityEngine;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
+using Ray2D = ME.BECS.FixedPoint.Ray2D;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
+using Ray2D = UnityEngine.Ray2D;
 #endif
 
 namespace ME.BECS.Bullets {
@@ -52,7 +53,7 @@ namespace ME.BECS.Bullets {
                     var direction = math.normalizesafe(vector);
                     var distance = math.length(vector);
                 
-                    var ray = new Ray2D((Vector2)prevPos.xz, (Vector2)direction.xz);
+                    var ray = new Ray2D(prevPos.xz, direction.xz);
                     var mask = ent.GetAspect<QuadTreeQueryAspect>().readQuery.treeMask;
                     if (this.qt.Raycast(ray, mask, distance, out var hitResult) == true) {
                         aspect.component.targetEnt = hitResult.obj;
@@ -94,7 +95,7 @@ namespace ME.BECS.Bullets {
                     var direction = math.normalizesafe(vector);
                     var distance = math.length(vector);
                 
-                    var ray = new Ray2D((Vector2)prevPos.xz, (Vector2)direction.xz);
+                    var ray = new Ray2D(prevPos.xz, direction.xz);
                     var mask = ent.GetAspect<SpatialQueryAspect>().readQuery.treeMask;
                     if (this.qt.Raycast(ray, mask, distance, out var hitResult) == true) {
                         aspect.component.targetEnt = hitResult.obj;

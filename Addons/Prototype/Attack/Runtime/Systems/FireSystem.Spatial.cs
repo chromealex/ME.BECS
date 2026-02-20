@@ -42,7 +42,7 @@ namespace ME.BECS.Attack {
                             targetPosition = aspect.componentRuntimeFire.targets[0u];
                         }
 
-                        var bullet = AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
+                        var bullet = AttackUtils.CreateBulletSpatial(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
                                                  aspect.readComponentVisual.muzzleView, jobInfo: jobInfo);
                         if (ent.TryRead(out MaxHitCountComponent maxHitCountComponent) == true) {
                             var attack = bullet.ent.GetAspect<SpatialQueryAspect>();
@@ -91,8 +91,8 @@ namespace ME.BECS.Attack {
                                 targetPosition = aspect.componentRuntimeFire.targets[i];
                             }
 
-                            var bullet = AttackUtils.CreateBullet(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
-                                                     aspect.readComponentVisual.muzzleView, jobInfo: in jobInfo);
+                            var bullet = AttackUtils.CreateBulletSpatial(aspect, pos, rot, query.readQuery.treeMask, in target, in targetPosition, aspect.readComponentVisual.bulletConfig,
+                                                                         aspect.readComponentVisual.muzzleView, jobInfo: in jobInfo);
                             if (ent.TryRead(out MaxHitCountComponent maxHitCountComponent) == true) {
                                 var attack = bullet.ent.GetAspect<SpatialQueryAspect>();
                                 attack.query.nearestCount = maxHitCountComponent.value;

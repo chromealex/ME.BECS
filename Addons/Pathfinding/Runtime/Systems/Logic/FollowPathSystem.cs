@@ -81,29 +81,31 @@ namespace ME.BECS.Pathfinding {
             [INLINE(256)]
             private void Move(ref TransformAspect tr, ref UnitAspect unit, in float3 movementDirection, bool isMoving) {
 
+                unit.componentRuntime.manualDirection = movementDirection;
+                
+                /*
                 var agent = unit.ent.Read<AgentComponent>();
                 var graph = this.buildGraphSystem.GetGraphByTypeId(unit.typeId);
-                var vel = unit.readComponentRuntime.alignmentVector + 
-                                unit.readComponentRuntime.desiredDirection +
-                                unit.readComponentRuntime.velocity +
-                                movementDirection;
+                var vel = unit.readComponentRuntime.desiredDirection + movementDirection;
+                unit.componentRuntime.desiredDirection = default;
                 var desiredDirection = math.normalizesafe(vel);
+                unit.velocity = movementDirection;
 
-                unit.componentRuntime.desiredDirection = desiredDirection;
-                var lengthSq = math.lengthsq(unit.readComponentRuntime.desiredDirection);
+                var lengthSq = math.lengthsq(desiredDirection);
                 
                 tfloat force = 0f;
                 if (lengthSq > math.EPSILON) {
                     this.buildGraphSystem.heights.GetHeight(tr.position, out var unitNormal);
+                    var forward = unit.readComponentRuntime.alignmentVector;
                     var rot = tr.rotation;
-                    var toRot = quaternion.LookRotation(unit.readComponentRuntime.desiredDirection, unitNormal);
+                    var toRot = quaternion.LookRotationSafe(forward, unitNormal);
                     var maxDegreesDelta = this.dt * unit.readRotationSpeed;
                     var qAngle = math.angle(rot, toRot);
                     if (qAngle != 0f) {
                         toRot = math.slerp(rot, toRot, math.min(1.0f, maxDegreesDelta / qAngle));
                     }
                     tr.rotation = toRot;
-                    var angle = mathext.angle(tr.forward, unit.readComponentRuntime.desiredDirection);
+                    var angle = mathext.angle(tr.forward, forward);
                     force = 1f - angle / 180f;
                 }
 
@@ -119,7 +121,7 @@ namespace ME.BECS.Pathfinding {
                     prevPos.y = 0f;
                     var newPos = prevPos;
                     //newPos += tr.forward * unit.speed * this.dt;
-                    newPos = Math.MoveTowards(newPos, newPos + unit.componentRuntime.desiredDirection, unit.readSpeed * this.dt);
+                    newPos = Math.MoveTowards(newPos, newPos + desiredDirection, unit.readSpeed * this.dt);
                     //newPos += unit.componentRuntime.collisionDirection * (this.followPathSystem.collisionForce * this.dt);
                     newPos = GraphUtils.GetPositionWithMapBorders(graph, out var collisionDirection, in newPos, in prevPos, in agent.filter);
                     var delta = collisionDirection * this.dt;
@@ -129,7 +131,7 @@ namespace ME.BECS.Pathfinding {
 
                     newPos.y = this.buildGraphSystem.heights.GetHeight(newPos);
                     tr.position = newPos;
-                }
+                }*/
 
             }
 

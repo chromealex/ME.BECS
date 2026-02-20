@@ -1,14 +1,15 @@
-
 using NativeTrees;
 using UnityEngine;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
+using Ray = ME.BECS.FixedPoint.Ray;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
+using Ray = UnityEngine.Ray;
 #endif
 
 namespace ME.BECS.Bullets {
@@ -52,7 +53,7 @@ namespace ME.BECS.Bullets {
                     var direction = math.normalizesafe(vector);
                     var distance = math.length(vector);
                 
-                    var ray = new Ray((Vector3)prevPos, (Vector3)direction);
+                    var ray = new Ray(prevPos, direction);
                     var mask = ent.GetAspect<OctreeQueryAspect>().readQuery.treeMask;
                     if (this.qt.Raycast(ray, mask, distance, out var hitResult) == true) {
                         aspect.component.targetEnt = hitResult.obj;

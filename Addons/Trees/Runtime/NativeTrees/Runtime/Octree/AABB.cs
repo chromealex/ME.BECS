@@ -4,12 +4,14 @@ using ME.BECS.FixedPoint;
 using static ME.BECS.FixedPoint.math;
 using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
+using Ray = ME.BECS.FixedPoint.Ray;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using static Unity.Mathematics.math;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
+using Ray = UnityEngine.Ray;
 #endif
 
 using System.Runtime.CompilerServices;

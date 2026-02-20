@@ -23,7 +23,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public ClassPtr(T data) {
-            this.gcHandle = (data != null ? System.Runtime.InteropServices.GCHandle.Alloc(data) : default);
+            this.gcHandle = (data != null ? System.Runtime.InteropServices.GCHandle.Alloc(data, System.Runtime.InteropServices.GCHandleType.Normal) : default);
             this.ptr = System.Runtime.InteropServices.GCHandle.ToIntPtr(this.gcHandle);
         }
 
@@ -32,6 +32,7 @@ namespace ME.BECS {
             if (this.gcHandle.IsAllocated == true) {
                 this.gcHandle.Free();
             }
+            this = default;
         }
 
         [INLINE(256)]

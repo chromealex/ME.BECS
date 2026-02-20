@@ -4,12 +4,14 @@ using ME.BECS.FixedPoint;
 using static ME.BECS.FixedPoint.math;
 using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
+using Ray2D = ME.BECS.FixedPoint.Ray2D;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using static Unity.Mathematics.math;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
+using Ray2D = UnityEngine.Ray2D;
 #endif
 
 namespace NativeTrees {
@@ -207,7 +209,7 @@ namespace NativeTrees {
         }
 
         [INLINE(256)]
-        public bool RaycastAABB(UnityEngine.Ray2D ray, out SpatialRaycastHit raycastHit, sfloat distance) {
+        public bool RaycastAABB(Ray2D ray, out SpatialRaycastHit raycastHit, sfloat distance) {
             raycastHit = default;
             if (this.tempObjects.Count == 0) return false;
 
