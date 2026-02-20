@@ -22,18 +22,13 @@ namespace ME.BECS.Units {
     public struct RVOSystem : IUpdate, IDrawGizmos {
 
         public static RVOSystem Default => new RVOSystem() {
-            brakeStrength = 2f,
             minSpeedFactor = 0.3f,
             timeHorizon = 1.5f,
             avoidanceWeight = 1.5f,
-            velocitySpeed = 5f,
         };
 
         public tfloat timeHorizon;
         public tfloat avoidanceWeight;
-        public tfloat velocitySpeed;
-        
-        public tfloat brakeStrength;
         public tfloat minSpeedFactor;
 
         public bool drawGizmos;
