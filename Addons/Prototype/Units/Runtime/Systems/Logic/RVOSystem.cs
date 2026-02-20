@@ -102,7 +102,7 @@ namespace ME.BECS.Units {
             
             unit.componentRuntime.desiredDirection = unit.velocity * dt;
 
-            unit.componentRuntime.alignmentVector = float3.zero;
+            unit.componentRuntime.alignmentVector = unit.readComponentRuntime.desiredDirection;
             if (math.lengthsq(unit.readVelocity) > 0.01f) {
                 unit.componentRuntime.alignmentVector = math.normalizesafe(unit.readVelocity);
             }
@@ -111,7 +111,6 @@ namespace ME.BECS.Units {
 
         private bool ResolveOverlap(in TransformAspect tr, in UnitAspect currentUnit, ListAuto<Ent> list, tfloat dt) {
             var collideWithEnd = false;
-            var maxPushPerFrame = currentUnit.readMaxSpeed * dt;
             foreach (var unitEnt in list) {
                 var unit = unitEnt.GetAspect<UnitAspect>();
                 var unitTr = unitEnt.GetAspect<TransformAspect>();
@@ -125,8 +124,6 @@ namespace ME.BECS.Units {
                     var pushDir = math.normalizesafe(diff);
 
                     var delta = pushDir * (penetration * 0.5f);
-                    var deltaLength = math.length(delta);
-                    if (deltaLength > maxPushPerFrame) delta = pushDir * maxPushPerFrame;
                     currentUnit.componentRuntime.collisionDirection += delta;
                     unit.componentRuntime.collisionDirection -= delta;
                     if (collideWithEnd == false && unit.readUnitCommandGroup == currentUnit.readUnitCommandGroup) {
