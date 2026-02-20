@@ -1,9 +1,11 @@
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
+using Ray2D = ME.BECS.FixedPoint.Ray2D;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
+using Ray2D = UnityEngine.Ray2D;
 #endif
 
 namespace ME.BECS {
@@ -323,7 +325,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Raycast(UnityEngine.Ray2D ray, int mask, sfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(Ray2D ray, int mask, sfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.SpatialRaycastHitMinNode>(this.treesCount, Constants.ALLOCATOR_TEMP);

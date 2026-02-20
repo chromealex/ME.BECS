@@ -3,11 +3,13 @@ using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
+using Ray = ME.BECS.FixedPoint.Ray;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
+using Ray = UnityEngine.Ray;
 #endif
 
 using UnityEngine;
@@ -37,8 +39,8 @@ namespace NativeTrees {
         public readonly float2 radius;
 
         public PrecomputedRay(Ray ray, float2 radius) {
-            this.origin = (float3)ray.origin;
-            this.dir = (float3)ray.direction;
+            this.origin = ray.origin;
+            this.dir = ray.direction;
             this.invDir = 1f / this.dir;
             this.radius = radius;
         }

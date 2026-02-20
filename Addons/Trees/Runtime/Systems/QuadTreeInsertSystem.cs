@@ -1,9 +1,11 @@
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
+using Ray2D = ME.BECS.FixedPoint.Ray2D;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
+using Ray2D = UnityEngine.Ray2D;
 #endif
 
 namespace ME.BECS {
@@ -444,7 +446,7 @@ namespace ME.BECS {
 
         }
 
-        public bool Raycast(UnityEngine.Ray2D ray, int mask, tfloat distance, out QuadtreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(Ray2D ray, int mask, tfloat distance, out QuadtreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.QuadtreeRaycastHitMinNode<Ent>>(this.treesCount, Constants.ALLOCATOR_TEMP);

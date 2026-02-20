@@ -3,11 +3,13 @@ using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
 using Rect = ME.BECS.FixedPoint.Rect;
+using Ray2D = ME.BECS.FixedPoint.Ray2D;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
+using Ray2D = UnityEngine.Ray2D;
 #endif
 
 using System;

@@ -1,9 +1,11 @@
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
+using Ray = ME.BECS.FixedPoint.Ray;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
+using Ray = UnityEngine.Ray;
 #endif
 
 namespace ME.BECS {
@@ -446,11 +448,11 @@ namespace ME.BECS {
 
         }
 
-        public bool Raycast(UnityEngine.Ray ray, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(Ray ray, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             return this.Raycast(ray, float2.zero, mask, distance, out raycastHit, ignoreSorting);
         }
 
-        public bool Raycast(UnityEngine.Ray ray, float2 radius, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(Ray ray, float2 radius, int mask, tfloat distance, out NativeTrees.OctreeRaycastHit<Ent> raycastHit, bool ignoreSorting = false) {
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.OctreeRaycastHitMinNode<Ent>>(this.treesCount, Constants.ALLOCATOR_TEMP);
             for (int i = 0; i < this.treesCount; ++i) {
@@ -463,7 +465,7 @@ namespace ME.BECS {
                     if (ignoreSorting == true) return true;
                     heap.Push(new NativeTrees.OctreeRaycastHitMinNode<Ent>() {
                         data = hitResult,
-                        cost = math.distancesq((float3)ray.origin, hitResult.point),
+                        cost = math.distancesq(ray.origin, hitResult.point),
                     });
                 }
             }
