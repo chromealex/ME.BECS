@@ -417,11 +417,16 @@ namespace ME.BECS.Network {
                 
             }
 
-            public void Add(NetworkPackage package, ulong currentTick) {
+            public void Add(NetworkPackage package, ulong currentTick, bool throwIfExist = true) {
 
                 ref var list = ref this.eventsByTick.GetValue(package.tick);
                 if (list.IsCreated == false) list = new SortedNetworkPackageList(ref this.state.ptr->allocator, this.properties.capacityPerTick);
-                list.Add(ref this.state.ptr->allocator, package);
+                try {
+                    list.Add(ref this.state.ptr->allocator, package);
+                } catch {
+                    if (throwIfExist == true) throw;
+                    return;
+                }
                 
                 Logger.Network.Log($"Added package (now: {currentTick}): {package}");
 
@@ -1343,29 +1348,54 @@ namespace ME.BECS.Network {
             }
         }
 
-        public byte[] SerializeAllEvents() {
+        public uint CountEventsInRange(ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
+
             var events = this.GetEvents();
             var cnt = 0u;
             foreach (var e in events) {
+                // Skip events out of range
+                if (e.key < tickFrom || e.key > tickTo) continue;
                 cnt += e.value.Count;
             }
-            var stream = new StreamBufferWriter(cnt * 24u); // avg bytes per package
-            stream.Write(this.GetResetState().ptr->tick);
+
+            return cnt;
+
+        }
+
+        public byte[] SerializeAllEvents(ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
+
+            var cnt = this.CountEventsInRange(tickFrom, tickTo);
+            var stream = new StreamBufferWriter(cnt * 24u);
+
+            this.SerializeAllEvents(ref stream, tickFrom, tickTo);
+            var bytes = stream.ToArray();
+            stream.Dispose();
+
+            return bytes;
+
+        }
+
+        public void SerializeAllEvents(ref StreamBufferWriter stream, ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
+
+            var cnt = this.CountEventsInRange(tickFrom, tickTo);
+
+            var events = this.GetEvents();
+
+            stream.Write(math.max(this.GetResetState().ptr->tick, tickFrom));
             stream.Write(cnt);
             foreach (var e in events) {
+                if (e.key < tickFrom || e.key > tickTo) continue;
                 for (uint i = 0u; i < e.value.Count; ++i) {
                     var evt = e.value[this.data.ptr->networkWorld.state.ptr->allocator, i];
                     evt.Serialize(ref stream);
                 }
             }
-            var bytes = stream.ToArray();
-            stream.Dispose();
-            return bytes;
+
         }
 
-        public bool DeserializeAllEvents(byte[] bytes) {
+        public bool DeserializeAllEvents(ref StreamBufferReader reader, bool updateServerTime = true, bool cleanOld = false, bool throwIfExist = true, bool throwFurther = true) {
+
             try {
-                var reader = new StreamBufferReader(bytes);
                 uint count = 0u;
                 ulong startTick = 0UL;
                 reader.Read(ref startTick);
@@ -1376,14 +1406,34 @@ namespace ME.BECS.Network {
                     events.Add(package);
                 }
                 this.RewindTo(startTick);
-                this.data.ptr->eventsStorage.Clear();
-                this.data.ptr->statesStorage.Clear();
-                this.GetResetState().ptr->tick = startTick;
-                foreach (var package in events) {
-                    this.data.ptr->eventsStorage.Add(package, package.tick);
+
+                if (cleanOld == true) {
+                    this.data.ptr->eventsStorage.Clear();
+                    this.data.ptr->statesStorage.Clear();
                 }
-                this.SetServerStartTime(startTick * this.properties.tickTime, in this.data.ptr->connectedWorld);
-                this.SetServerTime(startTick * this.properties.tickTime);
+
+                foreach (var package in events) {
+                    this.data.ptr->eventsStorage.Add(package, package.tick, throwIfExist: throwIfExist);
+                }
+
+                if (updateServerTime == true) {
+                    this.SetServerStartTime(startTick * this.properties.tickTime, in this.data.ptr->connectedWorld);
+                    this.SetServerTime(startTick * this.properties.tickTime);
+                }
+
+            } catch (System.Exception ex) {
+                if (throwFurther == true) throw;
+                UnityEngine.Debug.LogException(ex);
+                return false;
+            }
+            return true;
+
+        }
+
+        public bool DeserializeAllEvents(byte[] bytes, bool updateServerTime = true, bool cleanOld = false, bool throwIfExist = true) {
+            try {
+                var reader = new StreamBufferReader(bytes);
+                return this.DeserializeAllEvents(ref reader, updateServerTime, cleanOld, throwIfExist, throwFurther: true);
             } catch (System.Exception ex) {
                 UnityEngine.Debug.LogException(ex);
                 return false;

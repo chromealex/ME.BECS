@@ -89,10 +89,10 @@ namespace ME.BECS.Units {
             var collideWithEnd = this.ResolveOverlap(in tr, in unit, list, dt);
             if (collideWithEnd == true || unit.IsPathFollow == false) {
                 newVelocity = float3.zero;
-                unit.componentRuntime.manualDirection = float3.zero;
+                unit.componentRuntime.pathDirection = float3.zero;
                 unit.componentRuntime.collideWithEnd = collideWithEnd;
             } else {
-                var desiredVelocity = math.normalizesafe(unit.readComponentRuntime.manualDirection) * unit.maxSpeed;
+                var desiredVelocity = math.normalizesafe(unit.readComponentRuntime.pathDirection) * unit.maxSpeed;
                 newVelocity = this.ComputeRVO(in tr, in unit, list, desiredVelocity, out tfloat danger);
                 var speedFactor = math.lerp(1f, this.minSpeedFactor, danger * unit.readDecelerationSpeed);
                 newVelocity *= speedFactor;

@@ -29,7 +29,7 @@ namespace ME.BECS {
         private static readonly uint CACHE_LINE_SIZE = _align(TSize<T>.size, JobUtils.CacheLineSize);
 
         private readonly MemPtr arrPtr;
-        public readonly uint Length => JobUtils.ThreadsCount;
+        public readonly uint Length => JobUtils.ThreadsCountFixed;
 
         public readonly bool IsCreated {
             [INLINE(256)]

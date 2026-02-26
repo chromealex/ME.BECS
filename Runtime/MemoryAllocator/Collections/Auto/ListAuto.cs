@@ -506,6 +506,17 @@ namespace ME.BECS {
             
         }
 
+        [INLINE(256)]
+        public uint IndexOf<U>(in U element) where U : unmanaged, System.IEquatable<U> {
+            for (uint i = 0u; i < this.Count; ++i) {
+                var item = this.arr.As<U>(i);
+                if (item.Equals(element) == true) {
+                    return i;
+                }
+            }
+            return uint.MaxValue;
+        }
+
         public uint GetReservedSizeInBytes() {
             
             return this.arr.GetReservedSizeInBytes();

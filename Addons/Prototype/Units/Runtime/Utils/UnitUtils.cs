@@ -20,8 +20,51 @@ namespace ME.BECS.Units {
         public const uint FLOAT_TO_UINT = 1000u;
         public const float UINT_TO_FLOAT = 1f / FLOAT_TO_UINT;
 
+        public const float GOLDEN_ANGLE = 2.399963f; // 137.5
+
         [INLINE(256)]
-        public static float3 GetSpiralPosition(in float3 center, int index, tfloat radius) {
+        public static float3 GetCircleRingPosition(float3 center, uint index, tfloat unitRadius) {
+            if (index == 0) return center;
+
+            tfloat spacing = unitRadius * 2f;
+            uint remaining = index;
+            uint ring = 0;
+
+            while (true) {
+                tfloat ringRadius = spacing * (ring + 1u);
+                uint capacity = (uint)math.floor(2f * math.PI * ringRadius / spacing);
+                if (remaining <= capacity) break;
+                remaining -= capacity;
+                ++ring;
+            }
+
+            tfloat currentRadius = spacing * (ring + 1u);
+            uint countOnRing = (uint)math.floor(2f * math.PI * currentRadius / spacing);
+
+            tfloat angleStep = 2f * math.PI / countOnRing;
+            tfloat angle = angleStep * (remaining - 1u);
+
+            return new float3(
+                center.x + math.cos(angle) * currentRadius,
+                center.y,
+                center.z + math.sin(angle) * currentRadius
+            );
+        }
+        
+        [INLINE(256)]
+        public static float3 GetSnailPosition(float3 center, uint index, tfloat unitRadius) {
+            tfloat spacing = unitRadius * 2f;
+            tfloat angle = index * GOLDEN_ANGLE;
+            tfloat radius = spacing * math.sqrt(index);
+            return new float3(
+                center.x + math.cos(angle) * radius,
+                center.y,
+                center.z + math.sin(angle) * radius
+            );
+        }
+        
+        [INLINE(256)]
+        public static float3 GetSpiralPosition(in float3 center, uint index, tfloat radius) {
             if (index == 0) return center;
             // (dx, dy) is a vector - direction in which we move right now
             int dx = 0;

@@ -272,8 +272,9 @@ namespace ME.BECS {
     [IgnoreProfiler]
     public static unsafe class JobUtils {
 
-        public const uint CacheLineSize = JobsUtility.CacheLineSize;
+        public const uint CacheLineSize = 64u;
         public static uint ThreadsCount => (uint)JobsUtility.ThreadIndexCount;
+        public static uint ThreadsCountFixed => 8u;
 
         public static void Initialize() {
             CleanUp();

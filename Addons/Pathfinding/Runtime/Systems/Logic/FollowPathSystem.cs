@@ -31,7 +31,7 @@ namespace ME.BECS.Pathfinding {
 
                 if (unit.IsPathFollow == false) {
                     // just apply rvo direction
-                    this.Move(ref tr, ref unit, in unit.componentRuntime.manualDirection, false);
+                    this.Move(ref tr, ref unit, in unit.componentRuntime.pathDirection, false);
                     return;
                 }
 
@@ -81,7 +81,7 @@ namespace ME.BECS.Pathfinding {
             [INLINE(256)]
             private void Move(ref TransformAspect tr, ref UnitAspect unit, in float3 movementDirection, bool isMoving) {
 
-                unit.componentRuntime.manualDirection = movementDirection;
+                unit.componentRuntime.pathDirection = movementDirection;
                 
                 /*
                 var agent = unit.ent.Read<AgentComponent>();

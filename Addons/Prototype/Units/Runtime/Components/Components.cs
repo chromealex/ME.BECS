@@ -43,7 +43,7 @@ namespace ME.BECS.Units {
         public float3 alignmentVector;
         public float3 desiredDirection;
         public float3 velocity;
-        public float3 manualDirection;
+        public float3 pathDirection;
 
         public Ent attackSensor;
         public bbool collideWithEnd;

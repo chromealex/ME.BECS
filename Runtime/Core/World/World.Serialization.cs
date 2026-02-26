@@ -53,6 +53,13 @@ namespace ME.BECS {
         public static State Deserialize(this ref State state, byte[] bytes) {
 
             var buffer = new StreamBufferReader(bytes);
+            return state.Deserialize(ref buffer);
+
+        }
+
+        [INLINE(256)]
+        public static State Deserialize(this ref State state, ref StreamBufferReader buffer) {
+
             // Read allocator data
             var copy = state;
             copy.allocator.Deserialize(ref buffer);

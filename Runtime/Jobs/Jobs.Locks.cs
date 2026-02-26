@@ -20,7 +20,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
-            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCount;
+            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCountFixed;
             var arr = _make(size, TAlign<int>.alignInt, allocator);
             _memclear(arr, size);
             return new ReadWriteNativeSpinner() {
@@ -32,7 +32,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private int ReadCount() {
             var cnt = 0;
-            for (uint i = 0u; i < JobUtils.ThreadsCount; ++i) {
+            for (uint i = 0u; i < JobUtils.ThreadsCountFixed; ++i) {
                 cnt += *(int*)(this.value + i * CACHE_LINE_SIZE).ptr;
             }
             return cnt;
@@ -143,7 +143,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static ReadWriteSpinner Create(safe_ptr<State> state) {
-            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCount;
+            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCountFixed;
             var arr = state.ptr->allocator.Alloc(size, out var ptr);
             state.ptr->allocator.MemClear(arr, 0L, size);
             return new ReadWriteSpinner() {
@@ -158,7 +158,7 @@ namespace ME.BECS {
         private int ReadCount(safe_ptr<State> state) {
             var cnt = 0;
             var ptr = state.ptr->allocator.GetUnsafePtr(this.value);
-            for (uint i = 0u; i < JobUtils.ThreadsCount; ++i) {
+            for (uint i = 0u; i < JobUtils.ThreadsCountFixed; ++i) {
                 #if USE_CACHE_PTR
                 cnt += this.ptr[i * CACHE_LINE_SIZE];
                 #else

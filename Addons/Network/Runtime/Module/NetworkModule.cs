@@ -231,8 +231,8 @@ namespace ME.BECS.Network {
         
         public bool IsInReplayMode() => this.networkState == NetworkState.Replay;
 
-        public byte[] SerializeAllEvents() {
-            return this.network.SerializeAllEvents();
+        public byte[] SerializeAllEvents(ulong tickFrom = ulong.MinValue, ulong tickTo = ulong.MaxValue) {
+            return this.network.SerializeAllEvents(tickFrom, tickTo);
         }
 
         public bool DeserializeAllEvents(byte[] bytes) {
