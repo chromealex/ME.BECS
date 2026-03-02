@@ -435,6 +435,14 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static int Decrement(ref int value) {
+            E.ADDR_4(ref value);
+            unchecked {
+                return System.Threading.Interlocked.Decrement(ref value);
+            }
+        }
+
+        [INLINE(256)]
         public static void Increment(ref float value, float count) {
             E.ADDR_4(ref value);
             float initialValue;

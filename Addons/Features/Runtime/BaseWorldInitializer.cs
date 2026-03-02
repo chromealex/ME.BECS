@@ -8,11 +8,11 @@ namespace ME.BECS {
 
     public static class WorldInitializers {
 
-        private static scg::List<BaseWorldInitializer> list = new scg::List<BaseWorldInitializer>();
+        private static readonly scg::List<BaseWorldInitializer> list = new scg::List<BaseWorldInitializer>();
 
         public static BaseWorldInitializer GetByWorldName(FixedString64Bytes worldName) {
             foreach (var item in list) {
-                if (item.properties.name == worldName) {
+                if (item?.properties.name == worldName) {
                     return item;
                 }
             }
