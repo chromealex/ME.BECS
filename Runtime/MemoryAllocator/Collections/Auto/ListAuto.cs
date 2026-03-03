@@ -269,6 +269,17 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public void Sort<U, TComparer>() where U : unmanaged, System.IComparable<U> where TComparer : struct, System.Collections.Generic.IComparer<U> {
+            TComparer comparer = default;
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count, comparer);
+        }
+
+        [INLINE(256)]
+        public void Sort<U, TComparer>(TComparer comparer) where U : unmanaged, System.IComparable<U> where TComparer : struct, System.Collections.Generic.IComparer<U> {
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count, comparer);
+        }
+
+        [INLINE(256)]
         public readonly bool Contains<U>(U obj) where U : unmanaged, System.IEquatable<T> {
             
             E.IS_CREATED(this);
