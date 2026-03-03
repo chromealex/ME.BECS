@@ -79,14 +79,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Read(ref Unity.Burst.Intrinsics.v256 value) {
-            this.Read(ref value.ULong0);
-            this.Read(ref value.ULong1);
-            this.Read(ref value.ULong2);
-            this.Read(ref value.ULong3);
-        }
-
-        [INLINE(256)]
         public void Read(ref LockSpinner value) {
             this.Read(ref value.value);
         }

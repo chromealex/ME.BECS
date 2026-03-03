@@ -79,14 +79,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public void Write(Unity.Burst.Intrinsics.v256 value) {
-            this.Write(value.ULong0);
-            this.Write(value.ULong1);
-            this.Write(value.ULong2);
-            this.Write(value.ULong3);
-        }
-
-        [INLINE(256)]
         public void Write(LockSpinner value) {
             this.Write(value.value);
         }
