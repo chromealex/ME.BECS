@@ -12,7 +12,7 @@ namespace ME.BECS {
 
         public static BaseWorldInitializer GetByWorldName(FixedString64Bytes worldName) {
             foreach (var item in list) {
-                if (item?.properties.name == worldName) {
+                if (item != null && item.properties.name == worldName) {
                     return item;
                 }
             }
