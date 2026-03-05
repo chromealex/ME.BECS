@@ -66,6 +66,7 @@ namespace ME.BECS.NativeCollections {
 
             if (this.mHead < 0) {
                 this.mHead = this.mLength;
+                node.Next = -1;
             } else if (node.ExpectedCost < this[this.mHead].ExpectedCost) {
                 node.Next = this.mHead;
                 this.mHead = this.mLength;
