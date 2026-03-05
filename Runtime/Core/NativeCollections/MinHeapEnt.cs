@@ -77,6 +77,7 @@ namespace ME.BECS.NativeCollections {
 
             if (this.mHead < 0) {
                 this.mHead = this.mLength;
+                node.next = -1;
             } else if (node.expectedCost < this[this.mHead].expectedCost) {
                 node.next = this.mHead;
                 this.mHead = this.mLength;
@@ -103,6 +104,7 @@ namespace ME.BECS.NativeCollections {
         public int Pop() {
             var result = this.mHead;
             this.mHead = this[this.mHead].next;
+            this.mLength--;
             return result;
         }
 
