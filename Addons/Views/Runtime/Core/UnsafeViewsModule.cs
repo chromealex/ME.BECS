@@ -486,6 +486,7 @@ namespace ME.BECS.Views {
                 if (viewComponent.source.providerId < registeredProviders.Data.Length) {
                     ref var item = ref *(registeredProviders.Data.Ptr + viewComponent.source.providerId);
                     E.IS_CREATED(item);
+                    sourceEnt.Remove(item.typeId);
                     ent.Set(item.typeId, null);
                 }
                 return true;

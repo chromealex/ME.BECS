@@ -419,6 +419,8 @@ namespace ME.BECS.Views {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref AssignViewComponent component) {
 
+                if (component.isUsed == true) return;
+                
                 var assignToEntId = ent.id;
                 var sourceEntId = component.sourceEnt.id;
                 if (this.viewsModuleData.ptr->renderingOnSceneBits.IsSet((int)sourceEntId) == true) {
@@ -439,11 +441,11 @@ namespace ME.BECS.Views {
                     }
 
                     var srcHasViewComponent = false;
-                    var srcIsAlive = false;
+                    //var srcIsAlive = false;
                     if (component.sourceEnt.IsAlive() == true) {
                         // Check if we have created new view
                         srcHasViewComponent = component.sourceEnt.Has<ViewComponent>();
-                        srcIsAlive = true;
+                        //srcIsAlive = true;
                     }
                     if (srcHasViewComponent == false) {
                         // If source entity has no view component - Clean up
@@ -457,15 +459,16 @@ namespace ME.BECS.Views {
                     }
                     
                     // Assign provider
-                    var providerId = component.source.providerId;
+                    /*var providerId = component.source.providerId;
                     if (providerId > 0u && component.source.providerId < this.registeredProviders.Length) {
                         ref var item = ref *(this.registeredProviders.Ptr + component.source.providerId);
                         E.IS_CREATED(item);
                         if (srcIsAlive == true) component.sourceEnt.Remove(item.typeId);
                         ent.Set(item.typeId, null);
-                    }
+                    }*/
 
-                    ent.Remove<AssignViewComponent>();
+                    //ent.Remove<AssignViewComponent>();
+                    component.isUsed = true;
                     this.toAssign.TryAdd(sourceEntId, assignToEntId);
 
                 }

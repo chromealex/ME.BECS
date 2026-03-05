@@ -5,7 +5,9 @@
         "ME.BECS",
         "Unity.Burst",
         "ME.BECS.Transforms",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "Unity.Collections",
+        "ME.BECS.Views"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

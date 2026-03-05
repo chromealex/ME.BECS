@@ -34,6 +34,7 @@ namespace ME.BECS.Views {
 
         public ViewSource source;
         public Ent sourceEnt;
+        public bbool isUsed;
 
     }
 

@@ -1,3 +1,6 @@
+
+using ME.BECS.Transforms;
+using ME.BECS.Views;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -12,6 +15,11 @@ using Rect = UnityEngine.Rect;
 
 namespace ME.BECS {
 
+    public enum DestroyBehaviour : byte {
+        UseSource = 0,
+        CreateVisualCopy,
+    }
+    
     public static class EntExt {
 
         private static void CleanUpDestroyComponents(in Ent ent) {
@@ -19,6 +27,39 @@ namespace ME.BECS {
             ent.Remove<DestroyWithLifetime>();
             ent.Remove<DestroyWithLifetimeMs>();
             ent.Remove<DestroyWithTicks>();
+            
+        }
+
+        public static bool HasDestroyLifetime(this Ent ent) {
+            return ent.Has<DestroyWithLifetime>() == true ||
+                   ent.Has<DestroyWithLifetimeMs>() == true ||
+                   ent.Has<DestroyWithTicks>() == true;
+        }
+
+        public static bool HasDestroyLifetime(this EntRO ent) {
+            return ent.Has<DestroyWithLifetime>() == true ||
+                   ent.Has<DestroyWithLifetimeMs>() == true ||
+                   ent.Has<DestroyWithTicks>() == true;
+        }
+
+        public static void DestroyWithLifetime(this in Ent ent, DestroyBehaviour destroyBehaviour = DestroyBehaviour.UseSource) {
+
+            if (ent.TryRead(out DestroyWithLifetimeConfigMs destroyWithLifetime) == true) {
+                if (destroyBehaviour == DestroyBehaviour.UseSource) {
+                    ent.Destroy(destroyWithLifetime.lifetime);
+                } else {
+                    var srcTr = ent.GetAspect<TransformAspect>();
+                    var copy = Ent.New(JobInfo.Create(ent.worldId));
+                    var tr = copy.Set<TransformAspect>();
+                    tr.position = srcTr.position;
+                    tr.rotation = srcTr.rotation;
+                    copy.AssignView(ent);
+                    copy.Destroy(destroyWithLifetime.lifetime);
+                    ent.DestroyHierarchy();
+                }
+            } else {
+                ent.DestroyHierarchy();
+            }
             
         }
 

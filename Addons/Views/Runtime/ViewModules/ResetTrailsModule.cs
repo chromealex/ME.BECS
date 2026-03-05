@@ -28,7 +28,7 @@ namespace ME.BECS.Views {
 
         public void OnValidate(GameObject gameObject) {
             
-            this.particleSystems = gameObject.GetComponentsInChildren<ParticleSystem>(true).Where(x => x.trails.enabled).ToArray();
+            this.particleSystems = gameObject.GetComponentsInChildren<ParticleSystem>(true).Where(x => x.trails.enabled || x.emission.rateOverDistance.constant > 0f).ToArray();
             this.trailRenderers = gameObject.GetComponentsInChildren<TrailRenderer>(true);
             
         }
