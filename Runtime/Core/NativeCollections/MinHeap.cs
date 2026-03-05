@@ -105,6 +105,7 @@ namespace ME.BECS.NativeCollections {
         public int Pop() {
             var result = this.mHead;
             this.mHead = this[this.mHead].Next;
+            this.mLength--;
             return result;
         }
 
