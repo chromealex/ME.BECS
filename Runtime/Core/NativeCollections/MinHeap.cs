@@ -82,7 +82,7 @@ namespace ME.BECS.NativeCollections {
                 node.Next = current.Next;
                 current.Next = this.mLength;
 
-                this.Set(currentPtr, in current);
+                this.mBuffer[currentPtr] = current;
             }
 
             this.Set(this.mLength, in node);
