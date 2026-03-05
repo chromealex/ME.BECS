@@ -15,12 +15,20 @@ namespace ME.BECS.Editor.Aspects {
             var allStaticComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
             var allSharedComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentShared>().OrderBy(x => x.FullName).ToArray();
             allComponents = allComponents.Concat(allStaticComponents).Concat(allSharedComponents).ToArray();
+            this.cache.SetKey("CollectionsCount");
             foreach (var component in allComponents) {
 
                 if (component.IsValueType == false) continue;
                 if (this.IsValidTypeForAssembly(component) == false) continue;
 
-                var collectionsCount = GetCollectionsCount(component);
+                uint collectionsCount;
+                if (this.cache.TryGetValue<uint>(component, out var cachedCount) == false) {
+                    collectionsCount = GetCollectionsCount(component);
+                    this.cache.Add(component, collectionsCount);
+                } else {
+                    collectionsCount = cachedCount;
+                }
+                
                 if (collectionsCount == 0u) continue;
                 var type = EditorUtils.GetTypeName(component);
                 var str = $"StaticTypes<{type}>.SetCollectionsCount({collectionsCount}u);";
@@ -89,7 +97,7 @@ namespace ME.BECS.Editor.Aspects {
                     if (typeof(IUnmanagedList).IsAssignableFrom(fieldType) == true) {
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        var typeStr = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
+                        var typeStr = EditorUtils.FormatGenericTypeWithSingleArgument(fieldType, gType);
                         var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
                         content.Add("{");
                         content.Add($"var component = ({strType}*)componentPtr;");
