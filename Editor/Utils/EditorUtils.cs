@@ -1222,7 +1222,26 @@ namespace ME.BECS.Editor {
         public static System.Type MakeGenericConstraintType(System.Type type) {
             return type.MakeGenericType(GetFirstGenericConstraintType(type));
         }
-        
+
+        public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type baseTypeWithout) {
+            return GetTypesDerivedFrom(genType, baseTypeWithout.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+        }
+
+        public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type[] withoutTypes = null) {
+            var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).Where(x => x.IsValueType).OrderBy(x => x.FullName);
+            if (withoutTypes != null) {
+                var list = types.ToArray();
+                foreach (var item in withoutTypes) {
+                    if (item.IsGenericType == true) {
+                        var type = item.GetGenericArguments()[0];
+                        list = list.Where(x => type.IsAssignableFrom(x) == false).ToArray();
+                    }
+                }
+                return list.ToArray();
+            }
+            return types.ToArray();
+        }
+
     }
 
 }

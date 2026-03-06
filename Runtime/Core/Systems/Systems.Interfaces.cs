@@ -1,7 +1,10 @@
 namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
-    
+
+    public interface IGenericWithout {}
+    public interface IGenericWithout<T> : IGenericWithout { }
+
     public interface ISystem {
 
     }
