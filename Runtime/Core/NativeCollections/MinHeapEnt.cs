@@ -16,14 +16,14 @@ namespace ME.BECS.NativeCollections {
 
     public struct NativeMinHeapEnt : IDisposable {
 
-        public uint Count => (uint)this.mLength;
+        public uint Count => (uint)this.mBufferLength;
 
         private safe_ptr<MinHeapNodeEnt> mBuffer;
         private uint mCapacity;
         private Allocator mAllocatorLabel;
 
         private int mHead;
-        private int mLength;
+        private int mBufferLength;
         //private int mMinIndex;
         //private int mMaxIndex;
 
@@ -53,7 +53,7 @@ namespace ME.BECS.NativeCollections {
             //nativeMinHeap.mMinIndex = 0;
             //nativeMinHeap.mMaxIndex = capacity - 1;
             nativeMinHeap.mHead = -1;
-            nativeMinHeap.mLength = 0;
+            nativeMinHeap.mBufferLength = 0;
 
         }
 
@@ -65,9 +65,9 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void EnsureCapacity(uint capacity) {
 
-            var free = this.mCapacity - (uint)this.mLength;
+            var free = this.mCapacity - (uint)this.mBufferLength;
             if (free < capacity) {
-                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mLength);
+                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mBufferLength);
             }
 
         }
@@ -76,11 +76,11 @@ namespace ME.BECS.NativeCollections {
         public void Push(MinHeapNodeEnt node) {
 
             if (this.mHead < 0) {
-                this.mHead = this.mLength;
+                this.mHead = this.mBufferLength;
                 node.next = -1;
             } else if (node.expectedCost < this[this.mHead].expectedCost) {
                 node.next = this.mHead;
-                this.mHead = this.mLength;
+                this.mHead = this.mBufferLength;
             } else {
                 var currentPtr = this.mHead;
                 var current = this[currentPtr];
@@ -91,20 +91,19 @@ namespace ME.BECS.NativeCollections {
                 }
 
                 node.next = current.next;
-                current.next = this.mLength;
+                current.next = this.mBufferLength;
 
                 this.mBuffer[currentPtr] = current;
             }
 
-            this.mBuffer[this.mLength] = node;
-            ++this.mLength;
+            this.mBuffer[this.mBufferLength] = node;
+            ++this.mBufferLength;
         }
 
         [INLINE(256)]
         public int Pop() {
             var result = this.mHead;
             this.mHead = this[this.mHead].next;
-            this.mLength--;
             return result;
         }
 
@@ -113,7 +112,7 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Clear() {
             this.mHead = -1;
-            this.mLength = 0;
+            this.mBufferLength = 0;
         }
 
         [INLINE(256)]
