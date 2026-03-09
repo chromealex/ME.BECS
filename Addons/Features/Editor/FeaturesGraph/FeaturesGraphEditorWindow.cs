@@ -275,7 +275,7 @@ namespace ME.BECS.Editor.FeaturesGraph {
         
         private void OnScaleChanged() {
             
-            var scaleX = this.graphView.viewTransform.scale.x;
+            var scaleX = this.graphView.resolvedStyle.scale.value.x;
             var op = Mathf.Lerp(0f, maxOpacity, Mathf.Clamp01(scaleX - 0.25f) * 2f);
             this.background.opacity = op;
 

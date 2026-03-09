@@ -17,6 +17,7 @@ namespace ME.BECS {
         public static Ent Clone(this in Ent source, ushort worldId) {
 
             var ent = Ent.New(worldId);
+            ent.EditorName = source.EditorName;
             ent.CopyFrom(in source);
             return ent;
 

@@ -231,11 +231,11 @@ namespace ME.BECS.Blueprints.Editor {
 
             if (this.graphView == null) return;
             if (forced == false &&
-                this.prevScale == this.graphView.viewTransform.scale &&
-                this.prevPos == this.graphView.viewTransform.position) return;
+                this.prevScale == this.graphView.resolvedStyle.scale &&
+                this.prevPos == this.graphView.resolvedStyle.translate) return;
 
-            this.prevScale = this.graphView.viewTransform.scale;
-            this.prevPos = this.graphView.viewTransform.position;
+            this.prevScale = this.graphView.resolvedStyle.scale.value;
+            this.prevPos = this.graphView.resolvedStyle.translate;
             
             if (this.graphView != null) {
                 if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);

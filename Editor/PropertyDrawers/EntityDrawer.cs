@@ -57,6 +57,7 @@ namespace ME.BECS.Editor {
         
         private static StyleSheet styleSheetBase;
         private static StyleSheet styleSheet;
+        private static StyleSheet styleSheetTooltip;
 
         private TempObject tempObject {
             get {
@@ -77,6 +78,9 @@ namespace ME.BECS.Editor {
         protected void LoadStyle() {
             if (EntityDrawer.styleSheetBase == null) {
                 EntityDrawer.styleSheetBase = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Entity.uss");
+            }
+            if (EntityDrawer.styleSheetTooltip == null) {
+                EntityDrawer.styleSheetTooltip = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/Tooltip.uss");
             }
             if (EntityDrawer.styleSheet == null) {
                 EntityDrawer.styleSheet = EditorUtils.LoadResource<StyleSheet>("ME.BECS.Resources/Styles/EntityConfig.uss");
@@ -101,9 +105,11 @@ namespace ME.BECS.Editor {
             this.LoadStyle();
 
             var rootVisualElement = new VisualElement();
+            EditorUIUtils.ApplyDefaultStyles(rootVisualElement);
             rootVisualElement.AddToClassList("entity-mini");
             rootVisualElement.Clear();
             rootVisualElement.styleSheets.Add(EntityDrawer.styleSheetBase);
+            rootVisualElement.styleSheets.Add(EntityDrawer.styleSheetTooltip);
             rootVisualElement.styleSheets.Add(EntityDrawer.styleSheet);
             this.rootVisualElement = rootVisualElement;
 
@@ -476,6 +482,7 @@ namespace ME.BECS.Editor {
 
         private readonly System.Collections.Generic.List<VisualElement> cachedFieldsComponents = new System.Collections.Generic.List<VisualElement>();
         private readonly System.Collections.Generic.List<VisualElement> cachedFieldsSharedComponents = new System.Collections.Generic.List<VisualElement>();
+
         private void RedrawComponents(World world) {
             
             DrawFields(this.entity, this.componentContainerComponentsRoot, this.componentContainerComponents, this.cachedFieldsComponents, world, this.tempObject.data, this.tempObject.dataHas, this.serializedObj, nameof(TempObject.data), methodSetComponent, methodReadComponent);
