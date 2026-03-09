@@ -88,7 +88,7 @@ namespace ME.BECS {
                         byte* comp = null;
                         var exists = true;
                         if (StaticTypes.sizes.Get(typeId) > 0) {
-                            comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);;
+                            comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);
                         } else {
                             exists = Components.HasUnknownType(state, typeId, ent.id, ent.gen, false);
                         }

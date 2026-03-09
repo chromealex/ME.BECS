@@ -128,13 +128,13 @@ namespace ME.BECS.Extensions.GraphProcessor
       layout1.y = 0.0f;
       Vector3 vector3_1 = default;
       ref Vector3 local = ref vector3_1;
-      double magnitude1 = (double) this.m_Container.transform.matrix.GetColumn(0).magnitude;
-      Matrix4x4 matrix = this.m_Container.transform.matrix;
+      double magnitude1 = (double) ((ITransform)this.m_Container).matrix.GetColumn(0).magnitude;
+      Matrix4x4 matrix = ((ITransform)this.m_Container).matrix;
       double magnitude2 = (double) matrix.GetColumn(1).magnitude;
-      matrix = this.m_Container.transform.matrix;
+      matrix = ((ITransform)this.m_Container).matrix;
       double magnitude3 = (double) matrix.GetColumn(2).magnitude;
       local = new Vector3((float) magnitude1, (float) magnitude2, (float) magnitude3);
-      matrix = this.m_Container.transform.matrix;
+      matrix = ((ITransform)this.m_Container).matrix;
       Vector4 column = matrix.GetColumn(3);
       Rect layout2 = this.m_Container.layout;
       //UnityEditor.HandleUtility.ApplyWireMaterial();

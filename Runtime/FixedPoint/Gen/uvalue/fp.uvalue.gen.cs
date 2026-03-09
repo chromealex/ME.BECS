@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator uvalue(uint value) => new uvalue(value);
+        public static implicit operator uvalue(uint value) => new uvalue(value * PRECISION);
         
         [INLINE(256)]
         public static uvalue operator *(float value1, uvalue value2) {

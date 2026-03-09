@@ -361,6 +361,10 @@ namespace ME.BECS {
                     if (this.masks.ptr != null && this.masks[i].Length > 1u) {
                         var dataPtr = Components.GetUnknownType(ent.World.state, typeId, groupId, in ent, out var isNew, default);
                         if (isNew == true) {
+                            if (StaticTypesAutoDestroy.Is(typeId) == true) {
+                                AutoDestroyRegistry.Destroy(state, in ent, typeId);
+                                AutoDestroyRegistry.Add(state, in ent, typeId);
+                            }
                             Batches.Set_INTERNAL(typeId, in ent);
                         }
                         if (this.functionMaskPointers[i].IsValid() == true) {

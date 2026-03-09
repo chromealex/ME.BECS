@@ -574,6 +574,7 @@ namespace ME.BECS.Editor.Systems {
                                                             methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
                                                             var withoutSync = IsSyncNotRequired(type);
                                                             AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", "localDependsOn", forceWithoutSync: withoutSync);
+                                                            index.AddGeneric();
                                                         }
                                                         methodContent.Add($"{prevIndex} = localDependsOn;");
                                                         methodContent.Add("}");

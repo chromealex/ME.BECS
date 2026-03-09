@@ -191,6 +191,10 @@ namespace ME.BECS {
             for (uint i = 0u; i < AspectTypeInfo.with.Get(aspectTypeId).Length; ++i) {
 
                 var typeId = AspectTypeInfo.with.Get(aspectTypeId).Get(i);
+                if (StaticTypesAutoDestroy.Is(typeId) == true) {
+                    AutoDestroyRegistry.Destroy(state, in ent, typeId);
+                    AutoDestroyRegistry.Add(state, in ent, typeId);
+                }
                 var has = Components.HasUnknownType(state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     Components.SetUnknownType(state, typeId, StaticTypes.tracker.Get(typeId), in ent, (void*)StaticTypes.defaultValues.Get(typeId));

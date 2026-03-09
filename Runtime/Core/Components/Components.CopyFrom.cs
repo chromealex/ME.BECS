@@ -82,6 +82,10 @@ namespace ME.BECS {
             var ptr = sourceState.ptr->components.items.GetUnsafePtr(in sourceState.ptr->allocator, typeId);
             var storage = ptr.ptr->AsPtr<DataDenseSet>(in sourceState.ptr->allocator);
             var data = storage.ptr->Read(sourceState, ent.id, ent.gen, out _);
+            if (StaticTypesAutoDestroy.Is(typeId) == true) {
+                AutoDestroyRegistry.Destroy(targetState, in targetEnt, typeId);
+                AutoDestroyRegistry.Add(targetState, in targetEnt, typeId);
+            }
             if (Components.SetUnknownType(targetState, typeId, groupId, in targetEnt, data) == true) {
                 Batches.Set_INTERNAL(typeId, in targetEnt);
             }

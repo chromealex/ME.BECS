@@ -68,8 +68,8 @@ namespace ME.BECS.Extensions.GraphProcessor
             {
                 if (!resetPositionOnPan || didConnect)
                 {
-                    Vector3 p = graphView.contentViewContainer.transform.position;
-                    Vector3 s = graphView.contentViewContainer.transform.scale;
+                    Vector3 p = graphView.contentViewContainer.resolvedStyle.translate;
+                    Vector3 s = graphView.contentViewContainer.resolvedStyle.scale.value;
                     graphView.UpdateViewTransform(p, s);
                 }
             }

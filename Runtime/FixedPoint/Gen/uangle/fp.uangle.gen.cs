@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator uangle(uint value) => new uangle(value);
+        public static implicit operator uangle(uint value) => new uangle(value * PRECISION);
         
         [INLINE(256)]
         public static uangle operator *(float value1, uangle value2) {

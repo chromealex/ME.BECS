@@ -5,6 +5,12 @@ namespace ME.BECS {
     public partial struct umeter {
 
         [INLINE(256)]
+        public static umeter FromSFloat(sfloat value) {
+            var ms = new umeter((uint)(value * PRECISION));
+            return ms;
+        }
+
+        [INLINE(256)]
         public static umeter operator *(ucvalue value1, umeter value2) {
             value2.value *= value1.value;
             value2.value /= PRECISION;
@@ -35,6 +41,12 @@ namespace ME.BECS {
     }
 
     public partial struct meter {
+
+        [INLINE(256)]
+        public static meter FromSFloat(sfloat value) {
+            var ms = new meter((int)(value * PRECISION));
+            return ms;
+        }
 
         [INLINE(256)]
         public static meter operator *(ucvalue value1, meter value2) {
@@ -235,6 +247,46 @@ namespace ME.BECS {
         [INLINE(256)]
         public static implicit operator ucvalue(usec value) {
             return new ucvalue(fpmath.clamp(value, usec.zero, usec.oneSecond).value / PRECISION * ucvalue.PRECISION);
+        }
+
+        [INLINE(256)]
+        public static usec operator -(usec value1, uint value2) {
+            return value1 - new usec(value2);
+        }
+
+        [INLINE(256)]
+        public static usec operator +(usec value1, uint value2) {
+            return value1 + new usec(value2);
+        }
+
+        [INLINE(256)]
+        public static bool operator <(usec value1, uint value2) {
+            return value1.value < value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator >(usec value1, uint value2) {
+            return value1.value > value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator <=(usec value1, uint value2) {
+            return value1.value <= value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator >=(usec value1, uint value2) {
+            return value1.value >= value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator ==(usec value1, uint value2) {
+            return value1.value == value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator !=(usec value1, uint value2) {
+            return !(value1 == value2);
         }
 
         [INLINE(256)]

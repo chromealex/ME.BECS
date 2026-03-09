@@ -416,7 +416,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public static JobHandle Apply(JobHandle jobHandle, in World world) {
             #if ENABLE_BECS_FLAT_QUERIES
-            var state = world.state;
             HandleStorage.lastApplyHandleBurst.Data = JobHandle.CombineDependencies(HandleStorage.lastApplyHandleBurst.Data, jobHandle);
             return jobHandle;
             #else

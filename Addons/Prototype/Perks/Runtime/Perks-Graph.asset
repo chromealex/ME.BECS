@@ -1,0 +1,368 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c47971b42c2144aeb6f0fb81f786410, type: 3}
+  m_Name: Perks-Graph
+  m_EditorClassIdentifier: ME.BECS.Features::ME.BECS.FeaturesGraph.SystemsGraph
+  id: 35
+  builtInGraph: 1
+  isInnerGraph: 1
+  serializedNodes: []
+  nodes:
+  - rid: 7440845035025989708
+  - rid: 7440845035025989709
+  - rid: 7440845035025989710
+  - rid: 7440845035025989712
+  - rid: 7440845035025989722
+  - rid: 7440845040229925114
+  edges:
+  - GUID: 38e27e36-3870-4431-b2c3-352101d139f7
+    owner: {fileID: 11400000}
+    inputNodeGUID: 432060a6-b0f6-4718-b085-c378f6f9a35a
+    outputNodeGUID: StartNode
+    inputFieldName: inputNodes
+    outputFieldName: output
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: d181c60f-8c98-496d-8b63-4583a21a190b
+    owner: {fileID: 11400000}
+    inputNodeGUID: a61c2e7b-7f91-4b11-a597-76893d4789c9
+    outputNodeGUID: 0ce6e82e-0f58-438a-b4b7-baabf52de1d0
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: bb7899d0-5141-488d-af23-912db7299fb2
+    owner: {fileID: 11400000}
+    inputNodeGUID: EndNode
+    outputNodeGUID: a61c2e7b-7f91-4b11-a597-76893d4789c9
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: b3f979d9-f70d-46cf-b90a-94cdd9f20ba1
+    owner: {fileID: 11400000}
+    inputNodeGUID: 490e5235-5922-4227-9885-1cf8bd47d5eb
+    outputNodeGUID: 432060a6-b0f6-4718-b085-c378f6f9a35a
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  - GUID: 10aa3850-cabb-4114-a0d8-c54d7fedd59c
+    owner: {fileID: 11400000}
+    inputNodeGUID: 0ce6e82e-0f58-438a-b4b7-baabf52de1d0
+    outputNodeGUID: 490e5235-5922-4227-9885-1cf8bd47d5eb
+    inputFieldName: inputNodes
+    outputFieldName: outputNodes
+    inputPortIdentifier: 
+    outputPortIdentifier: 
+  groups: []
+  stackNodes: []
+  pinnedElements: []
+  exposedParameters: []
+  serializedParameterList: []
+  stickyNotes: []
+  nodeInspectorReference: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 7440845035025989708
+      type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 0
+          syncCount: 1
+          hasMethod: 0
+        syncPoint: 0
+        syncCount: 1
+        nodeCustomName: 
+        GUID: StartNode
+        groupGUID: 
+        computeOrder: 0
+        position:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 100
+          height: 100
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 7440845035025989709
+      type: {class: ExitNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: EndNode
+        groupGUID: 
+        computeOrder: 5
+        position:
+          serializedVersion: 2
+          x: 1644.023
+          y: -0.00001692772
+          width: 100
+          height: 79.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        isInstance: 0
+    - rid: 7440845035025989710
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: 432060a6-b0f6-4718-b085-c378f6f9a35a
+        groupGUID: 
+        computeOrder: 1
+        position:
+          serializedVersion: 2
+          x: 168
+          y: 0
+          width: 300
+          height: 99
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 7440845098008707701
+    - rid: 7440845035025989712
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: a61c2e7b-7f91-4b11-a597-76893d4789c9
+        groupGUID: 
+        computeOrder: 4
+        position:
+          serializedVersion: 2
+          x: 1277.023
+          y: -0.00001692772
+          width: 300
+          height: 145.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 7440845098008707702
+    - rid: 7440845035025989722
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: 0ce6e82e-0f58-438a-b4b7-baabf52de1d0
+        groupGUID: 
+        computeOrder: 3
+        position:
+          serializedVersion: 2
+          x: 906.02295
+          y: -0.00001692772
+          width: 300
+          height: 145.5
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 7440845098008707703
+    - rid: 7440845040229925114
+      type: {class: SystemNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
+      data:
+        syncPoints:
+        - method: 0
+          syncPoint: 0
+          syncCount: 0
+          hasMethod: 0
+        - method: 1
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 2
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 3
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 1
+        - method: 4
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        - method: 5
+          syncPoint: 1
+          syncCount: 0
+          hasMethod: 0
+        syncPoint: 1
+        syncCount: 0
+        nodeCustomName: 
+        GUID: 490e5235-5922-4227-9885-1cf8bd47d5eb
+        groupGUID: 
+        computeOrder: 2
+        position:
+          serializedVersion: 2
+          x: 538.6201
+          y: -0.00001692772
+          width: 300
+          height: 99
+        expanded: 1
+        enabled: 1
+        debug: 0
+        nodeLock: 0
+        customRuntimeSystemRoot: {fileID: 0}
+        system:
+          rid: 7440845098008707704
+    - rid: 7440845098008707701
+      type: {class: PerksSystem, ns: ME.BECS.Perks, asm: ME.BECS.Perks}
+      data: 
+    - rid: 7440845098008707702
+      type: {class: 'PerkInitializeSystem`1[[ME.BECS.Perks.DefaultPerkInitializerComponent, ME.BECS.Perks]]', ns: ME.BECS.Perks, asm: ME.BECS.Perks}
+      data: 
+    - rid: 7440845098008707703
+      type: {class: 'PerkUpdateParallelSystem`1[[ME.BECS.Perks.DefaultParallelPerkComponent, ME.BECS.Perks]]', ns: ME.BECS.Perks, asm: ME.BECS.Perks}
+      data: 
+    - rid: 7440845098008707704
+      type: {class: 'PerkUpdateSystem`1[[ME.BECS.Perks.DefaultPerkComponent, ME.BECS.Perks]]', ns: ME.BECS.Perks, asm: ME.BECS.Perks}
+      data: 

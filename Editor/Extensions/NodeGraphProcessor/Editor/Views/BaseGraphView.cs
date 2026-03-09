@@ -413,8 +413,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 		{
 			if (graph != null)
 			{
-				graph.position = viewTransform.position;
-				graph.scale = viewTransform.scale;
+				graph.position = this.contentViewContainer.resolvedStyle.translate;
+				graph.scale = this.contentViewContainer.resolvedStyle.scale.value;
 			}
 		}
 		
@@ -849,8 +849,8 @@ namespace ME.BECS.Extensions.GraphProcessor
 			graph.onExposedParameterListChanged += OnExposedParameterListChanged;
 			graph.onExposedParameterModified += (s) => onExposedParameterModified?.Invoke(s);
 			graph.onGraphChanges += GraphChangesCallback;
-			viewTransform.position = graph.position;
-			viewTransform.scale = graph.scale;
+			this.contentViewContainer.style.translate = graph.position;
+			this.contentViewContainer.style.scale = graph.scale;
 			nodeCreationRequest = (c) => {
 				SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), this.createNodeMenu);
 			};
