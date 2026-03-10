@@ -103,7 +103,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var size = quadTreeAspect.rectSize;
@@ -121,7 +121,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref QuadTreeAspect quadTreeAspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeQuadtree<Ent>>)this.trees[quadTreeAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var radius = quadTreeAspect.readQuadTreeElement.radius;

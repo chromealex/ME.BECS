@@ -122,7 +122,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeAspect aspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (aspect.readOctreeElement.ignoreY == 1) pos.y = 0f;
@@ -146,7 +146,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref OctreeAspect aspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.NativeOctree<Ent>>)this.trees[aspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition();
                 if (aspect.readOctreeElement.ignoreY == 1) pos.y = 0f;
