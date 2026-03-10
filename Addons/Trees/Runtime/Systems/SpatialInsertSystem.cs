@@ -104,7 +104,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var size = spatialAspect.rectSize;
@@ -122,7 +122,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var radius = spatialAspect.readSpatialElement.radius;
