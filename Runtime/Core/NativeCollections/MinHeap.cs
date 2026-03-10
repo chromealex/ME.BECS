@@ -92,11 +92,7 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Set(int index, in T data) {
             if (index >= this.mCapacity) {
-                this.mCapacity *= 2u;
-                var size = TSize<T>.size * this.mCapacity;
-                var newPtr = _make(size, TAlign<T>.alignInt, this.mAllocatorLabel);
-                _memmove(this.mBuffer, newPtr, TSize<T>.size * this.mBufferLength);
-                this.mBuffer = newPtr;
+                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, this.mCapacity * 2u);
             }
             this.mBuffer[index] = data;
         }
