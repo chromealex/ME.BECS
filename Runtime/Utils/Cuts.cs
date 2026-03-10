@@ -352,11 +352,12 @@ namespace ME.BECS {
 
                 var size = newLength * TSize<T>.size;
                 var ptr = (safe_ptr<T>)_make(size, TAlign<T>.alignInt, allocator);
-                _memclear(ptr, size);
                 if (arr.ptr != null) {
                     _memcpy(arr, ptr, length * TSize<T>.size);
                     _memclear((safe_ptr)(ptr + length), (newLength - length) * TSize<T>.size);
                     if (free == true) _free(arr, allocator);
+                } else {
+                    _memclear(ptr, size);
                 }
 
                 arr = ptr;
