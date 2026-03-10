@@ -194,8 +194,9 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public bool IsAnyTargetInSector() {
 
-            if (this.ent.TryRead(out AttackSectorComponent sectorComponent) == false) {
-                return true;
+            var sector = this.readComponent.sector;
+            if (this.ent.TryRead(out AttackSectorComponent sectorComponent) == true) {
+                sector = sectorComponent.sector;
             }
 
             var tr = this.ent.GetAspect<TransformAspect>();
@@ -203,13 +204,13 @@ namespace ME.BECS.Attack {
 
                 for (uint i = 0u; i < attackTargetsComponent.targets.Count; ++i) {
                     var target = attackTargetsComponent.targets[i].GetAspect<TransformAspect>();
-                    if (IsTargetInSector(in tr, in target, in sectorComponent.sector) == true) return true;
+                    if (IsTargetInSector(in tr, in target, in sector) == true) return true;
                 }
 
             } else {
 
                 var target = this.target.GetAspect<TransformAspect>();
-                if (IsTargetInSector(in tr, in target, in sectorComponent.sector) == true) return true;
+                if (IsTargetInSector(in tr, in target, in sector) == true) return true;
                 
             }
 
