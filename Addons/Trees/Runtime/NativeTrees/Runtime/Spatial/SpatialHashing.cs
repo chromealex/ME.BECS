@@ -218,17 +218,17 @@ namespace NativeTrees {
 
         [INLINE(256)]
         public int2 GetCoord(float2 position) {
-            return new int2((int)math.round(position.x * this.invCellSize) * this.cellSize, (int)math.round(position.y * this.invCellSize) * this.cellSize);
+            return new int2((int)math.round(position.x * this.invCellSize), (int)math.round(position.y * this.invCellSize));
         }
 
         [INLINE(256)]
-        public bool RaycastAABB(Ray2D ray, out SpatialRaycastHit raycastHit, sfloat distance) {
+        public bool RaycastAABB(Ray2D ray, out SpatialRaycastHit raycastHit, tfloat distance) {
             raycastHit = default;
             if (this.tempObjects.Count == 0) return false;
 
             var precomputedRay2D = new PrecomputedRay2D(ray);
-            var position = (float2)ray.origin;
-            var dir = math.normalizesafe((float2)ray.direction);
+            var position = ray.origin;
+            var dir = math.normalizesafe(ray.direction);
             var cell = this.GetCoord(position);
             var targetCell = this.GetCoord(position + dir * distance);
 
@@ -269,7 +269,7 @@ namespace NativeTrees {
                 var px = (steep == true ? y : x);
                 var py = (steep == true ? x : y);
 
-                var hash = this.GetHash(new float2(px * this.cellSize, py * this.cellSize));
+                var hash = GetHash(px, py);
                 var e = this.data.GetValuesForKey(hash);
                 while (e.MoveNext() == true) {
                     var item = e.Current;

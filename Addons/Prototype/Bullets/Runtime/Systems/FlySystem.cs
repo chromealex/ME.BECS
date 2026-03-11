@@ -57,7 +57,7 @@ namespace ME.BECS.Bullets {
                     var mask = ent.GetAspect<QuadTreeQueryAspect>().readQuery.treeMask;
                     if (this.qt.Raycast(ray, mask, distance, out var hitResult) == true) {
                         aspect.component.targetEnt = hitResult.obj;
-                        tr.position = new float3(hitResult.point.x, 0f, hitResult.point.y);
+                        tr.position = new float3(hitResult.point.x, tr.position.y, hitResult.point.y);
                         aspect.IsReached = true;
                     }
                     
@@ -99,7 +99,7 @@ namespace ME.BECS.Bullets {
                     var mask = ent.GetAspect<SpatialQueryAspect>().readQuery.treeMask;
                     if (this.qt.Raycast(ray, mask, distance, out var hitResult) == true) {
                         aspect.component.targetEnt = hitResult.obj;
-                        tr.position = new float3(hitResult.point.x, 0f, hitResult.point.y);
+                        tr.position = new float3(hitResult.point.x, tr.position.y, hitResult.point.y);
                         aspect.IsReached = true;
                     }
                     

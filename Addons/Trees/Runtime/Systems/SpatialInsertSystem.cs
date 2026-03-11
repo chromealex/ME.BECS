@@ -325,7 +325,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool Raycast(Ray2D ray, int mask, sfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(Ray2D ray, int mask, tfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.SpatialRaycastHitMinNode>(this.treesCount, Constants.ALLOCATOR_TEMP);
@@ -337,7 +337,7 @@ namespace ME.BECS {
                     if (ignoreSorting == true) return true;
                     heap.Push(new NativeTrees.SpatialRaycastHitMinNode() {
                         data = hitResult,
-                        cost = math.distancesq((float2)ray.origin, hitResult.point),
+                        cost = math.distancesq(ray.origin, hitResult.point),
                     });
                 }
             }
