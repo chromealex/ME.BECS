@@ -72,6 +72,9 @@ namespace ME.BECS.Perks {
         public static bool CanUseSlot(in PlayerAspect owner, uint index) {
             var perksEnt = owner.ent;
             ref readonly var perks = ref perksEnt.Read<PerksComponent>();
+            if (index >= perks.slots.Count) {
+                return false;
+            }
             var slot = perks.slots[index];
             if (slot.Has<IsPerkSlotCooldownReadyComponent>() == false) {
                 return false;
