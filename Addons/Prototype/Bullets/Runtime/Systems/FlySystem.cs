@@ -86,7 +86,7 @@ namespace ME.BECS.Bullets {
                 var prevPos = tr.position;
                 tr.position = Math.MoveTowards(prevPos, aspect.readComponent.targetWorldPos, aspect.readConfig.speed * this.dt);
                 tr.rotation = quaternion.LookRotationSafe(tr.position - prevPos, math.up());
-                if (math.lengthsq(tr.position - aspect.readComponent.targetWorldPos) <= 0.01f) {
+                if (math.lengthsq(tr.position.xz - aspect.readComponent.targetWorldPos.xz) <= 0.01f) {
                     aspect.IsReached = true;
                 }
 
