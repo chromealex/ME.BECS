@@ -20,6 +20,10 @@ namespace ME.BECS.Perks {
             perk.owner = owner.ent;
             perkConfig.Apply(in ent);
 
+            if (ent.Has<IsPerkPassiveComponent>() == false) {
+                throw new System.Exception();
+            }
+
             ent.SetTag<IsPerkInitializeRequired>(true);
 
             return ent;
@@ -49,6 +53,10 @@ namespace ME.BECS.Perks {
             perk.component.slot = slot;
             perkConfig.Apply(in ent);
             
+            if (ent.Has<IsPerkActiveComponent>() == false) {
+                throw new System.Exception();
+            }
+
             slot.Set(ent.Read<PerkSlotComponent>());
             slot.Set(new PerkSlotRuntimeComponent() {
                 cooldown = initializationState.startCooldown,

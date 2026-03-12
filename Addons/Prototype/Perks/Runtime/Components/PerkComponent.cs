@@ -1,3 +1,5 @@
+using ME.BECS.Transforms;
+
 namespace ME.BECS.Perks {
 
     using ME.BECS;
@@ -10,6 +12,9 @@ namespace ME.BECS.Perks {
         
     }
 
+    public struct IsPerkActiveComponent : IComponent {}
+    public struct IsPerkPassiveComponent : IComponent {}
+    
     public interface IPerkInitializeComponent : IConfigComponent {
 
         [INLINE(256)]
@@ -48,7 +53,8 @@ namespace ME.BECS.Perks {
             if (owner.IsAlive() == true) {
                 for (uint i = 0u; i < this.perks.Length; ++i) {
                     var config = this.perks[i];
-                    PerksUtils.AddPassivePerk(JobInfo.Create(ent.worldId), owner.GetAspect<PlayerAspect>(), config);
+                    var perk = PerksUtils.AddPassivePerk(JobInfo.Create(ent.worldId), owner.GetAspect<PlayerAspect>(), config);
+                    perk.SetParent(ent);
                 }
             }
 
