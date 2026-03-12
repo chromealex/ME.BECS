@@ -48,8 +48,8 @@ namespace ME.BECS.Bullets {
                 }
 
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
-                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
                 bullet.ent.Remove<BulletConfigComponent>();
+                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
 
             }
 
@@ -90,8 +90,8 @@ namespace ME.BECS.Bullets {
                 }
 
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
-                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
                 bullet.ent.Remove<BulletConfigComponent>();
+                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
 
             }
 
@@ -132,8 +132,8 @@ namespace ME.BECS.Bullets {
                 }
 
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
-                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
                 bullet.ent.Remove<BulletConfigComponent>();
+                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
 
             }
 
