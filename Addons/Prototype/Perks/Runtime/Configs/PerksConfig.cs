@@ -1,9 +1,8 @@
-namespace ExtGameplay {
+namespace ME.BECS.Perks {
 
-    [UnityEngine.CreateAssetMenuAttribute]
-    public class PerksConfig : UnityEngine.ScriptableObject {
+    public struct PerksConfig : IConfigComponentStatic {
 
-        public ME.BECS.Config[] configs;
+        public MemArrayAuto<Config> configs;
 
     }
 
