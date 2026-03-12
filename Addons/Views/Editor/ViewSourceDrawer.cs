@@ -10,6 +10,8 @@ namespace ME.BECS.Views.Editor {
 
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             
+            ObjectReferenceRegistry.LoadForced();
+            
             var rootVisualElement = new VisualElement();
             rootVisualElement.Clear();
 
