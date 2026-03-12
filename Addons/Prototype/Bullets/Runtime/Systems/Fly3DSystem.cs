@@ -68,7 +68,7 @@ namespace ME.BECS.Bullets {
         public void OnUpdate(ref SystemContext context) {
 
             var qt = context.world.GetSystem<OctreeInsertSystem>();
-            var dependsOn = context.Query().AsParallel().WithAspect<OctreeQueryAspect>().Without<TargetReachedComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
+            var dependsOn = context.Query().AsParallel().WithAspect<OctreeQueryAspect>().Without<TargetReachedComponent>().Without<IsBulletCustomFlyComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
                 continuousTargetCheck = this.continuousTargetCheck,
                 qt = qt,
                 dt = context.deltaTime,

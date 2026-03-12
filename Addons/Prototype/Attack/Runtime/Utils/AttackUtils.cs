@@ -334,6 +334,7 @@ namespace ME.BECS.Attack {
                 var bullet = ent.GetOrCreateAspect<BulletAspect>();
                 if (bullet.readConfig.autoTarget == true) bullet.component.targetEnt = target;
                 bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
+                bullet.component.sourceWorldPos = position;
                 bullet.component.sourceUnit = sourceUnit;
 
                 if (attackAspect.ent.Has<DamageMinOverrideComponent>() == true) {

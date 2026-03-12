@@ -17,6 +17,9 @@ namespace ME.BECS.Bullets {
     }
     
     [ComponentGroup(typeof(BulletComponentGroup))]
+    public struct IsBulletCustomFlyComponent : IConfigComponent {}
+    
+    [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletConfigComponent : IConfigComponent {
 
         /// <summary>
