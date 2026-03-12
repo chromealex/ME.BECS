@@ -25,7 +25,7 @@ namespace ME.BECS.Bullets {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<HealthAspect>();
-                        targetUnit.Hit(bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position), bullet.readComponent.sourceUnit, in jobInfo);
+                        targetUnit.Hit(bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position, unit.GetAspect<UnitAspect>().readRadius), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
@@ -63,11 +63,12 @@ namespace ME.BECS.Bullets {
                 if (bullet.readConfig.hitRangeSqr > 0f) {
 
                     // use splash
+                    var center = tr.position;
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<HealthAspect>();
-                        targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                        targetUnit.Hit(bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position, unit.GetAspect<UnitAspect>().readRadius), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
@@ -105,11 +106,12 @@ namespace ME.BECS.Bullets {
                 if (bullet.readConfig.hitRangeSqr > 0f) {
 
                     // use splash
+                    var center = tr.position.xz;
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
                         var targetUnit = unit.GetAspect<HealthAspect>();
-                        targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                        targetUnit.Hit(bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position.xz, unit.GetAspect<UnitAspect>().readRadius), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {

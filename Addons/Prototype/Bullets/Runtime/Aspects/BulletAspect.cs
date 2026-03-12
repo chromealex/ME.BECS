@@ -42,7 +42,7 @@ namespace ME.BECS.Bullets {
             }
         }
 
-        public uint CalculateDamage(float3 bulletPosition, float3 unitPosition) {
+        public uint CalculateDamage(float2 bulletPosition, float2 unitPosition, tfloat unitRadius) {
             var damageMin = this.damageMin;
             var damageMax = this.damage;
             if (damageMin == damageMax) {
@@ -50,7 +50,21 @@ namespace ME.BECS.Bullets {
             }
 
             var hitRangeSqr = this.readConfig.hitRangeSqr;
-            var dist = math.distancesq(bulletPosition, unitPosition);
+            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
+            dist *= dist;
+            return (uint)math.lerp(damageMax, damageMin, dist / hitRangeSqr);
+        }
+
+        public uint CalculateDamage(float3 bulletPosition, float3 unitPosition, tfloat unitRadius) {
+            var damageMin = this.damageMin;
+            var damageMax = this.damage;
+            if (damageMin == damageMax) {
+                return damageMax;
+            }
+
+            var hitRangeSqr = this.readConfig.hitRangeSqr;
+            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
+            dist *= dist;
             return (uint)math.lerp(damageMax, damageMin, dist / hitRangeSqr);
         }
 
