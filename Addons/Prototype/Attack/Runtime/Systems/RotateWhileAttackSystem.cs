@@ -25,9 +25,12 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transformAspect) {
 
-                var attack = unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>();
-                if (attack.target.IsAlive() == true) {
-                    UnitUtils.LookToTarget(in transformAspect, in unit, attack.target.GetAspect<TransformAspect>().position, this.dt);
+                for (uint i = 0u; i < unit.readComponentRuntime.attackSensors.Count; ++i) {
+                    var attack = unit.readComponentRuntime.attackSensors[i].GetAspect<AttackAspect>();
+                    if (attack.target.IsAlive() == true) {
+                        UnitUtils.LookToTarget(in transformAspect, in unit, attack.target.GetAspect<TransformAspect>().position, this.dt);
+                        break;
+                    }
                 }
 
             }

@@ -194,17 +194,28 @@ namespace ME.BECS.Attack {
             var targetTr = target.GetAspect<TransformAspect>();
             var fromPos = unitTr.GetWorldMatrixPosition();
             var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos);
-            var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
             var offset = nodeSize;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
             var sightRangeSqr = sightRange * sightRange;
             var dir = targetNearestPoint - fromPos;
             var dirNormalized = math.normalizesafe(dir);
             var distSq = math.lengthsq(dir);
-            var minRangeSq = attackSensor.sector.minRangeSqr;
+            tfloat minRangeSq = tfloat.MaxValue;
+            tfloat rangeSqr = 0;
+            var attackSensors = unit.readComponentRuntime.attackSensors;
+            for (uint i = 0u; i < attackSensors.Count; ++i) {
+                var attackSensor = attackSensors[i].Read<AttackComponent>();
+                if (attackSensor.sector.minRangeSqr < minRangeSq) {
+                    minRangeSq = attackSensor.sector.minRangeSqr;
+                }
+                if (attackSensor.sector.rangeSqr > rangeSqr) {
+                    rangeSqr = attackSensor.sector.rangeSqr;
+                }
+            }
 
-            var targetAttackSensor = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor;
-            if (targetAttackSensor.IsAlive() == true) {
+            var targetAttackSensors = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensors;
+            for (uint i = 0u; i < targetAttackSensors.Count; ++i) {
+                var targetAttackSensor = targetAttackSensors[i];
                 var targetAttack = targetAttackSensor.Read<AttackComponent>();
                 // if unit can't attack target and he is in target's attack range
                 if (CanAttack(in unit, in target) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
@@ -213,18 +224,18 @@ namespace ME.BECS.Attack {
                     return ReactionType.RunAway;
                 }
             }
-            
+
             if (distSq <= minRangeSq) {
                 // if target is too close - get out from target
                 position = unitTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(minRangeSq) + offset);
-            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.sector.rangeSqr) {            
+            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq > rangeSqr) {            
                 // if our unit is in range [attackRange, sightRange] - find target point
                 // find point on the line
-                var attackRangeSqr = attackSensor.sector.rangeSqr;
+                var attackRangeSqr = rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
-            } else if (distSq > 0f && ((distSq > sightRangeSqr && distSq <= attackSensor.sector.rangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, target) == false))) {
+            } else if (distSq > 0f && ((distSq > sightRangeSqr && distSq <= rangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, target) == false))) {
                 position = targetNearestPoint - dirNormalized * (math.sqrt(sightRangeSqr) - offset);
-            } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= attackSensor.sector.rangeSqr) {
+            } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return ReactionType.RotateToTarget;
             } else {
@@ -232,7 +243,7 @@ namespace ME.BECS.Attack {
             }
             
             position = ME.BECS.Pathfinding.GraphUtils.GetNearestNodeByFilter(buildGraphSystem.GetGraphByTypeId(unit.readTypeId), position, new NearestPositionToAttackFilter() {
-                rangeSqr = attackSensor.sector.rangeSqr,
+                rangeSqr = rangeSqr,
                 sourcePos = position,
                 targetPos = targetNearestPoint,
             });
@@ -243,11 +254,16 @@ namespace ME.BECS.Attack {
 
         [INLINE(256)]
         public static bool CanAttack(in UnitAspect unit, in Ent target) {
-            
-            var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
-            var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
-            return unitAttackMask.Contains(targetAttackLayer);
-            
+
+            var attackSensors = unit.readComponentRuntime.attackSensors;
+            for (uint i = 0u; i < attackSensors.Count; ++i) {
+                var unitAttackMask = attackSensors[i].Read<AttackFilterComponent>().layers;
+                var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
+                return unitAttackMask.Contains(targetAttackLayer);
+            }
+
+            return false;
+
         }
 
         [INLINE(256)]

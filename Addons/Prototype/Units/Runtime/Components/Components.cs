@@ -45,7 +45,7 @@ namespace ME.BECS.Units {
         public float3 velocity;
         public float3 pathDirection;
 
-        public Ent attackSensor;
+        public ListAuto<Ent> attackSensors;
         public bbool collideWithEnd;
 
     }

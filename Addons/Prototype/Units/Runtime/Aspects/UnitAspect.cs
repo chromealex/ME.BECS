@@ -162,6 +162,21 @@ namespace ME.BECS.Units {
             return this.readUnitCommandGroup.IsAlive();
         }
 
+        public uint AttackSensorCount => this.readComponentRuntime.attackSensors.Count;
+
+        [INLINE(256)]
+        public void AddAttackSensor(Ent sensor) {
+            if (this.readComponentRuntime.attackSensors.IsCreated == false) {
+                this.componentRuntime.attackSensors = new ListAuto<Ent>(this.ent, 2u);
+            }
+            this.componentRuntime.attackSensors.Add(sensor);
+        }
+
+        [INLINE(256)]
+        public Ent GetAttackSensor(uint index) {
+            return this.readComponentRuntime.attackSensors[index];
+        }
+
     }
 
 }

@@ -32,12 +32,15 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform, ref DamageTookEvent component) {
 
                 if (component.source.IsAlive() == false) return;
-                if (unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>().HasAnyTarget == true) return;
+                var attackSensors = unit.readComponentRuntime.attackSensors;
+                for (uint i = 0u; i < attackSensors.Count; ++i) {
+                    if (attackSensors[i].GetAspect<AttackAspect>().HasAnyTarget == true) return;
+                }
 
                 // move to attacker
                 var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos, in this.buildGraphSystem, in this.fogOfWarSystem);
                 if (result == AttackUtils.ReactionType.RunAway) {
-                    CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
+                    CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new CommandMove() {
                         targetPosition = worldPos,
                     }, jobInfo);
                 } else if (result == AttackUtils.ReactionType.RotateToTarget) {
@@ -45,7 +48,7 @@ namespace ME.BECS.Attack {
                         target = component.source.GetAspect<TransformAspect>().GetWorldMatrixPosition(),
                     });
                 } else if (result == AttackUtils.ReactionType.MoveToTarget) {
-                    CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandAttack() {
+                    CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new CommandAttack() {
                         target = component.source,
                     }, jobInfo);
                     if (ent.HasStatic<AttackerFollowDistanceComponent>() == true) {
@@ -160,7 +163,7 @@ namespace ME.BECS.Attack {
                 if (math.distancesq(tr.position, comeback.returnToPosition) < maxDistanceSqr.maxValueSqr) {
                     return;
                 }
-                CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new ME.BECS.Commands.CommandMove() {
+                CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new CommandMove() {
                     targetPosition = comeback.returnToPosition,
                 }, jobInfo);
                 ent.Remove<ComebackAfterAttackComponent>();
