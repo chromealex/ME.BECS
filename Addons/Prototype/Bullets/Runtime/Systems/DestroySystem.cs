@@ -24,14 +24,14 @@ namespace ME.BECS.Bullets {
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
-                        var targetUnit = unit.GetAspect<UnitAspect>();
+                        var targetUnit = unit.GetAspect<HealthAspect>();
                         targetUnit.Hit(bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<HealthAspect>();
                     targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
                 } else if (bullet.readComponent.targetEnt == Ent.Null) {
@@ -40,7 +40,7 @@ namespace ME.BECS.Bullets {
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
-                            var targetUnit = unit.GetAspect<UnitAspect>();
+                            var targetUnit = unit.GetAspect<HealthAspect>();
                             targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }
@@ -66,14 +66,14 @@ namespace ME.BECS.Bullets {
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
-                        var targetUnit = unit.GetAspect<UnitAspect>();
+                        var targetUnit = unit.GetAspect<HealthAspect>();
                         targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<HealthAspect>();
                     targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
                 } else if (bullet.readComponent.targetEnt == Ent.Null) {
@@ -82,7 +82,7 @@ namespace ME.BECS.Bullets {
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
-                            var targetUnit = unit.GetAspect<UnitAspect>();
+                            var targetUnit = unit.GetAspect<HealthAspect>();
                             targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }
@@ -108,14 +108,14 @@ namespace ME.BECS.Bullets {
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
-                        var targetUnit = unit.GetAspect<UnitAspect>();
+                        var targetUnit = unit.GetAspect<HealthAspect>();
                         targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<HealthAspect>();
                     targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
                 } else if (bullet.readComponent.targetEnt == Ent.Null) {
@@ -124,7 +124,7 @@ namespace ME.BECS.Bullets {
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
-                            var targetUnit = unit.GetAspect<UnitAspect>();
+                            var targetUnit = unit.GetAspect<HealthAspect>();
                             targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }

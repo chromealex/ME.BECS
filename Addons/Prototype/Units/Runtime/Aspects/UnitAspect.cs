@@ -11,6 +11,43 @@ namespace ME.BECS.Units {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Players;
 
+    public struct HealthAspect : IAspect {
+
+        public Ent ent { get; set; }
+
+        [QueryWith]
+        public AspectDataPtr<OwnerComponent> ownerDataPtr;
+        [QueryWith]
+        public AspectDataPtr<UnitHealthComponent> healthDataPtr;
+
+        public readonly ref Ent owner => ref this.ownerDataPtr.GetOrThrow(this.ent.id, this.ent.gen).ent;
+        public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
+        public readonly ref uint health => ref this.healthDataPtr.GetOrThrow(this.ent.id, this.ent.gen).health;
+        public readonly ref uint healthMax => ref this.healthDataPtr.GetOrThrow(this.ent.id, this.ent.gen).healthMax;
+        public readonly ref readonly uint readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
+        public readonly ref readonly uint readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
+        
+        [INLINE(256)]
+        [NotThreadSafe]
+        public readonly void Hit(uint damage, in Ent source, in JobInfo jobInfo) {
+            if (this.readHealth > 0u) {
+                var ent = Ent.New(in jobInfo);
+                ent.Set(new DamageTookComponent() {
+                    source = source,
+                    target = this.ent,
+                    damage = damage,
+                });
+                ent.Destroy(1UL);
+                this.ent.SetOneShot(new DamageTookEvent() {
+                    source = source,
+                });
+                var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                ME.BECS.Effects.EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect);
+            }
+        }
+
+    }
+    
     public struct UnitAspect : IAspect {
         
         public Ent ent { get; set; }
@@ -123,25 +160,6 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public readonly bool HasCommandGroup() {
             return this.readUnitCommandGroup.IsAlive();
-        }
-
-        [INLINE(256)]
-        [NotThreadSafe]
-        public readonly void Hit(uint damage, in Ent source, in JobInfo jobInfo) {
-            if (this.readHealth > 0u) {
-                var ent = Ent.New(in jobInfo);
-                ent.Set(new DamageTookComponent() {
-                    source = source,
-                    target = this.ent,
-                    damage = damage,
-                });
-                ent.Destroy(1UL);
-                this.ent.SetOneShot(new DamageTookEvent() {
-                    source = source,
-                });
-                var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                ME.BECS.Effects.EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect);
-            }
         }
 
     }
