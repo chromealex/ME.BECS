@@ -1,3 +1,5 @@
+
+using ME.BECS.Transforms;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -162,18 +164,53 @@ namespace ME.BECS.Units {
             return this.readUnitCommandGroup.IsAlive();
         }
 
-        public uint AttackSensorCount => this.readComponentRuntime.attackSensors.Count;
+        public readonly uint AttackSensorsCount => this.readComponentRuntime.attackSensors.Count;
 
         [INLINE(256)]
-        public void AddAttackSensor(Ent sensor) {
+        public readonly uint AddAttackSensor(Ent sensor) {
             if (this.readComponentRuntime.attackSensors.IsCreated == false) {
                 this.componentRuntime.attackSensors = new ListAuto<Ent>(this.ent, 2u);
             }
-            this.componentRuntime.attackSensors.Add(sensor);
+            return this.componentRuntime.attackSensors.Add(sensor);
         }
 
         [INLINE(256)]
-        public Ent GetAttackSensor(uint index) {
+        public readonly Ent ReplaceAttackSensor(Ent prevSensor, Ent replaceWith, bool destroy = false) {
+            var index = this.readComponentRuntime.attackSensors.IndexOf(prevSensor);
+            return this.ReplaceAttackSensor(replaceWith, index, destroy);
+        }
+
+        [INLINE(256)]
+        public readonly Ent ReplaceAttackSensor(Ent sensor, uint index, bool destroy = false) {
+            if (index >= this.readComponentRuntime.attackSensors.Count) return default;
+            var prev = this.readComponentRuntime.attackSensors[index];
+            this.componentRuntime.attackSensors[index] = sensor;
+            if (destroy == true) {
+                prev.DestroyHierarchy();
+            }
+            return prev;
+        }
+
+        [INLINE(256)]
+        public readonly Ent RemoveAttackSensor(Ent sensor, bool destroy = false) {
+            var index = this.readComponentRuntime.attackSensors.IndexOf(sensor);
+            return this.RemoveAttackSensor(index, destroy);
+        }
+
+        [INLINE(256)]
+        public readonly Ent RemoveAttackSensor(uint index, bool destroy = false) {
+            if (index >= this.readComponentRuntime.attackSensors.Count) return default;
+            var prev = this.readComponentRuntime.attackSensors[index];
+            if (destroy == true) {
+                prev.DestroyHierarchy();
+            }
+            this.componentRuntime.attackSensors.RemoveAt(index);
+            return prev;
+        }
+
+        [INLINE(256)]
+        public readonly Ent GetAttackSensor(uint index) {
+            if (index >= this.readComponentRuntime.attackSensors.Count) return default;
             return this.readComponentRuntime.attackSensors[index];
         }
 
