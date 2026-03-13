@@ -51,8 +51,10 @@ namespace ME.BECS.Bullets {
 
             var hitRangeSqr = this.readConfig.hitRangeSqr;
             var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
-            dist *= dist;
-            return (uint)math.lerp(damageMax, damageMin, dist / hitRangeSqr);
+            if (dist > 0) {
+                dist *= dist;
+            }
+            return (uint)math.lerp(damageMax, damageMin, math.clamp(dist / hitRangeSqr, 0, 1));
         }
 
         public uint CalculateDamage(float3 bulletPosition, float3 unitPosition, tfloat unitRadius) {
@@ -64,8 +66,10 @@ namespace ME.BECS.Bullets {
 
             var hitRangeSqr = this.readConfig.hitRangeSqr;
             var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
-            dist *= dist;
-            return (uint)math.lerp(damageMax, damageMin, dist / hitRangeSqr);
+            if (dist > 0) {
+                dist *= dist;
+            }
+            return (uint)math.lerp(damageMax, damageMin, math.clamp(dist / hitRangeSqr, 0, 1));
         }
 
     }
