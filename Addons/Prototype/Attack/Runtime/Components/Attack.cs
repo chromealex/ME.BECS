@@ -115,7 +115,7 @@ namespace ME.BECS.Attack {
     [ComponentGroup(typeof(AttackComponentGroup))]
     public struct RotateAttackSensorComponent : IConfigComponent {
 
-        public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { rotationSpeed = 1f };
+        public static RotateAttackSensorComponent Default => new RotateAttackSensorComponent() { rotationSpeed = 1f, upNormal = math.up() };
         
         /// <summary>
         /// Degrees per second
@@ -125,7 +125,14 @@ namespace ME.BECS.Attack {
         /// Degrees per second 
         /// </summary>
         public tfloat persistentRotationSpeed;
+        /// <summary>
+        /// Should object return to local identity rotation or not
+        /// </summary>
         public bbool returnToDefault;
+        /// <summary>
+        /// Local UP normal
+        /// </summary>
+        public float3 upNormal;
 
     }
     
