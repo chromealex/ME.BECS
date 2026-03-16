@@ -25,7 +25,7 @@ namespace ME.BECS.Bullets {
         public bbool continuousTargetCheck;
         
         [BURST]
-        public unsafe struct FlyJob : IJobForAspects<BulletAspect, TransformAspect> {
+        public struct FlyJob : IJobForAspects<BulletAspect, TransformAspect> {
             
             public bbool continuousTargetCheck;
             public OctreeInsertSystem qt;
@@ -34,9 +34,7 @@ namespace ME.BECS.Bullets {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref BulletAspect aspect, ref TransformAspect tr) {
 
                 if (aspect.readConfig.autoTarget == true) {
-                    if (aspect.readComponent.targetEnt.IsAlive() == true && aspect.readComponent.sourceUnit.IsAlive() == true) {
-                        aspect.component.targetWorldPos = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in aspect.readComponent.sourceUnit, in aspect.readComponent.targetEnt); 
-                    } else if (aspect.readComponent.targetEnt.IsAlive() == true) {
+                    if (aspect.readComponent.targetEnt.IsAlive() == true) {
                         aspect.component.targetWorldPos = ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in ent, in aspect.readComponent.targetEnt);
                     }
                 }
