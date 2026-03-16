@@ -174,6 +174,14 @@ namespace ME.BECS.Units {
         public Ent source; // Unit ent
 
     }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct LastDamageSource : IComponent {
+
+        public Ent source;
+        public Ent owner;
+
+    }
     
     [EditorComment("Is unit on hold?")]
     [ComponentGroup(typeof(UnitComponentGroup))]

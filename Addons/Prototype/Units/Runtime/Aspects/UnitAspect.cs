@@ -43,6 +43,10 @@ namespace ME.BECS.Units {
                 this.ent.SetOneShot(new DamageTookEvent() {
                     source = source,
                 });
+                this.ent.Set(new LastDamageSource() {
+                    source = source,
+                    owner = source.Read<OwnerComponent>().ent,
+                });
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 ME.BECS.Effects.EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect);
             }
