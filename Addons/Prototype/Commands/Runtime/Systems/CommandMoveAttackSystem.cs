@@ -60,9 +60,11 @@ namespace ME.BECS.Commands {
                     var unit = commandGroup.readUnits[i];
                     if (unit.IsAlive() == false) continue;
                     Ent target = default;
-                    var attackSensors = unit.GetAspect<UnitAspect>().readComponentRuntime.attackSensors;
+                    var attackSensors = unit.GetAspect<UnitAspect>().readComponentRuntime.placements;
                     for (uint j = 0u; j < attackSensors.Count; ++j) {
-                        var attackSensor = attackSensors[j];
+                        var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                        if (obj.IsAlive() == false) continue;
+                        var attackSensor = obj;
                         if (attackSensor.Has<QuadTreeQuery>() == true) {
                             var query = attackSensor.GetAspect<QuadTreeQueryAspect>();
                             if (query.readResults.results.Count > 0u) {

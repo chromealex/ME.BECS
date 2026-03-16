@@ -32,9 +32,11 @@ namespace ME.BECS.Attack {
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transform, ref DamageTookEvent component) {
 
                 if (component.source.IsAlive() == false) return;
-                var attackSensors = unit.readComponentRuntime.attackSensors;
+                var attackSensors = unit.readComponentRuntime.placements;
                 for (uint i = 0u; i < attackSensors.Count; ++i) {
-                    if (attackSensors[i].GetAspect<AttackAspect>().HasAnyTarget == true) return;
+                    var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                    if (obj.IsAlive() == false) continue;
+                    if (obj.GetAspect<AttackAspect>().HasAnyTarget == true) return;
                 }
 
                 // move to attacker

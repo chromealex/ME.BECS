@@ -65,7 +65,9 @@ namespace ME.BECS.Attack {
                     // use default attack time
                     if (aspect.readComponentRuntimeFire.fireTimer >= aspect.readComponent.attackTime) {
                         // Fire
-                        var parent = ent.Read<ME.BECS.Transforms.ParentComponent>().value.GetAspect<ME.BECS.Units.UnitAspect>();
+                        var placement = ent.ReadParent();
+                        var placements = placement.ReadParent();
+                        var parent = placements.ReadParent().GetAspect<ME.BECS.Units.UnitAspect>();
                         if (ent.HasTag<CanFireWhileMovesTag>(true) == false && parent is { IsHold: false, IsStatic: false }) {
                             aspect.CanFire = false;
                         } else {

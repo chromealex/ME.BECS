@@ -24,8 +24,8 @@ namespace ME.BECS.Bullets {
             var tr = point.Set<TransformAspect>();
             tr.IsStaticLocal = true;
             point.SetParent(in root);
-            tr.position = position;
-            tr.rotation = rotation;
+            tr.localPosition = position;
+            tr.localRotation = rotation;
 
             ref var firePoints = ref root.Get<FirePointComponent>();
             if (firePoints.points.IsCreated == false) firePoints.points = new ListAuto<Ent>(in point, 1u);

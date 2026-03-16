@@ -16,11 +16,13 @@ namespace ME.BECS.Attack {
         public void ApplyState(in EntRO ent) {
 
             var unit = ent.GetAspect<UnitAspect>();
-            var sensors = unit.readComponentRuntime.attackSensors;
+            var sensors = unit.readComponentRuntime.placements;
             if (this.sensorIndex >= sensors.Count) return;
             var sensor = sensors[this.sensorIndex];
             if (sensor.IsAlive() == false) return;
-            var attack = sensor.GetAspect<AttackAspect>();
+            var obj = sensor.Read<UnitPlacementComponent>().obj;
+            if (obj.IsAlive() == false) return;
+            var attack = obj.GetAspect<AttackAspect>();
             this.animator.SetFloat(attackHash, (float)attack.FireProgress);
             this.animator.SetFloat(reloadHash, (float)attack.ReloadProgress);
             this.animator.SetBool(hasTargetHash, attack.HasAnyTarget);

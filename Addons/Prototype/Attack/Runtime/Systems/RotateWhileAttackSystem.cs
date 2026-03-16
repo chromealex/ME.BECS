@@ -25,8 +25,10 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transformAspect) {
 
-                for (uint i = 0u; i < unit.readComponentRuntime.attackSensors.Count; ++i) {
-                    var attack = unit.readComponentRuntime.attackSensors[i].GetAspect<AttackAspect>();
+                for (uint i = 0u; i < unit.readComponentRuntime.placements.Count; ++i) {
+                    var obj = unit.readComponentRuntime.placements[i].Read<UnitPlacementComponent>().obj;
+                    if (obj.IsAlive() == false) continue;
+                    var attack = obj.GetAspect<AttackAspect>();
                     if (attack.target.IsAlive() == true) {
                         UnitUtils.LookToTarget(in transformAspect, in unit, attack.target.GetAspect<TransformAspect>().position, this.dt);
                         break;

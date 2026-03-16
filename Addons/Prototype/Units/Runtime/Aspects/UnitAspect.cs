@@ -164,54 +164,85 @@ namespace ME.BECS.Units {
             return this.readUnitCommandGroup.IsAlive();
         }
 
-        public readonly uint AttackSensorsCount => this.readComponentRuntime.attackSensors.Count;
+        public readonly uint PlacementsCount => this.readComponentRuntime.placements.Count;
 
         [INLINE(256)]
-        public readonly uint AddAttackSensor(Ent sensor) {
-            if (this.readComponentRuntime.attackSensors.IsCreated == false) {
-                this.componentRuntime.attackSensors = new ListAuto<Ent>(this.ent, 2u);
+        public readonly void ValidatePlacements() {
+            if (this.readComponentRuntime.placements.IsCreated == false) {
+                this.InitPlacements();
             }
-            return this.componentRuntime.attackSensors.Add(sensor);
         }
 
         [INLINE(256)]
-        public readonly Ent ReplaceAttackSensor(Ent prevSensor, Ent replaceWith, bool destroy = false) {
-            var index = this.readComponentRuntime.attackSensors.IndexOf(prevSensor);
-            return this.ReplaceAttackSensor(replaceWith, index, destroy);
-        }
-
-        [INLINE(256)]
-        public readonly Ent ReplaceAttackSensor(Ent sensor, uint index, bool destroy = false) {
-            if (index >= this.readComponentRuntime.attackSensors.Count) return default;
-            var prev = this.readComponentRuntime.attackSensors[index];
-            this.componentRuntime.attackSensors[index] = sensor;
-            if (destroy == true) {
-                prev.DestroyHierarchy();
+        public readonly void InitPlacements() {
+            var placementsDataComponent = this.ent.ReadStatic<UnitPlacementsDataComponent>();
+            if (placementsDataComponent.placements.IsCreated == true) {
+                if (this.readComponentRuntime.placements.IsCreated == false) this.componentRuntime.placements = new ListAuto<Ent>(this.ent, placementsDataComponent.placements.Length);
+                for (uint i = 0u; i < placementsDataComponent.placements.Length; ++i) {
+                    var placement = placementsDataComponent.placements[i];
+                    this.componentRuntime.placements.Add(this.CreatePlacement(placement.id, placement.localPosition, placement.localRotation));
+                }
+            } else {
+                this.componentRuntime.placements = new ListAuto<Ent>(this.ent, 2u);
             }
-            return prev;
         }
 
         [INLINE(256)]
-        public readonly Ent RemoveAttackSensor(Ent sensor, bool destroy = false) {
-            var index = this.readComponentRuntime.attackSensors.IndexOf(sensor);
-            return this.RemoveAttackSensor(index, destroy);
-        }
-
-        [INLINE(256)]
-        public readonly Ent RemoveAttackSensor(uint index, bool destroy = false) {
-            if (index >= this.readComponentRuntime.attackSensors.Count) return default;
-            var prev = this.readComponentRuntime.attackSensors[index];
-            if (destroy == true) {
-                prev.DestroyHierarchy();
+        private readonly Ent CreatePlacement(uint id, float3 localPosition, quaternion localRotation) {
+            var ent = Ent.New(JobInfo.Create(this.ent.worldId), "Placement");
+            var tr = ent.Set<TransformAspect>();
+            if (this.readComponentRuntime.placementsRoot.IsAlive() == true) {
+                ent.SetParent(this.readComponentRuntime.placementsRoot);
+            } else {
+                ent.SetParent(this.ent);
             }
-            this.componentRuntime.attackSensors.RemoveAt(index);
-            return prev;
+            PlayerUtils.SetOwner(ent, this.readOwner.GetAspect<PlayerAspect>());
+            tr.localPosition = localPosition;
+            tr.localRotation = localRotation;
+            ent.Set(new UnitPlacementComponent() {
+                id = id,
+            });
+            return ent;
         }
 
         [INLINE(256)]
-        public readonly Ent GetAttackSensor(uint index) {
-            if (index >= this.readComponentRuntime.attackSensors.Count) return default;
-            return this.readComponentRuntime.attackSensors[index];
+        public readonly void SetPlacementRoot(Ent ent) {
+            this.componentRuntime.placementsRoot = ent;
+        }
+
+        [INLINE(256)]
+        public readonly Ent ReadPlacement(uint id) {
+            if (this.readComponentRuntime.placements.IsCreated == true) {
+                for (uint i = 0u; i < this.readComponentRuntime.placements.Count; ++i) {
+                    var placement = this.readComponentRuntime.placements[i];
+                    if (placement.Read<UnitPlacementComponent>().id == id) {
+                        return placement;
+                    }
+                }
+            }
+            return default;
+        }
+
+        [INLINE(256)]
+        public readonly Ent GetPlacement(uint id) {
+            if (this.readComponentRuntime.placements.IsCreated == true) {
+                for (uint i = 0u; i < this.readComponentRuntime.placements.Count; ++i) {
+                    var placement = this.readComponentRuntime.placements[i];
+                    if (placement.Read<UnitPlacementComponent>().id == id) {
+                        return placement;
+                    }
+                }
+            }
+            return this.CreatePlacement(id, float3.zero, quaternion.identity);
+        }
+        
+        [INLINE(256)]
+        public readonly Ent SetToPlacement(Ent obj, uint id) {
+            this.ValidatePlacements();
+            var placement = this.GetPlacement(id);
+            obj.SetParent(placement);
+            placement.Get<UnitPlacementComponent>().obj = obj;
+            return placement;
         }
 
     }

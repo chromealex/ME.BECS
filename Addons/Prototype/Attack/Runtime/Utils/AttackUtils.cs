@@ -202,9 +202,11 @@ namespace ME.BECS.Attack {
             var distSq = math.lengthsq(dir);
             tfloat minRangeSq = tfloat.MaxValue;
             tfloat rangeSqr = 0;
-            var attackSensors = unit.readComponentRuntime.attackSensors;
+            var attackSensors = unit.readComponentRuntime.placements;
             for (uint i = 0u; i < attackSensors.Count; ++i) {
-                var attackSensor = attackSensors[i].Read<AttackComponent>();
+                var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var attackSensor = obj.Read<AttackComponent>();
                 if (attackSensor.sector.minRangeSqr < minRangeSq) {
                     minRangeSq = attackSensor.sector.minRangeSqr;
                 }
@@ -213,10 +215,12 @@ namespace ME.BECS.Attack {
                 }
             }
 
-            var targetAttackSensors = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensors;
+            var targetAttackSensors = target.GetAspect<UnitAspect>().readComponentRuntime.placements;
             for (uint i = 0u; i < targetAttackSensors.Count; ++i) {
                 var targetAttackSensor = targetAttackSensors[i];
-                var targetAttack = targetAttackSensor.Read<AttackComponent>();
+                var obj = targetAttackSensor.Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var targetAttack = obj.Read<AttackComponent>();
                 // if unit can't attack target and he is in target's attack range
                 if (CanAttack(in unit, in target) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
                     var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
@@ -255,11 +259,13 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static bool CanAttack(in UnitAspect unit, in Ent target) {
 
-            var attackSensors = unit.readComponentRuntime.attackSensors;
+            var attackSensors = unit.readComponentRuntime.placements;
             for (uint i = 0u; i < attackSensors.Count; ++i) {
-                var unitAttackMask = attackSensors[i].Read<AttackFilterComponent>().layers;
+                var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var unitAttackMask = obj.Read<AttackFilterComponent>().layers;
                 var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
-                return unitAttackMask.Contains(targetAttackLayer);
+                if (unitAttackMask.Contains(targetAttackLayer) == true) return true;
             }
 
             return false;
