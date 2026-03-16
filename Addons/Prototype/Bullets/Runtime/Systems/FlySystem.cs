@@ -46,6 +46,7 @@ namespace ME.BECS.Bullets {
                 tr.rotation = quaternion.LookRotationSafe(tr.position - prevPos, math.up());
                 if (math.lengthsq(tr.position - aspect.readComponent.targetWorldPos) <= 0.01f) {
                     aspect.IsReached = true;
+                    aspect.component.targetEnt = default;
                 }
 
                 if (this.continuousTargetCheck == true) {
@@ -88,6 +89,7 @@ namespace ME.BECS.Bullets {
                 tr.rotation = quaternion.LookRotationSafe(tr.position - prevPos, math.up());
                 if (math.lengthsq(tr.position.xz - aspect.readComponent.targetWorldPos.xz) <= 0.01f) {
                     aspect.IsReached = true;
+                    aspect.component.targetEnt = default;
                 }
 
                 if (this.continuousTargetCheck == true) {
