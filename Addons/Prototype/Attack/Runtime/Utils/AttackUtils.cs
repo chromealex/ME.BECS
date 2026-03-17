@@ -346,7 +346,9 @@ namespace ME.BECS.Attack {
             }
 
             {
-                var sourceUnit = attackAspect.ent.GetParent();
+                var placement = attackAspect.ent.ReadParent();
+                var placements = placement.ReadParent();
+                var sourceUnit = placements.ReadParent();
                 var ent = Ent.New(in jobInfo, "Bullet");
                 ME.BECS.Players.PlayerUtils.SetOwner(in ent, ME.BECS.Players.PlayerUtils.GetOwner(in sourceUnit));
                 config.Apply(ent);
