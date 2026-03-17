@@ -15,7 +15,7 @@ namespace ME.BECS {
 
         [Conditional(COND.EXCEPTIONS_ASPECTS)]
         [HIDE_CALLSTACK]
-        public static unsafe void IS_VALID_FOR_ASPECT<T>(in Ent ent) where T : unmanaged, IAspect {
+        public static void IS_VALID_FOR_ASPECT<T>(in Ent ent) where T : unmanaged, IAspect {
             
             var world = ent.World;
             for (uint i = 0u; i < AspectTypeInfo.with.Get(AspectTypeInfo<T>.typeId).Length; ++i) {
@@ -24,7 +24,7 @@ namespace ME.BECS {
                 var has = Components.HasUnknownType(world.state, typeId, ent.id, ent.gen, checkEnabled: false);
                 if (has == false) {
                     IS_VALID_FOR_ASPECT_BurstDiscard(in ent, typeId);
-                    throw new RequiredComponentException($"Entity {ent.ToString()} has no component {typeId}, but it is required");
+                    throw new RequiredComponentException("Entity has no component, but it is required");
                 }
 
             }
