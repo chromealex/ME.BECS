@@ -31,7 +31,7 @@ namespace ME.BECS.Units {
         
         [INLINE(256)]
         [NotThreadSafe]
-        public readonly void Hit(uint damage, in Ent source, in JobInfo jobInfo) {
+        public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo) {
             if (this.readHealth > 0u) {
                 var ent = Ent.New(in jobInfo);
                 ent.Set(new DamageTookComponent() {
@@ -45,7 +45,7 @@ namespace ME.BECS.Units {
                 });
                 this.ent.Set(new LastDamageSource() {
                     source = source,
-                    owner = source.Read<OwnerComponent>().ent,
+                    owner = hitOwner,
                 });
                 var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
                 ME.BECS.Effects.EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect);

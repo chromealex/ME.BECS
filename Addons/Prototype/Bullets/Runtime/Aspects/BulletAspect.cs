@@ -12,6 +12,8 @@ using Rect = UnityEngine.Rect;
 
 namespace ME.BECS.Bullets {
 
+    using ME.BECS.Players;
+    
     public struct BulletAspect : IAspect {
         
         public Ent ent { get; set; }
@@ -20,11 +22,13 @@ namespace ME.BECS.Bullets {
         public AspectDataPtr<BulletConfigComponent> bulletConfigDataPtr;
         [QueryWith]
         public AspectDataPtr<BulletRuntimeComponent> bulletRuntimeDataPtr;
+        public AspectDataPtr<OwnerComponent> ownerDataPtr;
         
         public readonly ref BulletConfigComponent config => ref this.bulletConfigDataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public readonly ref readonly BulletConfigComponent readConfig => ref this.bulletConfigDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref BulletRuntimeComponent component => ref this.bulletRuntimeDataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public readonly ref readonly BulletRuntimeComponent readComponent => ref this.bulletRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
         public uint damage {
             get => this.ent.Has<DamageOverrideComponent>() ? this.ent.Read<DamageOverrideComponent>().damage : this.readConfig.damage;
             set => this.ent.Get<DamageOverrideComponent>().damage = value;
