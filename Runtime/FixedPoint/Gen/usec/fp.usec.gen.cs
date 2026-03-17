@@ -116,7 +116,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly uint ToValue() {
-            return this.value / PRECISION;
+            return this.value;
         }
 
         [INLINE(256)]
