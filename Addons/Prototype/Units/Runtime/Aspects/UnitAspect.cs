@@ -175,6 +175,18 @@ namespace ME.BECS.Units {
             if (this.readComponentRuntime.placements.IsCreated == false) {
                 this.InitPlacements();
             }
+            if (this.readComponentRuntime.placementsRoot.IsAlive() == false) {
+                this.SetPlacementRoot(this.CreatePlacementsRoot());
+            }
+        }
+
+        [INLINE(256)]
+        public readonly Ent CreatePlacementsRoot() {
+            var placements = Ent.New(JobInfo.Create(this.ent.worldId), "Placements");
+            PlayerUtils.SetOwner(placements, this.readOwner.GetAspect<PlayerAspect>());
+            placements.Set<TransformAspect>();
+            placements.SetParent(this.ent);
+            return placements;
         }
 
         [INLINE(256)]
