@@ -48,9 +48,11 @@ namespace ME.BECS.Views {
             return false;
         }
 
+        private static readonly System.Collections.Generic.Queue<TransformItem> builderCache = new System.Collections.Generic.Queue<TransformItem>();
         public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, in Ent parentEnt, in World world) {
-
-            var queue = new System.Collections.Generic.Queue<TransformItem>();
+            
+            builderCache.Clear();
+            var queue = builderCache;
             queue.Enqueue(new TransformItem() {
                 obj = prefab,
                 parent = parentEnt,

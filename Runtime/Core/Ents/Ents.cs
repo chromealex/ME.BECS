@@ -172,9 +172,9 @@ namespace ME.BECS {
             state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (maxId + 1u) * (StaticTypesTrackedBurst.maxId + 1u), 2);
             state.ptr->entities.versions.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->entities.seeds.Resize(ref state.ptr->allocator, maxId + 1u, 2);
-            state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u);
+            state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u, growFactor: 2);
             #if ENABLE_BECS_FLAT_QUERIES
-            state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, maxId + 1u, 1);
+            state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             #endif
             
             // Apply list
