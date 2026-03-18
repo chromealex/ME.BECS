@@ -21,24 +21,24 @@ namespace ME.BECS {
 
         [INLINE(256)][IgnoreProfiler]
         public MemPtr AllocArray<T>(uint length) where T : unmanaged {
-            return this.Alloc(length * Align(TSize<T>.size));
+            return this.Alloc(length * TSize<T>.size);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public MemPtr AllocArray<T>(uint length, out safe_ptr<T> ptr) where T : unmanaged {
-            var res = this.Alloc(length * Align(TSize<T>.size), out var memPtr);
+            var res = this.Alloc(length * TSize<T>.size, out var memPtr);
             ptr = memPtr;
             return res;
         }
 
         [INLINE(256)][IgnoreProfiler]
         public MemPtr AllocArray(uint length, uint elementSize) {
-            return this.Alloc(length * Align(elementSize));
+            return this.Alloc(length * elementSize);
         }
         
         [INLINE(256)][IgnoreProfiler]
         public MemPtr ReAllocArray<T>(in MemPtr memPtr, uint newLength, out safe_ptr<T> ptr) where T : unmanaged {
-            var res = this.ReAlloc(memPtr, newLength * Align(TSize<T>.size), out var newMemPtr);
+            var res = this.ReAlloc(memPtr, newLength * TSize<T>.size, out var newMemPtr);
             ptr = newMemPtr;
             return res;
         }
@@ -55,32 +55,32 @@ namespace ME.BECS {
 
         [INLINE(256)][IgnoreProfiler]
         public readonly ref T RefArray<T>(in MemPtr ptr, uint index) where T : unmanaged {
-            return ref *(T*)((byte*)this.GetPtr(in ptr) + Align(TSize<T>.size) * index);
+            return ref *(T*)((byte*)this.GetPtr(in ptr) + TSize<T>.size * index);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public readonly ref T RefArray<T>(MemPtr ptr, uint index) where T : unmanaged {
-            return ref *(T*)((byte*)this.GetPtr(in ptr) + Align(TSize<T>.size) * index);
+            return ref *(T*)((byte*)this.GetPtr(in ptr) + TSize<T>.size * index);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public readonly ref T RefArray<T>(in MemPtr ptr, int index) where T : unmanaged {
-            return ref *(T*)((byte*)this.GetPtr(ptr) + Align(TSize<T>.size) * index);
+            return ref *(T*)((byte*)this.GetPtr(ptr) + TSize<T>.size * index);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public readonly ref T RefArray<T>(MemPtr ptr, int index) where T : unmanaged {
-            return ref *(T*)((byte*)this.GetPtr(ptr) + Align(TSize<T>.size) * index);
+            return ref *(T*)((byte*)this.GetPtr(ptr) + TSize<T>.size * index);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public readonly MemPtr RefArrayPtr<T>(in MemPtr ptr, uint index) where T : unmanaged {
-            return this.GetSafePtr((byte*)((T*)this.GetPtr(ptr) + Align(TSize<T>.size) * index), ptr.zoneId);
+            return this.GetSafePtr((byte*)((T*)this.GetPtr(ptr) + TSize<T>.size * index), ptr.zoneId);
         }
 
         [INLINE(256)][IgnoreProfiler]
         public readonly MemPtr RefArrayPtr<T>(MemPtr ptr, uint index) where T : unmanaged {
-            return this.GetSafePtr((byte*)((T*)this.GetPtr(ptr) + Align(TSize<T>.size) * index), ptr.zoneId);
+            return this.GetSafePtr((byte*)((T*)this.GetPtr(ptr) + TSize<T>.size * index), ptr.zoneId);
         }
 
         [INLINE(256)][IgnoreProfiler]
