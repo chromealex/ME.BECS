@@ -184,7 +184,8 @@ namespace ME.BECS.Units {
         public readonly Ent CreatePlacementsRoot() {
             var placements = Ent.New(JobInfo.Create(this.ent.worldId), "Placements");
             PlayerUtils.SetOwner(placements, this.readOwner.GetAspect<PlayerAspect>());
-            placements.Set<TransformAspect>();
+            var tr = placements.Set<TransformAspect>();
+            tr.IsStaticLocal = true;
             placements.SetParent(this.ent);
             return placements;
         }
@@ -215,6 +216,7 @@ namespace ME.BECS.Units {
             PlayerUtils.SetOwner(ent, this.readOwner.GetAspect<PlayerAspect>());
             tr.localPosition = localPosition;
             tr.localRotation = localRotation;
+            tr.IsStaticLocal = true;
             ent.Set(new UnitPlacementComponent() {
                 id = id,
             });
