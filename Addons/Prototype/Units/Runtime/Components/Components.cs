@@ -114,6 +114,9 @@ namespace ME.BECS.Units {
     }
 
     [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitJustSpawnedEvent : IComponent { }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnHitComponent : IConfigComponentStatic {
  
         public ME.BECS.Effects.EffectConfig effect;
@@ -122,6 +125,13 @@ namespace ME.BECS.Units {
 
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnDestroyComponent : IConfigComponentStatic {
+ 
+        public ME.BECS.Effects.EffectConfig effect;
+
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitEffectOnSpawnComponent : IConfigComponentStatic {
  
         public ME.BECS.Effects.EffectConfig effect;
 
