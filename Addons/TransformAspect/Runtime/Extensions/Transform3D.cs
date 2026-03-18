@@ -99,12 +99,14 @@ namespace ME.BECS.Transforms {
             ent.SetTag<TransformLevel1>(false);
             ent.SetTag<TransformLevel2>(false);
             ent.SetTag<TransformLevel3>(false);
+            ent.SetTag<TransformLevel4>(false);
             ent.SetTag<TransformLevelOther>(false);
             
             switch (level) {
                 case 1u: ent.SetTag<TransformLevel1>(true); break;
                 case 2u: ent.SetTag<TransformLevel2>(true); break;
                 case 3u: ent.SetTag<TransformLevel3>(true); break;
+                case 4u: ent.SetTag<TransformLevel4>(true); break;
                 default: ent.SetTag<TransformLevelOther>(true); break;
             }
 
