@@ -64,12 +64,13 @@ namespace ME.BECS.Views {
                 var obj = item.obj;
                 var parent = item.parent;
                 var ent = Ent.New(world);
+                ent.EditorName = (obj.name.Length > 16 ? obj.name.Substring(0, 16) : obj.name);
                 if (result.IsAlive() == false) result = ent;
                 var tr = ent.GetOrCreateAspect<TransformAspect>();
                 ent.SetParent(parent);
                 tr.Set(obj);
                 if (parent.IsAlive() == true) {
-                    tr.worldMatrix = math.mul((float4x4)obj.localToWorldMatrix, (float4x4)obj.root.localToWorldMatrix.inverse);
+                    tr.worldMatrix = math.mul((float4x4)prefab.localToWorldMatrix.inverse, (float4x4)obj.localToWorldMatrix);
                 } else {
                     tr.worldMatrix = float4x4.identity;
                 }

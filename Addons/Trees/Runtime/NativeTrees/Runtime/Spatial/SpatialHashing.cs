@@ -291,7 +291,8 @@ namespace NativeTrees {
             return false;
 
         }
-        
+
+        private static readonly UnityEngine.Vector3[] gizmosPoints = new UnityEngine.Vector3[4];
         public void DrawGizmos() {
 
             var rendered = new UnsafeHashSet<int>(this.data.Count(), Allocator.Temp);
@@ -309,7 +310,17 @@ namespace NativeTrees {
                             float worldX = (x + 0.5f) * this.cellSize;
                             float worldY = (y + 0.5f) * this.cellSize;
                             var p = new UnityEngine.Vector3(worldX, 0f, worldY);
-                            UnityEngine.Gizmos.DrawWireCube(p, (UnityEngine.Vector3)new float3(1f, 1f, 1f) * this.cellSize);
+                            var c = UnityEngine.Gizmos.color;
+                            c.a = 0.05f;
+                            #if UNITY_EDITOR
+                            var rect = new UnityEngine.Rect(p.x - this.cellSize * 0.5f, p.z - this.cellSize * 0.5f, this.cellSize, this.cellSize);
+                            gizmosPoints[0] = new UnityEngine.Vector3(rect.xMin, 0f, rect.yMin);
+                            gizmosPoints[1] = new UnityEngine.Vector3(rect.xMin, 0f, rect.yMax);
+                            gizmosPoints[2] = new UnityEngine.Vector3(rect.xMax, 0f, rect.yMax);
+                            gizmosPoints[3] = new UnityEngine.Vector3(rect.xMax, 0f, rect.yMin);
+                            UnityEditor.Handles.DrawSolidRectangleWithOutline(gizmosPoints, c, UnityEngine.Gizmos.color);
+                            //UnityEngine.Gizmos.DrawWireCube(p, (UnityEngine.Vector3)new float3(1f, 1f, 1f) * this.cellSize);
+                            #endif
                         }
                     }
                 }
