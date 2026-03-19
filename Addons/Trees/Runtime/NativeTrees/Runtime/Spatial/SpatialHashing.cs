@@ -293,6 +293,7 @@ namespace NativeTrees {
         }
 
         private static readonly UnityEngine.Vector3[] gizmosPoints = new UnityEngine.Vector3[4];
+        [WithoutBurst]
         public void DrawGizmos() {
 
             var rendered = new UnsafeHashSet<int>(this.data.Count(), Allocator.Temp);
