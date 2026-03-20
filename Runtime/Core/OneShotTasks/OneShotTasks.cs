@@ -116,6 +116,7 @@ namespace ME.BECS {
             if (type == OneShotType.NextTick) {
                 collection = _addressT(ref threadItem.nextTick);
             }
+            if (collection.ptr->items.Count == 0u) return;
             collection.ptr->lockIndex.Lock();
             for (uint j = collection.ptr->items.Count; j > 0u; --j) {
 

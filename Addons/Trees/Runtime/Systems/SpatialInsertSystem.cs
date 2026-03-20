@@ -468,6 +468,7 @@ namespace ME.BECS {
 
         }
 
+        [WithoutBurst]
         public void OnDrawGizmos(ref SystemContext context) {
             UnityEngine.Gizmos.color = UnityEngine.Color.green;
             for (int i = 0; i < this.treesCount; ++i) {

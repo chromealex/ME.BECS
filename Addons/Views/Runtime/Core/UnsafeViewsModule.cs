@@ -321,10 +321,10 @@ namespace ME.BECS.Views {
         public safe_ptr<uint> updateCounter;
         public safe_ptr<uint> updateParallelCounter;
 
-        public MemArray<bool> renderingOnSceneApplyStateCulling;
-        public MemArray<bool> renderingOnSceneApplyStateParallelCulling;
-        public MemArray<bool> renderingOnSceneUpdateCulling;
-        public MemArray<bool> renderingOnSceneUpdateParallelCulling;
+        public MemArray<ibool> renderingOnSceneApplyStateCulling;
+        public MemArray<ibool> renderingOnSceneApplyStateParallelCulling;
+        public MemArray<ibool> renderingOnSceneUpdateCulling;
+        public MemArray<ibool> renderingOnSceneUpdateParallelCulling;
 
         public uint renderingOnSceneCount;
         public UnsafeList<SceneInstanceInfo> toRemoveTemp;
@@ -359,10 +359,10 @@ namespace ME.BECS.Views {
                 renderingOnSceneApplyStateParallel = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdateParallel = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
-                renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneApplyStateParallelCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneUpdateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneUpdateParallelCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
+                renderingOnSceneApplyStateCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
+                renderingOnSceneApplyStateParallelCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
+                renderingOnSceneUpdateCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
+                renderingOnSceneUpdateParallelCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
                 renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, allocatorPersistent),
                 renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: allocatorPersistent),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
@@ -667,24 +667,36 @@ namespace ME.BECS.Views {
             if (this.data.ptr->camera.IsAlive() == true) { // Update culling
 
                 var depends = new NativeArray<JobHandle>(4, Constants.ALLOCATOR_TEMP);
-                depends[0] = new Jobs.UpdateCullingApplyStateParallelJob() {
+                depends[0] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
+                    renderingOnScene = this.data.ptr->renderingOnSceneApplyStateParallel,
+                    culling = this.data.ptr->renderingOnSceneApplyStateParallelCulling,
+                    cullingType = CullingType.FrustumApplyStateOnly,
                 }.Schedule((int*)this.data.ptr->applyStateParallelCounter.ptr, 64, dependsOn);
 
-                depends[1] = new Jobs.UpdateCullingApplyStateJob() {
+                depends[1] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                }.Schedule((int*)this.data.ptr->applyStateCounter.ptr, 64, dependsOn);
-
-                depends[2] = new Jobs.UpdateCullingUpdateParallelJob() {
-                    state = this.data.ptr->viewsWorld.state,
-                    viewsModuleData = this.data,
+                    renderingOnScene = this.data.ptr->renderingOnSceneUpdateParallel,
+                    culling = this.data.ptr->renderingOnSceneUpdateParallelCulling,
+                    cullingType = CullingType.FrustumOnUpdateOnly,
                 }.Schedule((int*)this.data.ptr->updateParallelCounter.ptr, 64, dependsOn);
 
-                depends[3] = new Jobs.UpdateCullingUpdateJob() {
+                depends[2] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
+                    renderingOnScene = this.data.ptr->renderingOnSceneApplyState,
+                    culling = this.data.ptr->renderingOnSceneApplyStateCulling,
+                    cullingType = CullingType.FrustumApplyStateOnly,
+                }.Schedule((int*)this.data.ptr->applyStateCounter.ptr, 64, dependsOn);
+
+                depends[3] = new Jobs.UpdateCullingJob() {
+                    state = this.data.ptr->viewsWorld.state,
+                    viewsModuleData = this.data,
+                    renderingOnScene = this.data.ptr->renderingOnSceneUpdate,
+                    culling = this.data.ptr->renderingOnSceneUpdateCulling,
+                    cullingType = CullingType.FrustumOnUpdateOnly,
                 }.Schedule((int*)this.data.ptr->updateCounter.ptr, 64, dependsOn);
 
                 dependsOn = JobHandle.CombineDependencies(depends);

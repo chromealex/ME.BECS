@@ -649,91 +649,27 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct UpdateCullingApplyStateParallelJob : IJobParallelForDefer {
+        public struct UpdateCullingJob : IJobParallelForDefer {
 
             public safe_ptr<State> state;
             public safe_ptr<ViewsModuleData> viewsModuleData;
+            public MemArray<ibool> culling;
+            public CullingType cullingType;
+            public RenderingSparseList renderingOnScene;
             
             public void Execute(int index) {
 
-                var entId = this.viewsModuleData.ptr->renderingOnSceneApplyStateParallel.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
+                var entId = this.renderingOnScene.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
+                /*
                 var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
                 var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
+                if (cullingType == CullingType.Frustum || cullingType == this.cullingType)*/
+                {
                     var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
                     var bounds = ent.GetAspect<TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
                     var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                    this.viewsModuleData.ptr->renderingOnSceneApplyStateParallelCulling[in this.state.ptr->allocator, entId] = isVisible == false;
-                }
-
-            }
-
-        }
-
-        [BURST]
-        public struct UpdateCullingUpdateParallelJob : IJobParallelForDefer {
-
-            public safe_ptr<State> state;
-            public safe_ptr<ViewsModuleData> viewsModuleData;
-            
-            public void Execute(int index) {
-
-                var entId = this.viewsModuleData.ptr->renderingOnSceneUpdateParallel.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
-                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
-                var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
-                    var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
-                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
-                    var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
-                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                    this.viewsModuleData.ptr->renderingOnSceneUpdateParallelCulling[in this.state.ptr->allocator, entId] = isVisible == false;
-                }
-
-            }
-
-        }
-
-        [BURST]
-        public struct UpdateCullingApplyStateJob : IJobParallelForDefer {
-
-            public safe_ptr<State> state;
-            public safe_ptr<ViewsModuleData> viewsModuleData;
-            
-            public void Execute(int index) {
-
-                var entId = this.viewsModuleData.ptr->renderingOnSceneApplyState.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
-                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
-                var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumApplyStateOnly) {
-                    var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
-                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
-                    var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
-                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                    this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling[in this.state.ptr->allocator, entId] = isVisible == false;
-                }
-
-            }
-
-        }
-
-        [BURST]
-        public struct UpdateCullingUpdateJob : IJobParallelForDefer {
-            
-            public safe_ptr<State> state;
-            public safe_ptr<ViewsModuleData> viewsModuleData;
-            
-            public void Execute(int index) {
-
-                var entId = this.viewsModuleData.ptr->renderingOnSceneUpdate.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
-                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
-                var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum || cullingType == CullingType.FrustumOnUpdateOnly) {
-                    var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
-                    var bounds = ent.GetAspect<TransformAspect>().GetBounds();
-                    var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
-                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                    this.viewsModuleData.ptr->renderingOnSceneUpdateCulling[in this.state.ptr->allocator, entId] = isVisible == false;
+                    this.culling[in this.state.ptr->allocator, entId] = (isVisible == false);
                 }
 
             }

@@ -1,7 +1,6 @@
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
-
 using System;
 
 namespace ME.BECS.FixedPoint {

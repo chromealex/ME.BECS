@@ -2,10 +2,12 @@
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
+using Plane = ME.BECS.FixedPoint.FPlane;
 using Rect = ME.BECS.FixedPoint.Rect;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
+using Plane = UnityEngine.Plane;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
@@ -46,7 +48,7 @@ namespace ME.BECS.Views {
             UnityEngine.GeometryUtility.CalculateFrustumPlanes(camera, planes);
             for (uint i = 0; i < comp.localPlanes.Length; ++i) {
                 ref var plane = ref comp.localPlanes[i];
-                plane = planes[i];
+                plane = (Plane)planes[i];
             }
             
         }
@@ -86,20 +88,23 @@ namespace ME.BECS.Views {
             ent.Set<ME.BECS.Transforms.TransformAspect>();
             var aspect = ent.GetOrCreateAspect<CameraAspect>();
             ref var comp = ref aspect.component;
-            comp.localPlanes = new MemArrayAuto<UnityEngine.Plane>(in ent, 6);
+            comp.localPlanes = new MemArrayAuto<Plane>(in ent, 6);
             return aspect;
             
         }
 
         [INLINE(256)]
-        public static bool TestPlanesAABB(in MemArrayAuto<UnityEngine.Plane> planes, in Bounds bounds) {
+        public static bool TestPlanesAABB(in MemArrayAuto<Plane> planes, in Bounds bounds) {
             
             for (uint i = 0u; i < PLANES_COUNT; ++i) {
                 var plane = planes[i];
-                var sign = math.sign((float3)plane.normal);
-                var testPoint = (float3)bounds.center + (float3)bounds.extents * sign;
-                var dot = math.dot((float3)testPoint, (float3)plane.normal);
-                if (dot + plane.distance < 0f) return false;
+                var r = math.dot(bounds.extents, math.abs(plane.normal));
+                var dist = math.dot(plane.normal, bounds.center) + plane.distance;
+                if (dist < -r) return false;
+                /*var sign = math.sign((float3)plane.normal);
+                var testPoint = bounds.center + bounds.extents * sign;
+                var dot = math.dot(testPoint, (float3)plane.normal);
+                if (dot + plane.distance < 0f) return false;*/
             }
             
             return true;
