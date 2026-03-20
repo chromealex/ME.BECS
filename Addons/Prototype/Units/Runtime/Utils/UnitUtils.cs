@@ -52,6 +52,59 @@ namespace ME.BECS.Units {
         }
         
         [INLINE(256)]
+        public static float3 GetCircleRingPosition(float3 center, uint index, uint maxCount, tfloat unitRadius) {
+            if (index == 0) return center;
+
+            tfloat spacing = unitRadius * 2.1f;
+            uint remaining = index;
+            uint ring = 0;
+    
+            tfloat currentRadius = 0;
+            uint countOnThisRing = 0;
+            uint indexInRing = 0;
+
+            uint tempMax = maxCount - 1;
+            uint currentRingIdx = 0;
+            uint processedPoints = 0;
+
+            while (true) {
+                currentRingIdx++;
+                tfloat r = spacing * currentRingIdx;
+                uint capacity = (uint)math.floor(2f * math.PI * r / spacing);
+        
+                if (processedPoints + capacity >= tempMax) {
+                    uint leftForLastRing = tempMax - processedPoints;
+            
+                    if (index > processedPoints) {
+                        currentRadius = r;
+                        countOnThisRing = leftForLastRing;
+                        indexInRing = index - processedPoints;
+                        break;
+                    }
+                }
+
+                if (remaining <= capacity) {
+                    currentRadius = r;
+                    countOnThisRing = capacity;
+                    indexInRing = remaining;
+                    break;
+                }
+
+                remaining -= capacity;
+                processedPoints += capacity;
+            }
+
+            tfloat angleStep = 2f * math.PI / countOnThisRing;
+            tfloat angle = angleStep * (indexInRing - 1);
+
+            return new float3(
+                center.x + math.cos(angle) * currentRadius,
+                center.y,
+                center.z + math.sin(angle) * currentRadius
+            );
+        }
+        
+        [INLINE(256)]
         public static float3 GetSnailPosition(float3 center, uint index, tfloat unitRadius) {
             tfloat spacing = unitRadius * 2f;
             tfloat angle = index * GOLDEN_ANGLE;
