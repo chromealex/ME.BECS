@@ -8,7 +8,6 @@ namespace ME.BECS.FixedPoint {
     [Serializable]
     public partial struct FPlane {
 
-        internal const int size = 16;
         private float3 normalData;
         private tfloat distanceData;
 
@@ -156,7 +155,7 @@ namespace ME.BECS.FixedPoint {
         /// <param name="point"></param>
         [INLINE(256)]
         public bool GetSide(float3 point) {
-            return (double)math.dot(this.normalData, point) + (double)this.distanceData > 0.0;
+            return math.dot(this.normalData, point) + this.distanceData > 0;
         }
 
         /// <summary>
@@ -168,20 +167,20 @@ namespace ME.BECS.FixedPoint {
         public bool SameSide(float3 inPt0, float3 inPt1) {
             var distanceToPoint1 = this.GetDistanceToPoint(inPt0);
             var distanceToPoint2 = this.GetDistanceToPoint(inPt1);
-            return ((double)distanceToPoint1 > 0.0 && (double)distanceToPoint2 > 0.0) || ((double)distanceToPoint1 <= 0.0 && (double)distanceToPoint2 <= 0.0);
+            return (distanceToPoint1 > 0 && distanceToPoint2 > 0) || (distanceToPoint1 <= 0 && distanceToPoint2 <= 0);
         }
 
         [INLINE(256)]
         public bool Raycast(Ray ray, out tfloat enter) {
             var a = math.dot(ray.direction, this.normalData);
             var num = -math.dot(ray.origin, this.normalData) - this.distanceData;
-            if (a <= 0.0f) {
-                enter = 0.0f;
+            if (a <= 0) {
+                enter = 0;
                 return false;
             }
 
             enter = num / a;
-            return (double)enter > 0.0;
+            return enter > 0;
         }
 
         [INLINE(256)]
