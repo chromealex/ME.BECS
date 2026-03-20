@@ -57,20 +57,19 @@ namespace ME.BECS.Units {
 
             tfloat spacing = unitRadius * 2.1f;
             uint remaining = index;
-            uint ring = 0;
     
             tfloat currentRadius = 0;
             uint countOnThisRing = 0;
             uint indexInRing = 0;
 
             uint tempMax = maxCount - 1;
-            uint currentRingIdx = 0;
-            uint processedPoints = 0;
+            uint currentRingIdx = 0u;
+            uint processedPoints = 0u;
 
             while (true) {
-                currentRingIdx++;
+                ++currentRingIdx;
                 tfloat r = spacing * currentRingIdx;
-                uint capacity = (uint)math.floor(2f * math.PI * r / spacing);
+                uint capacity = (uint)math.floor(2 * math.PI * r / spacing);
         
                 if (processedPoints + capacity >= tempMax) {
                     uint leftForLastRing = tempMax - processedPoints;
@@ -94,7 +93,7 @@ namespace ME.BECS.Units {
                 processedPoints += capacity;
             }
 
-            tfloat angleStep = 2f * math.PI / countOnThisRing;
+            tfloat angleStep = 2 * math.PI / countOnThisRing;
             tfloat angle = angleStep * (indexInRing - 1);
 
             return new float3(

@@ -1472,7 +1472,6 @@ namespace ME.BECS.Network {
                 UnityEngine.Debug.LogException(ex);
                 return false;
             }
-            return true;
         }
 
     }
