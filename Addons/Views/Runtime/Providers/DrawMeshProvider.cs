@@ -304,22 +304,22 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
+        public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
             
         }
 
         [INLINE(256)]
-        public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
+        public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
             
         }
 
         [INLINE(256)]
-        public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+        public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
         }
 
         [INLINE(256)]
-        public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+        public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
         }
 

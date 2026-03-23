@@ -1,3 +1,5 @@
+
+using ME.BECS.Transforms;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -73,8 +75,8 @@ namespace ME.BECS.Views {
 
         public struct ModuleMethod<T> where T : IViewModule {
 
-            public delegate void Delegate(T module, in EntRO ent);
-            public delegate void DelegateState<in TState>(T module, in EntRO ent, TState state) where TState : struct;
+            public delegate void Delegate(T module, in ViewData viewData);
+            public delegate void DelegateState<in TState>(T module, in ViewData viewData, TState state) where TState : struct;
             
             private scg::Dictionary<EntityView, scg::List<ModuleItem<T>>> methods;
 
@@ -113,26 +115,26 @@ namespace ME.BECS.Views {
             }
 
             [INLINE(256)]
-            public void InvokeForced(EntityView objInstance, in EntRO ent, Delegate onModule) {
+            public void InvokeForced(EntityView objInstance, in ViewData viewData, Delegate onModule) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
                         var marker = new Unity.Profiling.ProfilerMarker(module.name);
                         marker.Begin();
-                        onModule.Invoke(module.module, in ent);
+                        onModule.Invoke(module.module, in viewData);
                         marker.End();
                     }
                 }
             }
 
             [INLINE(256)]
-            public void Invoke(EntityView objInstance, in EntRO ent, Delegate onModule) {
+            public void Invoke(EntityView objInstance, in ViewData viewData, Delegate onModule) {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
-                        var hasChanged = module.tracker.HasChanged(in ent, ViewsTracker.GetTracker(module.module));
+                        var hasChanged = module.tracker.HasChanged(in viewData.data.logicEnt, ViewsTracker.GetTracker(module.module));
                         if (hasChanged == true) {
                             var marker = new Unity.Profiling.ProfilerMarker(module.name);
                             marker.Begin();
-                            onModule.Invoke(module.module, in ent);
+                            onModule.Invoke(module.module, in viewData);
                             marker.End();
                         }
                     }
@@ -140,14 +142,14 @@ namespace ME.BECS.Views {
             }
 
             [INLINE(256)]
-            public void Invoke<TState>(EntityView objInstance, in EntRO ent, TState state, DelegateState<TState> onModule) where TState : struct {
+            public void Invoke<TState>(EntityView objInstance, in ViewData viewData, TState state, DelegateState<TState> onModule) where TState : struct {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
-                        var hasChanged = module.tracker.HasChanged(in ent, ViewsTracker.GetTracker(module.module));
+                        var hasChanged = module.tracker.HasChanged(in viewData.data.logicEnt, ViewsTracker.GetTracker(module.module));
                         if (hasChanged == true) {
                             var marker = new Unity.Profiling.ProfilerMarker(module.name);
                             marker.Begin();
-                            onModule.Invoke(module.module, in ent, state);
+                            onModule.Invoke(module.module, in viewData, state);
                             marker.End();
                         }
                     }
@@ -155,12 +157,12 @@ namespace ME.BECS.Views {
             }
 
             [INLINE(256)]
-            public void InvokeForced<TState>(EntityView objInstance, in EntRO ent, TState state, DelegateState<TState> onModule) where TState : struct {
+            public void InvokeForced<TState>(EntityView objInstance, in ViewData viewData, TState state, DelegateState<TState> onModule) where TState : struct {
                 if (this.methods.TryGetValue(objInstance, out var list) == true) {
                     foreach (var module in list) {
                         var marker = new Unity.Profiling.ProfilerMarker(module.name);
                         marker.Begin();
-                        onModule.Invoke(module.module, in ent, state);
+                        onModule.Invoke(module.module, in viewData, state);
                         marker.End();
                     }
                 }
@@ -262,7 +264,7 @@ namespace ME.BECS.Views {
                         var instanceInfo = data.ptr->renderingOnScene[data.ptr->viewsWorld.state, index];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
                         // Replace with the new ent
-                        instance.ent = new Ent(toEntId, data.ptr->connectedWorld);
+                        instance.viewDataRaw.logicEnt = new Ent(toEntId, data.ptr->connectedWorld);
                     }
                 }
                 marker.End();
@@ -281,15 +283,16 @@ namespace ME.BECS.Views {
                             {
                                 if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
                                 //if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) instance.DoDisableToPoolChildren();
-                                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in EntRO _) => module.OnDisableToPool());
+                                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in ViewData _) => module.OnDisableToPool());
                             }
                         }
                         {
                             // call spawn methods
-                            instance.ent = data.ptr->renderingOnSceneEnts[(int)index].element;
-                            if (instanceInfo.prefabInfo.ptr->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.ent);
+                            var instanceData = data.ptr->renderingOnSceneEnts[(int)index];
+                            instance.viewDataRaw = instanceData.ViewData;
+                            if (instanceInfo.prefabInfo.ptr->typeInfo.HasEnableFromPool == true) instance.DoEnableFromPool(instance.viewData);
                             //if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) instance.DoEnableFromPoolChildren(instance.ent);
-                            if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(instance, in instance.ent, static (IViewEnableFromPool module, in EntRO e) => module.OnEnableFromPool(in e));
+                            if (instanceInfo.prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(instance, instance.viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
                         }
                     }
                 }
@@ -499,16 +502,17 @@ namespace ME.BECS.Views {
                 
             {
                 EntRO entRo = ent;
-                objInstance.ent = entRo;
+                objInstance.viewDataRaw = new ViewDataRaw(entRo, Ent.New(data.ptr->viewsWorld, editorName: entRo.GetEntity().EditorName));
+                var viewData = objInstance.viewData;
                 if (isNew == true) {
-                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(in entRo);
+                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(in viewData);
                     //if (prefabInfo.ptr->HasInitializeModules == true) objInstance.DoInitializeChildren(ent);
-                    if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.InvokeForced(objInstance, in entRo, static (IViewInitialize module, in EntRO e) => module.OnInitialize(in e));
+                    if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.InvokeForced(objInstance, in viewData, static (IViewInitialize module, in ViewData viewData) => module.OnInitialize(in viewData));
                 }
 
-                if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in entRo);
+                if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in viewData);
                 //if (prefabInfo.ptr->HasEnableFromPoolModules == true) objInstance.DoEnableFromPoolChildren(ent);
-                if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(objInstance, in entRo, static (IViewEnableFromPool module, in EntRO e) => module.OnEnableFromPool(in e));
+                if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(objInstance, in viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
             }
 
             return info;
@@ -536,7 +540,10 @@ namespace ME.BECS.Views {
         public void Despawn(SceneInstanceInfo instanceInfo) {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-            instance.ent = default;
+            if (instance.viewData.localViewEnt.IsAlive() == true) {
+                instance.viewData.localViewEnt.DestroyHierarchy();
+            }
+            instance.viewDataRaw = default;
             instance.groupChangedTracker.Dispose();
 
             var customViewId = instanceInfo.uniqueId;
@@ -544,7 +551,7 @@ namespace ME.BECS.Views {
             {
                 if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
                 //if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) instance.DoDisableToPoolChildren();
-                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in EntRO _) => module.OnDisableToPool());
+                if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in ViewData _) => module.OnDisableToPool());
             }
 
             this.applyStateModules.UnregisterMethods(instance);
@@ -584,9 +591,9 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
+        public void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
 
-            EntRO entRo = ent;
+            EntRO entRo = viewData.logicEnt;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyStateParallel");
@@ -599,13 +606,13 @@ namespace ME.BECS.Views {
                     var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                     updateMain.Begin();
                     #endif
-                    instanceObj.DoApplyStateParallel(in entRo);
+                    instanceObj.DoApplyStateParallel(in viewData);
                     #if ENABLE_PROFILER
                     updateMain.End();
                     #endif
                 }
             }
-            if (instanceInfo.prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Invoke(instanceObj, in entRo, static (IViewApplyStateParallel module, in EntRO e) => module.ApplyStateParallel(in e));
+            if (instanceInfo.prefabInfo.ptr->HasApplyStateParallelModules == true) this.applyStateParallelModules.Invoke(instanceObj, in viewData, static (IViewApplyStateParallel module, in ViewData viewData) => module.ApplyStateParallel(in viewData));
             #if ENABLE_PROFILER
             mainMarker.End();
             #endif
@@ -613,9 +620,9 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent) {
+        public void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData) {
 
-            EntRO entRo = ent;
+            EntRO entRo = viewData.logicEnt;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("ApplyState");
@@ -628,13 +635,13 @@ namespace ME.BECS.Views {
                     var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                     updateMain.Begin();
                     #endif
-                    instanceObj.DoApplyState(in entRo);
+                    instanceObj.DoApplyState(in viewData);
                     #if ENABLE_PROFILER
                     updateMain.End();
                     #endif
                 }
             }
-            if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in entRo, static (IViewApplyState module, in EntRO e) => module.ApplyState(in e));
+            if (instanceInfo.prefabInfo.ptr->HasApplyStateModules == true) this.applyStateModules.Invoke(instanceObj, in viewData, static (IViewApplyState module, in ViewData viewData) => module.ApplyState(in viewData));
             #if ENABLE_PROFILER
             mainMarker.End();
             #endif
@@ -642,9 +649,9 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+        public void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
-            EntRO entRo = ent;
+            Ent ent = viewData.logicEnt.GetEntity();
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdate");
@@ -655,12 +662,12 @@ namespace ME.BECS.Views {
                 var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                 updateMain.Begin();
                 #endif
-                instanceObj.DoOnUpdate(in entRo, dt);
+                instanceObj.DoOnUpdate(in viewData, dt);
                 #if ENABLE_PROFILER
                 updateMain.End();
                 #endif
             }
-            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdate module, in EntRO e, float dt) => module.OnUpdate(in e, dt));
+            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateModules.InvokeForced(instanceObj, in viewData, dt, static (IViewUpdate module, in ViewData viewData, float dt) => module.OnUpdate(in viewData, dt));
             #if ENABLE_PROFILER
             mainMarker.End();
             #endif
@@ -674,9 +681,8 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt) {
+        public void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt) {
             
-            EntRO entRo = ent;
             var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             #if ENABLE_PROFILER
             var mainMarker = new Unity.Profiling.ProfilerMarker("OnUpdateParallel");
@@ -687,12 +693,12 @@ namespace ME.BECS.Views {
                 var updateMain = new Unity.Profiling.ProfilerMarker(ViewsTracker.Tracker.names[instanceObj.GetType()]);
                 updateMain.Begin();
                 #endif
-                instanceObj.DoOnUpdateParallel(in entRo, dt);
+                instanceObj.DoOnUpdateParallel(in viewData, dt);
                 #if ENABLE_PROFILER
                 updateMain.End();
                 #endif
             }
-            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateParallelModules.InvokeForced(instanceObj, in entRo, dt, static (IViewUpdateParallel module, in EntRO e, float dt) => module.OnUpdateParallel(in e, dt));
+            if (instanceInfo.prefabInfo.ptr->HasUpdateModules == true) this.updateParallelModules.InvokeForced(instanceObj, in viewData, dt, static (IViewUpdateParallel module, in ViewData viewData, float dt) => module.OnUpdateParallel(in viewData, dt));
             #if ENABLE_PROFILER
             mainMarker.End();
             #endif
@@ -707,7 +713,7 @@ namespace ME.BECS.Views {
                 var instanceObj = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instance.obj).Target;
                 if (instance.prefabInfo.ptr->typeInfo.HasDeInitialize == true) instanceObj.DoDeInitialize();
                 //if (instance.prefabInfo.ptr->HasDeInitializeModules == true) instanceObj.DoDeInitializeChildren();
-                if (instance.prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(instanceObj, default, static (IViewDeInitialize module, in EntRO _) => module.OnDeInitialize());
+                if (instance.prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(instanceObj, default, static (IViewDeInitialize module, in ViewData _) => module.OnDeInitialize());
             }
 
             foreach (var kv in this.prefabIdToPool) {
@@ -717,7 +723,7 @@ namespace ME.BECS.Views {
                     if (comp.obj != null) {
                         if (comp.info.ptr->typeInfo.HasDeInitialize == true) comp.obj.DoDeInitialize();
                         //if (comp.info.ptr->HasDeInitializeModules == true) comp.obj.DoDeInitializeChildren();
-                        if (comp.info.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(comp.obj, default, static (IViewDeInitialize module, in EntRO _) => module.OnDeInitialize());
+                        if (comp.info.ptr->HasDeInitializeModules == true) this.deinitializeModules.InvokeForced(comp.obj, default, static (IViewDeInitialize module, in ViewData _) => module.OnDeInitialize());
                         EntityView.DestroyImmediate(comp.obj.gameObject);
                     }
                     

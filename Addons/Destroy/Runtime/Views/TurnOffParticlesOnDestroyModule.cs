@@ -8,8 +8,9 @@ namespace ME.BECS.Views {
 
         public ParticleSystem[] particleSystems;
 
-        public void ApplyState(in EntRO ent) {
+        public void ApplyState(in ViewData viewData) {
 
+            EntRO ent = viewData;
             if (ent.HasDestroyLifetime() == true) {
                 foreach (var ps in this.particleSystems) {
                     ps.Stop();

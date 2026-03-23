@@ -98,13 +98,27 @@ namespace ME.BECS {
     public struct SpatialQuerySystem : IUpdate {
 
         [BURST]
-        public struct Job : IJobForAspects<SpatialQueryAspect, TransformAspect> {
-
-            public SpatialInsertSystem system;
+        public struct PrepareJob : IJobForAspects<SpatialQueryAspect, TransformAspect> {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialQueryAspect query, ref TransformAspect tr) {
 
-                this.system.FillNearest(ref query, in tr, new AlwaysTrueSpatialSubFilter());
+                var result = tr.IsCalculated;
+                var q = query.readQuery;
+                if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) result = false;
+                ent.SetTag<IsQueryReady>(result);
+
+            }
+
+        }
+
+        [BURST]
+        public struct Job : IJobForAspects<SpatialQueryAspect, TransformAspect> {
+
+            public InjectSystem<SpatialInsertSystem> system;
+
+            public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialQueryAspect query, ref TransformAspect tr) {
+
+                this.system.Value.FillNearest(ref query, in tr, new AlwaysTrueSpatialSubFilter());
                 
             }
 
@@ -112,11 +126,9 @@ namespace ME.BECS {
         
         public void OnUpdate(ref SystemContext context) {
 
-            var querySystem = context.world.GetSystem<SpatialInsertSystem>();
-            var handle = context.Query().Without<SpatialQueryHasCustomFilterTag>().AsParallel().Schedule<Job, SpatialQueryAspect, TransformAspect>(new Job() {
-                system = querySystem,
-            });
-            context.SetDependency(handle);
+            context.Query().Without<SpatialQueryHasCustomFilterTag>().AsParallel().Schedule<PrepareJob, SpatialQueryAspect, TransformAspect>().AddDependency(ref context);
+            context.Apply();
+            context.Query().Without<SpatialQueryHasCustomFilterTag>().With<IsQueryReady>().AsParallel().Schedule<Job, SpatialQueryAspect, TransformAspect>().AddDependency(ref context);
 
         }
 

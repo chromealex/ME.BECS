@@ -9,9 +9,9 @@ namespace ME.BECS.Views {
         public ParticleSystem[] particleSystems;
         public TrailRenderer[] trailRenderers;
 
-        public void OnEnableFromPool(in EntRO ent) => this.Reset();
+        public void OnEnableFromPool(in ViewData viewData) => this.Reset();
 
-        public void OnInitialize(in EntRO ent) => this.Reset();
+        public void OnInitialize(in ViewData viewData) => this.Reset();
 
         public void Reset() {
             

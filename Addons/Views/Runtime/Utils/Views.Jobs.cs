@@ -40,7 +40,7 @@ namespace ME.BECS.Views {
                 var ent = entData.element;
                 if (entData.versionParallel != ent.Version) {
                     entData.versionParallel = ent.Version;
-                    this.provider.Value.ApplyStateParallel(this.data, in view, in ent);
+                    this.provider.Value.ApplyStateParallel(this.data, in view, entData.ViewData);
                 }
             }
 
@@ -59,9 +59,8 @@ namespace ME.BECS.Views {
                 var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in this.allocator, entId);
                 ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
                 var view = this.data.ptr->renderingOnScene[in this.allocator, idx];
-                var ent = entData.element;
                 if (view.prefabInfo.ptr->typeInfo.HasUpdateParallel == true || view.prefabInfo.ptr->HasUpdateParallelModules == true) {
-                    this.provider.Value.OnUpdateParallel(this.data, in view, in ent, this.dt);
+                    this.provider.Value.OnUpdateParallel(this.data, in view, entData.ViewData, this.dt);
                 }
             }
 

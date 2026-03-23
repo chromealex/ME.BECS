@@ -21,8 +21,9 @@ namespace ME.BECS.Units {
         private static readonly int speedHash = UnityEngine.Animator.StringToHash("Speed");
         private tfloat prevSpeed;
 
-        public void ApplyState(in EntRO ent) {
+        public void ApplyState(in ViewData viewData) {
 
+            EntRO ent = viewData;
             var componentProperties = ent.Read<NavAgentComponent>();
             var component = ent.Read<NavAgentRuntimeSpeedComponent>();
             var speedFactor = component.speed / componentProperties.maxSpeed;

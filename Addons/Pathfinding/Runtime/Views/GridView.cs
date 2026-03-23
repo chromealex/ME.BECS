@@ -10,6 +10,8 @@ using UnityEngine;
 
 namespace ME.BECS.Pathfinding.Views {
     
+    using ME.BECS.Views;
+    
     public class GridView : ME.BECS.Views.EntityView {
 
         private static readonly int centerPos = Shader.PropertyToID("_ObjPos");
@@ -27,16 +29,18 @@ namespace ME.BECS.Pathfinding.Views {
         private float4 objPos;
         public float2 offset;
 
-        protected override void OnInitialize(in EntRO ent) {
-            
+        protected override void OnInitialize(in ViewData viewData) {
+
+            EntRO ent = viewData;
             var grid = ent.World.GetSystem<ShowBuildingGridSystem>();
             this.gridSize = grid.gridSize;
             this.nodeSize = (float)grid.nodeSize;
             
         }
 
-        protected override void ApplyState(in ME.BECS.EntRO ent) {
+        protected override void ApplyState(in ViewData viewData) {
 
+            EntRO ent = viewData;
             var grid = ent.World.GetSystem<ShowBuildingGridSystem>();
             var objPos = ent.GetAspect<ME.BECS.Transforms.TransformAspect>().position;
             var objSize = ent.Read<ME.BECS.Units.UnitQuadSizeComponent>().size;
@@ -56,8 +60,9 @@ namespace ME.BECS.Pathfinding.Views {
 
         }
 
-        protected override void OnUpdate(in EntRO ent, float dt) { 
+        protected override void OnUpdate(in ViewData viewData, float dt) { 
             
+            EntRO ent = viewData;
             var invScaleX = 1f / this.viewWorldSize.x;
             var invScaleY = 1f / this.viewWorldSize.y;
             var x = this.offset.x - this.viewWorldSize.x * 0.5f;

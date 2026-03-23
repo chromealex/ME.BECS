@@ -1,12 +1,15 @@
 ﻿namespace ME.BECS.Attack {
+    
+    using ME.BECS.Views;
 
-    public class AttackMuzzleViewModule : ME.BECS.Views.IViewApplyState {
+    public class AttackMuzzleViewModule : IViewApplyState {
 
         public UnityEngine.GameObject muzzlePoint;
         public uint sensorIndex;
 
-        public void ApplyState(in EntRO ent) {
-            
+        public void ApplyState(in ViewData viewData) {
+
+            EntRO ent = viewData;
             var unit = ent.GetAspect<ME.BECS.Units.UnitAspect>();
             var sensors = unit.readComponentRuntime.placements;
             if (this.sensorIndex >= sensors.Count) return;

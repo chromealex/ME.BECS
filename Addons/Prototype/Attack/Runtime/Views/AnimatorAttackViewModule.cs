@@ -13,8 +13,9 @@ namespace ME.BECS.Attack {
         private static readonly int hasTargetHash = UnityEngine.Animator.StringToHash("HasTarget");
         private static readonly int canAttackOnMoveHash = UnityEngine.Animator.StringToHash("CanAttackOnMove");
 
-        public void ApplyState(in EntRO ent) {
+        public void ApplyState(in ViewData viewData) {
 
+            EntRO ent = viewData;
             var unit = ent.GetAspect<UnitAspect>();
             var sensors = unit.readComponentRuntime.placements;
             if (this.sensorIndex >= sensors.Count) return;

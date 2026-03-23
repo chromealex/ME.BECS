@@ -116,7 +116,7 @@ namespace ME.BECS.Tests {
                         var idx = views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, firstEnt.id];
                         var instanceInfo = views.data.ptr->renderingOnScene[views.data.ptr->viewsWorld.state, idx];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-                        Assert.IsTrue(instance.ent == firstEnt);
+                        Assert.IsTrue(instance.viewData.logicEnt == firstEnt);
                     }
 
                     var newEnt = world.NewEnt();
@@ -136,7 +136,7 @@ namespace ME.BECS.Tests {
                         var idx = views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, newEnt.id];
                         var instanceInfo = views.data.ptr->renderingOnScene[views.data.ptr->viewsWorld.state, idx];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-                        Assert.IsTrue(instance.ent == newEnt);
+                        Assert.IsTrue(instance.viewData.logicEnt == newEnt);
                     }
                 }
                 views.Dispose();
@@ -158,7 +158,8 @@ namespace ME.BECS.Tests {
 
         public class TestViewModule : IViewModule, IViewApplyState {
 
-            public void ApplyState(in EntRO ent) {
+            public void ApplyState(in ViewData viewData) {
+                EntRO ent = viewData;
                 var test = ent.Read<TestComponent>();
             }
 

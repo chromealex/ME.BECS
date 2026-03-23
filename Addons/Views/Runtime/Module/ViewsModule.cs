@@ -149,6 +149,12 @@ namespace ME.BECS {
 
         }
 
+        public Ent GetViewDataByEntity(in Ent entity) {
+            var data = this.GetViewByEntity(entity);
+            if (data == null) return default;
+            return data.GetViewData().localViewEnt;
+        }
+
         public IView GetViewByEntity(in Ent entity) {
             IView view = null;
             if (this.properties.viewsGameObjects == true) view = this.viewsGameObjects.GetViewByEntity(in entity);

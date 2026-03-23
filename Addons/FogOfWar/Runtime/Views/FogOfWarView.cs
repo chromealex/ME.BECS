@@ -29,8 +29,9 @@ namespace ME.BECS.FogOfWar {
         private float2 worldSize;
         private Vector3 offset;
 
-        protected override void OnInitialize(in EntRO ent) {
+        protected override void OnInitialize(in ViewData viewData) {
             
+            EntRO ent = viewData;
             var pathfinding = ent.World.parent.GetSystem<ME.BECS.Pathfinding.BuildGraphSystem>();
             var fowSystem = ent.World.parent.GetSystem<CreateSystem>();
             var system = ent.World.GetSystem<CreateTextureSystem>();
@@ -47,10 +48,11 @@ namespace ME.BECS.FogOfWar {
             
         }
 
-        protected override void OnUpdate(in EntRO ent, float dt) {
+        protected override void OnUpdate(in ViewData viewData, float dt) {
 
             // this.SetScale();
             
+            EntRO ent = viewData;
             var createTextureSystem = ent.World.GetSystem<CreateTextureSystem>();
             var logicWorld = ent.World.parent;
             var fowSystem = logicWorld.GetSystem<CreateSystem>();

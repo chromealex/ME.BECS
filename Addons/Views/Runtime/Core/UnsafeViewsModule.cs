@@ -20,10 +20,10 @@ namespace ME.BECS.Views {
         /// </summary>
         JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
         void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data);
-        void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
-        void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
-        void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
-        void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
+        void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData);
+        void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData);
+        void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt);
+        void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt);
 
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data);
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
@@ -98,12 +98,14 @@ namespace ME.BECS.Views {
 
     public interface IView {
 
-        void DoInitialize(in EntRO ent);
+        public ViewData GetViewData();
+
+        void DoInitialize(in ViewData viewData);
         void DoDeInitialize();
-        void DoEnableFromPool(in EntRO ent);
+        void DoEnableFromPool(in ViewData viewData);
         void DoDisableToPool();
-        void DoApplyState(in EntRO ent);
-        void DoOnUpdate(in EntRO ent, float dt);
+        void DoApplyState(in ViewData viewData);
+        void DoOnUpdate(in ViewData viewData, float dt);
 
     }
     
@@ -290,8 +292,11 @@ namespace ME.BECS.Views {
         public struct EntityData {
 
             public Ent element;
+            public Ent localData;
             public uint version;
             public uint versionParallel;
+
+            public ViewData ViewData => new ViewData(this.element, this.localData);
 
         }
         
@@ -764,7 +769,7 @@ namespace ME.BECS.Views {
                         var ent = entData.element;
                         if (entData.version != ent.Version) {
                             entData.version = ent.Version;
-                            provider.ApplyState(this.data, in view, in ent);
+                            provider.ApplyState(this.data, in view, new ViewData(ent, entData.localData));
                         }
                     }
                     marker.End();
@@ -781,7 +786,7 @@ namespace ME.BECS.Views {
                         var view = this.data.ptr->renderingOnScene[in allocator, idx];
                         var ent = entData.element;
                         if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
-                            provider.OnUpdate(this.data, in view, in ent, dt);
+                            provider.OnUpdate(this.data, in view, new ViewData(ent, entData.localData), dt);
                         }
                     }
                     marker.End();
