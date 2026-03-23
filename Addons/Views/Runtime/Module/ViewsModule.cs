@@ -149,6 +149,14 @@ namespace ME.BECS {
 
         }
 
+        public Ent GetViewDataByEntity(in EntRO entity) {
+            return this.GetViewDataByEntity(entity.GetEntity());
+        }
+
+        public IView GetViewByEntity(in EntRO entity) {
+            return this.GetViewByEntity(entity.GetEntity());
+        }
+
         public Ent GetViewDataByEntity(in Ent entity) {
             var data = this.GetViewByEntity(entity);
             if (data == null) return default;
