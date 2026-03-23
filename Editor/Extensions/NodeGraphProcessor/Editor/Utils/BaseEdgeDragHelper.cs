@@ -268,7 +268,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
         private void Pan(TimerState ts)
         {
-            graphView.viewTransform.position -= panDiff;
+            graphView.style.translate = graphView.resolvedStyle.translate - panDiff;
 
             // Workaround to force edge to update when we pan the graph
             edgeCandidate.output = edgeCandidate.output;
