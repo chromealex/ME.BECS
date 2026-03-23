@@ -77,6 +77,8 @@ namespace ME.BECS.Views {
                 
                 if (this.data.ptr->toAdd.Count() > 0) {
                     //UnityEngine.Debug.Log("To Add:");
+                    var jobInfo = JobInfo.Create(this.viewsWorld.id);
+                    jobInfo.CreateLocalCounter();
                     ref var allocator = ref this.viewsWorld.state.ptr->allocator;
                     foreach (var kv in this.data.ptr->toAdd) {
                         var entId = kv.Key;
@@ -89,8 +91,11 @@ namespace ME.BECS.Views {
                                 this.data.ptr->loadingRequests.Add(viewComponent.source.prefabId);
                                 continue;
                             }
+                            
+                            var localData = Ent.New(jobInfo, editorName: viewEnt.EditorName);
                             this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
                                 ent = viewEnt,
+                                localData = localData,
                                 prefabInfo = prefabInfo,
                             });
                             var updateIdx = this.data.ptr->renderingOnSceneCount++;
@@ -125,6 +130,7 @@ namespace ME.BECS.Views {
                             this.data.ptr->renderingOnSceneEntToPrefabId[in allocator, entId] = viewComponent.source.prefabId;
                             this.data.ptr->renderingOnSceneEnts.Add(new ViewsModuleData.EntityData() {
                                 element = viewEnt,
+                                localData = localData,
                                 version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
                                 versionParallel = viewEnt.Version - 1,
                             });

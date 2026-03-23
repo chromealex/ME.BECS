@@ -258,6 +258,7 @@ namespace ME.BECS.Views {
     public struct SpawnInstanceInfo {
 
         public Ent ent;
+        public Ent localData;
         public SourceRegistry.InfoRef prefabInfo;
 
     }
@@ -769,7 +770,7 @@ namespace ME.BECS.Views {
                         var ent = entData.element;
                         if (entData.version != ent.Version) {
                             entData.version = ent.Version;
-                            provider.ApplyState(this.data, in view, new ViewData(ent, entData.localData));
+                            provider.ApplyState(this.data, in view, entData.ViewData);
                         }
                     }
                     marker.End();
@@ -784,9 +785,8 @@ namespace ME.BECS.Views {
                         var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
                         ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
                         var view = this.data.ptr->renderingOnScene[in allocator, idx];
-                        var ent = entData.element;
                         if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
-                            provider.OnUpdate(this.data, in view, new ViewData(ent, entData.localData), dt);
+                            provider.OnUpdate(this.data, in view, entData.ViewData, dt);
                         }
                     }
                     marker.End();

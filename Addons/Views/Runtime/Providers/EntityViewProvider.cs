@@ -404,7 +404,7 @@ namespace ME.BECS.Views {
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
                 var item = data.ptr->toAddTemp[i];
-                var instanceInfo = this.Spawn(data, item.prefabInfo.info, in item.ent, out var isNew);
+                var instanceInfo = this.Spawn(data, item.prefabInfo.info, in item.ent, in item.localData, out var isNew);
                 data.ptr->renderingOnScene.Add(ref data.ptr->viewsWorld.state.ptr->allocator, instanceInfo);
             }
 
@@ -426,7 +426,7 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, out bool isNew) {
+        public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, in Ent localData, out bool isNew) {
 
             var customViewId = ent.Read<ViewCustomIdComponent>().uniqueId;
             System.IntPtr objPtr;
@@ -502,7 +502,7 @@ namespace ME.BECS.Views {
                 
             {
                 EntRO entRo = ent;
-                objInstance.viewDataRaw = new ViewDataRaw(entRo, Ent.New(data.ptr->viewsWorld, editorName: entRo.GetEntity().EditorName));
+                objInstance.viewDataRaw = new ViewDataRaw(entRo, localData);
                 var viewData = objInstance.viewData;
                 if (isNew == true) {
                     if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(in viewData);
