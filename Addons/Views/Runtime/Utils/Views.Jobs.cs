@@ -67,7 +67,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobSpawnViews : IJob {
+        public struct JobSpawnViews : IJobSingle {
 
             public World connectedWorld;
             public World viewsWorld;
@@ -77,8 +77,6 @@ namespace ME.BECS.Views {
                 
                 if (this.data.ptr->toAdd.Count() > 0) {
                     //UnityEngine.Debug.Log("To Add:");
-                    var jobInfo = JobInfo.Create(this.viewsWorld.id);
-                    jobInfo.CreateLocalCounter();
                     ref var allocator = ref this.viewsWorld.state.ptr->allocator;
                     foreach (var kv in this.data.ptr->toAdd) {
                         var entId = kv.Key;
@@ -92,7 +90,7 @@ namespace ME.BECS.Views {
                                 continue;
                             }
                             
-                            var localData = Ent.New(jobInfo, editorName: viewEnt.EditorName);
+                            var localData = Ent.New(this.viewsWorld, editorName: viewEnt.EditorName);
                             this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
                                 ent = viewEnt,
                                 localData = localData,

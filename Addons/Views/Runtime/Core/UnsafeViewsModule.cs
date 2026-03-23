@@ -664,7 +664,7 @@ namespace ME.BECS.Views {
                         connectedWorld = this.data.ptr->connectedWorld,
                         viewsWorld = this.data.ptr->viewsWorld,
                         data = this.data,
-                    }.Schedule(dependsOn);
+                    }.ScheduleSingle(dependsOn);
                     marker.End();
                 }
 
