@@ -150,7 +150,7 @@ Optional defines: ([Description](https://github.com/chromealex/ME.BECS/wiki/Defi
 -define:ENABLE_BECS_COLLECTIONS_CHECKS
 -define:LEAK_DETECTION
 -define:MEMORY_ALLOCATOR_BOUNDS_CHECK
--define:ENABLE_BECS_FLAT_QUIERIES
+-define:ENABLE_BECS_FLAT_QUERIES
 ```
 - Use "Create/ME.BECS/Create Project" menu to create default project.
 
