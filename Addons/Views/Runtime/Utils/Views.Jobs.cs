@@ -104,22 +104,18 @@ namespace ME.BECS.Views {
                             
                             if (prefabInfo.info.ptr->typeInfo.HasApplyStateParallel == true || prefabInfo.info.ptr->HasApplyStateParallelModules == true) {
                                 this.data.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, entId);
-                                *this.data.ptr->applyStateParallelCounter.ptr = this.data.ptr->renderingOnSceneApplyStateParallel.Count;
                             }
 
                             if (prefabInfo.info.ptr->typeInfo.HasApplyState == true || prefabInfo.info.ptr->HasApplyStateModules == true) {
                                 this.data.ptr->renderingOnSceneApplyState.Add(ref allocator, entId);
-                                *this.data.ptr->applyStateCounter.ptr = this.data.ptr->renderingOnSceneApplyState.Count;
                             }
 
                             if (prefabInfo.info.ptr->typeInfo.HasUpdate == true || prefabInfo.info.ptr->HasUpdateModules == true) {
                                 this.data.ptr->renderingOnSceneUpdate.Add(ref allocator, entId);
-                                *this.data.ptr->updateCounter.ptr = this.data.ptr->renderingOnSceneUpdate.Count;
                             }
 
                             if (prefabInfo.info.ptr->typeInfo.HasUpdateParallel == true || prefabInfo.info.ptr->HasUpdateParallelModules == true) {
                                 this.data.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, entId);
-                                *this.data.ptr->updateParallelCounter.ptr = this.data.ptr->renderingOnSceneUpdateParallel.Count;
                             }
 
                             this.data.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, entId) = updateIdx;
@@ -136,6 +132,10 @@ namespace ME.BECS.Views {
                             Logger.Views.Error("Item not found");
                         }
                     }
+                    this.data.ptr->applyStateParallelCounter.ptr->count = (int)this.data.ptr->renderingOnSceneApplyStateParallel.Count;
+                    this.data.ptr->applyStateCounter.ptr->count = (int)this.data.ptr->renderingOnSceneApplyState.Count;
+                    this.data.ptr->updateCounter.ptr->count = (int)this.data.ptr->renderingOnSceneUpdate.Count;
+                    this.data.ptr->updateParallelCounter.ptr->count = (int)this.data.ptr->renderingOnSceneUpdateParallel.Count;
                 }
                 
             }
@@ -174,22 +174,18 @@ namespace ME.BECS.Views {
                                 
                                 if (info.prefabInfo.ptr->typeInfo.HasApplyStateParallel == true || info.prefabInfo.ptr->HasApplyStateParallelModules == true) {
                                     this.data.ptr->renderingOnSceneApplyStateParallel.Remove(in allocator, entId);
-                                    *this.data.ptr->applyStateParallelCounter.ptr = this.data.ptr->renderingOnSceneApplyStateParallel.Count;
                                 }
 
                                 if (info.prefabInfo.ptr->typeInfo.HasApplyState == true || info.prefabInfo.ptr->HasApplyStateModules == true) {
                                     this.data.ptr->renderingOnSceneApplyState.Remove(in allocator, entId);
-                                    *this.data.ptr->applyStateCounter.ptr = this.data.ptr->renderingOnSceneApplyState.Count;
                                 }
 
                                 if (info.prefabInfo.ptr->typeInfo.HasUpdate == true || info.prefabInfo.ptr->HasUpdateModules == true) {
                                     this.data.ptr->renderingOnSceneUpdate.Remove(in allocator, entId);
-                                    *this.data.ptr->updateCounter.ptr = this.data.ptr->renderingOnSceneUpdate.Count;
                                 }
 
                                 if (info.prefabInfo.ptr->typeInfo.HasUpdateParallel == true || info.prefabInfo.ptr->HasUpdateParallelModules == true) {
                                     this.data.ptr->renderingOnSceneUpdateParallel.Remove(in allocator, entId);
-                                    *this.data.ptr->updateParallelCounter.ptr = this.data.ptr->renderingOnSceneUpdateParallel.Count;
                                 }
 
                                 --this.data.ptr->renderingOnSceneCount;
@@ -212,6 +208,10 @@ namespace ME.BECS.Views {
                             Logger.Views.Error("Item not found");
                         }
                     }
+                    this.data.ptr->applyStateParallelCounter.ptr->count = (int)this.data.ptr->renderingOnSceneApplyStateParallel.Count;
+                    this.data.ptr->applyStateCounter.ptr->count = (int)this.data.ptr->renderingOnSceneApplyState.Count;
+                    this.data.ptr->updateCounter.ptr->count = (int)this.data.ptr->renderingOnSceneUpdate.Count;
+                    this.data.ptr->updateParallelCounter.ptr->count = (int)this.data.ptr->renderingOnSceneUpdateParallel.Count;
                 }
                 
             }
@@ -658,11 +658,12 @@ namespace ME.BECS.Views {
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public MemArray<ibool> culling;
             public CullingType cullingType;
-            public RenderingSparseList renderingOnScene;
+            [NativeDisableUnsafePtrRestriction]
+            public RenderingSparseList* renderingOnScene;
             
             public void Execute(int index) {
 
-                var entId = this.renderingOnScene.sparseSet.dense[in this.state.ptr->allocator, (uint)index];
+                var entId = this.renderingOnScene->sparseSet.dense[in this.state.ptr->allocator, (uint)index];
                 /*
                 var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
                 var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;

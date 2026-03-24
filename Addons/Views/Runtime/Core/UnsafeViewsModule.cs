@@ -9,6 +9,7 @@ namespace ME.BECS.Views {
     using Unity.Jobs;
     using static Cuts;
     using System.Runtime.InteropServices;
+    using ME.BECS.NativeCollections;
 
     public unsafe interface IViewProvider<TEntityView> where TEntityView : IView {
 
@@ -322,10 +323,10 @@ namespace ME.BECS.Views {
         public RenderingSparseList renderingOnSceneApplyStateParallel;
         public RenderingSparseList renderingOnSceneUpdate;
         public RenderingSparseList renderingOnSceneUpdateParallel;
-        public safe_ptr<uint> applyStateCounter;
-        public safe_ptr<uint> applyStateParallelCounter;
-        public safe_ptr<uint> updateCounter;
-        public safe_ptr<uint> updateParallelCounter;
+        public safe_ptr<DeferJobCounter> applyStateCounter;
+        public safe_ptr<DeferJobCounter> applyStateParallelCounter;
+        public safe_ptr<DeferJobCounter> updateCounter;
+        public safe_ptr<DeferJobCounter> updateParallelCounter;
 
         public MemArray<ibool> renderingOnSceneApplyStateCulling;
         public MemArray<ibool> renderingOnSceneApplyStateParallelCulling;
@@ -352,10 +353,10 @@ namespace ME.BECS.Views {
                 prefabId = 0u,
                 properties = properties,
                 beginFrameState = _make(new BeginFrameState()),
-                applyStateCounter = _make<uint>(0u),
-                applyStateParallelCounter = _make<uint>(0u),
-                updateCounter = _make<uint>(0u),
-                updateParallelCounter = _make<uint>(0u),
+                applyStateCounter = _make<DeferJobCounter>(default),
+                applyStateParallelCounter = _make<DeferJobCounter>(default),
+                updateCounter = _make<DeferJobCounter>(default),
+                updateParallelCounter = _make<DeferJobCounter>(default),
                 prefabIdToInfo = new UIntDictionary<SourceRegistry.InfoRef>(ref allocator, properties.instancesRegistryCapacity),
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
@@ -676,34 +677,34 @@ namespace ME.BECS.Views {
                 depends[0] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = this.data.ptr->renderingOnSceneApplyStateParallel,
+                    renderingOnScene = &this.data.ptr->renderingOnSceneApplyStateParallel,
                     culling = this.data.ptr->renderingOnSceneApplyStateParallelCulling,
                     cullingType = CullingType.FrustumApplyStateOnly,
-                }.Schedule((int*)this.data.ptr->applyStateParallelCounter.ptr, 64, dependsOn);
+                }.Schedule(&this.data.ptr->applyStateParallelCounter.ptr->count, 64, dependsOn);
 
                 depends[1] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = this.data.ptr->renderingOnSceneUpdateParallel,
+                    renderingOnScene = &this.data.ptr->renderingOnSceneUpdateParallel,
                     culling = this.data.ptr->renderingOnSceneUpdateParallelCulling,
                     cullingType = CullingType.FrustumOnUpdateOnly,
-                }.Schedule((int*)this.data.ptr->updateParallelCounter.ptr, 64, dependsOn);
+                }.Schedule(&this.data.ptr->updateParallelCounter.ptr->count, 64, dependsOn);
 
                 depends[2] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = this.data.ptr->renderingOnSceneApplyState,
+                    renderingOnScene = &this.data.ptr->renderingOnSceneApplyState,
                     culling = this.data.ptr->renderingOnSceneApplyStateCulling,
                     cullingType = CullingType.FrustumApplyStateOnly,
-                }.Schedule((int*)this.data.ptr->applyStateCounter.ptr, 64, dependsOn);
+                }.Schedule(&this.data.ptr->applyStateCounter.ptr->count, 64, dependsOn);
 
                 depends[3] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = this.data.ptr->renderingOnSceneUpdate,
+                    renderingOnScene = &this.data.ptr->renderingOnSceneUpdate,
                     culling = this.data.ptr->renderingOnSceneUpdateCulling,
                     cullingType = CullingType.FrustumOnUpdateOnly,
-                }.Schedule((int*)this.data.ptr->updateCounter.ptr, 64, dependsOn);
+                }.Schedule(&this.data.ptr->updateCounter.ptr->count, 64, dependsOn);
 
                 dependsOn = JobHandle.CombineDependencies(depends);
 
