@@ -70,8 +70,10 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Execute() {
 
-            Ents.EnsureFree(this.buffer->state, this.buffer->count * this.jobInfo.itemsPerCall);
-            
+            for (uint i = 0u; i < EntityTypes.groupsCount; ++i) {
+                Ents.EnsureFree(this.buffer->state, i, this.buffer->count * this.jobInfo.itemsPerCall[i]);
+            }
+
         }
 
     }

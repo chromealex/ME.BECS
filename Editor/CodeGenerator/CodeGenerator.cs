@@ -7,6 +7,16 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using scg = System.Collections.Generic;
 
+    public class CodeGeneratorOrderAttribute : System.Attribute {
+
+        public int order;
+
+        public CodeGeneratorOrderAttribute(int order) {
+            this.order = order;
+        }
+
+    } 
+
     public struct MethodPointerData : System.IEquatable<MethodPointerData> {
 
         public MethodInfo originalMethodInfo;
@@ -503,7 +513,7 @@ namespace ME.BECS.Editor {
                 postfix = "Runtime";
             }
 
-            var customCodeGenerators = UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>().OrderBy(x => x.FullName);
+            var customCodeGenerators = UnityEditor.TypeCache.GetTypesDerivedFrom<CustomCodeGenerator>().OrderBy(x => x.GetCustomAttribute<CodeGeneratorOrderAttribute>()?.order).ThenBy(x => x.FullName);
             var generators = customCodeGenerators.Select(x => (CustomCodeGenerator)System.Activator.CreateInstance(x)).ToArray();
 
             if (System.IO.Directory.Exists(dir) == false) {

@@ -546,6 +546,15 @@ namespace ME.BECS {
             return dependsOn;
 
         }
+
+        [Unity.Burst.BurstDiscardAttribute]
+        private static void SetWorldName(ref World world, ref Unity.Collections.FixedString64Bytes name) {
+            if (name.IsEmpty == true) {
+                name = $"World #{world.id}";
+            } else {
+                name = $"#{world.id} {name.ToString()}";
+            }
+        }
         
         [INLINE(256)]
         internal static void AddWorld(ref World world, ushort worldId = 0, Unity.Collections.FixedString64Bytes name = default, bool raiseCallback = true) {
@@ -561,11 +570,7 @@ namespace ME.BECS {
             WorldsParent.Resize(world.id);
 
             var srcName = name;
-            if (name.IsEmpty == true) {
-                name = $"World #{world.id}";
-            } else {
-                name = $"#{world.id} {name.ToString()}";
-            }
+            SetWorldName(ref world, ref name);
             
             worldsStorage.Get(worldId) = new WorldHeader() {
                 world = world,

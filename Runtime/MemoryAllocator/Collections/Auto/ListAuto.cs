@@ -341,6 +341,7 @@ namespace ME.BECS {
         public unsafe bool RemoveAt(ref MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
+            E.RANGE(index, 0, this.Count);
             if (index >= this.Count) return false;
 
             if (index == this.Count - 1) {
@@ -366,6 +367,7 @@ namespace ME.BECS {
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
+            E.RANGE(index, 0, this.Count);
             if (index >= this.Count) return false;
             
             --this.Count;

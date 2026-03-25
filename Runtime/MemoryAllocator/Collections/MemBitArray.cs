@@ -732,6 +732,15 @@ namespace ME.BECS {
             var mask = 1ul << shift;
             return 0ul != (ptr[idx] & mask);
         }
+        
+        [INLINE(256)]
+        public bool IsSet(in MemoryAllocator allocator, uint pos) {
+            var ptr = (safe_ptr<ulong>)allocator.GetUnsafePtr(in this.ptr);
+            var idx = pos >> 6;
+            var shift = (int)pos & 0x3f;
+            var mask = 1ul << shift;
+            return 0ul != (ptr[idx] & mask);
+        }
 
         [INLINE(256)]
         internal void CopyUlong(in MemoryAllocator allocator, int dstPos, ref MemBitArray srcBitArray, int srcPos, int numBits) {

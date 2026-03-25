@@ -31,6 +31,7 @@ namespace ME.BECS {
 
             public uint free;
             public uint offset;
+            public bool IsEmpty => this.free == 0u;
 
             [INLINE(256)]
             public static Group Create(ref uint freeCount, uint offset) {
@@ -78,61 +79,91 @@ namespace ME.BECS {
         public struct Groups {
 
             public List<Group> groups;
+            public List<uint> freeGroups;
+            public HashSet<uint> freeGroupsHas;
             public ReadWriteSpinner resizeLock;
-            private uint lastFreeGroup;
 
             [INLINE(256)]
             public static Groups Create(safe_ptr<State> state, uint initGroupsCount) {
                 return new Groups() {
                     groups = new List<Group>(ref state.ptr->allocator, initGroupsCount),
+                    freeGroupsHas = new HashSet<uint>(ref state.ptr->allocator, initGroupsCount),
+                    freeGroups = new List<uint>(ref state.ptr->allocator, initGroupsCount),
                     resizeLock = ReadWriteSpinner.Create(state),
                 };
             }
 
             [INLINE(256)]
-            private bool TryNew(safe_ptr<State> state, out uint id) {
-                var startOffset = Volatile.Read(ref this.lastFreeGroup);
-                for (uint i = 0u; i < this.groups.Count; ++i) {
-                    var idx = (startOffset + i) % this.groups.Count;
-                    ref var group = ref this.groups[state, idx];
-                    E.ADDR_4(ref group);
+            private bool TryNew(safe_ptr<State> state, JobInfo jobInfo, uint groupId, out uint id, out uint groupIndex, out uint freeGroupIndex) {
+                id = 0u;
+                groupIndex = uint.MaxValue;
+                freeGroupIndex = 0u;
+                if (this.freeGroups.Count == 0u) return false;
+                var offset = jobInfo.GetOffset(groupId);
+                for (uint i = 0; i < this.freeGroups.Count; ++i) {
+                    freeGroupIndex = offset % this.freeGroups.Count;
+                    var groupIdx = this.freeGroups[state, freeGroupIndex];
+                    ref var group = ref this.groups[state, groupIdx];
                     if (group.TryNew(out var entId) == true) {
                         id = entId;
+                        groupIndex = groupIdx;
                         return true;
                     }
                 }
+
                 id = default;
                 return false;
             }
 
             [INLINE(256)]
-            public uint New(safe_ptr<State> state, ref uint nextGroupId, out bool reuse) {
+            public uint New(safe_ptr<State> state, JobInfo jobInfo, uint groupId, ref uint nextGroupId, out bool reuse) {
                 
                 if (state.ptr->entities.freeCount > 0u) {
                     this.resizeLock.ReadBegin(state);
-                    if (this.TryNew(state, out var entId) == true) {
+                    if (this.TryNew(state, jobInfo, groupId, out var entId, out var usedGroupIndex, out var freeGroupIndex) == true) {
                         this.resizeLock.ReadEnd(state);
+                        
+                        this.resizeLock.WriteBegin(state);
+                        var group = this.groups[state, usedGroupIndex];
+                        if (group.IsEmpty == true) {
+                            this.freeGroups.RemoveAt(ref state.ptr->allocator, freeGroupIndex);
+                            this.freeGroupsHas.Remove(ref state.ptr->allocator, usedGroupIndex);
+                        }
+                        this.resizeLock.WriteEnd();
                         reuse = true;
                         return entId;
                     }
-
                     this.resizeLock.ReadEnd(state);
                 }
 
                 {
+                    if (JobUtils.IsInParallelJob() == true) {
+                        throw new System.Exception("EnsureFree must be called in parallel job");
+                    }
                     reuse = false;
                     // create new group
                     this.resizeLock.WriteBegin(state);
-                    if (state.ptr->entities.freeCount > 0u && this.TryNew(state, out var entId) == true) {
+                    if (state.ptr->entities.freeCount > 0u && this.TryNew(state, jobInfo, groupId, out var entId, out var usedGroupIndex, out var freeGroupIndex) == true) {
+                        var group = this.groups[state, usedGroupIndex];
+                        if (group.IsEmpty == true) {
+                            this.freeGroups.RemoveAt(ref state.ptr->allocator, freeGroupIndex);
+                            this.freeGroupsHas.Remove(ref state.ptr->allocator, usedGroupIndex);
+                        }
                         this.resizeLock.WriteEnd();
                         return entId;
                     }
-                    var nextId = JobUtils.Increment(ref nextGroupId) - 1;
-                    var group = Group.Create(ref state.ptr->entities.freeCount, nextId * ENTITIES_PER_PAGE);
-                    group.TryNew(out var id);
-                    this.groups.Add(ref state.ptr->allocator, group);
-                    this.resizeLock.WriteEnd();
-                    return id;
+
+                    {
+                        var nextId = JobUtils.Increment(ref nextGroupId) - 1;
+                        var group = Group.Create(ref state.ptr->entities.freeCount, nextId * ENTITIES_PER_PAGE);
+                        group.TryNew(out var id);
+                        this.groups.Add(ref state.ptr->allocator, group);
+                        var idx = this.groups.Count - 1u;
+                        this.freeGroups.Add(ref state.ptr->allocator, idx);
+                        this.freeGroupsHas.Add(ref state.ptr->allocator, idx);
+                        this.resizeLock.WriteEnd();
+                        return id;
+                    }
                 }
                 
             }
@@ -143,8 +174,12 @@ namespace ME.BECS {
                 this.resizeLock.ReadBegin(state);
                 ref var group = ref this.groups[state, groupId];
                 group.Delete(entId);
-                Volatile.Write(ref this.lastFreeGroup, groupId);
                 this.resizeLock.ReadEnd(state);
+                this.resizeLock.WriteBegin(state);
+                if (this.freeGroupsHas.Add(ref state.ptr->allocator, groupId) == true) {
+                    this.freeGroups.Add(ref state.ptr->allocator, groupId);
+                }
+                this.resizeLock.WriteEnd();
             }
 
         }
@@ -281,13 +316,15 @@ namespace ME.BECS {
             groups.groups.Resize(ref state.ptr->allocator, initGroupsCount);
             for (uint i = 0u; i < initGroupsCount; ++i) {
                 groups.groups.Add(ref state.ptr->allocator, Group.Create(ref this.freeCount, i * ENTITIES_PER_PAGE));
+                groups.freeGroupsHas.Add(ref state.ptr->allocator, i);
+                groups.freeGroups.Add(ref state.ptr->allocator, i);
             }
             this.nextGroupId += initGroupsCount;
         }
 
         [NotThreadSafe]
         [INLINE(256)]
-        public static void EnsureFree(safe_ptr<State> state, uint required) {
+        public static void EnsureFree(safe_ptr<State> state, uint groupId, uint required) {
             
             E.IS_IN_TICK(state);
 
@@ -298,7 +335,7 @@ namespace ME.BECS {
 
             var need = required - free;
             var groupsNeeded = (uint)math.ceil(need / (float)ENTITIES_PER_PAGE);
-            var currentGroups = state.ptr->entities.groupByEntityType[state, 0].groups.Count;
+            var currentGroups = state.ptr->entities.groupByEntityType[state, groupId].groups.Count;
             var newGroupsCount = currentGroups + groupsNeeded;
             for (uint i = 0; i < state.ptr->entities.groupByEntityType.Length; ++i) {
                 ref var groups = ref state.ptr->entities.groupByEntityType[state, i];
@@ -308,6 +345,8 @@ namespace ME.BECS {
                     var offset = g * ENTITIES_PER_PAGE;
                     var group = Group.Create(ref state.ptr->entities.freeCount, offset);
                     groups.groups.Add(ref state.ptr->allocator, group);
+                    groups.freeGroupsHas.Add(ref state.ptr->allocator, g);
+                    groups.freeGroups.Add(ref state.ptr->allocator, g);
                     state.ptr->entities.freeCount += ENTITIES_PER_PAGE;
                 }
                 groups.resizeLock.WriteEnd();
@@ -398,11 +437,11 @@ namespace ME.BECS {
 
             var groupId = EntityTypes<T>.id;
             ref var groups = ref state.ptr->entities.groupByEntityType[state, groupId];
-            if (jobInfo.itemsPerCall > 0u) {
+            if (jobInfo.itemsPerCall.ptr != null) {
                 reuse = true;
-                jobInfo.IncrementLocalCounter();
+                jobInfo.IncrementLocalCounter(groupId);
             }
-            var entId = groups.New(state, ref state.ptr->entities.nextGroupId, out reuse);
+            var entId = groups.New(state, jobInfo, groupId, ref state.ptr->entities.nextGroupId, out reuse);
             
             const ushort version = 1;
 

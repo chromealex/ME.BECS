@@ -78,9 +78,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
-        internal static Ent NewEnt_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
+        internal static unsafe Ent NewEnt_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             
-            if (JobUtils.IsInParallelJob() == true || jobInfo.itemsPerCall > 1u) {
+            if (JobUtils.IsInParallelJob() == true || jobInfo.itemsPerCall.ptr != null) {
                 // Create entity with offset because we are in parallel mode
                 // so we need JobInfo struct to be provided
                 E.IS_CREATED(jobInfo);

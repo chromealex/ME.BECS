@@ -74,7 +74,7 @@ namespace ME.BECS {
 
     public struct JobStaticInfoInlineCount<TJob> {
         
-        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoInlineCount<TJob>>();
+        public static readonly Unity.Burst.SharedStatic<safe_ptr<uint>> data = Unity.Burst.SharedStatic<safe_ptr<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<JobStaticInfoInlineCount<TJob>>(TAlign<uint>.align, 9090);
 
     }
 
@@ -100,7 +100,7 @@ namespace ME.BECS {
 
         public static ref uint lastCount => ref JobStaticInfoLastCount<TJob>.data.Data;
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
-        public static ref uint inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
+        public static ref safe_ptr<uint> inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
         public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
         public static ref uint maxStructSize => ref JobStaticInfoMaxStructSize<TJob>.data.Data;
         public static bool IsParallelSupport => loopCount == 0u;
@@ -111,13 +111,11 @@ namespace ME.BECS {
             if (scheduleMode == ScheduleMode.Parallel) {
                 if (IsParallelSupport == false) {
                     E.THROW_ENT_NEW();
-                } else if (inlineCount > 0u) {
+                } else if (inlineCount.ptr != null) {
                     jobInfo.itemsPerCall = inlineCount;
-                    if (inlineCount > 1u) {
-                        // if we have more than 1 entity to create per iteration
-                        // we need to be sure that we have free entities to supply
-                        dependsOn = new StartParallelJob(buffer, in jobInfo).ScheduleSingle(dependsOn);
-                    }
+                    // if we have more than 1 entity to create per iteration
+                    // we need to be sure that we have free entities to supply
+                    dependsOn = new StartParallelJob(buffer, in jobInfo).ScheduleSingle(dependsOn);
                 }
             }
 
@@ -174,33 +172,36 @@ namespace ME.BECS {
 
         public uint count;
         public volatile uint index;
-        public volatile uint itemsPerCall;
-        public safe_ptr<uint> localOffset;
+        public safe_ptr<uint> itemsPerCall;
+        public safe_ptr<uint> localOffsets;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;
 
-        public uint Offset => this.index * this.itemsPerCall + *this.localOffset.ptr;
+        public readonly uint GetOffset(uint groupId) {
+            if (this.itemsPerCall.ptr == null) return 0u;
+            return this.index * this.itemsPerCall[groupId] + this.localOffsets[groupId];
+        }
 
         [INLINE(256)]
         public void CreateLocalCounter() {
-            this.localOffset = _makeDefault<uint>(0u, Constants.ALLOCATOR_TEMP);
+            this.localOffsets = _makeArray<uint>(EntityTypes.groupsCount, Constants.ALLOCATOR_TEMP);
         }
         
         [INLINE(256)]
         public void ResetLocalCounter() {
-            *this.localOffset.ptr = 0u;
+            _memclear(this.localOffsets, EntityTypes.groupsCount * sizeof(uint));
         }
 
         [INLINE(256)]
-        public readonly void IncrementLocalCounter() {
-            ++*this.localOffset.ptr;
+        public readonly void IncrementLocalCounter(uint groupId) {
+            ++this.localOffsets[groupId];
         }
 
         [INLINE(256)]
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
-                itemsPerCall = 1u,
+                itemsPerCall = default,
                 worldId = worldId,
             };
         }

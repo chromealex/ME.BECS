@@ -2,6 +2,8 @@ using NUnit.Framework;
 using Unity.Jobs;
 
 namespace ME.BECS.Tests {
+    
+    using static Cuts;
 
     public unsafe class Tests_Core {
 
@@ -60,9 +62,10 @@ namespace ME.BECS.Tests {
 
                 var jobInfoThread = new JobInfo() {
                     worldId = world.id,
-                    itemsPerCall = 1u,
+                    itemsPerCall = _makeArray<uint>(1u, Unity.Collections.Allocator.Temp),
                     count = 10u,
                 };
+                jobInfoThread.itemsPerCall[0u] = 1u;
                 jobInfoThread.CreateLocalCounter();
 
                 for (uint i = 0u; i < 5u; ++i) {
@@ -111,9 +114,10 @@ namespace ME.BECS.Tests {
 
                 var jobInfoThread = new JobInfo() {
                     worldId = world.id,
-                    itemsPerCall = 2u,
+                    itemsPerCall = _makeArray<uint>(1u, Unity.Collections.Allocator.Temp),
                     count = 20u,
                 };
+                jobInfoThread.itemsPerCall[0u] = 2u;
                 jobInfoThread.CreateLocalCounter();
 
                 for (uint i = 0u; i < 5u; ++i) {
@@ -121,11 +125,11 @@ namespace ME.BECS.Tests {
                     jobInfoThread.ResetLocalCounter();
                     {
                         var item = stack.Pop(ref allocator, in jobInfoThread);
-                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall + 1, item);
+                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall[0u] + 1, item);
                     }
                     {
                         var item = stack.Pop(ref allocator, in jobInfoThread);
-                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall + 1 - 1, item);
+                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall[0u] + 1 - 1, item);
                     }
                 }
 
@@ -134,11 +138,11 @@ namespace ME.BECS.Tests {
                     jobInfoThread.ResetLocalCounter();
                     {
                         var item = stack.Pop(ref allocator, in jobInfoThread);
-                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall + 1, item);
+                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall[0u] + 1, item);
                     }
                     {
                         var item = stack.Pop(ref allocator, in jobInfoThread);
-                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall + 1 - 1, item);
+                        Assert.AreEqual(20 - 1 - i * jobInfoThread.itemsPerCall[0u] + 1 - 1, item);
                     }
                 }
                 
@@ -164,9 +168,10 @@ namespace ME.BECS.Tests {
 
                 var jobInfoThread = new JobInfo() {
                     worldId = world.id,
-                    itemsPerCall = 1u,
+                    itemsPerCall = _makeArray<uint>(1u, Unity.Collections.Allocator.Temp),
                     count = 10u,
                 };
+                jobInfoThread.itemsPerCall[0u] = 1u;
                 jobInfoThread.CreateLocalCounter();
                 var k = 0u;
                 
@@ -215,9 +220,10 @@ namespace ME.BECS.Tests {
 
                 var jobInfoThread = new JobInfo() {
                     worldId = world.id,
-                    itemsPerCall = 1u,
+                    itemsPerCall = _makeArray<uint>(1u, Unity.Collections.Allocator.Temp),
                     count = 10u,
                 };
+                jobInfoThread.itemsPerCall[0u] = 1u;
                 jobInfoThread.CreateLocalCounter();
 
                 for (uint i = 5u; i < 10u; ++i) {
@@ -261,9 +267,10 @@ namespace ME.BECS.Tests {
 
                 var jobInfoThread = new JobInfo() {
                     worldId = world.id,
-                    itemsPerCall = 1u,
+                    itemsPerCall = _makeArray<uint>(1u, Unity.Collections.Allocator.Temp),
                     count = 10u,
                 };
+                jobInfoThread.itemsPerCall[0u] = 1u;
                 jobInfoThread.CreateLocalCounter();
 
                 for (uint i = 5u; i < 10u; ++i) {
@@ -311,9 +318,10 @@ namespace ME.BECS.Tests {
 
                 var jobInfoThread = new JobInfo() {
                     worldId = world.id,
-                    itemsPerCall = 1u,
+                    itemsPerCall = _makeArray<uint>(1u, Unity.Collections.Allocator.Temp),
                     count = 10u,
                 };
+                jobInfoThread.itemsPerCall[0u] = 1u;
                 jobInfoThread.CreateLocalCounter();
 
                 for (uint i = 5u; i < 10u; ++i) {
