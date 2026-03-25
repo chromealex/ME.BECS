@@ -32,6 +32,7 @@ namespace ME.BECS {
             public uint free;
             public uint offset;
             public bool IsEmpty => this.free == 0u;
+            public uint Count => ENTITIES_PER_PAGE - (uint)math.countbits(this.free);
 
             [INLINE(256)]
             public static Group Create(ref uint freeCount, uint offset) {
@@ -82,6 +83,15 @@ namespace ME.BECS {
             public List<uint> freeGroups;
             public HashSet<uint> freeGroupsHas;
             public ReadWriteSpinner resizeLock;
+
+            public uint Count(World world) {
+                var cnt = 0u;
+                for (uint i = 0u; i < this.groups.Count; ++i) {
+                    var group = this.groups[world.state, i];
+                    cnt += group.Count;
+                }
+                return cnt;
+            }
 
             [INLINE(256)]
             public static Groups Create(safe_ptr<State> state, uint initGroupsCount) {
@@ -242,6 +252,10 @@ namespace ME.BECS {
         public uint EntitiesCount => this.aliveCount;
         public uint FreeCount => this.freeCount;
         public int Hash => Utils.Hash(this.FreeCount, this.EntitiesCount);
+
+        public uint GetEntitiesCount<T>(World world) where T : unmanaged, IEntityType {
+            return this.groupByEntityType[world.state, EntityTypes<T>.id].Count(world);
+        }
 
         public uint GetReservedSizeInBytes(safe_ptr<State> worldState) {
             if (this.generations.IsCreated == false) return 0u;

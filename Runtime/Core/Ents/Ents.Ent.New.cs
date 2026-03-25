@@ -37,6 +37,26 @@ namespace ME.BECS {
             return NewEnt_INTERNAL<DefaultEntityType>(worldId, in jobInfo, in editorName);
         }
 
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        public static Ent New<T>(in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
+            return Ent.New<T>(jobInfo.worldId, in jobInfo, in editorName);
+        }
+
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        public static Ent New<T>(in World world, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
+            return Ent.New<T>(world.id, in jobInfo, in editorName);
+        }
+
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        public static Ent New<T>(in SystemContext systemContext, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
+            return Ent.New<T>(systemContext.world.id, in jobInfo, in editorName);
+        }
+
+        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        public static Ent New<T>(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
+            return NewEnt_INTERNAL<T>(worldId, in jobInfo, in editorName);
+        }
+
         [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
         internal static unsafe Ent NewEnt_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             

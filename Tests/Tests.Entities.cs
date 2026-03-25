@@ -196,6 +196,48 @@ namespace ME.BECS.Tests {
             }
 
         }
+        
+        public struct EntityType1 : IEntityType {}
+        public struct EntityType2 : IEntityType {}
+
+        [Test]
+        public void CreateEntityWithType() {
+
+            {
+                var amount = 1000u;
+                var props = WorldProperties.Default;
+                props.stateProperties.entitiesCapacity = amount;
+                using var world = World.Create(props);
+                TestAspect.TestInitialize(in world);
+
+                for (int i = 0; i < amount; ++i) {
+
+                    var ent = Ent.New(world);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
+                    
+                }
+
+                for (int i = 0; i < amount; ++i) {
+
+                    var ent = Ent.New<EntityType1>(world);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
+                    
+                }
+                
+                for (int i = 0; i < amount; ++i) {
+
+                    var ent = Ent.New<EntityType2>(world);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
+                    
+                }
+
+                Assert.AreEqual(amount, world.state.ptr->entities.GetEntitiesCount<DefaultEntityType>(world));
+                Assert.AreEqual(amount, world.state.ptr->entities.GetEntitiesCount<EntityType1>(world));
+                Assert.AreEqual(amount, world.state.ptr->entities.GetEntitiesCount<EntityType2>(world));
+                Assert.AreEqual(amount * 3, world.state.ptr->entities.EntitiesCount);
+            }
+
+        }
 
         [Unity.Burst.BurstCompileAttribute]
         public struct CreateEntitiesJob : ME.BECS.Jobs.IJobForComponents<TestComponent> {
