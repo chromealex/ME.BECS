@@ -88,7 +88,7 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
-            this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
+            this.entities = Ents.Create(statePtr, EntityTypes.groupsCount, stateProperties.entitiesCapacity);
             this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             #if !ENABLE_BECS_FLAT_QUERIES

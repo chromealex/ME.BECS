@@ -74,32 +74,32 @@ namespace ME.BECS {
 
         [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
         public static Ent New(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
-            return NewEnt_INTERNAL(worldId, in jobInfo, in editorName);
+            return NewEnt_INTERNAL<DefaultEntityType>(worldId, in jobInfo, in editorName);
         }
 
         [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
-        internal static Ent NewEnt_INTERNAL(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
+        internal static Ent NewEnt_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             
             if (JobUtils.IsInParallelJob() == true || jobInfo.itemsPerCall > 1u) {
                 // Create entity with offset because we are in parallel mode
                 // so we need JobInfo struct to be provided
                 E.IS_CREATED(jobInfo);
-                return New_INTERNAL(worldId, in jobInfo, in editorName);
+                return New_INTERNAL<T>(worldId, in jobInfo, in editorName);
             } else {
-                return New_INTERNAL(worldId, default, in editorName);
+                return New_INTERNAL<T>(worldId, default, in editorName);
             }
 
         }
 
         [CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
-        internal static Ent New_INTERNAL(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
+        internal static Ent New_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
 
             ref readonly var world = ref Worlds.GetWorld(worldId);
             E.IS_IN_TICK(world.state);
             
             Ent newEnt;
             {
-                newEnt = Ents.Add(world.state, worldId, out var reused, in jobInfo);
+                newEnt = Ents.New<T>(world.state, worldId, out var reused, in jobInfo);
                 if (reused == false) {
                     Ents.Lock(world.state, in newEnt);
                     Components.OnEntityAdd(world.state, newEnt.id);

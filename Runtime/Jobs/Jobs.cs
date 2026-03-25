@@ -548,6 +548,20 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static ulong CompareExchange(ref ulong location, ulong value, ulong comparand) {
+
+            return (ulong)System.Threading.Interlocked.CompareExchange(ref _as<ulong, long>(ref location), (long)value, (long)comparand);
+
+        }
+
+        [INLINE(256)]
+        public static uint CompareExchange(ref uint location, uint value, uint comparand) {
+
+            return (uint)System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref location), (int)value, (int)comparand);
+
+        }
+
+        [INLINE(256)]
         public static void Lock(ref LockSpinner spinner) {
             spinner.Lock();
         }

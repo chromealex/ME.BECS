@@ -27,20 +27,6 @@ namespace ME.BECS {
     #endif
 
     [BURST]
-    public unsafe struct ApplyFreeJob : IJobSingle {
-
-        public safe_ptr<State> state;
-            
-        [INLINE(256)]
-        public void Execute() {
-
-            this.state.ptr->entities.free.Apply(in this.state.ptr->allocator);
-
-        }
-
-    }
-
-    [BURST]
     public struct ApplyDestroyedJob : IJobSingle {
 
         public safe_ptr<State> state;
@@ -84,7 +70,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Execute() {
 
-            Ents.EnsureFree(this.buffer->state, this.buffer->worldId, this.buffer->count * this.jobInfo.itemsPerCall);
+            Ents.EnsureFree(this.buffer->state, this.buffer->count * this.jobInfo.itemsPerCall);
             
         }
 
