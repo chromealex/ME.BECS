@@ -21,7 +21,7 @@ namespace ME.BECS.Jobs {
             return builder.builderDependsOn;
         }
         
-        #if !ENABLE_BECS_FLAT_QUIERIES
+        #if !ENABLE_BECS_FLAT_QUERIES
         public static JobHandle Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(this Query staticQuery, in T job, in SystemContext context) where T : struct, IJobFor{{countAspects}}Aspects{{countComponents}}Components<{countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}> {countAspects( )[where A#i# : unmanaged, IAspect]} {countComponents( )[where C#i# : unmanaged, IComponentBase]} {
             return staticQuery.Schedule<T, {countAspects(,)[A#i#]}, {countComponents(,)[C#i#]}>(in job, in context.world, context.dependsOn);
         }
@@ -106,9 +106,9 @@ namespace ME.BECS.Jobs {
             #endif
             
             if (scheduleMode == ScheduleMode.Parallel) {
-                return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
+                return JobStaticInfo<T>.ScheduleResult(JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null), buffer, jobInfo, scheduleMode);
             }
-            return JobsUtility.Schedule(ref parameters);
+            return JobStaticInfo<T>.ScheduleResult(JobsUtility.Schedule(ref parameters), buffer, jobInfo, scheduleMode);
             
         }
 

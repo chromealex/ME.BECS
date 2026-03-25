@@ -25,7 +25,7 @@ namespace ME.BECS {
 
     public unsafe partial struct Ents {
 
-        private const uint ENTITIES_PER_PAGE = sizeof(uint) * 8;
+        public const uint ENTITIES_PER_PAGE = sizeof(uint) * 8;
 
         public struct Group {
 
@@ -119,11 +119,8 @@ namespace ME.BECS {
             public uint New(safe_ptr<State> state, JobInfo jobInfo, uint groupId, ref uint nextGroupId, out bool reuse) {
                 
                 if (state.ptr->entities.freeCount > 0u) {
-                    this.resizeLock.ReadBegin(state);
+                    this.resizeLock.WriteBegin(state);
                     if (this.TryNew(state, jobInfo, groupId, out var entId, out var usedGroupIndex, out var freeGroupIndex) == true) {
-                        this.resizeLock.ReadEnd(state);
-                        
-                        this.resizeLock.WriteBegin(state);
                         var group = this.groups[state, usedGroupIndex];
                         if (group.IsEmpty == true) {
                             this.freeGroups.RemoveAt(ref state.ptr->allocator, freeGroupIndex);
@@ -133,12 +130,12 @@ namespace ME.BECS {
                         reuse = true;
                         return entId;
                     }
-                    this.resizeLock.ReadEnd(state);
+                    this.resizeLock.WriteEnd();
                 }
 
                 {
                     if (JobUtils.IsInParallelJob() == true) {
-                        throw new System.Exception("EnsureFree must be called in parallel job");
+                        throw new System.Exception("EnsureFree must be called before parallel job");
                     }
                     reuse = false;
                     // create new group
@@ -193,6 +190,7 @@ namespace ME.BECS {
         public MemArray<LockSpinner> locksPerEntity;
         public List<uint> destroyed;
         public LockSpinner destroyedLock;
+        public LockSpinner prewarmLock;
         public BitArray aliveBits;
 
         public uint aliveCount;
@@ -215,6 +213,7 @@ namespace ME.BECS {
             writer.Write(this.freeCount);
             writer.Write(this.destroyed);
             writer.Write(this.destroyedLock);
+            writer.Write(this.prewarmLock);
             writer.Write(this.aliveBits);
             this.SerializeHeadersFlatQueries(ref writer);
         }
@@ -234,6 +233,7 @@ namespace ME.BECS {
             reader.Read(ref this.freeCount);
             reader.Read(ref this.destroyed);
             reader.Read(ref this.destroyedLock);
+            reader.Read(ref this.prewarmLock);
             reader.Read(ref this.aliveBits);
             this.DeserializeHeadersFlatQueries(ref reader);
         }
@@ -257,6 +257,16 @@ namespace ME.BECS {
             size += this.aliveBits.GetReservedSizeInBytes();
             
             return size;
+        }
+
+        [INLINE(256)]
+        public static void PrewarmBegin(safe_ptr<State> state) {
+            state.ptr->entities.prewarmLock.Lock();
+        }
+
+        [INLINE(256)]
+        public static void PrewarmEnd(safe_ptr<State> state) {
+            state.ptr->entities.prewarmLock.Unlock();
         }
 
         [INLINE(256)]
@@ -293,7 +303,7 @@ namespace ME.BECS {
         [NotThreadSafe]
         [INLINE(256)]
         public void Init(safe_ptr<State> state, uint groupsCount, uint entitiesCapacity) {
-            var initGroupsCount = (uint)math.ceil(entitiesCapacity / (float)ENTITIES_PER_PAGE);
+            var initGroupsCount = entitiesCapacity / ENTITIES_PER_PAGE;
             this.resizeLock = ReadWriteSpinner.Create(state);
             this.groupByEntityType = new MemArray<Groups>(ref state.ptr->allocator, groupsCount + 1u);
             Resize(state, ref this, entitiesCapacity);
@@ -310,7 +320,7 @@ namespace ME.BECS {
         [NotThreadSafe]
         [INLINE(256)]
         public void SetCapacity<T>(safe_ptr<State> state, uint entitiesCapacity) where T : unmanaged, IEntityType {
-            var initGroupsCount = (uint)math.ceil(entitiesCapacity / (float)ENTITIES_PER_PAGE);
+            var initGroupsCount = entitiesCapacity / ENTITIES_PER_PAGE;
             var groupId = EntityTypes<T>.id;
             ref var groups = ref this.groupByEntityType[state, groupId];
             groups.groups.Resize(ref state.ptr->allocator, initGroupsCount);
@@ -324,37 +334,38 @@ namespace ME.BECS {
 
         [NotThreadSafe]
         [INLINE(256)]
-        public static void EnsureFree(safe_ptr<State> state, uint groupId, uint required) {
+        public static uint EnsureFree(safe_ptr<State> state, uint groupId, uint required) {
             
             E.IS_IN_TICK(state);
 
             var free = state.ptr->entities.FreeCount;
             if (free >= required) {
-                return;
+                return 0u;
             }
 
             var need = required - free;
             var groupsNeeded = (uint)math.ceil(need / (float)ENTITIES_PER_PAGE);
-            var currentGroups = state.ptr->entities.groupByEntityType[state, groupId].groups.Count;
-            var newGroupsCount = currentGroups + groupsNeeded;
-            for (uint i = 0; i < state.ptr->entities.groupByEntityType.Length; ++i) {
-                ref var groups = ref state.ptr->entities.groupByEntityType[state, i];
-                groups.resizeLock.WriteBegin(state);
-                groups.groups.Resize(ref state.ptr->allocator, newGroupsCount);
-                for (uint g = currentGroups; g < newGroupsCount; ++g) {
-                    var offset = g * ENTITIES_PER_PAGE;
-                    var group = Group.Create(ref state.ptr->entities.freeCount, offset);
-                    groups.groups.Add(ref state.ptr->allocator, group);
-                    groups.freeGroupsHas.Add(ref state.ptr->allocator, g);
-                    groups.freeGroups.Add(ref state.ptr->allocator, g);
-                    state.ptr->entities.freeCount += ENTITIES_PER_PAGE;
-                }
-                groups.resizeLock.WriteEnd();
+            ref var group = ref state.ptr->entities.groupByEntityType[state, groupId];
+            var newGroupsCount = group.groups.Count + groupsNeeded;
+            group.resizeLock.WriteBegin(state);
+            group.groups.Resize(ref state.ptr->allocator, newGroupsCount);
+            var currentGroups = group.groups.Count;
+            for (uint i = currentGroups; i < newGroupsCount; ++i) {
+                var nextId = JobUtils.Increment(ref state.ptr->entities.nextGroupId) - 1;
+                var g = Group.Create(ref state.ptr->entities.freeCount, nextId * ENTITIES_PER_PAGE);
+                group.groups.Add(ref state.ptr->allocator, g);
+                var idx = group.groups.Count - 1u;
+                group.freeGroupsHas.Add(ref state.ptr->allocator, idx);
+                group.freeGroups.Add(ref state.ptr->allocator, idx);
             }
+            group.resizeLock.WriteEnd();
 
             state.ptr->entities.resizeLock.WriteBegin(state);
             Resize(state, ref state.ptr->entities, newGroupsCount * ENTITIES_PER_PAGE);
             state.ptr->entities.resizeLock.WriteEnd();
+
+            return newGroupsCount * ENTITIES_PER_PAGE;
+            
         }
         
         [INLINE(256)]
@@ -411,9 +422,10 @@ namespace ME.BECS {
             
         }
 
+        [NotThreadSafe]
         [INLINE(256)]
         private static void Resize(safe_ptr<State> state, ref Ents entities, uint len) {
-            len = len - (len & (ENTITIES_PER_PAGE - 1)) + ENTITIES_PER_PAGE;
+            len = Bitwise.AlignUp(len, ENTITIES_PER_PAGE);
             if (entities.aliveBits.IsCreated == false) {
                 entities.aliveBits = new BitArray(ref state.ptr->allocator, len, threadSafe: true);
             }
@@ -430,17 +442,22 @@ namespace ME.BECS {
             #endif
         }
 
+        [NotThreadSafe]
         [INLINE(256)]
-        public static Ent New<T>(safe_ptr<State> state, ushort worldId, out bool reuse, in JobInfo jobInfo) where T : unmanaged, IEntityType {
+        public static Ent New(safe_ptr<State> state, ushort worldId, ushort groupId, out bool reuse, in JobInfo jobInfo) {
             
             E.IS_IN_TICK(state);
 
-            var groupId = EntityTypes<T>.id;
-            ref var groups = ref state.ptr->entities.groupByEntityType[state, groupId];
             if (jobInfo.itemsPerCall.ptr != null) {
                 reuse = true;
-                jobInfo.IncrementLocalCounter(groupId);
+                return jobInfo.GetEntity(groupId);
             }
+            
+            if (JobUtils.IsInParallelJob() == true) {
+                throw new System.Exception("EnsureFree must be called before parallel job");
+            }
+            
+            ref var groups = ref state.ptr->entities.groupByEntityType[state, groupId];
             var entId = groups.New(state, jobInfo, groupId, ref state.ptr->entities.nextGroupId, out reuse);
             
             const ushort version = 1;

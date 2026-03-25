@@ -24,7 +24,7 @@ namespace ME.BECS {
             for (uint i = 1u; i < components.items.Length; ++i) {
                 ref var ptr = ref components.items[in state.ptr->allocator, i];
                 var dataSize = StaticTypes.sizes.Get(i);
-                ptr.Set(ref state.ptr->allocator, new DataDenseSet(state, dataSize, stateProperties.entitiesCapacity));
+                ptr.Set(ref state.ptr->allocator, new DataDenseSet(state, dataSize, stateProperties.EntitiesCapacity));
             }
 
             return components;

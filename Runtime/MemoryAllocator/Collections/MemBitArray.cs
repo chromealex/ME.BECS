@@ -51,14 +51,31 @@ namespace ME.BECS {
             if (delta < TempBitArray.BITS_IN_ULONG && delta > 0u) bitsCount += TempBitArray.BITS_IN_ULONG - delta;
             return bitsCount / 8u;
         }
-        
+
+        [INLINE(256)]
+        public static uint AlignUIntBits(uint bitsCount) {
+            var delta = bitsCount & TempBitArray.BITS_IN_UINT_MASK;
+            if (delta < TempBitArray.BITS_IN_UINT && delta > 0u) bitsCount += TempBitArray.BITS_IN_UINT - delta;
+            return bitsCount / 8u;
+        }
+
         [INLINE(256)]
         internal static int AlignDown(int value, int alignPow2) {
             return value & ~(alignPow2 - 1);
         }
 
         [INLINE(256)]
+        internal static uint AlignDown(uint value, uint alignPow2) {
+            return value & ~(alignPow2 - 1);
+        }
+
+        [INLINE(256)]
         internal static int AlignUp(int value, int alignPow2) {
+            return Bitwise.AlignDown(value + alignPow2 - 1, alignPow2);
+        }
+
+        [INLINE(256)]
+        internal static uint AlignUp(uint value, uint alignPow2) {
             return Bitwise.AlignDown(value + alignPow2 - 1, alignPow2);
         }
 

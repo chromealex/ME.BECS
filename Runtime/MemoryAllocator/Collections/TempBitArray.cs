@@ -38,6 +38,9 @@ namespace ME.BECS {
         internal const int BITS_IN_ULONG = sizeof(ulong) * 8;
         internal const int BITS_IN_ULONG_MASK = BITS_IN_ULONG - 1;
 
+        internal const int BITS_IN_UINT = sizeof(uint) * 8;
+        internal const int BITS_IN_UINT_MASK = BITS_IN_UINT - 1;
+
         public readonly safe_ptr<ulong> ptr;
         public uint Length;
         internal readonly Unity.Collections.Allocator allocator;

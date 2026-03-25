@@ -85,7 +85,7 @@ namespace ME.BECS.Jobs {
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, ScheduleMode.Parallel);
             #endif
             
-            return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
+            return JobStaticInfo<T>.ScheduleResult(JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null), buffer, jobInfo, ScheduleMode.Parallel);
             
         }
 

@@ -96,6 +96,12 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoHandle {
+        
+        public static readonly Unity.Burst.SharedStatic<JobHandle> data = Unity.Burst.SharedStatic<JobHandle>.GetOrCreate<JobStaticInfoHandle>();
+
+    }
+
     public unsafe struct JobStaticInfo<TJob> where TJob : struct {
 
         public static ref uint lastCount => ref JobStaticInfoLastCount<TJob>.data.Data;
@@ -112,15 +118,28 @@ namespace ME.BECS {
                 if (IsParallelSupport == false) {
                     E.THROW_ENT_NEW();
                 } else if (inlineCount.ptr != null) {
-                    jobInfo.itemsPerCall = inlineCount;
                     // if we have more than 1 entity to create per iteration
                     // we need to be sure that we have free entities to supply
-                    dependsOn = new StartParallelJob(buffer, in jobInfo).ScheduleSingle(dependsOn);
+                    jobInfo.Initialize(inlineCount);
+                    dependsOn = new StartParallelJob(buffer, inlineCount, in jobInfo).ScheduleSingle(JobHandle.CombineDependencies(dependsOn, JobStaticInfoHandle.data.Data));
+                    JobStaticInfoHandle.data.Data = dependsOn;
                 }
             }
 
             return dependsOn;
 
+        }
+
+        [INLINE(256)]
+        public static JobHandle ScheduleResult(JobHandle dependsOn, CommandBuffer* buffer, JobInfo jobInfo, ScheduleMode scheduleMode) {
+            if (scheduleMode == ScheduleMode.Parallel) {
+                if (IsParallelSupport == false) {
+                    E.THROW_ENT_NEW();
+                } else if (inlineCount.ptr != null) {
+                    dependsOn = new FinishParallelJob(buffer, inlineCount, in jobInfo).ScheduleSingle(dependsOn);
+                }
+            }
+            return dependsOn;
         }
 
     }
@@ -173,14 +192,66 @@ namespace ME.BECS {
         public uint count;
         public volatile uint index;
         public safe_ptr<uint> itemsPerCall;
+        public safe_ptr<safe_ptr<Ent>> results;
         public safe_ptr<uint> localOffsets;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;
 
+        [INLINE(256)]
         public readonly uint GetOffset(uint groupId) {
             if (this.itemsPerCall.ptr == null) return 0u;
             return this.index * this.itemsPerCall[groupId] + this.localOffsets[groupId];
+        }
+
+        [INLINE(256)]
+        public void Initialize(safe_ptr<uint> inlineCount) {
+            this.itemsPerCall = inlineCount;
+            this.results = _makeArray<safe_ptr<Ent>>(EntityTypes.groupsCount, WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator, false);
+        }
+
+        [INLINE(256)]
+        public void Prewarm(CommandBuffer* buffer, safe_ptr<uint> inlineCount) {
+            var maxId = 0u;
+            Ents.PrewarmBegin(buffer->state);
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator;
+            for (ushort groupId = 0; groupId < EntityTypes.groupsCount; ++groupId) {
+                var count = inlineCount[groupId];
+                if (count == 0u) continue;
+                var cnt = count * buffer->count;
+                this.results[groupId] = _makeArray<Ent>(cnt, allocator, false);
+                for (uint i = 0u; i < cnt; ++i) {
+                    var ent = Ent.NewWithGroup_INTERNAL(this.worldId, groupId, default);
+                    if (ent.id > maxId) maxId = ent.id;
+                    this.results[groupId][i] = ent;
+                }
+            }
+            Ents.PrewarmEnd(buffer->state);
+            Ent.Resize(this.worldId, buffer->state, maxId + 1u);
+        }
+
+        [INLINE(256)]
+        public readonly Ent GetEntity(ushort groupId) {
+            ref var ent = ref this.results[groupId][this.GetOffset(groupId)];
+            var newEnt = ent;
+            ent = default;
+            this.IncrementLocalCounter(groupId);
+            return newEnt;
+        }
+
+        [INLINE(256)]
+        public void Dispose(CommandBuffer* buffer, safe_ptr<uint> inlineCount) {
+            // return all unused entities
+            for (ushort groupId = 0; groupId < EntityTypes.groupsCount; ++groupId) {
+                var count = inlineCount[groupId];
+                if (count == 0u) continue;
+                var cnt = count * buffer->count;
+                for (uint i = 0u; i < cnt; ++i) {
+                    var ent = this.results[groupId][i];
+                    if (ent == default) continue;
+                    Ents.Remove(buffer->state, in ent);
+                }
+            }
         }
 
         [INLINE(256)]
