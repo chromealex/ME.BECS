@@ -131,7 +131,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void CreateEntitiesWithAspect() {
 
-            var amount = 10000;
+            var amount = 10_000;
             var world = World.Create();
             ME.BECS.Tests.TestAspect.TestInitialize(in world);
             for (int i = 0; i < amount; ++i) {

@@ -81,9 +81,14 @@ namespace ME.BECS.Editor.Jobs {
                 }
 
                 var entsInfo = GetJobEntInfo(jobType);
-                if (entsInfo.count > 0 || entsInfo.brCount > 0) {
+                if (entsInfo.brCount > 0) {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
+                }
+                if (entsInfo.count != null) {
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>({entsInfo.count.Length}u, Allocator.Domain);");
+                    for (uint i = 0u; i < entsInfo.count.Length; ++i) {
+                        content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {entsInfo.count[i]};");
+                    }
                 }
 
                 var typeInfos = GetJobTypesInfo(jobType);
@@ -502,64 +507,80 @@ namespace ME.BECS.Editor.Jobs {
         
         public struct NewEntInfo {
 
-            public int count;
+            public int[] count;
             public int brCount;
 
         }
         
         public static NewEntInfo GetJobEntInfo(System.Type jobType) {
-            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+
+            var groupsCount = ME.BECS.Editor.EntityTypeCodeGenerator.typeToId.Count;
+            var result = new NewEntInfo();
+            var anyCount = 0;
+            result.count = new int[groupsCount];
+            result.brCount = 0;
+            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetGenericMethodDefinition();
             var root = jobType.GetMethod("Execute");
-            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
-            var instructions = root.GetInstructions().ToList();
-            var brOpen = 0;
-            var count = 0;
-            var brCount = 0;
-            for (int i = 0; i < instructions.Count; ++i) {
-                var inst = instructions[i];
-                if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Br_S ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue_S ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse ||
-                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse_S) &&
-                    ((Instruction)inst.Operand).Offset < inst.Offset) {
-                    // jump to previous instruction - make it open
-                    ++((Instruction)inst.Operand).loopInfo.openCount;
-                    ++inst.loopInfo.closeCount;
+
+            foreach (var kv in ME.BECS.Editor.EntityTypeCodeGenerator.typeToId) {
+                var type = kv.Key;
+                var groupId = kv.Value;
+                var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
+                var instructions = root.GetInstructions().ToList();
+                var brOpen = 0;
+                ref var count = ref result.count[groupId];
+                for (int i = 0; i < instructions.Count; ++i) {
+                    var inst = instructions[i];
+                    if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
+                         inst.OpCode == System.Reflection.Emit.OpCodes.Br_S ||
+                         inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue ||
+                         inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue_S ||
+                         inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse ||
+                         inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse_S) &&
+                        ((Instruction)inst.Operand).Offset < inst.Offset) {
+                        // jump to previous instruction - make it open
+                        ++((Instruction)inst.Operand).loopInfo.openCount;
+                        ++inst.loopInfo.closeCount;
+                    }
+
+                    if (inst.Operand is System.Reflection.MethodInfo member) {
+                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) &&
+                            member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                            if (member.GetMethodBody() != null) {
+                                instructions.InsertRange(i + 1, member.GetInstructions());
+                            }
+                        }
+                    }
                 }
-                if (inst.Operand is System.Reflection.MethodInfo member) {
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                        if (member.GetMethodBody() != null) {
-                            instructions.InsertRange(i + 1, member.GetInstructions());
+
+                for (int i = 0; i < instructions.Count; ++i) {
+                    var inst = instructions[i];
+                    if (inst.loopInfo.openCount > 0) {
+                        brOpen += inst.loopInfo.openCount;
+                    }
+
+                    if (inst.loopInfo.closeCount > 0) {
+                        brOpen -= inst.loopInfo.closeCount;
+                    }
+
+                    if (inst.Operand is MethodInfo methodInfo) {
+                        if (methodInfo.IsGenericMethod == true && methodInfo.GetGenericMethodDefinition() == newEntMethod && methodInfo.GetGenericArguments()[0] == type) {
+                            if (brOpen > 0) {
+                                ++result.brCount;
+                            } else {
+                                ++count;
+                                ++anyCount;
+                            }
                         }
                     }
                 }
             }
 
-            for (int i = 0; i < instructions.Count; ++i) {
-                var inst = instructions[i];
-                if (inst.loopInfo.openCount > 0) {
-                    brOpen += inst.loopInfo.openCount;
-                }
-                if (inst.loopInfo.closeCount > 0) {
-                    brOpen -= inst.loopInfo.closeCount;
-                }
-                if (inst.Operand is MethodInfo methodInfo) {
-                    if (methodInfo == newEntMethod) {
-                        if (brOpen > 0) {
-                            ++brCount;
-                        } else {
-                            ++count;
-                        }
-                    }
-                }
+            if (anyCount == 0) {
+                result.count = null;
             }
 
-            return new NewEntInfo() {
-                count = count,
-                brCount = brCount,
-            };
+            return result;
         }
 
         public struct WeightsInfo {

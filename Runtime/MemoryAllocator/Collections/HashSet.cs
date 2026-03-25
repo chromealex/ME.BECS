@@ -201,6 +201,7 @@ namespace ME.BECS {
         /// <param name="allocator"></param>
         [INLINE(256)]
         public void Clear(ref MemoryAllocator allocator) {
+            E.IS_CREATED(this);
             if (this.lastIndex > 0) {
                 // clear the elements so that the gc can reclaim the references.
                 // clear only up to m_lastIndex for m_slots

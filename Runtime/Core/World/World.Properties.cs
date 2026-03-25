@@ -1,4 +1,6 @@
 namespace ME.BECS {
+    
+    using Unity.Mathematics;
 
     [System.Serializable]
     public struct StateProperties {
@@ -43,6 +45,8 @@ namespace ME.BECS {
         [UnityEngine.MinAttribute(0)]
         [UnityEngine.Tooltip("Use Logic for logic worlds, Visual for client-only local worlds.")]
         public WorldMode mode;
+
+        public uint EntitiesCapacity => math.max(Bitwise.AlignUp(this.entitiesCapacity, Ents.ENTITIES_PER_PAGE), Ents.ENTITIES_PER_PAGE);
 
     }
 

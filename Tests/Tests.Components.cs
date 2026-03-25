@@ -291,6 +291,50 @@ namespace ME.BECS.Tests {
 
         }
 
+        [Unity.Burst.BurstCompileAttribute]
+        public static void StressTestBurstRun(ref World world, uint amount) {
+            
+            var list = new Unity.Collections.LowLevel.Unsafe.UnsafeList<Ent>((int)amount, Constants.ALLOCATOR_TEMP);
+            for (int j = 0; j < 2; ++j) {
+                for (int i = 0; i < amount; ++i) {
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent() {
+                        data = 1,
+                    });
+                    list.Add(ent);
+                }
+
+                for (int i = 0; i < amount; ++i) {
+                    list[i].Destroy();
+                }
+
+                list.Clear();
+                for (int i = 0; i < amount; ++i) {
+                    var ent = Ent.New();
+                    ent.Set(new TestComponent() {
+                        data = 1,
+                    });
+                    list.Add(ent);
+                }
+
+                for (int i = 0; i < amount; ++i) {
+                    list[i].Remove<TestComponent>();
+                }
+            }
+        }
+        
+        [Test]
+        public void StressTestBurst() {
+
+            var amount = 100_000u;
+            var props = WorldProperties.Default;
+            props.stateProperties.entitiesCapacity = amount * 4;
+            var world = World.Create(props);
+            StressTestBurstRun(ref world, amount);
+            world.Dispose();
+
+        }
+
         [Test]
         public void EnableDisable() {
             

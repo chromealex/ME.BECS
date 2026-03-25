@@ -68,17 +68,17 @@ namespace ME.BECS {
     public partial struct StreamBufferWriter {
 
         [INLINE(256)]
-        public void Write(Ents value) {
-            value.SerializeHeaders(ref this);
-        }
-
-        [INLINE(256)]
         public void Write(OneShotTasks value) {
             value.SerializeHeaders(ref this);
         }
 
         [INLINE(256)]
         public void Write(Components value) {
+            value.SerializeHeaders(ref this);
+        }
+
+        [INLINE(256)]
+        public void Write(Ents value) {
             value.SerializeHeaders(ref this);
         }
 
@@ -114,17 +114,17 @@ namespace ME.BECS {
     public partial struct StreamBufferReader {
 
         [INLINE(256)]
-        public void Read(ref Ents value) {
-            value.DeserializeHeaders(ref this);
-        }
-
-        [INLINE(256)]
         public void Read(ref OneShotTasks value) {
             value.DeserializeHeaders(ref this);
         }
 
         [INLINE(256)]
         public void Read(ref Components value) {
+            value.DeserializeHeaders(ref this);
+        }
+
+        [INLINE(256)]
+        public void Read(ref Ents value) {
             value.DeserializeHeaders(ref this);
         }
 

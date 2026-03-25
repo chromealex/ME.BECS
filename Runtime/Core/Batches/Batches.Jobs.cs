@@ -1,5 +1,6 @@
 namespace ME.BECS {
 
+    using Unity.Mathematics;
     using Unity.Collections.LowLevel.Unsafe;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using BURST = Unity.Burst.BurstCompileAttribute;
@@ -25,20 +26,6 @@ namespace ME.BECS {
 
     }
     #endif
-
-    [BURST]
-    public unsafe struct ApplyFreeJob : IJobSingle {
-
-        public safe_ptr<State> state;
-            
-        [INLINE(256)]
-        public void Execute() {
-
-            this.state.ptr->entities.free.Apply(in this.state.ptr->allocator);
-
-        }
-
-    }
 
     [BURST]
     public struct ApplyDestroyedJob : IJobSingle {
@@ -69,10 +56,12 @@ namespace ME.BECS {
         [NativeDisableUnsafePtrRestriction]
         public CommandBuffer* buffer;
         public JobInfo jobInfo;
+        public safe_ptr<uint> inlineCount;
 
-        public StartParallelJob(CommandBuffer* buffer, in JobInfo jobInfo) {
+        public StartParallelJob(CommandBuffer* buffer, safe_ptr<uint> inlineCount, in JobInfo jobInfo) {
             this.buffer = buffer;
             this.jobInfo = jobInfo;
+            this.inlineCount = inlineCount;
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.m_Safety = safetyHandler.Data;
             this.m_Length = (int)this.buffer->count;
@@ -84,8 +73,46 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Execute() {
 
-            Ents.EnsureFree(this.buffer->state, this.buffer->worldId, this.buffer->count * this.jobInfo.itemsPerCall);
+            this.jobInfo.Prewarm(this.buffer, this.inlineCount);
             
+        }
+
+    }
+
+    [BURST]
+    public unsafe struct FinishParallelJob : IJobSingle {
+        
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+        public static readonly Unity.Burst.SharedStatic<AtomicSafetyHandle> safetyHandler = Unity.Burst.SharedStatic<AtomicSafetyHandle>.GetOrCreate<StartParallelJob>();
+
+        private AtomicSafetyHandle m_Safety;
+        private int m_Length;
+        private int m_MinIndex;
+        private int m_MaxIndex;
+        #endif
+        
+        [NativeDisableUnsafePtrRestriction]
+        public CommandBuffer* buffer;
+        public JobInfo jobInfo;
+        public safe_ptr<uint> inlineCount;
+
+        public FinishParallelJob(CommandBuffer* buffer, safe_ptr<uint> inlineCount, in JobInfo jobInfo) {
+            this.jobInfo = jobInfo;
+            this.buffer = buffer;
+            this.inlineCount = inlineCount;
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
+            this.m_Safety = safetyHandler.Data;
+            this.m_Length = (int)this.buffer->count;
+            this.m_MinIndex = 0;
+            this.m_MaxIndex = (int)this.buffer->count;
+            #endif
+        }
+
+        [INLINE(256)]
+        public void Execute() {
+
+            this.jobInfo.Dispose(this.buffer, this.inlineCount);
+
         }
 
     }

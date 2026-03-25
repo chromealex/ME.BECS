@@ -87,7 +87,7 @@ namespace ME.BECS {
             }
 
             {
-                var idx = this.size - 1u - jobInfo.Offset;
+                var idx = this.size - 1u - jobInfo.GetOffset(0u);
                 E.RANGE(idx, 0u, this.size);
                 /*while (true) {
                     if (this.toRemove.Contains(in allocator, idx) == true) {
@@ -100,7 +100,7 @@ namespace ME.BECS {
                 var item = this.array[in allocator, idx];
                 this.array[in allocator, idx] = default;
                 this.toRemove.Add(ref allocator, idx);
-                jobInfo.IncrementLocalCounter();
+                jobInfo.IncrementLocalCounter(0u);
                 //this.bits.Set(in allocator, (int)idx, true);
                 return item;
             }

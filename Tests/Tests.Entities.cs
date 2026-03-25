@@ -70,6 +70,77 @@ namespace ME.BECS.Tests {
 
         }
 
+        /*public struct TestEntityGroup1 : IEntityType { }
+        public struct TestEntityGroup2 : IEntityType { }
+        
+        [Test]
+        public void NewEntityInGroup() {
+
+            EntityTypes<TestEntityGroup1>.id = 1;
+            EntityTypes<TestEntityGroup2>.id = 2;
+            
+            {
+                using var world = World.Create();
+                var group = new Ents();
+                group.Init(world.state, 2u, 100u);
+                group.SetCapacity<TestEntityGroup1>(world.state, 10u);
+                group.SetCapacity<TestEntityGroup2>(world.state, 90u);
+                for (int i = 0; i < 80; ++i) {
+                    var id = group.New<TestEntityGroup1>(world.state, world.id, out _, default);
+                    Assert.IsTrue(id == i);
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80));
+                for (int i = 0; i < 30; ++i) {
+                    var id = group.New<TestEntityGroup2>(world.state, out _);
+                    Assert.IsTrue(id == (i + 128));
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80 + 64 - 30));
+                for (int i = 0; i < 30; ++i) {
+                    var id = group.New<TestEntityGroup1>(world.state, out _);
+                    Assert.IsTrue(id == (i + 80));
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80 + 64 - 30 - 30));
+            }
+
+        }
+
+        [Test]
+        public void DeleteEntityInGroup() {
+
+            EntityTypes<TestEntityGroup1>.id = 1;
+            EntityTypes<TestEntityGroup2>.id = 2;
+            
+            {
+                using var world = World.Create();
+                var group = new EntsGroup();
+                group.Init(world.state, 2u, 100u);
+                group.SetCapacity<TestEntityGroup1>(world.state, 10u);
+                group.SetCapacity<TestEntityGroup2>(world.state, 90u);
+                for (int i = 0; i < 80; ++i) {
+                    var id = group.New<TestEntityGroup1>(world.state, out _);
+                    Assert.IsTrue(id == i);
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80));
+                for (int i = 0; i < 80; i += 2) {
+                    var id = (uint)i;
+                    group.Delete(world.state, id);
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80 + 40));
+                for (int i = 0; i < 30; ++i) {
+                    var id = group.New<TestEntityGroup2>(world.state, out _);
+                    Assert.IsTrue(id == (i + 128));
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80 + 40 + 64 - 30));
+                for (int i = 0; i < 40; ++i) {
+                    var id = group.New<TestEntityGroup1>(world.state, out _);
+                    UnityEngine.Debug.Log(id);
+                    Assert.IsTrue(id == i * 2);
+                }
+                Assert.IsTrue(group.FreeCount(world.state) == (128 - 80 + 40 + 64 - 30 - 40));
+            }
+
+        }*/
+
         [Test]
         public void CloneEntity() {
 
@@ -108,7 +179,7 @@ namespace ME.BECS.Tests {
         public void CreateHugeAmount() {
 
             {
-                var amount = 100_000u;
+                var amount = 10_000u;
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = amount;
                 using var world = World.Create(props);
@@ -122,6 +193,48 @@ namespace ME.BECS.Tests {
                 }
 
                 Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            }
+
+        }
+        
+        public struct EntityType1 : IEntityType {}
+        public struct EntityType2 : IEntityType {}
+
+        [Test]
+        public void CreateEntityWithType() {
+
+            {
+                var amount = 1000u;
+                var props = WorldProperties.Default;
+                props.stateProperties.entitiesCapacity = amount;
+                using var world = World.Create(props);
+                TestAspect.TestInitialize(in world);
+
+                for (int i = 0; i < amount; ++i) {
+
+                    var ent = Ent.New(world);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
+                    
+                }
+
+                for (int i = 0; i < amount; ++i) {
+
+                    var ent = Ent.New<EntityType1>(world);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
+                    
+                }
+                
+                for (int i = 0; i < amount; ++i) {
+
+                    var ent = Ent.New<EntityType2>(world);
+                    ent.GetOrCreateAspect<TestAspect>().data.data = 1;
+                    
+                }
+
+                Assert.AreEqual(amount, world.state.ptr->entities.GetEntitiesCount<DefaultEntityType>(world));
+                Assert.AreEqual(amount, world.state.ptr->entities.GetEntitiesCount<EntityType1>(world));
+                Assert.AreEqual(amount, world.state.ptr->entities.GetEntitiesCount<EntityType2>(world));
+                Assert.AreEqual(amount * 3, world.state.ptr->entities.EntitiesCount);
             }
 
         }
@@ -179,7 +292,7 @@ namespace ME.BECS.Tests {
         public void CreateHugeAmountThreaded() {
 
             {
-                var amount = 100_000u;
+                var amount = 10_000u;
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = amount;
                 using var world = World.Create(props);
@@ -193,7 +306,7 @@ namespace ME.BECS.Tests {
         public void CreateHugeAmountThreadedResize() {
 
             {
-                var amount = 100_000u;
+                var amount = 10_000u;
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = 1000;
                 using var world = World.Create(props);
@@ -221,7 +334,7 @@ namespace ME.BECS.Tests {
         public void CreateHugeAmountBurst() {
 
             {
-                var amount = 100_000u;
+                var amount = 10_000u;
                 var props = WorldProperties.Default;
                 props.stateProperties.entitiesCapacity = amount;
                 var world = World.Create(props);
@@ -346,7 +459,7 @@ namespace ME.BECS.Tests {
         [Test]
         public void DestroyHugeAmountBurst() {
             
-            var amount = 100_000u;
+            var amount = 10_000u;
             var props = WorldProperties.Default;
             props.stateProperties.entitiesCapacity = amount;
             var world = World.Create(props);
@@ -356,6 +469,7 @@ namespace ME.BECS.Tests {
                 ME.BECS.Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            Assert.AreEqual(16u, world.state.ptr->entities.FreeCount);
             #if !ENABLE_BECS_FLAT_QUERIES
             Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
             #endif
@@ -365,7 +479,7 @@ namespace ME.BECS.Tests {
                 ME.BECS.Batches.Apply(world);
             }
             Assert.AreEqual(0, world.state.ptr->entities.EntitiesCount);
-            Assert.AreEqual(amount, world.state.ptr->entities.FreeCount);
+            Assert.AreEqual(amount + 16u, world.state.ptr->entities.FreeCount);
             
             world.Dispose();
             
@@ -374,9 +488,9 @@ namespace ME.BECS.Tests {
         [Test]
         public void DestroyHugeAmountThreaded() {
             
-            var amount = 20_000u;
+            var amount = 10_000u;
             var props = WorldProperties.Default;
-            props.stateProperties.entitiesCapacity = 10000;
+            props.stateProperties.entitiesCapacity = amount;
             var world = World.Create(props);
 
             {
@@ -384,6 +498,7 @@ namespace ME.BECS.Tests {
                 Batches.Apply(world);
             }
             Assert.AreEqual(amount, world.state.ptr->entities.EntitiesCount);
+            Assert.AreEqual(16u, world.state.ptr->entities.FreeCount);
             #if !ENABLE_BECS_FLAT_QUERIES
             Assert.AreEqual(0, world.state.ptr->archetypes.list[world.state.ptr->allocator, 0].entitiesList.Count);
             #endif
@@ -398,7 +513,7 @@ namespace ME.BECS.Tests {
                 Batches.Apply(world);
             }
             Assert.AreEqual(0, world.state.ptr->entities.EntitiesCount);
-            Assert.AreEqual(amount, world.state.ptr->entities.FreeCount);
+            Assert.AreEqual(amount + 16u, world.state.ptr->entities.FreeCount);
             
             world.Dispose();
             

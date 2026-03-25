@@ -88,7 +88,7 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
-            this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
+            this.entities = Ents.Create(statePtr, EntityTypes.groupsCount, stateProperties.EntitiesCapacity);
             this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             #if !ENABLE_BECS_FLAT_QUERIES
@@ -96,8 +96,8 @@ namespace ME.BECS {
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             #endif
             this.random = RandomData.Create(statePtr);
-            this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.entitiesCapacity);
-            this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.entitiesCapacity);
+            this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.EntitiesCapacity);
+            this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.EntitiesCapacity);
             this.Mode = stateProperties.mode;
             return this;
 

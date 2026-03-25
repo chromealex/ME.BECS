@@ -74,7 +74,7 @@ namespace ME.BECS {
 
     public struct JobStaticInfoInlineCount<TJob> {
         
-        public static readonly Unity.Burst.SharedStatic<uint> data = Unity.Burst.SharedStatic<uint>.GetOrCreate<JobStaticInfoInlineCount<TJob>>();
+        public static readonly Unity.Burst.SharedStatic<safe_ptr<uint>> data = Unity.Burst.SharedStatic<safe_ptr<uint>>.GetOrCreatePartiallyUnsafeWithHashCode<JobStaticInfoInlineCount<TJob>>(TAlign<uint>.align, 9090);
 
     }
 
@@ -96,11 +96,17 @@ namespace ME.BECS {
 
     }
 
+    public struct JobStaticInfoHandle {
+        
+        public static readonly Unity.Burst.SharedStatic<JobHandle> data = Unity.Burst.SharedStatic<JobHandle>.GetOrCreate<JobStaticInfoHandle>();
+
+    }
+
     public unsafe struct JobStaticInfo<TJob> where TJob : struct {
 
         public static ref uint lastCount => ref JobStaticInfoLastCount<TJob>.data.Data;
         public static ref uint loopCount => ref JobStaticInfoLoopCount<TJob>.data.Data;
-        public static ref uint inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
+        public static ref safe_ptr<uint> inlineCount => ref JobStaticInfoInlineCount<TJob>.data.Data;
         public static ref uint opsWeight => ref JobStaticInfoWeights<TJob>.data.Data;
         public static ref uint maxStructSize => ref JobStaticInfoMaxStructSize<TJob>.data.Data;
         public static bool IsParallelSupport => loopCount == 0u;
@@ -111,18 +117,29 @@ namespace ME.BECS {
             if (scheduleMode == ScheduleMode.Parallel) {
                 if (IsParallelSupport == false) {
                     E.THROW_ENT_NEW();
-                } else if (inlineCount > 0u) {
-                    jobInfo.itemsPerCall = inlineCount;
-                    if (inlineCount > 1u) {
-                        // if we have more than 1 entity to create per iteration
-                        // we need to be sure that we have free entities to supply
-                        dependsOn = new StartParallelJob(buffer, in jobInfo).ScheduleSingle(dependsOn);
-                    }
+                } else if (inlineCount.ptr != null) {
+                    // if we have more than 1 entity to create per iteration
+                    // we need to be sure that we have free entities to supply
+                    jobInfo.Initialize(inlineCount);
+                    dependsOn = new StartParallelJob(buffer, inlineCount, in jobInfo).ScheduleSingle(JobHandle.CombineDependencies(dependsOn, JobStaticInfoHandle.data.Data));
+                    JobStaticInfoHandle.data.Data = dependsOn;
                 }
             }
 
             return dependsOn;
 
+        }
+
+        [INLINE(256)]
+        public static JobHandle ScheduleResult(JobHandle dependsOn, CommandBuffer* buffer, JobInfo jobInfo, ScheduleMode scheduleMode) {
+            if (scheduleMode == ScheduleMode.Parallel) {
+                if (IsParallelSupport == false) {
+                    E.THROW_ENT_NEW();
+                } else if (inlineCount.ptr != null) {
+                    dependsOn = new FinishParallelJob(buffer, inlineCount, in jobInfo).ScheduleSingle(dependsOn);
+                }
+            }
+            return dependsOn;
         }
 
     }
@@ -174,33 +191,88 @@ namespace ME.BECS {
 
         public uint count;
         public volatile uint index;
-        public volatile uint itemsPerCall;
-        public safe_ptr<uint> localOffset;
+        public safe_ptr<uint> itemsPerCall;
+        public safe_ptr<safe_ptr<Ent>> results;
+        public safe_ptr<uint> localOffsets;
         public ushort worldId;
 
         public bool IsCreated => this.worldId > 0;
 
-        public uint Offset => this.index * this.itemsPerCall + *this.localOffset.ptr;
+        [INLINE(256)]
+        public readonly uint GetOffset(uint groupId) {
+            if (this.itemsPerCall.ptr == null) return 0u;
+            return this.index * this.itemsPerCall[groupId] + this.localOffsets[groupId];
+        }
+
+        [INLINE(256)]
+        public void Initialize(safe_ptr<uint> inlineCount) {
+            this.itemsPerCall = inlineCount;
+            this.results = _makeArray<safe_ptr<Ent>>(EntityTypes.groupsCount, WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator, false);
+        }
+
+        [INLINE(256)]
+        public void Prewarm(CommandBuffer* buffer, safe_ptr<uint> inlineCount) {
+            var maxId = 0u;
+            Ents.PrewarmBegin(buffer->state);
+            var allocator = WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator;
+            for (ushort groupId = 0; groupId < EntityTypes.groupsCount; ++groupId) {
+                var count = inlineCount[groupId];
+                if (count == 0u) continue;
+                var cnt = count * buffer->count;
+                this.results[groupId] = _makeArray<Ent>(cnt, allocator, false);
+                for (uint i = 0u; i < cnt; ++i) {
+                    var ent = Ent.NewWithGroup_INTERNAL(this.worldId, groupId, default);
+                    if (ent.id > maxId) maxId = ent.id;
+                    this.results[groupId][i] = ent;
+                }
+            }
+            Ents.PrewarmEnd(buffer->state);
+            Ent.Resize(this.worldId, buffer->state, maxId + 1u);
+        }
+
+        [INLINE(256)]
+        public readonly Ent GetEntity(ushort groupId) {
+            ref var ent = ref this.results[groupId][this.GetOffset(groupId)];
+            var newEnt = ent;
+            ent = default;
+            this.IncrementLocalCounter(groupId);
+            return newEnt;
+        }
+
+        [INLINE(256)]
+        public void Dispose(CommandBuffer* buffer, safe_ptr<uint> inlineCount) {
+            // return all unused entities
+            for (ushort groupId = 0; groupId < EntityTypes.groupsCount; ++groupId) {
+                var count = inlineCount[groupId];
+                if (count == 0u) continue;
+                var cnt = count * buffer->count;
+                for (uint i = 0u; i < cnt; ++i) {
+                    var ent = this.results[groupId][i];
+                    if (ent == default) continue;
+                    Ents.Remove(buffer->state, in ent);
+                }
+            }
+        }
 
         [INLINE(256)]
         public void CreateLocalCounter() {
-            this.localOffset = _makeDefault<uint>(0u, Constants.ALLOCATOR_TEMP);
+            this.localOffsets = _makeArray<uint>(EntityTypes.groupsCount, Constants.ALLOCATOR_TEMP);
         }
         
         [INLINE(256)]
         public void ResetLocalCounter() {
-            *this.localOffset.ptr = 0u;
+            _memclear(this.localOffsets, EntityTypes.groupsCount * sizeof(uint));
         }
 
         [INLINE(256)]
-        public readonly void IncrementLocalCounter() {
-            ++*this.localOffset.ptr;
+        public readonly void IncrementLocalCounter(uint groupId) {
+            ++this.localOffsets[groupId];
         }
 
         [INLINE(256)]
         public static JobInfo Create(ushort worldId) {
             return new JobInfo() {
-                itemsPerCall = 1u,
+                itemsPerCall = default,
                 worldId = worldId,
             };
         }
@@ -544,6 +616,20 @@ namespace ME.BECS {
         public static System.IntPtr CompareExchange(ref System.IntPtr location, System.IntPtr value, System.IntPtr comparand) {
 
             return System.Threading.Interlocked.CompareExchange(ref location, value, comparand);
+
+        }
+
+        [INLINE(256)]
+        public static ulong CompareExchange(ref ulong location, ulong value, ulong comparand) {
+
+            return (ulong)System.Threading.Interlocked.CompareExchange(ref _as<ulong, long>(ref location), (long)value, (long)comparand);
+
+        }
+
+        [INLINE(256)]
+        public static uint CompareExchange(ref uint location, uint value, uint comparand) {
+
+            return (uint)System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref location), (int)value, (int)comparand);
 
         }
 

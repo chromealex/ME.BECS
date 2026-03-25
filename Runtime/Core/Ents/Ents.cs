@@ -5,14 +5,14 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
-    [IgnoreProfiler]
+    /*[IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
-    public unsafe partial struct Ents {
-
+    public unsafe partial struct EntsOld {
+        
         public MemArray<ushort> generations;
         public MemArray<uint> versions;
         public MemArray<uint> seeds;
@@ -70,12 +70,12 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void Lock(safe_ptr<State> state, in Ent ent) {
-            state.ptr->entities.locksPerEntity[state, ent.id].Lock();
+            //state.ptr->entities.locksPerEntity[state, ent.id].Lock();
         }
 
         [INLINE(256)]
         public static void Unlock(safe_ptr<State> state, in Ent ent) {
-            state.ptr->entities.locksPerEntity[state, ent.id].Unlock();
+            //state.ptr->entities.locksPerEntity[state, ent.id].Unlock();
         }
 
         public uint GetReservedSizeInBytes(safe_ptr<State> state) {
@@ -111,7 +111,7 @@ namespace ME.BECS {
 
             if (entityCapacity == 0u) entityCapacity = 1u;
             
-            var ents = new Ents() {
+            var ents = new EntsOld() {
                 generations = new MemArray<ushort>(ref state.ptr->allocator, entityCapacity),
                 versions = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
                 seeds = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
@@ -400,6 +400,6 @@ namespace ME.BECS {
             
         }
 
-    }
+    }*/
     
 }

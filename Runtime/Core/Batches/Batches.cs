@@ -379,9 +379,6 @@ namespace ME.BECS {
                 state = state,
             }.Execute();
             #endif
-            new ApplyFreeJob() {
-                state = state,
-            }.Execute();
             new ApplyDestroyedJob() {
                 state = state,
             }.Execute();
@@ -398,16 +395,13 @@ namespace ME.BECS {
                 #endif
             }.ScheduleSingle(jobHandle);
             #endif
-            var handle2 = new ApplyFreeJob() { 
-                state = state,
-            }.ScheduleSingle(jobHandle);
-            var handle3 = new ApplyDestroyedJob() { 
+            var handle2 = new ApplyDestroyedJob() { 
                 state = state,
             }.ScheduleSingle(jobHandle);
             #if ENABLE_BECS_FLAT_QUERIES
-            var handle = JobHandle.CombineDependencies(handle2, handle3);
+            var handle = handle2;
             #else
-            var handle = JobHandle.CombineDependencies(handle1, handle2, handle3);
+            var handle = JobHandle.CombineDependencies(handle1, handle2);
             #endif
             HandleStorage.lastApplyHandleBurst.Data = JobHandle.CombineDependencies(HandleStorage.lastApplyHandleBurst.Data, handle);
             return handle;
