@@ -423,6 +423,11 @@ namespace ME.BECS.Editor {
 
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
+            if (UnityEngine.Application.isBatchMode == true) {
+                Logger.Editor.Warning($"[ ME.BECS ] CodeGen won't run in batchmode. Ensure it was properly generated (or stored in the repo) before the build");
+                return;
+            }
+
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
 
             if (cleanCache == true) {
