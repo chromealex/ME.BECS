@@ -80,7 +80,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                var entsInfo = GetJobEntInfo(jobType);
+                var entsInfo = GetJobEntInfo(jobType, this);
                 if (entsInfo.brCount > 0) {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
                 }
@@ -512,19 +512,21 @@ namespace ME.BECS.Editor.Jobs {
 
         }
         
-        public static NewEntInfo GetJobEntInfo(System.Type jobType) {
+        public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
 
-            var groupsCount = ME.BECS.Editor.EntityTypeCodeGenerator.typeToId.Count;
+            var allTypes = EntityTypeCodeGenerator.GetAllTypes();
+            var groupsCount = allTypes.Length;
             var result = new NewEntInfo();
             var anyCount = 0;
             result.count = new int[groupsCount];
             result.brCount = 0;
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetGenericMethodDefinition();
             var root = jobType.GetMethod("Execute");
-
-            foreach (var kv in ME.BECS.Editor.EntityTypeCodeGenerator.typeToId) {
-                var type = kv.Key;
-                var groupId = kv.Value;
+            
+            foreach (var kv in allTypes) {
+                var type = kv.Item1;
+                var groupId = kv.Item2;
+                if (codeGenerator.IsValidTypeForAssembly(type, true) == false) continue;
                 var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
                 var instructions = root.GetInstructions().ToList();
                 var brOpen = 0;
