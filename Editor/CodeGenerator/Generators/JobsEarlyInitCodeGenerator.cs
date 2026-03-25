@@ -514,7 +514,7 @@ namespace ME.BECS.Editor.Jobs {
         
         public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
 
-            var allTypes = EntityTypeCodeGenerator.GetAllTypes();
+            var allTypes = EntityTypeCodeGenerator.GetAllTypes().Where(x => codeGenerator.IsValidTypeForAssembly(x.Item1, true)).ToArray();
             var groupsCount = allTypes.Length;
             var result = new NewEntInfo();
             var anyCount = 0;
@@ -526,7 +526,6 @@ namespace ME.BECS.Editor.Jobs {
             foreach (var kv in allTypes) {
                 var type = kv.Item1;
                 var groupId = kv.Item2;
-                if (codeGenerator.IsValidTypeForAssembly(type, true) == false) continue;
                 var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
                 var instructions = root.GetInstructions().ToList();
                 var brOpen = 0;
