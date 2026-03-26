@@ -59,12 +59,12 @@ namespace ME.BECS.Editor.Aspects {
 
                             AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.ApplyState), ref idx);
                             AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.ApplyStateParallel), ref idx);
-                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnUpdate), ref idx);
-                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnUpdateParallel), ref idx);
-                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnInitialize), ref idx);
-                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnDeInitialize), ref idx);
-                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnEnableFromPool), ref idx);
-                            AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnDisableToPool), ref idx);
+                            //AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnUpdate), ref idx);
+                            //AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnUpdateParallel), ref idx);
+                            //AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnInitialize), ref idx);
+                            //AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnDeInitialize), ref idx);
+                            //AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnEnableFromPool), ref idx);
+                            //AddMethod(str, types, ignoreTypes, viewType, nameof(EntityView.OnDisableToPool), ref idx);
 
                             foreach (var interfaceType in interfaces) {
                                 if (interfaceType.IsGenericType == true && typeof(IViewTrack<>).IsAssignableFrom(interfaceType) == true) {
