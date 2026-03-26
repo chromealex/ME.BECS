@@ -87,7 +87,23 @@ namespace ME.BECS.Perks {
             if (slot.Has<IsPerkSlotCooldownReadyComponent>() == false) {
                 return false;
             }
-            return true;
+            return (slot.Has<IsPerkCanBeReleased>() == false);
+        }
+
+        /// <summary>
+        /// Returns true if slot is ready to release
+        /// </summary>
+        /// <param name="owner">Player owner</param>
+        /// <param name="index">Slot index</param>
+        /// <returns></returns>
+        public static bool CanReleaseSlot(in PlayerAspect owner, uint index) {
+            var perksEnt = owner.ent;
+            ref readonly var perks = ref perksEnt.Read<PerksComponent>();
+            if (index >= perks.slots.Count) {
+                return false;
+            }
+            var slot = perks.slots[index];
+            return slot.Read<PerkSlotComponent>().perkType == PerkType.Continuous;
         }
 
         /// <summary>
@@ -104,7 +120,11 @@ namespace ME.BECS.Perks {
                 return default;
             }
             slot.Remove<IsPerkSlotCooldownReadyComponent>();
-            slot.Get<PerkSlotRuntimeComponent>().cooldown = slot.Read<PerkSlotComponent>().cooldown;
+            var data = slot.Read<PerkSlotComponent>();
+            if (data.perkType == PerkType.Continuous) {
+                slot.Set(new IsPerkCanBeReleased());
+            }
+            slot.Get<PerkSlotRuntimeComponent>().cooldown = data.cooldown;
             var source = slot.Read<PerkSlotRuntimeComponent>().perkSource;
             return new PerkSource() {
                 source = source,
@@ -112,13 +132,39 @@ namespace ME.BECS.Perks {
         }
 
         /// <summary>
+        /// Release slot by index
+        /// </summary>
+        /// <param name="owner">Player owner</param>
+        /// <param name="index">Slot index</param>
+        /// <returns>True on success</returns>
+        public static bool ReleaseSlot(in PlayerAspect owner, uint index) {
+            var perksEnt = owner.ent;
+            ref readonly var perks = ref perksEnt.Read<PerksComponent>();
+            var slot = perks.slots[index];
+            if (slot.TryRead(out IsPerkCanBeReleased data) == true) {
+                if (data.instance.IsAlive() == true) {
+                    data.instance.GetAspect<PerkAspect>().Use();
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        /// <summary>
         /// Use perk source (see UseSlot)
         /// </summary>
         /// <param name="perk">Perk source</param>
         /// <returns>Entity instance or default</returns>
         public static Ent AddPerk(in PerkSource perk) {
             if (perk.source.IsAlive() == false) return default;
-            return perk.Clone();
+            var ent = perk.Clone();
+            var aspect = ent.GetAspect<PerkAspect>();
+            if (aspect.perkType == PerkType.Continuous) {
+                aspect.component.slot.Set(new IsPerkCanBeReleased() {
+                    instance = ent,
+                });
+            }
+            return ent;
         }
         
     }

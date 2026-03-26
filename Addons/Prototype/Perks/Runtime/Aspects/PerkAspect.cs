@@ -1,3 +1,5 @@
+using ME.BECS.Transforms;
+
 namespace ME.BECS.Perks {
     
     using ME.BECS.Players;
@@ -18,9 +20,21 @@ namespace ME.BECS.Perks {
         public readonly ref readonly OwnerComponent readOwnerComponent => ref this.ownerComponentPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref Ent owner => ref this.ownerComponent.ent;
         public readonly ref readonly Ent readOwner => ref this.readOwnerComponent.ent;
+        
+        public readonly PerkType perkType => this.readComponent.slot.Read<PerkSlotComponent>().perkType;
 
         public readonly void Use() {
             this.ent.SetTag<IsPerkUsedComponent>(true);
+            this.Release();
+        }
+
+        public readonly bool Release() {
+            if (this.perkType == PerkType.Continuous) {
+                this.component.slot.Remove<IsPerkCanBeReleased>();
+                this.ent.DestroyHierarchy();
+                return true;
+            }
+            return false;
         }
 
         public readonly PerkAspect Clone() {

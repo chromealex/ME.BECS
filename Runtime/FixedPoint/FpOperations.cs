@@ -308,6 +308,11 @@ namespace ME.BECS {
     public partial struct uspeed {
 
         [INLINE(256)]
+        public static uspeed operator *(uint value1, uspeed value2) {
+            return new uspeed(value1 * value2.value);
+        }
+
+        [INLINE(256)]
         public static uspeed operator *(ucvalue value1, uspeed value2) {
             value2.value *= value1.value;
             value2.value /= PRECISION;
