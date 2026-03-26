@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
+using scg = System.Collections.Generic;
 
 namespace ME.BECS.Editor {
 
@@ -100,7 +101,6 @@ namespace ME.BECS.Editor {
         private World selectedWorld;
         private readonly System.Collections.Generic.List<World> aliveWorlds = new System.Collections.Generic.List<World>();
         private DropdownField toolbarItemsContainer;
-        private VisualElement hierarchyRoot;
         private string search;
         private readonly System.Collections.Generic.HashSet<System.Type> searchTypes = new System.Collections.Generic.HashSet<System.Type>();
         private readonly System.Collections.Generic.HashSet<string> searchNames = new System.Collections.Generic.HashSet<string>();
@@ -124,11 +124,10 @@ namespace ME.BECS.Editor {
         private GradientAnimated logoLine;
 
         private readonly System.Collections.Generic.HashSet<Ent> current = new System.Collections.Generic.HashSet<Ent>();
-        private readonly System.Collections.Generic.List<Ent> createEntities = new System.Collections.Generic.List<Ent>();
+        private System.Collections.Generic.List<Ent> createEntities = new System.Collections.Generic.List<Ent>();
         private readonly System.Collections.Generic.HashSet<Ent> allEntities = new System.Collections.Generic.HashSet<Ent>();
         private readonly System.Collections.Generic.HashSet<Ent> removeEntities = new System.Collections.Generic.HashSet<Ent>();
         private readonly System.Collections.Generic.Dictionary<Ent, Element> entsToElements = new System.Collections.Generic.Dictionary<Ent, Element>();
-        private readonly System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<Ent>> awaitForParent = new System.Collections.Generic.Dictionary<Ent, System.Collections.Generic.List<Ent>>();
         //private bool rawHierarchy;
 
         [MenuItem("ME.BECS/\u2637 Hierarchy...", priority = 10000)]
@@ -230,7 +229,15 @@ namespace ME.BECS.Editor {
                 }
                 Handles.DrawOutline(this.currentObjects.ToArray(), Color.green);
                 if (tr != null && this.alignSceneViewToObject == true) {
-                    obj.AlignViewToObject(tr);
+                    if (this.currentObjects.Count > 0) {
+                        var bounds = this.currentObjects[0].bounds;
+                        for (int i = 1; i < this.currentObjects.Count; ++i) {
+                            bounds.Encapsulate(this.currentObjects[i].bounds);
+                        }
+                        obj.Frame(bounds);
+                    } else {
+                        obj.AlignViewToObject(tr);
+                    }
                 }
                 this.alignSceneViewToObject = false;
             }
@@ -261,109 +268,9 @@ namespace ME.BECS.Editor {
             this.DrawToolbar();
 
             if (this.selectedWorld.isCreated == true) {
-                this.DrawEntities(this.hierarchyRoot);
+                this.DrawEntities();
             }
             
-        }
-
-        private void Move(int delta, Ent current, out Element newElement, bool addToSelection = false) {
-            newElement = null;
-            if (this.entsToElements.TryGetValue(current, out var element) == true) {
-                if (delta > 0) {
-                    newElement = element;
-                    while (delta > 0) {
-                        var bounds = newElement.toggle.worldBound;
-                        var height = bounds.height;
-                        foreach (var item in this.entsToElements) {
-                            if (item.Value.Contains(new Vector2(bounds.center.x, bounds.center.y + height)) == true) {
-                                newElement = item.Value;
-                                if (addToSelection == false) this.selected.Clear();
-                                this.selected.Add(newElement.value);
-                                break;
-                            }
-                        }
-                        --delta;
-                    }
-                } else if (delta < 0) {
-                    newElement = element;
-                    while (delta < 0) {
-                        var bounds = newElement.toggle.worldBound;
-                        var height = bounds.height;
-                        foreach (var item in this.entsToElements) {
-                            if (item.Value.Contains(new Vector2(bounds.center.x, bounds.center.y - height)) == true) {
-                                newElement = item.Value;
-                                if (addToSelection == false) this.selected.Clear();
-                                this.selected.Add(newElement.value);
-                                break;
-                            }
-                        }
-                        ++delta;
-                    }
-                }
-            }
-        }
-        
-        private bool Move(int delta, out Element newElement, bool addToSelection = false) {
-            newElement = null;
-            var first = (delta > 0 ? this.selected.OrderBy(x => this.entsToElements[x].worldBounds.y).LastOrDefault() : this.selected.OrderBy(x => this.entsToElements[x].worldBounds.y).FirstOrDefault());
-            if (first.IsAlive() == true) {
-                this.Move(delta, first, out newElement, addToSelection);
-                return true;
-            }
-            return false;
-        }
-
-        private bool UnfoldSelection(out System.Collections.Generic.List<Element> newElement) {
-            newElement = null;
-            var count = 0;
-            foreach (var selection in this.selected) {
-                if (newElement == null) newElement = new System.Collections.Generic.List<Element>();
-                if (this.entsToElements.TryGetValue(selection, out var elem) == false) continue;
-                if (elem.IsFoldout == false) {
-                    elem.IsFoldout = true;
-                    newElement.Add(elem);
-                    ++count;
-                } else {
-                    // Move to child if it has one
-                    this.Move(1, selection, out var nextElement, false);
-                    ++count;
-                }
-            }
-
-            return count > 0;
-        }
-
-        private bool FoldSelection(out System.Collections.Generic.List<Element> newElement) {
-            newElement = null;
-            var count = 0;
-            var toAdd = new Unity.Collections.NativeList<Ent>(Unity.Collections.Allocator.Temp);
-            var toRemove = new Unity.Collections.NativeList<Ent>(Unity.Collections.Allocator.Temp);
-            foreach (var selection in this.selected) {
-                if (newElement == null) newElement = new System.Collections.Generic.List<Element>();
-                if (this.entsToElements.TryGetValue(selection, out var elem) == false) continue;
-                if (elem.IsFoldout == true) {
-                    elem.IsFoldout = false;
-                    newElement.Add(elem);
-                    ++count;
-                } else {
-                    // Move to child if it has one
-                    if (elem.parent != null) {
-                        toRemove.Add(selection);
-                        toAdd.Add(elem.value);
-                        ++count;
-                    }
-                }
-            }
-
-            foreach (var item in toRemove) {
-                this.selected.Remove(item);
-            }
-
-            foreach (var item in toAdd) {
-                this.selected.Add(item);
-            }
-            
-            return count > 0;
         }
 
         public void DrawToolbar() {
@@ -387,6 +294,7 @@ namespace ME.BECS.Editor {
 
         }
         
+        private TreeView treeView;
         private void CreateGUI() {
 
             Selection.selectionChanged -= this.OnSelectionChanged;
@@ -410,62 +318,30 @@ namespace ME.BECS.Editor {
             }
             
             if (this.selectedWorld.isCreated == true) {
-                var scrollView = new ScrollView(ScrollViewMode.Vertical);
-                scrollView.RegisterCallback<KeyDownEvent>((evt) => {
-                    if (evt.keyCode == KeyCode.DownArrow) {
-                        if (this.Move(1, out var newSelection, evt.shiftKey) == true) {
-                            evt.StopImmediatePropagation();
-                            scrollView.ScrollTo(newSelection.container);
-                            this.DrawInspector();
-                        }
-                    } else if (evt.keyCode == KeyCode.UpArrow) {
-                        if (this.Move(-1, out var newSelection, evt.shiftKey) == true) {
-                            evt.StopImmediatePropagation();
-                            scrollView.ScrollTo(newSelection.container);
-                            this.DrawInspector();
-                        }
-                    } else if (evt.keyCode == KeyCode.RightArrow) {
-                        if (this.UnfoldSelection(out var list) == true) {
-                            evt.StopImmediatePropagation();
-                            scrollView.ScrollTo(list.First().container);
-                            scrollView.ScrollTo(list.Last().container);
-                            this.DrawInspector();
-                        }
-                    } else if (evt.keyCode == KeyCode.LeftArrow) {
-                        if (this.FoldSelection(out var list) == true) {
-                            evt.StopImmediatePropagation();
-                            scrollView.ScrollTo(list.First().container);
-                            scrollView.ScrollTo(list.Last().container);
-                            this.DrawInspector();
-                        }
+                var treeView = new TreeView {
+                    makeItem = () => this.MakeElement(),
+                    bindItem = (element, i) => {
+                        var item = this.treeView.GetItemDataForIndex<Ent>(i);
+                        var txt = element.Q<Label>(className: "caption");
+                        txt.text = item.ToString(withWorld: false, withVersion: false).ToString();
+                        var ver = element.Q<Label>(className: "version");
+                        ver.text = item.Version.ToString();
+                    },
+                };
+                treeView.selectionType = SelectionType.Multiple;
+                treeView.selectionChanged += (values) => {
+                    this.selected.Clear();
+                    var arr = values.ToArray();
+                    foreach (var item in arr) {
+                        this.selected.Add((Ent)item);
                     }
-                }, TrickleDown.TrickleDown);
-                {
-                    var decorationsRoot = new VisualElement();
-                    decorationsRoot.AddToClassList("h-root-decorations");
-                    scrollView.Add(decorationsRoot);
-
-                    {
-                        var col = new VisualElement();
-                        col.AddToClassList("content-column");
-                        decorationsRoot.Add(col);
-                    }
-                    {
-                        var col = new VisualElement();
-                        col.AddToClassList("tags-column");
-                        this.tagsBackground = col;
-                        decorationsRoot.Add(col);
-                    }
-                    {
-                        var col = new VisualElement();
-                        col.AddToClassList("version-column");
-                        decorationsRoot.Add(col);
-                    }
-                }
-                this.hierarchyRoot = new VisualElement();
-                this.hierarchyRoot.AddToClassList("h-root");
-                scrollView.Add(this.hierarchyRoot);
-                EditorUIUtils.AddWindowContent(root, scrollView);
+                    this.DrawInspector();
+                };
+                treeView.AddToClassList("h-root");
+                this.treeView = treeView;
+                this.treeView.SetRootItems(this.roots);
+                
+                EditorUIUtils.AddWindowContent(root, treeView);
             } else {
                 var lbl = new Label("World is not selected");
                 lbl.AddToClassList("empty-label");
@@ -483,6 +359,14 @@ namespace ME.BECS.Editor {
         private void SelectWorld(World world) {
             
             this.selectedWorld = world;
+            this.current.Clear();
+            this.createEntities.Clear();
+            this.allEntities.Clear();
+            this.removeEntities.Clear();
+            this.roots.Clear();
+            foreach (var kv in this.dics) {
+                kv.Value.Clear();
+            }
             this.CreateGUI();
             
         }
@@ -518,7 +402,7 @@ namespace ME.BECS.Editor {
                     if (val == null) return "<b>W</b>";
                     if (list.Count == 0) return null;
                     var idx = list.IndexOf(val);
-                    if (idx >= this.aliveWorlds.Count) return null;
+                    if (idx < 0 || idx >= this.aliveWorlds.Count) return null;
                     return $"#{this.aliveWorlds[idx].id}";
                 });
                 selection.RegisterValueChangedCallback((evt) => {
@@ -804,6 +688,25 @@ namespace ME.BECS.Editor {
             }
         }
 
+        private VisualElement MakeElement() {
+            var container = new VisualElement();
+            container.AddToClassList("h-element");
+            var textLabel = new Label();
+            textLabel.AddToClassList("caption");
+            textLabel.pickingMode = PickingMode.Ignore;
+            container.Add(textLabel);
+            var versionLabel = new Label();
+            versionLabel.AddToClassList("version");
+            versionLabel.pickingMode = PickingMode.Ignore;
+            container.Add(versionLabel);
+            container.RegisterCallback<ClickEvent>(evt => {
+                if (evt.clickCount == 2) {
+                    this.alignSceneViewToObject = true;
+                }
+            });
+            return container;
+        }
+
         private Element MakeElement(Ent ent) {
             var element = new Element(this) {
                 value = ent,
@@ -936,13 +839,17 @@ namespace ME.BECS.Editor {
             }
             return element;
         }
-        
-        private void DrawEntities(VisualElement root) {
+
+        private scg::List<TreeViewItemData<Ent>> roots = new scg::List<TreeViewItemData<Ent>>();
+        private scg::Dictionary<int, scg::List<TreeViewItemData<Ent>>> dics = new scg::Dictionary<int, scg::List<TreeViewItemData<Ent>>>();
+        private void DrawEntities() {
             
             this.cache.Clear();
             this.createEntities.Clear();
             this.allEntities.Clear();
             this.removeEntities.Clear();
+            if (this.treeView?.viewController == null) return;
+            
             //this.rawHierarchy = false;
             if (this.searchTypes.Count == 0 && this.searchNames.Count == 0 && string.IsNullOrEmpty(this.search) == false) {
                 
@@ -1004,31 +911,84 @@ namespace ME.BECS.Editor {
                         }
 
                         this.allEntities.Add(ent);
+                        
+                        if (this.dics.ContainsKey((int)ent.id) == false) {
+                            this.dics.Add((int)ent.id, new scg::List<TreeViewItemData<Ent>>());
+                        }
+                        
                     #if !ENABLE_BECS_FLAT_QUERIES
                     }
                     #endif
                 }
             }
 
+            if (this.roots.Count == 0) {
+                var q = new scg::Queue<Ent>();
+                foreach (var ent in this.allEntities) {
+                    if (ent.Read<ParentComponent>().value.IsAlive() == false) {
+                        this.roots.Add(new TreeViewItemData<Ent>((int)ent.id, ent, this.dics[(int)ent.id]));
+                        this.current.Add(ent);
+                        q.Clear();
+                        q.Enqueue(ent);
+                        while (q.Count > 0) {
+                            var item = q.Dequeue();
+                            var list = this.dics[(int)item.id];
+                            var children = item.Read<ChildrenComponent>().list;
+                            for (uint k = 0u; k < children.Count; ++k) {
+                                var c = children[k];
+                                list.Add(new TreeViewItemData<Ent>((int)c.id, c, this.dics[(int)c.id]));
+                                this.current.Add(c);
+                                q.Enqueue(c);
+                            }
+                        }
+                    }
+                }
+                this.createEntities.Clear();
+                this.removeEntities.Clear();
+
+                this.treeView.SetRootItems(this.roots);
+            }
+
+            var rebuild = false;
+            this.createEntities = this.createEntities.OrderBy(x => x.id).ToList();
+
+            foreach (var ent in this.allEntities) {
+                if (ent.Read<ParentComponent>().value.IsAlive() == false) {
+                    this.roots.Add(new TreeViewItemData<Ent>((int)ent.id, ent, this.dics[(int)ent.id]));
+                }
+            }
+
             this.allEntities.IntersectWith(this.current);
-            
+
             foreach (var ent in this.current) {
                 if (this.allEntities.Contains(ent) == false) {
                     this.removeEntities.Add(ent);
                 }
             }
-            
+
             foreach (var ent in this.removeEntities) {
                 this.current.Remove(ent);
-                this.Remove(root, ent);
+                if (this.treeView.TryRemoveItem((int)ent.id, false) == true) {
+                    rebuild = true;
+                }
             }
 
             foreach (var ent in this.createEntities) {
+                var parent = ent.Read<ParentComponent>().value;
+                if (parent.IsAlive() == true && this.current.Contains(parent) == false) {
+                    continue;
+                }
                 this.current.Add(ent);
-                this.Add(root, ent);
+                var parentId = parent.IsAlive() == true ? (int)parent.id : -1;
+                this.treeView.AddItem(new TreeViewItemData<Ent>((int)ent.id, ent, this.dics[(int)ent.id]), parentId, -1, false);
+                rebuild = true;
             }
 
-            this.Draw(root);
+            if (rebuild == true) {
+                this.treeView.Rebuild();
+                this.logoLine.ThinkOnce();
+            }
+            //this.treeView.RefreshItems();
             
             if (this.settingsChanged == true) {
                 this.SaveSettings();
@@ -1037,99 +997,6 @@ namespace ME.BECS.Editor {
             
         }
 
-        private void Remove(VisualElement root, Ent ent) {
-            this.entsToElements.Remove(ent, out var element);
-            if (element.prev != null) element.prev.next = element.next;
-            if (element.next != null) element.next.prev = element.prev;
-            element.container.RemoveFromHierarchy();
-            if (element.parent != null) {
-                this.AddAwaitParent(element.parent.value, ent);
-                element.parent = null;
-                element.UpdateLevel();
-            }
-        }
-
-        private void AddAwaitParent(Ent parentEnt, Ent current) {
-            if (this.awaitForParent.TryGetValue(parentEnt, out var list) == true) {
-                list.Add(current);
-            } else {
-                list = new System.Collections.Generic.List<Ent>();
-                list.Add(current);
-                this.awaitForParent.Add(parentEnt, list);
-            }
-        }
-
-        private void Add(VisualElement root, Ent ent) {
-            var id = ent.pack;
-            var element = this.MakeElement(ent);
-            element.container.name = id.ToString();
-            element.container.userData = element;
-            
-            this.entsToElements.Add(ent, element);
-            
-            {
-                if (this.awaitForParent.TryGetValue(ent, out var list) == true) {
-                    for (var index = list.Count - 1; index >= 0; --index) {
-                        var item = list[index];
-                        if (this.AddParent(item, element) == true) {
-                            list.RemoveAt(index);
-                            if (list.Count == 0) {
-                                this.awaitForParent.Remove(ent);
-                            }
-                            element.UpdateLevel();
-                        }
-                    }
-                }
-            }
-            
-            var hasParent = false;
-            var parentEnt = ent.Read<ParentComponent>().value;
-            if (parentEnt.IsAlive() == true) {
-                if (this.entsToElements.TryGetValue(parentEnt, out var parentElement) == false) {
-                    this.AddAwaitParent(parentEnt, ent);
-                    hasParent = true;
-                } else if (this.AddParent(ent, parentElement) == true) {
-                    hasParent = true;
-                    element.UpdateLevel();
-                }
-            }
-
-            if (hasParent == false) {
-                {
-                    var childCount = root.childCount;
-                    if (childCount > 0) {
-                        element.prev = (Element)root[childCount - 1].userData;
-                        element.next = null;
-                        element.prev.next = element;
-                    }
-                }
-                root.Add(element.container);
-            }
-
-            element.UpdateLevel();
-
-        }
-
-        private bool AddParent(Ent childEnt, Element element) {
-            if (this.entsToElements.TryGetValue(childEnt, out var child) == true) {
-                child.parent = element;
-                child.UpdateLevel();
-                element.foldout.Add(child.container);
-                return true;
-            }
-            return false;
-        }
-
-        private void Draw(VisualElement root) {
-
-            foreach (var item in this.current) {
-                if (this.entsToElements.TryGetValue(item, out var element) == true) {
-                    element.Redraw(false);
-                }
-            }
-            
-        }
-        
     }
 
 }
