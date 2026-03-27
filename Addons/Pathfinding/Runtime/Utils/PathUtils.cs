@@ -151,7 +151,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         private static void AddTarget(in BuildGraphSystem buildGraphSystem, in UnitCommandGroupAspect unitCommandGroup, uint typeId, in Ent targetInfo, in JobInfo jobInfo = default) {
 
-            var targetEnt = Ent.New(in jobInfo);
+            var targetEnt = Ent.New<PathfindingTargetEntityType>(in jobInfo);
             targetEnt.SetParent(unitCommandGroup.ent);
             targetEnt.Set(TargetComponent.Create(in targetInfo, buildGraphSystem.GetGraphByTypeId(typeId)));
             unitCommandGroup.targets[typeId] = targetEnt;
@@ -178,7 +178,7 @@ namespace ME.BECS.Pathfinding {
         
         [INLINE(256)]
         public static Ent CreateTargetInfo(in Path.Target target, in JobInfo jobInfo) {
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New<PathfindingTargetInfoEntityType>(in jobInfo);
             ent.Set(new TargetInfoComponent() {
                 target = target,
                 volume = (uint)(DEFAULT_VOLUME_RADIUS * UnitUtils.FLOAT_TO_UINT),

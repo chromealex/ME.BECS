@@ -37,7 +37,7 @@ namespace ME.BECS.Players {
 
         [INLINE(256)]
         public static Ent CreatePlayer(uint index, in Ent team, in JobInfo jobInfo) {
-            var ent = Ent.New(in jobInfo, editorName: $"Player#{index}");
+            var ent = Ent.New<PlayerEntityType>(in jobInfo, editorName: $"Player#{index}");
             var aspect = ent.GetOrCreateAspect<PlayerAspect>();
             aspect.index = index;
             aspect.team = team;

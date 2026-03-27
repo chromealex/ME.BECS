@@ -49,7 +49,7 @@ namespace ME.BECS {
                     ent.Destroy(destroyWithLifetime.lifetime);
                 } else {
                     var srcTr = ent.GetAspect<TransformAspect>();
-                    var copy = Ent.New(JobInfo.Create(ent.worldId));
+                    var copy = Ent.New<DestroyWithLifetimeEntityType>(JobInfo.Create(ent.worldId));
                     var tr = copy.Set<TransformAspect>();
                     tr.position = srcTr.position;
                     tr.rotation = srcTr.rotation;

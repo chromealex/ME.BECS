@@ -87,7 +87,7 @@ namespace ME.BECS.Editor.Jobs {
                 if (entsInfo.count != null) {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>({entsInfo.count.Length}u, Allocator.Domain);");
                     for (uint i = 0u; i < entsInfo.count.Length; ++i) {
-                        content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {entsInfo.count[i]};");
+                        if (entsInfo.count[i] > 0) content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {entsInfo.count[i]};");
                     }
                 }
 
@@ -514,64 +514,59 @@ namespace ME.BECS.Editor.Jobs {
         
         public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
 
-            var allTypes = EntityTypeCodeGenerator.GetAllTypes().Where(x => codeGenerator.IsValidTypeForAssembly(x.Item1, true)).ToArray();
-            var groupsCount = allTypes.Length;
+            var allTypes = EntityTypeCodeGenerator.GetAllTypes(out var maxId).Where(x => codeGenerator.IsValidTypeForAssembly(x.Item1, true)).ToDictionary(x => x.Item1, x => x.Item2);
+            var groupsCount = maxId + 1u;
             var result = new NewEntInfo();
             var anyCount = 0;
             result.count = new int[groupsCount];
             result.brCount = 0;
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetGenericMethodDefinition();
             var root = jobType.GetMethod("Execute");
-            
-            foreach (var kv in allTypes) {
-                var type = kv.Item1;
-                var groupId = kv.Item2;
-                var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
-                var instructions = root.GetInstructions().ToList();
-                var brOpen = 0;
-                ref var count = ref result.count[groupId];
-                for (int i = 0; i < instructions.Count; ++i) {
-                    var inst = instructions[i];
-                    if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
-                         inst.OpCode == System.Reflection.Emit.OpCodes.Br_S ||
-                         inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue ||
-                         inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue_S ||
-                         inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse ||
-                         inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse_S) &&
-                        ((Instruction)inst.Operand).Offset < inst.Offset) {
-                        // jump to previous instruction - make it open
-                        ++((Instruction)inst.Operand).loopInfo.openCount;
-                        ++inst.loopInfo.closeCount;
-                    }
+            var instructions = root.GetInstructions().ToList();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
+            var brOpen = 0;
+            for (int i = 0; i < instructions.Count; ++i) {
+                var inst = instructions[i];
+                if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Br_S ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brtrue_S ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse ||
+                     inst.OpCode == System.Reflection.Emit.OpCodes.Brfalse_S) &&
+                    ((Instruction)inst.Operand).Offset < inst.Offset) {
+                    // jump to previous instruction - make it open
+                    ++((Instruction)inst.Operand).loopInfo.openCount;
+                    ++inst.loopInfo.closeCount;
+                }
 
-                    if (inst.Operand is System.Reflection.MethodInfo member) {
-                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) &&
-                            member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                            if (member.GetMethodBody() != null) {
-                                instructions.InsertRange(i + 1, member.GetInstructions());
-                            }
+                if (inst.Operand is System.Reflection.MethodInfo member) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) &&
+                        member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                        if (member.GetMethodBody() != null) {
+                            instructions.InsertRange(i + 1, member.GetInstructions());
                         }
                     }
                 }
+            }
 
-                for (int i = 0; i < instructions.Count; ++i) {
-                    var inst = instructions[i];
-                    if (inst.loopInfo.openCount > 0) {
-                        brOpen += inst.loopInfo.openCount;
-                    }
+            for (int i = 0; i < instructions.Count; ++i) {
+                var inst = instructions[i];
+                if (inst.loopInfo.openCount > 0) {
+                    brOpen += inst.loopInfo.openCount;
+                }
 
-                    if (inst.loopInfo.closeCount > 0) {
-                        brOpen -= inst.loopInfo.closeCount;
-                    }
+                if (inst.loopInfo.closeCount > 0) {
+                    brOpen -= inst.loopInfo.closeCount;
+                }
 
-                    if (inst.Operand is MethodInfo methodInfo) {
-                        if (methodInfo.IsGenericMethod == true && methodInfo.GetGenericMethodDefinition() == newEntMethod && methodInfo.GetGenericArguments()[0] == type) {
-                            if (brOpen > 0) {
-                                ++result.brCount;
-                            } else {
-                                ++count;
-                                ++anyCount;
-                            }
+                if (inst.Operand is MethodInfo methodInfo) {
+                    if (methodInfo.IsGenericMethod == true && methodInfo.GetGenericMethodDefinition() == newEntMethod && allTypes.TryGetValue(methodInfo.GetGenericArguments()[0], out var gId) == true) {
+                        if (brOpen > 0) {
+                            ++result.brCount;
+                        } else {
+                            ref var count = ref result.count[gId];
+                            ++count;
+                            ++anyCount;
                         }
                     }
                 }

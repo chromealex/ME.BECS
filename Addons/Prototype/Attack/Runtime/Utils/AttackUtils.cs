@@ -32,7 +32,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static Ent CreateAttackSensor(int targetsMask, Config config, in JobInfo jobInfo) {
 
-            var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
+            var attackSensor = Ent.New<AttackSensorEntityType>(in jobInfo, editorName: "AttackSensor");
             config.Apply(in attackSensor);
             attackSensor.Set<QuadTreeQueryAspect>();
             attackSensor.Set<AttackAspect>();
@@ -69,7 +69,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static Ent CreateAttackSensorSpatial(int targetsMask, Config config, in JobInfo jobInfo) {
 
-            var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
+            var attackSensor = Ent.New<AttackSensorEntityType>(in jobInfo, editorName: "AttackSensor");
             config.Apply(in attackSensor);
             attackSensor.Set<SpatialQueryAspect>();
             attackSensor.Set<AttackAspect>();
@@ -336,7 +336,7 @@ namespace ME.BECS.Attack {
         private static BulletAspect CreateBullet_INTERNAL(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
             
             if (muzzleView.IsValid == true) {
-                var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");
+                var muzzleEnt = Ent.New<AttackMuzzlePointEntityType>(in jobInfo, "MuzzlePoint");
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
                 tr.IsStaticLocal = true;
                 tr.position = position;
@@ -349,7 +349,7 @@ namespace ME.BECS.Attack {
                 var placement = attackAspect.ent.ReadParent();
                 var placements = placement.ReadParent();
                 var sourceUnit = placements.ReadParent();
-                var ent = Ent.New(in jobInfo, "Bullet");
+                var ent = Ent.New<BulletEntityType>(in jobInfo, "Bullet");
                 ME.BECS.Players.PlayerUtils.SetOwner(in ent, ME.BECS.Players.PlayerUtils.GetOwner(in sourceUnit));
                 config.Apply(ent);
                 var tr = ent.GetOrCreateAspect<TransformAspect>();

@@ -55,7 +55,7 @@ namespace ME.BECS.Pathfinding {
             var dependencies = new Unity.Collections.NativeArray<Unity.Jobs.JobHandle>(config.agentTypes.Length, Constants.ALLOCATOR_TEMP);
             for (int i = 0; i < config.agentTypes.Length; ++i) {
                 var agentConfig = config.agentTypes[i];
-                dependencies[i] = Graph.Build(in context.world, in heights, out var graphEnt, in graphProperties, in agentConfig, context.dependsOn);
+                dependencies[i] = Graph.Build(context, in heights, out var graphEnt, in graphProperties, in agentConfig, context.dependsOn);
                 this.graphs[in context.world.state.ptr->allocator, i] = graphEnt;
                 this.types[in context.world.state.ptr->allocator, i] = agentConfig;
             }

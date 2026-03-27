@@ -6,8 +6,8 @@ namespace ME.BECS.Editor {
     [CodeGeneratorOrder(-100)]
     public class EntityTypeCodeGenerator : CustomCodeGenerator {
 
-        public static (System.Type, uint)[] GetAllTypes() {
-            
+        public static (System.Type, uint)[] GetAllTypes(out uint maxId) {
+
             var content = new System.Collections.Generic.List<(System.Type, uint)>();
             var id = 0u;
             var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IEntityType)).OrderBy(x => x.FullName).ToArray();
@@ -21,6 +21,7 @@ namespace ME.BECS.Editor {
 
             }
 
+            maxId = id;
             return content.ToArray();
 
         }

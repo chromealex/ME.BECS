@@ -7,7 +7,12 @@ namespace ME.BECS {
 
         [INLINE(256)][CodeGeneratorIgnoreVisited]
         public static Ent New(in Config config, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
-            var ent = Ent.New(in jobInfo, editorName);
+            return New<DefaultEntityType>(in config, in jobInfo, in editorName);
+        }
+
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
+        public static Ent New<T>(in Config config, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
+            var ent = Ent.New<T>(in jobInfo, editorName);
             config.UnsafeConfig.Apply(in ent);
             return ent;
         }

@@ -15,7 +15,7 @@ namespace ME.BECS.Perks {
         /// <returns>Perk instance (not initialized)</returns>
         public static Ent AddPassivePerk(in JobInfo jobInfo, in PlayerAspect owner, Config perkConfig) {
             
-            var ent = Ent.New(in jobInfo, "Perk");
+            var ent = Ent.New<PerkEntityType>(in jobInfo, "Perk");
             var perk = ent.Set<PerkAspect>();
             perk.owner = owner.ent;
             perkConfig.Apply(in ent);
@@ -44,9 +44,9 @@ namespace ME.BECS.Perks {
             ref var perks = ref perksEnt.Get<PerksComponent>();
             if (perks.slots.Count == 0u) perks.slots = new ListAuto<Ent>(perksEnt, 4u);
             
-            var slot = Ent.New(jobInfo, "PerkSlot");
+            var slot = Ent.New<PerkSlotEntityType>(jobInfo, "PerkSlot");
             
-            var ent = Ent.New(in jobInfo, "Perk");
+            var ent = Ent.New<PerkEntityType>(in jobInfo, "Perk");
             ent.SetActive(false);
             var perk = ent.Set<PerkAspect>();
             perk.owner = owner.ent;

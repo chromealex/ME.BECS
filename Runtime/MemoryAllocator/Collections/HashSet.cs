@@ -551,6 +551,13 @@ namespace ME.BECS {
             return (uint)item.GetHashCode();
         }
 
+        public uint GetReservedSizeInBytes() {
+            var size = 0u;
+            size += this.buckets.GetReservedSizeInBytes();
+            size += this.slots.GetReservedSizeInBytes();
+            return size;
+        }
+
     }
 
 }

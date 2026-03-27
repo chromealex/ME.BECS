@@ -4,7 +4,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
-    public static unsafe class EntCloneExt {
+    public static class EntCloneExt {
 
         [INLINE(256)][IgnoreProfiler]
         [NotThreadSafe]
@@ -16,6 +16,7 @@ namespace ME.BECS {
         [NotThreadSafe]
         public static Ent Clone(this in Ent source, ushort worldId) {
 
+            // TODO: Somehow we need to call generic method with group id to clone to the same group
             var ent = Ent.New(worldId);
             ent.EditorName = source.EditorName;
             ent.CopyFrom(in source);
