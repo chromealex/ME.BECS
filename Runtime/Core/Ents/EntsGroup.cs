@@ -5,20 +5,24 @@ namespace ME.BECS {
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
-    public class EntityTypes {
+    internal static class EntityTypesManaged {
 
         public static readonly System.Collections.Generic.Dictionary<ushort, System.Type> typeByGroupId = new System.Collections.Generic.Dictionary<ushort, System.Type>();
+
+    }
+
+    public class EntityTypes {
 
         private static readonly Unity.Burst.SharedStatic<uint> groupsCountData = Unity.Burst.SharedStatic<uint>.GetOrCreate<EntityTypes>();
         public static ref uint groupsCount => ref groupsCountData.Data;
 
         public static void Init() {
-            typeByGroupId.Clear();
+            EntityTypesManaged.typeByGroupId.Clear();
         }
 
         public static void Register<T>(ushort id) where T : unmanaged, IEntityType {
             EntityTypes<T>.id = id;
-            typeByGroupId.Add(id, typeof(T));
+            EntityTypesManaged.typeByGroupId.Add(id, typeof(T));
         }
 
     }

@@ -398,7 +398,7 @@ namespace ME.BECS.Editor {
                 entityGenLabel.AddToClassList("entity-type-label");
                 entityGenLabel.AddToClassList("label-header");
                 genContainer.Add(entityGenLabel);
-                var entityGen = new Label(EditorUtils.GetComponentName(EntityTypes.typeByGroupId[Ents.GetEntityGroupId(world.state, this.entity.id)]));
+                var entityGen = new Label(EditorUtils.GetComponentName(EntityTypesManaged.typeByGroupId[Ents.GetEntityGroupId(world.state, this.entity.id)]));
                 entityGen.AddToClassList("entity-type");
                 entityGen.AddToClassList("label-value");
                 genContainer.Add(entityGen);
