@@ -21,8 +21,6 @@ namespace ME.BECS {
     
     public interface IEntityType { }
 
-    public struct DefaultEntityType : IEntityType {}
-
     public unsafe partial struct Ents {
 
         public const uint ENTITIES_PER_PAGE = sizeof(uint) * 8;
