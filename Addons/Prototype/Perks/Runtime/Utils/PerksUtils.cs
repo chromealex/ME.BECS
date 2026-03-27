@@ -58,15 +58,16 @@ namespace ME.BECS.Perks {
             }
 
             slot.Set(ent.Read<PerkSlotComponent>());
+            if (initializationState.startCooldown == 0u) slot.SetTag<IsPerkSlotCooldownReadyComponent>(true);
+            slot.SetParent(perksEnt);
+            var index = perks.slots.Add(slot);
             slot.Set(new PerkSlotRuntimeComponent() {
                 cooldown = initializationState.startCooldown,
                 perkConfig = perkConfig,
                 perkSource = ent,
+                slotIndex = index,
             });
-            if (initializationState.startCooldown == 0u) slot.SetTag<IsPerkSlotCooldownReadyComponent>(true);
-            slot.SetParent(perksEnt);
-            
-            var index = perks.slots.Add(slot);
+
             return index;
             
         }
