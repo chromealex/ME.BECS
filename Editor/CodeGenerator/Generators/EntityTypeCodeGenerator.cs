@@ -31,6 +31,12 @@ namespace ME.BECS.Editor {
             var id = 0u;
             var content = new System.Collections.Generic.List<string>();
             var aspects = EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
+            
+            {
+                var data = $"EntityTypes.Init();";
+                content.Add(data);
+            }
+            
             foreach (var aspect in aspects) {
 
                 if (aspect.IsValueType == false) continue;
@@ -42,7 +48,7 @@ namespace ME.BECS.Editor {
                 var type = aspect;
                 var strType = EditorUtils.GetTypeName(type);
 
-                contentItem.Add($"EntityTypes<{strType}>.id = {id};");
+                contentItem.Add($"EntityTypes.Register<{strType}>({id});");
                 ++id;
                 
                 content.AddRange(contentItem);

@@ -144,7 +144,8 @@
 .entity-header .entity-id-container,
 .entity-header .entity-name-container,
 .entity-header .entity-gen-container,
-.entity-header .entity-version-container {
+.entity-header .entity-version-container,
+.entity-header .entity-type-container {
     flex-direction: column;
     min-width: 40px;
     padding-right: 8px;
@@ -155,7 +156,8 @@
 .entity-header .entity-id-label,
 .entity-header .entity-gen-label,
 .entity-header .entity-version-label,
-.entity-header .entity-world-label {
+.entity-header .entity-world-label,
+.entity-header .entity-type-label {
     font-size: 10px;
     color: rgba(255, 255, 255, 0.5);
 }

@@ -7,8 +7,19 @@ namespace ME.BECS {
 
     public class EntityTypes {
 
+        public static readonly System.Collections.Generic.Dictionary<ushort, System.Type> typeByGroupId = new System.Collections.Generic.Dictionary<ushort, System.Type>();
+
         private static readonly Unity.Burst.SharedStatic<uint> groupsCountData = Unity.Burst.SharedStatic<uint>.GetOrCreate<EntityTypes>();
         public static ref uint groupsCount => ref groupsCountData.Data;
+
+        public static void Init() {
+            typeByGroupId.Clear();
+        }
+
+        public static void Register<T>(ushort id) where T : unmanaged, IEntityType {
+            EntityTypes<T>.id = id;
+            typeByGroupId.Add(id, typeof(T));
+        }
 
     }
     
@@ -474,7 +485,7 @@ namespace ME.BECS {
 
         [NotThreadSafe]
         [INLINE(256)]
-        public static uint GetEntityGroupId(safe_ptr<State> state, uint entId) {
+        public static ushort GetEntityGroupId(safe_ptr<State> state, uint entId) {
             return state.ptr->entities.entityToGroup[state, entId];
         }
 
