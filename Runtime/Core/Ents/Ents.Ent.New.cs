@@ -64,20 +64,13 @@ namespace ME.BECS {
                 // Create entity with offset because we are in parallel mode
                 // so we need JobInfo struct to be provided
                 E.IS_CREATED(jobInfo);
-                return New_INTERNAL<T>(worldId, in jobInfo, in editorName);
+                return NewWithGroup_INTERNAL(worldId, EntityTypes<T>.id, in jobInfo, in editorName);
             } else {
-                return New_INTERNAL<T>(worldId, default, in editorName);
+                return NewWithGroup_INTERNAL(worldId, EntityTypes<T>.id, default, in editorName);
             }
 
         }
         
-        [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
-        internal static Ent New_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
-
-            return NewWithGroup_INTERNAL(worldId, EntityTypes<T>.id, in jobInfo, in editorName);
-
-        }
-
         [CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
         internal static Ent NewWithGroup_INTERNAL(ushort worldId, ushort groupId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
 

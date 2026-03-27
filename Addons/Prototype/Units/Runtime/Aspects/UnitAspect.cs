@@ -33,7 +33,7 @@ namespace ME.BECS.Units {
         [NotThreadSafe]
         public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo) {
             if (this.readHealth > 0u) {
-                var ent = Ent.New(in jobInfo);
+                var ent = Ent.New<UnitHitEntityType>(in jobInfo);
                 ent.Set(new DamageTookComponent() {
                     source = source,
                     target = this.ent,
@@ -171,9 +171,9 @@ namespace ME.BECS.Units {
         public readonly uint PlacementsCount => this.readComponentRuntime.placements.Count;
 
         [INLINE(256)]
-        public readonly void ValidatePlacements() {
+        public readonly void ValidatePlacements(in JobInfo jobInfo) {
             if (this.readComponentRuntime.placements.IsCreated == false) {
-                this.InitPlacements();
+                this.InitPlacements(in jobInfo);
             }
             if (this.readComponentRuntime.placementsRoot.IsAlive() == false) {
                 this.SetPlacementRoot(this.CreatePlacementsRoot());
@@ -182,7 +182,7 @@ namespace ME.BECS.Units {
 
         [INLINE(256)]
         public readonly Ent CreatePlacementsRoot() {
-            var placements = Ent.New(JobInfo.Create(this.ent.worldId), "Placements");
+            var placements = Ent.New<PlacementsEntityType>(JobInfo.Create(this.ent.worldId), "Placements");
             PlayerUtils.SetOwner(placements, this.readOwner.GetAspect<PlayerAspect>());
             var tr = placements.Set<TransformAspect>();
             tr.IsStaticLocal = true;
@@ -191,13 +191,13 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public readonly void InitPlacements() {
+        public readonly void InitPlacements(in JobInfo jobInfo) {
             var placementsDataComponent = this.ent.ReadStatic<UnitPlacementsDataComponent>();
             if (placementsDataComponent.placements.IsCreated == true) {
                 if (this.readComponentRuntime.placements.IsCreated == false) this.componentRuntime.placements = new ListAuto<Ent>(this.ent, placementsDataComponent.placements.Length);
                 for (uint i = 0u; i < placementsDataComponent.placements.Length; ++i) {
                     var placement = placementsDataComponent.placements[i];
-                    this.componentRuntime.placements.Add(this.CreatePlacement(placement.id, placement.localPosition, placement.localRotation));
+                    this.componentRuntime.placements.Add(this.CreatePlacement(in jobInfo, placement.id, placement.localPosition, placement.localRotation));
                 }
             } else {
                 this.componentRuntime.placements = new ListAuto<Ent>(this.ent, 2u);
@@ -205,8 +205,8 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        private readonly Ent CreatePlacement(uint id, float3 localPosition, quaternion localRotation) {
-            var ent = Ent.New(JobInfo.Create(this.ent.worldId), "Placement");
+        private readonly Ent CreatePlacement(in JobInfo jobInfo, uint id, float3 localPosition, quaternion localRotation) {
+            var ent = Ent.New<PlacementEntityType>(in jobInfo, "Placement");
             var tr = ent.Set<TransformAspect>();
             if (this.readComponentRuntime.placementsRoot.IsAlive() == true) {
                 ent.SetParent(this.readComponentRuntime.placementsRoot);
@@ -242,7 +242,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        public readonly Ent GetPlacement(uint id) {
+        public readonly Ent GetPlacement(in JobInfo jobInfo, uint id) {
             if (this.readComponentRuntime.placements.IsCreated == true) {
                 for (uint i = 0u; i < this.readComponentRuntime.placements.Count; ++i) {
                     var placement = this.readComponentRuntime.placements[i];
@@ -251,13 +251,13 @@ namespace ME.BECS.Units {
                     }
                 }
             }
-            return this.CreatePlacement(id, float3.zero, quaternion.identity);
+            return this.CreatePlacement(in jobInfo, id, float3.zero, quaternion.identity);
         }
         
         [INLINE(256)]
-        public readonly Ent SetToPlacement(Ent obj, uint id) {
-            this.ValidatePlacements();
-            var placement = this.GetPlacement(id);
+        public readonly Ent SetToPlacement(in JobInfo jobInfo, in Ent obj, uint id) {
+            this.ValidatePlacements(in jobInfo);
+            var placement = this.GetPlacement(in jobInfo, id);
             obj.SetParent(placement);
             placement.Get<UnitPlacementComponent>().obj = obj;
             return placement;

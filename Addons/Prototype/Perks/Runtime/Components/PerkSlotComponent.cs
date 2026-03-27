@@ -20,6 +20,7 @@ namespace ME.BECS.Perks {
         public usec cooldown;
         public Config perkConfig;
         public Ent perkSource;
+        public uint slotIndex;
 
     }
     

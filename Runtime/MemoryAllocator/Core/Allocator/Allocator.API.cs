@@ -106,7 +106,7 @@ namespace ME.BECS {
                     header = prevHeader;
                 }
             }
-            
+
             // add to free blocks
             {
                 this.freeBlocks.Add(in this, header, ptr.zoneId);

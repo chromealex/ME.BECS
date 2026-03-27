@@ -96,6 +96,11 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public Ent NewEnt<T>() where T : unmanaged, IEntityType {
+            return Ent.New<T>(in this);
+        }
+
+        [INLINE(256)]
         public Unity.Jobs.JobHandle Tick(uint deltaTimeMs, ushort updateType = 0, Unity.Jobs.JobHandle dependsOn = default) {
 
             E.IS_CREATED(this);

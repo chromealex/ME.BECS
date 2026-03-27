@@ -212,7 +212,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost = Graph.UNWALKABLE, ObstacleChannel obstacleChannel = default, bool ignoreGraphRadius = false, int graphMask = -1, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New<PathfindingGraphMaskEntityType>(in jobInfo);
             return CreateGraphMask(in ent, in position, in rotation, size, cost, 1f, obstacleChannel, ignoreGraphRadius, graphMask);
 
         }
@@ -229,7 +229,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static Ent CreateGraphMask(in float3 position, in quaternion rotation, uint2 size, byte cost, tfloat height, ObstacleChannel obstacleChannel = default, bool ignoreGraphRadius = false, int graphMask = -1, in JobInfo jobInfo = default) {
 
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New<PathfindingGraphMaskEntityType>(in jobInfo);
             return CreateGraphMask(in ent, in position, in rotation, size, cost, height, obstacleChannel, ignoreGraphRadius, graphMask);
 
         }

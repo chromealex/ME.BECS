@@ -161,7 +161,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
-            var ent = Ent.New(in jobInfo, editorName: "Unit");
+            var ent = Ent.New<UnitEntityType>(in jobInfo, editorName: "Unit");
             return CreateUnit(in ent, in agentType, treeIndex);
             
         }
@@ -188,7 +188,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitAspect CreateUnitSpatial(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
-            var ent = Ent.New(in jobInfo, editorName: "Unit");
+            var ent = Ent.New<UnitEntityType>(in jobInfo, editorName: "Unit");
             return CreateUnitSpatial(in ent, in agentType, treeIndex);
             
         }
