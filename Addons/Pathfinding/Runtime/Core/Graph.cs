@@ -1102,7 +1102,7 @@ namespace ME.BECS.Pathfinding {
         [INLINE(256)]
         public static JobHandle Build(in JobInfo jobInfo, in Heights heights, out Ent graph, in GraphProperties properties, in ME.BECS.Units.AgentType agentConfig, JobHandle dependsOn = default) {
 
-            graph = Ent.New<PathfindingGraphEntityType>(in jobInfo, "PathfindingGraph");
+            graph = Ent.New<SingletonEntityType>(in jobInfo, "PathfindingGraph");
             graph.Set<TransformAspect>();
             return Build(in graph, in heights, in graph.World, in properties, in agentConfig, dependsOn);
 

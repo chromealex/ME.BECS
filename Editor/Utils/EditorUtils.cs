@@ -1228,7 +1228,7 @@ namespace ME.BECS.Editor {
         }
 
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type[] withoutTypes = null) {
-            var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).Where(x => x.IsValueType).OrderBy(x => x.FullName);
+            var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).Where(x => x.IsValueType).OrderBy(x => x.Namespace?.StartsWith("ME.BECS") == false).ThenBy(x => x.FullName);
             if (withoutTypes != null) {
                 var list = types.ToArray();
                 foreach (var item in withoutTypes) {

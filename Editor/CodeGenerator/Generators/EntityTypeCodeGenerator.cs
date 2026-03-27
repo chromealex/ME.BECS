@@ -10,7 +10,7 @@ namespace ME.BECS.Editor {
 
             var content = new System.Collections.Generic.List<(System.Type, uint)>();
             var id = 0u;
-            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IEntityType)).OrderBy(x => x.FullName).ToArray();
+            var aspects = EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
             foreach (var aspect in aspects) {
 
                 if (aspect.IsValueType == false) continue;
@@ -30,7 +30,7 @@ namespace ME.BECS.Editor {
 
             var id = 0u;
             var content = new System.Collections.Generic.List<string>();
-            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IEntityType)).OrderBy(x => x.FullName).ToArray();
+            var aspects = EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
             foreach (var aspect in aspects) {
 
                 if (aspect.IsValueType == false) continue;
