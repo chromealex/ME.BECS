@@ -388,20 +388,20 @@ namespace ME.BECS.Editor {
                 }
                 #endif
 
-            }
+                {
+                    var genContainer = new VisualElement();
+                    genContainer.AddToClassList("entity-type-container");
+                    header.Add(genContainer);
+                    var entityGenLabel = new Label("Type");
+                    entityGenLabel.AddToClassList("entity-type-label");
+                    entityGenLabel.AddToClassList("label-header");
+                    genContainer.Add(entityGenLabel);
+                    var entityGen = new Label(EditorUtils.GetComponentName(EntityTypesManaged.typeByGroupId[Ents.GetEntityGroupId(world.state, this.entity.id)]));
+                    entityGen.AddToClassList("entity-type");
+                    entityGen.AddToClassList("label-value");
+                    genContainer.Add(entityGen);
+                }
 
-            {
-                var genContainer = new VisualElement();
-                genContainer.AddToClassList("entity-type-container");
-                header.Add(genContainer);
-                var entityGenLabel = new Label("Type");
-                entityGenLabel.AddToClassList("entity-type-label");
-                entityGenLabel.AddToClassList("label-header");
-                genContainer.Add(entityGenLabel);
-                var entityGen = new Label(EditorUtils.GetComponentName(EntityTypesManaged.typeByGroupId[Ents.GetEntityGroupId(world.state, this.entity.id)]));
-                entityGen.AddToClassList("entity-type");
-                entityGen.AddToClassList("label-value");
-                genContainer.Add(entityGen);
             }
 
         }
