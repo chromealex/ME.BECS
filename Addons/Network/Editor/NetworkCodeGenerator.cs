@@ -16,6 +16,7 @@ namespace ME.BECS.Network.Editor {
 
                 if (method.IsStatic == false) continue;
                 if (method.DeclaringType.IsVisible == false) continue;
+                if (method.Name.Contains("$") == false) continue;
                 
                 if (this.IsValidTypeForAssembly(method.DeclaringType) == false) continue;
 
