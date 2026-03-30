@@ -16,11 +16,13 @@ namespace ME.BECS {
 
             public System.IntPtr ptr;
             public System.IntPtr hiPtr;
+            private readonly MemPtr memPtr;
             public readonly Unity.Collections.Allocator allocator;
             public Unity.Collections.FixedString4096Bytes stackTrace;
-
-            public Item(void* ptr, void* hiPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true) {
+            
+            public Item(void* ptr, void* hiPtr, MemPtr memPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true) {
                 this = default;
+                this.memPtr = memPtr;
                 this.ptr = (System.IntPtr)ptr;
                 this.hiPtr = (System.IntPtr)hiPtr;
                 this.allocator = allocator;
@@ -42,7 +44,7 @@ namespace ME.BECS {
             }
 
             public bool Equals(Item other) {
-                return this.ptr == other.ptr;
+                return this.ptr == other.ptr && this.memPtr == other.memPtr;
             }
 
             public override bool Equals(object obj) {
@@ -50,7 +52,7 @@ namespace ME.BECS {
             }
 
             public override int GetHashCode() {
-                return this.ptr.GetHashCode();
+                return this.ptr.GetHashCode() ^ this.memPtr.GetHashCode();
             }
 
         }
@@ -108,11 +110,11 @@ namespace ME.BECS {
         [Conditional(COND.LEAK_DETECTION)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
-        public static void TrackAllocator(void* ptr) {
+        public static void TrackAllocator(void* ptr, MemPtr memPtr) {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, Unity.Collections.Allocator.FirstUserIndex));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, memPtr, Unity.Collections.Allocator.FirstUserIndex));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -120,11 +122,11 @@ namespace ME.BECS {
         [Conditional(COND.LEAK_DETECTION_ALLOCATOR)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
-        public static void TrackAllocator(safe_ptr ptr) {
+        public static void TrackAllocator(safe_ptr ptr, MemPtr memPtr) {
 
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, Unity.Collections.Allocator.FirstUserIndex));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, memPtr, Unity.Collections.Allocator.FirstUserIndex));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -137,7 +139,7 @@ namespace ME.BECS {
             if (IsTrackable(allocator) == false) return;
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, allocator));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, default, allocator));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -150,7 +152,7 @@ namespace ME.BECS {
             if (IsTrackable(allocator) == false) return;
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, allocator));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, allocator));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -165,14 +167,15 @@ namespace ME.BECS {
         [Conditional(COND.LEAK_DETECTION_ALLOCATOR)]
         [HIDE_CALLSTACK]
         [INLINE(256)]
-        public static void FreeAllocator(void* ptr) {
+        public static void FreeAllocator(void* ptr, MemPtr memPtr) {
 
+            UnityEngine.Debug.Log($"FREE: {((System.IntPtr)ptr).ToInt64()} ({memPtr})");
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr, ptr));
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr, ptr, memPtr));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
-                UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} which has been already freed or was never instantiated.");
+                UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} ({memPtr}) which has been already freed or was never instantiated.");
             }
             
         }
@@ -185,7 +188,7 @@ namespace ME.BECS {
             if (IsTrackable(allocator) == false) return;
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound));
+            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
                 UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
@@ -225,7 +228,7 @@ namespace ME.BECS {
             if (ptr.LowBound == null || ptr.HiBound == null) return;
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Contains(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, withStackTrace: false));
+            var result = LeakDetectorData.tracked.Data.Contains(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, withStackTrace: false));
             LeakDetectorData.spinner.Data.Unlock();
             if (result == false) {
                 if (ptr.HiBound != ptr.LowBound) {

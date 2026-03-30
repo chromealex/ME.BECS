@@ -466,6 +466,14 @@ namespace ME.BECS.Attack {
             return false;
         }
 
+        [INLINE(256)]
+        public static Ent GetUnitByAttackAspect(AttackAspect aspect) {
+            var placement = aspect.ent.ReadParent();
+            var placements = placement.ReadParent();
+            var unit = placements.ReadParent();
+            return unit;
+        }
+
     }
 
     public struct NearestPositionToAttackFilter : ME.BECS.Pathfinding.IFilter {
