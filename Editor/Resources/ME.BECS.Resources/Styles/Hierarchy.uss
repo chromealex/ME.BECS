@@ -237,3 +237,23 @@
 .filter-checkmark {
     width: 20px;
 }
+
+.footer-container {
+    padding: 2px 4px;
+    flex-direction: row;
+    background-color: var(--dark-color);
+}
+
+.footer-container Label {
+    font-size: 11px;
+}
+
+.footer-container .footer-entities-count {
+    padding-left: 8px;
+    color: var(--highlight-text-color);
+}
+
+.footer-container .footer-selected-entities-count {
+    padding-left: 14px;
+    color: var(--highlight-text-color);
+}

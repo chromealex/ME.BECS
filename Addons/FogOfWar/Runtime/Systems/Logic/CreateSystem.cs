@@ -98,7 +98,7 @@ namespace ME.BECS.FogOfWar {
             // create fog of war
             var pathfinding = context.world.GetSystem<BuildGraphSystem>();
             var fowSize = math.max(8u, (uint2)(this.mapSize * this.resolution));
-            var heights = Ent.New(in context, editorName: "FOW");
+            var heights = Ent.New<SingletonEntityType>(in context, editorName: "FOW");
             heights.Set(new FogOfWarStaticComponent() {
                 mapPosition = this.mapPosition,
                 nodeSize = pathfinding.GetNodeSize() / this.resolution,

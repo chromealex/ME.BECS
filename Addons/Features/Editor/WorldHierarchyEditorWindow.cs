@@ -130,6 +130,11 @@ namespace ME.BECS.Editor {
         private readonly System.Collections.Generic.Dictionary<Ent, Element> entsToElements = new System.Collections.Generic.Dictionary<Ent, Element>();
         //private bool rawHierarchy;
 
+        private scg::List<TreeViewItemData<Ent>> roots = new scg::List<TreeViewItemData<Ent>>();
+        private scg::Dictionary<int, scg::List<TreeViewItemData<Ent>>> dics = new scg::Dictionary<int, scg::List<TreeViewItemData<Ent>>>();
+        private Label currentEntitiesCount;
+        private Label selectedEntitiesCount;
+
         [MenuItem("ME.BECS/\u2637 Hierarchy...", priority = 10000)]
         public static void ShowWindow() {
             var win = WorldHierarchyEditorWindow.CreateInstance<WorldHierarchyEditorWindow>();
@@ -266,6 +271,7 @@ namespace ME.BECS.Editor {
             
             this.UpdateWorlds();
             this.DrawToolbar();
+            this.UpdateFooter();
 
             if (this.selectedWorld.isCreated == true) {
                 this.DrawEntities();
@@ -342,6 +348,14 @@ namespace ME.BECS.Editor {
                 this.treeView.SetRootItems(this.roots);
                 
                 EditorUIUtils.AddWindowContent(root, treeView);
+                
+                {
+                    var toolbarContainer = new VisualElement();
+                    root.Add(toolbarContainer);
+                    toolbarContainer.AddToClassList("footer-container");
+                    this.MakeFooter(toolbarContainer);
+                }
+                
             } else {
                 var lbl = new Label("World is not selected");
                 lbl.AddToClassList("empty-label");
@@ -353,6 +367,7 @@ namespace ME.BECS.Editor {
         private void OnSelectionChanged() {
             if (Selection.activeObject != this.currentInspector) {
                 this.selected.Clear();
+                this.treeView.ClearSelection();
             }
         }
 
@@ -368,6 +383,34 @@ namespace ME.BECS.Editor {
                 kv.Value.Clear();
             }
             this.CreateGUI();
+            
+        }
+
+        private void MakeFooter(VisualElement container) {
+            
+            container.Clear();
+
+            {
+                var label = new Label();
+                container.Add(label);
+                this.currentEntitiesCount = label;
+                label.AddToClassList("footer-entities-count");
+            }
+            {
+                var label = new Label();
+                container.Add(label);
+                this.selectedEntitiesCount = label;
+                label.AddToClassList("footer-selected-entities-count");
+            }
+            
+        }
+
+        private void UpdateFooter() {
+
+            if (this.selectedEntitiesCount == null) return;
+            
+            this.selectedEntitiesCount.text = $"Selected: {this.selected.Count}";
+            this.currentEntitiesCount.text = $"Entities: {this.allEntities.Count}";
             
         }
 
@@ -840,8 +883,6 @@ namespace ME.BECS.Editor {
             return element;
         }
 
-        private scg::List<TreeViewItemData<Ent>> roots = new scg::List<TreeViewItemData<Ent>>();
-        private scg::Dictionary<int, scg::List<TreeViewItemData<Ent>>> dics = new scg::Dictionary<int, scg::List<TreeViewItemData<Ent>>>();
         private void DrawEntities() {
             
             this.cache.Clear();

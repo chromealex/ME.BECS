@@ -5,10 +5,25 @@ namespace ME.BECS {
     using static Cuts;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
+    internal static class EntityTypesManaged {
+
+        public static readonly System.Collections.Generic.Dictionary<ushort, System.Type> typeByGroupId = new System.Collections.Generic.Dictionary<ushort, System.Type>();
+
+    }
+
     public class EntityTypes {
 
         private static readonly Unity.Burst.SharedStatic<uint> groupsCountData = Unity.Burst.SharedStatic<uint>.GetOrCreate<EntityTypes>();
         public static ref uint groupsCount => ref groupsCountData.Data;
+
+        public static void Init() {
+            EntityTypesManaged.typeByGroupId.Clear();
+        }
+
+        public static void Register<T>(ushort id) where T : unmanaged, IEntityType {
+            EntityTypes<T>.id = id;
+            EntityTypesManaged.typeByGroupId.Add(id, typeof(T));
+        }
 
     }
     
@@ -20,8 +35,6 @@ namespace ME.BECS {
     }
     
     public interface IEntityType { }
-
-    public struct DefaultEntityType : IEntityType {}
 
     public unsafe partial struct Ents {
 
@@ -475,7 +488,7 @@ namespace ME.BECS {
 
         [NotThreadSafe]
         [INLINE(256)]
-        public static uint GetEntityGroupId(safe_ptr<State> state, uint entId) {
+        public static ushort GetEntityGroupId(safe_ptr<State> state, uint entId) {
             return state.ptr->entities.entityToGroup[state, entId];
         }
 
