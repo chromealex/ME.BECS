@@ -346,7 +346,6 @@ namespace ME.BECS {
             for (uint i = 0u; i < groupsCount + 1u; ++i) {
                 this.groupByEntityType[state, i] = Groups.Create(state, initGroupsCount);
             }
-            this.SetCapacity(state, EntityTypes<DefaultEntityType>.id, entitiesCapacity);
         }
 
         [NotThreadSafe]
