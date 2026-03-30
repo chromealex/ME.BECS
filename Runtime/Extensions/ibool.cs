@@ -53,4 +53,8 @@ public struct ibool : System.IEquatable<ibool> {
         return this.value.GetHashCode();
     }
 
+    public override string ToString() {
+        return this.value == 0 ? "false" : $"true ({this.value})";
+    }
+
 }

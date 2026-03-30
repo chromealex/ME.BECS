@@ -124,10 +124,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public MemPtr ReAlloc(MemPtr memPtr, uint size, out safe_ptr ptr) {
-            CheckPtr(in this, memPtr);
             if (memPtr.IsValid() == false) {
                 return this.Alloc(size, out ptr);
             }
+            CheckPtr(in this, memPtr);
             var header = (BlockHeader*)(this.GetPtr(memPtr) - sizeof(BlockHeader));
             this.lockSpinner.Lock();
             if (size <= header->size) {

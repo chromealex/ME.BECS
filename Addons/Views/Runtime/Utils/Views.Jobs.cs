@@ -143,7 +143,7 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
-        public struct JobDespawnViews : IJob {
+        public struct JobDespawnViews : IJobSingle {
 
             public World viewsWorld;
             public safe_ptr<ViewsModuleData> data;
@@ -656,10 +656,23 @@ namespace ME.BECS.Views {
 
             public safe_ptr<State> state;
             public safe_ptr<ViewsModuleData> viewsModuleData;
-            public MemArray<ibool> culling;
             public CullingType cullingType;
+            public CullingJobType dataType;
             [NativeDisableUnsafePtrRestriction]
             public RenderingSparseList* renderingOnScene;
+
+            public static MemArray<ibool> GetCullingData(safe_ptr<ViewsModuleData> data, CullingJobType dataType) {
+
+                switch (dataType) {
+                    case CullingJobType.Update: return data.ptr->renderingOnSceneUpdateCulling;
+                    case CullingJobType.UpdateParallel: return data.ptr->renderingOnSceneUpdateParallelCulling;
+                    case CullingJobType.ApplyState: return data.ptr->renderingOnSceneApplyStateCulling;
+                    case CullingJobType.ApplyStateParallel: return data.ptr->renderingOnSceneApplyStateParallelCulling;
+                }
+
+                return default;
+
+            }
             
             public void Execute(int index) {
 
@@ -673,7 +686,8 @@ namespace ME.BECS.Views {
                     var bounds = ent.GetAspect<TransformAspect>().GetBounds();
                     var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
                     var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                    this.culling[in this.state.ptr->allocator, entId] = (isVisible == false);
+                    var culling = GetCullingData(this.viewsModuleData, this.dataType);
+                    culling[in this.state.ptr->allocator, entId] = (isVisible == false);
                 }
 
             }

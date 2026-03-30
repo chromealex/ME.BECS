@@ -19,10 +19,12 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Clear(safe_ptr<State> state, uint capacity) {
+                this.lockSpinner.Lock();
                 if (this.entities.IsCreated == false) {
                     this.entities = new HashSet<uint>(ref state.ptr->allocator, capacity);
                 }
                 this.entities.Clear(ref state.ptr->allocator);
+                this.lockSpinner.Unlock();
             }
 
         }

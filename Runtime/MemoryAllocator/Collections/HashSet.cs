@@ -147,6 +147,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
             
+            E.IS_CREATED(this);
             this.buckets.Dispose(ref allocator);
             this.slots.Dispose(ref allocator);
             this = default;

@@ -134,6 +134,13 @@ namespace ME.BECS.Views {
         FrustumApplyStateOnly = 3,
     }
 
+    public enum CullingJobType {
+        ApplyState,
+        Update,
+        ApplyStateParallel,
+        UpdateParallel,
+    }
+
     [System.Serializable]
     public struct ViewModules {
 
