@@ -227,7 +227,7 @@ namespace NativeTrees {
             if (this.tempObjects.Count == 0) return false;
 
             var precomputedRay2D = new PrecomputedRay2D(ray);
-            var position = ray.origin;
+            var position = (float2)ray.origin;
             var dir = math.normalizesafe(ray.direction);
             var cell = this.GetCoord(position);
             var targetCell = this.GetCoord(position + dir * distance);
