@@ -322,7 +322,10 @@ namespace ME.BECS {
             
             if (ignoreSorting == false) {
                 var max = math.min(nearestCount, heap.Count);
-                if (max > 0u) return heap[heap.Pop()].data;
+                if (max > 0u) {
+                    marker.End();
+                    return heap[heap.Pop()].data;
+                }
             }
             marker.End();
 
