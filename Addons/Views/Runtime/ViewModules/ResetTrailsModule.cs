@@ -4,10 +4,12 @@ namespace ME.BECS.Views {
 
     using UnityEngine;
     
-    public class ResetTrailsModule : IViewInitialize, IViewOnValidate, IViewEnableFromPool {
+    public class ResetTrailsModule : IViewInitialize, IViewOnValidate, IViewEnableFromPool, IViewApplyState {
 
         public ParticleSystem[] particleSystems;
         public TrailRenderer[] trailRenderers;
+
+        private bool resetTrails;
 
         public void OnEnableFromPool(in ViewData viewData) => this.Reset();
 
@@ -17,11 +19,34 @@ namespace ME.BECS.Views {
             
             foreach (var ps in this.particleSystems) {
                 ps.Clear();
+                ps.Pause();
             }
 
             foreach (var tr in this.trailRenderers) {
                 tr.Clear();
                 tr.time = 0f;
+            }
+
+            this.resetTrails = true;
+
+        }
+
+        public void ApplyState(in ViewData ent) {
+
+            if (this.resetTrails == true) {
+
+                this.resetTrails = false;
+                
+                foreach (var ps in this.particleSystems) {
+                    ps.Clear();
+                    ps.Play();
+                }
+
+                foreach (var tr in this.trailRenderers) {
+                    tr.Clear();
+                    tr.time = 0f;
+                }
+                
             }
 
         }
