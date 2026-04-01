@@ -20,6 +20,7 @@ namespace ME.BECS.Views {
             foreach (var ps in this.particleSystems) {
                 ps.Clear();
                 ps.Pause();
+                ps.time = 0f;
             }
 
             foreach (var tr in this.trailRenderers) {
@@ -39,6 +40,7 @@ namespace ME.BECS.Views {
                 
                 foreach (var ps in this.particleSystems) {
                     ps.Clear();
+                    ps.time = 0f;
                     ps.Play();
                 }
 
