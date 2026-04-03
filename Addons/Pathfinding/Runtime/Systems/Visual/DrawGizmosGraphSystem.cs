@@ -14,11 +14,11 @@ namespace ME.BECS.Pathfinding {
     [UnityEngine.Tooltip("Draw graph in gizmos.")]
     public struct DrawGizmosGraphSystem : IUpdate, IDrawGizmos {
 
-        public bool drawGraph;
-        public bool drawPath;
-        public bool drawNormals;
-        public bool drawNodes;
-        public bool drawPortals;
+        public bbool drawGraph;
+        public bbool drawPath;
+        public bbool drawNormals;
+        public bbool drawNodes;
+        public bbool drawPortals;
 
         private int drawIndex;
 

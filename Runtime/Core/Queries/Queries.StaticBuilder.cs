@@ -218,6 +218,16 @@ namespace ME.BECS {
 
         public bool isCreated => this.id > 0u;
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.id);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.id);
+        }
+
         public QueryForEach ForEach(in World world, JobHandle dependsOn) {
             E.IS_CREATED(this);
             return new QueryForEach(in world, dependsOn, this.id);

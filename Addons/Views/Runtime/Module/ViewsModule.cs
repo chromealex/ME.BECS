@@ -100,8 +100,8 @@ namespace ME.BECS {
 
             if (this.isActive == true) return;
             
-            if (this.properties.viewsGameObjects == true) this.viewsGameObjects = UnsafeViewsModule<EntityView>.Create(GAMEOBJECT_PROVIDER_ID, ref world, new EntityViewProvider(), this.worldProperties.stateProperties.entitiesCapacity, this.properties);
-            if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes = UnsafeViewsModule<EntityView>.Create(DRAW_MESH_PROVIDER_ID, ref world, new DrawMeshProvider(), this.worldProperties.stateProperties.entitiesCapacity, this.properties);
+            if (this.properties.viewsGameObjects == true) this.viewsGameObjects = UnsafeViewsModule<EntityView>.Create(GAMEOBJECT_PROVIDER_ID, ref world, new EntityViewProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
+            if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes = UnsafeViewsModule<EntityView>.Create(DRAW_MESH_PROVIDER_ID, ref world, new DrawMeshProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
             this.isActive = true;
 
         }
@@ -147,6 +147,20 @@ namespace ME.BECS {
             
             return default;
 
+        }
+
+        public Ent GetViewDataByEntity(in EntRO entity) {
+            return this.GetViewDataByEntity(entity.GetEntity());
+        }
+
+        public IView GetViewByEntity(in EntRO entity) {
+            return this.GetViewByEntity(entity.GetEntity());
+        }
+
+        public Ent GetViewDataByEntity(in Ent entity) {
+            var data = this.GetViewByEntity(entity);
+            if (data == null) return default;
+            return data.GetViewData().localViewEnt;
         }
 
         public IView GetViewByEntity(in Ent entity) {

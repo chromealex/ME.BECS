@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator umeter(uint value) => new umeter(value);
+        public static implicit operator umeter(uint value) => new umeter(value * PRECISION);
         
         [INLINE(256)]
         public static umeter operator *(float value1, umeter value2) {

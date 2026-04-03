@@ -17,6 +17,30 @@ namespace ME.BECS.Units {
         public static UnityEngine.Color color = UnityEngine.Color.black;
         
     }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitPlacementComponent : IComponent {
+
+        public uint id;
+        public Ent obj;
+
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitPlacementsDataComponent : IConfigComponentStatic {
+
+        [System.Serializable]
+        public struct Placement {
+
+            public uint id;
+            public float3 localPosition;
+            public quaternion localRotation;
+
+        }
+        
+        public MemArrayAuto<Placement> placements;
+
+    }
     
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct NavAgentComponent : IConfigComponent {
@@ -45,7 +69,8 @@ namespace ME.BECS.Units {
         public float3 velocity;
         public float3 pathDirection;
 
-        public Ent attackSensor;
+        public Ent placementsRoot;
+        public ListAuto<Ent> placements;
         public bbool collideWithEnd;
 
     }
@@ -89,6 +114,9 @@ namespace ME.BECS.Units {
     }
 
     [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitJustSpawnedEvent : IComponent { }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnHitComponent : IConfigComponentStatic {
  
         public ME.BECS.Effects.EffectConfig effect;
@@ -97,6 +125,13 @@ namespace ME.BECS.Units {
 
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct UnitEffectOnDestroyComponent : IConfigComponentStatic {
+ 
+        public ME.BECS.Effects.EffectConfig effect;
+
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitEffectOnSpawnComponent : IConfigComponentStatic {
  
         public ME.BECS.Effects.EffectConfig effect;
 
@@ -147,6 +182,14 @@ namespace ME.BECS.Units {
     public struct DamageTookEvent : IComponent {
 
         public Ent source; // Unit ent
+
+    }
+
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct LastDamageSource : IComponent {
+
+        public Ent source;
+        public Ent owner;
 
     }
     

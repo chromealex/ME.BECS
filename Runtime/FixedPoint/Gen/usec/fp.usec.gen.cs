@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator usec(uint value) => new usec(value);
+        public static explicit operator usec(uint value) => new usec(value * PRECISION);
         
         [INLINE(256)]
         public static usec operator *(float value1, usec value2) {
@@ -116,7 +116,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly uint ToValue() {
-            return this.value / PRECISION;
+            return this.value;
         }
 
         [INLINE(256)]

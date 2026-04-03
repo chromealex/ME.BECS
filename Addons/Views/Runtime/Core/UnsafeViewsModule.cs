@@ -9,6 +9,7 @@ namespace ME.BECS.Views {
     using Unity.Jobs;
     using static Cuts;
     using System.Runtime.InteropServices;
+    using ME.BECS.NativeCollections;
 
     public unsafe interface IViewProvider<TEntityView> where TEntityView : IView {
 
@@ -20,10 +21,10 @@ namespace ME.BECS.Views {
         /// </summary>
         JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
         void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data);
-        void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
-        void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent);
-        void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
-        void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in Ent ent, float dt);
+        void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData);
+        void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData);
+        void OnUpdate(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt);
+        void OnUpdateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData, float dt);
 
         public void Load(safe_ptr<ViewsModuleData> viewsModuleData, BECS.ObjectReferenceRegistryData data);
         public ViewSource Register(safe_ptr<ViewsModuleData> viewsModuleData, TEntityView prefab, uint prefabId = 0u, bool checkPrefab = true, bool sceneSource = false);
@@ -98,12 +99,14 @@ namespace ME.BECS.Views {
 
     public interface IView {
 
-        void DoInitialize(in EntRO ent);
+        public ViewData GetViewData();
+
+        void DoInitialize(in ViewData viewData);
         void DoDeInitialize();
-        void DoEnableFromPool(in EntRO ent);
+        void DoEnableFromPool(in ViewData viewData);
         void DoDisableToPool();
-        void DoApplyState(in EntRO ent);
-        void DoOnUpdate(in EntRO ent, float dt);
+        void DoApplyState(in ViewData viewData);
+        void DoOnUpdate(in ViewData viewData, float dt);
 
     }
     
@@ -256,6 +259,7 @@ namespace ME.BECS.Views {
     public struct SpawnInstanceInfo {
 
         public Ent ent;
+        public Ent localData;
         public SourceRegistry.InfoRef prefabInfo;
 
     }
@@ -290,8 +294,11 @@ namespace ME.BECS.Views {
         public struct EntityData {
 
             public Ent element;
+            public Ent localData;
             public uint version;
             public uint versionParallel;
+
+            public ViewData ViewData => new ViewData(this.element, this.localData);
 
         }
         
@@ -316,15 +323,15 @@ namespace ME.BECS.Views {
         public RenderingSparseList renderingOnSceneApplyStateParallel;
         public RenderingSparseList renderingOnSceneUpdate;
         public RenderingSparseList renderingOnSceneUpdateParallel;
-        public safe_ptr<uint> applyStateCounter;
-        public safe_ptr<uint> applyStateParallelCounter;
-        public safe_ptr<uint> updateCounter;
-        public safe_ptr<uint> updateParallelCounter;
+        public safe_ptr<DeferJobCounter> applyStateCounter;
+        public safe_ptr<DeferJobCounter> applyStateParallelCounter;
+        public safe_ptr<DeferJobCounter> updateCounter;
+        public safe_ptr<DeferJobCounter> updateParallelCounter;
 
-        public MemArray<bool> renderingOnSceneApplyStateCulling;
-        public MemArray<bool> renderingOnSceneApplyStateParallelCulling;
-        public MemArray<bool> renderingOnSceneUpdateCulling;
-        public MemArray<bool> renderingOnSceneUpdateParallelCulling;
+        public MemArray<ibool> renderingOnSceneApplyStateCulling;
+        public MemArray<ibool> renderingOnSceneApplyStateParallelCulling;
+        public MemArray<ibool> renderingOnSceneUpdateCulling;
+        public MemArray<ibool> renderingOnSceneUpdateParallelCulling;
 
         public uint renderingOnSceneCount;
         public UnsafeList<SceneInstanceInfo> toRemoveTemp;
@@ -346,10 +353,10 @@ namespace ME.BECS.Views {
                 prefabId = 0u,
                 properties = properties,
                 beginFrameState = _make(new BeginFrameState()),
-                applyStateCounter = _make<uint>(0u),
-                applyStateParallelCounter = _make<uint>(0u),
-                updateCounter = _make<uint>(0u),
-                updateParallelCounter = _make<uint>(0u),
+                applyStateCounter = _make<DeferJobCounter>(default),
+                applyStateParallelCounter = _make<DeferJobCounter>(default),
+                updateCounter = _make<DeferJobCounter>(default),
+                updateParallelCounter = _make<DeferJobCounter>(default),
                 prefabIdToInfo = new UIntDictionary<SourceRegistry.InfoRef>(ref allocator, properties.instancesRegistryCapacity),
                 instanceIdToPrefabId = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneCount = 0u,
@@ -359,10 +366,10 @@ namespace ME.BECS.Views {
                 renderingOnSceneApplyStateParallel = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdate = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
                 renderingOnSceneUpdateParallel = new RenderingSparseList(ref allocator, properties.renderingObjectsCapacity),
-                renderingOnSceneApplyStateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneApplyStateParallelCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneUpdateCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
-                renderingOnSceneUpdateParallelCulling = new MemArray<bool>(ref allocator, entitiesCapacity),
+                renderingOnSceneApplyStateCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
+                renderingOnSceneApplyStateParallelCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
+                renderingOnSceneUpdateCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
+                renderingOnSceneUpdateParallelCulling = new MemArray<ibool>(ref allocator, entitiesCapacity),
                 renderingOnSceneEnts = new UnsafeList<EntityData>((int)properties.renderingObjectsCapacity, allocatorPersistent),
                 renderingOnSceneBits = new TempBitArray(properties.renderingObjectsCapacity, allocator: allocatorPersistent),
                 renderingOnSceneEntToRenderIndex = new UIntDictionary<uint>(ref allocator, properties.renderingObjectsCapacity),
@@ -486,6 +493,7 @@ namespace ME.BECS.Views {
                 if (viewComponent.source.providerId < registeredProviders.Data.Length) {
                     ref var item = ref *(registeredProviders.Data.Ptr + viewComponent.source.providerId);
                     E.IS_CREATED(item);
+                    sourceEnt.Remove(item.typeId);
                     ent.Set(item.typeId, null);
                 }
                 return true;
@@ -518,7 +526,7 @@ namespace ME.BECS.Views {
             viewsWorldProperties.name = ViewsModule.providerInfos[providerId].editorName;
             viewsWorldProperties.stateProperties.mode = WorldMode.Visual;
 
-            var viewsWorld = World.Create(viewsWorldProperties, false);
+            var viewsWorld = World.Create(viewsWorldProperties, switchContext: false);
             var prevContext = Context.world;
             Context.Switch(in viewsWorld);
             provider.Initialize(providerId, viewsWorld, properties);
@@ -646,7 +654,7 @@ namespace ME.BECS.Views {
                     dependsOn = new Jobs.JobDespawnViews() {
                         viewsWorld = this.data.ptr->viewsWorld,
                         data = this.data,
-                    }.Schedule(dependsOn);
+                    }.ScheduleSingle(dependsOn);
                     marker.End();
                 }
 
@@ -657,7 +665,7 @@ namespace ME.BECS.Views {
                         connectedWorld = this.data.ptr->connectedWorld,
                         viewsWorld = this.data.ptr->viewsWorld,
                         data = this.data,
-                    }.Schedule(dependsOn);
+                    }.ScheduleSingle(dependsOn);
                     marker.End();
                 }
 
@@ -666,25 +674,37 @@ namespace ME.BECS.Views {
             if (this.data.ptr->camera.IsAlive() == true) { // Update culling
 
                 var depends = new NativeArray<JobHandle>(4, Constants.ALLOCATOR_TEMP);
-                depends[0] = new Jobs.UpdateCullingApplyStateParallelJob() {
+                depends[0] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                }.Schedule((int*)this.data.ptr->applyStateParallelCounter.ptr, 64, dependsOn);
+                    renderingOnScene = &this.data.ptr->renderingOnSceneApplyStateParallel,
+                    cullingType = CullingType.FrustumApplyStateOnly,
+                    dataType = CullingJobType.ApplyStateParallel,
+                }.Schedule(&this.data.ptr->applyStateParallelCounter.ptr->count, 64, dependsOn);
 
-                depends[1] = new Jobs.UpdateCullingApplyStateJob() {
+                depends[1] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                }.Schedule((int*)this.data.ptr->applyStateCounter.ptr, 64, dependsOn);
+                    renderingOnScene = &this.data.ptr->renderingOnSceneUpdateParallel,
+                    cullingType = CullingType.FrustumOnUpdateOnly,
+                    dataType = CullingJobType.UpdateParallel,
+                }.Schedule(&this.data.ptr->updateParallelCounter.ptr->count, 64, dependsOn);
 
-                depends[2] = new Jobs.UpdateCullingUpdateParallelJob() {
+                depends[2] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                }.Schedule((int*)this.data.ptr->updateParallelCounter.ptr, 64, dependsOn);
+                    renderingOnScene = &this.data.ptr->renderingOnSceneApplyState,
+                    cullingType = CullingType.FrustumApplyStateOnly,
+                    dataType = CullingJobType.ApplyState,
+                }.Schedule(&this.data.ptr->applyStateCounter.ptr->count, 64, dependsOn);
 
-                depends[3] = new Jobs.UpdateCullingUpdateJob() {
+                depends[3] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                }.Schedule((int*)this.data.ptr->updateCounter.ptr, 64, dependsOn);
+                    renderingOnScene = &this.data.ptr->renderingOnSceneUpdate,
+                    cullingType = CullingType.FrustumOnUpdateOnly,
+                    dataType = CullingJobType.Update,
+                }.Schedule(&this.data.ptr->updateCounter.ptr->count, 64, dependsOn);
 
                 dependsOn = JobHandle.CombineDependencies(depends);
 
@@ -722,13 +742,13 @@ namespace ME.BECS.Views {
                         data = this.data,
                         allocator = allocator,
                         provider = this.provider,
-                    }.Schedule((int*)this.data.ptr->applyStateParallelCounter.ptr, 4, dependsOn);
+                    }.Schedule(&this.data.ptr->applyStateParallelCounter.ptr->count, 4, dependsOn);
                     var dependsOnUpdate = new Jobs.UpdateParallelJob<TEntityView>() {
                         data = this.data,
                         allocator = allocator,
                         provider = this.provider,
                         dt = dt,
-                    }.Schedule((int*)this.data.ptr->updateParallelCounter.ptr, 4, dependsOn);
+                    }.Schedule(&this.data.ptr->updateParallelCounter.ptr->count, 4, dependsOn);
                     dependsOn = JobHandle.CombineDependencies(dependsOnApplyState, dependsOnUpdate);
                 }
 
@@ -751,7 +771,7 @@ namespace ME.BECS.Views {
                         var ent = entData.element;
                         if (entData.version != ent.Version) {
                             entData.version = ent.Version;
-                            provider.ApplyState(this.data, in view, in ent);
+                            provider.ApplyState(this.data, in view, entData.ViewData);
                         }
                     }
                     marker.End();
@@ -766,9 +786,8 @@ namespace ME.BECS.Views {
                         var idx = this.data.ptr->renderingOnSceneEntToRenderIndex.ReadValue(in allocator, entId);
                         ref var entData = ref *(this.data.ptr->renderingOnSceneEnts.Ptr + idx);
                         var view = this.data.ptr->renderingOnScene[in allocator, idx];
-                        var ent = entData.element;
                         if (view.prefabInfo.ptr->typeInfo.HasUpdate == true || view.prefabInfo.ptr->HasUpdateModules == true) {
-                            provider.OnUpdate(this.data, in view, in ent, dt);
+                            provider.OnUpdate(this.data, in view, entData.ViewData, dt);
                         }
                     }
                     marker.End();

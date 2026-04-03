@@ -15,13 +15,18 @@ namespace ME.BECS.Transforms {
     public static unsafe class Transform3DExt {
 
         [INLINE(256)]
-        public static ref readonly Ent GetParent(this in Ent ent) {
-            return ref ent.GetAspect<TransformAspect>().parent;
+        public static Ent ReadParent(this in EntRO ent) {
+            return ent.Read<ParentComponent>().value;
+        }
+
+        [INLINE(256)]
+        public static ref Ent GetParent(this in Ent ent) {
+            return ref ent.Get<ParentComponent>().value;
         }
 
         [INLINE(256)]
         public static ref readonly Ent ReadParent(this in Ent ent) {
-            return ref ent.GetAspect<TransformAspect>().parent;
+            return ref ent.Read<ParentComponent>().value;
         }
 
         [INLINE(256)]
@@ -94,12 +99,15 @@ namespace ME.BECS.Transforms {
             ent.SetTag<TransformLevel1>(false);
             ent.SetTag<TransformLevel2>(false);
             ent.SetTag<TransformLevel3>(false);
+            ent.SetTag<TransformLevel4>(false);
             ent.SetTag<TransformLevelOther>(false);
             
             switch (level) {
+                case 0u: break;
                 case 1u: ent.SetTag<TransformLevel1>(true); break;
                 case 2u: ent.SetTag<TransformLevel2>(true); break;
                 case 3u: ent.SetTag<TransformLevel3>(true); break;
+                case 4u: ent.SetTag<TransformLevel4>(true); break;
                 default: ent.SetTag<TransformLevelOther>(true); break;
             }
 
@@ -134,22 +142,22 @@ namespace ME.BECS.Transforms {
             var s = ent.readLocalScale;
             var r = ent.readLocalRotation.value;
             ref var matrix = ref ent.localMatrix;
-            matrix.c0.x = (1.0f - 2.0f * (r.y * r.y + r.z * r.z)) * s.x;
-            matrix.c0.y = (r.x * r.y + r.z * r.w) * s.x * 2.0f;
-            matrix.c0.z = (r.x * r.z - r.y * r.w) * s.x * 2.0f;
-            matrix.c0.w = 0.0f;
-            matrix.c1.x = (r.x * r.y - r.z * r.w) * s.y * 2.0f;
-            matrix.c1.y = (1.0f - 2.0f * (r.x * r.x + r.z * r.z)) * s.y;
-            matrix.c1.z = (r.y * r.z + r.x * r.w) * s.y * 2.0f;
-            matrix.c1.w = 0.0f;
-            matrix.c2.x = (r.x * r.z + r.y * r.w) * s.z * 2.0f;
-            matrix.c2.y = (r.y * r.z - r.x * r.w) * s.z * 2.0f;
-            matrix.c2.z = (1.0f - 2.0f * (r.x * r.x + r.y * r.y)) * s.z;
-            matrix.c2.w = 0.0f;
+            matrix.c0.x = (1 - 2 * (r.y * r.y + r.z * r.z)) * s.x;
+            matrix.c0.y = (r.x * r.y + r.z * r.w) * s.x * 2;
+            matrix.c0.z = (r.x * r.z - r.y * r.w) * s.x * 2;
+            matrix.c0.w = 0;
+            matrix.c1.x = (r.x * r.y - r.z * r.w) * s.y * 2;
+            matrix.c1.y = (1 - 2 * (r.x * r.x + r.z * r.z)) * s.y;
+            matrix.c1.z = (r.y * r.z + r.x * r.w) * s.y * 2;
+            matrix.c1.w = 0;
+            matrix.c2.x = (r.x * r.z + r.y * r.w) * s.z * 2;
+            matrix.c2.y = (r.y * r.z - r.x * r.w) * s.z * 2;
+            matrix.c2.z = (1 - 2 * (r.x * r.x + r.y * r.y)) * s.z;
+            matrix.c2.w = 0;
             matrix.c3.x = t.x;
             matrix.c3.y = t.y;
             matrix.c3.z = t.z;
-            matrix.c3.w = 1.0f;
+            matrix.c3.w = 1;
             
             //ent.localMatrix = (float4x4)UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)ent.readLocalPosition, (UnityEngine.Quaternion)ent.readLocalRotation, (UnityEngine.Vector3)ent.readLocalScale); //float4x4.TRS(ent.readLocalPosition, ent.readLocalRotation, ent.readLocalScale);
 

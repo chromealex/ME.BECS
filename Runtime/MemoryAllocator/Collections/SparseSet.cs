@@ -11,18 +11,19 @@ namespace ME.BECS {
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
-    public struct SparseSet {
+    public struct SparseSet : IIsCreated {
 
         public MemArray<uint> dense;
         public MemArray<uint> sparse;
         public uint denseSize;
-        public bool isCreated;
         public LockSpinner lockIndex;
+
+        public bool IsCreated { get; private set; }
 
         [INLINE(256)]
         public SparseSet(ref MemoryAllocator allocator, uint size) {
 
-            this.isCreated = true;
+            this.IsCreated = true;
             this.denseSize = 0u;
             this.dense = new MemArray<uint>(ref allocator, size);
             this.sparse = new MemArray<uint>(ref allocator, size);

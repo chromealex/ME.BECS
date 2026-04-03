@@ -230,6 +230,30 @@ namespace ME.BECS {
         public MemArray<BitArray> archetypesWithTypeIdBits;
         public uint Count => this.allArchetypes.Count;
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.lockIndex);
+            writer.Write(this.list);
+            writer.Write(this.allArchetypes);
+            writer.Write(this.allArchetypesForQuery);
+            writer.Write(this.entToArchetypeIdx);
+            writer.Write(this.entToIdxInArchetype);
+            writer.Write(this.componentsCountToArchetypeIds);
+            writer.Write(this.archetypesWithTypeIdBits);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.lockIndex);
+            reader.Read(ref this.list);
+            reader.Read(ref this.allArchetypes);
+            reader.Read(ref this.allArchetypesForQuery);
+            reader.Read(ref this.entToArchetypeIdx);
+            reader.Read(ref this.entToIdxInArchetype);
+            reader.Read(ref this.componentsCountToArchetypeIds);
+            reader.Read(ref this.archetypesWithTypeIdBits);
+        }
+
         public uint GetReservedSizeInBytes(safe_ptr<State> state) {
 
             if (this.list.IsCreated == false) return 0u;

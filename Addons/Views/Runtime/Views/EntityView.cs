@@ -36,7 +36,7 @@ namespace ME.BECS.Views {
     public interface IViewTrackIgnore<T> { }
 
     public interface IViewInitialize : IViewModule {
-        void OnInitialize(in EntRO ent);
+        void OnInitialize(in ViewData ent);
     }
 
     public interface IViewDeInitialize : IViewModule {
@@ -44,7 +44,7 @@ namespace ME.BECS.Views {
     }
 
     public interface IViewEnableFromPool : IViewModule {
-        void OnEnableFromPool(in EntRO ent);
+        void OnEnableFromPool(in ViewData ent);
     }
 
     public interface IViewDisableToPool : IViewModule {
@@ -52,19 +52,67 @@ namespace ME.BECS.Views {
     }
 
     public interface IViewApplyState : IViewModule {
-        void ApplyState(in EntRO ent);
+        void ApplyState(in ViewData ent);
     }
 
     public interface IViewApplyStateParallel : IViewModule {
-        void ApplyStateParallel(in EntRO ent);
+        void ApplyStateParallel(in ViewData ent);
     }
 
     public interface IViewUpdate : IViewModule {
-        void OnUpdate(in EntRO ent, float dt);
+        void OnUpdate(in ViewData ent, float dt);
     }
 
     public interface IViewUpdateParallel : IViewModule {
-        void OnUpdateParallel(in EntRO ent, float dt);
+        void OnUpdateParallel(in ViewData ent, float dt);
+    }
+
+    public ref struct ViewData {
+
+        internal ViewDataRaw data;
+
+        public EntRO logicEnt => this.data.logicEnt;
+        public Ent localViewEnt => this.data.localViewEnt;
+
+        internal ViewData(in EntRO ent, in Ent localEnt) {
+            this.data.logicEnt = ent;
+            this.data.localViewEnt = localEnt;
+        }
+
+        public static implicit operator ViewData(ViewDataRaw raw) {
+            return new ViewData() {
+                data = raw,
+            };
+        }
+
+        public static implicit operator EntRO(ViewData data) {
+            return data.logicEnt;
+        }
+        
+        public static implicit operator Ent(ViewData data) {
+            return data.localViewEnt;
+        }
+
+    }
+
+    [System.Serializable]
+    public struct ViewDataRaw {
+
+        public EntRO logicEnt;
+        public Ent localViewEnt;
+
+        internal ViewDataRaw(in EntRO ent, in Ent localEnt) {
+            this.logicEnt = ent;
+            this.localViewEnt = localEnt;
+        }
+        
+        public static implicit operator ViewDataRaw(ViewData data) {
+            return new ViewDataRaw() {
+                logicEnt = data.logicEnt,
+                localViewEnt = data.localViewEnt,
+            };
+        }
+
     }
 
     public enum CullingType {
@@ -84,6 +132,13 @@ namespace ME.BECS.Views {
         /// Apply frustum culling for ApplyState method only
         /// </summary>
         FrustumApplyStateOnly = 3,
+    }
+
+    public enum CullingJobType {
+        ApplyState,
+        Update,
+        ApplyStateParallel,
+        UpdateParallel,
     }
 
     [System.Serializable]
@@ -171,7 +226,14 @@ namespace ME.BECS.Views {
         public CullingType cullingType;
         public GroupChangedTracker groupChangedTracker;
         public ViewRoot rootInfo;
-        public EntRO ent;
+        [SerializeField]
+        internal ViewDataRaw viewDataRaw;
+        public ViewData viewData => this.viewDataRaw;
+        
+        [System.Obsolete("Use viewData instead")]
+        public ViewData ent => this.viewData;
+
+        ViewData IView.GetViewData() => this.viewData;
 
         public T GetModule<T>() where T : IViewModule {
             foreach (var module in this.modules.items) {
@@ -185,9 +247,9 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Called once when this view creates on scene
         /// </summary>
-        /// <param name="ent"></param>
-        public void DoInitialize(in EntRO ent) {
-            this.OnInitialize(in ent);
+        /// <param name="viewData"></param>
+        public void DoInitialize(in ViewData viewData) {
+            this.OnInitialize(in viewData);
         }
 
         /// <summary>
@@ -200,9 +262,9 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Called every time this view comes from pool
         /// </summary>
-        /// <param name="ent"></param>
-        public void DoEnableFromPool(in EntRO ent) {
-            this.OnEnableFromPool(in ent);
+        /// <param name="viewData"></param>
+        public void DoEnableFromPool(in ViewData viewData) {
+            this.OnEnableFromPool(in viewData);
         }
         
         /// <summary>
@@ -215,52 +277,52 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Called every time ent has been changed
         /// </summary>
-        /// <param name="ent"></param>
-        public void DoApplyState(in EntRO ent) {
-            this.ApplyState(in ent);
+        /// <param name="viewData"></param>
+        public void DoApplyState(in ViewData viewData) {
+            this.ApplyState(in viewData);
         }
 
         /// <summary>
         /// Called every time ent has been changed, but in parallel job
         /// </summary>
-        /// <param name="ent"></param>
-        public void DoApplyStateParallel(in EntRO ent) {
-            this.ApplyStateParallel(in ent);
+        /// <param name="viewData"></param>
+        public void DoApplyStateParallel(in ViewData viewData) {
+            this.ApplyStateParallel(in viewData);
         }
 
         /// <summary>
         /// Called every frame
         /// </summary>
-        /// <param name="ent"></param>
+        /// <param name="viewData"></param>
         /// <param name="dt"></param>
-        public void DoOnUpdate(in EntRO ent, float dt) {
-            this.OnUpdate(in ent, dt);
+        public void DoOnUpdate(in ViewData viewData, float dt) {
+            this.OnUpdate(in viewData, dt);
         }
         
         /// <summary>
         /// Called every frame, but in parallel job
         /// </summary>
-        /// <param name="ent"></param>
+        /// <param name="viewData"></param>
         /// <param name="dt"></param>
-        public void DoOnUpdateParallel(in EntRO ent, float dt) {
-            this.OnUpdateParallel(in ent, dt);
+        public void DoOnUpdateParallel(in ViewData viewData, float dt) {
+            this.OnUpdateParallel(in viewData, dt);
         }
 
-        protected internal virtual void OnEnableFromPool(in EntRO ent) { }
+        protected internal virtual void OnEnableFromPool(in ViewData viewData) { }
 
         protected internal virtual void OnDisableToPool() { }
 
-        protected internal virtual void OnInitialize(in EntRO ent) { }
+        protected internal virtual void OnInitialize(in ViewData viewData) { }
 
         protected internal virtual void OnDeInitialize() { }
 
-        protected internal virtual void ApplyState(in EntRO ent) { }
+        protected internal virtual void ApplyState(in ViewData viewData) { }
 
-        protected internal virtual void ApplyStateParallel(in EntRO ent) { }
+        protected internal virtual void ApplyStateParallel(in ViewData viewData) { }
 
-        protected internal virtual void OnUpdate(in EntRO ent, float dt) { }
+        protected internal virtual void OnUpdate(in ViewData viewData, float dt) { }
 
-        protected internal virtual void OnUpdateParallel(in EntRO ent, float dt) { }
+        protected internal virtual void OnUpdateParallel(in ViewData viewData, float dt) { }
 
         public virtual void OnValidate() {
             

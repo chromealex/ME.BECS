@@ -37,7 +37,7 @@ namespace ME.BECS.Editor {
                 xField.value = value.x;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
-                    var value = (UnityEngine.Quaternion)(quaternion)property.boxedValue;
+                    var value = ((UnityEngine.Quaternion)(quaternion)property.boxedValue).eulerAngles;
                     property.boxedValue = (quaternion)UnityEngine.Quaternion.Euler(evt.newValue, value.y, value.z);
                     property.serializedObject.ApplyModifiedProperties();
                     property.serializedObject.Update();
@@ -50,7 +50,7 @@ namespace ME.BECS.Editor {
                 xField.value = value.y;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
-                    var value = (UnityEngine.Quaternion)(quaternion)property.boxedValue;
+                    var value = ((UnityEngine.Quaternion)(quaternion)property.boxedValue).eulerAngles;
                     property.boxedValue = (quaternion)UnityEngine.Quaternion.Euler(value.x, evt.newValue, value.z);
                     property.serializedObject.ApplyModifiedProperties();
                     property.serializedObject.Update();
@@ -63,7 +63,7 @@ namespace ME.BECS.Editor {
                 xField.value = value.z;
                 xField.RegisterValueChangedCallback(evt => {
                     property.serializedObject.Update();
-                    var value = (UnityEngine.Quaternion)(quaternion)property.boxedValue;
+                    var value = ((UnityEngine.Quaternion)(quaternion)property.boxedValue).eulerAngles;
                     property.boxedValue = (quaternion)UnityEngine.Quaternion.Euler(value.x, value.y, evt.newValue);
                     property.serializedObject.ApplyModifiedProperties();
                     property.serializedObject.Update();

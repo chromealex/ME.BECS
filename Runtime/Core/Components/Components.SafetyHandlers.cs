@@ -7,7 +7,7 @@ namespace ME.BECS {
 
     public partial struct Components {
 
-        #if ENABLE_UNITY_COLLECTIONS_CHECKS
+        #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         internal Internal.Array<AtomicSafetyHandle> handlers;
         internal LockSpinner handlersLock;
         

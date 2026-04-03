@@ -24,15 +24,15 @@ namespace ME.BECS.Bullets {
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
-                        var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position), bullet.readComponent.sourceUnit, in jobInfo);
+                        var targetUnit = unit.GetAspect<HealthAspect>();
+                        targetUnit.Hit(bullet.readOwner, bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position, unit.Read<NavAgentRuntimeComponent>().properties.radius), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<HealthAspect>();
+                    targetUnit.Hit(bullet.readOwner, bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
                 } else if (bullet.readComponent.targetEnt == Ent.Null) {
 
@@ -40,15 +40,16 @@ namespace ME.BECS.Bullets {
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
-                            var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                            var targetUnit = unit.GetAspect<HealthAspect>();
+                            targetUnit.Hit(bullet.readOwner, bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }
 
                 }
 
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
-                bullet.ent.DestroyHierarchy();
+                bullet.ent.Remove<BulletConfigComponent>();
+                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
 
             }
 
@@ -62,18 +63,19 @@ namespace ME.BECS.Bullets {
                 if (bullet.readConfig.hitRangeSqr > 0f) {
 
                     // use splash
+                    var center = tr.position;
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
-                        var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                        var targetUnit = unit.GetAspect<HealthAspect>();
+                        targetUnit.Hit(bullet.readOwner, bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position, unit.Read<NavAgentRuntimeComponent>().properties.radius), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<HealthAspect>();
+                    targetUnit.Hit(bullet.readOwner, bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
                 } else if (bullet.readComponent.targetEnt == Ent.Null) {
 
@@ -81,15 +83,16 @@ namespace ME.BECS.Bullets {
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
-                            var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                            var targetUnit = unit.GetAspect<HealthAspect>();
+                            targetUnit.Hit(bullet.readOwner, bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }
 
                 }
 
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
-                bullet.ent.DestroyHierarchy();
+                bullet.ent.Remove<BulletConfigComponent>();
+                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
 
             }
 
@@ -103,18 +106,19 @@ namespace ME.BECS.Bullets {
                 if (bullet.readConfig.hitRangeSqr > 0f) {
 
                     // use splash
+                    var center = tr.position.xz;
                     for (uint i = 0u; i < query.readResults.results.Count; ++i) {
                         var unit = query.readResults.results[i];
                         if (unit.IsAlive() == false) continue;
-                        var targetUnit = unit.GetAspect<UnitAspect>();
-                        targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                        var targetUnit = unit.GetAspect<HealthAspect>();
+                        targetUnit.Hit(bullet.readOwner, bullet.CalculateDamage(center, unit.GetAspect<TransformAspect>().position.xz, unit.Read<NavAgentRuntimeComponent>().properties.radius), bullet.readComponent.sourceUnit, in jobInfo);
                     }
 
                 } else if (bullet.readComponent.targetEnt.IsAlive() == true) {
                     
                     // hit only target unit if its alive and set
-                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<UnitAspect>();
-                    targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                    var targetUnit = bullet.readComponent.targetEnt.GetAspect<HealthAspect>();
+                    targetUnit.Hit(bullet.readOwner, bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                     
                 } else if (bullet.readComponent.targetEnt == Ent.Null) {
 
@@ -122,15 +126,16 @@ namespace ME.BECS.Bullets {
                     if (query.readResults.results.Count > 0u) {
                         var unit = query.readResults.results[0];
                         if (unit.IsAlive() == true) {
-                            var targetUnit = unit.GetAspect<UnitAspect>();
-                            targetUnit.Hit(bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
+                            var targetUnit = unit.GetAspect<HealthAspect>();
+                            targetUnit.Hit(bullet.readOwner, bullet.damage, bullet.readComponent.sourceUnit, in jobInfo);
                         }
                     }
 
                 }
 
                 EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, bullet.ent.ReadStatic<BulletEffectOnDestroy>().effect);
-                bullet.ent.DestroyHierarchy();
+                bullet.ent.Remove<BulletConfigComponent>();
+                bullet.ent.DestroyWithLifetime(DestroyBehaviour.UseSource);
 
             }
 

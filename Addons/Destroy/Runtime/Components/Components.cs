@@ -19,6 +19,14 @@ namespace ME.BECS {
     }
 
     [ComponentGroup(typeof(DestroyComponentGroup))]
+    [EditorComment("Use this component to configure destroy lifetime after manual destroy call ent.DestroyWithLifetime()")]
+    public struct DestroyWithLifetimeConfigMs : IConfigComponent {
+
+        public uint lifetime;
+
+    }
+
+    [ComponentGroup(typeof(DestroyComponentGroup))]
     public struct DestroyWithLifetimeMs : IConfigComponent {
 
         public uint lifetime;

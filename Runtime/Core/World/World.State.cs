@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Unity.Jobs;
 
 namespace ME.BECS {
@@ -16,25 +17,8 @@ namespace ME.BECS {
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
-    public unsafe struct State {
-
-        public MemoryAllocator allocator;
-        public Ents entities;
-        public OneShotTasks oneShotTasks;
-        public Components components;
-        #if !ENABLE_BECS_FLAT_QUERIES
-        public Archetypes archetypes;
-        public Queries queries;
-        #endif
-        public RandomData random;
-        public CollectionsRegistry collectionsRegistry;
-        public AutoDestroyRegistry autoDestroyRegistry;
-        public ulong tick;
-        public byte state;
-        public byte tickCheck;
-        public ushort updateType;
-        public JobHandle lastApplyHandle;
-        public uint seed;
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    public unsafe partial struct State {
 
         public WorldState WorldState {
             get {
@@ -104,7 +88,7 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public State Initialize(safe_ptr<State> statePtr, in StateProperties stateProperties) {
             
-            this.entities = Ents.Create(statePtr, stateProperties.entitiesCapacity);
+            this.entities = Ents.Create(statePtr, EntityTypes.groupsCount, stateProperties.EntitiesCapacity);
             this.oneShotTasks = OneShotTasks.Create(statePtr, stateProperties.oneShotTasksCapacity);
             this.components = Components.Create(statePtr, in stateProperties);
             #if !ENABLE_BECS_FLAT_QUERIES
@@ -112,8 +96,8 @@ namespace ME.BECS {
             this.archetypes = Archetypes.Create(statePtr, stateProperties.archetypesCapacity, stateProperties.entitiesCapacity);
             #endif
             this.random = RandomData.Create(statePtr);
-            this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.entitiesCapacity);
-            this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.entitiesCapacity);
+            this.collectionsRegistry = CollectionsRegistry.Create(statePtr, stateProperties.EntitiesCapacity);
+            this.autoDestroyRegistry = AutoDestroyRegistry.Create(statePtr, stateProperties.EntitiesCapacity);
             this.Mode = stateProperties.mode;
             return this;
 
@@ -174,7 +158,6 @@ namespace ME.BECS {
                 updateType = updateType,
                 deltaTimeMs = deltaTimeMs,
             }.ScheduleSingle(dependsOn);
-            world.state.ptr->lastApplyHandle = dependsOn;
             return dependsOn;
         }
 
@@ -201,12 +184,12 @@ namespace ME.BECS {
         public void CopyFrom(in State other) {
 
             var alloc = this.allocator;
-            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             var safetyHandlers = this.components.handlers;
             var safetyHandlersLock = this.components.handlersLock;
             #endif
             this = other;
-            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.components.handlers = safetyHandlers;
             this.components.handlersLock = safetyHandlersLock;
             this.components.SafetyHandlersCopyFrom(in other.components);
@@ -220,12 +203,12 @@ namespace ME.BECS {
         public void CopyFromPrepare(in State other) {
 
             var alloc = this.allocator;
-            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             var safetyHandlers = this.components.handlers;
             var safetyHandlersLock = this.components.handlersLock;
             #endif
             this = other;
-            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.components.handlers = safetyHandlers;
             this.components.handlersLock = safetyHandlersLock;
             this.components.SafetyHandlersCopyFrom(in other.components);
@@ -245,7 +228,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose() {
 
-            #if ENABLE_UNITY_COLLECTIONS_CHECKS
+            #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             this.components.DisposeSafetyHandlers();
             #endif
             this.allocator.Dispose();

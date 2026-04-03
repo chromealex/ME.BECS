@@ -5,6 +5,12 @@ namespace ME.BECS {
     public partial struct umeter {
 
         [INLINE(256)]
+        public static umeter FromSFloat(sfloat value) {
+            var ms = new umeter((uint)(value * PRECISION));
+            return ms;
+        }
+
+        [INLINE(256)]
         public static umeter operator *(ucvalue value1, umeter value2) {
             value2.value *= value1.value;
             value2.value /= PRECISION;
@@ -35,6 +41,12 @@ namespace ME.BECS {
     }
 
     public partial struct meter {
+
+        [INLINE(256)]
+        public static meter FromSFloat(sfloat value) {
+            var ms = new meter((int)(value * PRECISION));
+            return ms;
+        }
 
         [INLINE(256)]
         public static meter operator *(ucvalue value1, meter value2) {
@@ -238,6 +250,46 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static usec operator -(usec value1, uint value2) {
+            return value1 - new usec(value2);
+        }
+
+        [INLINE(256)]
+        public static usec operator +(usec value1, uint value2) {
+            return value1 + new usec(value2);
+        }
+
+        [INLINE(256)]
+        public static bool operator <(usec value1, uint value2) {
+            return value1.value < value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator >(usec value1, uint value2) {
+            return value1.value > value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator <=(usec value1, uint value2) {
+            return value1.value <= value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator >=(usec value1, uint value2) {
+            return value1.value >= value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator ==(usec value1, uint value2) {
+            return value1.value == value2;
+        }
+
+        [INLINE(256)]
+        public static bool operator !=(usec value1, uint value2) {
+            return !(value1 == value2);
+        }
+
+        [INLINE(256)]
         public static usec operator *(ucvalue value1, usec value2) {
             value2.value *= value1.value;
             value2.value /= PRECISION;
@@ -254,6 +306,11 @@ namespace ME.BECS {
     }
 
     public partial struct uspeed {
+
+        [INLINE(256)]
+        public static uspeed operator *(uint value1, uspeed value2) {
+            return new uspeed(value1 * value2.value);
+        }
 
         [INLINE(256)]
         public static uspeed operator *(ucvalue value1, uspeed value2) {

@@ -4,7 +4,7 @@ namespace ME.BECS.Transforms {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]
-    public static unsafe class EntCloneExt {
+    public static class EntCloneExt {
 
         [INLINE(256)]
         public static Ent Clone(this in Ent source, bool cloneHierarchy, in JobInfo jobInfo = default) {

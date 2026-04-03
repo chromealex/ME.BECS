@@ -123,7 +123,8 @@ MonoBehaviour:
     - rid: 7199769621873033633
       type: {class: Fly3DSystem, ns: ME.BECS.Bullets, asm: ME.BECS.Bullets}
       data:
-        continuousTargetCheck: 0
+        continuousTargetCheck:
+          value: 0
     - rid: 8346928838201573445
       type: {class: StartNode, ns: ME.BECS.FeaturesGraph.Nodes, asm: ME.BECS.Features}
       data:
@@ -313,7 +314,8 @@ MonoBehaviour:
     - rid: 8346928897455554629
       type: {class: FlySystem, ns: ME.BECS.Bullets, asm: ME.BECS.Bullets}
       data:
-        continuousTargetCheck: 0
+        continuousTargetCheck:
+          value: 0
     - rid: 8346928897455554630
       type: {class: DestroySystem, ns: ME.BECS.Bullets, asm: ME.BECS.Bullets}
       data: 

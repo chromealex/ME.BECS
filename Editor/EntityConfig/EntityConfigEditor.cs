@@ -570,7 +570,7 @@ namespace ME.BECS.Editor {
                     labelField.AddToClassList("unity-foldout");
                     elementContainer.Add(labelField);
                     rootElement = elementContainer;
-                    var foldoutLabel = labelField.Q<Toggle>();
+                    var foldoutLabel = labelField.Q<Toggle>() ?? (VisualElement)labelField;
                     EditorUIUtils.DrawTooltip(foldoutLabel, EditorUtils.GetComponent(type)?.GetEditorComment());
                     labelField.RegisterCallback<ClickEvent>((evt) => { updateButtons.Invoke(list, idx); });
                     labelField.text = label;

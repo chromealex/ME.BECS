@@ -25,9 +25,14 @@ namespace ME.BECS.Attack {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref UnitAspect unit, ref TransformAspect transformAspect) {
 
-                var attack = unit.readComponentRuntime.attackSensor.GetAspect<AttackAspect>();
-                if (attack.target.IsAlive() == true) {
-                    UnitUtils.LookToTarget(in transformAspect, in unit, attack.target.GetAspect<TransformAspect>().position, this.dt);
+                for (uint i = 0u; i < unit.readComponentRuntime.placements.Count; ++i) {
+                    var obj = unit.readComponentRuntime.placements[i].Read<UnitPlacementComponent>().obj;
+                    if (obj.IsAlive() == false) continue;
+                    var attack = obj.GetAspect<AttackAspect>();
+                    if (attack.target.IsAlive() == true) {
+                        UnitUtils.LookToTarget(in transformAspect, in unit, attack.target.GetAspect<TransformAspect>().position, this.dt);
+                        break;
+                    }
                 }
 
             }
@@ -44,13 +49,14 @@ namespace ME.BECS.Attack {
                 var speedFactor = sensor.rotationSpeed;
                 if (attack.target.IsAlive() == true) {
                     var lookDir = attack.target.GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, sensor.upNormal), this.dt * speedFactor);
                 } else if (attack.targets.Count > 0u) {
                     var lookDir = attack.targets[0u].GetAspect<TransformAspect>().GetWorldMatrixPosition() - transformAspect.GetWorldMatrixPosition();
-                    transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, math.up()), this.dt * speedFactor);
+                    transformAspect.rotation = quaternionext.RotateTowards(transformAspect.rotation, quaternion.LookRotationSafe(lookDir, sensor.upNormal), this.dt * speedFactor);
                 } else {
                     if (sensor.persistentRotationSpeed > 0f) {
-                        transformAspect.rotation = math.mul(transformAspect.rotation, quaternion.Euler(0f, math.radians(sensor.persistentRotationSpeed * this.dt), 0f));
+                        var delta = quaternion.AxisAngle(sensor.upNormal, math.radians(sensor.persistentRotationSpeed * this.dt));
+                        transformAspect.rotation = math.mul(transformAspect.rotation, delta);
                     } else if (sensor.returnToDefault == true) {
                         transformAspect.localRotation = quaternionext.RotateTowards(transformAspect.readLocalRotation, quaternion.identity, this.dt * speedFactor);
                     }

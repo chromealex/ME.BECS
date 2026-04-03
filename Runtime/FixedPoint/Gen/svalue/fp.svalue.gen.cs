@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator svalue(int value) => new svalue(value);
+        public static implicit operator svalue(int value) => new svalue(value * PRECISION);
         
         [INLINE(256)]
         public static svalue operator *(float value1, svalue value2) {

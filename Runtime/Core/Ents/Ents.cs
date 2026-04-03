@@ -5,14 +5,14 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     
-    [IgnoreProfiler]
+    /*[IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.NullChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
-    public unsafe partial struct Ents {
-
+    public unsafe partial struct EntsOld {
+        
         public MemArray<ushort> generations;
         public MemArray<uint> versions;
         public MemArray<uint> seeds;
@@ -24,23 +24,58 @@ namespace ME.BECS {
         public ReadWriteSpinner readWriteSpinner;
         public LockSpinner popLock;
         public LockSpinner destroyedLock;
+        private uint entitiesCount;
+        private uint aliveCount;
+        
         public uint Capacity => this.generations.Length;
         public uint FreeCount => this.free.Count;
         public uint EntitiesCount => this.aliveCount;
-
-        private uint entitiesCount;
-        private uint aliveCount;
-
         public int Hash => Utils.Hash(this.FreeCount, this.EntitiesCount);
 
         [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.generations);
+            writer.Write(this.versions);
+            writer.Write(this.seeds);
+            writer.Write(this.versionsGroup);
+            writer.Write(this.aliveBits);
+            writer.Write(this.free);
+            writer.Write(this.destroyed);
+            writer.Write(this.locksPerEntity);
+            writer.Write(this.readWriteSpinner);
+            writer.Write(this.popLock);
+            writer.Write(this.destroyedLock);
+            writer.Write(this.entitiesCount);
+            writer.Write(this.aliveCount);
+            this.SerializeHeadersFlatQueries(ref writer);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.generations);
+            reader.Read(ref this.versions);
+            reader.Read(ref this.seeds);
+            reader.Read(ref this.versionsGroup);
+            reader.Read(ref this.aliveBits);
+            reader.Read(ref this.free);
+            reader.Read(ref this.destroyed);
+            reader.Read(ref this.locksPerEntity);
+            reader.Read(ref this.readWriteSpinner);
+            reader.Read(ref this.popLock);
+            reader.Read(ref this.destroyedLock);
+            reader.Read(ref this.entitiesCount);
+            reader.Read(ref this.aliveCount);
+            this.DeserializeHeadersFlatQueries(ref reader);
+        }
+
+        [INLINE(256)]
         public static void Lock(safe_ptr<State> state, in Ent ent) {
-            state.ptr->entities.locksPerEntity[state, ent.id].Lock();
+            //state.ptr->entities.locksPerEntity[state, ent.id].Lock();
         }
 
         [INLINE(256)]
         public static void Unlock(safe_ptr<State> state, in Ent ent) {
-            state.ptr->entities.locksPerEntity[state, ent.id].Unlock();
+            //state.ptr->entities.locksPerEntity[state, ent.id].Unlock();
         }
 
         public uint GetReservedSizeInBytes(safe_ptr<State> state) {
@@ -76,7 +111,7 @@ namespace ME.BECS {
 
             if (entityCapacity == 0u) entityCapacity = 1u;
             
-            var ents = new Ents() {
+            var ents = new EntsOld() {
                 generations = new MemArray<ushort>(ref state.ptr->allocator, entityCapacity),
                 versions = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
                 seeds = new MemArray<uint>(ref state.ptr->allocator, entityCapacity),
@@ -137,9 +172,9 @@ namespace ME.BECS {
             state.ptr->entities.versionsGroup.Resize(ref state.ptr->allocator, (maxId + 1u) * (StaticTypesTrackedBurst.maxId + 1u), 2);
             state.ptr->entities.versions.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             state.ptr->entities.seeds.Resize(ref state.ptr->allocator, maxId + 1u, 2);
-            state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u);
+            state.ptr->entities.aliveBits.Resize(ref state.ptr->allocator, maxId + 1u, growFactor: 2);
             #if ENABLE_BECS_FLAT_QUERIES
-            state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, maxId + 1u, 1);
+            state.ptr->entities.entityToComponents.Resize(ref state.ptr->allocator, maxId + 1u, 2);
             #endif
             
             // Apply list
@@ -365,6 +400,6 @@ namespace ME.BECS {
             
         }
 
-    }
+    }*/
     
 }

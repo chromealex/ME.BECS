@@ -30,9 +30,10 @@ namespace ME.BECS.FogOfWar {
         private UnityEngine.MaterialPropertyBlock propertyBlock;
         private bool targetState;
 
-        public override void OnInitialize(in EntRO ent) {
+        public override void OnInitialize(in ViewData viewData) {
             
-            base.OnInitialize(in ent);
+            EntRO ent = viewData;
+            base.OnInitialize(in viewData);
 
             this.crossFadeMaterial.EnableKeyword("CROSS_FADE");
             this.propertyBlock = new UnityEngine.MaterialPropertyBlock();
@@ -68,9 +69,9 @@ namespace ME.BECS.FogOfWar {
             
         }
 
-        public override void OnUpdate(in EntRO ent, float dt) {
+        public override void OnUpdate(in ViewData viewData, float dt) {
 
-            base.OnUpdate(in ent, dt);
+            base.OnUpdate(in viewData, dt);
             
             if (this.crossFade == true) {
                 this.crossFadeTimer += dt / this.crossFadeDuration;
@@ -102,8 +103,9 @@ namespace ME.BECS.FogOfWar {
         private bool isVisible;
         protected CreateSystem fow;
 
-        public virtual void OnInitialize(in EntRO ent) {
+        public virtual void OnInitialize(in ViewData viewData) {
 
+            EntRO ent = viewData;
             this.fow = ent.World.parent.GetSystem<CreateSystem>();
             this.UpdateVisibility(in ent, true);
             
@@ -162,8 +164,9 @@ namespace ME.BECS.FogOfWar {
             }
         }
         
-        public virtual void OnUpdate(in EntRO ent, float dt) {
+        public virtual void OnUpdate(in ViewData viewData, float dt) {
             
+            EntRO ent = viewData;
             this.UpdateVisibility(in ent, false);
             
         }

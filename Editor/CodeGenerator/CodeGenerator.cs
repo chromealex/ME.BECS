@@ -9,6 +9,16 @@ namespace ME.BECS.Editor {
     using System.Linq;
     using scg = System.Collections.Generic;
 
+    public class CodeGeneratorOrderAttribute : System.Attribute {
+
+        public int order;
+
+        public CodeGeneratorOrderAttribute(int order) {
+            this.order = order;
+        }
+
+    } 
+
     public struct MethodPointerData : System.IEquatable<MethodPointerData> {
 
         public MethodInfo originalMethodInfo;
@@ -471,8 +481,11 @@ namespace ME.BECS.Editor {
 
             if (CodeGeneratorMenu.IsEnabledAuto == false && forced == false) return;
 
-            if (UnityEngine.Application.isBatchMode == true && forced == false) return;
-            
+            if (UnityEngine.Application.isBatchMode == true) {
+                Logger.Editor.Warning($"[ ME.BECS ] CodeGen won't run in batchmode. Ensure it was properly generated (or stored in the repo) before the build");
+                return;
+            }
+
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
 
             if (cleanCache == true) {
@@ -681,7 +694,7 @@ namespace ME.BECS.Editor {
 
             var asmsDict = asms.ToDictionary(x => x.name, x => x);
 
-            var customCodeGenerators = GetCachedTypesDerivedFrom(typeof(CustomCodeGenerator)).OrderBy(x => x.FullName);
+            var customCodeGenerators = GetCachedTypesDerivedFrom(typeof(CustomCodeGenerator)).OrderBy(x => x.GetCustomAttribute<CodeGeneratorOrderAttribute>()?.order).ThenBy(x => x.FullName);
             var generators = customCodeGenerators.Select(x => (CustomCodeGenerator)System.Activator.CreateInstance(x)).ToArray();
 
             if (System.IO.Directory.Exists(dir) == false) {

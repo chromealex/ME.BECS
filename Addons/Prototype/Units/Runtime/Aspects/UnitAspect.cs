@@ -1,3 +1,5 @@
+
+using ME.BECS.Transforms;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -11,6 +13,47 @@ namespace ME.BECS.Units {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Players;
 
+    public struct HealthAspect : IAspect {
+
+        public Ent ent { get; set; }
+
+        [QueryWith]
+        public AspectDataPtr<OwnerComponent> ownerDataPtr;
+        [QueryWith]
+        public AspectDataPtr<UnitHealthComponent> healthDataPtr;
+
+        public readonly ref Ent owner => ref this.ownerDataPtr.GetOrThrow(this.ent.id, this.ent.gen).ent;
+        public readonly ref readonly Ent readOwner => ref this.ownerDataPtr.Read(this.ent.id, this.ent.gen).ent;
+        public readonly ref uint health => ref this.healthDataPtr.GetOrThrow(this.ent.id, this.ent.gen).health;
+        public readonly ref uint healthMax => ref this.healthDataPtr.GetOrThrow(this.ent.id, this.ent.gen).healthMax;
+        public readonly ref readonly uint readHealth => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).health;
+        public readonly ref readonly uint readHealthMax => ref this.healthDataPtr.Read(this.ent.id, this.ent.gen).healthMax;
+        
+        [INLINE(256)]
+        [NotThreadSafe]
+        public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo) {
+            if (this.readHealth > 0u) {
+                var ent = Ent.New<UnitHitEntityType>(in jobInfo);
+                ent.Set(new DamageTookComponent() {
+                    source = source,
+                    target = this.ent,
+                    damage = damage,
+                });
+                ent.Destroy(1UL);
+                this.ent.SetOneShot(new DamageTookEvent() {
+                    source = source,
+                });
+                this.ent.Set(new LastDamageSource() {
+                    source = source,
+                    owner = hitOwner,
+                });
+                var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
+                ME.BECS.Effects.EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect);
+            }
+        }
+
+    }
+    
     public struct UnitAspect : IAspect {
         
         public Ent ent { get; set; }
@@ -125,23 +168,99 @@ namespace ME.BECS.Units {
             return this.readUnitCommandGroup.IsAlive();
         }
 
+        public readonly uint PlacementsCount => this.readComponentRuntime.placements.Count;
+
         [INLINE(256)]
-        [NotThreadSafe]
-        public readonly void Hit(uint damage, in Ent source, in JobInfo jobInfo) {
-            if (this.readHealth > 0u) {
-                var ent = Ent.New(in jobInfo);
-                ent.Set(new DamageTookComponent() {
-                    source = source,
-                    target = this.ent,
-                    damage = damage,
-                });
-                ent.Destroy(1UL);
-                this.ent.SetOneShot(new DamageTookEvent() {
-                    source = source,
-                });
-                var tr = this.ent.GetAspect<ME.BECS.Transforms.TransformAspect>();
-                ME.BECS.Effects.EffectUtils.CreateEffect(in jobInfo, tr.position, tr.rotation, this.ent.ReadStatic<UnitEffectOnHitComponent>().effect);
+        public readonly void ValidatePlacements(in JobInfo jobInfo) {
+            if (this.readComponentRuntime.placements.IsCreated == false) {
+                this.InitPlacements(in jobInfo);
             }
+            if (this.readComponentRuntime.placementsRoot.IsAlive() == false) {
+                this.SetPlacementRoot(this.CreatePlacementsRoot());
+            }
+        }
+
+        [INLINE(256)]
+        public readonly Ent CreatePlacementsRoot() {
+            var placements = Ent.New<PlacementsEntityType>(JobInfo.Create(this.ent.worldId), "Placements");
+            PlayerUtils.SetOwner(placements, this.readOwner.GetAspect<PlayerAspect>());
+            var tr = placements.Set<TransformAspect>();
+            tr.IsStaticLocal = true;
+            placements.SetParent(this.ent);
+            return placements;
+        }
+
+        [INLINE(256)]
+        public readonly void InitPlacements(in JobInfo jobInfo) {
+            var placementsDataComponent = this.ent.ReadStatic<UnitPlacementsDataComponent>();
+            if (placementsDataComponent.placements.IsCreated == true) {
+                if (this.readComponentRuntime.placements.IsCreated == false) this.componentRuntime.placements = new ListAuto<Ent>(this.ent, placementsDataComponent.placements.Length);
+                for (uint i = 0u; i < placementsDataComponent.placements.Length; ++i) {
+                    var placement = placementsDataComponent.placements[i];
+                    this.componentRuntime.placements.Add(this.CreatePlacement(in jobInfo, placement.id, placement.localPosition, placement.localRotation));
+                }
+            } else {
+                this.componentRuntime.placements = new ListAuto<Ent>(this.ent, 2u);
+            }
+        }
+
+        [INLINE(256)]
+        private readonly Ent CreatePlacement(in JobInfo jobInfo, uint id, float3 localPosition, quaternion localRotation) {
+            var ent = Ent.New<PlacementEntityType>(in jobInfo, "Placement");
+            var tr = ent.Set<TransformAspect>();
+            if (this.readComponentRuntime.placementsRoot.IsAlive() == true) {
+                ent.SetParent(this.readComponentRuntime.placementsRoot);
+            } else {
+                ent.SetParent(this.ent);
+            }
+            PlayerUtils.SetOwner(ent, this.readOwner.GetAspect<PlayerAspect>());
+            tr.localPosition = localPosition;
+            tr.localRotation = localRotation;
+            tr.IsStaticLocal = true;
+            ent.Set(new UnitPlacementComponent() {
+                id = id,
+            });
+            return ent;
+        }
+
+        [INLINE(256)]
+        public readonly void SetPlacementRoot(Ent ent) {
+            this.componentRuntime.placementsRoot = ent;
+        }
+
+        [INLINE(256)]
+        public readonly Ent ReadPlacement(uint id) {
+            if (this.readComponentRuntime.placements.IsCreated == true) {
+                for (uint i = 0u; i < this.readComponentRuntime.placements.Count; ++i) {
+                    var placement = this.readComponentRuntime.placements[i];
+                    if (placement.Read<UnitPlacementComponent>().id == id) {
+                        return placement;
+                    }
+                }
+            }
+            return default;
+        }
+
+        [INLINE(256)]
+        public readonly Ent GetPlacement(in JobInfo jobInfo, uint id) {
+            if (this.readComponentRuntime.placements.IsCreated == true) {
+                for (uint i = 0u; i < this.readComponentRuntime.placements.Count; ++i) {
+                    var placement = this.readComponentRuntime.placements[i];
+                    if (placement.Read<UnitPlacementComponent>().id == id) {
+                        return placement;
+                    }
+                }
+            }
+            return this.CreatePlacement(in jobInfo, id, float3.zero, quaternion.identity);
+        }
+        
+        [INLINE(256)]
+        public readonly Ent SetToPlacement(in JobInfo jobInfo, in Ent obj, uint id) {
+            this.ValidatePlacements(in jobInfo);
+            var placement = this.GetPlacement(in jobInfo, id);
+            obj.SetParent(placement);
+            placement.Get<UnitPlacementComponent>().obj = obj;
+            return placement;
         }
 
     }

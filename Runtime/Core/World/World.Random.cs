@@ -25,12 +25,24 @@ namespace ME.BECS {
         
     }
     
-    public unsafe struct RandomData {
+    public struct RandomData {
 
         public uint data;
         public LockSpinner lockIndex;
         
         public int Hash => Utils.Hash(this.data);
+
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.data);
+            writer.Write(this.lockIndex);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.data);
+            reader.Read(ref this.lockIndex);
+        }
 
         [INLINE(256)]
         public void SetSeed(safe_ptr<State> statePtr, uint seed) {

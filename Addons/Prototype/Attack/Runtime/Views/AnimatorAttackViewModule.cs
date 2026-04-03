@@ -6,18 +6,24 @@ namespace ME.BECS.Attack {
     public class AnimatorAttackViewModule : IViewApplyState, IViewIgnoreTracker {
 
         public UnityEngine.Animator animator;
+        public uint sensorIndex;
         
         private static readonly int attackHash = UnityEngine.Animator.StringToHash("Attack");
         private static readonly int reloadHash = UnityEngine.Animator.StringToHash("Reload");
         private static readonly int hasTargetHash = UnityEngine.Animator.StringToHash("HasTarget");
         private static readonly int canAttackOnMoveHash = UnityEngine.Animator.StringToHash("CanAttackOnMove");
 
-        public void ApplyState(in EntRO ent) {
+        public void ApplyState(in ViewData viewData) {
 
+            EntRO ent = viewData;
             var unit = ent.GetAspect<UnitAspect>();
-            var sensor = unit.readComponentRuntime.attackSensor;
+            var sensors = unit.readComponentRuntime.placements;
+            if (this.sensorIndex >= sensors.Count) return;
+            var sensor = sensors[this.sensorIndex];
             if (sensor.IsAlive() == false) return;
-            var attack = sensor.GetAspect<AttackAspect>();
+            var obj = sensor.Read<UnitPlacementComponent>().obj;
+            if (obj.IsAlive() == false) return;
+            var attack = obj.GetAspect<AttackAspect>();
             this.animator.SetFloat(attackHash, (float)attack.FireProgress);
             this.animator.SetFloat(reloadHash, (float)attack.ReloadProgress);
             this.animator.SetBool(hasTargetHash, attack.HasAnyTarget);

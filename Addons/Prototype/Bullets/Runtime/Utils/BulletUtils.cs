@@ -20,12 +20,12 @@ namespace ME.BECS.Bullets {
         [INLINE(256)]
         public static Ent RegisterFirePoint(in Ent root, in float3 position, in quaternion rotation, in JobInfo jobInfo) {
 
-            var point = Ent.New(in jobInfo, editorName: "FirePoint");
+            var point = Ent.New<FirePointEntityType>(in jobInfo, editorName: "FirePoint");
             var tr = point.Set<TransformAspect>();
             tr.IsStaticLocal = true;
             point.SetParent(in root);
-            tr.position = position;
-            tr.rotation = rotation;
+            tr.localPosition = position;
+            tr.localRotation = rotation;
 
             ref var firePoints = ref root.Get<FirePointComponent>();
             if (firePoints.points.IsCreated == false) firePoints.points = new ListAuto<Ent>(in point, 1u);

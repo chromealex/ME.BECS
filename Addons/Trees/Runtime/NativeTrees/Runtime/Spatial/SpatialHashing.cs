@@ -102,7 +102,7 @@ namespace NativeTrees {
 
         }
         
-        public NativeParallelMultiHashMap<uint, ObjWrapper> data;
+        public NativeParallelMultiHashMap<int, ObjWrapper> data;
         private Allocator allocator;
         private int cellSize;
         private tfloat invCellSize;
@@ -112,7 +112,7 @@ namespace NativeTrees {
             this.allocator = allocator;
             this.cellSize = cellSize;
             this.invCellSize = 1f / cellSize;
-            this.data = new NativeParallelMultiHashMap<uint, ObjWrapper>(capacity, allocator);
+            this.data = new NativeParallelMultiHashMap<int, ObjWrapper>(capacity, allocator);
             this.tempObjects = new NativeParallelList<ObjWrapper>(capacity, allocator);
         }
 
@@ -121,11 +121,16 @@ namespace NativeTrees {
         }
 
         [INLINE(256)]
-        public uint GetHash(float2 pos) {
-            var cx = (uint)math.floor(pos.x * this.invCellSize);
-            var cy = (uint)math.floor(pos.y * this.invCellSize);
-            var hash = cx * 73856093 ^ cy * 19349663;
+        public int GetHash(float2 pos) {
+            var cx = (int)math.floor(pos.x * this.invCellSize);
+            var cy = (int)math.floor(pos.y * this.invCellSize);
+            var hash = GetHash(cx, cy);
             return hash;
+        }
+
+        [INLINE(256)]
+        public static int GetHash(int cx, int cy) {
+            return cx * 73856093 ^ cy * 19349663;
         }
 
         [INLINE(256)]
@@ -136,8 +141,16 @@ namespace NativeTrees {
         
         [INLINE(256)]
         public void Insert(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
-            var hash = this.GetHash(bounds.Center);
-            this.data.Add(hash, new ObjWrapper(obj, bounds));
+            var minX = (int)math.floor(bounds.min.x * this.invCellSize);
+            var minY = (int)math.floor(bounds.min.y * this.invCellSize);
+            var maxX = (int)math.floor(bounds.max.x * this.invCellSize);
+            var maxY = (int)math.floor(bounds.max.y * this.invCellSize);
+            for (int x = minX; x <= maxX; ++x) {
+                for (int y = minY; y <= maxY; ++y) {
+                    var hash = GetHash(x, y);
+                    this.data.Add(hash, new ObjWrapper(obj, bounds));
+                }
+            }
         }
 
         [INLINE(256)]
@@ -205,17 +218,17 @@ namespace NativeTrees {
 
         [INLINE(256)]
         public int2 GetCoord(float2 position) {
-            return new int2((int)math.round(position.x * this.invCellSize) * this.cellSize, (int)math.round(position.y * this.invCellSize) * this.cellSize);
+            return new int2((int)math.round(position.x * this.invCellSize), (int)math.round(position.y * this.invCellSize));
         }
 
         [INLINE(256)]
-        public bool RaycastAABB(Ray2D ray, out SpatialRaycastHit raycastHit, sfloat distance) {
+        public bool RaycastAABB(Ray2D ray, out SpatialRaycastHit raycastHit, tfloat distance) {
             raycastHit = default;
             if (this.tempObjects.Count == 0) return false;
 
             var precomputedRay2D = new PrecomputedRay2D(ray);
             var position = (float2)ray.origin;
-            var dir = math.normalizesafe((float2)ray.direction);
+            var dir = math.normalizesafe(ray.direction);
             var cell = this.GetCoord(position);
             var targetCell = this.GetCoord(position + dir * distance);
 
@@ -256,7 +269,7 @@ namespace NativeTrees {
                 var px = (steep == true ? y : x);
                 var py = (steep == true ? x : y);
 
-                var hash = this.GetHash(new float2(px * this.cellSize, py * this.cellSize));
+                var hash = GetHash(px, py);
                 var e = this.data.GetValuesForKey(hash);
                 while (e.MoveNext() == true) {
                     var item = e.Current;
@@ -278,18 +291,38 @@ namespace NativeTrees {
             return false;
 
         }
-        
+
+        private static readonly UnityEngine.Vector3[] gizmosPoints = new UnityEngine.Vector3[4];
         public void DrawGizmos() {
 
-            var rendered = new UnsafeHashSet<uint>(this.data.Count(), Allocator.Temp);
+            var rendered = new UnsafeHashSet<int>(this.data.Count(), Allocator.Temp);
             foreach (var kv in this.data) {
                 var item = kv.Value;
-                var hash = this.GetHash(item.bounds.Center);
-                if (this.data.ContainsKey(hash) == true && rendered.Add(hash) == true) {
-                    var p = new UnityEngine.Vector3((float)item.bounds.Center.x, 0f, (float)item.bounds.Center.y);
-                    p.x = UnityEngine.Mathf.RoundToInt(p.x / this.cellSize) * this.cellSize;
-                    p.z = UnityEngine.Mathf.RoundToInt(p.z / this.cellSize) * this.cellSize;
-                    UnityEngine.Gizmos.DrawWireCube(p, (UnityEngine.Vector3)new float3(1f, 1f, 1f) * this.cellSize);
+                var bounds = item.bounds;
+                var minX = (int)math.floor(bounds.min.x * this.invCellSize);
+                var minY = (int)math.floor(bounds.min.y * this.invCellSize);
+                var maxX = (int)math.floor(bounds.max.x * this.invCellSize);
+                var maxY = (int)math.floor(bounds.max.y * this.invCellSize);
+                for (int x = minX; x <= maxX; ++x) {
+                    for (int y = minY; y <= maxY; ++y) {
+                        var hash = GetHash(x, y);
+                        if (this.data.ContainsKey(hash) == true && rendered.Add(hash) == true) {
+                            float worldX = (x + 0.5f) * this.cellSize;
+                            float worldY = (y + 0.5f) * this.cellSize;
+                            var p = new UnityEngine.Vector3(worldX, 0f, worldY);
+                            var c = UnityEngine.Gizmos.color;
+                            c.a = 0.05f;
+                            #if UNITY_EDITOR
+                            var rect = new UnityEngine.Rect(p.x - this.cellSize * 0.5f, p.z - this.cellSize * 0.5f, this.cellSize, this.cellSize);
+                            gizmosPoints[0] = new UnityEngine.Vector3(rect.xMin, 0f, rect.yMin);
+                            gizmosPoints[1] = new UnityEngine.Vector3(rect.xMin, 0f, rect.yMax);
+                            gizmosPoints[2] = new UnityEngine.Vector3(rect.xMax, 0f, rect.yMax);
+                            gizmosPoints[3] = new UnityEngine.Vector3(rect.xMax, 0f, rect.yMin);
+                            UnityEditor.Handles.DrawSolidRectangleWithOutline(gizmosPoints, c, UnityEngine.Gizmos.color);
+                            //UnityEngine.Gizmos.DrawWireCube(p, (UnityEngine.Vector3)new float3(1f, 1f, 1f) * this.cellSize);
+                            #endif
+                        }
+                    }
                 }
             }
 

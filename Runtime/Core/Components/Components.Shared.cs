@@ -34,7 +34,7 @@ namespace ME.BECS {
         private Components InitializeSharedComponents(safe_ptr<State> state, in StateProperties stateProperties) {
 
             this.sharedData = new UIntDictionary<MemAllocatorPtr>(ref state.ptr->allocator, stateProperties.sharedComponentsCapacity);
-            this.entityIdToHash = new MemArray<MemArray<uint>>(ref state.ptr->allocator, stateProperties.entitiesCapacity);
+            this.entityIdToHash = new MemArray<MemArray<uint>>(ref state.ptr->allocator, stateProperties.EntitiesCapacity);
             return this;
 
         }

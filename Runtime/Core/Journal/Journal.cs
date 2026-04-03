@@ -239,7 +239,7 @@ namespace ME.BECS {
 
             var props = WorldProperties.Default;
             props.name = $"Journal for #{connectedWorld.id}";
-            var world = World.Create(props, false);
+            var world = World.Create(props, switchContext: false);
             var journal = new Journal {
                 world = _make(world),
                 data = _make(JournalData.Create(world.state, properties)),

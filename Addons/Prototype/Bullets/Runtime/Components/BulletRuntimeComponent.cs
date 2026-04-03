@@ -23,6 +23,7 @@ namespace ME.BECS.Bullets {
         /// Unit source
         /// </summary>
         public Ent sourceUnit;
+        public float3 sourceWorldPos;
 
     }
     

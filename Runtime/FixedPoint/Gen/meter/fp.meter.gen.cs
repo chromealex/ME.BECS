@@ -31,15 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static meter FromSFloat(sfloat value) {
-            var ms = new meter {
-                value = (int)(value * PRECISION),
-            };
-            return ms;
-        }
-
-        [INLINE(256)]
-        public static implicit operator meter(int value) => new meter(value);
+        public static implicit operator meter(int value) => new meter(value * PRECISION);
         
         [INLINE(256)]
         public static meter operator *(float value1, meter value2) {

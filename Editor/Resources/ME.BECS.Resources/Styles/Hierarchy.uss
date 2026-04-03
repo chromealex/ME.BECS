@@ -71,9 +71,15 @@
 }
 
 .h-root .h-element {
+    flex-direction: row;
 }
 
-.h-root .h-element {
+.h-root .unity-tree-view__item-content {
+    justify-content: center;
+}
+
+.h-root .unity-collection-view__item--selected {
+    background-color: var(--main-color);
 }
 
 .h-root .h-element > Foldout > Toggle {
@@ -130,8 +136,12 @@
     background-color: rgba(21, 122, 189, 0.4);
 }
 
-.h-root .h-element .name {
+.h-root .h-element .caption {
+    width: 0px;
     flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-wrap: nowrap;
 }
 .h-root .h-element .version {
     color: rgba(255, 255, 255, 0.5);
@@ -226,4 +236,24 @@
 
 .filter-checkmark {
     width: 20px;
+}
+
+.footer-container {
+    padding: 2px 4px;
+    flex-direction: row;
+    background-color: var(--dark-color);
+}
+
+.footer-container Label {
+    font-size: 11px;
+}
+
+.footer-container .footer-entities-count {
+    padding-left: 8px;
+    color: var(--highlight-text-color);
+}
+
+.footer-container .footer-selected-entities-count {
+    padding-left: 14px;
+    color: var(--highlight-text-color);
 }

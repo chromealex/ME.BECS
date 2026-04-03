@@ -17,6 +17,20 @@ namespace ME.BECS {
 
         public int Hash => (int)this.items.Length;
 
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.lockSharedIndex);
+            writer.Write(this.sharedData);
+            writer.Write(this.entityIdToHash);
+            writer.Write(this.items);
+        }
+
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.lockSharedIndex);
+            reader.Read(ref this.sharedData);
+            reader.Read(ref this.entityIdToHash);
+            reader.Read(ref this.items);
+        }
+
     }
 
 }

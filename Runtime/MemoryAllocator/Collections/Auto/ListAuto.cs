@@ -45,6 +45,18 @@ namespace ME.BECS {
         internal MemArrayAuto<T> arr;
         public uint Count;
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.arr);
+            writer.Write(this.Count);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.arr);
+            reader.Read(ref this.Count);
+        }
+
         public uint GetConfigId() => this.Count;
 
         public readonly Ent ent => this.arr.ent;
@@ -234,7 +246,7 @@ namespace ME.BECS {
         public bool EnsureCapacity(uint capacity) {
 
             capacity = Helpers.NextPot(capacity);
-            return this.arr.Resize(capacity, 2, ClearOptions.UninitializedMemory);
+            return this.arr.Resize(capacity, 1, ClearOptions.UninitializedMemory);
             
         }
         
@@ -254,6 +266,17 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Sort<U>() where U : unmanaged, System.IComparable<U> {
             Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count);
+        }
+
+        [INLINE(256)]
+        public void Sort<U, TComparer>() where U : unmanaged, System.IComparable<U> where TComparer : struct, System.Collections.Generic.IComparer<U> {
+            TComparer comparer = default;
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count, comparer);
+        }
+
+        [INLINE(256)]
+        public void Sort<U, TComparer>(TComparer comparer) where U : unmanaged, System.IComparable<U> where TComparer : struct, System.Collections.Generic.IComparer<U> {
+            Unity.Collections.NativeSortExtension.Sort((U*)this.GetUnsafePtr().ptr, (int)this.Count, comparer);
         }
 
         [INLINE(256)]
@@ -318,6 +341,7 @@ namespace ME.BECS {
         public unsafe bool RemoveAt(ref MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
+            E.RANGE(index, 0, this.Count);
             if (index >= this.Count) return false;
 
             if (index == this.Count - 1) {
@@ -343,6 +367,7 @@ namespace ME.BECS {
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
+            E.RANGE(index, 0, this.Count);
             if (index >= this.Count) return false;
             
             --this.Count;
@@ -507,7 +532,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public uint IndexOf<U>(in U element) where U : unmanaged, System.IEquatable<U> {
+        public readonly uint IndexOf<U>(in U element) where U : unmanaged, System.IEquatable<U> {
             for (uint i = 0u; i < this.Count; ++i) {
                 var item = this.arr.As<U>(i);
                 if (item.Equals(element) == true) {

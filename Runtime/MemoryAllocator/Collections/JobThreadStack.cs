@@ -23,6 +23,20 @@ namespace ME.BECS {
         public readonly uint Count => this.size;
 
         [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.array);
+            writer.Write(this.toRemove);
+            writer.Write(this.size);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.array);
+            reader.Read(ref this.toRemove);
+            reader.Read(ref this.size);
+        }
+
+        [INLINE(256)]
         public JobThreadStack(ref MemoryAllocator allocator, uint capacity) {
             this = default;
             this.array = new MemArray<T>(ref allocator, capacity);
@@ -73,7 +87,7 @@ namespace ME.BECS {
             }
 
             {
-                var idx = this.size - 1u - jobInfo.Offset;
+                var idx = this.size - 1u - jobInfo.GetOffset(0u);
                 E.RANGE(idx, 0u, this.size);
                 /*while (true) {
                     if (this.toRemove.Contains(in allocator, idx) == true) {
@@ -86,7 +100,7 @@ namespace ME.BECS {
                 var item = this.array[in allocator, idx];
                 this.array[in allocator, idx] = default;
                 this.toRemove.Add(ref allocator, idx);
-                jobInfo.IncrementLocalCounter();
+                jobInfo.IncrementLocalCounter(0u);
                 //this.bits.Set(in allocator, (int)idx, true);
                 return item;
             }

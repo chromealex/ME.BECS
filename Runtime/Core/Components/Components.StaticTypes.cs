@@ -75,15 +75,6 @@ namespace ME.BECS {
         public static ref ME.BECS.Internal.Array<uint> tracker => ref trackerBurst.Data;
 
         public static void Dispose() {
-            if (StaticTypes.sizes.IsCreated == true) StaticTypes.sizes.Dispose();
-            if (StaticTypes.groups.IsCreated == true) StaticTypes.groups.Dispose();
-            if (StaticTypes.sharedTypeId.IsCreated == true) StaticTypes.sharedTypeId.Dispose();
-            if (StaticTypes.staticTypeId.IsCreated == true) StaticTypes.staticTypeId.Dispose();
-            if (StaticTypes.defaultValues.IsCreated == true) StaticTypes.defaultValues.Dispose();
-            if (StaticTypes.collectionsCount.IsCreated == true) StaticTypes.collectionsCount.Dispose();
-            if (StaticTypes.tracker.IsCreated == true) StaticTypes.tracker.Dispose();
-            if (StaticTypesDestroyRegistry.registry.Data.IsCreated == true) StaticTypesDestroyRegistry.registry.Data.Dispose();
-            if (StaticTypesAutoDestroy.registry.Data.IsCreated == true) StaticTypesAutoDestroy.registry.Data.Dispose();
         }
         
         public static void SetTracker(uint count) {
@@ -244,23 +235,6 @@ namespace ME.BECS {
         public static bool Is(uint typeId) {
             if (typeId >= registry.Data.Length) return false;
             return registry.Data.Get(typeId);
-        }
-
-    }
-
-    [IgnoreProfiler]
-    public struct StaticTypesDestroy<T> where T : unmanaged, IComponentDestroy {
-
-        [INLINE(256)]
-        public static unsafe void RegisterAutoDestroy(bool isTag) {
-
-            var typeId = StaticTypes<T>.typeId;
-            StaticTypesDestroyRegistry.registry.Data.Resize(typeId + 1);
-            StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer<AutoDestroyRegistry.DestroyDelegate>(AutoDestroyRegistryStatic<T>.Destroy).Value;
-            StaticTypesAutoDestroy<T>.registry.Data = true;
-            StaticTypesAutoDestroy.registry.Data.Resize(typeId + 1);
-            StaticTypesAutoDestroy.registry.Data.Get(typeId) = true;
-
         }
 
     }

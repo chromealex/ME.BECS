@@ -2,10 +2,12 @@
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
+using Plane = ME.BECS.FixedPoint.FPlane;
 #else
 using tfloat = System.Single;
 using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
+using Plane = UnityEngine.Plane;
 #endif
 
 namespace ME.BECS.Views {
@@ -21,7 +23,7 @@ namespace ME.BECS.Views {
     [ComponentGroup(typeof(CameraComponentGroup))]
     public struct CameraComponent : IComponent {
 
-        public MemArrayAuto<UnityEngine.Plane> localPlanes;
+        public MemArrayAuto<Plane> localPlanes;
         public tfloat nearClipPlane;
         public tfloat farClipPlane;
         public tfloat fieldOfViewVertical;

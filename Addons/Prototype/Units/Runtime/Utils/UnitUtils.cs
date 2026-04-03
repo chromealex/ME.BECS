@@ -52,6 +52,58 @@ namespace ME.BECS.Units {
         }
         
         [INLINE(256)]
+        public static float3 GetCircleRingPosition(float3 center, uint index, uint maxCount, tfloat unitRadius) {
+            if (index == 0) return center;
+
+            tfloat spacing = unitRadius * 2.1f;
+            uint remaining = index;
+    
+            tfloat currentRadius = 0;
+            uint countOnThisRing = 0;
+            uint indexInRing = 0;
+
+            uint tempMax = maxCount - 1;
+            uint currentRingIdx = 0u;
+            uint processedPoints = 0u;
+
+            while (true) {
+                ++currentRingIdx;
+                tfloat r = spacing * currentRingIdx;
+                uint capacity = (uint)math.floor(2 * math.PI * r / spacing);
+        
+                if (processedPoints + capacity >= tempMax) {
+                    uint leftForLastRing = tempMax - processedPoints;
+            
+                    if (index > processedPoints) {
+                        currentRadius = r;
+                        countOnThisRing = leftForLastRing;
+                        indexInRing = index - processedPoints;
+                        break;
+                    }
+                }
+
+                if (remaining <= capacity) {
+                    currentRadius = r;
+                    countOnThisRing = capacity;
+                    indexInRing = remaining;
+                    break;
+                }
+
+                remaining -= capacity;
+                processedPoints += capacity;
+            }
+
+            tfloat angleStep = 2 * math.PI / countOnThisRing;
+            tfloat angle = angleStep * (indexInRing - 1);
+
+            return new float3(
+                center.x + math.cos(angle) * currentRadius,
+                center.y,
+                center.z + math.sin(angle) * currentRadius
+            );
+        }
+        
+        [INLINE(256)]
         public static float3 GetSnailPosition(float3 center, uint index, tfloat unitRadius) {
             tfloat spacing = unitRadius * 2f;
             tfloat angle = index * GOLDEN_ANGLE;
@@ -109,7 +161,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitAspect CreateUnit(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
-            var ent = Ent.New(in jobInfo, editorName: "Unit");
+            var ent = Ent.New<UnitEntityType>(in jobInfo, editorName: "Unit");
             return CreateUnit(in ent, in agentType, treeIndex);
             
         }
@@ -118,6 +170,7 @@ namespace ME.BECS.Units {
         public static UnitAspect CreateUnit(in Ent ent, in AgentType agentType, int treeIndex) {
             
             var unit = ent.GetOrCreateAspect<UnitAspect>();
+            ent.SetOneShot(new UnitJustSpawnedEvent());
             ent.Set<TransformAspect>();
             ent.Set<QuadTreeQueryAspect>(); // to query nearby units
             var aspect = ent.GetOrCreateAspect<QuadTreeAspect>();
@@ -135,7 +188,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         public static UnitAspect CreateUnitSpatial(in AgentType agentType, int treeIndex, in JobInfo jobInfo) {
 
-            var ent = Ent.New(in jobInfo, editorName: "Unit");
+            var ent = Ent.New<UnitEntityType>(in jobInfo, editorName: "Unit");
             return CreateUnitSpatial(in ent, in agentType, treeIndex);
             
         }
@@ -144,6 +197,7 @@ namespace ME.BECS.Units {
         public static UnitAspect CreateUnitSpatial(in Ent ent, in AgentType agentType, int treeIndex) {
             
             var unit = ent.GetOrCreateAspect<UnitAspect>();
+            ent.SetOneShot(new UnitJustSpawnedEvent());
             ent.Set<TransformAspect>();
             ent.Set<SpatialQueryAspect>(); // to query nearby units
             var aspect = ent.GetOrCreateAspect<SpatialAspect>();

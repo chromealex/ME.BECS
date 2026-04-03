@@ -46,11 +46,11 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public static World Create(bool switchContext = true) {
-            return World.Create(WorldProperties.Default, switchContext);
+            return World.Create(WorldProperties.Default, switchContext: switchContext);
         }
 
         [INLINE(256)]
-        public static World Create(WorldProperties properties, bool switchContext = true) {
+        public static World Create(WorldProperties properties, ushort worldId = 0, bool switchContext = true) {
 
             var statePtr = State.CreateDefault(properties.allocatorProperties);
             var world = new World() {
@@ -60,7 +60,7 @@ namespace ME.BECS {
             world.state.ptr->WorldState = WorldState.Initialized;
 
             if (switchContext == true) Context.Switch(world);
-            Worlds.AddWorld(ref world, name: properties.name);
+            Worlds.AddWorld(ref world, worldId, name: properties.name);
             #if !ENABLE_BECS_FLAT_QUERIES
             Batches.SetCapacity(world.id, properties.stateProperties.entitiesCapacity);
             #endif
@@ -93,6 +93,11 @@ namespace ME.BECS {
         [INLINE(256)]
         public Ent NewEnt() {
             return Ent.New(in this);
+        }
+
+        [INLINE(256)]
+        public Ent NewEnt<T>() where T : unmanaged, IEntityType {
+            return Ent.New<T>(in this);
         }
 
         [INLINE(256)]

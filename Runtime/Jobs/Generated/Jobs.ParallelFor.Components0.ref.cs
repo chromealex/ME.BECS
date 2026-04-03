@@ -79,9 +79,9 @@ namespace ME.BECS.Jobs {
             var data = _addressPtr(ref dataVal);
             var parameters = new JobsUtility.JobScheduleParameters(data, JobReflectionData<T>.data.Data, dependsOn, scheduleMode);
             if (scheduleMode == ScheduleMode.Parallel) {
-                return JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null);
+                return JobStaticInfo<T>.ScheduleResult(JobsUtility.ScheduleParallelForDeferArraySize(ref parameters, (int)innerLoopBatchCount, (byte*)buffer, null), buffer, jobInfo, scheduleMode);
             }
-            return JobsUtility.Schedule(ref parameters);
+            return JobStaticInfo<T>.ScheduleResult(JobsUtility.Schedule(ref parameters), buffer, jobInfo, scheduleMode);
 
         }
 

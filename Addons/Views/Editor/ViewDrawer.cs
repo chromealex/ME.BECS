@@ -12,6 +12,8 @@ namespace ME.BECS.Views.Editor {
 
         public override UnityEngine.UIElements.VisualElement CreatePropertyGUI(SerializedProperty property) {
 
+            ObjectReferenceRegistry.Load();
+            
             var viewSource = property.FindPropertyRelative(nameof(View.viewSource));
             var prefabId = viewSource.FindPropertyRelative(nameof(View.viewSource.prefabId));
             var providerId = viewSource.FindPropertyRelative(nameof(View.viewSource.providerId));

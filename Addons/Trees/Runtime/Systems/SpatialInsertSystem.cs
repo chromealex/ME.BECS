@@ -104,7 +104,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var size = spatialAspect.rectSize;
@@ -122,7 +122,7 @@ namespace ME.BECS {
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
-                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.treeIndex];
+                var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[spatialAspect.readTreeIndex];
                 if (tr.IsCalculated == false) return;
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var radius = spatialAspect.readSpatialElement.radius;
@@ -245,23 +245,28 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void FillNearest<T>(ref SpatialQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
-            if (tr.IsCalculated == false) return;
+            var marker = new Unity.Profiling.ProfilerMarker("tree::FillNearest");
+            marker.Begin();
             
+            var markerRead = new Unity.Profiling.ProfilerMarker("tree::FillNearest::Read");
+            markerRead.Begin();
             var q = query.readQuery;
-            if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) return;
-            
+            var ent = query.ent;
+
             var worldPos = tr.GetWorldMatrixPosition();
             MathSector sector = default;
             if (query.readQuery.sector > 0 || query.readQuery.sector < 360) {
                 var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().GetWorldMatrixRotation() : tr.GetWorldMatrixRotation();
                 sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
             }
+            markerRead.End();
 
-            var ent = tr.ent;
-            
+            var markerCleanUp = new Unity.Profiling.ProfilerMarker("tree::FillNearest::CleanUp");
+            markerCleanUp.Begin();
             // clean up results
             if (query.readResults.results.IsCreated == true) query.results.results.Clear();
             if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+            markerCleanUp.End();
             
             if (q.nearestCount == 1u) {
                 var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
@@ -269,12 +274,13 @@ namespace ME.BECS {
             } else {
                 this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
             }
+            marker.End();
             
         }
         
         [INLINE(256)]
         public readonly Ent GetNearestFirst(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default,
-                                            tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreY = default, bool ignoreSorting = false) {
+                                            tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = false) {
             return this.GetNearestFirst(mask, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSpatialSubFilter());
         }
 
@@ -282,10 +288,10 @@ namespace ME.BECS {
         public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
 
             const uint nearestCount = 1u;
-            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
-            var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
             var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
             marker.Begin();
+            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
+            var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
             var visitor = new SpatialNearestAABBVisitor<Ent, T>() {
                 subFilter = subFilter,
                 sector = sector,
@@ -313,19 +319,22 @@ namespace ME.BECS {
                     visitor.Reset();
                 }
             }
-            marker.End();
             
             if (ignoreSorting == false) {
                 var max = math.min(nearestCount, heap.Count);
-                if (max > 0u) return heap[heap.Pop()].data;
+                if (max > 0u) {
+                    marker.End();
+                    return heap[heap.Pop()].data;
+                }
             }
+            marker.End();
 
             return result;
 
         }
 
         [INLINE(256)]
-        public bool Raycast(Ray2D ray, int mask, sfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
+        public bool Raycast(Ray2D ray, int mask, tfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
             var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.SpatialRaycastHitMinNode>(this.treesCount, Constants.ALLOCATOR_TEMP);
@@ -337,7 +346,7 @@ namespace ME.BECS {
                     if (ignoreSorting == true) return true;
                     heap.Push(new NativeTrees.SpatialRaycastHitMinNode() {
                         data = hitResult,
-                        cost = math.distancesq((float2)ray.origin, hitResult.point),
+                        cost = math.distancesq(ray.origin, hitResult.point),
                     });
                 }
             }
@@ -361,6 +370,7 @@ namespace ME.BECS {
             if (nearestCount > 0u) {
 
                 var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
+                marker.Begin();
                 var markerResultsUnsorted = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
                 var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
                 var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
@@ -374,7 +384,6 @@ namespace ME.BECS {
                     ignoreSelf = ignoreSelf,
                     ignore = selfEnt,
                 };
-                marker.Begin();
                 // for each tree
                 while (mask != 0) {
                     int i = math.tzcnt(mask);
@@ -398,8 +407,6 @@ namespace ME.BECS {
                         visitor.Reset();
                     }
                 }
-                marker.End();
-                resultsTemp.Dispose();
 
                 if (ignoreSorting == false) {
                     var max = math.min((uint)nearestCount, heap.Count);
@@ -408,10 +415,12 @@ namespace ME.BECS {
                         results.Add(heap[heap.Pop()].data);
                     }
                 }
+                marker.End();
 
             } else {
                 
                 var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
+                marker.Begin();
                 var markerResultsUnsorted = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
                 var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
                 // select all units
@@ -427,7 +436,6 @@ namespace ME.BECS {
                     ignore = selfEnt,
                 };
                 // for each tree
-                marker.Begin();
                 while (mask != 0) {
                     int i = math.tzcnt(mask);
                     mask &= mask - 1;
@@ -454,8 +462,6 @@ namespace ME.BECS {
                         visitor.Reset();
                     }
                 }
-                marker.End();
-                resultsTemp.Dispose();
 
                 if (ignoreSorting == false) {
                     results.EnsureCapacity(heap.Count);
@@ -463,11 +469,13 @@ namespace ME.BECS {
                         results.Add(heap[heap.Pop()].data);
                     }
                 }
+                marker.End();
 
             }
 
         }
 
+        [WithoutBurst]
         public void OnDrawGizmos(ref SystemContext context) {
             UnityEngine.Gizmos.color = UnityEngine.Color.green;
             for (int i = 0; i < this.treesCount; ++i) {

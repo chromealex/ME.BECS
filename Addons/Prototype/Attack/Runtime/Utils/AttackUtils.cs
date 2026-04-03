@@ -32,7 +32,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static Ent CreateAttackSensor(int targetsMask, Config config, in JobInfo jobInfo) {
 
-            var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
+            var attackSensor = Ent.New<AttackSensorEntityType>(in jobInfo, editorName: "AttackSensor");
             config.Apply(in attackSensor);
             attackSensor.Set<QuadTreeQueryAspect>();
             attackSensor.Set<AttackAspect>();
@@ -69,7 +69,7 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static Ent CreateAttackSensorSpatial(int targetsMask, Config config, in JobInfo jobInfo) {
 
-            var attackSensor = Ent.New(in jobInfo, editorName: "AttackSensor");
+            var attackSensor = Ent.New<AttackSensorEntityType>(in jobInfo, editorName: "AttackSensor");
             config.Apply(in attackSensor);
             attackSensor.Set<SpatialQueryAspect>();
             attackSensor.Set<AttackAspect>();
@@ -194,18 +194,33 @@ namespace ME.BECS.Attack {
             var targetTr = target.GetAspect<TransformAspect>();
             var fromPos = unitTr.GetWorldMatrixPosition();
             var targetNearestPoint = GetNearestPoint(in targetTr, in fromPos);
-            var attackSensor = unit.readComponentRuntime.attackSensor.Read<AttackComponent>();
             var offset = nodeSize;
             var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
             var sightRangeSqr = sightRange * sightRange;
             var dir = targetNearestPoint - fromPos;
             var dirNormalized = math.normalizesafe(dir);
             var distSq = math.lengthsq(dir);
-            var minRangeSq = attackSensor.sector.minRangeSqr;
+            tfloat minRangeSq = tfloat.MaxValue;
+            tfloat rangeSqr = 0;
+            var attackSensors = unit.readComponentRuntime.placements;
+            for (uint i = 0u; i < attackSensors.Count; ++i) {
+                var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var attackSensor = obj.Read<AttackComponent>();
+                if (attackSensor.sector.minRangeSqr < minRangeSq) {
+                    minRangeSq = attackSensor.sector.minRangeSqr;
+                }
+                if (attackSensor.sector.rangeSqr > rangeSqr) {
+                    rangeSqr = attackSensor.sector.rangeSqr;
+                }
+            }
 
-            var targetAttackSensor = target.GetAspect<UnitAspect>().readComponentRuntime.attackSensor;
-            if (targetAttackSensor.IsAlive() == true) {
-                var targetAttack = targetAttackSensor.Read<AttackComponent>();
+            var targetAttackSensors = target.GetAspect<UnitAspect>().readComponentRuntime.placements;
+            for (uint i = 0u; i < targetAttackSensors.Count; ++i) {
+                var targetAttackSensor = targetAttackSensors[i];
+                var obj = targetAttackSensor.Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var targetAttack = obj.Read<AttackComponent>();
                 // if unit can't attack target and he is in target's attack range
                 if (CanAttack(in unit, in target) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
                     var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
@@ -213,18 +228,18 @@ namespace ME.BECS.Attack {
                     return ReactionType.RunAway;
                 }
             }
-            
+
             if (distSq <= minRangeSq) {
                 // if target is too close - get out from target
                 position = unitTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(minRangeSq) + offset);
-            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq > attackSensor.sector.rangeSqr) {            
+            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq > rangeSqr) {            
                 // if our unit is in range [attackRange, sightRange] - find target point
                 // find point on the line
-                var attackRangeSqr = attackSensor.sector.rangeSqr;
+                var attackRangeSqr = rangeSqr;
                 position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
-            } else if (distSq > 0f && ((distSq > sightRangeSqr && distSq <= attackSensor.sector.rangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, target) == false))) {
+            } else if (distSq > 0f && ((distSq > sightRangeSqr && distSq <= rangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, target) == false))) {
                 position = targetNearestPoint - dirNormalized * (math.sqrt(sightRangeSqr) - offset);
-            } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= attackSensor.sector.rangeSqr) {
+            } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= rangeSqr) {
                 // we are in attack range already - try to look at attacker
                 return ReactionType.RotateToTarget;
             } else {
@@ -232,7 +247,7 @@ namespace ME.BECS.Attack {
             }
             
             position = ME.BECS.Pathfinding.GraphUtils.GetNearestNodeByFilter(buildGraphSystem.GetGraphByTypeId(unit.readTypeId), position, new NearestPositionToAttackFilter() {
-                rangeSqr = attackSensor.sector.rangeSqr,
+                rangeSqr = rangeSqr,
                 sourcePos = position,
                 targetPos = targetNearestPoint,
             });
@@ -243,11 +258,18 @@ namespace ME.BECS.Attack {
 
         [INLINE(256)]
         public static bool CanAttack(in UnitAspect unit, in Ent target) {
-            
-            var unitAttackMask = unit.readComponentRuntime.attackSensor.Read<AttackFilterComponent>().layers;
-            var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
-            return unitAttackMask.Contains(targetAttackLayer);
-            
+
+            var attackSensors = unit.readComponentRuntime.placements;
+            for (uint i = 0u; i < attackSensors.Count; ++i) {
+                var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var unitAttackMask = obj.Read<AttackFilterComponent>().layers;
+                var targetAttackLayer = target.Read<UnitBelongsToComponent>().layer;
+                if (unitAttackMask.Contains(targetAttackLayer) == true) return true;
+            }
+
+            return false;
+
         }
 
         [INLINE(256)]
@@ -314,7 +336,7 @@ namespace ME.BECS.Attack {
         private static BulletAspect CreateBullet_INTERNAL(in AttackAspect attackAspect, in float3 position, in quaternion rotation, int targetsMask, in Ent target, in float3 targetPosition, in Config config, in ME.BECS.Views.View muzzleView, uint muzzleLifetimeMs, in JobInfo jobInfo = default) {
             
             if (muzzleView.IsValid == true) {
-                var muzzleEnt = Ent.New(in jobInfo, "MuzzlePoint");
+                var muzzleEnt = Ent.New<AttackMuzzlePointEntityType>(in jobInfo, "MuzzlePoint");
                 var tr = muzzleEnt.GetOrCreateAspect<TransformAspect>();
                 tr.IsStaticLocal = true;
                 tr.position = position;
@@ -324,8 +346,10 @@ namespace ME.BECS.Attack {
             }
 
             {
-                var sourceUnit = attackAspect.ent.GetParent();
-                var ent = Ent.New(in jobInfo, "Bullet");
+                var placement = attackAspect.ent.ReadParent();
+                var placements = placement.ReadParent();
+                var sourceUnit = placements.ReadParent();
+                var ent = Ent.New<BulletEntityType>(in jobInfo, "Bullet");
                 ME.BECS.Players.PlayerUtils.SetOwner(in ent, ME.BECS.Players.PlayerUtils.GetOwner(in sourceUnit));
                 config.Apply(ent);
                 var tr = ent.GetOrCreateAspect<TransformAspect>();
@@ -334,6 +358,7 @@ namespace ME.BECS.Attack {
                 var bullet = ent.GetOrCreateAspect<BulletAspect>();
                 if (bullet.readConfig.autoTarget == true) bullet.component.targetEnt = target;
                 bullet.component.targetWorldPos = target.IsAlive() == true ? ME.BECS.Units.UnitUtils.GetTargetBulletPosition(in sourceUnit, in target) : targetPosition;
+                bullet.component.sourceWorldPos = position;
                 bullet.component.sourceUnit = sourceUnit;
 
                 if (attackAspect.ent.Has<DamageMinOverrideComponent>() == true) {
@@ -439,6 +464,14 @@ namespace ME.BECS.Attack {
                 return true;
             }
             return false;
+        }
+
+        [INLINE(256)]
+        public static Ent GetUnitByAttackAspect(AttackAspect aspect) {
+            var placement = aspect.ent.ReadParent();
+            var placements = placement.ReadParent();
+            var unit = placements.ReadParent();
+            return unit;
         }
 
     }

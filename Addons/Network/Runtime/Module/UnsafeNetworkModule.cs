@@ -553,6 +553,8 @@ namespace ME.BECS.Network {
                     this.rover = 0u;
                 }
 
+                state.ptr->WorldState = WorldState.EndTick;
+
                 removedStateHash = 0;
                 removedStateTick = 0u;
                 var oldStateWasRemoved = false;
@@ -687,9 +689,31 @@ namespace ME.BECS.Network {
                 }
             }
 
+            public void DropResetState() {
+
+                this.Clear();
+
+            }
+
             public void Clear() {
+
+                for (uint i = 0u; i < this.entries.Length; ++i) {
+
+                    ref var entry = ref this.entries[i];
+                    if (entry.state.ptr != null) {
+                        entry.state.ptr->Dispose();
+                        _free(entry.state);
+                    }
+
+                }
                 this.entries.Clear();
                 this.rover = 0u;
+
+                if (this.resetState.ptr != null) {
+                    this.resetState.ptr->Dispose();
+                    _free(ref this.resetState);
+                }
+
             }
 
         }
@@ -884,7 +908,7 @@ namespace ME.BECS.Network {
                     stateProperties = stateProperties,
                     name = "Network World",
                 };
-                this.networkWorld = World.Create(worldProperties, false);
+                this.networkWorld = World.Create(worldProperties, switchContext: false);
                 this.connectedWorld = connectedWorld;
 
                 this.writeBuffer = new StreamBufferWriter(properties.eventsStorageProperties.bufferCapacity);
@@ -921,6 +945,11 @@ namespace ME.BECS.Network {
             [INLINE(256)]
             public void SaveResetState() {
                 this.statesStorage.SaveResetState();
+            }
+
+            [INLINE(256)]
+            public void DropResetState() {
+                this.statesStorage.DropResetState();
             }
 
             [INLINE(256)]
@@ -1102,6 +1131,11 @@ namespace ME.BECS.Network {
         [INLINE(256)]
         public void SaveResetState() {
             this.data.ptr->SaveResetState();
+        }
+
+        [INLINE(256)]
+        public void DropResetState() {
+            this.data.ptr->DropResetState();
         }
 
         [INLINE(256)]
@@ -1438,7 +1472,6 @@ namespace ME.BECS.Network {
                 UnityEngine.Debug.LogException(ex);
                 return false;
             }
-            return true;
         }
 
     }

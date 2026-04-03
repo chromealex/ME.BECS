@@ -782,7 +782,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat range, tfloat? height = null, tfloat? lifetime = null, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
@@ -817,7 +817,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat range, tfloat? height, Sector sector, tfloat? lifetime = null, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, range),
@@ -857,7 +857,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in float3 position, tfloat sizeX, tfloat sizeY, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, sizeX),
@@ -893,7 +893,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in Rect rect, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
             ent.Set(new FogOfWarRevealerComponent() {
                 range = FogOfWarUtils.WorldToFogMapUValue(in props, rect.width),
                 rangeY = FogOfWarUtils.WorldToFogMapUValue(in props, rect.height),
@@ -934,7 +934,7 @@ namespace ME.BECS.FogOfWar {
 
         [INLINE(256)]
         public static Ent CreateObserver(in FogOfWarStaticComponent props, in ME.BECS.Players.PlayerAspect owner, in RectUInt rect, tfloat? height, tfloat? lifetime = null, in JobInfo jobInfo = default) {
-            var ent = Ent.New(in jobInfo, editorName: "FOW Observer");
+            var ent = Ent.New<FowObserverEntityType>(in jobInfo, editorName: "FOW Observer");
             ME.BECS.Players.PlayerUtils.SetOwner(in ent, in owner);
             ent.Set(new FogOfWarRevealerComponent() {
                 range = rect.width,

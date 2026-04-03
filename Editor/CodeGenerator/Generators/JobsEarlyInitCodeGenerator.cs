@@ -84,17 +84,15 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                this.cache.SetKey("JobEntInfo");
-                NewEntInfo entsInfo;
-                if (this.cache.TryGetValue<NewEntInfo>(jobType, out var cachedEntInfo) == false) {
-                    entsInfo = GetJobEntInfo(jobType);
-                    this.cache.Add(jobType, entsInfo);
-                } else {
-                    entsInfo = cachedEntInfo;
-                }
-                if (entsInfo.count > 0 || entsInfo.brCount > 0) {
+                var entsInfo = GetJobEntInfo(jobType, this);
+                if (entsInfo.brCount > 0) {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
-                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = {entsInfo.count}u;");
+                }
+                if (entsInfo.count != null) {
+                    content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount = _makeArray<uint>({entsInfo.count.Length}u, Allocator.Domain);");
+                    for (uint i = 0u; i < entsInfo.count.Length; ++i) {
+                        if (entsInfo.count[i] > 0) content.Add($"JobStaticInfo<{jobTypeFullName}>.inlineCount[{i}u] = {entsInfo.count[i]};");
+                    }
                 }
 
                 var typeInfos = GetJobTypesInfo(jobType);
@@ -547,29 +545,24 @@ namespace ME.BECS.Editor.Jobs {
         
         public struct NewEntInfo {
 
-            public int count;
+            public int[] count;
             public int brCount;
 
         }
         
-        public static NewEntInfo GetJobEntInfo(System.Type jobType) {
-            if (CodeGenerator._jobEntInfoCache.TryGetValue(jobType, out var cached)) {
-                return cached;
-            }
-            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+        public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
+
+            var allTypes = EntityTypeCodeGenerator.GetAllTypes(out var maxId).Where(x => codeGenerator.IsValidTypeForAssembly(x.Item1, true)).ToDictionary(x => x.Item1, x => x.Item2);
+            var groupsCount = maxId + 1u;
+            var result = new NewEntInfo();
+            var anyCount = 0;
+            result.count = new int[groupsCount];
+            result.brCount = 0;
+            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).GetGenericMethodDefinition();
             var root = jobType.GetMethod("Execute");
+            var instructions = root.GetInstructions().ToList();
             var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
-            var instructionsList = CodeGenerator.GetCachedInstructions(root);
-            NewEntInfo result;
-            if (instructionsList == null) {
-                result = new NewEntInfo { count = 0, brCount = 0 };
-                CodeGenerator._jobEntInfoCache[jobType] = result;
-                return result;
-            }
-            var instructions = instructionsList.ToList();
             var brOpen = 0;
-            var count = 0;
-            var brCount = 0;
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if ((inst.OpCode == System.Reflection.Emit.OpCodes.Br ||
@@ -583,8 +576,10 @@ namespace ME.BECS.Editor.Jobs {
                     ++((Instruction)inst.Operand).loopInfo.openCount;
                     ++inst.loopInfo.closeCount;
                 }
+
                 if (inst.Operand is System.Reflection.MethodInfo member) {
-                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                    if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) &&
+                        member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
                             var memberInstructions = CodeGenerator.GetCachedInstructions(member);
                             if (memberInstructions != null) {
@@ -600,25 +595,28 @@ namespace ME.BECS.Editor.Jobs {
                 if (inst.loopInfo.openCount > 0) {
                     brOpen += inst.loopInfo.openCount;
                 }
+
                 if (inst.loopInfo.closeCount > 0) {
                     brOpen -= inst.loopInfo.closeCount;
                 }
+
                 if (inst.Operand is MethodInfo methodInfo) {
-                    if (methodInfo == newEntMethod) {
+                    if (methodInfo.IsGenericMethod == true && methodInfo.GetGenericMethodDefinition() == newEntMethod && allTypes.TryGetValue(methodInfo.GetGenericArguments()[0], out var gId) == true) {
                         if (brOpen > 0) {
-                            ++brCount;
+                            ++result.brCount;
                         } else {
+                            ref var count = ref result.count[gId];
                             ++count;
+                            ++anyCount;
                         }
                     }
                 }
             }
 
-            result = new NewEntInfo() {
-                count = count,
-                brCount = brCount,
-            };
-            CodeGenerator._jobEntInfoCache[jobType] = result;
+            if (anyCount == 0) {
+                result.count = null;
+            }
+
             return result;
         }
 

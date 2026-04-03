@@ -124,9 +124,28 @@ namespace ME.BECS {
             [INLINE(256)]
             public void Add(ushort value) {
 
-                var node = _make(new Node() { data = value });
-                node.ptr->next = this.root;
-                this.root = node;
+                var newNode = _make(new Node() { data = value });
+                if (this.root.ptr == null) {
+                    newNode.ptr->next = default;
+                    this.root = newNode;
+                    ++this.Count;
+                    return;
+                }
+
+                if (value < this.root.ptr->data) {
+                    newNode.ptr->next = this.root;
+                    this.root = newNode;
+                    ++this.Count;
+                    return;
+                }
+
+                var current = this.root;
+                while (current.ptr->next.ptr != null && current.ptr->next.ptr->data < value) {
+                    current = current.ptr->next;
+                }
+
+                newNode.ptr->next = current.ptr->next;
+                current.ptr->next = newNode;
                 ++this.Count;
 
             }
@@ -343,6 +362,13 @@ namespace ME.BECS {
 
     }
 
+    public struct HandleStorage {
+
+        internal static readonly Unity.Burst.SharedStatic<JobHandle> lastApplyHandleBurst = Unity.Burst.SharedStatic<JobHandle>.GetOrCreate<JobHandle>();
+        internal static ref JobHandle lastApplyHandle => ref lastApplyHandleBurst.Data;
+
+    }
+
     public unsafe struct Worlds {
 
         private static readonly Unity.Burst.SharedStatic<ushort> worldsCounterBurst = Unity.Burst.SharedStatic<ushort>.GetOrCreate<Worlds>();
@@ -520,6 +546,15 @@ namespace ME.BECS {
             return dependsOn;
 
         }
+
+        [Unity.Burst.BurstDiscardAttribute]
+        private static void SetWorldName(ref World world, ref Unity.Collections.FixedString64Bytes name) {
+            if (name.IsEmpty == true) {
+                name = $"World #{world.id}";
+            } else {
+                name = $"#{world.id} {name.ToString()}";
+            }
+        }
         
         [INLINE(256)]
         internal static void AddWorld(ref World world, ushort worldId = 0, Unity.Collections.FixedString64Bytes name = default, bool raiseCallback = true) {
@@ -535,11 +570,7 @@ namespace ME.BECS {
             WorldsParent.Resize(world.id);
 
             var srcName = name;
-            if (name.IsEmpty == true) {
-                name = $"World #{world.id}";
-            } else {
-                name = $"#{world.id} {name.ToString()}";
-            }
+            SetWorldName(ref world, ref name);
             
             worldsStorage.Get(worldId) = new WorldHeader() {
                 world = world,

@@ -31,7 +31,7 @@ namespace ME.BECS.Units {
         public tfloat avoidanceWeight;
         public tfloat minSpeedFactor;
 
-        public bool drawGizmos;
+        public bbool drawGizmos;
 
         [BURST]
         public struct Job : IJobForAspects<TransformAspect, UnitAspect, QuadTreeQueryAspect> {

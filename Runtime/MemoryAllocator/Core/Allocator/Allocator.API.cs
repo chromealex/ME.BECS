@@ -46,7 +46,7 @@ namespace ME.BECS {
             var memPtr = this.AllocFromFreeBlocks(size, out ptr);
             if (memPtr.IsValid() == true) {
                 this.lockSpinner.Unlock();
-                LeakDetector.TrackAllocator(ptr);
+                LeakDetector.TrackAllocator(ptr, memPtr);
                 return memPtr;
             }
 
@@ -58,7 +58,7 @@ namespace ME.BECS {
             this.zones[zoneId] = this.CreateZone(size, zoneId);
             memPtr = this.AllocFromFreeBlocks(size, out ptr);
             this.lockSpinner.Unlock();
-            LeakDetector.TrackAllocator(ptr);
+            LeakDetector.TrackAllocator(ptr, memPtr);
             MemoryAllocator.CheckConsistency(ref this);
             return memPtr;
         }
@@ -73,7 +73,7 @@ namespace ME.BECS {
                 return false;
             }
 
-            LeakDetector.FreeAllocator(this.GetPtr(ptr));
+            LeakDetector.FreeAllocator(this.GetPtr(ptr), ptr);
             
             var root = this.zones[ptr.zoneId].ptr->root.ptr;
             
@@ -106,7 +106,7 @@ namespace ME.BECS {
                     header = prevHeader;
                 }
             }
-            
+
             // add to free blocks
             {
                 this.freeBlocks.Add(in this, header, ptr.zoneId);
@@ -124,10 +124,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public MemPtr ReAlloc(MemPtr memPtr, uint size, out safe_ptr ptr) {
-            CheckPtr(in this, memPtr);
             if (memPtr.IsValid() == false) {
                 return this.Alloc(size, out ptr);
             }
+            CheckPtr(in this, memPtr);
             var header = (BlockHeader*)(this.GetPtr(memPtr) - sizeof(BlockHeader));
             this.lockSpinner.Lock();
             if (size <= header->size) {

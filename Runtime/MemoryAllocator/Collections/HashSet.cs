@@ -147,6 +147,7 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Dispose(ref MemoryAllocator allocator) {
             
+            E.IS_CREATED(this);
             this.buckets.Dispose(ref allocator);
             this.slots.Dispose(ref allocator);
             this = default;
@@ -201,6 +202,7 @@ namespace ME.BECS {
         /// <param name="allocator"></param>
         [INLINE(256)]
         public void Clear(ref MemoryAllocator allocator) {
+            E.IS_CREATED(this);
             if (this.lastIndex > 0) {
                 // clear the elements so that the gc can reclaim the references.
                 // clear only up to m_lastIndex for m_slots
@@ -548,6 +550,13 @@ namespace ME.BECS {
         [INLINE(256)]
         public static uint GetHashCode(T item) {
             return (uint)item.GetHashCode();
+        }
+
+        public uint GetReservedSizeInBytes() {
+            var size = 0u;
+            size += this.buckets.GetReservedSizeInBytes();
+            size += this.slots.GetReservedSizeInBytes();
+            return size;
         }
 
     }

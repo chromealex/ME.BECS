@@ -1,0 +1,20 @@
+{
+    "name": "ME.BECS.Perks",
+    "rootNamespace": "",
+    "references": [
+        "ME.BECS",
+        "ME.BECS.Players",
+        "ME.BECS.Transforms",
+        "Unity.Burst",
+        "Unity.Collections"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator {{name}}({{type}} value) => new {{name}}(value);
+        public static explicit operator {{name}}({{type}} value) => new {{name}}(value * PRECISION);
         
         [INLINE(256)]
         public static {{name}} operator *(float value1, {{name}} value2) {

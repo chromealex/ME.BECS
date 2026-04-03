@@ -32,6 +32,16 @@ namespace ME.BECS {
         
         private MemArrayThreadCacheLine<ThreadItem> threadItems;
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.threadItems);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.threadItems);
+        }
+
         [INLINE(256)][NotThreadSafe][IgnoreProfiler]
         public static OneShotTasks Create(safe_ptr<State> state, uint capacity) {
             var tasks = new OneShotTasks() {
@@ -59,7 +69,7 @@ namespace ME.BECS {
         public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
-            var threadIndex = (uint)JobsUtility.ThreadIndex;
+            var threadIndex = JobUtils.ThreadIndex;
             Journal.SetOneShotComponent(in ent, typeId, type);
             ref var threadItem = ref state.ptr->oneShotTasks.threadItems[state, threadIndex];
             var collection = _addressT(ref threadItem.currentTick);
@@ -106,6 +116,7 @@ namespace ME.BECS {
             if (type == OneShotType.NextTick) {
                 collection = _addressT(ref threadItem.nextTick);
             }
+            if (collection.ptr->items.Count == 0u) return;
             collection.ptr->lockIndex.Lock();
             for (uint j = collection.ptr->items.Count; j > 0u; --j) {
 

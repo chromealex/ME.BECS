@@ -39,6 +39,18 @@ namespace ME.BECS {
         private MemArray<T> arr;
         public uint Count;
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.arr);
+            writer.Write(this.Count);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.arr);
+            reader.Read(ref this.Count);
+        }
+
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.arr.IsCreated;
@@ -247,6 +259,7 @@ namespace ME.BECS {
         public unsafe bool RemoveAt(ref MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
+            E.RANGE(index, 0, this.Count);
             if (index >= this.Count) return false;
 
             if (index == this.Count - 1) {
@@ -272,6 +285,7 @@ namespace ME.BECS {
         public bool RemoveAtFast(in MemoryAllocator allocator, uint index) {
             
             E.IS_CREATED(this);
+            E.RANGE(index, 0, this.Count);
             if (index >= this.Count) return false;
             
             --this.Count;

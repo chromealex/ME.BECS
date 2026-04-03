@@ -8,9 +8,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void Initialize(in ViewsTracker.ViewInfo tracker) {
-            if (this.versionByGroup == null) {
-                this.versionByGroup = System.Buffers.ArrayPool<ushort>.Shared.Rent((int)tracker.tracker.Length);
-            }
+            E.IS_ALREADY_INITIALIZED(versionByGroup);
+            this.versionByGroup = System.Buffers.ArrayPool<ushort>.Shared.Rent((int)tracker.tracker.Length);
 
             for (uint i = 0u; i < this.versionByGroup.Length; ++i) {
                 this.versionByGroup[i] = ushort.MaxValue;

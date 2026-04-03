@@ -179,6 +179,10 @@ namespace ME.BECS.Network {
             this.network.SaveResetState();
         }
 
+        public void DropResetState() {
+            this.network.DropResetState();
+        }
+
         public safe_ptr<State> GetResetState() => this.network.GetResetState();
 
         public void RegisterMethod(NetworkMethodDelegate method) {
@@ -261,8 +265,9 @@ namespace ME.BECS.Network {
         /// <param name="patch"></param>
         public void ApplyPatch(in Patch patch) {
             Patch.Apply(in patch, this.network.data.ptr->connectedWorld.state);
+            this.network.data.ptr->connectedWorld.UpdateAfterDeserialization();
         }
-
+        
     }
 
 }

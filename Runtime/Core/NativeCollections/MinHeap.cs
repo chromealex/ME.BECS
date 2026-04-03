@@ -23,7 +23,7 @@ namespace ME.BECS.NativeCollections {
         private Allocator mAllocatorLabel;
 
         private int mHead;
-        private int mLength;
+        private int mBufferLength;
         //private int mMinIndex;
         //private int mMaxIndex;
 
@@ -52,7 +52,7 @@ namespace ME.BECS.NativeCollections {
             //nativeMinHeap.mMinIndex = 0;
             //nativeMinHeap.mMaxIndex = capacity - 1;
             nativeMinHeap.mHead = -1;
-            nativeMinHeap.mLength = 0;
+            nativeMinHeap.mBufferLength = 0;
 
         }
 
@@ -65,10 +65,11 @@ namespace ME.BECS.NativeCollections {
         public void Push(T node) {
 
             if (this.mHead < 0) {
-                this.mHead = this.mLength;
+                this.mHead = this.mBufferLength;
+                node.Next = -1;
             } else if (node.ExpectedCost < this[this.mHead].ExpectedCost) {
                 node.Next = this.mHead;
-                this.mHead = this.mLength;
+                this.mHead = this.mBufferLength;
             } else {
                 var currentPtr = this.mHead;
                 var current = this[currentPtr];
@@ -79,23 +80,19 @@ namespace ME.BECS.NativeCollections {
                 }
 
                 node.Next = current.Next;
-                current.Next = this.mLength;
+                current.Next = this.mBufferLength;
 
-                this.Set(currentPtr, in current);
+                this.mBuffer[currentPtr] = current;
             }
 
-            this.Set(this.mLength, in node);
-            ++this.mLength;
+            this.Set(this.mBufferLength, in node);
+            ++this.mBufferLength;
         }
 
         [INLINE(256)]
         public void Set(int index, in T data) {
             if (index >= this.mCapacity) {
-                this.mCapacity *= 2u;
-                var size = TSize<T>.size * this.mCapacity;
-                var newPtr = _make(size, TAlign<T>.alignInt, this.mAllocatorLabel);
-                _memmove(this.mBuffer, newPtr, TSize<T>.size * this.mLength);
-                this.mBuffer = newPtr;
+                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, this.mCapacity * 2u);
             }
             this.mBuffer[index] = data;
         }
@@ -123,7 +120,7 @@ namespace ME.BECS.NativeCollections {
         [INLINE(256)]
         public void Clear() {
             this.mHead = -1;
-            this.mLength = 0;
+            this.mBufferLength = 0;
         }
 
         public void Dispose() {

@@ -8,11 +8,11 @@ namespace ME.BECS {
 
     public static class WorldInitializers {
 
-        private static scg::List<BaseWorldInitializer> list = new scg::List<BaseWorldInitializer>();
+        private static readonly scg::List<BaseWorldInitializer> list = new scg::List<BaseWorldInitializer>();
 
         public static BaseWorldInitializer GetByWorldName(FixedString64Bytes worldName) {
             foreach (var item in list) {
-                if (item.properties.name == worldName) {
+                if (item != null && item.properties.name == worldName) {
                     return item;
                 }
             }
@@ -107,7 +107,9 @@ namespace ME.BECS {
 
         }
 
-        protected virtual World CreateWorld() => World.Create(this.properties);
+        protected virtual World CreateWorld() => World.Create(this.properties, this.worldId);
+
+        protected virtual ushort worldId => 0;
         
         protected virtual void Awake() {
 

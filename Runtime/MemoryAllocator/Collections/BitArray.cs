@@ -36,6 +36,26 @@ namespace ME.BECS {
         public CachedPtr cachedPtr;
         #endif
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.ptr);
+            writer.Write(this.locks);
+            writer.Write(this.Length);
+            #if USE_CACHE_PTR
+            writer.Write(this.cachedPtr);
+            #endif
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.ptr);
+            reader.Read(ref this.locks);
+            reader.Read(ref this.Length);
+            #if USE_CACHE_PTR
+            reader.Read(ref this.cachedPtr);
+            #endif
+        }
+
         public bool IsCreated => this.ptr.IsValid();
 
         [INLINE(256)]

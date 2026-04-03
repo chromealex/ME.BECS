@@ -31,7 +31,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public static implicit operator uspeed(uint value) => new uspeed(value);
+        public static implicit operator uspeed(uint value) => new uspeed(value * PRECISION);
         
         [INLINE(256)]
         public static uspeed operator *(float value1, uspeed value2) {

@@ -68,8 +68,8 @@ namespace ME.BECS.Extensions.GraphProcessor
             {
                 if (!resetPositionOnPan || didConnect)
                 {
-                    Vector3 p = graphView.contentViewContainer.transform.position;
-                    Vector3 s = graphView.contentViewContainer.transform.scale;
+                    Vector3 p = graphView.contentViewContainer.resolvedStyle.translate;
+                    Vector3 s = graphView.contentViewContainer.resolvedStyle.scale.value;
                     graphView.UpdateViewTransform(p, s);
                 }
             }
@@ -268,7 +268,7 @@ namespace ME.BECS.Extensions.GraphProcessor
 
         private void Pan(TimerState ts)
         {
-            graphView.viewTransform.position -= panDiff;
+            graphView.style.translate = graphView.resolvedStyle.translate - panDiff;
 
             // Workaround to force edge to update when we pan the graph
             edgeCandidate.output = edgeCandidate.output;

@@ -59,6 +59,26 @@ namespace ME.BECS {
         internal int freeList;
         internal uint freeCount;
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.buckets);
+            writer.Write(this.entries);
+            writer.Write(this.count);
+            writer.Write(this.version);
+            writer.Write(this.freeList);
+            writer.Write(this.freeCount);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.buckets);
+            reader.Read(ref this.entries);
+            reader.Read(ref this.count);
+            reader.Read(ref this.version);
+            reader.Read(ref this.freeList);
+            reader.Read(ref this.freeCount);
+        }
+
         public bool isCreated {
             [INLINE(256)]
             get => this.buckets.IsCreated;

@@ -22,6 +22,11 @@ namespace ME.BECS {
     public static unsafe class WorldSerializationExt {
 
         [INLINE(256)]
+        public static void UpdateAfterDeserialization(this World world) {
+            WorldStaticCallbacks.RaiseCallback(ref world);
+        }
+        
+        [INLINE(256)]
         public static byte[] Serialize(this in World world) {
 
             E.IS_CREATED(world);
@@ -37,15 +42,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Serialize(this in State state, ref StreamBufferWriter bufferWriter) {
+        public static void Serialize(this in State state, ref StreamBufferWriter buffer) {
 
             var src = state;
             var copy = state;
             ++copy.allocator.version;
-            copy.allocator.Serialize(ref bufferWriter);
+            copy.allocator.Serialize(ref buffer);
             src.allocator = default;
             // Write all except of allocator pointers
-            bufferWriter.Write(src);
+            src.SerializeHeaders(ref buffer);
 
         }
 
@@ -64,7 +69,7 @@ namespace ME.BECS {
             var copy = state;
             copy.allocator.Deserialize(ref buffer);
             // Read all state
-            buffer.Read(ref state);
+            state.DeserializeHeaders(ref buffer);
             state.allocator = copy.allocator;
             
             return state;
@@ -308,7 +313,7 @@ namespace ME.BECS {
 
     }
 
-    public unsafe struct StreamBufferReader {
+    public unsafe partial struct StreamBufferReader {
 
         private readonly safe_ptr<byte> arr;
         private readonly uint arrSize;
@@ -346,12 +351,10 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public StreamBufferReader(safe_ptr<byte> bytes, uint size) {
-
             this = default;
             this.arr = bytes;
             this.arrSize = size;
             this.position = 0u;
-
         }
 
         [INLINE(256)]
@@ -361,10 +364,8 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void ReadBlittable<T>(ref T value, uint size) where T : unmanaged {
-
             var ptr = this.GetPointerAndMove(size);
             value = *(T*)ptr.ptr;
-
         }
 
         [INLINE(256)]
@@ -372,58 +373,33 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public safe_ptr<byte> GetPointerAndMove(uint size) {
-            
             if (this.position + size > this.arrSize) throw new System.Exception();
-            
             var pos = this.position;
             this.position += size;
             return this.arr + pos;
-            
         }
 
         [INLINE(256)]
         public void Read(ref byte* value, uint length) {
-
             var ptr = this.GetPointerAndMove(length);
             _memcpy(ptr, (safe_ptr)value, length);
-            
         }
 
         [INLINE(256)]
         public void Read<T>(ref T* value, uint length) where T : unmanaged {
-
             var size = TSize<T>.size * length;
             var ptr = this.GetPointerAndMove(size);
             _memcpy(ptr, (safe_ptr)(byte*)value, size);
-            
         }
 
         [INLINE(256)]
         public void Read<T>(ref T value) where T : unmanaged {
-            
             this.ReadBlittable(ref value, TSize<T>.size);
-            
         }
         
-        [INLINE(256)]
-        public void Read(ref int value) {
-            
-            const uint size = 4u;
-            this.ReadBlittable(ref value, size);
-
-        }
-
-        [INLINE(256)]
-        public void Read(ref long value) {
-            
-            const uint size = 8u;
-            this.ReadBlittable(ref value, size);
-            
-        }
-
     }
 
-    public unsafe struct StreamBufferWriter {
+    public unsafe partial struct StreamBufferWriter {
 
         private safe_ptr<byte> arr;
         private uint arrSize;
@@ -481,60 +457,34 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public safe_ptr<byte> GetPointerAndMove(uint size) {
-            
             var pos = this.position;
             this.SetCapacity(this.position + size);
             this.position += size;
             return this.arr + pos;
-            
         }
 
         [INLINE(256)]
         public void WriteBlittable<T>(T value, uint size) where T : unmanaged {
-
             var ptr = this.GetPointerAndMove(size);
             *(T*)ptr.ptr = value;
-
         }
 
         [INLINE(256)]
         public void Write(byte* arrBytes, uint length) {
-
             var ptr = this.GetPointerAndMove(length);
             _memcpy((safe_ptr)arrBytes, ptr, length);
-
         }
 
         [INLINE(256)]
         public void Write<T>(T* arrBytes, uint length) where T : unmanaged {
-
             var size = TSize<T>.size * length;
             var ptr = this.GetPointerAndMove(size);
             _memcpy((safe_ptr)(byte*)arrBytes, ptr, size);
-
         }
 
         [INLINE(256)]
         public void Write<T>(T value) where T : unmanaged {
-            
             this.WriteBlittable(value, TSize<T>.size);
-            
-        }
-
-        [INLINE(256)]
-        public void Write(int value) {
-
-            const uint size = 4u;
-            this.WriteBlittable(value, size);
-
-        }
-
-        [INLINE(256)]
-        public void Write(long value) {
-
-            const uint size = 8u;
-            this.WriteBlittable(value, size);
-
         }
 
         [INLINE(256)]

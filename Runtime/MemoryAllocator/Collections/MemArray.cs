@@ -84,6 +84,26 @@ namespace ME.BECS {
         public CachedPtr cachedPtr;
         #endif
 
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.arrPtr);
+            writer.Write(this.Length);
+            #if USE_CACHE_PTR
+            writer.Write(this.cachedPtr);
+            #endif
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.arrPtr);
+            var length = 0u;
+            reader.Read(ref length);
+            this.Length = length;
+            #if USE_CACHE_PTR
+            reader.Read(ref this.cachedPtr);
+            #endif
+        }
+
     }
 
     [IgnoreProfiler]
@@ -106,6 +126,16 @@ namespace ME.BECS {
         public readonly bool IsCreated {
             [INLINE(256)]
             get => this.data.arrPtr.IsValid();
+        }
+
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            this.data.SerializeHeaders(ref writer);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            this.data.DeserializeHeaders(ref reader);
         }
 
         public MemArray(ref MemoryAllocator allocator, uint length, ClearOptions clearOptions = ClearOptions.ClearMemory) {

@@ -48,9 +48,11 @@ namespace ME.BECS.Views {
             return false;
         }
 
+        private static readonly System.Collections.Generic.Queue<TransformItem> builderCache = new System.Collections.Generic.Queue<TransformItem>();
         public static Ent ConstructEntFromPrefab(UnityEngine.Transform prefab, in Ent parentEnt, in World world) {
-
-            var queue = new System.Collections.Generic.Queue<TransformItem>();
+            
+            builderCache.Clear();
+            var queue = builderCache;
             queue.Enqueue(new TransformItem() {
                 obj = prefab,
                 parent = parentEnt,
@@ -62,12 +64,13 @@ namespace ME.BECS.Views {
                 var obj = item.obj;
                 var parent = item.parent;
                 var ent = Ent.New(world);
+                ent.EditorName = (obj.name.Length > 16 ? obj.name.Substring(0, 16) : obj.name);
                 if (result.IsAlive() == false) result = ent;
                 var tr = ent.GetOrCreateAspect<TransformAspect>();
                 ent.SetParent(parent);
                 tr.Set(obj);
                 if (parent.IsAlive() == true) {
-                    tr.worldMatrix = math.mul((float4x4)obj.localToWorldMatrix, (float4x4)obj.root.localToWorldMatrix.inverse);
+                    tr.worldMatrix = math.mul((float4x4)prefab.localToWorldMatrix.inverse, (float4x4)obj.localToWorldMatrix);
                 } else {
                     tr.worldMatrix = float4x4.identity;
                 }

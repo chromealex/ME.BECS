@@ -33,7 +33,7 @@ namespace ME.BECS.Effects {
 
             if (effect.config.IsValid == false) return default;
             
-            var ent = Ent.New(in jobInfo);
+            var ent = Ent.New<EffectEntityType>(in jobInfo);
             var tr = ent.Set<TransformAspect>();
             tr.IsStaticLocal = true;
             tr.position = position;

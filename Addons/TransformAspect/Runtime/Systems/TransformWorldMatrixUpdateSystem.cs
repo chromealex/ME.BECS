@@ -126,17 +126,21 @@ namespace ME.BECS.Transforms {
             
             var level1 = context.Query(rootsHandle).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel1>().With<ParentComponent>().Without<IsTransformStaticComponent>().Schedule<CalculateLevelJob, TransformAspect>();
             var level1Static = context.Query(rootsHandle).AsParallel().AsUnsafe().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel1>().With<ParentComponent>().With<IsTransformStaticComponent>().Schedule<CalculateLevelStaticJob, TransformAspect>();
-            
             var level1Dep = JobHandle.CombineDependencies(level1, level1Static);
+            
             var level2 = context.Query(level1Dep).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel2>().With<ParentComponent>().Without<IsTransformStaticComponent>().Schedule<CalculateLevelJob, TransformAspect>();
             var level2Static = context.Query(level1Dep).AsParallel().AsUnsafe().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel2>().With<ParentComponent>().With<IsTransformStaticComponent>().Schedule<CalculateLevelStaticJob, TransformAspect>();
-            
             var level2Dep = JobHandle.CombineDependencies(level2, level2Static);
+            
             var level3 = context.Query(level2Dep).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel3>().With<ParentComponent>().Without<IsTransformStaticComponent>().Schedule<CalculateLevelJob, TransformAspect>();
             var level3Static = context.Query(level2Dep).AsParallel().AsUnsafe().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel3>().With<ParentComponent>().With<IsTransformStaticComponent>().Schedule<CalculateLevelStaticJob, TransformAspect>();
-            
             var level3Dep = JobHandle.CombineDependencies(level3, level3Static);
-            var rootsWithChildrenHandle = context.Query(level3Dep).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevelOther>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();
+            
+            var level4 = context.Query(level3Dep).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel4>().With<ParentComponent>().Without<IsTransformStaticComponent>().Schedule<CalculateLevelJob, TransformAspect>();
+            var level4Static = context.Query(level3Dep).AsParallel().AsUnsafe().Without<IsTransformStaticCalculatedComponent>().With<TransformLevel4>().With<ParentComponent>().With<IsTransformStaticComponent>().Schedule<CalculateLevelStaticJob, TransformAspect>();
+            var level4Dep = JobHandle.CombineDependencies(level4, level4Static);
+            
+            var rootsWithChildrenHandle = context.Query(level4Dep).AsParallel().Without<IsTransformStaticCalculatedComponent>().With<TransformLevelOther>().With<ParentComponent>().Schedule<CalculateJob, TransformAspect>();
             // Update children with roots
             context.SetDependency(rootsWithChildrenHandle);
 

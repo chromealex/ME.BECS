@@ -31,7 +31,7 @@ namespace ME.BECS.Tests {
                 ME.BECS.Views.ViewsTypeInfo.RegisterType<ME.BECS.Views.DefaultView>(new ME.BECS.Views.ViewTypeInfo() {
                     flags = (ME.BECS.Views.TypeFlags)0,
                 });
-                var views = ME.BECS.Views.UnsafeViewsModule<EntityView>.Create(ViewsModule.GAMEOBJECT_PROVIDER_ID, ref world, new ME.BECS.Views.EntityViewProvider(), WorldProperties.Default.stateProperties.entitiesCapacity, ME.BECS.Views.ViewsModuleProperties.Default);
+                var views = ME.BECS.Views.UnsafeViewsModule<EntityView>.Create(ViewsModule.GAMEOBJECT_PROVIDER_ID, ref world, new ME.BECS.Views.EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ME.BECS.Views.ViewsModuleProperties.Default);
                 var viewId = views.RegisterViewSource(comp, checkPrefab: false, sceneSource: false);
                 Ent firstEnt;
                 {
@@ -96,7 +96,7 @@ namespace ME.BECS.Tests {
                 ME.BECS.Views.ViewsTypeInfo.RegisterType<ME.BECS.Views.DefaultView>(new ME.BECS.Views.ViewTypeInfo() {
                     flags = (ME.BECS.Views.TypeFlags)0,
                 });
-                var views = ME.BECS.Views.UnsafeViewsModule<EntityView>.Create(ViewsModule.GAMEOBJECT_PROVIDER_ID, ref world, new ME.BECS.Views.EntityViewProvider(), WorldProperties.Default.stateProperties.entitiesCapacity, ME.BECS.Views.ViewsModuleProperties.Default);
+                var views = ME.BECS.Views.UnsafeViewsModule<EntityView>.Create(ViewsModule.GAMEOBJECT_PROVIDER_ID, ref world, new ME.BECS.Views.EntityViewProvider(), WorldProperties.Default.stateProperties.EntitiesCapacity, ME.BECS.Views.ViewsModuleProperties.Default);
                 var viewId = views.RegisterViewSource(comp, checkPrefab: false, sceneSource: false);
                 Ent firstEnt;
                 {
@@ -116,12 +116,14 @@ namespace ME.BECS.Tests {
                         var idx = views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, firstEnt.id];
                         var instanceInfo = views.data.ptr->renderingOnScene[views.data.ptr->viewsWorld.state, idx];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-                        Assert.IsTrue(instance.ent == firstEnt);
+                        Assert.IsTrue(instance.viewData.logicEnt == firstEnt);
                     }
 
                     var newEnt = world.NewEnt();
                     newEnt.Set<ME.BECS.Transforms.TransformAspect>();
                     Assert.IsTrue(ME.BECS.Views.UnsafeViewsModule.AssignView(in newEnt, in firstEnt));
+                    Assert.IsTrue(newEnt.Has<AssignViewComponent>());
+                    Assert.IsFalse(newEnt.Read<AssignViewComponent>().isUsed);
                     Batches.Apply(world);
                     views.Update(dt).Complete();
                     {
@@ -131,12 +133,12 @@ namespace ME.BECS.Tests {
                         Assert.IsTrue(newEnt.Has<ViewComponent>());
                         Assert.IsTrue(newEnt.Has<IsViewRequested>());
                         Assert.IsTrue(newEnt.Has<EntityViewProviderTag>());
-                        Assert.IsFalse(newEnt.Has<AssignViewComponent>());
+                        Assert.IsTrue(newEnt.Read<AssignViewComponent>().isUsed);
                         Assert.IsTrue(views.data.ptr->renderingOnSceneEntToRenderIndex.ContainsKey(views.data.ptr->viewsWorld.state.ptr->allocator, newEnt.id));
                         var idx = views.data.ptr->renderingOnSceneEntToRenderIndex[views.data.ptr->viewsWorld.state.ptr->allocator, newEnt.id];
                         var instanceInfo = views.data.ptr->renderingOnScene[views.data.ptr->viewsWorld.state, idx];
                         var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
-                        Assert.IsTrue(instance.ent == newEnt);
+                        Assert.IsTrue(instance.viewData.logicEnt == newEnt);
                     }
                 }
                 views.Dispose();
@@ -158,7 +160,8 @@ namespace ME.BECS.Tests {
 
         public class TestViewModule : IViewModule, IViewApplyState {
 
-            public void ApplyState(in EntRO ent) {
+            public void ApplyState(in ViewData viewData) {
+                EntRO ent = viewData;
                 var test = ent.Read<TestComponent>();
             }
 

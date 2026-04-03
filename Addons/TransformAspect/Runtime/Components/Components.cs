@@ -123,6 +123,10 @@ namespace ME.BECS.Transforms {
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct TransformLevel3 : IComponent { }
 
+    [EditorComment("Fourth Transform Level")]
+    [ComponentGroup(typeof(TransformComponentGroup))]
+    public struct TransformLevel4 : IComponent { }
+
     [EditorComment("Other Transform Level")]
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct TransformLevelOther : IComponent { }

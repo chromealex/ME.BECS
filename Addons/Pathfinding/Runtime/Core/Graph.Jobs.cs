@@ -38,7 +38,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public unsafe struct BuildSlopeJob : IJob {
+    public struct BuildSlopeJob : IJob {
 
         public Ent graph;
         public World world;
@@ -75,7 +75,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public unsafe struct BuildChunksJob : IJob {
+    public struct BuildChunksJob : IJob {
 
         public Ent graph;
         public World world;
@@ -100,7 +100,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public unsafe struct UpdateChunksJob : IJob {
+    public struct UpdateChunksJob : IJob {
 
         public Ent graph;
         public World world;
@@ -127,7 +127,7 @@ namespace ME.BECS.Pathfinding {
     }
 
     [BURST]
-    public unsafe struct CalculateConnectionsJob : Unity.Jobs.IJobParallelFor {
+    public struct CalculateConnectionsJob : Unity.Jobs.IJobParallelFor {
 
         public World world;
         public Ent graph;
@@ -256,7 +256,7 @@ namespace ME.BECS.Pathfinding {
     }
     
     [BURST]
-    public unsafe struct AddConnectionsJob : IJob {
+    public struct AddConnectionsJob : IJob {
 
         public World world;
         public Ent graph;

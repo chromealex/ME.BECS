@@ -386,7 +386,6 @@ namespace ME.BECS {
         public static unsafe ref T InitAspect(in World world) {
 
             return ref WorldAspectStorage.Initialize<T>(world.id);
-            //return ref world.state.ptr->aspectsStorage.Initialize<T>(world.state);
 
         }
 

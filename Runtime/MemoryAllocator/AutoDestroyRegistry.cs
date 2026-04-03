@@ -5,23 +5,6 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
-
-    [BURST]
-    public static unsafe class AutoDestroyRegistryStatic<T> where T : unmanaged, IComponentDestroy {
-
-        [BURST]
-        [AOT.MonoPInvokeCallback(typeof(AutoDestroyRegistry.DestroyDelegate))]
-        public static void Destroy(in Ent ent, byte* comp) {
-
-            if (comp == null) {
-                default(T).Destroy(in ent);
-            } else {
-                _ref((T*)comp).Destroy(in ent);
-            }
-
-        }
-
-    }
     
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE
@@ -34,8 +17,22 @@ namespace ME.BECS {
         public delegate void DestroyDelegate(in Ent ent, byte* comp);
 
         private MemArray<List<uint>> list;
-        private MemArray<LockSpinner> readWriteSpinnerPerEntity;
         private ReadWriteSpinner readWriteSpinner;
+        private MemArray<LockSpinner> readWriteSpinnerPerEntity;
+
+        [INLINE(256)]
+        public void SerializeHeaders(ref StreamBufferWriter writer) {
+            writer.Write(this.list);
+            writer.Write(this.readWriteSpinner);
+            writer.Write(this.readWriteSpinnerPerEntity);
+        }
+
+        [INLINE(256)]
+        public void DeserializeHeaders(ref StreamBufferReader reader) {
+            reader.Read(ref this.list);
+            reader.Read(ref this.readWriteSpinner);
+            reader.Read(ref this.readWriteSpinnerPerEntity);
+        }
 
         [INLINE(256)]
         public static AutoDestroyRegistry Create(safe_ptr<State> state, uint capacity) {
@@ -74,7 +71,7 @@ namespace ME.BECS {
                         byte* comp = null;
                         var exists = true;
                         if (StaticTypes.sizes.Get(typeId) > 0) {
-                            comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);;
+                            comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);
                         } else {
                             exists = Components.HasUnknownType(state, typeId, ent.id, ent.gen, false);
                         }

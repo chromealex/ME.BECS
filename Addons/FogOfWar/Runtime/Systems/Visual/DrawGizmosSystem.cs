@@ -16,7 +16,7 @@ namespace ME.BECS.FogOfWar {
     [BURST]
     public struct DrawGizmosSystem : IDrawGizmos {
 
-        public bool drawGizmos;
+        public bbool drawGizmos;
         
         public void OnDrawGizmos(ref SystemContext context) {
 

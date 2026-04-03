@@ -1,7 +1,6 @@
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
 using Bounds = ME.BECS.FixedPoint.AABB;
-
 using System;
 
 namespace ME.BECS.FixedPoint {
@@ -66,9 +65,11 @@ namespace ME.BECS.FixedPoint {
             return true;
         }
 
-        public bool Intersects(in AABB bounds) => this.Contains(bounds);
+        public bool Intersects(in AABB bounds) {
+            return this.min.x <= bounds.max.x && this.max.x >= bounds.min.x && this.min.y <= bounds.max.y && this.max.y >= bounds.min.y && this.min.z <= bounds.max.z && this.max.z >= bounds.min.z;
+        }
 
-        public bool Contains(AABB b) {
+        public bool Contains(in AABB b) {
             return this.Contains(b.center + new float3(-b.extents.x, -b.extents.y, -b.extents.z))
                    && this.Contains(b.center + new float3(-b.extents.x, -b.extents.y, b.extents.z))
                    && this.Contains(b.center + new float3(-b.extents.x, b.extents.y, -b.extents.z))

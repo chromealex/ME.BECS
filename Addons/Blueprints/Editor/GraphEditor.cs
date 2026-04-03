@@ -231,11 +231,11 @@ namespace ME.BECS.Blueprints.Editor {
 
             if (this.graphView == null) return;
             if (forced == false &&
-                this.prevScale == this.graphView.viewTransform.scale &&
-                this.prevPos == this.graphView.viewTransform.position) return;
+                this.prevScale == this.graphView.resolvedStyle.scale &&
+                this.prevPos == this.graphView.resolvedStyle.translate) return;
 
-            this.prevScale = this.graphView.viewTransform.scale;
-            this.prevPos = this.graphView.viewTransform.position;
+            this.prevScale = this.graphView.resolvedStyle.scale.value;
+            this.prevPos = this.graphView.resolvedStyle.translate;
             
             if (this.graphView != null) {
                 if (contextMenu == null) contextMenu = new ContextualMenuManipulator(this.graphView.BuildContextualMenu);
@@ -254,7 +254,7 @@ namespace ME.BECS.Blueprints.Editor {
 
         private void OnScaleChanged() {
             
-            var scaleX = this.graphView.viewTransform.scale.x;
+            var scaleX = this.graphView.resolvedStyle.scale.value.x;
             var op = Mathf.Lerp(0f, maxOpacity, Mathf.Clamp01(scaleX - 0.25f) * 2f);
             this.background.opacity = op;
 
