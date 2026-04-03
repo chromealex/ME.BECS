@@ -209,6 +209,7 @@ namespace ME.BECS.Attack {
 
             } else {
 
+                if (this.target.IsAlive() == false) return false;
                 var target = this.target.GetAspect<TransformAspect>();
                 if (IsTargetInSector(in tr, in target, in sector) == true) return true;
                 
