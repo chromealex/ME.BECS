@@ -81,7 +81,18 @@ namespace ME.BECS {
             WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Get(StaticTypes<T>.typeId) = BurstCompiler.CompileFunctionPointer(callback);
 
         }
-        
+
+        public static void RegisterAutoDestroyCallback<T>(AutoDestroyRegistry.DestroyDelegate callback) where T : unmanaged, IComponentDestroy {
+
+            var typeId = StaticTypes<T>.typeId;
+            StaticTypesDestroyRegistry.registry.Data.Resize(typeId + 1);
+            StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer<AutoDestroyRegistry.DestroyDelegate>(callback).Value;
+            StaticTypesAutoDestroy<T>.registry.Data = true;
+            StaticTypesAutoDestroy.registry.Data.Resize(typeId + 1);
+            StaticTypesAutoDestroy.registry.Data.Get(typeId) = true;
+
+        }
+
         public static unsafe void RaiseConfigComponentCallback<T>(in UnsafeEntityConfig config, void* component, in Ent ent) where T : unmanaged, IComponentBase {
 
             if (WorldStaticConfigComponentCallbacksTypes.callbacks.Data.Length == 0u) return;

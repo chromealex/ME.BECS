@@ -240,23 +240,6 @@ namespace ME.BECS {
     }
 
     [IgnoreProfiler]
-    public struct StaticTypesDestroy<T> where T : unmanaged, IComponentDestroy {
-
-        [INLINE(256)]
-        public static unsafe void RegisterAutoDestroy(bool isTag) {
-
-            var typeId = StaticTypes<T>.typeId;
-            StaticTypesDestroyRegistry.registry.Data.Resize(typeId + 1);
-            StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer<AutoDestroyRegistry.DestroyDelegate>(AutoDestroyRegistryStatic<T>.Destroy).Value;
-            StaticTypesAutoDestroy<T>.registry.Data = true;
-            StaticTypesAutoDestroy.registry.Data.Resize(typeId + 1);
-            StaticTypesAutoDestroy.registry.Data.Get(typeId) = true;
-
-        }
-
-    }
-
-    [IgnoreProfiler]
     public struct StaticTypesNames<T> {
 
         public static readonly Unity.Burst.SharedStatic<Unity.Collections.FixedString512Bytes> name = Unity.Burst.SharedStatic<Unity.Collections.FixedString512Bytes>.GetOrCreate<StaticTypesNames<T>>();

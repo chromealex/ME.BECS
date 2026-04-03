@@ -5,23 +5,6 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
-
-    [BURST]
-    public static unsafe class AutoDestroyRegistryStatic<T> where T : unmanaged, IComponentDestroy {
-
-        [BURST]
-        [AOT.MonoPInvokeCallback(typeof(AutoDestroyRegistry.DestroyDelegate))]
-        public static void Destroy(in Ent ent, byte* comp) {
-
-            if (comp == null) {
-                default(T).Destroy(in ent);
-            } else {
-                _ref((T*)comp).Destroy(in ent);
-            }
-
-        }
-
-    }
     
     [IgnoreProfiler]
     #if !BECS_IL2CPP_OPTIONS_DISABLE

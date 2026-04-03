@@ -672,26 +672,6 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>().OrderBy(x => x.FullName).ToArray();
-                    foreach (var component in allComponents) {
-
-                        if (component.IsValueType == false) continue;
-
-                        var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
-                        if (editorAssembly == false && info.isEditor == true) continue;
-
-                        var isTagType = IsTagType(component);
-                        var isTag = isTagType.ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
-                        var str = $"StaticTypesDestroy<{type}>.RegisterAutoDestroy(isTag: {isTag});";
-                        typesContent.Add(str);
-                        componentTypes.Add(component);
-                        aotContent.Add($"AutoDestroyRegistryStatic<{type}>.Destroy(default, null);");
-
-                    }
-                }
-                {
                     var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentShared>().OrderBy(x => x.FullName).ToArray();
                     foreach (var component in allComponents) {
 
