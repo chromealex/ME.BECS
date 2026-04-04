@@ -197,7 +197,7 @@ namespace ME.BECS.Views {
 
         [INLINE(256)]
         public IView GetViewByEntity(safe_ptr<ViewsModuleData> data, in Ent entity) {
-            if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(data.ptr->viewsWorld.state.ptr->allocator, entity.id, out var index) == true) &&
+            if (data.ptr->renderingOnSceneEntToRenderIndex.TryGetValue(data.ptr->viewsWorld.state.ptr->allocator, entity.id, out var index) == true &&
                 index < data.ptr->renderingOnScene.Count) {
                 var info = data.ptr->renderingOnScene[data.ptr->viewsWorld.state.ptr->allocator, index];
                 return (IView)System.Runtime.InteropServices.GCHandle.FromIntPtr(info.obj).Target;
