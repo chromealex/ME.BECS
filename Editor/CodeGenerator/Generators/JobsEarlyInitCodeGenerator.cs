@@ -36,7 +36,7 @@ namespace ME.BECS.Editor.Jobs {
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
 
             this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
-            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            var jobsComponents = CodeGenerator.GetCachedTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
 
@@ -56,10 +56,10 @@ namespace ME.BECS.Editor.Jobs {
                     throw new System.Exception($"[ CodeGenerator ] Generic jobs are not supported (job type {jobType.FullName}). Use generic systems instead.");
                 }
 
-                var jobTypeFullName = EditorUtils.GetTypeName(jobType);
+                var jobTypeFullName = EditorUtils.GetJobTypeName(jobType);
                 var components = new System.Collections.Generic.List<string>();
                 var componentsTypes = new System.Collections.Generic.List<System.Type>();
-                var jobInterfaces = jobType.GetInterfaces();
+                var jobInterfaces = CodeGenerator.GetCachedInterfaces(jobType);
                 System.Type workInterface = null;
                 foreach (var i in jobInterfaces) {
                     if (i.IsGenericType == true) {
@@ -67,8 +67,12 @@ namespace ME.BECS.Editor.Jobs {
                             if (typeof(T0).IsAssignableFrom(type) == true ||
                                 typeof(T1).IsAssignableFrom(type) == true) {
                                 if (this.IsValidTypeForAssembly(type) == false) continue;
+                                if (type.IsGenericTypeDefinition) continue;
                                 components.Add(EditorUtils.GetDataTypeName(type));
                                 componentsTypes.Add(type);
+                                if (this.references != null) {
+                                    this.references.Add(type);
+                                }
                             }
                         }
 
@@ -92,6 +96,23 @@ namespace ME.BECS.Editor.Jobs {
                 }
 
                 var typeInfos = GetJobTypesInfo(jobType);
+                var allComponents = new System.Collections.Generic.HashSet<System.Type>();
+                foreach (var item in typeInfos) {
+                    if (typeof(IComponent).IsAssignableFrom(item.type) == false) continue;
+                    if (item.type.IsGenericTypeDefinition) continue;
+                    if (this.IsValidTypeForAssembly(item.type) == false) continue;
+                    allComponents.Add(item.type);
+                }
+                foreach (var componentType in componentsTypes) {
+                    if (typeof(IComponent).IsAssignableFrom(componentType) == false) continue;
+                    if (componentType.IsGenericTypeDefinition) continue;
+                    allComponents.Add(componentType);
+                }
+                if (this.references != null) {
+                    foreach (var componentType in allComponents) {
+                        this.references.Add(componentType);
+                    }
+                }
                 var maxStructSize = 0u;
                 foreach (var item in typeInfos) {
                     if (typeof(IComponent).IsAssignableFrom(item.type) == false) continue;
@@ -101,7 +122,14 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
                 
-                var weightsInfo = GetJobWeightsInfo(jobType);
+                this.cache.SetKey("JobWeightsInfo");
+                WeightsInfo weightsInfo;
+                if (this.cache.TryGetValue<WeightsInfo>(jobType, out var cachedWeightsInfo) == false) {
+                    weightsInfo = GetJobWeightsInfo(jobType);
+                    this.cache.Add(jobType, weightsInfo);
+                } else {
+                    weightsInfo = cachedWeightsInfo;
+                }
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.opsWeight = {weightsInfo.weight}u;");
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
 
@@ -220,7 +248,7 @@ namespace ME.BECS.Editor.Jobs {
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             this.cache.SetKey(typeof(TJobBase).Name);
-            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            var jobsComponents = CodeGenerator.GetCachedTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
                 if (jobType.IsValueType == false) continue;
@@ -246,26 +274,30 @@ namespace ME.BECS.Editor.Jobs {
                 var tempStructBuilder = new System.Text.StringBuilder();
                 var tempStructUnsafeBuilder = new System.Text.StringBuilder();
                 
-                var jobTypeFullName = EditorUtils.GetTypeName(jobType);
+                var jobTypeFullName = EditorUtils.GetJobTypeName(jobType);
                 var aspects = new System.Collections.Generic.List<string>();
                 var components = new System.Collections.Generic.List<string>();
-                //var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
-                //var componentsType = new System.Collections.Generic.HashSet<System.Type>();
-                var interfaces = jobType.GetInterfaces();
+                var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
+                var componentsType = new System.Collections.Generic.HashSet<System.Type>();
+                var interfaces = CodeGenerator.GetCachedInterfaces(jobType);
                 System.Type workInterface = null;
                 foreach (var i in interfaces) {
                     if (i.IsGenericType == true) {
                         foreach (var type in i.GenericTypeArguments) {
                             if (typeof(T0).IsAssignableFrom(type) == true) {
                                 if (this.IsValidTypeForAssembly(type) == false) continue;
+                                if (type.IsGenericTypeDefinition) continue;
                                 components.Add(EditorUtils.GetDataTypeName(type));
-                                //componentsType.Add(type);
+                                componentsType.Add(type);
+                                this.references.Add(type);
                             }
 
                             if (typeof(T1).IsAssignableFrom(type) == true) {
                                 if (this.IsValidTypeForAssembly(type) == false) continue;
+                                if (type.IsGenericTypeDefinition) continue;
                                 aspects.Add(EditorUtils.GetDataTypeName(type));
-                                //aspectsType.Add(type);
+                                aspectsType.Add(type);
+                                this.references.Add(type);
                             }
                         }
 
@@ -339,7 +371,12 @@ namespace ME.BECS.Editor.Jobs {
                         var i = 0u;
                         var uniqueTypesSorted = uniqueTypes.ToList().OrderBy(x => x.type.FullName);
                         foreach (var typeInfo in uniqueTypesSorted) {
-                            var type = EditorUtils.GetDataTypeName(typeInfo.type);
+                            var componentType = typeInfo.type;
+                            if (componentType.IsGenericTypeDefinition) continue;
+                            if (typeof(IComponent).IsAssignableFrom(componentType) == false) continue;
+                            if (this.IsValidTypeForAssembly(componentType) == false) continue;
+                            this.references.Add(componentType);
+                            var type = EditorUtils.GetDataTypeName(componentType);
                             var RWRO = string.Empty;
                             if (typeInfo.op == RefOp.ReadOnly) RWRO = "RO";
                             if (typeInfo.op == RefOp.WriteOnly) RWRO = "WO";
@@ -429,7 +466,8 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
-                var instructions = body.GetInstructions();
+                var instructions = CodeGenerator.GetCachedInstructions(body);
+                if (instructions == null) continue;
                 foreach (var inst in instructions) {
                     var continueTraverse = true;
                     if (onInstruction?.Invoke(inst) == true) continue;
@@ -543,7 +581,10 @@ namespace ME.BECS.Editor.Jobs {
                     if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) &&
                         member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
-                            instructions.InsertRange(i + 1, member.GetInstructions());
+                            var memberInstructions = CodeGenerator.GetCachedInstructions(member);
+                            if (memberInstructions != null) {
+                                instructions.InsertRange(i + 1, memberInstructions);
+                            }
                         }
                     }
                 }
@@ -593,6 +634,9 @@ namespace ME.BECS.Editor.Jobs {
         }
         
         public static WeightsInfo GetJobWeightsInfo(System.Type jobType) {
+            if (CodeGenerator._jobWeightsInfoCache.TryGetValue(jobType, out var cached)) {
+                return cached;
+            }
             var config = new System.Collections.Generic.List<MethodWeightInfo>();
             config.Add(new MethodWeightInfo() {
                 methods = new [] { typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public) },
@@ -624,20 +668,30 @@ namespace ME.BECS.Editor.Jobs {
             });
             var root = jobType.GetMethod("Execute");
             var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
-            var instructions = root.GetInstructions().ToList();
+            var instructionsList = CodeGenerator.GetCachedInstructions(root);
+            WeightsInfo weightsResult;
+            if (instructionsList == null) {
+                weightsResult = new WeightsInfo { weight = 0 };
+                CodeGenerator._jobWeightsInfoCache[jobType] = weightsResult;
+                return weightsResult;
+            }
+            var instructions = instructionsList.ToList();
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
                     if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
-                            instructions.InsertRange(i + 1, member.GetInstructions());
+                            var memberInstructions = CodeGenerator.GetCachedInstructions(member);
+                            if (memberInstructions != null) {
+                                instructions.InsertRange(i + 1, memberInstructions);
+                            }
                         }
                     }
                 }
             }
 
-            var weight = (uint)jobType.GetInterfaces().Sum(x => x.GenericTypeArguments.Length);
+            var weight = (uint)CodeGenerator.GetCachedInterfaces(jobType).Sum(x => x.GenericTypeArguments.Length);
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if (inst.Operand is MethodInfo methodInfo) {
@@ -653,9 +707,11 @@ namespace ME.BECS.Editor.Jobs {
                 }
             }
 
-            return new WeightsInfo() {
+            weightsResult = new WeightsInfo() {
                 weight = weight,
             };
+            CodeGenerator._jobWeightsInfoCache[jobType] = weightsResult;
+            return weightsResult;
         }
         
         public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Predicate<Instruction> onInstruction = null) {
@@ -688,15 +744,9 @@ namespace ME.BECS.Editor.Jobs {
             }
         }
 
-        private void GenerateJobsDebug(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-            dataList.Add("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
-            dataList.Add("DebugJobs.InitializeJobsDebug();");
-            dataList.Add("#endif");
-        }
-        
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
-
-            this.GenerateJobsDebug(dataList, references);
+            this.references = references;
+            GenerateJobsDebug(dataList, references);
             this.Generate<IJobForComponentsBase, TNull, TNull>(dataList, "DoComponents");
             this.Generate<IJobParallelForComponentsBase, IComponentBase, TNull>(dataList, "DoParallelForComponents");
             this.Generate<IJobForComponentsBase, IComponentBase, TNull>(dataList, "DoComponents");
@@ -704,9 +754,13 @@ namespace ME.BECS.Editor.Jobs {
             this.Generate<IJobForAspectsBase, IAspect, TNull>(dataList, "DoAspect");
             this.Generate<IJobForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoAspectsComponents");
             this.Generate<IJobParallelForAspectsComponentsBase, IAspect, IComponentBase>(dataList, "DoParallelForAspectsComponents");
-            
         }
 
+        private static void GenerateJobsDebug(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
+            dataList.Add("#if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS");
+            dataList.Add("DebugJobs.InitializeJobsDebug();");
+            dataList.Add("#endif");
+        }
     }
 
 }
