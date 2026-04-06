@@ -70,6 +70,7 @@ namespace ME.BECS.Bullets {
             rotation = quaternion.identity,
         };
 
+        public uint id;
         public float3 position;
         public quaternion rotation;
 
