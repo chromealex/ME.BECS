@@ -278,7 +278,7 @@ namespace ME.BECS {
         public uint Capacity => this.generations.Length;
         public uint EntitiesCount => this.aliveCount;
         public uint FreeCount => this.freeCount;
-        public int Hash => Utils.Hash(this.FreeCount, this.EntitiesCount);
+        public int Hash => Utils.Hash(this.FreeCount, this.EntitiesCount, this.nextGroupId);
 
         public uint GetEntitiesCount<T>(World world) where T : unmanaged, IEntityType {
             return this.groupByEntityType[world.state, EntityTypes<T>.id].Count(world);

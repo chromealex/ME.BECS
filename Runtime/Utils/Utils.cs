@@ -15,6 +15,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static int Hash(uint v1, uint v2, uint v3) {
+            int hash = 23;
+            hash = hash * 31 + v1.GetHashCode();
+            hash = hash * 31 + v2.GetHashCode();
+            hash = hash * 31 + v3.GetHashCode();
+            return hash;
+        }
+
+        [INLINE(256)]
         public static int Hash(uint v1) {
             int hash = 23;
             hash = hash * 31 + v1.GetHashCode();

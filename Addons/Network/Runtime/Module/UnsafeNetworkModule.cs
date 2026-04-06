@@ -598,6 +598,18 @@ namespace ME.BECS.Network {
                         data = data,
                         tempData = tempData,
                     }.Schedule(count, 4, dependsOn);
+                    #if LOGS_NETWORK_SYNC_LOG
+                    dependsOn.Complete();
+                    var logBuilder = new System.Text.StringBuilder();
+                    logBuilder.Append("TICK: ");
+                    logBuilder.Append(tick);
+                    logBuilder.Append('\n');
+                    for (uint i = 0u; i < world.state.ptr->entities.versions.Length; ++i) {
+                        logBuilder.Append(new Ent(i, world).ToString());
+                        logBuilder.Append('\n');
+                    }
+                    System.IO.File.AppendAllText("Network.temp.bytes", logBuilder.ToString());
+                    #endif
                     world.AddEndTickHandle(tempData.Dispose(dependsOn));
                     JobUtils.RunScheduled();
 
