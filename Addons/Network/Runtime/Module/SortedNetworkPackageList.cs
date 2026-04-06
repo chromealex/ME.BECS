@@ -137,15 +137,17 @@ namespace ME.BECS.Network {
         }
 
         [INLINE(256)]
-        public void Add(ref MemoryAllocator allocator, NetworkPackage value) {
+        public bool Add(ref MemoryAllocator allocator, NetworkPackage value) {
 
             E.IS_CREATED(this);
             var i = BinarySearch(in allocator, this.arr, 0, (int)this.Count, value);
             if (i >= 0) {
-                throw new System.Exception("Item already exists");
+                Logger.Network.Warning("Item already exists");
+                return false;
             }
 
             this.Insert(ref allocator, ~i, value);
+            return true;
 
         }
 

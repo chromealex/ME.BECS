@@ -417,15 +417,13 @@ namespace ME.BECS.Network {
                 
             }
 
-            public void Add(NetworkPackage package, ulong currentTick, bool throwIfExist = true) {
+            public bool Add(NetworkPackage package, ulong currentTick) {
 
                 ref var list = ref this.eventsByTick.GetValue(package.tick);
                 if (list.IsCreated == false) list = new SortedNetworkPackageList(ref this.state.ptr->allocator, this.properties.capacityPerTick);
-                try {
-                    list.Add(ref this.state.ptr->allocator, package);
-                } catch {
-                    if (throwIfExist == true) throw;
-                    return;
+                if (list.Add(ref this.state.ptr->allocator, package) == false) {
+                    package.Dispose();
+                    return false;
                 }
                 
                 Logger.Network.Log($"Added package (now: {currentTick}): {package}");
@@ -434,6 +432,8 @@ namespace ME.BECS.Network {
                     // Update the oldest tick to rollback in the future
                     this.oldestTick = package.tick;
                 }
+
+                return true;
 
             }
 
@@ -1439,51 +1439,41 @@ namespace ME.BECS.Network {
 
         }
 
-        public bool DeserializeAllEvents(ref StreamBufferReader reader, bool updateServerTime = true, bool cleanOld = false, bool throwIfExist = true, bool throwFurther = true) {
+        public bool DeserializeAllEvents(ref StreamBufferReader reader, bool updateServerTime = true, bool cleanOld = false) {
 
-            try {
-                uint count = 0u;
-                ulong startTick = 0UL;
-                reader.Read(ref startTick);
-                reader.Read(ref count);
-                var events = new Unity.Collections.NativeList<NetworkPackage>(Constants.ALLOCATOR_TEMP);
-                for (uint i = 0u; i < count; ++i) {
-                    var package = NetworkPackage.Create(ref reader);
-                    events.Add(package);
-                }
-                this.RewindTo(startTick);
-
-                if (cleanOld == true) {
-                    this.data.ptr->eventsStorage.Clear();
-                    this.data.ptr->statesStorage.Clear();
-                }
-
-                foreach (var package in events) {
-                    this.data.ptr->eventsStorage.Add(package, package.tick, throwIfExist: throwIfExist);
-                }
-
-                if (updateServerTime == true) {
-                    this.SetServerStartTime(startTick * this.properties.tickTime, in this.data.ptr->connectedWorld);
-                    this.SetServerTime(startTick * this.properties.tickTime);
-                }
-
-            } catch (System.Exception ex) {
-                if (throwFurther == true) throw;
-                UnityEngine.Debug.LogException(ex);
-                return false;
+            uint count = 0u;
+            ulong startTick = 0UL;
+            reader.Read(ref startTick);
+            reader.Read(ref count);
+            var events = new Unity.Collections.NativeList<NetworkPackage>(Constants.ALLOCATOR_TEMP);
+            for (uint i = 0u; i < count; ++i) {
+                var package = NetworkPackage.Create(ref reader);
+                events.Add(package);
             }
-            return true;
+            this.RewindTo(startTick);
+
+            if (cleanOld == true) {
+                this.data.ptr->eventsStorage.Clear();
+                this.data.ptr->statesStorage.Clear();
+            }
+
+            var result = false;
+            foreach (var package in events) {
+                result |= this.data.ptr->eventsStorage.Add(package, package.tick);
+            }
+
+            if (updateServerTime == true) {
+                this.SetServerStartTime(startTick * this.properties.tickTime, in this.data.ptr->connectedWorld);
+                this.SetServerTime(startTick * this.properties.tickTime);
+            }
+
+            return result;
 
         }
 
-        public bool DeserializeAllEvents(byte[] bytes, bool updateServerTime = true, bool cleanOld = false, bool throwIfExist = true) {
-            try {
-                var reader = new StreamBufferReader(bytes);
-                return this.DeserializeAllEvents(ref reader, updateServerTime, cleanOld, throwIfExist, throwFurther: true);
-            } catch (System.Exception ex) {
-                UnityEngine.Debug.LogException(ex);
-                return false;
-            }
+        public bool DeserializeAllEvents(byte[] bytes, bool updateServerTime = true, bool cleanOld = false) {
+            var reader = new StreamBufferReader(bytes);
+            return this.DeserializeAllEvents(ref reader, updateServerTime, cleanOld);
         }
 
     }
