@@ -108,12 +108,12 @@ namespace ME.BECS.Bullets {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().AsParallel().WithAspect<QuadTreeQueryAspect>().Without<TargetReachedComponent>().Without<IsBulletCustomFlyComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
+            var dependsOn = context.Query().AsUnsafe().AsParallel().WithAspect<QuadTreeQueryAspect>().Without<TargetReachedComponent>().Without<IsBulletCustomFlyComponent>().Schedule<FlyJob, BulletAspect, TransformAspect>(new FlyJob() {
                 continuousTargetCheck = this.continuousTargetCheck,
                 qt = context.world.GetSystem<QuadTreeInsertSystem>(),
                 dt = context.deltaTime,
             });
-            var dependsOnSpatial = context.Query().AsParallel().WithAspect<SpatialQueryAspect>().Without<TargetReachedComponent>().Without<IsBulletCustomFlyComponent>().Schedule<FlySpatialJob, BulletAspect, TransformAspect>(new FlySpatialJob() {
+            var dependsOnSpatial = context.Query().AsUnsafe().AsParallel().WithAspect<SpatialQueryAspect>().Without<TargetReachedComponent>().Without<IsBulletCustomFlyComponent>().Schedule<FlySpatialJob, BulletAspect, TransformAspect>(new FlySpatialJob() {
                 continuousTargetCheck = this.continuousTargetCheck,
                 qt = context.world.GetSystem<SpatialInsertSystem>(),
                 dt = context.deltaTime,

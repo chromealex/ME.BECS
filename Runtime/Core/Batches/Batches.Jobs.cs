@@ -47,10 +47,12 @@ namespace ME.BECS {
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         public static readonly Unity.Burst.SharedStatic<AtomicSafetyHandle> safetyHandler = Unity.Burst.SharedStatic<AtomicSafetyHandle>.GetOrCreate<StartParallelJob>();
 
+        #pragma warning disable 0649
         private AtomicSafetyHandle m_Safety;
         private int m_Length;
         private int m_MinIndex;
         private int m_MaxIndex;
+        #pragma warning restore 0649
         #endif
         
         [NativeDisableUnsafePtrRestriction]
@@ -85,10 +87,12 @@ namespace ME.BECS {
         #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
         public static readonly Unity.Burst.SharedStatic<AtomicSafetyHandle> safetyHandler = Unity.Burst.SharedStatic<AtomicSafetyHandle>.GetOrCreate<StartParallelJob>();
 
+        #pragma warning disable 0649
         private AtomicSafetyHandle m_Safety;
         private int m_Length;
         private int m_MinIndex;
         private int m_MaxIndex;
+        #pragma warning restore 0649
         #endif
         
         [NativeDisableUnsafePtrRestriction]

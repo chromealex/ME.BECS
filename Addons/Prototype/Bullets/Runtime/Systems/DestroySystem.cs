@@ -143,9 +143,9 @@ namespace ME.BECS.Bullets {
 
         public void OnUpdate(ref SystemContext context) {
 
-            var dependsOn = context.Query().With<TargetReachedComponent>().Schedule<DestroyJob, BulletAspect, QuadTreeQueryAspect, TransformAspect>();
-            var dependsOn3D = context.Query().With<TargetReachedComponent>().Schedule<Destroy3DJob, BulletAspect, OctreeQueryAspect, TransformAspect>();
-            var spatial = context.Query().With<TargetReachedComponent>().Schedule<DestroySpatialJob, BulletAspect, SpatialQueryAspect, TransformAspect>();
+            var dependsOn = context.Query().AsUnsafe().With<TargetReachedComponent>().Schedule<DestroyJob, BulletAspect, QuadTreeQueryAspect, TransformAspect>();
+            var dependsOn3D = context.Query().AsUnsafe().With<TargetReachedComponent>().Schedule<Destroy3DJob, BulletAspect, OctreeQueryAspect, TransformAspect>();
+            var spatial = context.Query().AsUnsafe().With<TargetReachedComponent>().Schedule<DestroySpatialJob, BulletAspect, SpatialQueryAspect, TransformAspect>();
             context.SetDependency(dependsOn, dependsOn3D, spatial);
 
         }
