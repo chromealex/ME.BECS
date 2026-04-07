@@ -82,8 +82,8 @@ namespace ME.BECS {
 
             this.found = true;
             this.nearest = obj;
-        
-            return false; // immediately stop iterating at first hit
+
+            return false; // false to immediately stop iterating at first hit
             // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
         }
 

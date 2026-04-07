@@ -174,6 +174,30 @@ namespace NativeTrees {
         }
         
         [INLINE(256)]
+        public void NearestFirst<U, V>(float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V provider, bool ignoreSorting) where U : struct, ISpatialNearestVisitor<ME.BECS.Ent> where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
+            if (this.tempObjects.Count == 0) return;
+            var rangeInt = (int)math.ceil(math.sqrt(maxDistanceSqr) * this.invCellSize);
+            var dist = tfloat.MaxValue;
+            for (int x = -rangeInt; x <= rangeInt; ++x) {
+                for (int y = -rangeInt; y <= rangeInt; ++y) {
+                    var p = new float2(pos.x + x * this.cellSize, pos.y + y * this.cellSize);
+                    var hash = this.GetHash(p);
+                    var e = this.data.GetValuesForKey(hash);
+                    while (e.MoveNext() == true) {
+                        var item = e.Current;
+                        var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
+                        if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && d < dist) {
+                            if (visitor.OnVisit(in item.obj, in item.bounds) == false) {
+                                dist = d;
+                                if (ignoreSorting == true) return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [INLINE(256)]
         public void Nearest<U, V>(float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V provider) where U : struct, ISpatialNearestVisitor<ME.BECS.Ent> where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
             if (this.tempObjects.Count == 0) return;
             var rangeInt = (int)math.ceil(math.sqrt(maxDistanceSqr) * this.invCellSize);

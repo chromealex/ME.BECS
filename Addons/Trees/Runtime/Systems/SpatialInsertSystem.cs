@@ -305,7 +305,7 @@ namespace ME.BECS {
                 mask &= mask - 1;
                 var tree = this.GetTree(i).ptr;
                 {
-                    tree->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
+                    tree->NearestFirst(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d, ignoreSorting);
                     if (visitor.found == true) {
                         if (ignoreSorting == true) {
                             result = visitor.nearest;
