@@ -194,7 +194,7 @@ namespace ME.BECS.Views {
                 var worldEnt = data.ptr->toAddTemp[i].ent;
                 this.SpawnInstanceHierarchy(data, in data.ptr->viewsWorld, in worldEnt, in ent);
                 
-                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), data.ptr->toAddTemp[i].prefabInfo.info, 0u);
+                var instanceInfo = new SceneInstanceInfo((System.IntPtr)worldEnt.ToULong(), data.ptr->toAddTemp[i].prefabInfo.info, 0u, data.ptr->toAddTemp[i].localData);
                 data.ptr->renderingOnScene.Add(ref data.ptr->viewsWorld.state.ptr->allocator, instanceInfo);
             }
             dependsOn = Batches.Apply(dependsOn, in data.ptr->viewsWorld);

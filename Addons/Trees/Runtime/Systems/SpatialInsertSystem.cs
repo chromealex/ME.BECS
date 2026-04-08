@@ -255,8 +255,8 @@ namespace ME.BECS {
 
             var worldPos = tr.GetWorldMatrixPosition();
             MathSector sector = default;
-            if (query.readQuery.sector > 0 || query.readQuery.sector < 360) {
-                var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().GetWorldMatrixRotation() : tr.GetWorldMatrixRotation();
+            if (query.readQuery.sector > 0 && query.readQuery.sector < 360) {
+                var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().rotation : tr.rotation;
                 sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
             }
             markerRead.End();

@@ -106,6 +106,34 @@ namespace ME.BECS {
 
         }
 
+        public UnsafeViewsModule<EntityView> GetUnsafeViewsModule(uint providerId) {
+
+            if (providerId == GAMEOBJECT_PROVIDER_ID) {
+                return this.viewsGameObjects;
+            }
+
+            if (providerId == DRAW_MESH_PROVIDER_ID) {
+                return this.viewsDrawMeshes;
+            }
+
+            return default;
+
+        }
+
+        public unsafe World GetWorld(uint providerId) {
+
+            if (providerId == GAMEOBJECT_PROVIDER_ID) {
+                return this.viewsGameObjects.data.ptr->viewsWorld;
+            }
+
+            if (providerId == DRAW_MESH_PROVIDER_ID) {
+                return this.viewsDrawMeshes.data.ptr->viewsWorld;
+            }
+
+            return default;
+
+        }
+
         public void SetCamera(in CameraAspect camera) {
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects.SetCamera(in camera);

@@ -268,13 +268,15 @@ namespace ME.BECS.Views {
 
         public System.IntPtr obj;
         public readonly safe_ptr<SourceRegistry.Info> prefabInfo;
+        public Ent localData;
         public uint uniqueId;
         public uint index;
 
-        public SceneInstanceInfo(System.IntPtr obj, safe_ptr<SourceRegistry.Info> prefabInfo, uint uniqueId) {
+        public SceneInstanceInfo(System.IntPtr obj, safe_ptr<SourceRegistry.Info> prefabInfo, uint uniqueId, Ent localData) {
             this = default;
             this.obj = obj;
             this.prefabInfo = prefabInfo;
+            this.localData = localData;
             this.uniqueId = uniqueId;
             this.index = 0u;
         }
@@ -801,6 +803,10 @@ namespace ME.BECS.Views {
             
             return dependsOn;
 
+        }
+
+        public Ent GetLocalDataByEntity(in Ent entity) {
+            return EntityViewProvider.GetLocalDataByEntity(this.data, in entity);
         }
 
         public IView GetViewByEntity(in Ent entity) {
