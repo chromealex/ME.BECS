@@ -298,7 +298,7 @@ namespace ME.BECS.Editor.Systems {
                 public System.Collections.Generic.List<MethodInfoDependencies.Error> errors; 
 
                 public override string ToString() {
-                    return "// " + this.system.FullName + "\n// |------ " + string.Join("\n// |------ ", this.dependencies.Select(x => x.ToString()).ToArray());
+                    return "// " + this.system.FullName + "\n// |------ " + string.Join("\n// |------ ", this.dependencies.Select(x => x.ToString()).Distinct().OrderBy(x => x).ToArray());
                 }
 
                 public bool ContainsAny(System.Collections.Generic.List<System.Type> types) {
@@ -321,7 +321,7 @@ namespace ME.BECS.Editor.Systems {
                     str.Append(",");
                     if (this.dependencies.Count > 0) {
                         str.Append("new s::HashSet<System.Type>() {\ntypeof(" +
-                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetTypeName(x, showGenericType: false)).ToArray()) +
+                                   string.Join("),\ntypeof(", this.dependencies.Select(x => EditorUtils.GetTypeName(x, showGenericType: false)).Distinct().OrderBy(x => x).ToArray()) +
                                    ")\n}");
                     } else {
                         str.Append("null");
