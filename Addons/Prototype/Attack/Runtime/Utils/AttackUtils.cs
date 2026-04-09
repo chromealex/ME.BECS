@@ -488,12 +488,12 @@ namespace ME.BECS.Attack {
         [INLINE(256)]
         public static UnsafeList<BulletData> Distribute(in Ent ent, in float3 sourcePosition, in float3 targetPosition) {
             var results = new UnsafeList<BulletData>(1, Constants.ALLOCATOR_TEMP);
-            if (ent.TryRead(out AttackBulletTargetsComponent attackBulletTargetsComponent) == true && attackBulletTargetsComponent.bulletsCount > 1u) {
+            if (ent.TryRead(out AttackBulletDistributionComponent attackBulletTargetsComponent) == true && attackBulletTargetsComponent.bulletsCount > 1u) {
                 var dir = math.normalizesafe(targetPosition - sourcePosition);
                 var sector = attackBulletTargetsComponent.sector;
                 var startAngle = -sector.sector * 0.5f;
                 var step = sector.sector / (attackBulletTargetsComponent.bulletsCount - 1u);
-                if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletTargetsComponent.BulletsSpawnBehaviour.SectorUniformDistribution) {
+                if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletDistributionComponent.BulletsSpawnBehaviour.SectorUniformDistribution) {
                     var range = math.sqrt(sector.rangeSqr);
                     for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
                         var currentAngle = math.radians(startAngle + step * i);
@@ -501,7 +501,7 @@ namespace ME.BECS.Attack {
                         var d = math.mul(rot, dir);
                         results.Add(new BulletData(math.normalizesafe(d * range)));
                     }
-                } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletTargetsComponent.BulletsSpawnBehaviour.SectorRandomDistribution) {
+                } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletDistributionComponent.BulletsSpawnBehaviour.SectorRandomDistribution) {
                     for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
                         var angleDeg = ent.GetRandomValue(startAngle, startAngle + sector.sector);
                         var angle = math.radians(angleDeg);
@@ -509,7 +509,7 @@ namespace ME.BECS.Attack {
                         var d = math.mul(rot, dir);
                         results.Add(new BulletData(d));
                     }
-                } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletTargetsComponent.BulletsSpawnBehaviour.SectorUniformRandomDistribution) {
+                } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletDistributionComponent.BulletsSpawnBehaviour.SectorUniformRandomDistribution) {
                     for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
                         var baseAngle = startAngle + step * i;
                         var jitter = ent.GetRandomValue(-step * 0.5f, step * 0.5f);

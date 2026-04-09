@@ -42,9 +42,9 @@ namespace ME.BECS.Attack {
     }
 
     [ComponentGroup(typeof(AttackComponentGroup))]
-    public struct AttackBulletTargetsComponent : IConfigComponent {
+    public struct AttackBulletDistributionComponent : IConfigComponent {
 
-        public static AttackBulletTargetsComponent Default => new AttackBulletTargetsComponent() {
+        public static AttackBulletDistributionComponent Default => new AttackBulletDistributionComponent() {
             sector = Sector.Default,
         };
 
