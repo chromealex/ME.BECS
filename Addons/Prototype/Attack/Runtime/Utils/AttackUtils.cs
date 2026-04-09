@@ -17,6 +17,7 @@ namespace ME.BECS.Attack {
     using ME.BECS.Units;
     using ME.BECS.Bullets;
     using ME.BECS.Views;
+    using Unity.Collections.LowLevel.Unsafe;
 
     public static class AttackUtils {
 
@@ -472,6 +473,56 @@ namespace ME.BECS.Attack {
             var placements = placement.ReadParent();
             var unit = placements.ReadParent();
             return unit;
+        }
+
+        public readonly struct BulletData {
+
+            public readonly float3 direction;
+
+            public BulletData(in float3 direction) {
+                this.direction = direction;
+            }
+
+        }
+        
+        [INLINE(256)]
+        public static UnsafeList<BulletData> Distribute(in Ent ent, in float3 sourcePosition, in float3 targetPosition) {
+            var results = new UnsafeList<BulletData>(1, Constants.ALLOCATOR_TEMP);
+            if (ent.TryRead(out AttackBulletTargetsComponent attackBulletTargetsComponent) == true && attackBulletTargetsComponent.bulletsCount > 1u) {
+                var dir = math.normalizesafe(targetPosition - sourcePosition);
+                var sector = attackBulletTargetsComponent.sector;
+                var startAngle = -sector.sector * 0.5f;
+                var step = sector.sector / (attackBulletTargetsComponent.bulletsCount - 1u);
+                if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletTargetsComponent.BulletsSpawnBehaviour.SectorUniformDistribution) {
+                    var range = math.sqrt(sector.rangeSqr);
+                    for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
+                        var currentAngle = math.radians(startAngle + step * i);
+                        quaternion rot = quaternion.AxisAngle(math.up(), currentAngle);
+                        var d = math.mul(rot, dir);
+                        results.Add(new BulletData(math.normalizesafe(d * range)));
+                    }
+                } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletTargetsComponent.BulletsSpawnBehaviour.SectorRandomDistribution) {
+                    for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
+                        var angleDeg = ent.GetRandomValue(startAngle, startAngle + sector.sector);
+                        var angle = math.radians(angleDeg);
+                        var rot = quaternion.AxisAngle(math.up(), angle);
+                        var d = math.mul(rot, dir);
+                        results.Add(new BulletData(d));
+                    }
+                } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletTargetsComponent.BulletsSpawnBehaviour.SectorUniformRandomDistribution) {
+                    for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
+                        var baseAngle = startAngle + step * i;
+                        var jitter = ent.GetRandomValue(-step * 0.5f, step * 0.5f);
+                        var angle = math.radians(baseAngle + jitter);
+                        var rot = quaternion.AxisAngle(math.up(), angle);
+                        var d = math.mul(rot, dir);
+                        results.Add(new BulletData(d));
+                    }
+                }
+            } else {
+                results.Add(new BulletData(math.normalizesafe(targetPosition - sourcePosition)));
+            }
+            return results;
         }
 
     }

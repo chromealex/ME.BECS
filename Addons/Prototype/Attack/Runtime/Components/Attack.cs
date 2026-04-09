@@ -21,11 +21,16 @@ namespace ME.BECS.Attack {
             sector = Sector.Default,
         };
 
+        [UnityEngine.Header("General")]
         public Sector sector;
         public bbool ignoreSelf;
         public tfloat reloadTime;
+        [Tooltip("Animation duration")]
         public tfloat fireTime;
+        [Tooltip("Fire time in animation between 0 and fireTime")]
         public tfloat attackTime;
+        
+        [UnityEngine.Header("Fire Rate")]
         public tfloat rateTime;
         public uint rateCount;
 
@@ -33,6 +38,29 @@ namespace ME.BECS.Attack {
             ent.Set(new AttackRuntimeReloadComponent());
             ent.Set(new AttackRuntimeFireComponent());
         }
+
+    }
+
+    [ComponentGroup(typeof(AttackComponentGroup))]
+    public struct AttackBulletTargetsComponent : IConfigComponent {
+
+        public static AttackBulletTargetsComponent Default => new AttackBulletTargetsComponent() {
+            sector = Sector.Default,
+        };
+
+        public enum BulletsSpawnBehaviour {
+            [UnityEngine.Tooltip("Uniform distribution in sector")]
+            SectorUniformDistribution,
+            [UnityEngine.Tooltip("Random distribution in sector")]
+            SectorRandomDistribution,
+            [UnityEngine.Tooltip("Random distribution based on uniform distribution in sector")]
+            SectorUniformRandomDistribution,
+        }
+        
+        [Tooltip("Bullets count at a time")]
+        public uint bulletsCount;
+        public Sector sector;
+        public BulletsSpawnBehaviour bulletsSpawnBehaviour;
 
     }
 

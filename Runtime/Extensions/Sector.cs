@@ -14,7 +14,7 @@ namespace ME.BECS {
     public struct Sector {
 
         public static Sector Default => new Sector() {
-            rangeSqr = (tfloat)(0f),
+            rangeSqr = (tfloat)(1f),
             sector = (tfloat)(360f),
         };
 
