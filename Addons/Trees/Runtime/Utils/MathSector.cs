@@ -23,14 +23,28 @@ namespace ME.BECS {
         
         [INLINE(256)]
         public MathSector(in float3 position, in quaternion rotation, tfloat sector) {
+
+            var twoDimensionalWorldPos = new float3(position.x, 0, position.z);
+            var twoDimensionalRot = ProjectRotationOnXZ(rotation);
+
             this.checkSector = sector > 0 && sector < 360;
             if (this.checkSector == false) {
                 this = default;
                 return;
             }
-            this.position = position;
-            this.lookDirection = math.normalize(math.mul(rotation, math.forward()));
+            this.position = twoDimensionalWorldPos;
+            this.lookDirection = math.normalize(math.mul(twoDimensionalRot, math.forward()));
             this.sector = math.radians(sector);
+        }
+
+        private static quaternion ProjectRotationOnXZ(quaternion rot) {
+            float3 forward = math.mul(rot, new float3(0, 0, 1));
+            forward.y = 0;
+
+            if (math.lengthsq(forward) < sfloat.Epsilon)
+                return quaternion.identity;
+            forward = math.normalizesafe(forward);
+            return quaternion.LookRotationSafe(forward, new float3(0, 1, 0));
         }
 
         [INLINE(256)]
