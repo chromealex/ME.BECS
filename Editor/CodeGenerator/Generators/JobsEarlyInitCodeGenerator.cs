@@ -195,7 +195,7 @@ namespace ME.BECS.Editor.Jobs {
             cacheBuilder.AppendLine($"#endif");
             
             cacheBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{cacheBuilder}\n}}";
-            funcBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{funcBuilder}\n}}";
+            funcBuilderFile.content = $"[BURST] public unsafe partial class DebugJobs {{\n{funcBuilder}\n}}";
             structBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{structBuilder}\n}}";
             structUnsafeBuilderFile.content = $"public unsafe partial class DebugJobs {{\n{structUnsafeBuilder}\n}}";
 
@@ -285,7 +285,7 @@ namespace ME.BECS.Editor.Jobs {
 
                 tempFuncBuilder.AppendLine($"{{ // {jobType.FullName}");
                 tempFuncBuilder.AppendLine($"Cache{structName}.cache.Data = default;");
-                tempFuncBuilder.AppendLine($"[BurstCompile]");
+                tempFuncBuilder.AppendLine($"[BURST]");
                 tempFuncBuilder.AppendLine($"static void* Method(void* jobData, CommandBuffer* buffer, bool unsafeMode, ScheduleFlags scheduleFlags, in JobInfo jobInfo) {{");
                 tempFuncBuilder.AppendLine($"{structName}* data = ({structName}*)Cache{structName}.cache.Data;");
                 tempFuncBuilder.AppendLine($"if (data == null) {{");
