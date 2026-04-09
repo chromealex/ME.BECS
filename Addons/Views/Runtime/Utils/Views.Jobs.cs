@@ -1,3 +1,5 @@
+
+using UnityEngine;
 #if FIXED_POINT
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
@@ -125,6 +127,7 @@ namespace ME.BECS.Views {
                             this.data.ptr->renderingOnSceneEnts.Add(new ViewsModuleData.EntityData() {
                                 element = viewEnt,
                                 localData = localData,
+                                initialVersion = viewEnt.Version - 1,
                                 version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
                                 versionParallel = viewEnt.Version - 1,
                             });
@@ -392,6 +395,40 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
+        public struct JobUpdateTransformsNetworkInterpolation : IJobParallelForTransform {
+
+            public float dt;
+            public float lerpFactor;
+            [ReadOnly]
+            public NativeArray<InterpolationTempData> results;
+            [ReadOnly]
+            public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
+
+            public void Execute(int index, TransformAccess transform) {
+
+                ref var trData = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafeReadOnlyPtr(), index);
+                var entityData = this.renderingOnSceneEnts[index];
+
+                var lerpFactorCalc = (entityData.version == entityData.initialVersion) ? 1 : this.dt * this.lerpFactor;
+
+                if (trData.isLocal == true) {
+                    var newPosition = Vector3.Lerp(transform.localPosition, trData.position, lerpFactorCalc);
+                    var newRotation = Quaternion.Lerp(transform.localRotation, trData.rotation, lerpFactorCalc);
+                    transform.SetLocalPositionAndRotation(newPosition, newRotation);
+                } else {
+                    var newPosition = Vector3.Lerp(transform.position, trData.position, lerpFactorCalc);
+                    var newRotation = Quaternion.Lerp(transform.rotation, trData.rotation, lerpFactorCalc);
+                    transform.SetPositionAndRotation(newPosition, newRotation);
+                }
+
+                var newScale = Vector3.Lerp(transform.localScale, trData.localScale, lerpFactorCalc);
+                transform.localScale = newScale;
+
+            }
+
+        }
+
+        [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public struct JobUpdateTransformsInterpolation : IJobParallelForTransform {
 
             [ReadOnly]
@@ -439,6 +476,7 @@ namespace ME.BECS.Views {
                         this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, assignToEntId] = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, sourceEntId];
                         ref var entData = ref this.viewsModuleData.ptr->renderingOnSceneEnts.Ptr[updateIdx];
                         entData.element = ent;
+                        entData.initialVersion = ent.Version - 1;
                         entData.version = ent.Version - 1;
                         entData.versionParallel = ent.Version - 1;
                     }

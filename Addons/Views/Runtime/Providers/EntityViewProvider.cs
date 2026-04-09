@@ -247,7 +247,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
 
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");
@@ -335,10 +335,20 @@ namespace ME.BECS.Views {
                             results = results,
                         }.Schedule(results.Length, 32, dependsOn);
                     }
-                    
-                    dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
-                        results = results,
-                    }.Schedule(this.renderingOnSceneTransforms, dependsOn);
+
+                    if (data.ptr->properties.interpolateNetwork == true) {
+                        dependsOn = new Jobs.JobUpdateTransformsNetworkInterpolation() {
+                            dt = dt,
+                            lerpFactor = data.ptr->properties.interpolateNetworkLerpFactor,
+                            results = results,
+                            renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
+                        }.Schedule(this.renderingOnSceneTransforms, dependsOn);
+                    } else {
+                        dependsOn = new Jobs.JobUpdateTransformsInterpolation() {
+                            results = results,
+                        }.Schedule(this.renderingOnSceneTransforms, dependsOn);
+                    }
+
                     dependsOn = results.Dispose(dependsOn);
                 } else {
                     dependsOn = new Jobs.JobUpdateTransforms() {

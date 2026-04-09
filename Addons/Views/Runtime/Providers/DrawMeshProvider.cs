@@ -136,7 +136,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn) {
+        public JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt) {
             
             {
                 var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Prepare");

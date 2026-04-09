@@ -19,7 +19,7 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Apply Spawn/Despawn commands
         /// </summary>
-        JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn);
+        JobHandle Commit(safe_ptr<ViewsModuleData> data, JobHandle dependsOn, float dt);
         void Dispose(safe_ptr<State> state, safe_ptr<ViewsModuleData> data);
         void ApplyStateParallel(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData);
         void ApplyState(safe_ptr<ViewsModuleData> data, in SceneInstanceInfo instanceInfo, in ViewData viewData);
@@ -44,6 +44,8 @@ namespace ME.BECS.Views {
             viewsGameObjects = true,
             viewsDrawMeshes = true,
             interpolateState = true,
+            interpolateNetwork = true,
+            interpolateNetworkLerpFactor = 1.0f,
             useUnityHierarchy = false,
         };
 
@@ -59,6 +61,11 @@ namespace ME.BECS.Views {
 
         [UnityEngine.Tooltip("Use automatic state interpolation between start and end of the frame. Useful with Network Module only.")]
         public bool interpolateState;
+
+        [UnityEngine.Tooltip("Interpolate view according to network input delay")]
+        public bool interpolateNetwork;
+        [UnityEngine.Tooltip("Network interpolation lerp factor")]
+        public float interpolateNetworkLerpFactor;
 
         [UnityEngine.Tooltip("Use Unity hierarchy for objects. All transforms on scene will be added into their parents.")]
         public bool useUnityHierarchy;
@@ -297,6 +304,7 @@ namespace ME.BECS.Views {
 
             public Ent element;
             public Ent localData;
+            public uint initialVersion;
             public uint version;
             public uint versionParallel;
 
@@ -730,7 +738,7 @@ namespace ME.BECS.Views {
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("[Views Module] Provider::Commit");
                     marker.Begin();
-                    dependsOn = this.provider.Value.Commit(this.data, dependsOn);
+                    dependsOn = this.provider.Value.Commit(this.data, dependsOn, dt);
                     marker.End();
                 }
             }
