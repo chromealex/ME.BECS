@@ -100,11 +100,14 @@ namespace ME.BECS.Editor.JSON {
                 list.Add(config);
                 var comp = new ME.BECS.Editor.CsvImporter.EntityConfigCsvImporterEditor.ConfigFile.Component() {
                     fields = new System.Collections.Generic.Dictionary<string, string>(),
+                    baseFields = new System.Collections.Generic.HashSet<string>(),
                     componentInstance = copy.managedReferenceValue,
                     type = PropertyEditorUtils.GetTargetObjectOfProperty(copy).GetType(),
                 };
                 config.components.Add(comp);
                 foreach (var kv in keys) {
+                    var ks = kv.Key.Split('/');
+                    comp.baseFields.Add(ks[0]);
                     comp.fields.Add(kv.Key, kv.Value);
                 }
                 CsvImporter.EntityConfigCsvImporterEditor.Link(list);
