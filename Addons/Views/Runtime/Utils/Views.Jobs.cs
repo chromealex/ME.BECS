@@ -397,8 +397,7 @@ namespace ME.BECS.Views {
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public struct JobUpdateTransformsNetworkInterpolation : IJobParallelForTransform {
 
-            public float dt;
-            public float lerpFactor;
+            public float dtMs;
             [ReadOnly]
             public NativeArray<InterpolationTempData> results;
             [ReadOnly]
@@ -407,11 +406,16 @@ namespace ME.BECS.Views {
             public void Execute(int index, TransformAccess transform) {
 
                 ref var trData = ref UnsafeUtility.ArrayElementAsRef<InterpolationTempData>(this.results.GetUnsafeReadOnlyPtr(), index);
+
                 var entityData = this.renderingOnSceneEnts[index];
 
-                var lerpFactorCalc = (entityData.version == entityData.initialVersion) ? 1 : this.dt * this.lerpFactor;
+                var lerpFactorCalc = 1f;
+                if (entityData.version != entityData.initialVersion && entityData.playerDelayMs != 0) {
+                    lerpFactorCalc = (float) this.dtMs / entityData.playerDelayMs;
+                }
 
                 if (trData.isLocal == true) {
+
                     var newPosition = Vector3.Lerp(transform.localPosition, trData.position, lerpFactorCalc);
                     var newRotation = Quaternion.Lerp(transform.localRotation, trData.rotation, lerpFactorCalc);
                     transform.SetLocalPositionAndRotation(newPosition, newRotation);

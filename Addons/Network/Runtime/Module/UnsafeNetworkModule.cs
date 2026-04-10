@@ -1291,7 +1291,12 @@ namespace ME.BECS.Network {
                     if (bytes != null) {
                         var readBuffer = new StreamBufferReader(bytes);
                         var package = NetworkPackage.Create(ref readBuffer);
-                        this.data.ptr->eventsStorage.Add(package, currentTick);
+                        var added = this.data.ptr->eventsStorage.Add(package, currentTick);
+
+                        if (added == true && this.networkTransport is INetworkTransportPackageCallback networkTransportPackageCallback) {
+                            networkTransportPackageCallback.NotifyReceivedPackage(package);
+                        }
+
                         readBuffer.Dispose();
                     } else {
                         break;

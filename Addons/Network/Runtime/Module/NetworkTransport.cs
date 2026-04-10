@@ -96,4 +96,10 @@ namespace ME.BECS.Network {
 
     }
 
+    public interface INetworkTransportPackageCallback {
+
+        void NotifyReceivedPackage(NetworkPackage package);
+
+    }
+
 }

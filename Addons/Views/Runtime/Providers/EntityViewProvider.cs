@@ -338,8 +338,7 @@ namespace ME.BECS.Views {
 
                     if (data.ptr->properties.interpolateNetwork == true) {
                         dependsOn = new Jobs.JobUpdateTransformsNetworkInterpolation() {
-                            dt = dt,
-                            lerpFactor = data.ptr->properties.interpolateNetworkLerpFactor,
+                            dtMs = dt * 1000,
                             results = results,
                             renderingOnSceneEnts = data.ptr->renderingOnSceneEnts,
                         }.Schedule(this.renderingOnSceneTransforms, dependsOn);

@@ -45,7 +45,6 @@ namespace ME.BECS.Views {
             viewsDrawMeshes = true,
             interpolateState = true,
             interpolateNetwork = true,
-            interpolateNetworkLerpFactor = 1.0f,
             useUnityHierarchy = false,
         };
 
@@ -64,8 +63,6 @@ namespace ME.BECS.Views {
 
         [UnityEngine.Tooltip("Interpolate view according to network input delay")]
         public bool interpolateNetwork;
-        [UnityEngine.Tooltip("Network interpolation lerp factor")]
-        public float interpolateNetworkLerpFactor;
 
         [UnityEngine.Tooltip("Use Unity hierarchy for objects. All transforms on scene will be added into their parents.")]
         public bool useUnityHierarchy;
@@ -307,6 +304,7 @@ namespace ME.BECS.Views {
             public uint initialVersion;
             public uint version;
             public uint versionParallel;
+            public ulong playerDelayMs;
 
             public ViewData ViewData => new ViewData(this.element, this.localData);
 

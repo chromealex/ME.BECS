@@ -44,7 +44,6 @@ namespace ME.BECS.Views.Editor {
                 var viewsDrawMeshes = property.FindPropertyRelative(nameof(ViewsModuleProperties.viewsDrawMeshes));
                 var interpolateState = property.FindPropertyRelative(nameof(ViewsModuleProperties.interpolateState));
                 var interpolateNetwork = property.FindPropertyRelative(nameof(ViewsModuleProperties.interpolateNetwork));
-                var interpolateNetworkLerpFactor = property.FindPropertyRelative(nameof(ViewsModuleProperties.interpolateNetworkLerpFactor));
                 var useUnityHierarchy = property.FindPropertyRelative(nameof(ViewsModuleProperties.useUnityHierarchy));
                 ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, instancesRegistryCapacity);
                 ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, renderingObjectsCapacity);
@@ -52,7 +51,6 @@ namespace ME.BECS.Views.Editor {
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, viewsDrawMeshes);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, interpolateState);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, interpolateNetwork);
-                ME.BECS.Editor.EditorUIUtils.DrawPropertyField(container, interpolateNetworkLerpFactor);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, useUnityHierarchy);
             }
             root.Add(foldout);

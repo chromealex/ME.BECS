@@ -45,6 +45,14 @@ namespace ME.BECS.Players {
         }
 
         [INLINE(256)]
+        public static bool TryGetOwner(in Ent entity, out PlayerAspect playerAspect) {
+            playerAspect = default;
+            if (entity.TryRead<OwnerComponent>(out OwnerComponent owner) == false || owner.ent.IsAlive() == false) return false;
+            playerAspect = owner.ent.GetAspect<PlayerAspect>();
+            return true;
+        }
+
+        [INLINE(256)]
         public static PlayerAspect GetOwner(in Ent entity) {
             E.REQUIRED<OwnerComponent>(in entity);
             return entity.Read<OwnerComponent>().ent.GetAspect<PlayerAspect>();
