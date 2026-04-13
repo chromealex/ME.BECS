@@ -70,14 +70,14 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
-        private readonly void CleanUpTarget() {
+        public readonly void CleanUpTarget() {
             
             this.ent.Remove<AttackTargetComponent>();
             
         }
         
         [INLINE(256)]
-        private readonly void CleanUpTargets() {
+        public readonly void CleanUpTargets() {
             
             var targets = this.ent.Read<AttackTargetsComponent>().targets;
             if (targets.IsCreated == true) targets.Dispose();
