@@ -23,6 +23,7 @@ namespace ME.BECS.Attack {
         public AspectDataPtr<AttackTargetComponent> targetDataPtr;
         public AspectDataPtr<AttackTargetsComponent> targetsDataPtr;
         public AspectDataPtr<AttackVisualComponent> attackVisualDataPtr;
+        public AspectDataPtr<AttackBulletDistributionComponent> attackBulletDistributionPtr;
 
         public readonly ref AttackComponent component => ref this.attackDataPtr.GetOrThrow(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackComponent readComponent => ref this.attackDataPtr.Read(this.ent.id, this.ent.gen);
@@ -32,10 +33,12 @@ namespace ME.BECS.Attack {
         public readonly ref readonly AttackRuntimeReloadComponent readComponentRuntimeReload => ref this.attackRuntimeReloadDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref AttackRuntimeFireComponent componentRuntimeFire => ref this.attackRuntimeFireDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly AttackRuntimeFireComponent readComponentRuntimeFire => ref this.attackRuntimeFireDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref readonly AttackBulletDistributionComponent readBulletDistribution => ref this.attackBulletDistributionPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref tfloat attackRangeSqr => ref this.component.sector.rangeSqr;
         public readonly ref readonly tfloat readAttackRangeSqr => ref this.readComponent.sector.rangeSqr;
         public readonly ref readonly tfloat readMinAttackRangeSqr => ref this.readComponent.sector.minRangeSqr;
         public readonly ref readonly tfloat readAttackSector => ref this.readComponent.sector.sector;
+        public readonly ref readonly tfloat readBulletDistributionSector => ref this.readBulletDistribution.sector.sector;
         public readonly ref readonly bbool readIgnoreSelf => ref this.readComponent.ignoreSelf;
         
         public readonly Ent target => this.targetDataPtr.Read(this.ent.id, this.ent.gen).target;
