@@ -17,12 +17,23 @@ namespace ME.BECS.Units {
                 if (damageComponent.damage == 0u) return;
                 if (damageComponent.target.IsAlive() == false) return;
                 var unit = damageComponent.target.GetAspect<HealthAspect>();
+                if (unit.ent.TryRead(out UnitInvincibility unitInvincibility) == true) {
+                    if (unitInvincibility.behaviour == UnitInvincibility.InvincibleBehaviour.NoDamage) {
+                        return;
+                    } else if (unitInvincibility.behaviour == UnitInvincibility.InvincibleBehaviour.IgnoreLastHit) {
+                        if (damageComponent.damage >= unit.readHealth) {
+                            damageComponent.damage = unit.readHealth - 1u;
+                        }
+                    }
+                }
+
                 var newHealth = (int)unit.readHealth - (int)damageComponent.damage;
                 if (newHealth <= 0) {
                     unit.health = 0u;
                 } else {
                     unit.health = (uint)newHealth;
                 }
+                
                 // Use damage
                 damageComponent.damage = 0u;
             }

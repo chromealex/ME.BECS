@@ -177,6 +177,19 @@ namespace ME.BECS.Units {
 
     }
     
+    [EditorComment("Is unit invincible or not")]
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct UnitInvincibility : IComponent {
+
+        public enum InvincibleBehaviour {
+            NoDamage = 0,
+            IgnoreLastHit = 1,
+        }
+        
+        public InvincibleBehaviour behaviour;
+
+    }
+
     [EditorComment("Added as one-shot component on target unit")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct DamageTookEvent : IComponent {
