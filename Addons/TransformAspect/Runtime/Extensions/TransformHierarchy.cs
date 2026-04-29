@@ -42,6 +42,8 @@ namespace ME.BECS.Transforms {
         [INLINE(256)][CodeGeneratorIgnore]
         public static void DestroyHierarchy(this in Ent entity) {
 
+            E.IS_ALIVE(entity);
+            
             if (entity.Has<ParentComponent>() == true) {
                 // remove from parent
                 entity.SetParent(default);

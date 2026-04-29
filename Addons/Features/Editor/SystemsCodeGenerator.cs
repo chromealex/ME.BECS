@@ -1136,6 +1136,7 @@ namespace ME.BECS.Editor.Systems {
 
             if (type == null) type = system.GetType();
             if (type.IsGenericType == true) return "default";
+            ObjectReferenceRegistry.LoadForced();
             var sourceId = ObjectReferenceRegistry.data.Add(graph, out var isNew);
             return $"({EditorUtils.GetTypeName(type)})((ME.BECS.FeaturesGraph.Nodes.SystemNode)ObjectReferenceRegistry.GetObjectBySourceId<ME.BECS.FeaturesGraph.SystemsGraph>({sourceId}).nodes[{nodeIndex}]).system";
             // var result = new System.Text.StringBuilder(100);
