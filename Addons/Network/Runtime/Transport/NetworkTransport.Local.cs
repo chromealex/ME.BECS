@@ -133,7 +133,7 @@ namespace ME.BECS.Network {
 
         public EventsBehaviour EventsBehaviour => EventsBehaviour.SendToNetworkOnly;
 
-        public TransportStatus Status { get; set; }
+        public virtual TransportStatus Status { get; set; }
         public double ServerTime { get; private set; }
         public ulong InputLagInTicks { get; private set; }
 
@@ -161,7 +161,7 @@ namespace ME.BECS.Network {
             this.Status = TransportStatus.Unknown;
         }
 
-        public Unity.Jobs.JobHandle Connect(in World world, NetworkModule module, Unity.Jobs.JobHandle dependsOn) {
+        public virtual Unity.Jobs.JobHandle Connect(in World world, NetworkModule module, Unity.Jobs.JobHandle dependsOn) {
 
             if (this.simulationMode == SimulationMode.SimulateReplay) {
                 if (this.replayData == null) {
