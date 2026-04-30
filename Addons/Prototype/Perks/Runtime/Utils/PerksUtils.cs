@@ -104,7 +104,7 @@ namespace ME.BECS.Perks {
                 return false;
             }
             var slot = perks.slots[index];
-            return slot.Read<PerkSlotComponent>().perkType == PerkType.Continuous;
+            return slot.Read<PerkSlotComponent>().perkType == PerkType.Continuous && slot.Has<IsPerkCanBeReleased>() == true;
         }
 
         /// <summary>
