@@ -50,6 +50,8 @@ namespace ME.BECS.Editor {
 
                 public Label tooltip;
                 public VisualElement root;
+                public BlockHeaderPtr data;
+                public Button stackButton;
 
             }
 
@@ -91,9 +93,16 @@ namespace ME.BECS.Editor {
 
         }
 
+        public struct BlockHeaderPtr {
+
+            public System.IntPtr ptr;
+            public MemoryAllocator.BlockHeader header;
+
+        }
+
         private void UpdateZone(Zone zoneVisual, VisualElement root, MemoryAllocator.Zone* zone) {
 
-            var list = new System.Collections.Generic.List<MemoryAllocator.BlockHeader>();
+            var list = new System.Collections.Generic.List<BlockHeaderPtr>();
 
             var blocksCount = 0;
             var freeBlocksCount = 0;
@@ -103,7 +112,7 @@ namespace ME.BECS.Editor {
                 if (node->freeIndex != uint.MaxValue) {
                     ++freeBlocksCount;
                 }
-                list.Add(*node);
+                list.Add(new BlockHeaderPtr() { ptr = (System.IntPtr)node, header = *node, });
                 node = (MemoryAllocator.BlockHeader*)(zone->root.ptr + node->next);
             } while (node->next != uint.MaxValue);
             
@@ -120,6 +129,13 @@ namespace ME.BECS.Editor {
                         tooltip.pickingMode = PickingMode.Ignore;
                         blockVisual.root.Add(tooltip);
                         blockVisual.tooltip = tooltip;
+                        var stackButton = new Button(() => {
+                            this.ShowStackTrace(blockVisual);
+                        });
+                        stackButton.style.display = DisplayStyle.None;
+                        stackButton.text = "Stack";
+                        blockVisual.stackButton = stackButton;
+                        blockVisual.root.Add(stackButton);
                     }
                     zoneVisual.blocks.Add(blockVisual);
                 }
@@ -133,20 +149,30 @@ namespace ME.BECS.Editor {
             for (int i = 0; i < list.Count; ++i) {
                 var block = list[i];
                 var blockVisual = zoneVisual.blocks[i];
-                var length = block.size / (float)zone->size * 100f;
-                if (block.freeIndex != uint.MaxValue) {
+                blockVisual.data = block;
+                var length = block.header.size / (float)zone->size * 100f;
+                if (block.header.freeIndex != uint.MaxValue) {
                     blockVisual.root.AddToClassList("free");
+                    blockVisual.stackButton.style.display = DisplayStyle.None;
                 } else {
                     blockVisual.root.RemoveFromClassList("free");
+                    blockVisual.stackButton.style.display = DisplayStyle.Flex;
                 }
                 blockVisual.root.style.width = new StyleLength(new Length(length * 10f, LengthUnit.Percent));
                 {
-                    blockVisual.tooltip.text = $"Size: {EditorUtils.BytesToString(block.size)}\nState: {(block.freeIndex != uint.MaxValue ? "Free" : "Allocated")}";
+                    blockVisual.tooltip.text = $"Size: {EditorUtils.BytesToString(block.header.size)}\nState: {(block.header.freeIndex != uint.MaxValue ? "Free" : "Allocated")}";
                 }
             }
 
             var zoneContainer = zoneVisual.foldout;
             zoneContainer.text = $"Size: {EditorUtils.BytesToString(zone->size)}, Blocks: {blocksCount}, Free Blocks: {freeBlocksCount}";
+
+        }
+
+        public void ShowStackTrace(Zone.Block block) {
+            
+            var stack = LeakDetector.FindStack((safe_ptr)((byte*)block.data.ptr) + sizeof(MemoryAllocator.BlockHeader));
+            UnityEngine.Debug.Log(stack);
 
         }
         
