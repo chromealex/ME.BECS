@@ -72,7 +72,7 @@ namespace ME.BECS {
     [ComponentGroup(typeof(SpatialComponentGroup))]
     public struct SpatialResult : IComponent {
 
-        public ListAuto<Ent> results;
+        public QueryResults results;
 
     }
 

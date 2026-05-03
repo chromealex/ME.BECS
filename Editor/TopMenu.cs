@@ -29,7 +29,7 @@ namespace ME.BECS.Editor {
         }
         
         [MenuItem("ME.BECS/Internal/Clear Allocations State", priority = 0)]
-        public static void PrintAllocationsState() {
+        public static void ClearAllocationsState() {
             
             LeakDetector.ClearAllocated();
             

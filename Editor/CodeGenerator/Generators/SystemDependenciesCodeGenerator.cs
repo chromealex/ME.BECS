@@ -586,6 +586,216 @@ namespace ME.BECS.Editor.Systems {
             return method1.MetadataToken == method2.MetadataToken && method1.Module == method2.Module && method1.DeclaringType == method2.DeclaringType;
         }
 
+        public struct UsedObjects {
+
+            public System.Collections.Generic.List<System.Type> systems;
+            public System.Collections.Generic.List<System.Type> components; 
+            public System.Collections.Generic.List<System.Type> componentsGroup;
+            public System.Collections.Generic.List<System.Type> jobTypes;
+            public System.Collections.Generic.List<System.Type> entityTypes;
+            public System.Collections.Generic.List<System.Type> aspects;
+
+        }
+
+        public static void GetUsedObjects(out UsedObjects usedObjects) {
+            
+            usedObjects = new UsedObjects();
+            
+            var systemsSet = new System.Collections.Generic.HashSet<System.Type>(10);
+            var componentsSet = new System.Collections.Generic.HashSet<System.Type>(10);
+            var jobTypesSet = new System.Collections.Generic.HashSet<System.Type>(10);
+            var entityTypesSet = new System.Collections.Generic.HashSet<System.Type>(10);
+            var aspectsSet = new System.Collections.Generic.HashSet<System.Type>(10);
+
+            var asms = System.AppDomain.CurrentDomain.GetAssemblies();
+            foreach (var asm in asms) {
+                var asmIncludes = asm.GetCustomAttributes<CodeGeneratorInclude>().ToArray();
+                if (asmIncludes.Length > 0) {
+                    foreach (var inc in asmIncludes) {
+                        if (typeof(IComponentBase).IsAssignableFrom(inc.type) == true) {
+                            componentsSet.Add(inc.type);
+                        } else if (typeof(IAspect).IsAssignableFrom(inc.type) == true) {
+                            aspectsSet.Add(inc.type);
+                        } else if (typeof(IEntityType).IsAssignableFrom(inc.type) == true) {
+                            entityTypesSet.Add(inc.type);
+                        } else if (typeof(ISystem).IsAssignableFrom(inc.type) == true) {
+                            systemsSet.Add(inc.type);
+                        }
+                    }
+                }
+            }
+
+            var modules = UnityEditor.TypeCache.GetTypesDerivedFrom<Module>();
+            foreach (var module in modules) {
+                AddMethod(module, nameof(Module.OnAwake), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                AddMethod(module, nameof(Module.OnStart), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                AddMethod(module, nameof(Module.OnUpdate), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+            }
+
+            var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
+            foreach (var guid in guids) {
+                var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<ME.BECS.FeaturesGraph.SystemsGraph>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                if (graph.isInnerGraph == true) continue;
+                var nodes = graph.nodes.ToList();
+                var q = new System.Collections.Generic.Queue<ME.BECS.Extensions.GraphProcessor.BaseNode>(nodes);
+                while (q.Count > 0) {
+                    var node = q.Dequeue();
+                    if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
+                        LookUp(systemNode.system, systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                    } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
+                        foreach (var n in graphNode.graphValue.nodes) {
+                            q.Enqueue(n);
+                        }
+                    }
+                }
+            }
+
+            guids = UnityEditor.AssetDatabase.FindAssets("t:EntityConfig");
+            foreach (var guid in guids) {
+                var config = UnityEditor.AssetDatabase.LoadAssetAtPath<EntityConfig>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                foreach (var component in config.data.components) {
+                    componentsSet.Add(component.GetType());
+                }
+                foreach (var component in config.staticData.components) {
+                    componentsSet.Add(component.GetType());
+                }
+                foreach (var component in config.sharedData.components) {
+                    componentsSet.Add(component.GetType());
+                }
+                foreach (var component in config.aspects.components) {
+                    aspectsSet.Add(component.GetType());
+                }
+            }
+
+            LookUpComponents(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+
+            usedObjects.jobTypes = jobTypesSet.OrderBy(x => x.FullName).ToList();
+            usedObjects.systems = systemsSet.OrderBy(x => x.FullName).ToList();
+            usedObjects.components = componentsSet.OrderBy(x => x.FullName).ToList();
+            usedObjects.entityTypes = entityTypesSet.OrderBy(x => x.FullName).ToList();
+            usedObjects.aspects = aspectsSet.OrderBy(x => x.FullName).ToList();
+            
+            var componentsGroupSet = new System.Collections.Generic.HashSet<System.Type>(usedObjects.components.Count);
+            foreach (var component in usedObjects.components) {
+                var attr = component.GetCustomAttribute<ComponentGroupAttribute>();
+                if (attr == null) continue;
+                componentsGroupSet.Add(component);
+            }
+
+            usedObjects.componentsGroup = componentsGroupSet.ToList();
+            
+        }
+
+        private static void LookUpComponents(System.Collections.Generic.HashSet<System.Type> types,
+                                             System.Collections.Generic.HashSet<System.Type> components,
+                                             System.Collections.Generic.HashSet<System.Type> jobTypes,
+                                             System.Collections.Generic.HashSet<System.Type> entityTypes,
+                                             System.Collections.Generic.HashSet<System.Type> aspects) {
+
+            var lookUp = components.ToArray();
+            foreach (var comp in lookUp) {
+                if (typeof(IConfigInitialize).IsAssignableFrom(comp) == true) {
+                    AddMethod(comp, nameof(IConfigInitialize.OnInitialize), types, components, jobTypes, entityTypes, aspects);
+                }
+
+                if (typeof(IComponentDestroy).IsAssignableFrom(comp) == true) {
+                    AddMethod(comp, nameof(IComponentDestroy.Destroy), types, components, jobTypes, entityTypes, aspects);
+                }
+            }
+            
+        }
+
+        private static void LookUp(ISystem system, 
+                                   System.Collections.Generic.HashSet<System.Type> types,
+                                   System.Collections.Generic.HashSet<System.Type> components,
+                                   System.Collections.Generic.HashSet<System.Type> jobTypes,
+                                   System.Collections.Generic.HashSet<System.Type> entityTypes,
+                                   System.Collections.Generic.HashSet<System.Type> aspects) {
+            if (system == null) return;
+            var type = system.GetType();
+            if (type.IsGenericType == true && type.IsGenericTypeDefinition == false) {
+                type = type.GetGenericTypeDefinition();
+            }
+            types.Add(type);
+            AddMethod(type, nameof(IAwake.OnAwake), types, components, jobTypes, entityTypes, aspects);
+            AddMethod(type, nameof(IStart.OnStart), types, components, jobTypes, entityTypes, aspects);
+            AddMethod(type, nameof(IUpdate.OnUpdate), types, components, jobTypes, entityTypes, aspects);
+            AddMethod(type, nameof(IDrawGizmos.OnDrawGizmos), types, components, jobTypes, entityTypes, aspects);
+        }
+        
+        
+        private static void AddMethod(System.Type type, string name, 
+                              System.Collections.Generic.HashSet<System.Type> types, 
+                              System.Collections.Generic.HashSet<System.Type> components,
+                              System.Collections.Generic.HashSet<System.Type> jobTypes,
+                              System.Collections.Generic.HashSet<System.Type> entityTypes,
+                              System.Collections.Generic.HashSet<System.Type> aspects) {
+            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            var aspectMethod = typeof(WorldAspectStorage).GetMethod(nameof(WorldAspectStorage.InitializeObj), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            foreach (var method in methods) {
+                if (method.Name != name) continue;
+                var componentTypes = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(method, methodParameters: false, onInstruction: (inst, q) => {
+                    if (inst.Operand is MethodInfo methodInfo) {
+                        if (IsMethod(methodInfo, aspectMethod) == true) {
+                            var t = methodInfo.GetGenericArguments()[0];
+                            AddToLookup(t, types, components, jobTypes, entityTypes, aspects);
+                        } else if (IsMethod(methodInfo, newEntMethod) == true) {
+                            var entityType = methodInfo.GetGenericArguments()[0];
+                            entityTypes.Add(entityType);
+                        } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
+                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                                var jobType = methodInfo.GetGenericArguments()[0];
+                                jobTypes.Add(jobType);
+                                var interfaces = jobType.GetInterfaces();
+                                foreach (var inter in interfaces) {
+                                    if (inter.IsGenericType == true) {
+                                        var args = inter.GetGenericArguments();
+                                        foreach (var arg in args) {
+                                            AddToLookup(arg, types, components, jobTypes, entityTypes, aspects);
+                                        }
+                                    }
+                                }
+                                var exec = jobType.GetMethod("Execute", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                                q.Enqueue(exec);
+                            }
+                        }
+                    }
+
+                    return false;
+                });
+                foreach (var componentType in componentTypes) {
+                    if (typeof(IComponentBase).IsAssignableFrom(componentType.type) == true) {
+                        components.Add(componentType.type);
+                    }
+                }
+            }
+        }
+
+        private static void AddToLookup(System.Type type, System.Collections.Generic.HashSet<System.Type> types, System.Collections.Generic.HashSet<System.Type> components, System.Collections.Generic.HashSet<System.Type> jobTypes, System.Collections.Generic.HashSet<System.Type> entityTypes, System.Collections.Generic.HashSet<System.Type> aspects) {
+            if (type.IsGenericTypeParameter == true) {
+                var constraints = type.GetGenericParameterConstraints();
+                foreach (var constraint in constraints) {
+                    var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
+                    foreach (var constType in constTypes) {
+                        AddToLookup(constType, types, components, jobTypes, entityTypes, aspects);
+                    }
+                }
+                return;
+            }
+            if (typeof(IComponentBase).IsAssignableFrom(type) == true) {
+                components.Add(type);
+            } else if (typeof(IAspect).IsAssignableFrom(type) == true) {
+                aspects.Add(type);
+                var fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                foreach (var field in fields) {
+                    if (typeof(IAspectData).IsAssignableFrom(field.FieldType) == true) {
+                        components.Add(field.FieldType.GenericTypeArguments[0]);
+                    }
+                }
+            }
+        }
+
     }
     
 }

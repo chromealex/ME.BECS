@@ -72,7 +72,7 @@ namespace ME.BECS {
     [ComponentGroup(typeof(QuadTreeComponentGroup))]
     public struct QuadTreeResult : IComponent {
 
-        public ListAuto<Ent> results;
+        public QueryResults results;
 
     }
 

@@ -20,15 +20,17 @@
 }
 
 .block {
-    background-color: #652a2a;
+    opacity: 1;
     border-width: 1px;
-    border-color: #8f4c4c;
+    border-color: rgba(255, 255, 255, 0.2);
     min-width: 4px;
     border-right-width: 0px;
     height: 20px;
     flex-grow: 0;
     flex-shrink: 0;
-    opacity: 1;
+    padding: 0px;
+    margin: 0px;
+    border-radius: 0px;
 }
 
 .block Button {
@@ -156,4 +158,43 @@
 .block:hover {
     opacity: 0.8;
     transition-duration: 0.2s;
+}
+
+.legend {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    padding: 4px;
+    margin: 2px;
+    min-width: 200px;
+    max-width: 50%;
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.5);
+    flex-wrap: wrap;
+    align-items: flex-start;
+    flex-direction: row;
+}
+
+.legend .legend-item {
+    padding: 2px;
+    flex-direction: row;
+    background-color: rgba(90, 90, 90, 0.2);
+    align-items: center;
+}
+
+.legend .legend-item.selected {
+    border-color: greenyellow;
+}
+
+.legend .legend-item .color-box {
+    margin-right: 5px;
+    width: 10px;
+    height: 10px;
+}
+
+.legend .legend-item .label {
+    font-size: 9px;
+    flex-grow: 1;
+    -unity-text-align: middle-left;
 }

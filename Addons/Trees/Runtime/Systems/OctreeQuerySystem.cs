@@ -71,7 +71,7 @@ namespace ME.BECS {
     [ComponentGroup(typeof(OctreeComponentGroup))]
     public struct OctreeResult : IComponent {
 
-        public ListAuto<Ent> results;
+        public QueryResults results;
 
     }
 

@@ -15,7 +15,7 @@ namespace ME.BECS.Editor {
             this.order = order;
         }
 
-    } 
+    }
 
     public struct MethodPointerData : System.IEquatable<MethodPointerData> {
 
@@ -228,6 +228,9 @@ namespace ME.BECS.Editor {
         public UnityEditor.TypeCache.TypeCollection burstedTypes;
         public UnityEditor.TypeCache.MethodCollection burstDiscardedTypes;
         public System.Collections.Generic.List<System.Type> systems;
+        public System.Collections.Generic.List<System.Type> jobTypes;
+        public System.Collections.Generic.List<System.Type> entityTypes;
+        public System.Collections.Generic.List<System.Type> aspects;
 
         public bool IsValidTypeForAssembly(System.Type type, bool runtimeInEditor = true) {
 
@@ -488,6 +491,10 @@ namespace ME.BECS.Editor {
 
         }
 
+        private static bool IsStaticType(System.Type type) {
+            return typeof(IConfigComponentStatic).IsAssignableFrom(type);
+        }
+
         private static void OnLogAdded(string condition, string stackTrace, UnityEngine.LogType type) {
 
             /*if (type == UnityEngine.LogType.Exception ||
@@ -544,7 +551,8 @@ namespace ME.BECS.Editor {
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var aotContent = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
-                var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
+                ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.GetUsedObjects(out var usedObjects);
+                var types = usedObjects.systems;//UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
                 PatchSystemsList(types);
                 var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
@@ -626,8 +634,8 @@ namespace ME.BECS.Editor {
                     if (drawGizmosBurst == true) aotContent.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
                 }
 
-                var components = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
-                foreach (var component in components) {
+                //var componentsGroups = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
+                foreach (var component in usedObjects.componentsGroup) {
 
                     var asm = component.Assembly.GetName().Name;
                     var info = asms.FirstOrDefault(x => x.name == asm);
@@ -643,7 +651,8 @@ namespace ME.BECS.Editor {
                 }
 
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>().OrderBy(x => x.FullName).ToArray();
+                    //var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponent>().OrderBy(x => x.FullName).ToArray();
+                    var allComponents = usedObjects.components;
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -653,10 +662,12 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTagType = IsTagType(component);
+                        var isStaticType = IsStaticType(component);
                         var isTag = isTagType.ToString().ToLower();
+                        var isStatic = isStaticType.ToString().ToLower();
                         var type = EditorUtils.GetTypeName(component);
                         {
-                            var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
+                            var str = $"StaticTypes<{type}>.Validate(isTag: {isTag}, isStatic: {isStatic});";
                             typesContent.Add(str);
                         }
                         componentTypes.Add(component);
@@ -672,7 +683,8 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentShared>().OrderBy(x => x.FullName).ToArray();
+                    //var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentShared>().OrderBy(x => x.FullName).ToArray();
+                    var allComponents = usedObjects.components.Where(x => typeof(IComponentShared).IsAssignableFrom(x)).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -692,7 +704,8 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
+                    //var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigComponentStatic>().OrderBy(x => x.FullName).ToArray();
+                    var allComponents = usedObjects.components.Where(x => typeof(IConfigComponentStatic).IsAssignableFrom(x)).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -711,7 +724,8 @@ namespace ME.BECS.Editor {
                     }
                 }
                 {
-                    var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigInitialize>().OrderBy(x => x.FullName).ToArray();
+                    //var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IConfigInitialize>().OrderBy(x => x.FullName).ToArray();
+                    var allComponents = usedObjects.components.Where(x => typeof(IConfigInitialize).IsAssignableFrom(x)).ToArray();
                     foreach (var component in allComponents) {
 
                         if (component.IsValueType == false) continue;
@@ -721,8 +735,9 @@ namespace ME.BECS.Editor {
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
+                        var isStatic = IsStaticType(component).ToString().ToLower();
                         var type = EditorUtils.GetTypeName(component);
-                        var str = $"StaticTypes<{type}>.Validate(isTag: {isTag});";
+                        var str = $"StaticTypes<{type}>.Validate(isTag: {isTag}, isStatic: {isStatic});";
                         typesContent.Add(str);
                         componentTypes.Add(component);
                         aotContent.Add($"ConfigInitializeTypes<{type}>.AOT();");
@@ -742,6 +757,9 @@ namespace ME.BECS.Editor {
                         customCodeGenerator.dir = dir;
                         customCodeGenerator.asms = asms;
                         customCodeGenerator.systems = types;
+                        customCodeGenerator.entityTypes = usedObjects.entityTypes;
+                        customCodeGenerator.jobTypes = usedObjects.jobTypes;
+                        customCodeGenerator.aspects = usedObjects.aspects;
                         customCodeGenerator.editorAssembly = editorAssembly;
                         customCodeGenerator.burstedTypes = burstedTypes;
                         customCodeGenerator.burstDiscardedTypes = burstDiscardedTypes;

@@ -932,21 +932,21 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
+        [SafetyCheck(RefOp.ReadOnly)] public bool HasStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
             return this.staticData.HasStatic<T>();
 
         }
 
         [INLINE(256)]
-        public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
+        [SafetyCheck(RefOp.ReadOnly)] public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
             return this.staticData.ReadStatic<T>();
 
         }
 
         [INLINE(256)]
-        public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
+        [SafetyCheck(RefOp.ReadOnly)] public bool TryReadStatic<T>(out T component) where T : unmanaged, IConfigComponentStatic {
 
             return this.staticData.TryReadStatic(out component);
 

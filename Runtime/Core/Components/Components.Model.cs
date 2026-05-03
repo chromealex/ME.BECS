@@ -14,6 +14,7 @@ namespace ME.BECS {
         // entityId => [typeId => hash]
         internal MemArray<MemArray<uint>> entityIdToHash;
         public MemArray<MemAllocatorPtr> items;
+        private bbool allowStaticStorage;
 
         public int Hash => (int)this.items.Length;
 
@@ -22,6 +23,7 @@ namespace ME.BECS {
             writer.Write(this.sharedData);
             writer.Write(this.entityIdToHash);
             writer.Write(this.items);
+            writer.Write(this.allowStaticStorage);
         }
 
         public void DeserializeHeaders(ref StreamBufferReader reader) {
@@ -29,6 +31,7 @@ namespace ME.BECS {
             reader.Read(ref this.sharedData);
             reader.Read(ref this.entityIdToHash);
             reader.Read(ref this.items);
+            reader.Read(ref this.allowStaticStorage);
         }
 
     }

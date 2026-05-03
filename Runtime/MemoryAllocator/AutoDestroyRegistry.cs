@@ -37,11 +37,13 @@ namespace ME.BECS {
         [INLINE(256)]
         public static AutoDestroyRegistry Create(safe_ptr<State> state, uint capacity) {
 
-            return new AutoDestroyRegistry() {
-                list = new MemArray<List<uint>>(ref state.ptr->allocator, capacity),
-                readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, capacity),
-                readWriteSpinner = ReadWriteSpinner.Create(state),
-            };
+            using (new AllocatorTag(ALLOC_TAGS.AUTO_DESTROY)) {
+                return new AutoDestroyRegistry() {
+                    list = new MemArray<List<uint>>(ref state.ptr->allocator, capacity),
+                    readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, capacity),
+                    readWriteSpinner = ReadWriteSpinner.Create(state),
+                };
+            }
 
         }
 
@@ -50,8 +52,10 @@ namespace ME.BECS {
             
             if (entId >= state.ptr->autoDestroyRegistry.list.Length) {
                 state.ptr->autoDestroyRegistry.readWriteSpinner.WriteBegin(state);
-                state.ptr->autoDestroyRegistry.list.Resize(ref state.ptr->allocator, entId + 1u, 2);
-                state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity.Resize(ref state.ptr->allocator, entId + 1u, 2);
+                using (new AllocatorTag(ALLOC_TAGS.AUTO_DESTROY)) {
+                    state.ptr->autoDestroyRegistry.list.Resize(ref state.ptr->allocator, entId + 1u, 2);
+                    state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity.Resize(ref state.ptr->allocator, entId + 1u, 2);
+                }
                 state.ptr->autoDestroyRegistry.readWriteSpinner.WriteEnd();
             }
             
@@ -96,7 +100,7 @@ namespace ME.BECS {
             byte* comp = null;
             var exists = true;
             if (StaticTypes.sizes.Get(typeId) > 0) {
-                comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);;
+                comp = Components.ReadUnknownType(state, typeId, ent.id, ent.gen, out exists);
             } else {
                 exists = Components.HasUnknownType(state, typeId, ent.id, ent.gen, false);
             }
@@ -127,9 +131,11 @@ namespace ME.BECS {
             state.ptr->autoDestroyRegistry.readWriteSpinner.ReadBegin(state);
             ref var entitySpinner = ref state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
             entitySpinner.Lock();
-            ref var list = ref state.ptr->autoDestroyRegistry.list[in state.ptr->allocator, ent.id];
-            if (list.IsCreated == false) list = new List<uint>(ref state.ptr->allocator, 1u);
-            list.Add(ref state.ptr->allocator, typeId);
+            using (new AllocatorTag(ALLOC_TAGS.AUTO_DESTROY)) {
+                ref var list = ref state.ptr->autoDestroyRegistry.list[in state.ptr->allocator, ent.id];
+                if (list.IsCreated == false) list = new List<uint>(ref state.ptr->allocator, 1u);
+                list.Add(ref state.ptr->allocator, typeId);
+            }
             entitySpinner.Unlock();
             state.ptr->autoDestroyRegistry.readWriteSpinner.ReadEnd(state);
             

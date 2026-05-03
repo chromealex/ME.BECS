@@ -53,7 +53,6 @@ GridBackground {
 
 .popup .content {
     margin: 10px;
-    margin-right: 260px;
     background-color: rgba(70, 70, 70, 0.8);
     border-width: 2px;
     border-color: rgba(40, 40, 40, 0.8);

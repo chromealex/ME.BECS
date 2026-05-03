@@ -1210,6 +1210,7 @@ namespace ME.BECS.Editor {
         }
 
         public static System.Type GetFirstInterfaceConstraintType(System.Type type) {
+            if (type.IsGenericTypeDefinition == false) type = type.GetGenericTypeDefinition();
             var constrains = type.GetGenericArguments()[0].GetGenericParameterConstraints();
             return constrains.FirstOrDefault(x => x.IsInterface == true);
         }

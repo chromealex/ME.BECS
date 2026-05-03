@@ -127,19 +127,19 @@ namespace ME.BECS.Jobs {
                 
                 JobStaticInfo<T>.lastCount = jobInfo.count;
                 
-                while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
-                    
-                    jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                    for (uint i = (uint)begin; i < end; ++i) {
-                        jobInfo.index = i;
-                        jobInfo.ResetLocalCounter();
-                        var entId = *(jobData.buffer->entities + i);
-                        var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                        var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                        jobData.jobData.Execute(in jobInfo, in ent, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen),ref jobData.c4.Get(ent.id, ent.gen),ref jobData.c5.Get(ent.id, ent.gen),ref jobData.c6.Get(ent.id, ent.gen),ref jobData.c7.Get(ent.id, ent.gen));
+                using (new AllocatorTag(ALLOC_TAGS.SYSTEMS)) {
+                    while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                        jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                        for (uint i = (uint)begin; i < end; ++i) {
+                            jobInfo.index = i;
+                            jobInfo.ResetLocalCounter();
+                            var entId = *(jobData.buffer->entities + i);
+                            var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                            var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                            jobData.jobData.Execute(in jobInfo, in ent, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen),ref jobData.c4.Get(ent.id, ent.gen),ref jobData.c5.Get(ent.id, ent.gen),ref jobData.c6.Get(ent.id, ent.gen),ref jobData.c7.Get(ent.id, ent.gen));
+                        }
+                        jobData.buffer->EndForEachRange();
                     }
-                    jobData.buffer->EndForEachRange();
-                    
                 }
 
             }

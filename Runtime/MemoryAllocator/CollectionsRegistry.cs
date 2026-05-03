@@ -33,11 +33,13 @@ namespace ME.BECS {
         [INLINE(256)]
         public static CollectionsRegistry Create(safe_ptr<State> state, uint capacity) {
 
-            return new CollectionsRegistry() {
-                list = new MemArray<List<MemPtr>>(ref state.ptr->allocator, capacity),
-                readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, capacity),
-                readWriteSpinner = ReadWriteSpinner.Create(state),
-            };
+            using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
+                return new CollectionsRegistry() {
+                    list = new MemArray<List<MemPtr>>(ref state.ptr->allocator, capacity),
+                    readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, capacity),
+                    readWriteSpinner = ReadWriteSpinner.Create(state),
+                };
+            }
 
         }
 
@@ -47,8 +49,10 @@ namespace ME.BECS {
             if (entId >= state.ptr->collectionsRegistry.list.Length) {
                 state.ptr->collectionsRegistry.readWriteSpinner.WriteBegin(state);
                 if (entId >= state.ptr->collectionsRegistry.list.Length) {
-                    state.ptr->collectionsRegistry.list.Resize(ref state.ptr->allocator, entId + 1u, 2);
-                    state.ptr->collectionsRegistry.readWriteSpinnerPerEntity.Resize(ref state.ptr->allocator, entId + 1u, 2);
+                    using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
+                        state.ptr->collectionsRegistry.list.Resize(ref state.ptr->allocator, entId + 1u, 2);
+                        state.ptr->collectionsRegistry.readWriteSpinnerPerEntity.Resize(ref state.ptr->allocator, entId + 1u, 2);
+                    }
                 }
                 state.ptr->collectionsRegistry.readWriteSpinner.WriteEnd();
             }
@@ -83,8 +87,14 @@ namespace ME.BECS {
             ref var entitySpinner = ref state.ptr->collectionsRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
             entitySpinner.Lock();
             ref var list = ref state.ptr->collectionsRegistry.list[in state.ptr->allocator, ent.id];
-            if (list.IsCreated == false) list = new List<MemPtr>(ref state.ptr->allocator, 1u);
-            list.Add(ref state.ptr->allocator, ptr);
+            if (list.IsCreated == false) {
+                using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
+                    list = new List<MemPtr>(ref state.ptr->allocator, 1u);
+                }
+            }
+            using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
+                list.Add(ref state.ptr->allocator, ptr);
+            }
             entitySpinner.Unlock();
             state.ptr->collectionsRegistry.readWriteSpinner.ReadEnd(state);
             

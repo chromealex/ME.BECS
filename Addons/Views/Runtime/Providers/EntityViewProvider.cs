@@ -1,4 +1,3 @@
-
 using ME.BECS.Transforms;
 #if FIXED_POINT
 using tfloat = sfloat;
@@ -7,6 +6,9 @@ using ME.BECS.FixedPoint;
 using tfloat = System.Single;
 using Unity.Mathematics;
 #endif
+
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Views.ViewCustomIdComponent))]
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Views.EntityViewProviderTag))]
 
 namespace ME.BECS.Views {
     

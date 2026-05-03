@@ -71,7 +71,7 @@ namespace ME.BECS.Tests {
                     data = 1,
                 };
                 var test = &testData;
-                var sp = new DataDenseSet(world.state, TSize<TestComponent>.size, 10);
+                var sp = new DataDenseSet(1u, world.state, TSize<TestComponent>.size, 10);
                 sp.Set(world.state, 1, 1, test, out _);
                 sp.Set(world.state, 2, 1, test, out _);
                 sp.Set(world.state, 3, 1, test, out _);
@@ -100,7 +100,7 @@ namespace ME.BECS.Tests {
                     data = 1,
                 };
                 var test = &testData;
-                var sp = new DataDenseSet(world.state, TSize<TestComponent>.size, 10);
+                var sp = new DataDenseSet(1u, world.state, TSize<TestComponent>.size, 10);
                 sp.Set(world.state, 1, 1, test, out _);
                 sp.Set(world.state, 2, 1, test, out _);
                 sp.Set(world.state, 3, 1, test, out _);

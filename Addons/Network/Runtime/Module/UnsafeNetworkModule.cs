@@ -1323,7 +1323,7 @@ namespace ME.BECS.Network {
                         // Apply events for this tick
                         dependsOn = this.data.ptr->Tick(tick, deltaTimeMs, in world, dependsOn);
                     }
-                    
+
                     dependsOn = world.TickWithoutWorldState(deltaTimeMs, UpdateType.FIXED_UPDATE, dependsOn);
                     dependsOn = State.SetWorldState(in world, WorldState.EndTick, UpdateType.FIXED_UPDATE, deltaTimeMs, dependsOn);
                     dependsOn.Complete();

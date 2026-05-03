@@ -34,7 +34,9 @@ namespace ME.BECS {
         public void OnAddComponent(safe_ptr<State> state, uint entityId, uint typeId) {
             ref var list = ref this.entityToComponents[in state.ptr->allocator, entityId];
             list.lockSpinner.Lock();
-            list.entities.Add(ref state.ptr->allocator, typeId);
+            using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
+                list.entities.Add(ref state.ptr->allocator, typeId);
+            }
             list.lockSpinner.Unlock();
         }
 

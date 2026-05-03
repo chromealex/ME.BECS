@@ -115,10 +115,27 @@ namespace ME.BECS.Jobs {
                 
                 JobStaticInfo<T>.lastCount = jobInfo.count;
 
-                if (jobData.scheduleMode == ScheduleMode.Parallel) {
-                    while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
-                        jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                        for (uint i = (uint)begin; i < end; ++i) {
+                using (new AllocatorTag(ALLOC_TAGS.SYSTEMS)) {
+                    if (jobData.scheduleMode == ScheduleMode.Parallel) {
+                        while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                            jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                            for (uint i = (uint)begin; i < end; ++i) {
+                                jobInfo.index = i;
+                                jobInfo.ResetLocalCounter();
+                                var entId = *(jobData.buffer->entities + i);
+                                var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                                var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                                jobData.jobData.Execute(in jobInfo, in ent);
+                            }
+
+                            jobData.buffer->EndForEachRange();
+                        }
+                    } else {
+                        jobData.buffer->SetEntities(jobData.buffer);
+                        jobInfo.count = jobData.buffer->count;
+                        JobUtils.SetCurrentThreadAsSingle(true);
+                        jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
+                        for (uint i = 0u; i < jobData.buffer->count; ++i) {
                             jobInfo.index = i;
                             jobInfo.ResetLocalCounter();
                             var entId = *(jobData.buffer->entities + i);
@@ -126,23 +143,10 @@ namespace ME.BECS.Jobs {
                             var ent = new Ent(entId, gen, jobData.buffer->worldId);
                             jobData.jobData.Execute(in jobInfo, in ent);
                         }
+
                         jobData.buffer->EndForEachRange();
+                        JobUtils.SetCurrentThreadAsSingle(false);
                     }
-                } else {
-                    jobData.buffer->SetEntities(jobData.buffer);
-                    jobInfo.count = jobData.buffer->count;
-                    JobUtils.SetCurrentThreadAsSingle(true);
-                    jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                    for (uint i = 0u; i < jobData.buffer->count; ++i) {
-                        jobInfo.index = i;
-                        jobInfo.ResetLocalCounter();
-                        var entId = *(jobData.buffer->entities + i);
-                        var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                        var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                        jobData.jobData.Execute(in jobInfo, in ent);
-                    }
-                    jobData.buffer->EndForEachRange();
-                    JobUtils.SetCurrentThreadAsSingle(false);
                 }
 
             }

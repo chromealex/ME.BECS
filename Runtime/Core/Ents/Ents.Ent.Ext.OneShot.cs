@@ -24,7 +24,7 @@ namespace ME.BECS {
         /// <typeparam name="T">Component type</typeparam>
         /// <returns></returns>
         [INLINE(256)][IgnoreProfiler]
-        public static bool SetOneShot<T>(in this Ent ent, in T data) where T : unmanaged, IComponent {
+        [SafetyCheck(RefOp.WriteOnly)] public static bool SetOneShot<T>(in this Ent ent, in T data) where T : unmanaged, IComponent {
 
             return ent.SetOneShot(in data, OneShotType.CurrentTick);
 
@@ -39,7 +39,7 @@ namespace ME.BECS {
         /// <typeparam name="T">Component type</typeparam>
         /// <returns></returns>
         [INLINE(256)][IgnoreProfiler]
-        public static bool SetOneShot<T>(in this Ent ent, in T data, OneShotType type) where T : unmanaged, IComponent {
+        [SafetyCheck(RefOp.WriteOnly)] public static bool SetOneShot<T>(in this Ent ent, in T data, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_ALIVE(ent);
             E.IS_IN_TICK(ent.World.state);

@@ -263,11 +263,7 @@ namespace ME.BECS {
             // clean up results
             marker = new Unity.Profiling.ProfilerMarker("Prepare:Clear");
             marker.Begin();
-            if (query.readResults.results.IsCreated == true) query.results.results.Clear();
-            marker.End();
-            marker = new Unity.Profiling.ProfilerMarker("Prepare:Alloc");
-            marker.Begin();
-            if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+            QueryResults.Create(ref query.results.results, query.ent, q.nearestCount > 0u ? q.nearestCount : 1u, q.updatePerTick == 0);
             marker.End();
 
             if (q.nearestCount == 1u) {
@@ -324,11 +320,11 @@ namespace ME.BECS {
 
         }
 
-        public readonly void GetNearest(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
+        public readonly void GetNearest(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreY, ignoreSorting, new AlwaysTrueOctreeSubFilter());
         }
 
-        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
+        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting, in T subFilter = default) where T : struct, IOctreeSubFilter<Ent> {
             
             var bitsCount = math.countbits(mask);
             if (nearestCount > 0u) {

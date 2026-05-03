@@ -22,6 +22,7 @@ namespace ME.BECS {
         public static void Load() {
             JobUtils.Initialize();
             {{CONTENT_TYPES}}
+            LocksCache.Initialize(LocksCache.COMPONENTS, StaticTypes.counter + 1u);
         }
     }
     
@@ -33,6 +34,7 @@ namespace ME.BECS {
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Load() {
             Logger.Core.Log("[ ME.BECS ] Loading...");
+            LeakDetector.ClearAllocated();
             Worlds.Initialize();
             SystemsStatic.Initialize();
             StaticTypesInitializer.Load();

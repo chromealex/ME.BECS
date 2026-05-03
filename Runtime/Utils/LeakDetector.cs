@@ -7,7 +7,94 @@ namespace ME.BECS {
     using Unity.Collections.LowLevel.Unsafe;
     using System.Diagnostics;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
+    using static Cuts;
 
+    public class AllocatorTagInfoAttribute : System.Attribute {}
+    
+    public struct AllocatorTagInfo {
+
+        public ushort tag;
+        public Unity.Collections.FixedString32Bytes name;
+        public UnityEngine.Color color;
+
+    }
+
+    public struct AllocatorTagData {
+
+        public AllocatorTagInfo tagInfo;
+        public uint componentId;
+        public safe_ptr<AllocatorTagData> parent;
+
+    }
+
+    public class AllocatorTagLocks {
+
+        public static readonly SharedStatic<LockSpinner> lck = SharedStatic<LockSpinner>.GetOrCreate<AllocatorTagLocks>();
+
+    }
+    
+    public class AllocatorTagDummy {
+
+        public static readonly SharedStatic<AllocatorTagData> dummy = SharedStatic<AllocatorTagData>.GetOrCreate<AllocatorTagDummy>();
+
+    }
+    
+    public struct AllocatorTag : System.IDisposable {
+
+        public static readonly SharedStatic<Internal.Array<AllocatorTagData>> tags = SharedStatic<Internal.Array<AllocatorTagData>>.GetOrCreate<AllocatorTag>();
+        
+        public AllocatorTag(AllocatorTagInfo tag, uint id = 0u, bool allThreads = false) {
+            #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
+            AllocatorTagLocks.lck.Data.Lock();
+            safe_ptr<AllocatorTagData> parent = default;
+            if (Get().tagInfo.tag > 0) {
+                parent = _make(Get());
+            }
+            tags.Data.Resize(JobUtils.ThreadIndex + 1u);
+            AllocatorTagLocks.lck.Data.Unlock();
+            if (allThreads == true) {
+                SetAllThreads(tag, id, parent);
+            } else {
+                tags.Data.Get(JobUtils.ThreadIndex) = new AllocatorTagData() {
+                    tagInfo = tag,
+                    componentId = id,
+                    parent = parent,
+                };
+            }
+            #endif
+        }
+
+        private static void SetAllThreads(AllocatorTagInfo tag, uint id, safe_ptr<AllocatorTagData> parent) {
+            for (uint i = 0u; i < JobUtils.ThreadsCount; ++i) {
+                tags.Data.Get(JobUtils.ThreadIndex) = new AllocatorTagData() {
+                    tagInfo = tag,
+                    componentId = id,
+                    parent = parent,
+                };
+            }
+        }
+
+        public unsafe void Dispose() {
+            #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
+            if (Get().parent.ptr != null) {
+                tags.Data.Get(JobUtils.ThreadIndex) = *Get().parent.ptr;
+            } else {
+                tags.Data.Get(JobUtils.ThreadIndex) = default;
+            }
+            #endif
+        }
+
+        public static ref AllocatorTagData Get() {
+            #if LEAK_DETECTION || LEAK_DETECTION_ALLOCATOR
+            if (JobUtils.ThreadIndex >= tags.Data.Length) return ref AllocatorTagDummy.dummy.Data;
+            return ref tags.Data.Get(JobUtils.ThreadIndex);
+            #else
+            return ref AllocatorTagDummy.dummy.Data;
+            #endif
+        }
+
+    }
+    
     [IgnoreProfiler]
     public unsafe class LeakDetectorData {
 
@@ -16,13 +103,15 @@ namespace ME.BECS {
 
             public System.IntPtr ptr;
             public System.IntPtr hiPtr;
-            private readonly MemPtr memPtr;
+            public readonly MemPtr memPtr;
             public readonly Unity.Collections.Allocator allocator;
             public Unity.Collections.FixedString4096Bytes stackTrace;
-            
-            public Item(void* ptr, void* hiPtr, MemPtr memPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true) {
+            public readonly AllocatorTagData tag;
+
+            public Item(void* ptr, void* hiPtr, MemPtr memPtr, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.None, bool withStackTrace = true, AllocatorTagData tag = default) {
                 this = default;
                 this.memPtr = memPtr;
+                this.tag = tag;
                 this.ptr = (System.IntPtr)ptr;
                 this.hiPtr = (System.IntPtr)hiPtr;
                 this.allocator = allocator;
@@ -114,9 +203,10 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void TrackAllocator(void* ptr, MemPtr memPtr) {
 
+            var tag = AllocatorTag.Get();
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, default, Unity.Collections.Allocator.FirstUserIndex, false), new LeakDetectorData.Item(ptr, ptr, memPtr, Unity.Collections.Allocator.FirstUserIndex));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, default, Unity.Collections.Allocator.FirstUserIndex, false), new LeakDetectorData.Item(ptr, ptr, memPtr, Unity.Collections.Allocator.FirstUserIndex, tag: tag));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -126,9 +216,10 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void TrackAllocator(safe_ptr ptr, MemPtr memPtr) {
 
+            var tag = AllocatorTag.Get();
             LeakDetectorData.spinner.Data.Lock();
             LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, false), new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, memPtr, Unity.Collections.Allocator.FirstUserIndex));
+            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, false), new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, memPtr, Unity.Collections.Allocator.FirstUserIndex, tag: tag));
             LeakDetectorData.spinner.Data.Unlock();
 
         }
@@ -255,6 +346,14 @@ namespace ME.BECS {
             var item = new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, withStackTrace: false);
             if (LeakDetectorData.tracked.Data.TryGetValue(item, out var value) == true) {
                 return value.stackTrace;
+            }
+            return default;
+        }
+
+        public static LeakDetectorData.Item Find(safe_ptr ptr) {
+            var item = new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, withStackTrace: false);
+            if (LeakDetectorData.tracked.Data.TryGetValue(item, out var value) == true) {
+                return value;
             }
             return default;
         }

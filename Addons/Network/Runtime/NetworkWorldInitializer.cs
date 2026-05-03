@@ -133,7 +133,7 @@ namespace ME.BECS.Network {
                 // Update logic - depends on tick time
                 var handle = this.networkModule.UpdateInitializer(dt, this, this.previousFrameDependsOn, ref this.world);
                 handle.Complete();
-                
+
                 if (this.networkModule.IsInRollback() == false) {
                     this.RedrawVisual();
                 }

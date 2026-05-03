@@ -36,7 +36,7 @@ namespace ME.BECS.Editor.Jobs {
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
 
             this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
-            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            var jobsComponents = this.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
 
@@ -146,6 +146,21 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
+        private System.Type[] GetTypesDerivedFrom(System.Type type) {
+            var list = new System.Collections.Generic.List<System.Type>(this.jobTypes.Count);
+            foreach (var item in this.jobTypes) {
+                if (type.IsAssignableFrom(item) == true) {
+                    var t = item;
+                    if (item.IsGenericType == true && item.IsGenericTypeDefinition == false) {
+                        t = item.GetGenericTypeDefinition();
+                    }
+                    list.Add(t);
+                }
+            }
+            return list.ToArray();
+            //return UnityEditor.TypeCache.GetTypesDerivedFrom(type).ToArray();
+        }
+
         public enum JobType {
             Aspect,
             Components,
@@ -220,7 +235,7 @@ namespace ME.BECS.Editor.Jobs {
         private void AddJobs<TJobBase, T0, T1>(ref int uniqueId, System.Text.StringBuilder cacheBuilder, System.Text.StringBuilder funcBuilder, System.Text.StringBuilder structBuilder, System.Text.StringBuilder structUnsafeBuilder, JobType genType) {
             
             this.cache.SetKey(typeof(TJobBase).Name);
-            var jobsComponents = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
+            var jobsComponents = this.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
                 if (jobType.IsValueType == false) continue;
@@ -377,41 +392,45 @@ namespace ME.BECS.Editor.Jobs {
             
         }
 
-        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, bool useAnalyzer = false, System.Predicate<Instruction> onInstruction = null) {
+        public static System.Collections.Generic.HashSet<TypeInfo> GetMethodTypesInfo(MethodInfo root, bool traverseHierarchy = true, bool useAnalyzer = false, bool methodParameters = true, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
             var aspectsType = new System.Collections.Generic.HashSet<System.Type>();
             var componentsType = new System.Collections.Generic.HashSet<System.Type>();
 
             var parametersOverrides = new System.Collections.Generic.HashSet<TypeInfo>();
-            var parameters = root.GetParameters();
-            foreach (var p in parameters) {
-                var overrideWO = p.GetCustomAttribute<WOAttribute>() != null;
-                var overrideRO = p.GetCustomAttribute<ROAttribute>() != null;
-                var overrideRW = p.GetCustomAttribute<RWAttribute>() != null;
-                if (overrideRW == true) {
-                    parametersOverrides.Add(new TypeInfo() {
-                        type = p.ParameterType.GetElementType(),
-                        op = RefOp.ReadWrite,
-                        isArg = true,
-                    });
-                } else if (overrideWO == true) {
-                    parametersOverrides.Add(new TypeInfo() {
-                        type = p.ParameterType.GetElementType(),
-                        op = RefOp.WriteOnly,
-                        isArg = true,
-                    });
-                } else if (overrideRO == true) {
-                    parametersOverrides.Add(new TypeInfo() {
-                        type = p.ParameterType.GetElementType(),
-                        op = RefOp.ReadOnly,
-                        isArg = true,
-                    });
-                }
-                if (p.ParameterType.GetInterfaces().Contains(typeof(IAspect)) == true) {
-                    aspectsType.Add(p.ParameterType.GetElementType());
-                } else if (p.ParameterType.GetInterfaces().Contains(typeof(IComponentBase)) == true) {
-                    componentsType.Add(p.ParameterType.GetElementType());
+            if (methodParameters == true) {
+                var parameters = root.GetParameters();
+                foreach (var p in parameters) {
+                    var overrideWO = p.GetCustomAttribute<WOAttribute>() != null;
+                    var overrideRO = p.GetCustomAttribute<ROAttribute>() != null;
+                    var overrideRW = p.GetCustomAttribute<RWAttribute>() != null;
+                    if (overrideRW == true) {
+                        parametersOverrides.Add(new TypeInfo() {
+                            type = p.ParameterType.GetElementType(),
+                            op = RefOp.ReadWrite,
+                            isArg = true,
+                        });
+                    } else if (overrideWO == true) {
+                        parametersOverrides.Add(new TypeInfo() {
+                            type = p.ParameterType.GetElementType(),
+                            op = RefOp.WriteOnly,
+                            isArg = true,
+                        });
+                    } else if (overrideRO == true) {
+                        parametersOverrides.Add(new TypeInfo() {
+                            type = p.ParameterType.GetElementType(),
+                            op = RefOp.ReadOnly,
+                            isArg = true,
+                        });
+                    }
+
+                    if (p.ParameterType.GetInterfaces().Contains(typeof(IAspect)) == true) {
+                        aspectsType.Add(p.ParameterType.GetElementType());
+                    } else if (p.ParameterType.GetInterfaces().Contains(typeof(IComponentBase)) == true) {
+                        componentsType.Add(p.ParameterType.GetElementType());
+                    }
                 }
             }
+
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
             var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
@@ -432,7 +451,7 @@ namespace ME.BECS.Editor.Jobs {
                 var instructions = body.GetInstructions();
                 foreach (var inst in instructions) {
                     var continueTraverse = true;
-                    if (onInstruction?.Invoke(inst) == true) continue;
+                    if (onInstruction?.Invoke(inst, q) == true) continue;
                     {
                         if (inst.Operand is MethodInfo methodInfo && methodInfo.GetCustomAttribute<DisableContainerSafetyRestrictionAttribute>() != null) {
                             continue;
@@ -478,10 +497,23 @@ namespace ME.BECS.Editor.Jobs {
                         if (safetyCheck != null) {
                             var type = method.GetGenericArguments()[0];
                             if (typeof(IComponentBase).IsAssignableFrom(type) == true) {
-                                uniqueTypes.Add(new TypeInfo() {
-                                    type = type,
-                                    op = safetyCheck.Op,
-                                });
+                                if (type.IsGenericTypeParameter == true) {
+                                    var constraints = type.GetGenericParameterConstraints();
+                                    foreach (var constraint in constraints) {
+                                        var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
+                                        foreach (var constType in constTypes) {
+                                            uniqueTypes.Add(new TypeInfo() {
+                                                type = constType,
+                                                op = safetyCheck.Op,
+                                            });
+                                        }
+                                    }
+                                } else {
+                                    uniqueTypes.Add(new TypeInfo() {
+                                        type = type,
+                                        op = safetyCheck.Op,
+                                    });
+                                }
                                 continueTraverse = false;
                             }
                         }
@@ -658,7 +690,7 @@ namespace ME.BECS.Editor.Jobs {
             };
         }
         
-        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Predicate<Instruction> onInstruction = null) {
+        public static System.Collections.Generic.HashSet<TypeInfo> GetJobTypesInfo(System.Type jobType, System.Func<Instruction, System.Collections.Generic.Queue<System.Reflection.MethodInfo>, bool> onInstruction = null) {
             var root = jobType.GetMethod("Execute");
             return GetMethodTypesInfo(root, onInstruction: onInstruction);
         }

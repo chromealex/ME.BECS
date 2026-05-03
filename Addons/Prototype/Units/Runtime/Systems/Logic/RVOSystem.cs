@@ -82,7 +82,7 @@ namespace ME.BECS.Units {
             
         }
 
-        private void Resolve(in TransformAspect tr, in UnitAspect unit, ListAuto<Ent> list, tfloat dt) {
+        private void Resolve(in TransformAspect tr, in UnitAspect unit, QueryResults list, tfloat dt) {
 
             float3 newVelocity;
             unit.componentRuntime.collideWithEnd = false;
@@ -110,7 +110,7 @@ namespace ME.BECS.Units {
 
         }
 
-        private bool ResolveOverlap(in TransformAspect tr, in UnitAspect currentUnit, ListAuto<Ent> list, tfloat dt) {
+        private bool ResolveOverlap(in TransformAspect tr, in UnitAspect currentUnit, QueryResults list, tfloat dt) {
             var collideWithEnd = false;
             var collisionDirection = float3.zero;
             foreach (var unitEnt in list) {
@@ -140,7 +140,7 @@ namespace ME.BECS.Units {
             return collideWithEnd;
         }
         
-        private float3 ComputeRVO(in TransformAspect tr, in UnitAspect currentUnit, ListAuto<Ent> list, float3 desiredVelocity, out tfloat danger) {
+        private float3 ComputeRVO(in TransformAspect tr, in UnitAspect currentUnit, QueryResults list, float3 desiredVelocity, out tfloat danger) {
             
             var avoidance = float3.zero;
             var count = 0u;

@@ -12,7 +12,7 @@ namespace ME.BECS {
 
             [HIDE_CALLSTACK]
             public static void Throw() {
-                throw new OutOfRangeException("Type id is out of range");
+                throw new OutOfRangeException("Type id is out of range. Be sure you have referenced it by your systems or jobs code or add it manually by [assembly: CodeGeneratorInclude(..)].");
             }
 
         }

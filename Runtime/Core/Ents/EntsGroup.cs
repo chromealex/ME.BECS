@@ -95,7 +95,8 @@ namespace ME.BECS {
             public List<Group> groups;
             public List<uint> freeGroups;
             public HashSet<uint> freeGroupsHas;
-            public ReadWriteSpinner resizeLock;
+            public uint index;
+            public ref ReadWriteNativeSpinner resizeLock => ref LocksCache.GetReadWriteSpinner(LocksCache.ENT_GROUPS, this.index);
 
             public uint Count(World world) {
                 var cnt = 0u;
@@ -107,13 +108,15 @@ namespace ME.BECS {
             }
 
             [INLINE(256)]
-            public static Groups Create(safe_ptr<State> state, uint initGroupsCount) {
-                return new Groups() {
-                    groups = new List<Group>(ref state.ptr->allocator, initGroupsCount),
-                    freeGroupsHas = new HashSet<uint>(ref state.ptr->allocator, initGroupsCount),
-                    freeGroups = new List<uint>(ref state.ptr->allocator, initGroupsCount),
-                    resizeLock = ReadWriteSpinner.Create(state),
-                };
+            public static Groups Create(uint index, safe_ptr<State> state, uint initGroupsCount) {
+                using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
+                    return new Groups() {
+                        index = index,
+                        groups = new List<Group>(ref state.ptr->allocator, initGroupsCount),
+                        freeGroupsHas = new HashSet<uint>(ref state.ptr->allocator, initGroupsCount),
+                        freeGroups = new List<uint>(ref state.ptr->allocator, initGroupsCount),
+                    };
+                }
             }
 
             [INLINE(256)]
@@ -142,7 +145,7 @@ namespace ME.BECS {
             public uint New(safe_ptr<State> state, JobInfo jobInfo, uint groupId, ref uint nextGroupId, out uint localGroupIndex, out bool reuse) {
                 
                 if (state.ptr->entities.freeCount > 0u) {
-                    this.resizeLock.WriteBegin(state);
+                    this.resizeLock.WriteBegin();
                     if (this.TryNew(state, jobInfo, groupId, out var entId, out var usedGroupIndex, out var freeGroupIndex) == true) {
                         localGroupIndex = usedGroupIndex;
                         var group = this.groups[state, usedGroupIndex];
@@ -163,7 +166,7 @@ namespace ME.BECS {
                     }
                     reuse = false;
                     // create new group
-                    this.resizeLock.WriteBegin(state);
+                    this.resizeLock.WriteBegin();
                     if (state.ptr->entities.freeCount > 0u && this.TryNew(state, jobInfo, groupId, out var entId, out var usedGroupIndex, out var freeGroupIndex) == true) {
                         localGroupIndex = usedGroupIndex;
                         var group = this.groups[state, usedGroupIndex];
@@ -193,12 +196,12 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Delete(safe_ptr<State> state, uint entId) {
-                this.resizeLock.ReadBegin(state);
+                this.resizeLock.ReadBegin();
                 var localGroupIndex = state.ptr->entities.entityToGroupLocal[state, entId];
                 ref var group = ref this.groups[state, localGroupIndex];
                 group.Delete(entId);
-                this.resizeLock.ReadEnd(state);
-                this.resizeLock.WriteBegin(state);
+                this.resizeLock.ReadEnd();
+                this.resizeLock.WriteBegin();
                 if (this.freeGroupsHas.Add(ref state.ptr->allocator, localGroupIndex) == true) {
                     this.freeGroups.Add(ref state.ptr->allocator, localGroupIndex);
                 }
@@ -349,15 +352,18 @@ namespace ME.BECS {
         [INLINE(256)]
         public void Init(safe_ptr<State> state, uint groupsCount, uint entitiesCapacity) {
             var initGroupsCount = entitiesCapacity / ENTITIES_PER_PAGE;
-            this.resizeLock = ReadWriteSpinner.Create(state);
-            this.groupByEntityType = new MemArray<Groups>(ref state.ptr->allocator, groupsCount + 1u);
-            Resize(state, ref this, entitiesCapacity);
-            this.destroyedLock = default;
-            this.nextGroupId = 0u;
-            this.freeCount = 0u;
-            this.aliveCount = 0u;
-            for (uint i = 0u; i < groupsCount + 1u; ++i) {
-                this.groupByEntityType[state, i] = Groups.Create(state, initGroupsCount);
+            using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
+                this.resizeLock = ReadWriteSpinner.Create(state);
+                this.groupByEntityType = new MemArray<Groups>(ref state.ptr->allocator, groupsCount + 1u);
+                Resize(state, ref this, entitiesCapacity);
+                this.destroyedLock = default;
+                this.nextGroupId = 0u;
+                this.freeCount = 0u;
+                this.aliveCount = 0u;
+                LocksCache.Initialize(LocksCache.ENT_GROUPS, groupsCount + 1u);
+                for (uint i = 0u; i < groupsCount + 1u; ++i) {
+                    this.groupByEntityType[state, i] = Groups.Create(i, state, initGroupsCount);
+                }
             }
         }
 
@@ -390,7 +396,7 @@ namespace ME.BECS {
             var groupsNeeded = (uint)math.ceil(need / (float)ENTITIES_PER_PAGE);
             ref var group = ref state.ptr->entities.groupByEntityType[state, groupId];
             var newGroupsCount = group.groups.Count + groupsNeeded;
-            group.resizeLock.WriteBegin(state);
+            group.resizeLock.WriteBegin();
             group.groups.Resize(ref state.ptr->allocator, newGroupsCount);
             var currentGroups = group.groups.Count;
             for (uint i = currentGroups; i < newGroupsCount; ++i) {
@@ -468,22 +474,24 @@ namespace ME.BECS {
         [NotThreadSafe]
         [INLINE(256)]
         private static void Resize(safe_ptr<State> state, ref Ents entities, uint len) {
-            len = Bitwise.AlignUp(len, ENTITIES_PER_PAGE);
-            if (entities.aliveBits.IsCreated == false) {
-                entities.aliveBits = new BitArray(ref state.ptr->allocator, len, threadSafe: true);
+            using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
+                len = Bitwise.AlignUp(len, ENTITIES_PER_PAGE);
+                if (entities.aliveBits.IsCreated == false) {
+                    entities.aliveBits = new BitArray(ref state.ptr->allocator, len, threadSafe: true);
+                }
+                entities.aliveBits.Resize(ref state.ptr->allocator, len, growFactor: 2);
+                entities.destroyed.Resize(ref state.ptr->allocator, len);
+                entities.entityToGroup.Resize(ref state.ptr->allocator, len, 2);
+                entities.entityToGroupLocal.Resize(ref state.ptr->allocator, len, 2);
+                entities.generations.Resize(ref state.ptr->allocator, len, 2);
+                entities.versions.Resize(ref state.ptr->allocator, len, 2);
+                entities.versionsGroup.Resize(ref state.ptr->allocator, len * (StaticTypesTrackedBurst.maxId + 1u), 2);
+                entities.locksPerEntity.Resize(ref state.ptr->allocator, len, 2);
+                entities.seeds.Resize(ref state.ptr->allocator, len, 2);
+                #if ENABLE_BECS_FLAT_QUERIES
+                entities.entityToComponents.Resize(ref state.ptr->allocator, len, 2);
+                #endif
             }
-            entities.aliveBits.Resize(ref state.ptr->allocator, len, growFactor: 2);
-            entities.destroyed.Resize(ref state.ptr->allocator, len);
-            entities.entityToGroup.Resize(ref state.ptr->allocator, len, 2);
-            entities.entityToGroupLocal.Resize(ref state.ptr->allocator, len, 2);
-            entities.generations.Resize(ref state.ptr->allocator, len, 2);
-            entities.versions.Resize(ref state.ptr->allocator, len, 2);
-            entities.versionsGroup.Resize(ref state.ptr->allocator, len * (StaticTypesTrackedBurst.maxId + 1u), 2);
-            entities.locksPerEntity.Resize(ref state.ptr->allocator, len, 2);
-            entities.seeds.Resize(ref state.ptr->allocator, len, 2);
-            #if ENABLE_BECS_FLAT_QUERIES
-            entities.entityToComponents.Resize(ref state.ptr->allocator, len, 2);
-            #endif
         }
 
         [NotThreadSafe]
@@ -526,7 +534,9 @@ namespace ME.BECS {
                     state.ptr->entities.generations[in state.ptr->allocator, entId] = gen;
                     state.ptr->entities.versions[in state.ptr->allocator, entId] = version;
                     #if ENABLE_BECS_FLAT_QUERIES
-                    state.ptr->entities.entityToComponents[in state.ptr->allocator, entId] = new LockedEntityToComponent(ref state.ptr->allocator, LockedEntityToComponent.DEFAULT_CAPACITY);
+                    using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
+                        state.ptr->entities.entityToComponents[in state.ptr->allocator, entId] = new LockedEntityToComponent(ref state.ptr->allocator, LockedEntityToComponent.DEFAULT_CAPACITY);
+                    }
                     #endif
                 }
                 state.ptr->entities.resizeLock.WriteEnd();
@@ -543,7 +553,9 @@ namespace ME.BECS {
                     state.ptr->entities.entityToGroup[state, entId] = groupId;
                     state.ptr->entities.entityToGroupLocal[state, entId] = localGroupIndex;
                     #if ENABLE_BECS_FLAT_QUERIES
-                    state.ptr->entities.entityToComponents[in state.ptr->allocator, entId].Clear(state, LockedEntityToComponent.DEFAULT_CAPACITY);
+                    using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
+                        state.ptr->entities.entityToComponents[in state.ptr->allocator, entId].Clear(state, LockedEntityToComponent.DEFAULT_CAPACITY);
+                    }
                     #endif
                 }
                 state.ptr->entities.resizeLock.ReadEnd(state);

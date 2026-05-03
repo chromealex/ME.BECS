@@ -4,28 +4,31 @@ namespace ME.BECS {
     using Unity.Burst;
     using ME.BECS.Internal;
 
-    public class ReadWriteSpinnerComponentsShared {
+    public class ReadWriteSpinnerShared {
         
-        public static readonly SharedStatic<Array<Array<ReadWriteNativeSpinner>>> spinners = SharedStatic<Array<Array<ReadWriteNativeSpinner>>>.GetOrCreate<ReadWriteSpinnerComponentsShared>();
+        public static readonly SharedStatic<Array<Array<ReadWriteNativeSpinner>>> spinners = SharedStatic<Array<Array<ReadWriteNativeSpinner>>>.GetOrCreate<ReadWriteSpinnerShared>();
 
     }
     
     public static class LocksCache {
 
+        public const uint MAX_ID = 3u;
+        
+        public const uint COMPONENTS = 1u;
+        public const uint ENT_GROUPS = 2u;
+
         [INLINE(256)]
-        public static void InitializeComponents(uint maxGroupId, uint maxIndex) {
-            ref var groups = ref ReadWriteSpinnerComponentsShared.spinners.Data;
+        public static void Initialize(uint groupId, uint maxIndex) {
+            var maxGroupId = MAX_ID;
+            ref var groups = ref ReadWriteSpinnerShared.spinners.Data;
             if (maxGroupId >= groups.Length) {
                 groups.Resize(maxGroupId);
             }
-
-            for (uint i = 0u; i < groups.Length; ++i) {
-                ref var data = ref groups.Get(i);
-                if (maxIndex > data.Length) {
-                    data.Resize(maxIndex);
-                    for (uint j = 0u; j < data.Length; ++j) {
-                        data.Get(j) = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_DOMAIN);
-                    }
+            ref var data = ref groups.Get(groupId);
+            if (maxIndex > data.Length) {
+                data.Resize(maxIndex);
+                for (uint j = 0u; j < data.Length; ++j) {
+                    data.Get(j) = ReadWriteNativeSpinner.Create(Constants.ALLOCATOR_DOMAIN);
                 }
             }
         }
@@ -36,8 +39,8 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static ref ReadWriteNativeSpinner GetComponentsReadWriteSpinner(uint groupId, uint index) {
-            return ref ReadWriteSpinnerComponentsShared.spinners.Data.Get(groupId).Get(index);
+        public static ref ReadWriteNativeSpinner GetReadWriteSpinner(uint groupId, uint index) {
+            return ref ReadWriteSpinnerShared.spinners.Data.Get(groupId).Get(index);
         }
 
     }

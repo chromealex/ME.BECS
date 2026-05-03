@@ -154,11 +154,28 @@ namespace ME.BECS.Jobs {
                 
                 JobStaticInfo<T>.lastCount = jobInfo.count;
                 
-                if ((jobData.scheduleFlags & ScheduleFlags.IsReadonly) != 0) {
-                    if ((jobData.scheduleFlags & ScheduleFlags.Parallel) != 0) {
-                        while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
-                            jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                            for (uint i = (uint)begin; i < end; ++i) {
+                using (new AllocatorTag(ALLOC_TAGS.SYSTEMS)) {
+                    if ((jobData.scheduleFlags & ScheduleFlags.IsReadonly) != 0) {
+                        if ((jobData.scheduleFlags & ScheduleFlags.Parallel) != 0) {
+                            while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                                jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                                for (uint i = (uint)begin; i < end; ++i) {
+                                    jobInfo.index = i;
+                                    jobInfo.ResetLocalCounter();
+                                    var entId = *(jobData.buffer->entities + i);
+                                    var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                                    var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                                    aspect0.ent = ent;aspect1.ent = ent;aspect2.ent = ent;aspect3.ent = ent;aspect4.ent = ent;aspect5.ent = ent;aspect6.ent = ent;aspect7.ent = ent;aspect8.ent = ent;
+                                    jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7,ref aspect8, ref jobData.c0.GetReadonly(ent.id, ent.gen),ref jobData.c1.GetReadonly(ent.id, ent.gen),ref jobData.c2.GetReadonly(ent.id, ent.gen),ref jobData.c3.GetReadonly(ent.id, ent.gen));
+                                }
+                                jobData.buffer->EndForEachRange();
+                            }
+                        } else {
+                            jobData.buffer->SetEntities(jobData.buffer);
+                            jobInfo.count = jobData.buffer->count;
+                            JobUtils.SetCurrentThreadAsSingle(true);
+                            jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
+                            for (uint i = 0u; i < jobData.buffer->count; ++i) {
                                 jobInfo.index = i;
                                 jobInfo.ResetLocalCounter();
                                 var entId = *(jobData.buffer->entities + i);
@@ -168,29 +185,29 @@ namespace ME.BECS.Jobs {
                                 jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7,ref aspect8, ref jobData.c0.GetReadonly(ent.id, ent.gen),ref jobData.c1.GetReadonly(ent.id, ent.gen),ref jobData.c2.GetReadonly(ent.id, ent.gen),ref jobData.c3.GetReadonly(ent.id, ent.gen));
                             }
                             jobData.buffer->EndForEachRange();
+                            JobUtils.SetCurrentThreadAsSingle(false);
                         }
                     } else {
-                        jobData.buffer->SetEntities(jobData.buffer);
-                        jobInfo.count = jobData.buffer->count;
-                        JobUtils.SetCurrentThreadAsSingle(true);
-                        jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                        for (uint i = 0u; i < jobData.buffer->count; ++i) {
-                            jobInfo.index = i;
-                            jobInfo.ResetLocalCounter();
-                            var entId = *(jobData.buffer->entities + i);
-                            var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                            var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                            aspect0.ent = ent;aspect1.ent = ent;aspect2.ent = ent;aspect3.ent = ent;aspect4.ent = ent;aspect5.ent = ent;aspect6.ent = ent;aspect7.ent = ent;aspect8.ent = ent;
-                            jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7,ref aspect8, ref jobData.c0.GetReadonly(ent.id, ent.gen),ref jobData.c1.GetReadonly(ent.id, ent.gen),ref jobData.c2.GetReadonly(ent.id, ent.gen),ref jobData.c3.GetReadonly(ent.id, ent.gen));
-                        }
-                        jobData.buffer->EndForEachRange();
-                        JobUtils.SetCurrentThreadAsSingle(false);
-                    }
-                } else {
-                    if ((jobData.scheduleFlags & ScheduleFlags.Parallel) != 0) {
-                        while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
-                            jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                            for (uint i = (uint)begin; i < end; ++i) {
+                        if ((jobData.scheduleFlags & ScheduleFlags.Parallel) != 0) {
+                            while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                                jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                                for (uint i = (uint)begin; i < end; ++i) {
+                                    jobInfo.index = i;
+                                    jobInfo.ResetLocalCounter();
+                                    var entId = *(jobData.buffer->entities + i);
+                                    var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                                    var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                                    aspect0.ent = ent;aspect1.ent = ent;aspect2.ent = ent;aspect3.ent = ent;aspect4.ent = ent;aspect5.ent = ent;aspect6.ent = ent;aspect7.ent = ent;aspect8.ent = ent;
+                                    jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7,ref aspect8, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen));
+                                }
+                                jobData.buffer->EndForEachRange();
+                            }
+                        } else {
+                            jobData.buffer->SetEntities(jobData.buffer);
+                            jobInfo.count = jobData.buffer->count;
+                            JobUtils.SetCurrentThreadAsSingle(true);
+                            jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
+                            for (uint i = 0u; i < jobData.buffer->count; ++i) {
                                 jobInfo.index = i;
                                 jobInfo.ResetLocalCounter();
                                 var entId = *(jobData.buffer->entities + i);
@@ -200,23 +217,8 @@ namespace ME.BECS.Jobs {
                                 jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7,ref aspect8, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen));
                             }
                             jobData.buffer->EndForEachRange();
+                            JobUtils.SetCurrentThreadAsSingle(false);
                         }
-                    } else {
-                        jobData.buffer->SetEntities(jobData.buffer);
-                        jobInfo.count = jobData.buffer->count;
-                        JobUtils.SetCurrentThreadAsSingle(true);
-                        jobData.buffer->BeginForEachRange(0u, jobData.buffer->count);
-                        for (uint i = 0u; i < jobData.buffer->count; ++i) {
-                            jobInfo.index = i;
-                            jobInfo.ResetLocalCounter();
-                            var entId = *(jobData.buffer->entities + i);
-                            var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                            var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                            aspect0.ent = ent;aspect1.ent = ent;aspect2.ent = ent;aspect3.ent = ent;aspect4.ent = ent;aspect5.ent = ent;aspect6.ent = ent;aspect7.ent = ent;aspect8.ent = ent;
-                            jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1,ref aspect2,ref aspect3,ref aspect4,ref aspect5,ref aspect6,ref aspect7,ref aspect8, ref jobData.c0.Get(ent.id, ent.gen),ref jobData.c1.Get(ent.id, ent.gen),ref jobData.c2.Get(ent.id, ent.gen),ref jobData.c3.Get(ent.id, ent.gen));
-                        }
-                        jobData.buffer->EndForEachRange();
-                        JobUtils.SetCurrentThreadAsSingle(false);
                     }
                 }
                 

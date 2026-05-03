@@ -44,18 +44,20 @@ namespace ME.BECS {
 
         [INLINE(256)][NotThreadSafe][IgnoreProfiler]
         public static OneShotTasks Create(safe_ptr<State> state, uint capacity) {
-            var tasks = new OneShotTasks() {
-                threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
-            };
-            for (uint i = 0; i < tasks.threadItems.Length; ++i) {
-                ref var threadItem = ref tasks.threadItems[state, i];
-                threadItem.currentTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state.ptr->allocator, capacity) };
-                threadItem.nextTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state.ptr->allocator, capacity) };
+            using (new AllocatorTag(ALLOC_TAGS.ONE_SHOT)) {
+                var tasks = new OneShotTasks() {
+                    threadItems = new MemArrayThreadCacheLine<ThreadItem>(ref state.ptr->allocator),
+                };
+                for (uint i = 0; i < tasks.threadItems.Length; ++i) {
+                    ref var threadItem = ref tasks.threadItems[state, i];
+                    threadItem.currentTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state.ptr->allocator, capacity) };
+                    threadItem.nextTick = new ThreadItem.TaskCollection() { items = new List<Task>(ref state.ptr->allocator, capacity) };
+                }
+                return tasks;
             }
-            return tasks;
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnore]
         public static void Add<T>(safe_ptr<State> state, in Ent ent, in T data, ushort updateType, OneShotType type) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
@@ -65,7 +67,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnore]
         public static void Add(safe_ptr<State> state, in Ent ent, uint typeId, ushort updateType, MemAllocatorPtr data, OneShotType type) {
 
             E.IS_IN_TICK(state);
@@ -79,13 +81,15 @@ namespace ME.BECS {
 
             {
                 collection.ptr->lockIndex.Lock();
-                collection.ptr->items.Add(ref state.ptr->allocator, new Task() {
-                    typeId = typeId,
-                    ent = ent,
-                    type = type,
-                    data = data,
-                    updateType = updateType,
-                });
+                using (new AllocatorTag(ALLOC_TAGS.ONE_SHOT, typeId)) {
+                    collection.ptr->items.Add(ref state.ptr->allocator, new Task() {
+                        typeId = typeId,
+                        ent = ent,
+                        type = type,
+                        data = data,
+                        updateType = updateType,
+                    });
+                }
                 collection.ptr->lockIndex.Unlock();
             }
             

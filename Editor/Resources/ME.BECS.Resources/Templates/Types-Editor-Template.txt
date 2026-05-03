@@ -23,6 +23,7 @@ namespace ME.BECS.Editor {
         public static void Load() {
             JobUtils.Initialize();
             {{CONTENT_TYPES}}
+            LocksCache.Initialize(LocksCache.COMPONENTS, StaticTypes.counter + 1u);
         }
     }
     
@@ -32,6 +33,7 @@ namespace ME.BECS.Editor {
     public static unsafe class StaticMethods {
         [UnityEngine.Scripting.PreserveAttribute] 
         public static void Load() {
+            LeakDetector.ClearAllocated();
             StaticTypes.Dispose();
             Worlds.Initialize();
             SystemsStatic.Initialize();

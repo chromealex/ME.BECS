@@ -30,22 +30,21 @@ namespace ME.BECS.Editor {
 
             var id = 0u;
             var content = new System.Collections.Generic.List<string>();
-            var aspects = EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
+            var types = this.entityTypes;//EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
             
             {
                 var data = $"EntityTypes.Init();";
                 content.Add(data);
             }
             
-            foreach (var aspect in aspects) {
+            foreach (var type in types) {
 
-                if (aspect.IsValueType == false) continue;
-                if (aspect.IsVisible == false) continue;
+                if (type.IsValueType == false) continue;
+                if (type.IsVisible == false) continue;
 
-                if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
+                if (this.IsValidTypeForAssembly(type, true) == false) continue;
                 
                 var contentItem = new System.Collections.Generic.List<string>();
-                var type = aspect;
                 var strType = EditorUtils.GetTypeName(type);
 
                 contentItem.Add($"EntityTypes.Register<{strType}>({id});");

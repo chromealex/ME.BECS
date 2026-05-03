@@ -23,6 +23,7 @@ namespace ME.BECS {
             oneShotTasksCapacity = 1u,
             sharedComponentsCapacity = 1u,
             mode = WorldMode.Logic,
+            allowStaticStorage = false,
         };
 
         [UnityEngine.MinAttribute(1)]
@@ -45,6 +46,8 @@ namespace ME.BECS {
         [UnityEngine.MinAttribute(0)]
         [UnityEngine.Tooltip("Use Logic for logic worlds, Visual for client-only local worlds.")]
         public WorldMode mode;
+
+        public bool allowStaticStorage;
 
         public uint EntitiesCapacity => math.max(Bitwise.AlignUp(this.entitiesCapacity, Ents.ENTITIES_PER_PAGE), Ents.ENTITIES_PER_PAGE);
 

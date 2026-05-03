@@ -321,7 +321,7 @@ namespace ME.BECS {
     public struct WorldsTempAllocator {
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.align, 10005);
-        internal static ref Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
+        public static ref Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>> allocatorTemp => ref allocatorTempBurst.Data;
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<bool>> allocatorTempValidBurst = Unity.Burst.SharedStatic<Internal.Array<bool>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<bool>>.align, 10008);
         internal static ref Internal.Array<bool> allocatorTempValid => ref allocatorTempValidBurst.Data;

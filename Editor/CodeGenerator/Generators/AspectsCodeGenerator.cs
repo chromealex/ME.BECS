@@ -8,7 +8,8 @@ namespace ME.BECS.Editor.Aspects {
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             
             var content = new System.Collections.Generic.List<string>();
-            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray();
+            //UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray()
+            var aspects = this.aspects;
             foreach (var aspect in aspects) {
 
                 if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(aspect, out var cacheData) == true) {
@@ -65,7 +66,8 @@ namespace ME.BECS.Editor.Aspects {
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
 
             var content = new System.Collections.Generic.List<string>();
-            var aspects = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray();
+            //UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray()
+            var aspects = this.aspects;
             foreach (var aspect in aspects) {
 
                 if (aspect.IsValueType == false) continue;

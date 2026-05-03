@@ -227,8 +227,7 @@ namespace ME.BECS {
             var q = query.readQuery;
             if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) return;
 
-            if (query.readResults.results.IsCreated == true) query.results.results.Clear();
-            if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+            QueryResults.Create(ref query.results.results, query.ent, q.nearestCount > 0u ? q.nearestCount : 1u, q.updatePerTick == 0);
 
             var mask = q.treeMask;
             while (mask != 0) {
@@ -264,8 +263,7 @@ namespace ME.BECS {
             var markerCleanUp = new Unity.Profiling.ProfilerMarker("tree::FillNearest::CleanUp");
             markerCleanUp.Begin();
             // clean up results
-            if (query.readResults.results.IsCreated == true) query.results.results.Clear();
-            if (query.readResults.results.IsCreated == false) query.results.results = new ListAuto<Ent>(query.ent, q.nearestCount > 0u ? q.nearestCount : 1u);
+            QueryResults.Create(ref query.results.results, query.ent, q.nearestCount > 0u ? q.nearestCount : 1u, q.updatePerTick == 0);
             markerCleanUp.End();
             
             if (q.nearestCount == 1u) {
@@ -360,12 +358,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public readonly void GetNearest(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
+        public readonly void GetNearest(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreY, bool ignoreSorting) {
             this.GetNearest(mask, nearestCount, ref results, in selfEnt, in worldPos, in sector, minRangeSqr, rangeSqr, ignoreSelf, ignoreSorting, new AlwaysTrueSpatialSubFilter());
         }
 
         [INLINE(256)]
-        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref ListAuto<Ent> results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
+        public readonly void GetNearest<T>(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
             if (nearestCount > 0u) {
 

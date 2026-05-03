@@ -150,6 +150,11 @@ namespace ME.BECS {
                 for (int i = 0; i < this.dataPagesB.Length; ++i) {
                     size += this.dataPagesB[state, i].GetReservedSizeInBytes(dataSize, ENTITIES_PER_PAGE);
                 }
+
+                #if ENABLE_BECS_FLAT_QUERIES
+                size += this.bitsA.GetReservedSizeInBytes();
+                size += this.bitsB.GetReservedSizeInBytes();
+                #endif
                 return size;
             }
 
@@ -166,16 +171,19 @@ namespace ME.BECS {
         internal const uint ENTITIES_PER_PAGE_MASK = ENTITIES_PER_PAGE - 1u;
         private const int ENTITIES_PER_PAGE_POW = 6;
 
-        private ReadWriteSpinner readWriteSpinner;
+        private uint groupIndex;
         private readonly uint dataSize;
         private DoubleBuffer buffer;
+        private ref ReadWriteNativeSpinner readWriteSpinner => ref LocksCache.GetReadWriteSpinner(LocksCache.COMPONENTS, this.groupIndex);
 
         [INLINE(256)]
-        public DataDenseSet(safe_ptr<State> state, uint dataSize, uint entitiesCapacity) {
+        public DataDenseSet(uint groupIndex, safe_ptr<State> state, uint dataSize, uint entitiesCapacity) {
             var pages = _sizeData(entitiesCapacity);
             this.dataSize = dataSize;
-            this.buffer = new DoubleBuffer(state, pages);
-            this.readWriteSpinner = ReadWriteSpinner.Create(state);
+            using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, groupIndex)) {
+                this.buffer = new DoubleBuffer(state, pages);
+            }
+            this.groupIndex = groupIndex;
             MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
         }
 
@@ -241,10 +249,12 @@ namespace ME.BECS {
             var newSize = _sizeData(entitiesCapacity);
             ref var activePages = ref DoubleBuffer.GetActivePages(ref this.buffer);
             if (newSize > activePages.Length) {
-                this.readWriteSpinner.WriteBegin(state);
+                this.readWriteSpinner.WriteBegin();
                 activePages = ref DoubleBuffer.GetActivePages(ref this.buffer);
                 if (newSize > activePages.Length) {
-                    DoubleBuffer.Swap(ref this.buffer, state, newSize);
+                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
+                        DoubleBuffer.Swap(ref this.buffer, state, newSize);
+                    }
                 }
                 this.readWriteSpinner.WriteEnd();
             }
@@ -302,14 +312,16 @@ namespace ME.BECS {
             var isCreated = page.ptr->isCreated;
             if (Unity.Burst.CompilerServices.Hint.Unlikely(isCreated == 0)) {
                 // create page if not exist
-                this.readWriteSpinner.ReadBegin(state);
+                this.readWriteSpinner.ReadBegin();
                 page = (safe_ptr<Page>)DoubleBuffer.GetActivePages(ref this.buffer).GetUnsafePtr(in state.ptr->allocator) + pageIndex;
                 page.ptr->Lock(state);
                 if (page.ptr->isCreated == 0) {
-                    Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
+                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
+                        Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
+                    }
                 }
                 page.ptr->Unlock(state);
-                this.readWriteSpinner.ReadEnd(state);
+                this.readWriteSpinner.ReadEnd();
             }
             var ptr = _getBlock(state, page, entityId, this.dataSize);
             if (this.dataSize > 0u) { // set data
@@ -340,14 +352,16 @@ namespace ME.BECS {
             var isCreated = page.ptr->isCreated;
             if (Unity.Burst.CompilerServices.Hint.Unlikely(isCreated == 0)) {
                 // create page if not exist
-                this.readWriteSpinner.ReadBegin(state);
+                this.readWriteSpinner.ReadBegin();
                 page = (safe_ptr<Page>)DoubleBuffer.GetActivePages(ref this.buffer).GetUnsafePtr(in state.ptr->allocator) + pageIndex;
                 page.ptr->Lock(state);
                 if (page.ptr->isCreated == 0) {
-                    Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
+                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
+                        Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
+                    }
                 }
                 page.ptr->Unlock(state);
-                this.readWriteSpinner.ReadEnd(state);
+                this.readWriteSpinner.ReadEnd();
             }
             var ptr = _getBlock(state, page, entityId, this.dataSize);
             var dataPtr = _offsetData(ptr);

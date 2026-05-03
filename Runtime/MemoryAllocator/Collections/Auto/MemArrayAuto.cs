@@ -1,6 +1,6 @@
-
 namespace ME.BECS {
-    
+
+    using System.Runtime.CompilerServices;
     #if NO_INLINE
     using INLINE = NoInlineAttribute;
     #else
@@ -12,7 +12,7 @@ namespace ME.BECS {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Explicit)]
     [System.Serializable]
     public struct MemArrayAutoData {
 
@@ -22,10 +22,14 @@ namespace ME.BECS {
         public const int SIZE = 24;
         #endif
 
+        [FieldOffset(0)]
         public MemPtr arrPtr;
+        [FieldOffset(8)]
         public Ent ent;
+        [FieldOffset(16)]
         public uint Length;
         #if USE_CACHE_PTR
+        [FieldOffset(20)]
         public CachedPtr cachedPtr;
         #endif
 
@@ -79,7 +83,7 @@ namespace ME.BECS {
         
         public readonly bool IsCreated {
             [INLINE(256)]
-            get => this.data.arrPtr.IsValid() == true && this.data.ent.IsAlive() == true;
+            get => (this.data.arrPtr.IsValid() == true || this.IsInlined == true) && this.data.ent.IsAlive() == true;
         }
 
         public Ent Ent => this.ent;
@@ -95,6 +99,8 @@ namespace ME.BECS {
         }
 
         public uint GetConfigId() => this.data.Length;
+        
+        private readonly bool IsInlined => TSize<T>.size * this.Length <= MemPtr.SIZE;
         
         object[] IUnmanagedList.ToManagedArray() {
             var arr = new object[this.data.Length];
@@ -123,14 +129,21 @@ namespace ME.BECS {
                 return;
             }
 
-            var state = ent.World.state;
             this = default;
+            this.data.Length = length;
+            if (this.IsInlined == true) {
+                // we can inline the data into array without allocating any memory
+                this.data.ent = ent;
+                this.data.arrPtr = default;
+                return;
+            }
+            
+            var state = ent.World.state;
             this.data.ent = ent;
             var memPtr = state.ptr->allocator.AllocArray(length, out safe_ptr<T> ptr);
             #if USE_CACHE_PTR
             this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
             #endif
-            this.data.Length = length;
             
             if (clearOptions == ClearOptions.ClearMemory) {
                 var size = TSize<T>.size;
@@ -140,29 +153,6 @@ namespace ME.BECS {
             this.data.arrPtr = memPtr;
             CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
 
-        }
-
-        public MemArrayAuto(in Ent ent, uint elementSize, uint length, ClearOptions clearOptions) {
-
-            if (length == 0u) {
-                this = MemArrayAuto<T>.Empty;
-                return;
-            }
-
-            var state = ent.World.state;
-            this = default;
-            this.data.ent = ent;
-            this.data.arrPtr = state.ptr->allocator.Alloc(elementSize * length, out var tPtr);
-            #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, (T*)tPtr);
-            #endif
-            this.data.Length = length;
-            
-            if (clearOptions == ClearOptions.ClearMemory) {
-                this.Clear();
-            }
-            CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
-            
         }
 
         public MemArrayAuto(in Ent ent, in MemArrayAuto<T> arr) {
@@ -266,6 +256,12 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr() {
 
+            if (this.IsInlined == true) {
+                ref var r = ref Unsafe.AsRef(in this);
+                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                return (safe_ptr)ptr;
+            }
+
             return this.data.ent.World.state.ptr->allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
@@ -273,12 +269,24 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtr(in MemoryAllocator allocator) {
 
+            if (this.IsInlined == true) {
+                ref var r = ref Unsafe.AsRef(in this);
+                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                return (safe_ptr)ptr;
+            }
+
             return allocator.GetUnsafePtr(this.data.arrPtr);
 
         }
 
         [INLINE(256)]
         public readonly safe_ptr GetUnsafePtrCached(in MemoryAllocator allocator) {
+
+            if (this.IsInlined == true) {
+                ref var r = ref Unsafe.AsRef(in this);
+                var ptr = (byte*)Unsafe.AsPointer(ref r.data);
+                return (safe_ptr)ptr;
+            }
 
             #if USE_CACHE_PTR
             return CachedPtr.ReadPtr(in this.data.cachedPtr, in allocator, this.data.arrPtr);
@@ -313,7 +321,7 @@ namespace ME.BECS {
             #if USE_CACHE_PTR
             return ref CachedPtr.Read<T>(this.data.cachedPtr, in allocator, this.data.arrPtr, index);
             #else
-            return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in this.data.ent.World.state.ptr->allocator) + index).ptr;
+            return ref *((safe_ptr<T>)this.GetUnsafePtrCached(in allocator) + index).ptr;
             #endif
             
         }
@@ -380,16 +388,33 @@ namespace ME.BECS {
             newLength *= growFactor;
 
             var state = this.data.ent.World.state;
-            CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
-            var prevLength = this.Length;
-            this.data.arrPtr = state.ptr->allocator.ReAllocArray(this.data.arrPtr, newLength, out safe_ptr<T> ptr);
-            CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
-            #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
-            #endif
-            if (options == ClearOptions.ClearMemory) {
-                this.Clear(prevLength, newLength - prevLength);
+            if (this.IsInlined == true) {
+                if (TSize<T>.size * newLength > MemPtr.SIZE) {
+                    var arrPtr = state.ptr->allocator.AllocArray(newLength, out safe_ptr<T> ptr);
+                    #if USE_CACHE_PTR
+                    this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
+                    #endif
+                    _memcpy(this.GetUnsafePtr(), state.ptr->allocator.GetUnsafePtr(arrPtr), this.Length * TSize<T>.size);
+                    this.data.arrPtr = arrPtr;
+                    if (options == ClearOptions.ClearMemory) {
+                        this.Clear(0u, newLength);
+                    }
+                    CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
+                } else {
+                    this.Clear(this.Length, newLength - this.Length);
+                }
+            } else {
+                CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
+                this.data.arrPtr = state.ptr->allocator.ReAllocArray(this.data.arrPtr, newLength, out safe_ptr<T> ptr);
+                #if USE_CACHE_PTR
+                this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
+                #endif
+                if (options == ClearOptions.ClearMemory) {
+                    this.Clear(this.Length, newLength - this.Length);
+                }
+                CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             }
+
             this.data.Length = newLength;
             return true;
 
@@ -409,16 +434,30 @@ namespace ME.BECS {
             newLength *= growFactor;
 
             var state = this.data.ent.World.state;
-            CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
-            var prevLength = this.Length;
-            this.data.arrPtr = state.ptr->allocator.Alloc(elementSize * newLength, out var tPtr);
-            CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
-            #if USE_CACHE_PTR
-            this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, (T*)tPtr);
-            #endif
-            if (options == ClearOptions.ClearMemory) {
-                this.Clear(prevLength, newLength - prevLength);
+            if (this.IsInlined == true) {
+                if (TSize<T>.size * newLength > MemPtr.SIZE) {
+                    this.data.arrPtr = state.ptr->allocator.AllocArray(newLength, out safe_ptr<T> ptr);
+                    #if USE_CACHE_PTR
+                    this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
+                    #endif
+                    if (options == ClearOptions.ClearMemory) {
+                        this.Clear(0u, newLength);
+                    }
+                } else {
+                    this.Clear(this.Length, newLength - this.Length);
+                }
+            } else {
+                CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
+                this.data.arrPtr = state.ptr->allocator.Alloc(elementSize * newLength, out var tPtr);
+                CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
+                #if USE_CACHE_PTR
+                this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, (T*)tPtr);
+                #endif
+                if (options == ClearOptions.ClearMemory) {
+                    this.Clear(this.Length, newLength - this.Length);
+                }
             }
+
             this.data.Length = newLength;
             return true;
 
@@ -437,8 +476,12 @@ namespace ME.BECS {
             E.IS_CREATED(this);
 
             var size = TSize<T>.size;
-            this.data.ent.World.state.ptr->allocator.MemClear(this.data.arrPtr, index * size, length * size);
-            
+            if (this.IsInlined == true) {
+                _memclear(this.GetUnsafePtr() + index * size, length * size);
+            } else {
+                this.data.ent.World.state.ptr->allocator.MemClear(this.data.arrPtr, index * size, length * size);
+            }
+
         }
 
         [INLINE(256)]
@@ -477,7 +520,7 @@ namespace ME.BECS {
         
         public uint GetReservedSizeInBytes() {
 
-            return this.Length * (uint)sizeof(T);
+            return this.Length * TSize<T>.size;
 
         }
 

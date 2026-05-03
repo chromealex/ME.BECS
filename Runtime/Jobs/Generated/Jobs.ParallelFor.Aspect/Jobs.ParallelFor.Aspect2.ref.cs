@@ -126,20 +126,20 @@ namespace ME.BECS.Jobs {
                 
                 JobStaticInfo<T>.lastCount = jobInfo.count;
                 
-                while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
-                    
-                    jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
-                    for (uint i = (uint)begin; i < end; ++i) {
-                        jobInfo.index = i;
-                        jobInfo.ResetLocalCounter();
-                        var entId = *(jobData.buffer->entities + i);
-                        var gen = Ents.GetGeneration(jobData.buffer->state, entId);
-                        var ent = new Ent(entId, gen, jobData.buffer->worldId);
-                        aspect0.ent = ent;aspect1.ent = ent;
-                        jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1);
+                using (new AllocatorTag(ALLOC_TAGS.SYSTEMS)) {
+                    while (JobsUtility.GetWorkStealingRange(ref ranges, jobIndex, out var begin, out var end) == true) {
+                        jobData.buffer->BeginForEachRange((uint)begin, (uint)end);
+                        for (uint i = (uint)begin; i < end; ++i) {
+                            jobInfo.index = i;
+                            jobInfo.ResetLocalCounter();
+                            var entId = *(jobData.buffer->entities + i);
+                            var gen = Ents.GetGeneration(jobData.buffer->state, entId);
+                            var ent = new Ent(entId, gen, jobData.buffer->worldId);
+                            aspect0.ent = ent;aspect1.ent = ent;
+                            jobData.jobData.Execute(in jobInfo, in ent, ref aspect0,ref aspect1);
+                        }
+                        jobData.buffer->EndForEachRange();   
                     }
-                    jobData.buffer->EndForEachRange();
-                    
                 }
 
             }

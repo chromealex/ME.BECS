@@ -114,6 +114,13 @@ namespace ME.BECS {
         [INLINE(256)]
         public static ref T Initialize<T>(ushort worldId) where T : unmanaged, IAspect {
             
+            return ref InitializeObj<T>(worldId);
+
+        }
+
+        [INLINE(256)]
+        public static ref T InitializeObj<T>(ushort worldId) where T : unmanaged, IAspect {
+            
             return ref storage.Data.Get(worldId).Initialize<T>();
 
         }
@@ -161,7 +168,7 @@ namespace ME.BECS {
             this.list.Dispose();
         }
 
-        [INLINE(256)]
+        [INLINE(256)][CodeGeneratorIgnore]
         public ref T Initialize<T>() where T : unmanaged, IAspect {
             
             var typeId = AspectTypeInfo<T>.typeId;

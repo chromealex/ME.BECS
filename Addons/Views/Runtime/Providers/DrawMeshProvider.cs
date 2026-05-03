@@ -6,6 +6,10 @@ using tfloat = System.Single;
 using Unity.Mathematics;
 #endif
 
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Views.MeshRendererComponent))]
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Views.MeshFilterComponent))]
+[assembly: ME.BECS.CodeGeneratorInclude(typeof(ME.BECS.Views.DrawMeshProviderTag))]
+
 namespace ME.BECS.Views {
     
     using Unity.Collections;

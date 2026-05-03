@@ -10,7 +10,7 @@ namespace ME.BECS {
     
     public unsafe partial struct Batches {
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static T* GetPtr<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
@@ -24,7 +24,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static ref T Get<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
@@ -38,7 +38,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static ref T GetOrThrow<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
@@ -51,7 +51,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static T* GetPtrOrThrow<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
@@ -64,7 +64,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Set<T>(in Ent ent, in T data, safe_ptr<State> state) where T : unmanaged, IComponent {
             
             E.IS_IN_TICK(state);
@@ -83,7 +83,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Set(in Ent ent, uint typeId, void* data, safe_ptr<State> state) {
             
             E.IS_IN_TICK(state);
@@ -102,7 +102,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Remove<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);
@@ -118,7 +118,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Remove(in Ent ent, uint typeId, safe_ptr<State> state) {
 
             E.IS_IN_TICK(state);
@@ -134,7 +134,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Enable<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
             
             E.IS_IN_TICK(state);
@@ -149,7 +149,7 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnore]
         public static bool Disable<T>(in Ent ent, safe_ptr<State> state) where T : unmanaged, IComponent {
 
             E.IS_IN_TICK(state);

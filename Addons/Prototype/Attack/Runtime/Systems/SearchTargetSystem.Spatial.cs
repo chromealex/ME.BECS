@@ -32,7 +32,7 @@ namespace ME.BECS.Attack {
 
                 UnitAspect nearestResult = default;
                 for (uint i = 0u; i < query.readResults.results.Count; ++i) {
-                    var queryEnt = query.readResults.results[this.world.state, i];
+                    var queryEnt = query.readResults.results[i];
                     if (queryEnt.IsAlive() == false) continue;
                     var result = queryEnt.GetAspect<UnitAspect>();
                     nearestResult = result;
@@ -75,7 +75,7 @@ namespace ME.BECS.Attack {
                 if (targets.targets.IsCreated == false) targets.targets = new ListAuto<Ent>(in ent, count);
                 targets.targets.Clear();
                 for (uint i = 0u; i < count; ++i) {
-                    var queryEnt = query.readResults.results[this.world.state, i];
+                    var queryEnt = query.readResults.results[i];
                     if (queryEnt.IsAlive() == false) continue;
                     if (requiredTarget == queryEnt) {
                         hasTarget = true;

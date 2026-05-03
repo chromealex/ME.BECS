@@ -7,123 +7,128 @@ namespace ME.BECS {
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     using System.Threading;
+    using Unity.Collections.LowLevel.Unsafe;
 
     [BURST]
     [IgnoreProfiler]
     public unsafe struct ReadWriteNativeSpinner : IIsCreated {
 
-        private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
-        private Unity.Collections.Allocator allocator;
-        private safe_ptr value;
-        private int writeValue;
-        
         public bool IsCreated => this.value.ptr != null;
+
+        private static readonly uint CACHE_LINE_SIZE = _align(TSize<int>.size, JobUtils.CacheLineSize);
+
+        private safe_ptr value;   // per-thread read counters
+        private int writeValue;   // 0 = free, 1 = writer active
+        private Unity.Collections.Allocator allocator;
 
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
-            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCount;
-            var arr = _make(size, TAlign<int>.alignInt, allocator);
-            _memclear(arr, size);
+            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCountMax;
+            var arr = UnsafeUtility.Malloc(size, TAlign<int>.alignInt, allocator);
+            UnsafeUtility.MemClear(arr, size);
             return new ReadWriteNativeSpinner() {
+                value = (safe_ptr)arr,
                 allocator = allocator,
-                value = arr,
+                writeValue = 0,
             };
+        }
+
+        [INLINE(256)]
+        private int* GetThreadPtr() {
+            return (int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
         private int ReadCount() {
             var cnt = 0;
-            for (uint i = 0u; i < JobUtils.ThreadsCount; ++i) {
-                cnt += *(int*)(this.value + i * CACHE_LINE_SIZE).ptr;
+            var basePtr = this.value;
+            for (uint i = 0u; i < JobUtils.ThreadsCountMax; ++i) {
+                var ptr = (int*)(basePtr + i * CACHE_LINE_SIZE).ptr;
+                cnt += Volatile.Read(ref *ptr);
             }
             return cnt;
         }
-        
+
         [INLINE(256)]
-        public void ReadBegin() {
+        public bool ReadBegin() {
             E.IS_CREATED(this);
-            // wait if we have to write op running
+
+            var ptr = this.GetThreadPtr();
             #if EXCEPTIONS_INTERNAL
-            var i = 100_000_000;
+            var spin = 100_000_000;
             #endif
-            while (System.Threading.Volatile.Read(ref this.writeValue) == 1) {
+
+            while (true) {
+                while (Volatile.Read(ref this.writeValue) == 1) {
+                    #if EXCEPTIONS_INTERNAL
+                    if (--spin <= 0) {
+                        UnityEngine.Debug.LogError("ReadBegin spin limit exceeded (writer stuck)");
+                        return false;
+                    }
+                    #endif
+                    Unity.Burst.Intrinsics.Common.Pause();
+                }
+                Interlocked.Increment(ref *ptr);
+                if (Volatile.Read(ref this.writeValue) == 0) {
+                    return true;
+                }
+                Interlocked.Decrement(ref *ptr);
                 #if EXCEPTIONS_INTERNAL
-                --i;
-                if (i == 0) {
-                    UnityEngine.Debug.LogError("Max lock iter");
-                    return;
+                if (--spin <= 0) {
+                    UnityEngine.Debug.LogError("ReadBegin spin limit exceeded (retry loop)");
+                    return false;
                 }
                 #endif
-                Unity.Burst.Intrinsics.Common.Pause();
             }
-            // acquire read op
-            ++*(int*)(this.value + CACHE_LINE_SIZE * (uint)JobsUtility.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
         public void ReadEnd() {
             E.IS_CREATED(this);
-            // release read op
-            --*(int*)(this.value + CACHE_LINE_SIZE * (uint)JobsUtility.ThreadIndex).ptr;
+            var ptr = this.GetThreadPtr();
+            Interlocked.Decrement(ref *ptr);
         }
 
         [INLINE(256)]
-        public void WriteBegin() {
+        public bool WriteBegin() {
             E.IS_CREATED(this);
-            // acquire write op
             #if EXCEPTIONS_INTERNAL
-            var i = 100_000_000;
+            var spin = 100_000_000;
             #endif
-            E.ADDR_4(ref this.writeValue);
-            while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
+            while (Interlocked.CompareExchange(ref this.writeValue, 1, 0) != 0) {
                 #if EXCEPTIONS_INTERNAL
-                --i;
-                if (i == 0) {
-                    UnityEngine.Debug.LogError("Max lock iter");
-                    return;
+                if (--spin <= 0) {
+                    UnityEngine.Debug.LogError("WriteBegin spin limit exceeded (writer contention)");
+                    return false;
                 }
                 #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
-            // wait if we have read op running
             #if EXCEPTIONS_INTERNAL
-            i = 100_000_000;
+            spin = 100_000_000;
             #endif
             while (this.ReadCount() > 0) {
                 #if EXCEPTIONS_INTERNAL
-                --i;
-                if (i == 0) {
-                    UnityEngine.Debug.LogError("Max lock iter");
-                    return;
+                if (--spin <= 0) {
+                    UnityEngine.Debug.LogError("WriteBegin spin limit exceeded (readers stuck)");
+                    return false;
                 }
                 #endif
                 Unity.Burst.Intrinsics.Common.Pause();
             }
+
+            return true;
         }
 
         [INLINE(256)]
         public void WriteEnd() {
             E.IS_CREATED(this);
-            // release write op
-            #if EXCEPTIONS_INTERNAL
-            var i = 100_000_000;
-            #endif
-            E.ADDR_4(ref this.writeValue);
-            while (System.Threading.Interlocked.CompareExchange(ref this.writeValue, 0, 1) != 1) {
-                #if EXCEPTIONS_INTERNAL
-                --i;
-                if (i == 0) {
-                    UnityEngine.Debug.LogError("Max lock iter");
-                    return;
-                }
-                #endif
-                Unity.Burst.Intrinsics.Common.Pause();
-            }
+            Volatile.Write(ref this.writeValue, 0);
         }
 
-        [INLINE(256)]
         public void Dispose() {
-            _free(this.value, this.allocator);
+            UnsafeUtility.Free(this.value.ptr, this.allocator);
+            this = default;
         }
 
     }

@@ -17,17 +17,20 @@ namespace ME.BECS {
         [INLINE(256)][IgnoreProfiler]
         public static Components Create(safe_ptr<State> state, in StateProperties stateProperties) {
 
-            var components = new Components() {
-                items = new MemArray<MemAllocatorPtr>(ref state.ptr->allocator, StaticTypes.counter + 1u),
-            }.InitializeSharedComponents(state, stateProperties);
-            
-            for (uint i = 1u; i < components.items.Length; ++i) {
-                ref var ptr = ref components.items[in state.ptr->allocator, i];
-                var dataSize = StaticTypes.sizes.Get(i);
-                ptr.Set(ref state.ptr->allocator, new DataDenseSet(state, dataSize, stateProperties.EntitiesCapacity));
-            }
+            using (new AllocatorTag(ALLOC_TAGS.COMPONENTS)) {
+                var components = new Components() {
+                    items = new MemArray<MemAllocatorPtr>(ref state.ptr->allocator, StaticTypes.counter + 1u),
+                    allowStaticStorage = stateProperties.allowStaticStorage,
+                }.InitializeSharedComponents(state, stateProperties);
 
-            return components;
+                for (uint i = 1u; i < components.items.Length; ++i) {
+                    ref var ptr = ref components.items[in state.ptr->allocator, i];
+                    var dataSize = StaticTypes.sizes.Get(i);
+                    if (stateProperties.allowStaticStorage == false && StaticTypes.IsStatic(i) == true) dataSize = 0u;
+                    ptr.Set(ref state.ptr->allocator, new DataDenseSet(i, state, dataSize, stateProperties.EntitiesCapacity));
+                }
+                return components;
+            }
 
         }
 

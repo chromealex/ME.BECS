@@ -81,6 +81,11 @@ namespace ME.BECS {
             tracker.Resize(StaticTypes.counter + 1u);
         }
 
+        public static bool IsStatic(uint id) {
+            if (id >= StaticTypes.staticTypeId.Length) return false;
+            return StaticTypes.staticTypeId.Get(id) > 0u;
+        }
+
     }
 
     [IgnoreProfiler]
@@ -148,6 +153,13 @@ namespace ME.BECS {
     public struct StaticTypesIsTag<T> where T : unmanaged {
 
         public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesIsTag<T>>();
+
+    }
+
+    [IgnoreProfiler]
+    public struct StaticTypesIsStatic<T> where T : unmanaged {
+
+        public static readonly Unity.Burst.SharedStatic<bool> value = Unity.Burst.SharedStatic<bool>.GetOrCreate<StaticTypesIsStatic<T>>();
 
     }
 
@@ -264,6 +276,7 @@ namespace ME.BECS {
         public static ref bool hasSharedCustomHash => ref StaticTypesSharedCustomHash<T>.value.Data;
         public static ref uint typeId => ref StaticTypesId<T>.value.Data;
         public static ref bool isTag => ref StaticTypesIsTag<T>.value.Data;
+        public static ref bool isStatic => ref StaticTypesIsStatic<T>.value.Data;
         public static ref uint groupId => ref StaticTypesGroupId<T>.value.Data;
         public static ref uint trackerIndex => ref StaticTypesTrackId<T>.value.Data;
         public static bool isTracked => StaticTypes.tracker.Get(StaticTypes<T>.typeId) > 0u;
@@ -326,11 +339,12 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public static void Validate(bool isTag) {
+        public static void Validate(bool isTag, bool isStatic = false) {
 
             if (typeId == 0u && typeof(T) != typeof(TNull)) {
                 StaticTypes<T>.typeId = ++StaticTypes.counter;
                 StaticTypes<T>.isTag = isTag;
+                StaticTypes<T>.isStatic = isStatic;
                 var typeId = (StaticTypes<T>.typeId + 1u);// * 2u;
                 StaticTypes.sizes.Resize(typeId);
                 StaticTypes.sizes.Get(StaticTypes<T>.typeId) = isTag == true ? 0u : TSize<T>.size;

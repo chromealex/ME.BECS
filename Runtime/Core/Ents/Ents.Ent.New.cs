@@ -12,52 +12,52 @@ namespace ME.BECS {
         /// Create new entity from Context.world
         /// </summary>
         /// <returns></returns>
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New(in FixedString32Bytes editorName = default) {
             return Ent.New(Context.world.id, default, in editorName);
         }
         
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New(in JobInfo jobInfo, in FixedString32Bytes editorName = default) {
             return Ent.New(jobInfo.worldId, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New(in World world, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return Ent.New(world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New(in SystemContext systemContext, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return Ent.New(systemContext.world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) {
             return NewEnt_INTERNAL<DefaultEntityType>(worldId, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New<T>(in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             return Ent.New<T>(jobInfo.worldId, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New<T>(in World world, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             return Ent.New<T>(world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New<T>(in SystemContext systemContext, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             return Ent.New<T>(systemContext.world.id, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnoreVisited][IgnoreProfiler]
+        [INLINE(256)][IgnoreProfiler][CodeGeneratorIgnoreVisited]
         public static Ent New<T>(ushort worldId, in JobInfo jobInfo = default, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             return NewEnt_INTERNAL<T>(worldId, in jobInfo, in editorName);
         }
 
-        [INLINE(256)][CodeGeneratorIgnore][CodeGeneratorIgnoreVisited]
+        [INLINE(256)][CodeGeneratorIgnoreVisited]
         internal static unsafe Ent NewEnt_INTERNAL<T>(ushort worldId, in JobInfo jobInfo, in FixedString32Bytes editorName = default) where T : unmanaged, IEntityType {
             
             if (JobUtils.IsInParallelJob() == true || jobInfo.itemsPerCall.ptr != null) {
