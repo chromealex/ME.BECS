@@ -217,7 +217,11 @@ namespace ME.BECS.Editor {
             var customData = string.Empty;
             var item = LeakDetector.Find((safe_ptr)((byte*)block.data.ptr) + sizeof(MemoryAllocator.BlockHeader));
             if (item.tag.componentId > 0u) customData = StaticTypesLoadedManaged.allLoadedTypes[item.tag.componentId].Name;
-            UnityEngine.Debug.Log($"Tag: {item.tag.tagInfo.name}\nSize: {EditorUtils.BytesToString(block.data.header.size)}\nCustom: {customData}\n{item.stackTrace}");
+            var stack = item.stackTrace;
+            #if !LEAK_DETECTION_ALLOCATOR
+            stack = "Add LEAK_DETECTION_ALLOCATOR define to turn on labels and stack trace";
+            #endif
+            UnityEngine.Debug.Log($"Tag: {item.tag.tagInfo.name}\nSize: {EditorUtils.BytesToString(block.data.header.size)}\nCustom: {customData}\n{stack}");
 
         }
         
@@ -303,6 +307,7 @@ namespace ME.BECS.Editor {
             legend.AddToClassList("legend");
             this.AddLegend(legend, "None", ALLOCATED_COLOR);
             this.AddLegend(legend, "Free", FREE_COLOR);
+            #if LEAK_DETECTION_ALLOCATOR
             {
                 var fields = UnityEditor.TypeCache.GetFieldsWithAttribute<AllocatorTagInfoAttribute>();
                 foreach (var field in fields) {
@@ -310,6 +315,13 @@ namespace ME.BECS.Editor {
                     this.AddLegend(legend, tagInfo.name.ToString(), tagInfo.color);
                 }
             }
+            #else
+            var lbl = new TextField();
+            lbl.value = "Add LEAK_DETECTION_ALLOCATOR define to turn on allocator labels";
+            lbl.isReadOnly = true;
+            lbl.AddToClassList("label-define");
+            legend.Add(lbl);
+            #endif
             root.Add(legend);
             
             this.scrollRoot = new ScrollView();

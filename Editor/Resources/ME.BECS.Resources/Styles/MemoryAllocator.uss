@@ -176,6 +176,14 @@
     flex-direction: row;
 }
 
+.legend .label-define, .legend .label-define * {
+    font-size: 9px;
+    flex-wrap: wrap;
+    white-space: normal;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0px;
+}
+
 .legend .legend-item {
     padding: 2px;
     flex-direction: row;
