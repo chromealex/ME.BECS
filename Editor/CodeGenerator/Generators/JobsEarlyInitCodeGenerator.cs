@@ -500,6 +500,7 @@ namespace ME.BECS.Editor.Jobs {
                                 if (type.IsGenericTypeParameter == true) {
                                     var constraints = type.GetGenericParameterConstraints();
                                     foreach (var constraint in constraints) {
+                                        if (constraint == typeof(System.ValueType)) continue;
                                         var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
                                         foreach (var constType in constTypes) {
                                             uniqueTypes.Add(new TypeInfo() {

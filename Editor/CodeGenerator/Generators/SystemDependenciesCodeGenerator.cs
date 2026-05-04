@@ -630,6 +630,7 @@ namespace ME.BECS.Editor.Systems {
                 AddMethod(module, nameof(Module.OnAwake), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                 AddMethod(module, nameof(Module.OnStart), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                 AddMethod(module, nameof(Module.OnUpdate), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                AddMethod(module, nameof(Module.DoDestroy), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
             }
 
             var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
@@ -721,6 +722,7 @@ namespace ME.BECS.Editor.Systems {
             AddMethod(type, nameof(IStart.OnStart), types, components, jobTypes, entityTypes, aspects);
             AddMethod(type, nameof(IUpdate.OnUpdate), types, components, jobTypes, entityTypes, aspects);
             AddMethod(type, nameof(IDrawGizmos.OnDrawGizmos), types, components, jobTypes, entityTypes, aspects);
+            AddMethod(type, nameof(IDestroy.OnDestroy), types, components, jobTypes, entityTypes, aspects);
         }
         
         
@@ -776,6 +778,7 @@ namespace ME.BECS.Editor.Systems {
             if (type.IsGenericTypeParameter == true) {
                 var constraints = type.GetGenericParameterConstraints();
                 foreach (var constraint in constraints) {
+                    if (constraint == typeof(System.ValueType)) continue;
                     var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
                     foreach (var constType in constTypes) {
                         AddToLookup(constType, types, components, jobTypes, entityTypes, aspects);

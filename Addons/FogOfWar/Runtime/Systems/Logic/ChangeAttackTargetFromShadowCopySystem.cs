@@ -4,11 +4,11 @@ using tfloat = sfloat;
 using tfloat = System.Single;
 #endif
 
-namespace ME.BECS.Attack {
+namespace ME.BECS.FogOfWar {
     
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
-    using ME.BECS.FogOfWar;
+    using ME.BECS.Attack;
     using ME.BECS.Transforms;
     using ME.BECS.Players;
     using ME.BECS.Units;

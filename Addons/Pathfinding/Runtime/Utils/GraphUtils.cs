@@ -11,6 +11,28 @@ namespace ME.BECS.Pathfinding {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using ME.BECS.Transforms;
 
+    public struct NearestPositionToAttackFilter : ME.BECS.Pathfinding.IFilter {
+
+        public float3 sourcePos;
+        public float3 targetPos;
+        public tfloat rangeSqr;
+        
+        [INLINE(256)]
+        public bool IsValid(in ME.BECS.Pathfinding.NodeInfo info, in ME.BECS.Pathfinding.RootGraphComponent root) {
+
+            if (new ME.BECS.Pathfinding.Filter().IsValid(in info, in root) == false) return false;
+            var nodePosition = ME.BECS.Pathfinding.Graph.GetPosition(in root, root.chunks[info.chunkIndex], info.nodeIndex);
+            var dir = this.targetPos - nodePosition;
+            var rangeSqr = math.lengthsq(dir);
+            if (rangeSqr > this.rangeSqr) return false;
+            
+            var dot = -math.dot(math.normalizesafe(this.targetPos - this.sourcePos), math.normalizesafe(dir));
+            return rangeSqr * dot * 2 <= this.rangeSqr;
+            
+        }
+
+    }
+
     public static class GraphUtils {
 
         [INLINE(256)]

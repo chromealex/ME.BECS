@@ -16,6 +16,7 @@ namespace ME.BECS.FogOfWar {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Units;
+    using ME.BECS.Attack;
     using ME.BECS.Transforms;
     using static Cuts;
     
@@ -988,6 +989,125 @@ namespace ME.BECS.FogOfWar {
                 }
             }
             
+        }
+
+        [INLINE(256)]
+        public static AttackUtils.ReactionType GetPositionToAttack(in UnitCommandGroupAspect group, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, SystemLink<ME.BECS.FogOfWar.CreateSystem> fowSystem) {
+
+            position = default;
+            if (group.readUnits.Count == 0u) return AttackUtils.ReactionType.None;
+
+            var targetPos = target.GetAspect<TransformAspect>().position;
+            var d = tfloat.MaxValue;
+            var result = AttackUtils.ReactionType.RotateToTarget;
+            foreach (var unit in group.readUnits) {
+                if (unit.IsAlive() == false) continue;
+                var res = GetPositionToAttack(unit.GetAspect<UnitAspect>(), in target, nodeSize, out var pos, in buildGraphSystem, in fowSystem);
+                var dist = math.distancesq(targetPos, pos);
+                if (dist < d) {
+                    position = pos;
+                    d = dist;
+                }
+                if (res == AttackUtils.ReactionType.MoveToTarget) {
+                    result = AttackUtils.ReactionType.MoveToTarget;
+                }
+            }
+
+            return result;
+            
+        }
+
+        [INLINE(256)]
+        public static AttackUtils.ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem) {
+            return GetPositionToAttack(in unit, in target, nodeSize, out position, in buildGraphSystem, default);
+        }
+
+        [INLINE(256)]
+        public static AttackUtils.ReactionType GetPositionToAttack(in UnitAspect unit, in Ent target, tfloat nodeSize, out float3 position, in ME.BECS.Pathfinding.BuildGraphSystem buildGraphSystem, in SystemLink<ME.BECS.FogOfWar.CreateSystem> fogOfWarSystem) {
+
+            if (unit.unitCommandGroup.IsAlive() == true) {
+                var group = unit.unitCommandGroup.GetAspect<UnitCommandGroupAspect>();
+                var pathTarget = group.targets[unit.typeId];
+                if (pathTarget.IsAlive() == true) {
+                    var targetComponent = pathTarget.Read<ME.BECS.Pathfinding.TargetComponent>();
+                    if (targetComponent.target.IsAlive() == true) {
+                        var targetPathComponent = pathTarget.Read<ME.BECS.Pathfinding.TargetPathComponent>();
+                        var path = targetPathComponent.path;
+                        if (path.IsCreated == true) {
+                            position = unit.ent.GetAspect<TransformAspect>().position;
+                            ME.BECS.Pathfinding.Graph.GetDirection(in unit.ent.World, position, in path, out var complete);
+                            if (complete == true) return AttackUtils.ReactionType.None;
+                        }
+                    }
+                }
+            }
+
+            position = default;
+            var owner = unit.readOwner.GetAspect<ME.BECS.Players.PlayerAspect>();
+            var unitTr = unit.ent.GetAspect<TransformAspect>();
+            var targetTr = target.GetAspect<TransformAspect>();
+            var fromPos = unitTr.GetWorldMatrixPosition();
+            var targetNearestPoint = AttackUtils.GetNearestPoint(in targetTr, in fromPos);
+            var offset = nodeSize;
+            var sightRange = math.sqrt(unit.readSightRangeSqr) + offset * 0.5f;
+            var sightRangeSqr = sightRange * sightRange;
+            var dir = targetNearestPoint - fromPos;
+            var dirNormalized = math.normalizesafe(dir);
+            var distSq = math.lengthsq(dir);
+            tfloat minRangeSq = tfloat.MaxValue;
+            tfloat rangeSqr = 0;
+            var attackSensors = unit.readComponentRuntime.placements;
+            for (uint i = 0u; i < attackSensors.Count; ++i) {
+                var obj = attackSensors[i].Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var attackSensor = obj.Read<AttackComponent>();
+                if (attackSensor.sector.minRangeSqr < minRangeSq) {
+                    minRangeSq = attackSensor.sector.minRangeSqr;
+                }
+                if (attackSensor.sector.rangeSqr > rangeSqr) {
+                    rangeSqr = attackSensor.sector.rangeSqr;
+                }
+            }
+
+            var targetAttackSensors = target.GetAspect<UnitAspect>().readComponentRuntime.placements;
+            for (uint i = 0u; i < targetAttackSensors.Count; ++i) {
+                var targetAttackSensor = targetAttackSensors[i];
+                var obj = targetAttackSensor.Read<UnitPlacementComponent>().obj;
+                if (obj.IsAlive() == false) continue;
+                var targetAttack = obj.Read<AttackComponent>();
+                // if unit can't attack target and he is in target's attack range
+                if (AttackUtils.CanAttack(in unit, in target) == false && math.lengthsq(dir) < targetAttack.sector.rangeSqr) {
+                    var targetAttackRange = math.sqrt(targetAttack.sector.rangeSqr);
+                    position = unitTr.GetWorldMatrixPosition() - dirNormalized * (targetAttackRange + offset);
+                    return AttackUtils.ReactionType.RunAway;
+                }
+            }
+
+            if (distSq <= minRangeSq) {
+                // if target is too close - get out from target
+                position = unitTr.GetWorldMatrixPosition() - dirNormalized * (math.sqrt(minRangeSq) + offset);
+            } else if (distSq > 0f && distSq <= sightRangeSqr && distSq > rangeSqr) {            
+                // if our unit is in range [attackRange, sightRange] - find target point
+                // find point on the line
+                var attackRangeSqr = rangeSqr;
+                position = targetNearestPoint - dirNormalized * (math.sqrt(attackRangeSqr) - offset);
+            } else if (distSq > 0f && ((distSq > sightRangeSqr && distSq <= rangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, target) == false))) {
+                position = targetNearestPoint - dirNormalized * (math.sqrt(sightRangeSqr) - offset);
+            } else if (distSq > 0f && ((fogOfWarSystem.IsCreated == false && distSq <= sightRangeSqr) || (fogOfWarSystem.IsCreated == true && fogOfWarSystem.Value.IsVisible(in owner, targetNearestPoint) == true)) && distSq <= rangeSqr) {
+                // we are in attack range already - try to look at attacker
+                return AttackUtils.ReactionType.RotateToTarget;
+            } else {
+                position = targetNearestPoint - dirNormalized * offset * 2f;
+            }
+            
+            position = ME.BECS.Pathfinding.GraphUtils.GetNearestNodeByFilter(buildGraphSystem.GetGraphByTypeId(unit.readTypeId), position, new ME.BECS.Pathfinding.NearestPositionToAttackFilter() {
+                rangeSqr = rangeSqr,
+                sourcePos = position,
+                targetPos = targetNearestPoint,
+            });
+            
+            return AttackUtils.ReactionType.MoveToTarget;
+
         }
 
     }

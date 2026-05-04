@@ -549,5 +549,5 @@ MonoBehaviour:
         system:
           rid: 8346928920201003121
     - rid: 8346928920201003121
-      type: {class: MoveToAttackerSystem, ns: ME.BECS.Attack, asm: ME.BECS.Attack}
+      type: {class: MoveToAttackerSystem, ns: ME.BECS.FogOfWar, asm: ME.BECS.FogOfWar}
       data: 

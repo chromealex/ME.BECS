@@ -24,7 +24,7 @@ namespace ME.BECS {
             }
 
             [HIC]
-            new public static void Exception(System.Exception ex, bool showCallstack = false) {
+            new public static void Exception(System.Exception ex, bool showCallstack = true) {
                 BaseLogger<UnityLogger>.Exception(ex, showCallstack);
             }
 

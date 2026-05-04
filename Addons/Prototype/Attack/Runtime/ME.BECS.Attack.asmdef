@@ -11,12 +11,9 @@
         "ME.BECS.Destroy",
         "ME.BECS.Bullets",
         "ME.BECS.Views",
-        "ME.BECS.Pathfinding",
-        "ME.BECS.FogOfWar",
         "ME.BECS.Commands",
         "Unity.Mathematics",
-        "Unity.Collections",
-        "ME.ECS.Pathfinding"
+        "Unity.Collections"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

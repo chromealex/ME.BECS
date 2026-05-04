@@ -330,6 +330,10 @@ namespace ME.BECS.Editor {
 
         }
 
+        private static readonly CustomStyleProperty<string> GradientDirectionProperty = new("--gradient-direction");
+        private static readonly CustomStyleProperty<UnityEngine.Color> GradientFromProperty = new("--border-from");
+        private static readonly CustomStyleProperty<UnityEngine.Color> GradientToProperty = new("--border-to");
+        
         private void AddLegend(VisualElement legend, string caption, UnityEngine.Color startColor) {
             Button container = null;
             container = new Button(() => {
@@ -353,14 +357,16 @@ namespace ME.BECS.Editor {
             UnityEngine.Color.RGBToHSV(startColor, out var h, out var s, out var v);
             v *= 0.5f;
             var darkColor = UnityEngine.Color.HSVToRGB(h, s, v);
-            var startColorBox = new VisualElement();
+            var startColorBox = new UnityEditor.UIElements.GradientField();
             startColorBox.AddToClassList("color-box");
-            startColorBox.style.backgroundColor = startColor;
+            startColorBox.value = new UnityEngine.Gradient() {
+                colorKeys = new UnityEngine.GradientColorKey[] {
+                    new UnityEngine.GradientColorKey(startColor, 0f),
+                    new UnityEngine.GradientColorKey(darkColor, 1f),
+                }
+            };
+            startColorBox.enabledSelf = false;
             container.Add(startColorBox);
-            var endColorBox = new VisualElement();
-            endColorBox.AddToClassList("color-box");
-            endColorBox.style.backgroundColor = darkColor;
-            container.Add(endColorBox);
             var lbl = new Label(caption);
             lbl.AddToClassList("label");
             container.Add(lbl);

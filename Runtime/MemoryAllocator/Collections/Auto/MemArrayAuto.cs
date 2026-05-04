@@ -162,12 +162,21 @@ namespace ME.BECS {
                 return;
             }
 
+            this = default;
+            this.data.Length = arr.Length;
+            if (this.IsInlined == true) {
+                // we can inline the data into array without allocating any memory
+                this.data.ent = ent;
+                this.data.arrPtr = default;
+                NativeArrayUtils.CopyNoChecks(in arr, 0u, ref this, 0u, arr.Length);
+                return;
+            }
+            
             var state = ent.World.state;
             this.data.ent = ent;
             #if USE_CACHE_PTR
             this.data.cachedPtr = default;
             #endif
-            this.data.Length = arr.Length;
             this.data.arrPtr = state.ptr->allocator.AllocArray<T>(arr.Length);
             NativeArrayUtils.CopyNoChecks(in arr, 0u, ref this, 0u, arr.Length);
             CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
@@ -181,14 +190,23 @@ namespace ME.BECS {
                 return;
             }
 
+            this = default;
+            var size = TSize<T>.size;
+            this.data.Length = arr.Length;
+            if (this.IsInlined == true) {
+                // we can inline the data into array without allocating any memory
+                this.data.ent = ent;
+                this.data.arrPtr = default;
+                _memcpy(arr.ptr, this.GetUnsafePtr(), this.Length * size);
+                return;
+            }
+            
             var state = ent.World.state;
             this.data.ent = ent;
             #if USE_CACHE_PTR
             this.data.cachedPtr = default;
             #endif
-            this.data.Length = arr.Length;
             this.data.arrPtr = state.ptr->allocator.AllocArray<T>(arr.Length, out var ptr);
-            var size = TSize<T>.size;
             _memcpy(arr.ptr, ptr, this.Length * size);
             CollectionsRegistry.Add(state, in ent, in this.data.arrPtr);
             
@@ -216,6 +234,10 @@ namespace ME.BECS {
         public void Dispose() {
 
             E.IS_ALIVE(this.data.ent);
+            if (this.IsInlined == true) {
+                this = default;
+                return;
+            }
             var state = this.data.ent.World.state;
             CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
             if (this.data.arrPtr.IsValid() == true) {
@@ -229,6 +251,11 @@ namespace ME.BECS {
         public Unity.Jobs.JobHandle Dispose(Unity.Jobs.JobHandle inputDeps) {
 
             E.IS_CREATED(this);
+            
+            if (this.IsInlined == true) {
+                this = default;
+                return inputDeps;
+            }
             
             var jobHandle = new DisposeAutoJob() {
                 ptr = this.data.arrPtr,
@@ -308,14 +335,15 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        public MemPtr GetAllocPtr(uint index) {
-            
+        public readonly MemPtr GetAllocPtr(uint index) {
+
+            if (this.IsInlined == true) return default;
             return this.data.ent.World.state.ptr->allocator.RefArrayPtr<T>(this.data.arrPtr, index);
             
         }
 
         [INLINE(256)]
-        public ref T Read(in MemoryAllocator allocator, uint index) {
+        public readonly ref T Read(in MemoryAllocator allocator, uint index) {
             
             E.RANGE(index, 0, this.Length);
             #if USE_CACHE_PTR
@@ -396,12 +424,15 @@ namespace ME.BECS {
                     #endif
                     _memcpy(this.GetUnsafePtr(), state.ptr->allocator.GetUnsafePtr(arrPtr), this.Length * TSize<T>.size);
                     this.data.arrPtr = arrPtr;
+                    this.data.Length = newLength;
                     if (options == ClearOptions.ClearMemory) {
-                        this.Clear(0u, newLength);
+                        var size = TSize<T>.size;
+                        _memclear(this.GetUnsafePtr(), newLength * size);
                     }
                     CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
                 } else {
-                    this.Clear(this.Length, newLength - this.Length);
+                    var size = TSize<T>.size;
+                    _memclear(this.GetUnsafePtr() + this.Length * size, (newLength - this.Length) * size);
                 }
             } else {
                 CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
@@ -410,55 +441,13 @@ namespace ME.BECS {
                 this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
                 #endif
                 if (options == ClearOptions.ClearMemory) {
-                    this.Clear(this.Length, newLength - this.Length);
+                    var size = TSize<T>.size;
+                    _memclear(this.GetUnsafePtr() + this.Length * size, (newLength - this.Length) * size);
                 }
                 CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
             }
-
             this.data.Length = newLength;
-            return true;
 
-        }
-
-        [INLINE(256)]
-        public bool Resize(uint elementSize, uint newLength, ClearOptions options = ClearOptions.ClearMemory, ushort growFactor = 1) {
-
-            E.IS_CREATED(this);
-
-            if (newLength <= this.Length) {
-
-                return false;
-                
-            }
-
-            newLength *= growFactor;
-
-            var state = this.data.ent.World.state;
-            if (this.IsInlined == true) {
-                if (TSize<T>.size * newLength > MemPtr.SIZE) {
-                    this.data.arrPtr = state.ptr->allocator.AllocArray(newLength, out safe_ptr<T> ptr);
-                    #if USE_CACHE_PTR
-                    this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
-                    #endif
-                    if (options == ClearOptions.ClearMemory) {
-                        this.Clear(0u, newLength);
-                    }
-                } else {
-                    this.Clear(this.Length, newLength - this.Length);
-                }
-            } else {
-                CollectionsRegistry.Remove(state, in this.data.ent, in this.data.arrPtr);
-                this.data.arrPtr = state.ptr->allocator.Alloc(elementSize * newLength, out var tPtr);
-                CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
-                #if USE_CACHE_PTR
-                this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, (T*)tPtr);
-                #endif
-                if (options == ClearOptions.ClearMemory) {
-                    this.Clear(this.Length, newLength - this.Length);
-                }
-            }
-
-            this.data.Length = newLength;
             return true;
 
         }
@@ -473,7 +462,11 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly void Clear(uint index, uint length) {
 
+            if (length == 0u) return;
+            
             E.IS_CREATED(this);
+            E.RANGE(index, 0u, this.Length);
+            E.RANGE(length - 1u, 0u, this.Length);
 
             var size = TSize<T>.size;
             if (this.IsInlined == true) {
@@ -507,12 +500,12 @@ namespace ME.BECS {
         public void CopyFrom(in MemArrayAuto<T> other) {
 
             if (other.data.arrPtr == this.data.arrPtr) return;
-            if (this.data.arrPtr.IsValid() == false && other.data.arrPtr.IsValid() == false) return;
-            if (this.data.arrPtr.IsValid() == true && other.data.arrPtr.IsValid() == false) {
+            if (this.IsCreated == false && other.IsCreated == false) return;
+            if (this.IsCreated == true && other.IsCreated == false) {
                 this.Dispose();
                 return;
             }
-            if (this.data.arrPtr.IsValid() == false) this = new MemArrayAuto<T>(in other.data.ent, other.Length);
+            if (this.IsCreated == false) this = new MemArrayAuto<T>(in other.data.ent, other.Length);
             
             NativeArrayUtils.Copy(in other, ref this);
             

@@ -49,32 +49,35 @@
 
 .zone > Toggle,
 .zone > ListView > Foldout > Toggle {
-    padding: 8px;
+    padding: 2px 4px;
     margin: 0px;
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    -unity-font-style: bold;
 }
 
 .zone {
     border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.4);
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0.1);
     margin-top: 2px;
     margin-bottom: 2px;
-    margin-left: 10px;
-    margin-right: 10px;
+    margin-left: 4px;
+    margin-right: 4px;
     transition-duration: 1s;
 }
 
 .zone:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.3);
     transition-duration: 1s;
 }
 
 .zone > #unity-content,
 .zone > ListView > Foldout > #unity-content {
-    padding: 8px;
+    padding: 4px;
     margin-left: 0px;
     background-color: var(--main-background-color);
 }
@@ -196,9 +199,19 @@
 }
 
 .legend .legend-item .color-box {
+    margin: 0px;
     margin-right: 5px;
-    width: 10px;
+    border-width: 0px;
+    width: 25px;
     height: 10px;
+    opacity: 1;
+}
+.legend .legend-item .color-box * {
+    margin: 0px;
+    border-width: 0px;
+    padding: 0px;
+    font-size: 0px;
+    min-height: auto;
 }
 
 .legend .legend-item .label {

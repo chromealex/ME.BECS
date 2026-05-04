@@ -9,12 +9,13 @@ using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
-namespace ME.BECS.Attack {
+namespace ME.BECS.FogOfWar {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
     using ME.BECS.Units;
     using ME.BECS.Pathfinding;
+    using ME.BECS.Attack;
     using ME.BECS.Commands;
     using ME.BECS.Transforms;
 
@@ -40,7 +41,7 @@ namespace ME.BECS.Attack {
                 }
 
                 // move to attacker
-                var result = AttackUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos, in this.buildGraphSystem, in this.fogOfWarSystem);
+                var result = FogOfWarUtils.GetPositionToAttack(in unit, in component.source, this.buildGraphSystem.GetNodeSize(), out var worldPos, in this.buildGraphSystem, in this.fogOfWarSystem);
                 if (result == AttackUtils.ReactionType.RunAway) {
                     CommandsUtils.SetCommand(in this.buildGraphSystem, in unit, new CommandMove() {
                         targetPosition = worldPos,
@@ -77,7 +78,7 @@ namespace ME.BECS.Attack {
                     return;
                 }
                 if (target.target.IsAlive() == true && AttackUtils.CanAttack(in unit, in target.target) == true) {
-                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.buildGraphSystem, in this.fogOfWarSystem);
+                    var result = FogOfWarUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.buildGraphSystem, in this.fogOfWarSystem);
                     if (result == AttackUtils.ReactionType.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {
@@ -107,7 +108,7 @@ namespace ME.BECS.Attack {
                     return;
                 }
                 if (target.target.IsAlive() == true && AttackUtils.CanAttack(in unit, in target.target) == true) {
-                    var result = AttackUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.buildGraphSystem, in this.fogOfWarSystem);
+                    var result = FogOfWarUtils.GetPositionToAttack(in unit, in target.target, this.buildGraphSystem.GetNodeSize(), out _, in this.buildGraphSystem, in this.fogOfWarSystem);
                     if (result == AttackUtils.ReactionType.RotateToTarget) {
                         // Stop unit to attack
                         unit.ent.Set(new UnitLookAtComponent() {
@@ -134,7 +135,7 @@ namespace ME.BECS.Attack {
 
                 if (command.target.IsAlive() == false) return;
                 
-                var result = AttackUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos, in this.buildGraphSystem, this.fowSystem);
+                var result = FogOfWarUtils.GetPositionToAttack(in group, in command.target, this.buildGraphSystem.GetNodeSize(), out var pos, in this.buildGraphSystem, this.fowSystem);
                 if (result == AttackUtils.ReactionType.MoveToTarget) {
                     if (AttackUtils.SetTargetChanged(in group, result, in pos, in command.target) == true) {
                         if (command.target.TryRead(out UnitQuadSizeComponent unitQuadSizeComponent) == true) {
