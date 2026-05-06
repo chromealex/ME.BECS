@@ -423,11 +423,12 @@ namespace ME.BECS {
                     this.data.cachedPtr = new CachedPtr(in state.ptr->allocator, ptr);
                     #endif
                     _memcpy(this.GetUnsafePtr(), state.ptr->allocator.GetUnsafePtr(arrPtr), this.Length * TSize<T>.size);
+                    var oldLength = this.Length;
                     this.data.arrPtr = arrPtr;
                     this.data.Length = newLength;
                     if (options == ClearOptions.ClearMemory) {
                         var size = TSize<T>.size;
-                        _memclear(this.GetUnsafePtr(), newLength * size);
+                        _memclear(this.GetUnsafePtr() + oldLength * size, (newLength - oldLength) * size);
                     }
                     CollectionsRegistry.Add(state, in this.data.ent, in this.data.arrPtr);
                 } else {
