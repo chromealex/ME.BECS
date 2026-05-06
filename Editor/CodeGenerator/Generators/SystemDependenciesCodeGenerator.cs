@@ -734,41 +734,61 @@ namespace ME.BECS.Editor.Systems {
                               System.Collections.Generic.HashSet<System.Type> aspects) {
             var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             var aspectMethod = typeof(WorldAspectStorage).GetMethod(nameof(WorldAspectStorage.InitializeObj), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            foreach (var method in methods) {
-                if (method.Name != name) continue;
-                var componentTypes = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(method, methodParameters: false, onInstruction: (inst, q) => {
-                    if (inst.Operand is MethodInfo methodInfo) {
-                        if (IsMethod(methodInfo, aspectMethod) == true) {
-                            var t = methodInfo.GetGenericArguments()[0];
-                            AddToLookup(t, types, components, jobTypes, entityTypes, aspects);
-                        } else if (IsMethod(methodInfo, newEntMethod) == true) {
-                            var entityType = methodInfo.GetGenericArguments()[0];
-                            entityTypes.Add(entityType);
-                        } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
-                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                                var jobType = methodInfo.GetGenericArguments()[0];
-                                jobTypes.Add(jobType);
-                                var interfaces = jobType.GetInterfaces();
-                                foreach (var inter in interfaces) {
-                                    if (inter.IsGenericType == true) {
-                                        var args = inter.GetGenericArguments();
-                                        foreach (var arg in args) {
-                                            AddToLookup(arg, types, components, jobTypes, entityTypes, aspects);
+            if (type.IsGenericType == true) {
+                var without = type.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x) && x.IsGenericType == true).Select(x => x.GetGenericArguments()[0]).ToArray();
+                var constraints = type.GetGenericArguments()[0].GetGenericParameterConstraints();
+                foreach (var constraint in constraints) {
+                    if (constraint == typeof(System.ValueType)) continue;
+                    var constTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(constraint);
+                    foreach (var t in constTypes) {
+                        if (t.IsValueType == false) continue;
+                        if (without.Any(x => x.IsAssignableFrom(t)) == true) continue;
+                        var genType = type.MakeGenericType(t);
+                        Run(genType);
+                    }
+                }
+            } else {
+                Run(type);
+            }
+
+            void Run(System.Type type) {
+                var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                foreach (var method in methods) {
+                    if (method.Name != name) continue;
+                    var componentTypes = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(method, methodParameters: false, onInstruction: (inst, q) => {
+                        if (inst.Operand is MethodInfo methodInfo) {
+                            if (IsMethod(methodInfo, aspectMethod) == true) {
+                                var t = methodInfo.GetGenericArguments()[0];
+                                AddToLookup(t, types, components, jobTypes, entityTypes, aspects);
+                            } else if (IsMethod(methodInfo, newEntMethod) == true) {
+                                var entityType = methodInfo.GetGenericArguments()[0];
+                                entityTypes.Add(entityType);
+                            } else if (methodInfo.Name == "Schedule" && methodInfo.IsGenericMethod == true) {
+                                if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
+                                    var jobType = methodInfo.GetGenericArguments()[0];
+                                    jobTypes.Add(jobType);
+                                    var interfaces = jobType.GetInterfaces();
+                                    foreach (var inter in interfaces) {
+                                        if (inter.IsGenericType == true) {
+                                            var args = inter.GetGenericArguments();
+                                            foreach (var arg in args) {
+                                                AddToLookup(arg, types, components, jobTypes, entityTypes, aspects);
+                                            }
                                         }
                                     }
+
+                                    var exec = jobType.GetMethod("Execute", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                                    q.Enqueue(exec);
                                 }
-                                var exec = jobType.GetMethod("Execute", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                                q.Enqueue(exec);
                             }
                         }
-                    }
 
-                    return false;
-                });
-                foreach (var componentType in componentTypes) {
-                    if (typeof(IComponentBase).IsAssignableFrom(componentType.type) == true) {
-                        components.Add(componentType.type);
+                        return false;
+                    });
+                    foreach (var componentType in componentTypes) {
+                        if (typeof(IComponentBase).IsAssignableFrom(componentType.type) == true) {
+                            components.Add(componentType.type);
+                        }
                     }
                 }
             }

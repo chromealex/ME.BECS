@@ -19,10 +19,12 @@ namespace ME.BECS.Editor {
 
     public struct MethodPointerData : System.IEquatable<MethodPointerData> {
 
-        public MethodInfo originalMethodInfo;
+        private MethodInfo originalMethodInfo;
+        private System.Type rootType;
 
-        public MethodPointerData(MethodInfo originalMethodInfo) {
+        public MethodPointerData(MethodInfo originalMethodInfo, System.Type rootType = null) {
             this.originalMethodInfo = originalMethodInfo;
+            this.rootType = rootType;
         }
 
         public bool Equals(MethodPointerData other) {
@@ -30,6 +32,7 @@ namespace ME.BECS.Editor {
                 if (this.originalMethodInfo.Name == other.originalMethodInfo.Name &&
                     this.originalMethodInfo.ReturnType == other.originalMethodInfo.ReturnType &&
                     this.originalMethodInfo.MemberType == other.originalMethodInfo.MemberType &&
+                    this.rootType == other.rootType &&
                     this.originalMethodInfo.GetGenericMethodDefinition() == other.originalMethodInfo.GetGenericMethodDefinition()) {
                     return true;
                 }
@@ -39,7 +42,8 @@ namespace ME.BECS.Editor {
                    this.originalMethodInfo.DeclaringType == other.originalMethodInfo.DeclaringType &&
                    this.originalMethodInfo.ReflectedType == other.originalMethodInfo.ReflectedType &&
                    this.originalMethodInfo.MemberType == other.originalMethodInfo.MemberType &&
-                   this.originalMethodInfo.IsGenericMethod == other.originalMethodInfo.IsGenericMethod;
+                   this.originalMethodInfo.IsGenericMethod == other.originalMethodInfo.IsGenericMethod &&
+                   this.rootType == other.rootType;
         }
 
         public override bool Equals(object obj) {
@@ -48,9 +52,9 @@ namespace ME.BECS.Editor {
 
         public override int GetHashCode() {
             if (this.originalMethodInfo.IsGenericMethod == true) {
-                return this.originalMethodInfo.Name.GetHashCode() ^ this.originalMethodInfo.ReturnType.GetHashCode() ^ this.originalMethodInfo.GetGenericMethodDefinition().GetHashCode();
+                return this.originalMethodInfo.Name.GetHashCode() ^ this.originalMethodInfo.ReturnType.GetHashCode() ^ this.originalMethodInfo.GetGenericMethodDefinition().GetHashCode() ^ (this.rootType != null ? this.rootType.GetHashCode() : 0);
             }
-            return (this.originalMethodInfo != null ? this.originalMethodInfo.GetHashCode() : 0);
+            return (this.originalMethodInfo != null ? this.originalMethodInfo.GetHashCode() : 0) ^ (this.rootType != null ? this.rootType.GetHashCode() : 0);
         }
 
     }

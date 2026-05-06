@@ -880,13 +880,15 @@ namespace ME.BECS.Editor {
                 this.Repaint();
                 */
             }
-
+            
             if (hasActiveWorlds == false) {
 
                 if (this.rootContainer != null) this.newRootContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
                 if (this.toolbarContainer != null) this.toolbarContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.None);
-                this.worldsSelectionContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
-                this.DrawWorldsSelection(this.worldsSelectionContainer);
+                if (this.worldsSelectionContainer != null) {
+                    this.worldsSelectionContainer.style.display = new StyleEnum<DisplayStyle>(DisplayStyle.Flex);
+                    this.DrawWorldsSelection(this.worldsSelectionContainer);
+                }
 
             } else {
 

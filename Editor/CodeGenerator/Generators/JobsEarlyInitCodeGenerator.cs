@@ -521,8 +521,21 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (continueTraverse == true && traverseHierarchy == true && inst.Operand is System.Reflection.MethodInfo member) {
-                        if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                            if (member.GetMethodBody() != null) q.Enqueue(member);
+                        if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null && (member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member, body.DeclaringType)) == true)) {
+                            if (body.DeclaringType.IsGenericType == true && member.DeclaringType.IsInterface == true) {
+                                var arg = body.DeclaringType.GetGenericArguments()[0];
+                                var newMethods = arg.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                                foreach (var newMethod in newMethods) {
+                                    if (newMethod.Name != member.Name) continue;
+                                    if (newMethod == null) {
+                                        if (member.GetMethodBody() != null) q.Enqueue(member);
+                                    } else {
+                                        if (newMethod.GetMethodBody() != null) q.Enqueue(newMethod);
+                                    }
+                                }
+                            } else {
+                                if (member.GetMethodBody() != null) q.Enqueue(member);
+                            }
                         }
                     }
                 }
