@@ -108,6 +108,7 @@ namespace ME.BECS {
                     Logger.Core.Warning($"Config is null while loading #{obj.sourceId}");
                     return;
                 }
+                ObjectReferenceRegistry.data.objectLookup.TryAdd(config, processItem.objectItem.sourceId);
                 var unsafeConfig = config.AsUnsafeConfig();
                 if (unsafeConfig.IsValid() == false) return;
                 TryAdd(obj.sourceId, unsafeConfig);
