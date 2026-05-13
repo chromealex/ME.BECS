@@ -737,10 +737,12 @@ namespace ME.BECS {
                     var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(comp, System.Runtime.InteropServices.GCHandleType.Pinned);
                     var ptr = gcHandle.AddrOfPinnedObject();
                     Batches.Set(in this.staticDataEnt, typeId, (void*)ptr, this.staticDataEnt.World.state);
-                    var newPtr = Components.GetUnknownType(this.staticDataEnt.World.state, typeId, groupId, in this.staticDataEnt, out _, default);
-                    {
-                        var del = (MethodCallerDelegate)GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
-                        del.Invoke(in config, newPtr, in this.staticDataEnt);
+                    if (StaticTypes.sizes.Get(typeId) != 0u) {
+                        var newPtr = Components.GetUnknownType(this.staticDataEnt.World.state, typeId, groupId, in this.staticDataEnt, out _, default);
+                        {
+                            var del = (MethodCallerDelegate)GenericCache.Get(comp.GetType(), typeof(MethodCaller<>), "Call", typeof(MethodCallerDelegate));
+                            del.Invoke(in config, newPtr, in this.staticDataEnt);
+                        }
                     }
                     gcHandle.Free();
                 }
