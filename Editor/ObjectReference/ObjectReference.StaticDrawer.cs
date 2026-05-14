@@ -44,7 +44,7 @@ namespace ME.BECS.Editor {
             
             var type = this.fieldInfo.FieldType.GenericTypeArguments[0];
 
-            var newValue = EditorGUILayout.ObjectField(property.displayName, obj, type, false);
+            var newValue = EditorGUI.ObjectField(position, property.displayName, obj, type, false);
             if (newValue == obj) return;
             var pId = ObjectReferenceRegistryUtils.Assign(obj, newValue);
             var prop = property.serializedObject.FindProperty(id.propertyPath);
