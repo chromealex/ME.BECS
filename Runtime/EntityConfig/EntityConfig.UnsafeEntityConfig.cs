@@ -783,7 +783,6 @@ namespace ME.BECS {
 
                 E.IS_ALIVE(this.staticDataEnt);
                 var world = this.staticDataEnt.World;
-                UnityEngine.Debug.Log("READ STATIC: " + staticDataEnt + " :: " + typeof(T));
                 return Components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out _);
 
             }
@@ -944,7 +943,6 @@ namespace ME.BECS {
         [INLINE(256)]
         [SafetyCheck(RefOp.ReadOnly)] public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
-            UnityEngine.Debug.Log("READ STATIC: " + this.id);
             return this.staticData.ReadStatic<T>();
 
         }
