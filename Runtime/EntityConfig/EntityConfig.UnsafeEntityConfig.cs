@@ -702,7 +702,7 @@ namespace ME.BECS {
         }
 
         [IgnoreProfiler]
-        internal readonly struct StaticData {
+        public readonly struct StaticData {
 
             internal static class MethodCaller<T> where T : unmanaged, IConfigComponentStatic {
 
@@ -716,7 +716,7 @@ namespace ME.BECS {
 
             }
 
-            internal readonly Ent staticDataEnt;
+            public readonly Ent staticDataEnt;
             internal readonly safe_ptr<uint> typeIds;
             private readonly uint count;
 
@@ -783,6 +783,7 @@ namespace ME.BECS {
 
                 E.IS_ALIVE(this.staticDataEnt);
                 var world = this.staticDataEnt.World;
+                UnityEngine.Debug.Log("READ STATIC: " + staticDataEnt + " :: " + typeof(T));
                 return Components.Read<T>(world.state, entId: this.staticDataEnt.id, gen: this.staticDataEnt.gen, out _);
 
             }
@@ -806,7 +807,7 @@ namespace ME.BECS {
         private readonly DataInitialize dataInitialize;
         private readonly Aspect aspects;
         private readonly CollectionsData collectionsData;
-        private readonly StaticData staticData;
+        public readonly StaticData staticData;
 
         public bool IsCreated => this.IsValid();
 
@@ -943,6 +944,7 @@ namespace ME.BECS {
         [INLINE(256)]
         [SafetyCheck(RefOp.ReadOnly)] public T ReadStatic<T>() where T : unmanaged, IConfigComponentStatic {
 
+            UnityEngine.Debug.Log("READ STATIC: " + this.id);
             return this.staticData.ReadStatic<T>();
 
         }
