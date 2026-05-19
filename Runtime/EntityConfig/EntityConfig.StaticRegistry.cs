@@ -78,8 +78,9 @@ namespace ME.BECS {
                     if (awaiter.IsCompleted == true) {
                         CompleteItem(item);
                     } else {
+                        var copyItem = item;
                         item.GetAwaiter().OnCompleted(() => {
-                            CompleteItem(item);
+                            CompleteItem(copyItem);
                         });
                     }
                 }
