@@ -1010,16 +1010,16 @@ namespace ME.BECS.Editor.Systems {
                         if (injectType.IsVisible == false) continue;
                         var t = EditorUtils.GetTypeName(injectType);
                         var v = typeToVar[injectType];
-                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(systemType, field.Name);
-                        localContent.Add("{");
-                        localContent.Add($"var addr = (byte*)({src}*){variable} + {fieldOffset};");
-                        localContent.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
-                        localContent.Add("}");
-                        /*if (field.IsPublic == false) {
-                            content.Add($"typeof({src}).GetField(\"{field.Name}\").SetValue(*({src}*){variable}, new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
+                        if (field.IsPublic == false) {
+                            var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(systemType, field.Name);
+                            localContent.Add("{");
+                            localContent.Add($"var addr = (byte*)({src}*){variable} + {fieldOffset};");
+                            localContent.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
+                            localContent.Add("}");
+                            //localContent.Add($"typeof({src}).GetField(\"{field.Name}\").SetValue(*({src}*){variable}, new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
                         } else {
-                            content.Add($"(({src}*){variable})->{field.Name} = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
-                        }*/
+                            localContent.Add($"(({src}*){variable})->{field.Name} = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
+                        }
                     }
                 }
 
@@ -1074,6 +1074,7 @@ namespace ME.BECS.Editor.Systems {
                         containsBool = true;
                     }
                     var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
+                    content.Add($"JobInject<{jobTypeStr}>.Check({fieldOffset}, \"{field.Name}\");");
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
                         if (typeToVar.TryGetValue(injectType, out var v) == true) {
