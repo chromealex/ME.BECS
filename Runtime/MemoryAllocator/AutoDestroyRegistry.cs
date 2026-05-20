@@ -81,7 +81,7 @@ namespace ME.BECS {
                         }
                         if (exists == true) {
                             // component exists - call destroy method
-                            var func = new Unity.Burst.FunctionPointer<DestroyDelegate>(StaticTypesDestroyRegistry.registry.Data.Get(typeId));
+                            var func = StaticTypesDestroyRegistry.registry.Data.Get(typeId);
                             func.Invoke(ent, comp);
                         }
                     }
@@ -106,7 +106,7 @@ namespace ME.BECS {
             }
             if (exists == true) {
                 // component exists - call destroy method
-                var func = new Unity.Burst.FunctionPointer<DestroyDelegate>(StaticTypesDestroyRegistry.registry.Data.Get(typeId));
+                var func = StaticTypesDestroyRegistry.registry.Data.Get(typeId);
                 func.Invoke(ent, comp);
                 
                 // clean up list
