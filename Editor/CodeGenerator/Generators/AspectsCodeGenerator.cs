@@ -86,9 +86,18 @@ namespace ME.BECS.Editor.Aspects {
                         ++fieldsCount;
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
-                        var t = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
-                        types.Add($"*(({t}*)((addr + {fieldOffset}).ptr)) = new ME.BECS.AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
+                        if (field.IsPublic == true) {
+                            types.Add($"(({strType}*)addr.ptr)->{field.Name} = new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
+                        } else {
+                            types.Add("{");
+                            types.Add($"ref var s = ref *(({strType}*)addr.ptr);");
+                            types.Add($"typeof({strType}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValueDirect(__makeref(s), new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world));");
+                            //types.Add($"typeof({strType}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(*(({strType}*)addr.ptr), new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world));");
+                            types.Add("}");
+                            //var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
+                            //var t = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
+                            //types.Add($"*(({t}*)((addr + {fieldOffset}).ptr)) = new ME.BECS.AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
+                        }
                     }
                 }
                 

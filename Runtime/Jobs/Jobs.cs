@@ -165,6 +165,11 @@ namespace ME.BECS {
             JobInjectDeltaTime<TJob>.data.Data = fieldType;
         }
 
+        public static void Check(int offset, string fieldName) {
+            var runtimeOffset = (int)System.Runtime.InteropServices.Marshal.OffsetOf(typeof(TJob), fieldName);
+            UnityEngine.Assertions.Assert.IsTrue(offset == runtimeOffset, $"Field {fieldName} in job {typeof(TJob).Name} does not match runtime offset {runtimeOffset}");
+        }
+
         [INLINE(256)]
         public static void Patch(ref TJob instance, ushort worldId) {
             if (JobInjectDeltaTime<TJob>.data.Data > 0) {
