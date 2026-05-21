@@ -143,50 +143,25 @@ namespace ME.BECS {
         }
 
     }
+
+    public unsafe struct JobPatchInjectDelegate {
+        
+        public delegate void PatchDelegate(void* job, ushort worldId);
+
+    }
     
     public unsafe struct JobInject<TJob> where TJob : struct {
-        
-        public static readonly Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>> data = Unity.Burst.SharedStatic<UnsafeHashMap<int, System.IntPtr>>.GetOrCreate<JobInject<TJob>>();
 
-        public static void Init() {
-            if (data.Data.IsCreated == true) data.Data.Dispose();
-            data.Data = new UnsafeHashMap<int, System.IntPtr>(10, ALLOCATOR);
-            data.Data.Clear();
-        }
-        
-        [INLINE(256)]
-        public static void Register(int offset, System.IntPtr systemPtr) {
-            data.Data.Add(offset, systemPtr);
-        }
+        public static readonly Unity.Burst.SharedStatic<Unity.Burst.FunctionPointer<JobPatchInjectDelegate.PatchDelegate>> data = Unity.Burst.SharedStatic<Unity.Burst.FunctionPointer<JobPatchInjectDelegate.PatchDelegate>>.GetOrCreate<JobInject<TJob>>();
 
         [INLINE(256)]
-        public static void RegisterDeltaTime(int offset, byte fieldType) {
-            JobInjectDeltaTimeOffset<TJob>.data.Data = offset;
-            JobInjectDeltaTime<TJob>.data.Data = fieldType;
-        }
-
-        public static void Check(int offset, string fieldName) {
-            var runtimeOffset = (int)System.Runtime.InteropServices.Marshal.OffsetOf(typeof(TJob), fieldName);
-            UnityEngine.Assertions.Assert.IsTrue(offset == runtimeOffset, $"Field {fieldName} in job {typeof(TJob).Name} does not match runtime offset {runtimeOffset}");
+        public static void Register(JobPatchInjectDelegate.PatchDelegate patchDelegate) {
+            data.Data = Unity.Burst.BurstCompiler.CompileFunctionPointer(patchDelegate);
         }
 
         [INLINE(256)]
         public static void Patch(ref TJob instance, ushort worldId) {
-            if (JobInjectDeltaTime<TJob>.data.Data > 0) {
-                var addr = (byte*)_addressPtr(ref instance) + JobInjectDeltaTimeOffset<TJob>.data.Data;
-                var dtMs = Worlds.GetWorldDeltaTime(worldId);
-                var systemContext = SystemContext.Create(dtMs, default, default);
-                if (JobInjectDeltaTime<TJob>.data.Data == 1) {
-                    *((tfloat*)addr) = systemContext.deltaTime;
-                } else if (JobInjectDeltaTime<TJob>.data.Data == 2) {
-                    *((uint*)addr) = systemContext.deltaTimeMs;
-                }
-            }
-            if (data.Data.IsCreated == false || data.Data.Count == 0) return;
-            foreach (var kv in data.Data) {
-                var addr = (byte*)_addressPtr(ref instance) + kv.Key;
-                *((System.IntPtr*)addr) = kv.Value;
-            }
+            if (data.Data.IsCreated == true) data.Data.Invoke(_addressPtr(ref instance), worldId);
         }
         
     }

@@ -92,11 +92,7 @@ namespace ME.BECS.Editor.Aspects {
                             types.Add("{");
                             types.Add($"ref var s = ref *(({strType}*)addr.ptr);");
                             types.Add($"typeof({strType}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValueDirect(__makeref(s), new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world));");
-                            //types.Add($"typeof({strType}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(*(({strType}*)addr.ptr), new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world));");
                             types.Add("}");
-                            //var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
-                            //var t = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
-                            //types.Add($"*(({t}*)((addr + {fieldOffset}).ptr)) = new ME.BECS.AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
                         }
                     }
                 }

@@ -1011,12 +1011,10 @@ namespace ME.BECS.Editor.Systems {
                         var t = EditorUtils.GetTypeName(injectType);
                         var v = typeToVar[injectType];
                         if (field.IsPublic == false) {
-                            var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(systemType, field.Name);
                             localContent.Add("{");
-                            localContent.Add($"var addr = (byte*)({src}*){variable} + {fieldOffset};");
-                            localContent.Add($"*((InjectSystem<{t}>*)addr) = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
+                            localContent.Add($"ref var s = ref *(({src}*){variable});");
+                            localContent.Add($"typeof({src}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValueDirect(__makeref(s), new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
                             localContent.Add("}");
-                            //localContent.Add($"typeof({src}).GetField(\"{field.Name}\").SetValue(*({src}*){variable}, new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
                         } else {
                             localContent.Add($"(({src}*){variable})->{field.Name} = new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v}));");
                         }
@@ -1040,45 +1038,30 @@ namespace ME.BECS.Editor.Systems {
             CollectJobsTypes(systemType.GetMethod(nameof(IUpdate.OnUpdate), flags), types);
             CollectJobsTypes(systemType.GetMethod(nameof(IDestroy.OnDestroy), flags), types);
             CollectJobsTypes(systemType.GetMethod(nameof(IDrawGizmos.OnDrawGizmos), flags), types);
-            foreach (var jobType in types) {
-                if (jobType.IsVisible == false) continue;
-                var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                var containsBool = false;
-                localContent.Clear();
-                foreach (var field in fields) {
-                    if (field.FieldType == typeof(bool)) {
-                        containsBool = true;
-                    }
-                    if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
-                        var jobTypeStr = EditorUtils.GetTypeName(jobType);
-                        localContent.Add($"JobInject<{jobTypeStr}>.Init();");
-                        break;
-                    }
-                }
-                
-                if (containsBool == true && localContent.Count > 0) {
-                    UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
-                } else {
-                    content.AddRange(localContent);
-                }
-            }
-
+            
+            var methodContent = new scg::List<string>();
             foreach (var jobType in types) {
                 if (jobType.IsVisible == false) continue;
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                var methodName = $"Patch_{EditorUtils.GetCodeName(jobTypeStr)}";
                 var containsBool = false;
                 localContent.Clear();
+                methodContent.Clear();
+                methodContent.Add($"[BURST] static unsafe void {methodName}(void* jobPtr, ushort worldId) {{");
+                methodContent.Add($"var job = ({jobTypeStr}*)jobPtr;");
+                var hasPatch = false;
                 foreach (var field in fields) {
                     if (field.FieldType == typeof(bool)) {
                         containsBool = true;
                     }
-                    var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(jobType, field.Name);
-                    content.Add($"JobInject<{jobTypeStr}>.Check({fieldOffset}, \"{field.Name}\");");
+
+                    var hasAny = false;
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
                         if (typeToVar.TryGetValue(injectType, out var v) == true) {
-                            content.Add($"JobInject<{jobTypeStr}>.Register({fieldOffset}, {v});");
+                            methodContent.Add($"job->{field.Name} = new InjectSystem<{EditorUtils.GetTypeName(injectType)}>({v});");
+                            hasAny = true;
                         } else {
                             UnityEngine.Debug.LogError($"[CodeGenerator] {graph.name} failed to inject system {injectType.Name} because it's missing in current graph. If this graph is inner, use `Is Inner Graph` flag on graph object.");
                         }
@@ -1093,9 +1076,26 @@ namespace ME.BECS.Editor.Systems {
                         } else if (field.FieldType == typeof(uint)) {
                             fieldType = 2;
                         }
-                        content.Add($"JobInject<{jobTypeStr}>.RegisterDeltaTime({fieldOffset}, {fieldType});");
+                        methodContent.Add("{");
+                        methodContent.Add("var dtMs = Worlds.GetWorldDeltaTime(worldId);");
+                        methodContent.Add("var systemContext = SystemContext.Create(dtMs, default, default);");
+                        if (fieldType == 1) {
+                            methodContent.Add($"job->{field.Name} = systemContext.deltaTime;");
+                        } else if (fieldType == 2) {
+                            methodContent.Add($"job->{field.Name} = systemContext.deltaTimeMs;");
+                        }
+                        methodContent.Add("}");
+                        hasAny = true;
                     }
+
+                    hasPatch |= hasAny;
                 }
+                methodContent.Add("}");
+                if (hasPatch == true) {
+                    localContent.AddRange(methodContent);
+                    localContent.Add($"JobInject<{jobTypeStr}>.Register({methodName});");
+                }
+
                 if (containsBool == true && localContent.Count > 0) {
                     UnityEngine.Debug.LogError($"[CodeGenerator] Graph {graph.name} inject dependency failed because type {jobType} contains boolean field. This leads to errors, injection will be ignored. You can use bbool type instead.");
                 } else {

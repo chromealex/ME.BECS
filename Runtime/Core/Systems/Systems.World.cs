@@ -40,7 +40,11 @@ namespace ME.BECS {
         internal InjectSystem(SystemLink<T> link) {
             this.link = new SystemLinkPtr(link.ptr);
         }
-        
+
+        internal InjectSystem(System.IntPtr ptr) {
+            this.link = new SystemLinkPtr((void*)ptr);
+        }
+
         public bool IsCreated => this.link.IsCreated;
 
         public ref T Value => ref this.link.GetValue<T>();
