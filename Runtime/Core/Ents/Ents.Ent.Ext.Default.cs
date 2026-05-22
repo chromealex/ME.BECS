@@ -21,23 +21,23 @@ namespace ME.BECS {
 
         /// <summary>
         /// Include (true) or exclude (false) entity from any filters.
-        /// By default all entities are included.
+        /// By default, all entities are included.
         /// </summary>
         /// <param name="ent">Entity</param>
         /// <param name="state">State</param>
-        [INLINE(256)][IgnoreProfiler]
+        [IgnoreProfiler]
         public static void SetActive(in this Ent ent, bool state) {
             
             ent.SetTag<IsInactive>(state == false);
             
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [IgnoreProfiler]
         public static bool IsActive(in this Ent ent) {
             return ent.Has<IsInactive>() == false;
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [IgnoreProfiler]
         public static bool IsAlive(in this Ent ent) {
 
             if (ent.World.isCreated == false) return false;
@@ -46,10 +46,10 @@ namespace ME.BECS {
 
         }
 
-        [INLINE(256)][IgnoreProfiler]
+        [IgnoreProfiler]
         public static bool IsEmpty(in this Ent ent) => ent is { id: 0u, gen: 0, worldId: 0 };
 
-        [INLINE(256)][CodeGeneratorIgnore][IgnoreProfiler]
+        [CodeGeneratorIgnore][IgnoreProfiler]
         public static void Destroy(in this Ent ent) {
 
             E.IS_ALIVE(ent);
