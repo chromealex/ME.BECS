@@ -25,7 +25,7 @@ namespace ME.BECS.Editor {
                     contentItem.Add("if (comp == null) {");
                     contentItem.Add($"default({strType}).Destroy(in ent);");
                     contentItem.Add("} else {");
-                    contentItem.Add($"_ref(({strType}*)comp).Destroy(in ent);");
+                    contentItem.Add($"(({strType}*)comp)->Destroy(in ent);");
                     contentItem.Add("}");
                     contentItem.Add("}");
 

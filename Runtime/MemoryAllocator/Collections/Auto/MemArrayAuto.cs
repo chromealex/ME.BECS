@@ -12,7 +12,7 @@ namespace ME.BECS {
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = MemArrayAutoData.SIZE)]
     [System.Serializable]
     public struct MemArrayAutoData {
 
@@ -99,7 +99,7 @@ namespace ME.BECS {
         }
 
         public uint GetConfigId() => this.data.Length;
-        
+
         private readonly bool IsInlined => TSize<T>.size * this.Length <= MemPtr.SIZE;
         
         object[] IUnmanagedList.ToManagedArray() {

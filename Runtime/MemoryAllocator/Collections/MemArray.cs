@@ -70,13 +70,13 @@ namespace ME.BECS {
 
     }
 
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = MemArrayData.SIZE)]
     public struct MemArrayData {
 
         #if USE_CACHE_PTR
         public const int SIZE = 24;
         #else
-        public const int SIZE = 12;
+        public const int SIZE = 16;
         #endif
 
         [FieldOffset(0)]

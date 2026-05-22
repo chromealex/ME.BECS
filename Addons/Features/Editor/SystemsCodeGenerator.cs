@@ -1048,7 +1048,7 @@ namespace ME.BECS.Editor.Systems {
                 var containsBool = false;
                 localContent.Clear();
                 methodContent.Clear();
-                methodContent.Add($"[BURST] static unsafe void {methodName}(void* jobPtr, ushort worldId) {{");
+                methodContent.Add($"[AOT.MonoPInvokeCallbackAttribute(typeof(JobPatchInjectDelegate.PatchDelegate))] [BURST] static unsafe void {methodName}(void* jobPtr, ushort worldId) {{");
                 methodContent.Add($"var job = ({jobTypeStr}*)jobPtr;");
                 var hasPatch = false;
                 foreach (var field in fields) {
