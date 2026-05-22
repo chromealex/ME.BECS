@@ -132,7 +132,7 @@ namespace ME.BECS {
             get => this.data.arrPtr.IsValid() == true || (this.IsInlined == true && this.Length > 0u);
         }
 
-        private readonly bool IsInlined => TSize<T>.size * this.Length <= MemPtr.SIZE;
+        private readonly bool IsInlined => false; // TSize<T>.size * this.Length <= MemPtr.SIZE;
 
         [INLINE(256)]
         public void SerializeHeaders(ref StreamBufferWriter writer) {

@@ -100,7 +100,7 @@ namespace ME.BECS {
 
         public uint GetConfigId() => this.data.Length;
 
-        private readonly bool IsInlined => TSize<T>.size * this.Length <= MemPtr.SIZE;
+        private readonly bool IsInlined => false; // TSize<T>.size * this.Length <= MemPtr.SIZE;
         
         object[] IUnmanagedList.ToManagedArray() {
             var arr = new object[this.data.Length];
