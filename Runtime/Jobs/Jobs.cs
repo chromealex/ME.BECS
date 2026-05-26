@@ -170,7 +170,6 @@ namespace ME.BECS {
             if (callManaged == false) PatchBurstOnly(ref instance, worldId);
         }
 
-        [BURST]
         public static void PatchBurstOnly(ref TJob instance, ushort worldId) {
             if (data.Data.IsCreated == true) data.Data.Invoke(_addressPtr(ref instance), worldId);
         }
