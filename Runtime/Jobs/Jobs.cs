@@ -152,18 +152,35 @@ namespace ME.BECS {
     
     public unsafe struct JobInject<TJob> where TJob : struct {
 
+        public static bool hasDelegate;
+        public static JobPatchInjectDelegate.PatchDelegate nonBurstDelegate;
         public static readonly Unity.Burst.SharedStatic<Unity.Burst.FunctionPointer<JobPatchInjectDelegate.PatchDelegate>> data = Unity.Burst.SharedStatic<Unity.Burst.FunctionPointer<JobPatchInjectDelegate.PatchDelegate>>.GetOrCreate<JobInject<TJob>>();
 
         [INLINE(256)]
         public static void Register(JobPatchInjectDelegate.PatchDelegate patchDelegate) {
             data.Data = Unity.Burst.BurstCompiler.CompileFunctionPointer(patchDelegate);
+            nonBurstDelegate = patchDelegate;
+            hasDelegate = true;
         }
 
         [INLINE(256)]
         public static void Patch(ref TJob instance, ushort worldId) {
+            var callManaged = false;
+            PatchManagedOnly(ref instance, worldId, ref callManaged);
+            if (callManaged == false) PatchBurstOnly(ref instance, worldId);
+        }
+
+        [BURST]
+        public static void PatchBurstOnly(ref TJob instance, ushort worldId) {
             if (data.Data.IsCreated == true) data.Data.Invoke(_addressPtr(ref instance), worldId);
         }
-        
+
+        [Unity.Burst.BurstDiscardAttribute]
+        public static void PatchManagedOnly(ref TJob instance, ushort worldId, ref bool call) {
+            if (hasDelegate == true) nonBurstDelegate.Invoke(_addressPtr(ref instance), worldId);
+            call = true;
+        }
+
     }
     
     [IgnoreProfiler]
