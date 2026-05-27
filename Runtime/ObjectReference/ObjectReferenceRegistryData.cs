@@ -265,6 +265,55 @@ namespace ME.BECS {
             #endif
 
         }
+
+        public void ValidateNow() {
+            
+            var newObjects = new System.Collections.Generic.List<ItemInfo>();
+            {
+                var list = this.objects.ToList();
+                list.RemoveAll(x => x == null);
+                this.objects = list.ToArray();
+            }
+            foreach (var item in this.items) {
+                var found = false;
+                foreach (var obj in this.objects) {
+                    if (obj.data.Equals(item) == true) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found == false) {
+                    newObjects.Add(item);
+                }
+            }
+            this.items = System.Array.Empty<ItemInfo>();
+            
+            #if UNITY_EDITOR
+            var curDir = System.IO.Path.GetDirectoryName(UnityEditor.AssetDatabase.GetAssetPath(this));
+            var dir = $"{curDir}/ObjectReferenceRegistry";
+            if (System.IO.Directory.Exists(dir) == false) {
+                System.IO.Directory.CreateDirectory(dir);
+            }
+
+            foreach (var obj in newObjects) {
+                var instance = UnityEngine.ScriptableObject.CreateInstance<ObjectReferenceRegistryItem>();
+                instance.name = obj.sourceId.ToString();
+                instance.data = obj;
+                var path = $"{dir}/{instance.name}.asset";
+                UnityEditor.AssetDatabase.CreateAsset(instance, path);
+                UnityEditor.AssetDatabase.ImportAsset(path);
+            }
+
+            var items = UnityEditor.AssetDatabase.FindAssets("t:ObjectReferenceRegistryItem", new string[] { dir });
+            this.objects = new ObjectReferenceRegistryItem[items.Length];
+            var index = 0;
+            foreach (var guid in items) {
+                var item = UnityEditor.AssetDatabase.LoadAssetAtPath<ObjectReferenceRegistryItem>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                this.objects[index++] = item;
+            }
+            #endif
+
+        }
         
         public void Initialize() {
             this.itemLookup.Clear();
@@ -332,7 +381,7 @@ namespace ME.BECS {
                 }
                 this.objectLookup.TryAdd(source, nextId);
                 #if UNITY_EDITOR
-                this.Validate();
+                this.ValidateNow();
                 #endif
                 return nextId;
             }
