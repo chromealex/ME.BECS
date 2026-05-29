@@ -39,7 +39,7 @@ namespace ME.BECS.NativeCollections {
     public static unsafe class UnsafeUtilityEx {
 
         public static T* AllocArray<T>(int length, Allocator allocator) where T : unmanaged {
-            return (T*)UnsafeUtility.Malloc(length * UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator);
+            return (T*)_malloc(length * UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), allocator).ptr;
         }
 
     }

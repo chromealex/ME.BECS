@@ -24,10 +24,9 @@ namespace ME.BECS {
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
             var size = CACHE_LINE_SIZE * JobUtils.ThreadsCountMax;
-            var arr = UnsafeUtility.Malloc(size, TAlign<int>.alignInt, allocator);
-            UnsafeUtility.MemClear(arr, size);
+            var arr = _calloc((int)size, TAlign<int>.alignInt, allocator);
             return new ReadWriteNativeSpinner() {
-                value = (safe_ptr)arr,
+                value = arr,
                 allocator = allocator,
                 writeValue = 0,
             };
@@ -127,7 +126,7 @@ namespace ME.BECS {
         }
 
         public void Dispose() {
-            UnsafeUtility.Free(this.value.ptr, this.allocator);
+            _free(this.value, this.allocator);
             this = default;
         }
 

@@ -101,7 +101,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static bool Raycast(in BuildGraphSystem system, in float3 position, in float3 direction, sfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
+        public static bool Raycast(in BuildGraphSystem system, in float3 position, in float3 direction, tfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
 
             hitPoint = default;
             for (uint i = 0u; i < system.graphs.Length; ++i) {
@@ -114,7 +114,7 @@ namespace ME.BECS.Pathfinding {
         }
 
         [INLINE(256)]
-        public static bool Raycast(in Ent graph, in float3 position, in float3 direction, sfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
+        public static bool Raycast(in Ent graph, in float3 position, in float3 direction, tfloat distance, out float3 hitPoint, byte minCost, byte maxCost, bool debug = false) {
             
             var root = graph.Read<RootGraphComponent>();
             var state = graph.World.state;
