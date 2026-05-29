@@ -76,7 +76,7 @@ namespace ME.BECS.Editor.Systems {
                             filename = $"{baseName}.DrawGizmos",
                         };
                         var graphInitializeContent = new scg::List<string>();
-                        graphInitializeContent.Add($"public static unsafe class Graph{baseName}Initialize {{");
+                        graphInitializeContent.Add($"[BURST] public unsafe class Graph{baseName}Initialize {{");
                         var graphAwakeContent = new scg::List<string>();
                         graphAwakeContent.Add($"public static unsafe class Graph{baseName}Awake {{");
                         var graphStartContent = new scg::List<string>();
@@ -89,7 +89,8 @@ namespace ME.BECS.Editor.Systems {
                         graphDrawGizmosContent.Add($"public static unsafe class Graph{baseName}DrawGizmos {{");
                         
                         //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
-                        graphInitializeContent.Add($"public static NativeArray<System.IntPtr> graphNodes{GetId(graph)}_{this.GetType().Name};");
+                        graphInitializeContent.Add($"private static readonly SharedStatic<NativeArray<System.IntPtr>> graphNodes{GetId(graph)}_{this.GetType().Name}Data = SharedStatic<NativeArray<System.IntPtr>>.GetOrCreate<Graph{baseName}Initialize>();");
+                        graphInitializeContent.Add($"public static ref NativeArray<System.IntPtr> graphNodes{GetId(graph)}_{this.GetType().Name} => ref graphNodes{GetId(graph)}_{this.GetType().Name}Data.Data;");
 
                         { // initialize method
                             graphInitializeContent.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.InitializeGraph))]");
@@ -1092,7 +1093,7 @@ namespace ME.BECS.Editor.Systems {
                 }
                 methodContent.Add("}");
                 if (hasPatch == true) {
-                    localContent.AddRange(methodContent);
+                    content.InsertRange(1, methodContent);
                     localContent.Add($"JobInject<{jobTypeStr}>.Register({methodName});");
                 }
 
