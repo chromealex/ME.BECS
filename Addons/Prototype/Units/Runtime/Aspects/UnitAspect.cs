@@ -197,7 +197,7 @@ namespace ME.BECS.Units {
                 if (this.readComponentRuntime.placements.IsCreated == false) this.componentRuntime.placements = new ListAuto<Ent>(this.ent, placementsDataComponent.placements.Length);
                 for (uint i = 0u; i < placementsDataComponent.placements.Length; ++i) {
                     var placement = placementsDataComponent.placements[i];
-                    this.componentRuntime.placements.Add(this.CreatePlacement(in jobInfo, placement.id, placement.localPosition, placement.localRotation));
+                    this.componentRuntime.placements.Add(this.CreatePlacement(in jobInfo, placement.id, placement.placementType, placement.localPosition, placement.localRotation));
                 }
             } else {
                 this.componentRuntime.placements = new ListAuto<Ent>(this.ent, 2u);
@@ -205,7 +205,7 @@ namespace ME.BECS.Units {
         }
 
         [INLINE(256)]
-        private readonly Ent CreatePlacement(in JobInfo jobInfo, uint id, float3 localPosition, quaternion localRotation) {
+        private readonly Ent CreatePlacement(in JobInfo jobInfo, uint id, uint placementType, float3 localPosition, quaternion localRotation) {
             var ent = Ent.New<PlacementEntityType>(in jobInfo, "Placement");
             var tr = ent.Set<TransformAspect>();
             if (this.readComponentRuntime.placementsRoot.IsAlive() == true) {
@@ -218,6 +218,7 @@ namespace ME.BECS.Units {
             tr.localRotation = localRotation;
             tr.IsStaticLocal = true;
             ent.Set(new UnitPlacementComponent() {
+                placementType = placementType,
                 id = id,
             });
             return ent;
@@ -251,7 +252,7 @@ namespace ME.BECS.Units {
                     }
                 }
             }
-            return this.CreatePlacement(in jobInfo, id, float3.zero, quaternion.identity);
+            return this.CreatePlacement(in jobInfo, id, 0, float3.zero, quaternion.identity);
         }
         
         [INLINE(256)]
