@@ -45,8 +45,10 @@ namespace ME.BECS.Views.Editor {
                 var interpolateState = property.FindPropertyRelative(nameof(ViewsModuleProperties.interpolateState));
                 var interpolateNetwork = property.FindPropertyRelative(nameof(ViewsModuleProperties.interpolateNetwork));
                 var useUnityHierarchy = property.FindPropertyRelative(nameof(ViewsModuleProperties.useUnityHierarchy));
+                var spawnLimitPerFrame = property.FindPropertyRelative(nameof(ViewsModuleProperties.spawnLimitPerFrame));
                 ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, instancesRegistryCapacity);
                 ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, renderingObjectsCapacity);
+                ME.BECS.Editor.EditorUIUtils.DrawUIntField(container, spawnLimitPerFrame);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, viewsGameObjects);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, viewsDrawMeshes);
                 ME.BECS.Editor.EditorUIUtils.DrawToggleField(container, interpolateState);

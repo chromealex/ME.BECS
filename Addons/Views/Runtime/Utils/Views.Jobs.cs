@@ -79,6 +79,8 @@ namespace ME.BECS.Views {
                 
                 if (this.data.ptr->toAdd.Count() > 0) {
                     //UnityEngine.Debug.Log("To Add:");
+                    var count = 0u;
+                    var spawnMax = this.data.ptr->properties.spawnLimitPerFrame;
                     ref var allocator = ref this.viewsWorld.state.ptr->allocator;
                     foreach (var kv in this.data.ptr->toAdd) {
                         var entId = kv.Key;
@@ -91,6 +93,8 @@ namespace ME.BECS.Views {
                                 this.data.ptr->loadingRequests.Add(viewComponent.source.prefabId);
                                 continue;
                             }
+
+                            if (spawnMax > 0u && ++count == spawnMax) break;
                             
                             var localData = Ent.New(this.viewsWorld, editorName: viewEnt.EditorName);
                             this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
