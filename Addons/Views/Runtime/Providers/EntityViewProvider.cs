@@ -533,7 +533,7 @@ namespace ME.BECS.Views {
             if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.Register(objInstance, objInstance.enableFromPoolModules);
             if (prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.Register(objInstance, objInstance.disableToPoolModules);
             
-            if (prewarm == false) {
+            {
                 EntRO entRo = ent;
                 objInstance.viewDataRaw = new ViewDataRaw(entRo, localData);
                 var viewData = objInstance.viewData;
@@ -543,9 +543,11 @@ namespace ME.BECS.Views {
                     if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.InvokeForced(objInstance, in viewData, static (IViewInitialize module, in ViewData viewData) => module.OnInitialize());
                 }
 
-                if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in viewData);
-                //if (prefabInfo.ptr->HasEnableFromPoolModules == true) objInstance.DoEnableFromPoolChildren(ent);
-                if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(objInstance, in viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
+                if (prewarm == false) {
+                    if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in viewData);
+                    //if (prefabInfo.ptr->HasEnableFromPoolModules == true) objInstance.DoEnableFromPoolChildren(ent);
+                    if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.InvokeForced(objInstance, in viewData, static (IViewEnableFromPool module, in ViewData viewData) => module.OnEnableFromPool(in viewData));
+                }
             }
 
             return info;
