@@ -364,22 +364,32 @@ namespace ME.BECS.Views {
 
             {
                 ref var allocator = ref data.ptr->viewsWorld.state.ptr->allocator;
+                var continueLoadingRequests = new Unity.Collections.LowLevel.Unsafe.UnsafeList<uint>(data.ptr->loadingRequests.Count, Constants.ALLOCATOR_TEMP);
                 foreach (var prefabId in data.ptr->loadingRequests) {
                     if (data.ptr->prefabIdToInfo.TryGetValue(in allocator, prefabId, out var prefabInfo) == true) {
                         var handle = GCHandle.FromIntPtr(prefabInfo.info.ptr->prefabPtr);
                         var assetRef = (AssetOp)handle.Target;
                         if (assetRef.IsLoading() == false) {
                             assetRef.StartLoading();
+                            if (prefabInfo.info.ptr->poolCount > 0u) {
+                                continueLoadingRequests.Add(prefabId);
+                            }
                         } else if (assetRef.IsLoaded() == true) {
                             prefabInfo.info.ptr->isLoaded = true;
+                            prefabInfo.info.ptr->loadedTick = data.ptr->viewsWorld.CurrentTick;
                             var go = (UnityEngine.GameObject)assetRef.assetReference.Asset;
-                            handle = new HeapReference<EntityView>(go.GetComponent<EntityView>()).handle;
+                            var entityView = go.GetComponent<EntityView>();
+                            handle = new HeapReference<EntityView>(entityView).handle;
                             prefabInfo.info.ptr->prefabPtr = GCHandle.ToIntPtr(handle);
                             data.ptr->gcHandles.Add(ref data.ptr->viewsWorld.state.ptr->allocator, handle);
+                            this.PrewarmPool(data, prefabInfo);
                         }
                     }
                 }
                 data.ptr->loadingRequests.Clear();
+                foreach (var prefabId in continueLoadingRequests) {
+                    data.ptr->loadingRequests.Add(prefabId);
+                }
             }
             
             return dependsOn;
@@ -396,7 +406,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        private ViewRoot AssignToRoot(in Ent ent) {
+        private ViewRoot AssignToRoot(ushort worldId) {
 
             for (int i = 0; i < this.roots.Count; ++i) {
 
@@ -410,7 +420,7 @@ namespace ME.BECS.Views {
             }
 
             var newRoot = new ViewRoot() {
-                tr = new UnityEngine.GameObject($"ViewsModule[World #{ent.worldId}]::Root").transform,
+                tr = new UnityEngine.GameObject($"ViewsModule[World #{worldId}]::Root").transform,
                 Count = 1,
                 index = this.roots.Count,
             };
@@ -450,7 +460,8 @@ namespace ME.BECS.Views {
         [INLINE(256)]
         public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, in Ent localData, out bool isNew) {
 
-            var customViewId = ent.Read<ViewCustomIdComponent>().uniqueId;
+            var worldId = data.ptr->connectedWorld.id;
+            var customViewId = ent.IsAlive() == true ? ent.Read<ViewCustomIdComponent>().uniqueId : default;
             System.IntPtr objPtr;
             EntityView objInstance;
             if (prefabInfo.ptr->sceneSource == false) {
@@ -461,7 +472,7 @@ namespace ME.BECS.Views {
                     if (this.tempViews.Contains(instance.obj) == true) {
                         this.tempViews.Remove(instance.obj);
                     } else {
-                        var root = this.AssignToRoot(in ent);
+                        var root = this.AssignToRoot(worldId);
                         if (instance.obj.transform.parent != root.tr) instance.obj.transform.SetParent(root.tr);
                         instance.obj.gameObject.SetActive(true);
                     }
@@ -474,7 +485,7 @@ namespace ME.BECS.Views {
 
                     isNew = true;
                     
-                    var root = this.AssignToRoot(in ent);
+                    var root = this.AssignToRoot(worldId);
                     var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                     if (prefabInfo.ptr->isLoaded == false) {
                         throw new System.Exception("Prefab was not loaded, but we are trying to instantiate it.");
@@ -490,7 +501,7 @@ namespace ME.BECS.Views {
 
             } else {
                 
-                var root = this.AssignToRoot(in ent);
+                var root = this.AssignToRoot(worldId);
                 var handle = System.Runtime.InteropServices.GCHandle.FromIntPtr(prefabInfo.ptr->prefabPtr);
                 var instance = (EntityView)handle.Target;
                 instance.transform.SetParent(root.tr);
@@ -501,7 +512,7 @@ namespace ME.BECS.Views {
 
             }
 
-            if (data.ptr->properties.useUnityHierarchy == true) {
+            if (data.ptr->properties.useUnityHierarchy == true && ent.IsAlive() == true) {
                 this.ValidateParent(data, in ent, objInstance);
             }
 
@@ -843,8 +854,9 @@ namespace ME.BECS.Views {
                 info.HasDeInitializeModules = ProvidersHelper.HasAny<IViewDeInitialize>(prefab.modules);
                 info.HasEnableFromPoolModules = ProvidersHelper.HasAny<IViewEnableFromPool>(prefab.modules);
                 info.HasDisableToPoolModules = ProvidersHelper.HasAny<IViewDisableToPool>(prefab.modules);
-                
-                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
+
+                var prefabInfo = new SourceRegistry.InfoRef(info);
+                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, prefabInfo);
 
             } else {
 
@@ -895,13 +907,41 @@ namespace ME.BECS.Views {
                     typeInfo = typeInfo,
                     sceneSource = false,
                     isLoaded = isLoaded,
+                    poolCount = data.info.poolCount,
                     flags = data.info.flags,
                 };
+
+                var prefabInfo = new SourceRegistry.InfoRef(info);
+                if (data.info.poolCount > 0u) {
+                    if (isLoaded == true) {
+                        this.PrewarmPool(viewsModuleData, prefabInfo);
+                        info.poolCount = 0u;
+                    } else {
+                        viewsModuleData.ptr->loadingRequests.Add(prefabId);
+                    }
+                }
                 
-                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, new SourceRegistry.InfoRef(info));
+                viewsModuleData.ptr->prefabIdToInfo.Add(ref viewsModuleData.ptr->viewsWorld.state.ptr->allocator, prefabId, prefabInfo);
 
             }
 
+        }
+
+        private void PrewarmPool(safe_ptr<ViewsModuleData> viewsModuleData, SourceRegistry.InfoRef prefabInfo) {
+            if (prefabInfo.info.ptr->poolCount > 0u) {
+                // prewarm pool
+                var temp = new Unity.Collections.NativeArray<SceneInstanceInfo>((int)prefabInfo.info.ptr->poolCount, Unity.Collections.Allocator.Temp);
+                for (uint i = 0u; i < prefabInfo.info.ptr->poolCount; ++i) {
+                    var instance = this.Spawn(viewsModuleData, prefabInfo.info, default, default, out _);
+                    temp[(int)i] = instance;
+                }
+
+                foreach (var item in temp) {
+                    this.Despawn(item);
+                }
+
+                prefabInfo.info.ptr->poolCount = 0u;
+            }
         }
 
     }

@@ -128,6 +128,8 @@ namespace ME.BECS.Views {
             public ViewTypeInfo typeInfo;
             public bbool sceneSource;
             public bbool isLoaded;
+            public ulong loadedTick;
+            public uint poolCount;
             
             public TypeFlags flags;
 

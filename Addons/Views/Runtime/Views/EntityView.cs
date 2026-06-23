@@ -224,6 +224,7 @@ namespace ME.BECS.Views {
         internal int[] updateParallelModules;
 
         public CullingType cullingType;
+        public uint poolCount;
         public GroupChangedTracker groupChangedTracker;
         public ViewRoot rootInfo;
         [SerializeField]

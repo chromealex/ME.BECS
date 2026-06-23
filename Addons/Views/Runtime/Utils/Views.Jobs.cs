@@ -94,7 +94,8 @@ namespace ME.BECS.Views {
                                 continue;
                             }
 
-                            if (spawnMax > 0u && ++count == spawnMax) break;
+                            // if object just loaded - check spawn max
+                            if (this.data.ptr->viewsWorld.CurrentTick == prefabInfo.info.ptr->loadedTick - 1L && spawnMax > 0u && ++count == spawnMax) break;
                             
                             var localData = Ent.New(this.viewsWorld, editorName: viewEnt.EditorName);
                             this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
