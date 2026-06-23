@@ -109,7 +109,7 @@ namespace ME.BECS.Views {
 
         public ViewData GetViewData();
 
-        void DoInitialize(in ViewData viewData);
+        void DoInitialize();
         void DoDeInitialize();
         void DoEnableFromPool(in ViewData viewData);
         void DoDisableToPool();

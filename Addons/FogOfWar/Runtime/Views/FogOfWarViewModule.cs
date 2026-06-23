@@ -30,10 +30,9 @@ namespace ME.BECS.FogOfWar {
         private UnityEngine.MaterialPropertyBlock propertyBlock;
         private bool targetState;
 
-        public override void OnInitialize(in ViewData viewData) {
+        public override void OnEnableFromPool(in ViewData viewData) {
             
-            EntRO ent = viewData;
-            base.OnInitialize(in viewData);
+            base.OnEnableFromPool(in viewData);
 
             this.crossFadeMaterial.EnableKeyword("CROSS_FADE");
             this.propertyBlock = new UnityEngine.MaterialPropertyBlock();
@@ -41,7 +40,7 @@ namespace ME.BECS.FogOfWar {
             this.crossFadeTimer = 1f;
 
         }
-        
+
         public override void OnBecomeVisible(in EntRO ent) {
             
             base.OnBecomeVisible(in ent);
@@ -98,17 +97,17 @@ namespace ME.BECS.FogOfWar {
 
     }
     
-    public class FogOfWarViewModule : CollectRenderers, IViewUpdate, IViewInitialize, IViewIgnoreTracker {
+    public class FogOfWarViewModule : CollectRenderers, IViewUpdate, IViewEnableFromPool, IViewIgnoreTracker {
         
         private bool isVisible;
         protected CreateSystem fow;
 
-        public virtual void OnInitialize(in ViewData viewData) {
-
+        public virtual void OnEnableFromPool(in ViewData viewData) {
+            
             EntRO ent = viewData;
             this.fow = ent.World.parent.GetSystem<CreateSystem>();
             this.UpdateVisibility(in ent, true);
-            
+
         }
 
         public bool IsVisible() => this.isVisible;

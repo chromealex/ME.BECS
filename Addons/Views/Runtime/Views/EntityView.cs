@@ -36,7 +36,7 @@ namespace ME.BECS.Views {
     public interface IViewTrackIgnore<T> { }
 
     public interface IViewInitialize : IViewModule {
-        void OnInitialize(in ViewData ent);
+        void OnInitialize();
     }
 
     public interface IViewDeInitialize : IViewModule {
@@ -248,9 +248,8 @@ namespace ME.BECS.Views {
         /// <summary>
         /// Called once when this view creates on scene
         /// </summary>
-        /// <param name="viewData"></param>
-        public void DoInitialize(in ViewData viewData) {
-            this.OnInitialize(in viewData);
+        public void DoInitialize() {
+            this.OnInitialize();
         }
 
         /// <summary>
@@ -313,7 +312,7 @@ namespace ME.BECS.Views {
 
         protected internal virtual void OnDisableToPool() { }
 
-        protected internal virtual void OnInitialize(in ViewData viewData) { }
+        protected internal virtual void OnInitialize() { }
 
         protected internal virtual void OnDeInitialize() { }
 

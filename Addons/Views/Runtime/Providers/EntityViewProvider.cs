@@ -436,7 +436,7 @@ namespace ME.BECS.Views {
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toAddTemp.Length; ++i) {
                 var item = data.ptr->toAddTemp[i];
-                var instanceInfo = this.Spawn(data, item.prefabInfo.info, in item.ent, in item.localData, out var isNew);
+                var instanceInfo = this.Spawn(data, item.prefabInfo.info, in item.ent, in item.localData, out var isNew, false);
                 data.ptr->renderingOnScene.Add(ref data.ptr->viewsWorld.state.ptr->allocator, instanceInfo);
             }
 
@@ -450,7 +450,7 @@ namespace ME.BECS.Views {
             dependsOn.Complete();
             for (int i = 0; i < data.ptr->toRemoveTemp.Length; ++i) {
                 var item = data.ptr->toRemoveTemp[i];
-                this.Despawn(item);
+                this.Despawn(item, false);
             }
             
             return dependsOn;
@@ -458,7 +458,7 @@ namespace ME.BECS.Views {
         }
         
         [INLINE(256)]
-        public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, in Ent localData, out bool isNew) {
+        public SceneInstanceInfo Spawn(safe_ptr<ViewsModuleData> data, safe_ptr<SourceRegistry.Info> prefabInfo, in Ent ent, in Ent localData, out bool isNew, bool prewarm) {
 
             var worldId = data.ptr->connectedWorld.id;
             var customViewId = ent.IsAlive() == true ? ent.Read<ViewCustomIdComponent>().uniqueId : default;
@@ -532,15 +532,15 @@ namespace ME.BECS.Views {
             if (prefabInfo.ptr->HasDeInitializeModules == true) this.deinitializeModules.Register(objInstance, objInstance.deInitializeModules);
             if (prefabInfo.ptr->HasEnableFromPoolModules == true) this.enableModules.Register(objInstance, objInstance.enableFromPoolModules);
             if (prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.Register(objInstance, objInstance.disableToPoolModules);
-                
-            {
+            
+            if (prewarm == false) {
                 EntRO entRo = ent;
                 objInstance.viewDataRaw = new ViewDataRaw(entRo, localData);
                 var viewData = objInstance.viewData;
                 if (isNew == true) {
-                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize(in viewData);
+                    if (prefabInfo.ptr->typeInfo.HasInitialize == true) objInstance.DoInitialize();
                     //if (prefabInfo.ptr->HasInitializeModules == true) objInstance.DoInitializeChildren(ent);
-                    if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.InvokeForced(objInstance, in viewData, static (IViewInitialize module, in ViewData viewData) => module.OnInitialize(in viewData));
+                    if (prefabInfo.ptr->HasInitializeModules == true) this.initializeModules.InvokeForced(objInstance, in viewData, static (IViewInitialize module, in ViewData viewData) => module.OnInitialize());
                 }
 
                 if (prefabInfo.ptr->typeInfo.HasEnableFromPool == true) objInstance.DoEnableFromPool(in viewData);
@@ -570,7 +570,7 @@ namespace ME.BECS.Views {
         }
 
         [INLINE(256)]
-        public void Despawn(SceneInstanceInfo instanceInfo) {
+        public void Despawn(SceneInstanceInfo instanceInfo, bool prewarm) {
             
             var instance = (EntityView)System.Runtime.InteropServices.GCHandle.FromIntPtr(instanceInfo.obj).Target;
             if (instance.viewData.localViewEnt.IsAlive() == true) {
@@ -581,7 +581,7 @@ namespace ME.BECS.Views {
 
             var customViewId = instanceInfo.uniqueId;
 
-            {
+            if (prewarm == false) {
                 if (instanceInfo.prefabInfo.ptr->typeInfo.HasDisableToPool == true) instance.DoDisableToPool();
                 //if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) instance.DoDisableToPoolChildren();
                 if (instanceInfo.prefabInfo.ptr->HasDisableToPoolModules == true) this.disableModules.InvokeForced(instance, default, static (IViewDisableToPool module, in ViewData _) => module.OnDisableToPool());
@@ -915,7 +915,6 @@ namespace ME.BECS.Views {
                 if (data.info.poolCount > 0u) {
                     if (isLoaded == true) {
                         this.PrewarmPool(viewsModuleData, prefabInfo);
-                        info.poolCount = 0u;
                     } else {
                         viewsModuleData.ptr->loadingRequests.Add(prefabId);
                     }
@@ -932,12 +931,12 @@ namespace ME.BECS.Views {
                 // prewarm pool
                 var temp = new Unity.Collections.NativeArray<SceneInstanceInfo>((int)prefabInfo.info.ptr->poolCount, Unity.Collections.Allocator.Temp);
                 for (uint i = 0u; i < prefabInfo.info.ptr->poolCount; ++i) {
-                    var instance = this.Spawn(viewsModuleData, prefabInfo.info, default, default, out _);
+                    var instance = this.Spawn(viewsModuleData, prefabInfo.info, default, default, out _, prewarm: true);
                     temp[(int)i] = instance;
                 }
 
                 foreach (var item in temp) {
-                    this.Despawn(item);
+                    this.Despawn(item, prewarm: true);
                 }
 
                 prefabInfo.info.ptr->poolCount = 0u;

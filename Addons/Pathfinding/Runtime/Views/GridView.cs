@@ -29,13 +29,11 @@ namespace ME.BECS.Pathfinding.Views {
         private float4 objPos;
         public float2 offset;
 
-        protected override void OnInitialize(in ViewData viewData) {
-
+        protected override void OnEnableFromPool(in ViewData viewData) {
             EntRO ent = viewData;
             var grid = ent.World.GetSystem<ShowBuildingGridSystem>();
             this.gridSize = grid.gridSize;
             this.nodeSize = (float)grid.nodeSize;
-            
         }
 
         protected override void ApplyState(in ViewData viewData) {
