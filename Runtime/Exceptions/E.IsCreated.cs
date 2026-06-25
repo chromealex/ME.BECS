@@ -3,6 +3,7 @@ namespace ME.BECS {
     using System.Diagnostics;
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public partial class E {
 
@@ -10,34 +11,34 @@ namespace ME.BECS {
 
             public NotCreatedException(string str) : base(str) { }
 
-            [HIDE_CALLSTACK]
+            [HIDE_CALLSTACK][IgnoreProfiler]
             public static void Throw(QueryBuilder obj) {
                 ThrowNotBurst(obj);
                 throw new NotCreatedException("Object is not created");
             }
 
-            [HIDE_CALLSTACK]
+            [HIDE_CALLSTACK][IgnoreProfiler]
             public static void Throw<T>(T obj) {
                 ThrowNotBurst(obj);
                 throw new NotCreatedException("Object is not created");
             }
 
-            [HIDE_CALLSTACK]
+            [HIDE_CALLSTACK][IgnoreProfiler]
             public static void Throw<T>(T* obj) where T : unmanaged {
                 ThrowNotBurst(obj);
                 throw new NotCreatedException("Object is not created");
             }
 
             [BURST_DISCARD]
-            [HIDE_CALLSTACK]
+            [HIDE_CALLSTACK][IgnoreProfiler]
             private static void ThrowNotBurst<T>(T obj) => throw new NotCreatedException($"{Exception.Format(typeof(T).Name)} is not created");
 
             [BURST_DISCARD]
-            [HIDE_CALLSTACK]
+            [HIDE_CALLSTACK][IgnoreProfiler]
             private static void ThrowNotBurst(QueryBuilder obj) => throw new NotCreatedException($"{Exception.Format("QueryBuilder")} is not created");
 
             [BURST_DISCARD]
-            [HIDE_CALLSTACK]
+            [HIDE_CALLSTACK][IgnoreProfiler]
             private static void ThrowNotBurst<T>(T* obj) where T : unmanaged => throw new NotCreatedException($"{Exception.Format(typeof(T).Name)} is not created");
 
         }
@@ -47,7 +48,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED<T>(T obj) where T : unmanaged, IIsCreated {
             if (obj.IsCreated == true) return;
             NotCreatedException.Throw(obj);
@@ -58,7 +59,7 @@ namespace ME.BECS {
     public static unsafe partial class E {
         
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(in World world) {
             if (world.state.ptr != null) return;
             NotCreatedException.Throw(world);
@@ -66,14 +67,14 @@ namespace ME.BECS {
 
         #if !ENABLE_BECS_FLAT_QUERIES
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(in Query query) {
             if (query.isCreated == true) return;
             NotCreatedException.Throw(query);
         }
         
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(in QueryBuilderStatic queryBuilder) {
             if (queryBuilder.isCreated == true) return;
             NotCreatedException.Throw(queryBuilder);
@@ -81,14 +82,14 @@ namespace ME.BECS {
         #endif
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(in QueryBuilder queryBuilder) {
             if (queryBuilder.isCreated == true) return;
             NotCreatedException.Throw(queryBuilder);
         }
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(in QueryBuilderDispose queryBuilder) {
             if (queryBuilder.isCreated == true) return;
             NotCreatedException.Throw(queryBuilder);
@@ -99,7 +100,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED<K, V>(EquatableDictionary<K, V> dic) where K : unmanaged, System.IEquatable<K> where V : unmanaged {
             if (dic.isCreated == true) return;
             NotCreatedException.Throw(dic);
@@ -110,7 +111,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED<V>(UIntDictionary<V> dic) where V : unmanaged {
             if (dic.isCreated == true) return;
             NotCreatedException.Throw(dic);
@@ -121,7 +122,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED<V>(ULongDictionary<V> dic) where V : unmanaged {
             if (dic.isCreated == true) return;
             NotCreatedException.Throw(dic);
@@ -132,21 +133,21 @@ namespace ME.BECS {
     public static unsafe partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(UIntHashSet list) {
             if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(UIntPairHashSet list) {
             if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
         }
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(UIntHashSet* list) {
             if (list->IsCreated == true) return;
             NotCreatedException.Throw(list);
@@ -157,7 +158,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED<T>(List<T> list) where T : unmanaged {
             if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
@@ -168,7 +169,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED(UIntListHash list) {
             if (list.IsCreated == true) return;
             NotCreatedException.Throw(list);
@@ -179,7 +180,7 @@ namespace ME.BECS {
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_CREATED<T>(MemArray<T> arr) where T : unmanaged {
             if (arr.IsCreated == true) return;
             NotCreatedException.Throw(arr);

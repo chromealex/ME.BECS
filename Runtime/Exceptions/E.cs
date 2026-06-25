@@ -3,6 +3,7 @@ namespace ME.BECS {
     using System.Diagnostics;
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public static class COND {
 
@@ -27,12 +28,17 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public static class Exception {
 
         public static string Format(string str) {
             return $"[ ME.BECS ] {str}";
         }
 
+    }
+
+    [IgnoreProfiler]
+    public static partial class E {
     }
 
 }
