@@ -22,6 +22,7 @@ namespace ME.BECS.Units {
     public struct UnitPlacementComponent : IComponent {
 
         public uint id;
+        public uint placementType;
         public Ent obj;
 
     }
@@ -33,6 +34,7 @@ namespace ME.BECS.Units {
         public struct Placement {
 
             public uint id;
+            public uint placementType;
             public float3 localPosition;
             public quaternion localRotation;
 

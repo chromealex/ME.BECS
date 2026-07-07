@@ -29,7 +29,7 @@ namespace ME.BECS.FogOfWar {
         private float2 worldSize;
         private Vector3 offset;
 
-        protected override void OnInitialize(in ViewData viewData) {
+        protected override void OnInitialize() {
             
             EntRO ent = viewData;
             var pathfinding = ent.World.parent.GetSystem<ME.BECS.Pathfinding.BuildGraphSystem>();

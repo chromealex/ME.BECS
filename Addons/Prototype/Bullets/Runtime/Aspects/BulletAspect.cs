@@ -47,33 +47,11 @@ namespace ME.BECS.Bullets {
         }
 
         public uint CalculateDamage(float2 bulletPosition, float2 unitPosition, tfloat unitRadius) {
-            var damageMin = this.damageMin;
-            var damageMax = this.damage;
-            if (damageMin == damageMax) {
-                return damageMax;
-            }
-
-            var hitRangeSqr = this.readConfig.hitRangeSqr;
-            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
-            if (dist > 0) {
-                dist *= dist;
-            }
-            return (uint)math.lerp(damageMax, damageMin, math.clamp(dist / hitRangeSqr, 0, 1));
+            return BulletUtils.CalculateDamage(this.damageMin, this.damage, this.readConfig.hitRangeSqr, bulletPosition, unitPosition, unitRadius);
         }
 
         public uint CalculateDamage(float3 bulletPosition, float3 unitPosition, tfloat unitRadius) {
-            var damageMin = this.damageMin;
-            var damageMax = this.damage;
-            if (damageMin == damageMax) {
-                return damageMax;
-            }
-
-            var hitRangeSqr = this.readConfig.hitRangeSqr;
-            var dist = math.distance(bulletPosition, unitPosition) - unitRadius;
-            if (dist > 0) {
-                dist *= dist;
-            }
-            return (uint)math.lerp(damageMax, damageMin, math.clamp(dist / hitRangeSqr, 0, 1));
+            return BulletUtils.CalculateDamage(this.damageMin, this.damage, this.readConfig.hitRangeSqr, bulletPosition, unitPosition, unitRadius);
         }
 
     }

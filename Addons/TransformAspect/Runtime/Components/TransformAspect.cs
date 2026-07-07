@@ -80,7 +80,7 @@ namespace ME.BECS.Transforms {
                         parent = parent.parent;
                     }
                 }
-                return true;
+                return this.IsStatic;
             }
             [INLINE(256)] set {
                 this.IsStatic = value;

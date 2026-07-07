@@ -702,7 +702,7 @@ namespace ME.BECS {
         }
 
         [IgnoreProfiler]
-        internal readonly struct StaticData {
+        public readonly struct StaticData {
 
             internal static class MethodCaller<T> where T : unmanaged, IConfigComponentStatic {
 
@@ -716,7 +716,7 @@ namespace ME.BECS {
 
             }
 
-            internal readonly Ent staticDataEnt;
+            public readonly Ent staticDataEnt;
             internal readonly safe_ptr<uint> typeIds;
             private readonly uint count;
 
@@ -806,7 +806,7 @@ namespace ME.BECS {
         private readonly DataInitialize dataInitialize;
         private readonly Aspect aspects;
         private readonly CollectionsData collectionsData;
-        private readonly StaticData staticData;
+        public readonly StaticData staticData;
 
         public bool IsCreated => this.IsValid();
 

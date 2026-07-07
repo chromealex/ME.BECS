@@ -40,6 +40,7 @@ namespace ME.BECS.Bullets {
                 }
 
                 var prevPos = tr.position;
+                aspect.component.prevWorldPos = prevPos;
                 tr.position = Math.MoveTowards(prevPos, aspect.readComponent.targetWorldPos, aspect.readConfig.speed * this.dt);
                 tr.rotation = quaternion.LookRotationSafe(tr.position - prevPos, math.up());
                 if (math.lengthsq(tr.position - aspect.readComponent.targetWorldPos) <= 0.01f) {

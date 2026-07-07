@@ -33,6 +33,15 @@ namespace ME.BECS {
 
         }
         
+        [Conditional(COND.EXCEPTIONS)]
+        [HIDE_CALLSTACK]
+        public static void CHECK_FIELD_OFFSET<T>(int offset, string fieldName) {
+
+            var runtimeOffset = (int)System.Runtime.InteropServices.Marshal.OffsetOf(typeof(T), fieldName);
+            UnityEngine.Assertions.Assert.IsTrue(offset == runtimeOffset, $"Field {fieldName} in object {typeof(T).Name} has offset {offset} which does not match runtime offset {runtimeOffset}");
+
+        }
+
     }
 
 }

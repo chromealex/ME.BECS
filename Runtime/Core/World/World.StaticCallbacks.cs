@@ -86,7 +86,7 @@ namespace ME.BECS {
 
             var typeId = StaticTypes<T>.typeId;
             StaticTypesDestroyRegistry.registry.Data.Resize(typeId + 1);
-            StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer<AutoDestroyRegistry.DestroyDelegate>(callback).Value;
+            StaticTypesDestroyRegistry.registry.Data.Get(typeId) = Unity.Burst.BurstCompiler.CompileFunctionPointer(callback);
             StaticTypesAutoDestroy<T>.registry.Data = true;
             StaticTypesAutoDestroy.registry.Data.Resize(typeId + 1);
             StaticTypesAutoDestroy.registry.Data.Get(typeId) = true;

@@ -3,18 +3,19 @@ namespace ME.BECS {
     using System.Diagnostics;
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     public static partial class E {
 
         [Conditional(COND.EXCEPTIONS_COLLECTIONS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_VALID_ASPECT_TYPE_ID(uint typeId) {
             if (typeId > 0u && typeId <= AspectTypeInfo.counter) return;
             InvalidTypeIdException.Throw();
         }
 
         [Conditional(COND.EXCEPTIONS_ASPECTS)]
-        [HIDE_CALLSTACK]
+        [HIDE_CALLSTACK][IgnoreProfiler]
         public static void IS_VALID_FOR_ASPECT<T>(in Ent ent) where T : unmanaged, IAspect {
             
             var world = ent.World;
@@ -31,7 +32,7 @@ namespace ME.BECS {
             
         }
 
-        [BURST_DISCARD]
+        [BURST_DISCARD][IgnoreProfiler]
         private static void IS_VALID_FOR_ASPECT_BurstDiscard(in Ent ent, uint typeId) {
             throw new RequiredComponentException($"Entity {ent.ToString()} has no component {typeId} ({StaticTypesLoadedManaged.loadedTypes[typeId].Name}), but it is required");
         }

@@ -403,7 +403,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        [CodeGeneratorIgnore]
         public static T Set<T>(in this Ent ent) where T : unmanaged, IAspect {
 
             E.IS_ALIVE(in ent);
@@ -415,7 +414,6 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        [CodeGeneratorIgnore]
         public static T Get<T>(this in Ent ent) where T : unmanaged, IAspect {
 
             return ent.GetAspect<T>();
@@ -423,11 +421,9 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        [CodeGeneratorIgnore]
         public static T GetAspect<T>(this in EntRO ent) where T : unmanaged, IAspect => ent.ent.GetAspect<T>();
 
         [INLINE(256)]
-        [CodeGeneratorIgnore]
         public static T GetOrCreateAspect<T>(this in EntRO ent) where T : unmanaged, IAspect => ent.ent.GetOrCreateAspect<T>();
 
         [INLINE(256)]

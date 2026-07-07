@@ -7,9 +7,11 @@ namespace ME.BECS {
     using Internal;
     using BURST = Unity.Burst.BurstCompileAttribute;
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     namespace Internal {
 
+        [IgnoreProfiler]
         public unsafe struct ArrayCacheLine<T> where T : unmanaged {
 
             public static readonly uint CACHE_LINE_SIZE = _align(TSize<T>.size, JobUtils.CacheLineSize);
@@ -41,7 +43,8 @@ namespace ME.BECS {
             }
 
         }
-
+        
+        [IgnoreProfiler]
         public unsafe struct Array<T> : IIsCreated where T : unmanaged {
 
             public volatile uint Length;
@@ -91,6 +94,7 @@ namespace ME.BECS {
 
         }
 
+        [IgnoreProfiler]
         public unsafe struct ListUShort {
 
             public struct Node {
@@ -228,6 +232,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     public struct WorldsStorage {
 
         private static readonly Unity.Burst.SharedStatic<Array<WorldHeader>> worldsArrBurst = Unity.Burst.SharedStatic<Array<WorldHeader>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsStorage>(TAlign<Array<WorldHeader>>.align, 10003);
@@ -235,6 +240,7 @@ namespace ME.BECS {
         
     }
 
+    [IgnoreProfiler]
     public struct WorldsIdStorage {
 
         private static readonly Unity.Burst.SharedStatic<ListUShort> worldIdsBurst = Unity.Burst.SharedStatic<ListUShort>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsIdStorage>(TAlign<ListUShort>.align, 10001);
@@ -242,6 +248,7 @@ namespace ME.BECS {
 
     }
     
+    [IgnoreProfiler]
     public struct WorldsDomainAllocator {
 
         #if UNITY_2023_1_OR_NEWER
@@ -280,6 +287,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct WorldsPersistentAllocator {
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>> allocatorPersistentBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsPersistentAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<Unity.Collections.RewindableAllocator>>>.align, 10006);
@@ -318,6 +326,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct WorldsTempAllocator {
 
         private static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>> allocatorTempBurst = Unity.Burst.SharedStatic<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.GetOrCreatePartiallyUnsafeWithHashCode<WorldsTempAllocator>(TAlign<Internal.Array<Unity.Collections.AllocatorHelper<TempAllocator>>>.align, 10005);
@@ -362,6 +371,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public struct HandleStorage {
 
         internal static readonly Unity.Burst.SharedStatic<JobHandle> lastApplyHandleBurst = Unity.Burst.SharedStatic<JobHandle>.GetOrCreate<JobHandle>();
@@ -369,6 +379,7 @@ namespace ME.BECS {
 
     }
 
+    [IgnoreProfiler]
     public unsafe struct Worlds {
 
         private static readonly Unity.Burst.SharedStatic<ushort> worldsCounterBurst = Unity.Burst.SharedStatic<ushort>.GetOrCreate<Worlds>();

@@ -2,6 +2,7 @@ namespace ME.BECS {
 
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     
+    [System.Serializable]
     public struct QueryResults : IIsCreated {
 
         public ListAuto<Ent> results;

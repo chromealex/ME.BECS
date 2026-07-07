@@ -467,9 +467,8 @@ namespace ME.BECS.Editor {
 
         private static void CleanCache() {
             
-            if (System.IO.Directory.Exists($"Assets/{ECS}.Gen/Runtime/Cache") == false) return;
-            System.IO.Directory.Delete($"Assets/{ECS}.Gen/Runtime/Cache", true);
-            System.IO.Directory.Delete($"Assets/{ECS}.Gen/Editor/Cache", true);
+            if (System.IO.Directory.Exists($"Assets/{ECS}.Gen/Runtime/Cache") == true) System.IO.Directory.Delete($"Assets/{ECS}.Gen/Runtime/Cache", true);
+            if (System.IO.Directory.Exists($"Assets/{ECS}.Gen/Editor/Cache") == true) System.IO.Directory.Delete($"Assets/{ECS}.Gen/Editor/Cache", true);
             
         }
 

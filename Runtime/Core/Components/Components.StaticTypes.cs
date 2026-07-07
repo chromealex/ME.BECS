@@ -227,7 +227,7 @@ namespace ME.BECS {
     [IgnoreProfiler]
     public struct StaticTypesDestroyRegistry {
 
-        public static readonly Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>> registry = Unity.Burst.SharedStatic<Internal.Array<System.IntPtr>>.GetOrCreate<StaticTypesDestroyRegistry>();
+        public static readonly Unity.Burst.SharedStatic<Internal.Array<Unity.Burst.FunctionPointer<AutoDestroyRegistry.DestroyDelegate>>> registry = Unity.Burst.SharedStatic<Internal.Array<Unity.Burst.FunctionPointer<AutoDestroyRegistry.DestroyDelegate>>>.GetOrCreate<StaticTypesDestroyRegistry>();
 
     }
 

@@ -23,6 +23,7 @@ namespace ME.BECS.Views {
             };
             var info = new SourceRegistry.Info() {
                 typeInfo = typeInfo,
+                poolCount = prefab.poolCount,
                 flags = 0,
             };
             info.HasUpdateModules = prefab.modules.Any(x => x is IViewUpdate);

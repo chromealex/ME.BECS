@@ -41,6 +41,7 @@ namespace ME.BECS.Views {
         public static ViewsModuleProperties Default => new ViewsModuleProperties() {
             instancesRegistryCapacity = 10u,
             renderingObjectsCapacity = 100u,
+            spawnLimitPerFrame = 5u,
             viewsGameObjects = true,
             viewsDrawMeshes = true,
             interpolateState = true,
@@ -52,6 +53,9 @@ namespace ME.BECS.Views {
         public uint instancesRegistryCapacity;
         [UnityEngine.Tooltip("How many instances will be drawing on the scene at once.")]
         public uint renderingObjectsCapacity;
+
+        [UnityEngine.Tooltip("Limits spawn view instances per frame. 0 = unlimited.")]
+        public uint spawnLimitPerFrame;
 
         [UnityEngine.Tooltip("Enable GameObjects Provider.")]
         public bool viewsGameObjects;
@@ -66,7 +70,7 @@ namespace ME.BECS.Views {
 
         [UnityEngine.Tooltip("Use Unity hierarchy for objects. All transforms on scene will be added into their parents.")]
         public bool useUnityHierarchy;
-
+        
     }
 
     internal class AssetOp {
@@ -105,7 +109,7 @@ namespace ME.BECS.Views {
 
         public ViewData GetViewData();
 
-        void DoInitialize(in ViewData viewData);
+        void DoInitialize();
         void DoDeInitialize();
         void DoEnableFromPool(in ViewData viewData);
         void DoDisableToPool();
@@ -124,6 +128,8 @@ namespace ME.BECS.Views {
             public ViewTypeInfo typeInfo;
             public bbool sceneSource;
             public bbool isLoaded;
+            public ulong loadedTick;
+            public uint poolCount;
             
             public TypeFlags flags;
 

@@ -13,6 +13,7 @@ namespace ME.BECS.Bullets {
     [ComponentGroup(typeof(BulletComponentGroup))]
     public struct BulletRuntimeComponent : IComponent {
 
+        public float3 prevWorldPos;
         /// <summary>
         /// if targetEnt is set - use it,
         /// otherwise use targetWorldPos
@@ -24,7 +25,7 @@ namespace ME.BECS.Bullets {
         /// </summary>
         public Ent sourceUnit;
         public float3 sourceWorldPos;
-
+        
     }
     
     [ComponentGroup(typeof(BulletComponentGroup))]

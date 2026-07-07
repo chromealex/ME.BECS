@@ -13,7 +13,7 @@ namespace ME.BECS.Views {
 
         public void OnEnableFromPool(in ViewData viewData) => this.Reset();
 
-        public void OnInitialize(in ViewData viewData) => this.Reset();
+        public void OnInitialize() => this.Reset();
 
         public void Reset() {
             

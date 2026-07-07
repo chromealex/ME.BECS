@@ -51,11 +51,13 @@ namespace ME.BECS.Editor.Aspects {
                 var idx = 0u;
                 content.Add($"var allocator = ent.World.state.ptr->allocator;");
                 content.Add($"var mask = (BitArray*)maskPtr;");
+                content.Add($"var component = ({strType}*)componentPtr;");
+                content.Add($"var componentSrc = ({strType}*)configComponent;");
                 foreach (var field in fields) {
                     
-                    var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
-                    var sizeOf = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf(field.FieldType);
-                    content.Add($"if (mask->IsSet(in allocator, {idx}) == true) UnsafeUtility.MemCpy((byte*)componentPtr + {fieldOffset}, (byte*)configComponent + {fieldOffset}, {sizeOf});");
+                    var compFieldStr = $"component->{field.Name}";
+                    var compSrcFieldStr = $"componentSrc->{field.Name}";
+                    content.Add($"if (mask->IsSet(in allocator, {idx}) == true) {compFieldStr} = {compSrcFieldStr};");
                     ++idx;
 
                 }
@@ -84,26 +86,25 @@ namespace ME.BECS.Editor.Aspects {
                 var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).OrderBy(x => x.FieldType.FullName).ToArray();
                 var count = 0u;
                 content.Clear();
+                content.Add($"var component = ({strType}*)componentPtr;");
                 foreach (var field in fields) {
                     var fieldType = field.FieldType;
                     if (typeof(IUnmanagedList).IsAssignableFrom(fieldType) == true) {
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
                         var typeStr = $"{EditorUtils.GetDataTypeName(fieldType)}<{EditorUtils.GetTypeName(gType)}>";
-                        var fieldOffset = System.Runtime.InteropServices.Marshal.OffsetOf(type, field.Name);
+                        var compFieldStr = $"component->{field.Name}";
                         content.Add("{");
-                        content.Add($"var component = ({strType}*)componentPtr;");
-                        content.Add($"var addr = ({typeStr}*)((byte*)component + {fieldOffset});");
-                        content.Add($"var res = config.GetCollectionById(component->{field.Name}.GetConfigId(), out var data, out var length);");
-                        content.Add("if (addr->IsCreated == true) addr->Dispose();");
+                        content.Add($"var res = config.GetCollectionById({compFieldStr}.GetConfigId(), out var data, out var length);");
+                        content.Add($"if ({compFieldStr}.IsCreated == true) {compFieldStr}.Dispose();");
                         content.Add("if (res == true) {");
-                        content.Add($"*addr = new {typeStr}(in ent, data, length);");
+                        content.Add($"{compFieldStr} = new {typeStr}(in ent, data, length);");
                         if (typeof(IMemList).IsAssignableFrom(fieldType) == true) {
                             content.Add("} else {");
-                            content.Add($"*addr = new {typeStr}(in ent, 1u);");
+                            content.Add($"{compFieldStr} = new {typeStr}(in ent, 1u);");
                         } else if (typeof(IMemArray).IsAssignableFrom(fieldType) == true) {
                             content.Add("} else {");
-                            content.Add($"*addr = {typeStr}.Empty;");
+                            content.Add($"{compFieldStr} = {typeStr}.Empty;");
                         }
                         content.Add("}");
                         content.Add("}");
