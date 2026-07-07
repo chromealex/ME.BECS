@@ -23,6 +23,11 @@ namespace ME.BECS {
             }
 
             [HIDE_CALLSTACK]
+            public static void Throw() {
+                throw new NotCreatedException("Object is not created");
+            }
+
+            [HIDE_CALLSTACK]
             public static void Throw<T>(T* obj) where T : unmanaged {
                 ThrowNotBurst(obj);
                 throw new NotCreatedException("Object is not created");
