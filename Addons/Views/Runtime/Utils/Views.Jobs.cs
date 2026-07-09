@@ -705,8 +705,6 @@ namespace ME.BECS.Views {
             public safe_ptr<ViewsModuleData> viewsModuleData;
             public CullingType cullingType;
             public CullingJobType dataType;
-            [NativeDisableUnsafePtrRestriction]
-            public RenderingSparseList* renderingOnScene;
 
             public static MemArray<ibool> GetCullingData(safe_ptr<ViewsModuleData> data, CullingJobType dataType) {
 
@@ -720,14 +718,23 @@ namespace ME.BECS.Views {
                 return default;
 
             }
-            
+
+            public static RenderingSparseList GetListData(safe_ptr<ViewsModuleData> data, CullingJobType dataType) {
+
+                switch (dataType) {
+                    case CullingJobType.Update: return data.ptr->renderingOnSceneUpdate;
+                    case CullingJobType.UpdateParallel: return data.ptr->renderingOnSceneUpdateParallel;
+                    case CullingJobType.ApplyState: return data.ptr->renderingOnSceneApplyState;
+                    case CullingJobType.ApplyStateParallel: return data.ptr->renderingOnSceneApplyStateParallel;
+                }
+
+                return default;
+
+            }
+
             public void Execute(int index) {
 
-                var entId = this.renderingOnScene->sparseSet.dense[in this.state.ptr->allocator, (uint)index];
-                /*
-                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in this.state.ptr->allocator, entId];
-                var cullingType = this.viewsModuleData.ptr->prefabIdToInfo[in this.state.ptr->allocator, prefabId].info.ptr->typeInfo.cullingType;
-                if (cullingType == CullingType.Frustum || cullingType == this.cullingType)*/
+                var entId = GetListData(this.viewsModuleData, this.dataType).sparseSet.dense[in this.state.ptr->allocator, (uint)index];
                 {
                     var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
                     var bounds = ent.GetAspect<TransformAspect>().GetBounds();

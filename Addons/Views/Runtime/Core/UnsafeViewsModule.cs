@@ -691,7 +691,6 @@ namespace ME.BECS.Views {
                 depends[0] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = &this.data.ptr->renderingOnSceneApplyStateParallel,
                     cullingType = CullingType.FrustumApplyStateOnly,
                     dataType = CullingJobType.ApplyStateParallel,
                 }.Schedule(&this.data.ptr->applyStateParallelCounter.ptr->count, 64, dependsOn);
@@ -699,7 +698,6 @@ namespace ME.BECS.Views {
                 depends[1] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = &this.data.ptr->renderingOnSceneUpdateParallel,
                     cullingType = CullingType.FrustumOnUpdateOnly,
                     dataType = CullingJobType.UpdateParallel,
                 }.Schedule(&this.data.ptr->updateParallelCounter.ptr->count, 64, dependsOn);
@@ -707,7 +705,6 @@ namespace ME.BECS.Views {
                 depends[2] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = &this.data.ptr->renderingOnSceneApplyState,
                     cullingType = CullingType.FrustumApplyStateOnly,
                     dataType = CullingJobType.ApplyState,
                 }.Schedule(&this.data.ptr->applyStateCounter.ptr->count, 64, dependsOn);
@@ -715,7 +712,6 @@ namespace ME.BECS.Views {
                 depends[3] = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    renderingOnScene = &this.data.ptr->renderingOnSceneUpdate,
                     cullingType = CullingType.FrustumOnUpdateOnly,
                     dataType = CullingJobType.Update,
                 }.Schedule(&this.data.ptr->updateCounter.ptr->count, 64, dependsOn);
