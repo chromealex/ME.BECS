@@ -367,7 +367,7 @@ namespace ME.BECS.Editor {
         private void OnSelectionChanged() {
             if (Selection.activeObject != this.currentInspector) {
                 this.selected.Clear();
-                this.treeView.ClearSelection();
+                this.treeView?.ClearSelection();
             }
         }
 
