@@ -344,11 +344,21 @@ namespace ME.BECS.Views {
 
             viewsModuleData.ptr->prefabId = math.max(viewsModuleData.ptr->prefabId, data.GetSourceId());
             foreach (var item in data.objects) {
-                if (item == null) continue;
-                if (item.data.source is EntityView entityView) {
-                    this.Register(viewsModuleData, entityView, item.data.sourceId);
+                var objectItem = new ObjectItem(item.data);
+                if (objectItem.IsValid() == true && item.data.source is EntityView entityView) {
+                    this.Register(viewsModuleData, entityView, objectItem, item.data.sourceId);
                 }
             }
+
+        }
+
+        public void Register(safe_ptr<ViewsModuleData> viewsModuleData, EntityView prefab, ObjectItem prefabItem, uint prefabId = 0u) {
+
+            if ((((ViewObjectItemData)prefabItem.data).info.supportedProviders & 1u << (int)ViewsModule.DRAW_MESH_PROVIDER_ID) == 0) {
+                return;
+            }
+
+            this.Register(viewsModuleData, prefab, prefabId);
 
         }
 

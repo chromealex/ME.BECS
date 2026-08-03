@@ -880,6 +880,10 @@ namespace ME.BECS.Views {
                 throw new System.Exception("Prefab is null");
             }
 
+            if ((((ViewObjectItemData)prefab.data).info.supportedProviders & 1u << (int)ViewsModule.GAMEOBJECT_PROVIDER_ID) == 0) {
+                return;
+            }
+
             var instanceId = prefab.GetInstanceID();
 
             var id = (uint)instanceId;
@@ -910,6 +914,7 @@ namespace ME.BECS.Views {
                     sceneSource = false,
                     isLoaded = isLoaded,
                     poolCount = data.info.poolCount,
+                    supportedProviders = data.info.supportedProviders,
                     flags = data.info.flags,
                 };
 
