@@ -288,6 +288,8 @@ namespace NativeTrees {
             var y = y0;
 
             raycastHit.point = default;
+            var distanceSq = distance * distance;
+
             for (var x = x0; x <= x1; ++x) {
 
                 var px = (steep == true ? y : x);
@@ -297,7 +299,7 @@ namespace NativeTrees {
                 var e = this.data.GetValuesForKey(hash);
                 while (e.MoveNext() == true) {
                     var item = e.Current;
-                    if (item.bounds.IntersectsRay(precomputedRay2D, out var point) == true) {
+                    if (item.bounds.IntersectsRay(precomputedRay2D, out var point) == true && math.distancesq(precomputedRay2D.origin, point) <= distanceSq) {
                         raycastHit.point = point;
                         return true;
                     }
