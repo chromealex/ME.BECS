@@ -1,4 +1,5 @@
 using System.Linq;
+using ME.BECS.Addons.Views.Runtime.Providers;
 using UnityEngine;
 
 namespace ME.BECS.Views {
@@ -225,6 +226,8 @@ namespace ME.BECS.Views {
 
         public CullingType cullingType;
         public uint poolCount;
+        [ViewsProviderMask]
+        public uint supportedProviders = uint.MaxValue;
         public GroupChangedTracker groupChangedTracker;
         public ViewRoot rootInfo;
         [SerializeField]

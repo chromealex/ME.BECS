@@ -1,3 +1,4 @@
+using ME.BECS.Addons.Views.Runtime.Providers;
 using Unity.Collections;
 
 namespace ME.BECS.Views {
@@ -61,6 +62,8 @@ namespace ME.BECS.Views {
         public bool viewsGameObjects;
         [UnityEngine.Tooltip("Enable DrawMeshes Provider.")]
         public bool viewsDrawMeshes;
+        [UnityEngine.Tooltip("Enable Particles Provider.")]
+        public bool viewsParticles;
 
         [UnityEngine.Tooltip("Use automatic state interpolation between start and end of the frame. Useful with Network Module only.")]
         public bool interpolateState;
@@ -130,6 +133,8 @@ namespace ME.BECS.Views {
             public bbool isLoaded;
             public ulong loadedTick;
             public uint poolCount;
+            [ViewsProviderMask]
+            public uint supportedProviders;
             
             public TypeFlags flags;
 

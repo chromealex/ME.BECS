@@ -86,14 +86,17 @@ namespace ME.BECS {
             new ProviderInfo() { editorName = "None", id = 0u },
             new ProviderInfo() { editorName = "GameObject Provider", id = 1u },
             new ProviderInfo() { editorName = "DrawMesh Provider", id = 2u },
+            new ProviderInfo() { editorName = "Particles Provider", id = 3u },
         };
         
         public static readonly uint GAMEOBJECT_PROVIDER_ID = providerInfos[1].id;
         public static readonly uint DRAW_MESH_PROVIDER_ID = providerInfos[2].id;
-        
+        public static readonly uint PARTICLES_PROVIDER_ID = providerInfos[3].id;
+
         public ViewsModuleProperties properties = ViewsModuleProperties.Default;
         private UnsafeViewsModule<EntityView> viewsGameObjects;
         private UnsafeViewsModule<EntityView> viewsDrawMeshes;
+        private UnsafeViewsModule<EntityView> viewsParticles;
         private bool isActive;
 
         public override void OnAwake(ref World world) {
@@ -102,6 +105,7 @@ namespace ME.BECS {
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects = UnsafeViewsModule<EntityView>.Create(GAMEOBJECT_PROVIDER_ID, ref world, new EntityViewProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
             if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes = UnsafeViewsModule<EntityView>.Create(DRAW_MESH_PROVIDER_ID, ref world, new DrawMeshProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
+            if (this.properties.viewsParticles == true) this.viewsParticles = UnsafeViewsModule<EntityView>.Create(PARTICLES_PROVIDER_ID, ref world, new ParticlesProvider(), this.worldProperties.stateProperties.EntitiesCapacity, this.properties);
             this.isActive = true;
 
         }
@@ -114,6 +118,10 @@ namespace ME.BECS {
 
             if (providerId == DRAW_MESH_PROVIDER_ID) {
                 return this.viewsDrawMeshes;
+            }
+
+            if (providerId == PARTICLES_PROVIDER_ID) {
+                return this.viewsParticles;
             }
 
             return default;
@@ -130,6 +138,10 @@ namespace ME.BECS {
                 return this.viewsDrawMeshes.data.ptr->viewsWorld;
             }
 
+            if (providerId == PARTICLES_PROVIDER_ID) {
+                return this.viewsParticles.data.ptr->viewsWorld;
+            }
+
             return default;
 
         }
@@ -138,7 +150,8 @@ namespace ME.BECS {
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects.SetCamera(in camera);
             if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes.SetCamera(in camera);
-            
+            if (this.properties.viewsParticles == true) this.viewsParticles.SetCamera(in camera);
+
         }
 
         public override JobHandle OnStart(ref World world, JobHandle dependsOn) {
@@ -151,7 +164,8 @@ namespace ME.BECS {
             
             var provider1Handle = (this.properties.viewsGameObjects == true ? this.viewsGameObjects.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
             var provider2Handle = (this.properties.viewsDrawMeshes == true ? this.viewsDrawMeshes.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
-            return JobHandle.CombineDependencies(provider1Handle, provider2Handle);
+            var provider3Handle = (this.properties.viewsParticles == true ? this.viewsParticles.Update(UnityEngine.Time.deltaTime, dependsOn) : default);
+            return JobHandle.CombineDependencies(provider1Handle, provider2Handle, provider3Handle);
 
         }
 
@@ -161,6 +175,7 @@ namespace ME.BECS {
             
             if (this.properties.viewsGameObjects == true) this.viewsGameObjects.Dispose();
             if (this.properties.viewsDrawMeshes == true) this.viewsDrawMeshes.Dispose();
+            if (this.properties.viewsParticles == true) this.viewsParticles.Dispose();
             this.isActive = false;
 
         }
@@ -171,6 +186,8 @@ namespace ME.BECS {
                 return this.viewsGameObjects.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
             } else if (providerId == DRAW_MESH_PROVIDER_ID) {
                 return this.viewsDrawMeshes.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
+            } else if (providerId == PARTICLES_PROVIDER_ID) {
+                return this.viewsParticles.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
             }
             
             return default;
@@ -195,6 +212,7 @@ namespace ME.BECS {
             IView view = null;
             if (this.properties.viewsGameObjects == true) view = this.viewsGameObjects.GetViewByEntity(in entity);
             if (this.properties.viewsDrawMeshes == true && view == null) view = this.viewsDrawMeshes.GetViewByEntity(in entity);
+            if (this.properties.viewsParticles == true && view == null) view = this.viewsParticles.GetViewByEntity(in entity);
             return view;
         }
 
