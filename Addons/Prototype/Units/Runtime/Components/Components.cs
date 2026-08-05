@@ -173,9 +173,11 @@ namespace ME.BECS.Units {
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct DamageTookComponent : IComponent {
 
+        public Ent sourceOwner;
         public Ent source;
         public Ent target;
         public uint damage;
+        public uint damageTotal;
 
     }
     

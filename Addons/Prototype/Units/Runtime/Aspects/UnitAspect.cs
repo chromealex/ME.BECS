@@ -35,9 +35,11 @@ namespace ME.BECS.Units {
             if (this.readHealth > 0u) {
                 var ent = Ent.New<UnitHitEntityType>(in jobInfo);
                 ent.Set(new DamageTookComponent() {
+                    sourceOwner = hitOwner,
                     source = source,
                     target = this.ent,
                     damage = damage,
+                    damageTotal = damage,
                 });
                 ent.Destroy(1UL);
                 this.ent.SetOneShot(new DamageTookEvent() {
