@@ -141,6 +141,8 @@ namespace ME.BECS.Views {
                 var main = requiredParticleSystem.main;
                 main.prewarm = false;
 
+                main.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Transform;
+
                 subEmitters.AddSubEmitter(requiredParticleSystem, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing, emitProbability: 1f);
 
             }
