@@ -33,7 +33,7 @@ namespace ME.BECS.Views {
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.ArrayBoundsChecks, false)]
     [Unity.IL2CPP.CompilerServices.Il2CppSetOption(Unity.IL2CPP.CompilerServices.Option.DivideByZeroChecks, false)]
     #endif
-    public unsafe struct ParticlesProvider : IViewProvider<EntityView> {
+    public unsafe struct ParticlesProvider : IViewProvider<EntityView>, IViewProviderRoot {
 
         public struct ParticleSystemInfo {
             public ParticleSystem particleSystem;
@@ -63,6 +63,8 @@ namespace ME.BECS.Views {
         private Dictionary<Ent, int> entityToInstanceIndex;
 
         private Transform particlesRoot;
+
+        public Transform GetRoot() => this.particlesRoot;
 
         public void Initialize(uint providerId, World viewsWorld, ViewsModuleProperties properties) {
 
@@ -138,14 +140,25 @@ namespace ME.BECS.Views {
             var requiredParticleSystems = prefabInstance.GetComponentsInChildren<ParticleSystem>(includeInactive: false);
             foreach (var requiredParticleSystem in requiredParticleSystems) {
 
+                requiredParticleSystem.Pause(withChildren: true);
+                requiredParticleSystem.Stop(withChildren: true);
+
                 var main = requiredParticleSystem.main;
                 main.prewarm = false;
+                main.playOnAwake = false;
 
                 main.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Transform;
                 main.simulationSpace = UnityEngine.ParticleSystemSimulationSpace.Local;
 
                 subEmitters.AddSubEmitter(requiredParticleSystem, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing, emitProbability: 1f);
 
+            }
+
+            var renderers = prefabInstance.GetComponentsInChildren<Renderer>();
+            foreach (var renderer in renderers) {
+                if (renderer is not ParticleSystemRenderer) {
+                    renderer.enabled = false;
+                }
             }
 
             var systemInfo = new ParticleSystemInfo {

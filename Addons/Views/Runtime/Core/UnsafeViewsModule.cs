@@ -36,6 +36,12 @@ namespace ME.BECS.Views {
 
     }
 
+    public interface IViewProviderRoot {
+
+        public UnityEngine.Transform GetRoot();
+
+    }
+
     [System.Serializable]
     public struct ViewsModuleProperties {
 
@@ -536,7 +542,7 @@ namespace ME.BECS.Views {
     public unsafe struct UnsafeViewsModule<TEntityView> where TEntityView : IView {
 
         public safe_ptr<ViewsModuleData> data;
-        private ClassPtr<IViewProvider<TEntityView>> provider;
+        public ClassPtr<IViewProvider<TEntityView>> provider;
         
         public static UnsafeViewsModule<TEntityView> Create<T>(uint providerId, ref World connectedWorld, T provider, uint entitiesCapacity, ViewsModuleProperties properties) where T : IViewProvider<TEntityView> {
             
