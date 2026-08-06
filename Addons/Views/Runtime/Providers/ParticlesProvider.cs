@@ -295,7 +295,12 @@ namespace ME.BECS.Views {
                     var instance = objects.instances[instanceIndex];
 
                     var worldMatrix = ent.Read<ME.BECS.Transforms.WorldMatrixComponent>().value;
-                    var nextPos = math.lerp(instance.position, worldMatrix.c3.xyz, factor);
+                    var beginFrameMatrix = worldMatrix;
+                    if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen, true) == true) {
+                        beginFrameMatrix = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen).value;
+                    }
+
+                    var nextPos = math.lerp(beginFrameMatrix.c3.xyz, worldMatrix.c3.xyz, factor);
                     if (data.ptr->connectedWorld.CurrentTick > instance.prevTick && tickTime > 0) {
                         instance.velocity = (nextPos - instance.prevPos) * 1000 / tickTime;
                         instance.prevPos = nextPos;
