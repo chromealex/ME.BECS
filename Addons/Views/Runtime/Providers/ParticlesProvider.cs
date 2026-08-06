@@ -142,6 +142,7 @@ namespace ME.BECS.Views {
                 main.prewarm = false;
 
                 main.emitterVelocityMode = ParticleSystemEmitterVelocityMode.Transform;
+                main.simulationSpace = UnityEngine.ParticleSystemSimulationSpace.Local;
 
                 subEmitters.AddSubEmitter(requiredParticleSystem, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing, emitProbability: 1f);
 
