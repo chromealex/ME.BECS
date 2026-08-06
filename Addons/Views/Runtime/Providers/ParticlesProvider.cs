@@ -119,6 +119,7 @@ namespace ME.BECS.Views {
                 main.startLifetime = 10_000f;
                 main.ringBufferMode = UnityEngine.ParticleSystemRingBufferMode.PauseUntilReplaced;
                 main.simulationSpace = UnityEngine.ParticleSystemSimulationSpace.World;
+                main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
 
                 var emission = rootParticleSystem.emission;
                 emission.enabled = false;
