@@ -278,12 +278,17 @@ namespace ME.BECS.Views {
 
                 var currentTick = data.ptr->connectedWorld.CurrentTick;
                 var beginFrameState = data.ptr->beginFrameState.ptr->state;
-                var tickTime = data.ptr->beginFrameState.ptr->tickTime;
+                var tickTime = data.ptr->beginFrameState.ptr->tickTime; // ms
                 var currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart;
 
-                var factor = this.GetInterpolationFactor(beginFrameState, currentTick, tickTime / 1000, currentTimeSinceStart / 1000);
+                var factor = this.GetInterpolationFactor(beginFrameState, currentTick, tickTime, currentTimeSinceStart);
 
                 // UnityEngine.Debug.Log($"Factor {factor}");
+
+                var tickMod = 1f;
+                if (tickTime > 0) {
+                    tickMod = 1000 / tickTime;
+                }
 
                 foreach (var kv in this.entityToPrefabId) {
 
@@ -295,20 +300,38 @@ namespace ME.BECS.Views {
                     var instance = objects.instances[instanceIndex];
 
                     var worldMatrix = ent.Read<ME.BECS.Transforms.WorldMatrixComponent>().value;
-                    var beginFrameMatrix = worldMatrix;
-                    if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen, true) == true) {
-                        beginFrameMatrix = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen).value;
+
+                    if (beginFrameState.ptr == null || beginFrameState.ptr->IsCreated == false) {
+
+                        // move by velocity interpolation
+
+                        instance.position += instance.velocity * dt;
+
+                        var targetRotation = quaternion.LookRotationSafe(worldMatrix.c2.xyz, worldMatrix.c1.xyz);
+                        instance.rotation = targetRotation;
+
+                    } else {
+
+                        // move by tick interpolation
+
+                        var beginFrameMatrix = worldMatrix;
+                        if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen, true) == true) {
+                            beginFrameMatrix = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen).value;
+                        }
+
+                        var nextPos = math.lerp(beginFrameMatrix.c3.xyz, worldMatrix.c3.xyz, factor);
+                        if (data.ptr->connectedWorld.CurrentTick > instance.prevTick && tickTime > 0) {
+                            var ticksDiff = data.ptr->connectedWorld.CurrentTick - instance.prevTick;
+                            instance.velocity = (nextPos - instance.prevPos) * (tickMod / ticksDiff);
+                            instance.prevPos = nextPos;
+                            instance.prevTick = data.ptr->connectedWorld.CurrentTick;
+                        }
+                        instance.position = nextPos;
+                        var targetRotation = quaternion.LookRotationSafe(worldMatrix.c2.xyz, worldMatrix.c1.xyz);
+                        instance.rotation = math.slerp(instance.rotation, targetRotation, factor);
+
                     }
 
-                    var nextPos = math.lerp(beginFrameMatrix.c3.xyz, worldMatrix.c3.xyz, factor);
-                    if (data.ptr->connectedWorld.CurrentTick > instance.prevTick && tickTime > 0) {
-                        instance.velocity = (nextPos - instance.prevPos) * 1000 / tickTime;
-                        instance.prevPos = nextPos;
-                        instance.prevTick = data.ptr->connectedWorld.CurrentTick;
-                    }
-                    instance.position = nextPos;
-                    var targetRotation = quaternion.LookRotationSafe(worldMatrix.c2.xyz, worldMatrix.c1.xyz);
-                    instance.rotation = math.slerp(instance.rotation, targetRotation, factor);
                     objects.instances[instanceIndex] = instance;
 
                     objects.isDirty = true;
