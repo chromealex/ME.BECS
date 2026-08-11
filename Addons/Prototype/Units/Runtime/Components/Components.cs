@@ -183,7 +183,7 @@ namespace ME.BECS.Units {
     
     [EditorComment("Is unit invincible or not")]
     [ComponentGroup(typeof(UnitComponentGroup))]
-    public struct UnitInvincibility : IComponent {
+    public struct UnitInvincibility : IConfigComponent {
 
         public enum InvincibleBehaviour {
             NoDamage = 0,
