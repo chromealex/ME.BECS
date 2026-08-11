@@ -305,7 +305,9 @@ namespace ME.BECS.Views {
 
                         // move by velocity interpolation
 
-                        instance.position += instance.velocity * dt;
+                        instance.prevPos = instance.position;
+                        instance.position = math.lerp(instance.position, worldMatrix.c3.xyz, dt * 10);
+                        instance.velocity = (instance.position - instance.prevPos) / dt;
 
                         var targetRotation = quaternion.LookRotationSafe(worldMatrix.c2.xyz, worldMatrix.c1.xyz);
                         instance.rotation = targetRotation;
