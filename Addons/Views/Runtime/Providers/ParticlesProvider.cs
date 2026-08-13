@@ -45,6 +45,7 @@ namespace ME.BECS.Views {
             public float3 prevPos;
             public ulong prevTick;
             public float3 velocity;
+            public tfloat time;
         }
 
         public struct ObjectsPerPrefab {
@@ -199,6 +200,7 @@ namespace ME.BECS.Views {
                     prevPos = pos,
                     prevTick = data.ptr->connectedWorld.CurrentTick,
                     velocity = float3.zero,
+                    time = 0,
                 });
                 objects.isDirty = true;
 
@@ -334,6 +336,8 @@ namespace ME.BECS.Views {
 
                     }
 
+                    instance.time += dt;
+
                     objects.instances[instanceIndex] = instance;
 
                     objects.isDirty = true;
@@ -370,6 +374,7 @@ namespace ME.BECS.Views {
                     particle.position = (Vector3)instance.position;
                     particle.rotation3D = (Vector3)instance.rotation.ToEuler();
                     particle.velocity = (Vector3)instance.velocity;
+                    particle.remainingLifetime = particle.startLifetime - (float)instance.time;
                     particlesArr[i] = particle;
 
                 }
