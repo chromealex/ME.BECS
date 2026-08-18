@@ -373,7 +373,7 @@ namespace ME.BECS.Attack {
                 var dir = math.normalizesafe(targetPosition - sourcePosition);
                 var sector = attackBulletTargetsComponent.sector;
                 var startAngle = -sector.sector * 0.5f;
-                var step = sector.sector / (attackBulletTargetsComponent.bulletsCount - 1u);
+                var step = sector.sector / attackBulletTargetsComponent.bulletsCount;
                 if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletDistributionComponent.BulletsSpawnBehaviour.SectorUniformDistribution) {
                     var range = math.sqrt(sector.rangeSqr);
                     for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
