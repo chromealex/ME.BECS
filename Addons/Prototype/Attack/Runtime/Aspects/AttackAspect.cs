@@ -73,6 +73,15 @@ namespace ME.BECS.Attack {
         }
 
         [INLINE(256)]
+        public Ent GetFirstTarget() {
+            if (this.target.IsAlive() == true) return this.target;
+            for (uint i = 0u; i < this.targets.Count; ++i) {
+                if (this.targets[i].IsAlive() == true) return this.targets[i];
+            }
+            return default;
+        }
+
+        [INLINE(256)]
         public readonly void CleanUpTarget() {
             
             this.ent.Remove<AttackTargetComponent>();
