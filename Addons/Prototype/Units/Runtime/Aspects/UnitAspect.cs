@@ -32,6 +32,7 @@ namespace ME.BECS.Units {
         [INLINE(256)]
         [NotThreadSafe]
         public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo) {
+            if (damage == 0u) return;
             if (this.readHealth > 0u) {
                 var ent = Ent.New<UnitHitEntityType>(in jobInfo);
                 ent.Set(new DamageTookComponent() {
