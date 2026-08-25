@@ -4,7 +4,11 @@ namespace ME.BECS.Perks {
 
     using ME.BECS;
     using ME.BECS.Players;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public struct PerksComponent : IComponent {
 

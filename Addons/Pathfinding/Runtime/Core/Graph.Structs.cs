@@ -12,7 +12,11 @@ using Rect = UnityEngine.Rect;
 
 namespace ME.BECS.Pathfinding {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using ME.BECS.Transforms;
     using Unity.Jobs;
     using ME.BECS.Jobs;

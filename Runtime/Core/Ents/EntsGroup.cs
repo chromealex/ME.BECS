@@ -3,7 +3,11 @@ namespace ME.BECS {
     using System.Threading;
     using Unity.Mathematics;
     using static Cuts;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     internal static class EntityTypesManaged {
 

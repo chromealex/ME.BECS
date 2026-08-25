@@ -1,6 +1,10 @@
 using tfloat = sfloat;
 using ME.BECS.FixedPoint;
+#if INLINE_DISABLED
+using INLINE = ME.BECS.NoInline;
+#else
 using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+#endif
 using System;
 
 namespace ME.BECS.FixedPoint {

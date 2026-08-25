@@ -1,6 +1,10 @@
 namespace ME.BECS.Collections {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Burst.Intrinsics;

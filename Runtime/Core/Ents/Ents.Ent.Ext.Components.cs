@@ -3,7 +3,11 @@
 namespace ME.BECS {
 
     #if !NO_INLINE
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 

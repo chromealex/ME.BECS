@@ -1,7 +1,11 @@
 namespace ME.BECS {
 
     using MemPtr = System.Int64;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using static Cuts;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 

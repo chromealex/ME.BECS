@@ -1,6 +1,10 @@
 namespace ME.BECS {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Jobs;
     using Unity.Jobs;

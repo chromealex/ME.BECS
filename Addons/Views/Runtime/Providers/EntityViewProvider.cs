@@ -16,7 +16,11 @@ namespace ME.BECS.Views {
     using UnityEngine.Jobs;
     using Unity.Jobs.LowLevel.Unsafe;
     using scg = System.Collections.Generic;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
     using System.Runtime.InteropServices;
     using UnityEngine.Pool;

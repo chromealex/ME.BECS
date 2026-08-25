@@ -6,7 +6,11 @@ namespace ME.BECS {
     using System.Runtime.InteropServices;
     using UnityEngine.Scripting;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     /// <summary>
     /// Use this to run method in system without burst even when whole system run with burst  

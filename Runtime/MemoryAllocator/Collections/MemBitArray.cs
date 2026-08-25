@@ -13,7 +13,11 @@ using Rect = UnityEngine.Rect;
 namespace ME.BECS {
 
     using Unity.Collections;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     [IgnoreProfiler]

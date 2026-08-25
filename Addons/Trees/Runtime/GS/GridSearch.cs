@@ -1,6 +1,18 @@
 namespace ME.BECS.Trees {
 
+    #if INLINE_DISABLED
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
+    using INLINE = ME.BECS.NoInline;
+    #endif
+    #else
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
+    #endif
     using System.Collections.Generic;
     using Unity.Burst;
     using Unity.Collections;

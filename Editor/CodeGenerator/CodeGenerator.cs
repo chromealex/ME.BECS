@@ -434,7 +434,7 @@ namespace ME.BECS.Editor {
         }
 
         public static void RegenerateBurstAOT(bool forced = false, bool cleanCache = false) {
-
+            
             // Skip if project creation is in progress
             if (UnityEditor.EditorPrefs.HasKey("ME.BECS.Editor.AwaitPackageImportData") == true) return;
 

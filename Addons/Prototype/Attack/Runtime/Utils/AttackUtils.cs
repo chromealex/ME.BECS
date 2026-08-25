@@ -12,7 +12,11 @@ using Rect = UnityEngine.Rect;
 
 namespace ME.BECS.Attack {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using ME.BECS.Transforms;
     using ME.BECS.Units;
     using ME.BECS.Bullets;

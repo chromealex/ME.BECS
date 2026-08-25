@@ -4,7 +4,11 @@ using Unity.Collections;
 namespace ME.BECS.Views {
 
     using BURST = Unity.Burst.BurstCompileAttribute;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;
     using Unity.Jobs;

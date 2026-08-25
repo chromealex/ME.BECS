@@ -1,7 +1,11 @@
 namespace ME.BECS.Perks {
 
     using ME.BECS;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public enum PerkType : byte {
         Immediately,

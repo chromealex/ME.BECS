@@ -20,7 +20,11 @@ namespace ME.BECS.Network {
     using System.Runtime.InteropServices;
     using Unity.Collections.LowLevel.Unsafe;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using static Cuts;
     using Jobs;
 

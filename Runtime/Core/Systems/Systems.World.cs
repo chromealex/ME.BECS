@@ -1,6 +1,10 @@
 namespace ME.BECS {
     
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     using FO = System.Runtime.InteropServices.FieldOffsetAttribute;
     using Unity.Jobs;

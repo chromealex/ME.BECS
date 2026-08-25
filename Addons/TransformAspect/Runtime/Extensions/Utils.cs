@@ -8,7 +8,11 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Transforms {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using System.Runtime.InteropServices;
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;

@@ -1,6 +1,10 @@
 namespace ME.BECS {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public interface IObjectReferenceId {
         uint Id { get; set; }

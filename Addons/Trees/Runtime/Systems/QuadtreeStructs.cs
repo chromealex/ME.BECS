@@ -9,7 +9,11 @@ using Unity.Mathematics;
 using Bounds = UnityEngine.Bounds;
 using Rect = UnityEngine.Rect;
 #endif
+#if INLINE_DISABLED
+using INLINE = ME.BECS.NoInline;
+#else
 using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+#endif
 
 namespace ME.BECS {
 

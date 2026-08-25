@@ -10,7 +10,11 @@ using Bounds = UnityEngine.Bounds;
 
 namespace ME.BECS.Pathfinding {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public struct GraphHeights {
 

@@ -10,7 +10,11 @@ using Ray2D = UnityEngine.Ray2D;
 
 namespace ME.BECS {
     
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;

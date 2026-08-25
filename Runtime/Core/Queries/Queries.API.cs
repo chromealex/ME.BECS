@@ -4,7 +4,11 @@ namespace ME.BECS {
     using static CutsPool;
     using Unity.Jobs;
     using Unity.Collections.LowLevel.Unsafe;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 

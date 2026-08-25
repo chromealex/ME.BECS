@@ -2,7 +2,11 @@ using ME.BECS.Transforms;
 
 namespace ME.BECS.Units {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     
     /// <summary>
     /// Selection group used for the lists

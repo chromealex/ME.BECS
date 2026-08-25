@@ -1,7 +1,11 @@
 namespace ME.BECS.Players {
 
     using ME.BECS.Network.Markers;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
     using ME.BECS.Network;
     

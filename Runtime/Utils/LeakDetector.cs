@@ -1,6 +1,10 @@
 namespace ME.BECS {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using BURST_DISCARD = Unity.Burst.BurstDiscardAttribute;
     using HIDE_CALLSTACK = UnityEngine.HideInCallstackAttribute;
     using Unity.Burst;

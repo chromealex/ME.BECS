@@ -6,7 +6,11 @@ namespace ME.BECS {
     using static Cuts;
     using Internal;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
 
     namespace Internal {

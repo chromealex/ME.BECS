@@ -14,9 +14,17 @@ using Rect = UnityEngine.Rect;
 namespace ME.BECS.Pathfinding {
     
     #if NO_INLINE
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = NoInlineAttribute;
+    #endif
+    #else
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
     #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     #endif
     using ME.BECS.Transforms;
     using Unity.Jobs;

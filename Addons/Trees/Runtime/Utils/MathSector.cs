@@ -12,7 +12,11 @@ using Rect = UnityEngine.Rect;
 
 namespace ME.BECS {
     
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public readonly struct MathSector {
 

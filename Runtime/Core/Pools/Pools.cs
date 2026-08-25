@@ -2,7 +2,11 @@ using Unity.Collections.LowLevel.Unsafe;
 
 namespace ME.BECS {
     
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using static Cuts;
     using Unity.Collections;
 

@@ -7,7 +7,11 @@ using tfloat = System.Single;
 namespace ME.BECS {
 
     using Unity.Jobs;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public static class SystemContextExt {
 

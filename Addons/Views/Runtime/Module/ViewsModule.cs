@@ -3,7 +3,11 @@ namespace ME.BECS {
 
     using Views;
     using Unity.Jobs;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public static class ViewsTracker {
 

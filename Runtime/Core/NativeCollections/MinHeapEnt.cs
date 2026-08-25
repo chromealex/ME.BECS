@@ -8,7 +8,11 @@ using Unity.Mathematics;
 
 namespace ME.BECS.NativeCollections {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using System;
     using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;

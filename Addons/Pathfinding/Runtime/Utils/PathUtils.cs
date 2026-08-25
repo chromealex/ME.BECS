@@ -8,7 +8,11 @@ using Unity.Mathematics;
 
 namespace ME.BECS.Pathfinding {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using ME.BECS.Transforms;
     using ME.BECS.Units;
     

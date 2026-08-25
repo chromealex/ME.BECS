@@ -1,6 +1,10 @@
 namespace ME.BECS.Views {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
     

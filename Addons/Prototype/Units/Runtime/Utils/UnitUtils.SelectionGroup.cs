@@ -14,7 +14,11 @@ using ME.BECS.Transforms;
 
 namespace ME.BECS.Units {
     
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     public struct RangeMoveableAABBUniqueVisitor : NativeTrees.IQuadtreeRangeVisitor<Ent> {
         public Unity.Collections.LowLevel.Unsafe.UnsafeHashSet<Ent> results;

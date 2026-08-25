@@ -6,7 +6,11 @@ namespace ME.BECS.Perks {
     using ME.BECS.Jobs;
     using ME.BECS.Players;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
 
     [BURST]
     public struct PerkInitializeSystem<T> : IUpdate where T : unmanaged, IPerkInitializeComponent {

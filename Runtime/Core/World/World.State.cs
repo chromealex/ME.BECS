@@ -5,7 +5,11 @@ namespace ME.BECS {
 
     using static Cuts;
     using BURST = Unity.Burst.BurstCompileAttribute;
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using Unity.Collections.LowLevel.Unsafe;
     using Jobs;
     using IgnoreProfiler = Unity.Profiling.IgnoredByDeepProfilerAttribute;

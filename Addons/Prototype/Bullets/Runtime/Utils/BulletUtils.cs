@@ -10,7 +10,11 @@ using Bounds = UnityEngine.Bounds;
 
 namespace ME.BECS.Bullets {
 
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using ME.BECS.Views;
     using ME.BECS.Transforms;
     using ME.BECS.Players;

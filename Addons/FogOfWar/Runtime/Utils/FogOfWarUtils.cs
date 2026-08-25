@@ -13,7 +13,11 @@ using um = Unity.Mathematics;
 
 namespace ME.BECS.FogOfWar {
     
+    #if INLINE_DISABLED
+    using INLINE = ME.BECS.NoInline;
+    #else
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
+    #endif
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Units;
     using ME.BECS.Attack;
