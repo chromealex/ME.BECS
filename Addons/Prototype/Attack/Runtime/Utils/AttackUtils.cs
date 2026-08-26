@@ -379,12 +379,11 @@ namespace ME.BECS.Attack {
                 var startAngle = -sector.sector * 0.5f;
                 var step = sector.sector / attackBulletTargetsComponent.bulletsCount;
                 if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletDistributionComponent.BulletsSpawnBehaviour.SectorUniformDistribution) {
-                    var range = math.sqrt(sector.rangeSqr);
                     for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
                         var currentAngle = math.radians(startAngle + step * i);
                         quaternion rot = quaternion.AxisAngle(math.up(), currentAngle);
                         var d = math.mul(rot, dir);
-                        results.Add(new BulletData(math.normalizesafe(d * range)));
+                        results.Add(new BulletData(d));
                     }
                 } else if (attackBulletTargetsComponent.bulletsSpawnBehaviour == AttackBulletDistributionComponent.BulletsSpawnBehaviour.SectorRandomDistribution) {
                     for (uint i = 0u; i < attackBulletTargetsComponent.bulletsCount; ++i) {
