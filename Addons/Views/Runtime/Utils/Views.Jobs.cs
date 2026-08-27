@@ -71,6 +71,21 @@ namespace ME.BECS.Views {
         [BURST]
         public struct JobSpawnViews : IJobSingle {
 
+            private struct SpawnCandidate : System.IComparable<SpawnCandidate> {
+
+                public uint entId;
+                public tfloat distanceSq;
+                public bool isVisible;
+
+                public int CompareTo(SpawnCandidate other) {
+                    if (this.isVisible != other.isVisible) return this.isVisible == true ? -1 : 1;
+                    if (this.distanceSq < other.distanceSq) return -1;
+                    if (this.distanceSq > other.distanceSq) return 1;
+                    return this.entId.CompareTo(other.entId);
+                }
+
+            }
+
             public World connectedWorld;
             public World viewsWorld;
             public safe_ptr<ViewsModuleData> data;
@@ -78,68 +93,86 @@ namespace ME.BECS.Views {
             public void Execute() {
                 
                 if (this.data.ptr->toAdd.Count() > 0) {
-                    //UnityEngine.Debug.Log("To Add:");
-                    var count = 0u;
                     var spawnMax = this.data.ptr->properties.spawnLimitPerFrame;
                     ref var allocator = ref this.viewsWorld.state.ptr->allocator;
+                    var hasCamera = this.data.ptr->camera.IsAlive();
+                    var camera = hasCamera == true ? this.data.ptr->camera.GetAspect<CameraAspect>() : default;
+                    var cameraPosition = hasCamera == true
+                        ? camera.ent.GetAspect<TransformAspect>().GetWorldMatrixPosition()
+                        : float3.zero;
+                    var candidates = new UnsafeList<SpawnCandidate>(this.data.ptr->toAdd.Count(), Constants.ALLOCATOR_TEMP);
+
                     foreach (var kv in this.data.ptr->toAdd) {
                         var entId = kv.Key;
                         var viewEnt = new Ent(entId, this.connectedWorld);
                         var viewComponent = viewEnt.Read<ViewComponent>();
-                        // Create new view from prefab
                         if (this.data.ptr->prefabIdToInfo.TryGetValue(in allocator, viewComponent.source.prefabId, out var prefabInfo) == true) {
                             if (prefabInfo.info.ptr->isLoaded == false) {
-                                // Create unique prefab loading request
                                 this.data.ptr->loadingRequests.Add(viewComponent.source.prefabId);
                                 continue;
                             }
 
-                            // if object just loaded - check spawn max
-                            if (this.data.ptr->viewsWorld.CurrentTick == prefabInfo.info.ptr->loadedTick - 1L && spawnMax > 0u && ++count == spawnMax) break;
-                            
-                            var localData = Ent.New(this.viewsWorld, editorName: viewEnt.EditorName);
-                            this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
-                                ent = viewEnt,
-                                localData = localData,
-                                prefabInfo = prefabInfo,
-                            });
-                            var updateIdx = this.data.ptr->renderingOnSceneCount++;
-                            this.data.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] = false;
-                            this.data.ptr->renderingOnSceneApplyStateParallelCulling[in allocator, entId] = false;
-                            this.data.ptr->renderingOnSceneUpdateCulling[in allocator, entId] = false;
-                            this.data.ptr->renderingOnSceneUpdateParallelCulling[in allocator, entId] = false;
-                            
-                            if (prefabInfo.info.ptr->typeInfo.HasApplyStateParallel == true || prefabInfo.info.ptr->HasApplyStateParallelModules == true) {
-                                this.data.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, entId);
-                            }
-
-                            if (prefabInfo.info.ptr->typeInfo.HasApplyState == true || prefabInfo.info.ptr->HasApplyStateModules == true) {
-                                this.data.ptr->renderingOnSceneApplyState.Add(ref allocator, entId);
-                            }
-
-                            if (prefabInfo.info.ptr->typeInfo.HasUpdate == true || prefabInfo.info.ptr->HasUpdateModules == true) {
-                                this.data.ptr->renderingOnSceneUpdate.Add(ref allocator, entId);
-                            }
-
-                            if (prefabInfo.info.ptr->typeInfo.HasUpdateParallel == true || prefabInfo.info.ptr->HasUpdateParallelModules == true) {
-                                this.data.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, entId);
-                            }
-
-                            this.data.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, entId) = updateIdx;
-                            this.data.ptr->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = entId;
-                            this.data.ptr->renderingOnSceneBits.Set((int)entId, true);
-                            this.data.ptr->renderingOnSceneEntToPrefabId[in allocator, entId] = viewComponent.source.prefabId;
-                            this.data.ptr->renderingOnSceneEnts.Add(new ViewsModuleData.EntityData() {
-                                element = viewEnt,
-                                localData = localData,
-                                initialVersion = viewEnt.Version - 1,
-                                version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
-                                versionParallel = viewEnt.Version - 1,
+                            var bounds = viewEnt.GetAspect<TransformAspect>().GetBounds();
+                            candidates.Add(new SpawnCandidate() {
+                                entId = entId,
+                                distanceSq = hasCamera == true ? math.distancesq(cameraPosition, (float3)bounds.center) : 0f,
+                                isVisible = hasCamera == true && CameraUtils.IsVisible(in camera, in bounds),
                             });
                         } else {
                             Logger.Views.Error("Item not found");
                         }
                     }
+
+                    candidates.Sort();
+                    var count = spawnMax == 0u ? candidates.Length : math.min(candidates.Length, (int)spawnMax);
+                    for (var i = 0; i < count; ++i) {
+                        var entId = candidates[i].entId;
+                        var viewEnt = new Ent(entId, this.connectedWorld);
+                        var viewComponent = viewEnt.Read<ViewComponent>();
+                        this.data.ptr->prefabIdToInfo.TryGetValue(in allocator, viewComponent.source.prefabId, out var prefabInfo);
+
+                        var localData = Ent.New(this.viewsWorld, editorName: viewEnt.EditorName);
+                        this.data.ptr->toAddTemp.Add(new SpawnInstanceInfo() {
+                            ent = viewEnt,
+                            localData = localData,
+                            prefabInfo = prefabInfo,
+                        });
+                        var updateIdx = this.data.ptr->renderingOnSceneCount++;
+                        this.data.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] = false;
+                        this.data.ptr->renderingOnSceneApplyStateParallelCulling[in allocator, entId] = false;
+                        this.data.ptr->renderingOnSceneUpdateCulling[in allocator, entId] = false;
+                        this.data.ptr->renderingOnSceneUpdateParallelCulling[in allocator, entId] = false;
+
+                        if (prefabInfo.info.ptr->typeInfo.HasApplyStateParallel == true || prefabInfo.info.ptr->HasApplyStateParallelModules == true) {
+                            this.data.ptr->renderingOnSceneApplyStateParallel.Add(ref allocator, entId);
+                        }
+
+                        if (prefabInfo.info.ptr->typeInfo.HasApplyState == true || prefabInfo.info.ptr->HasApplyStateModules == true) {
+                            this.data.ptr->renderingOnSceneApplyState.Add(ref allocator, entId);
+                        }
+
+                        if (prefabInfo.info.ptr->typeInfo.HasUpdate == true || prefabInfo.info.ptr->HasUpdateModules == true) {
+                            this.data.ptr->renderingOnSceneUpdate.Add(ref allocator, entId);
+                        }
+
+                        if (prefabInfo.info.ptr->typeInfo.HasUpdateParallel == true || prefabInfo.info.ptr->HasUpdateParallelModules == true) {
+                            this.data.ptr->renderingOnSceneUpdateParallel.Add(ref allocator, entId);
+                        }
+
+                        this.data.ptr->renderingOnSceneEntToRenderIndex.GetValue(ref allocator, entId) = updateIdx;
+                        this.data.ptr->renderingOnSceneRenderIndexToEnt.GetValue(ref allocator, updateIdx) = entId;
+                        this.data.ptr->renderingOnSceneBits.Set((int)entId, true);
+                        this.data.ptr->renderingOnSceneEntToPrefabId[in allocator, entId] = viewComponent.source.prefabId;
+                        this.data.ptr->renderingOnSceneEnts.Add(new ViewsModuleData.EntityData() {
+                            element = viewEnt,
+                            localData = localData,
+                            initialVersion = viewEnt.Version - 1,
+                            version = viewEnt.Version - 1, // To be sure ApplyState will call at least once
+                            versionParallel = viewEnt.Version - 1,
+                        });
+                    }
+                    candidates.Dispose();
+
                     this.data.ptr->applyStateParallelCounter.ptr->count = (int)this.data.ptr->renderingOnSceneApplyStateParallel.Count;
                     this.data.ptr->applyStateCounter.ptr->count = (int)this.data.ptr->renderingOnSceneApplyState.Count;
                     this.data.ptr->updateCounter.ptr->count = (int)this.data.ptr->renderingOnSceneUpdate.Count;
