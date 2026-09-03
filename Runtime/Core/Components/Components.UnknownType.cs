@@ -27,14 +27,22 @@ namespace ME.BECS {
         }
         
         [INLINE(256)][IgnoreProfiler]
-        public static void OnEntityAdd(safe_ptr<State> state, uint entityId) {
+        public static void OnEntityAdd(safe_ptr<State> state, ushort worldId, uint entityId) {
 
-            var c = StaticTypes.counter;
-            for (uint i = 1u; i <= c; ++i) {
-                var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, i);
-                var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
-                storage.ptr->OnEntityAdd(state, entityId);
+            var requiredCapacity = Bitwise.AlignUp(entityId + 1u, DataDenseSet.ENTITIES_PER_PAGE);
+            if (System.Threading.Volatile.Read(ref state.ptr->components.entitiesCapacity) >= requiredCapacity) return;
+
+            state.ptr->components.resizeLock.LockWhile();
+            if (state.ptr->components.entitiesCapacity < requiredCapacity) {
+                var c = StaticTypes.counter;
+                for (uint i = 1u; i <= c; ++i) {
+                    var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, i);
+                    var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
+                    storage.ptr->OnEntityAdd(state, worldId, entityId);
+                }
+                System.Threading.Volatile.Write(ref state.ptr->components.entitiesCapacity, requiredCapacity);
             }
+            state.ptr->components.resizeLock.UnlockWhile();
 
         }
 
@@ -45,7 +53,7 @@ namespace ME.BECS {
 
             var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
             var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
-            var isNew = storage.ptr->Set(state, ent.id, ent.gen, data, out var changed);
+            var isNew = storage.ptr->Set(state, ent.worldId, ent.id, ent.gen, data, out var changed);
             if (changed == true) Ents.UpVersion(state, in ent, groupId);
             return isNew;
 
@@ -133,7 +141,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, out isNew, defaultValue);
+            var data = storage.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.worldId, ent.id, ent.gen, out isNew, defaultValue);
             Ents.UpVersion(state, in ent, groupId);
             return data;
 
@@ -144,7 +152,7 @@ namespace ME.BECS {
 
             E.IS_VALID_TYPE_ID(typeId);
 
-            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.id, ent.gen, out isNew, defaultValue);
+            var data = storage.AsPtr<DataDenseSet>(in state.ptr->allocator).ptr->Get(state, ent.worldId, ent.id, ent.gen, out isNew, defaultValue);
             Ents.UpVersion(state, in ent, groupId);
             return data;
 

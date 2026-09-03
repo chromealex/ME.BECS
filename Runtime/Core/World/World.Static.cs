@@ -425,6 +425,7 @@ namespace ME.BECS {
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             AtomicSafetyHandle.Release(StartParallelJob.safetyHandler.Data);
             #endif
+            LocksCache.Dispose();
             WorldsDomainAllocator.Dispose();
             
         }
@@ -511,26 +512,6 @@ namespace ME.BECS {
 
         }
 
-        [BURST]
-        public struct ClearEndTickHandlesJob : Unity.Jobs.IJob {
-
-            public Array<WorldHeader> worldsStorage;
-            public ushort worldId;
-
-            public void Execute() {
-
-                ref var storage = ref this.worldsStorage.Get(this.worldId);
-                ref var arr = ref storage.endTickHandles;
-                if (arr.IsCreated == true) {
-                    storage.endTickHandlesLock.Lock();
-                    arr.Clear();
-                    storage.endTickHandlesLock.Unlock();
-                }
-                
-            }
-
-        }
-        
         [INLINE(256)]
         public static void AddEndTickHandle(ushort worldId, Unity.Jobs.JobHandle handle) {
             
@@ -552,12 +533,21 @@ namespace ME.BECS {
             
             ref var worldsStorage = ref WorldsStorage.worlds;
             if (worldId >= worldsStorage.Length) return default;
-            ref var arr = ref worldsStorage.Get(worldId).endTickHandles;
-            if (arr.IsCreated == false) return default;
+            ref var storage = ref worldsStorage.Get(worldId);
+            storage.endTickHandlesLock.Lock();
+            ref var arr = ref storage.endTickHandles;
+            if (arr.IsCreated == false || arr.Length == 0) {
+                storage.endTickHandlesLock.Unlock();
+                return default;
+            }
+
             var tempArr = new Unity.Collections.NativeArray<JobHandle>(arr.Length, Constants.ALLOCATOR_TEMP);
             Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(tempArr.GetUnsafePtr(), arr.Ptr, arr.Length * TSize<JobHandle>.sizeInt);
-            var dependsOn = Unity.Jobs.JobHandle.CombineDependencies(tempArr);//Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Unity.Jobs.JobHandle>(arr.Ptr, arr.Length, Unity.Collections.Allocator.None));
-            dependsOn = Unity.Jobs.JobHandle.CombineDependencies(dependsOn, new ClearEndTickHandlesJob() { worldsStorage = worldsStorage, worldId = worldId, }.Schedule());
+            arr.Clear();
+            storage.endTickHandlesLock.Unlock();
+
+            var dependsOn = Unity.Jobs.JobHandle.CombineDependencies(tempArr);
+            tempArr.Dispose();
             return dependsOn;
 
         }
@@ -577,6 +567,8 @@ namespace ME.BECS {
             ref var worldsStorage = ref WorldsStorage.worlds;
             if (worldId == 0u) worldId = Worlds.GetNextWorldId();
             world.id = worldId;
+
+            LocksCache.AddWorld(worldId);
             
             if (worldId >= worldsStorage.Length) {
                 worldsStorage.Resize((worldId + 1u) * 2u);
@@ -609,6 +601,7 @@ namespace ME.BECS {
         internal static void ReleaseWorld(in World world) {
 
             Worlds.ReleaseWorldId(world.id);
+            LocksCache.DisposeWorld(world.id);
             ref var worldsStorage = ref WorldsStorage.worlds;
             worldsStorage.Get(world.id).Dispose();
             worldsStorage.Get(world.id) = default;

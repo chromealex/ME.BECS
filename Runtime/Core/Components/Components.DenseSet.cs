@@ -179,7 +179,7 @@ namespace ME.BECS {
         private uint groupIndex;
         private readonly uint dataSize;
         private DoubleBuffer buffer;
-        private ref ReadWriteNativeSpinner readWriteSpinner => ref LocksCache.GetReadWriteSpinner(LocksCache.COMPONENTS, this.groupIndex);
+        private ref ReadWriteNativeSpinner GetReadWriteSpinner(ushort worldId) => ref LocksCache.GetReadWriteSpinner(worldId, LocksCache.COMPONENTS, this.groupIndex);
 
         [INLINE(256)]
         public DataDenseSet(uint groupIndex, safe_ptr<State> state, uint dataSize, uint entitiesCapacity) {
@@ -250,24 +250,24 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private void Resize(safe_ptr<State> state, uint entitiesCapacity) {
+        private void Resize(safe_ptr<State> state, ushort worldId, uint entitiesCapacity) {
             var newSize = _sizeData(entitiesCapacity);
             ref var activePages = ref DoubleBuffer.GetActivePages(ref this.buffer);
             if (newSize > activePages.Length) {
-                this.readWriteSpinner.WriteBegin();
+                this.GetReadWriteSpinner(worldId).WriteBegin();
                 activePages = ref DoubleBuffer.GetActivePages(ref this.buffer);
                 if (newSize > activePages.Length) {
                     using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
                         DoubleBuffer.Swap(ref this.buffer, state, newSize);
                     }
                 }
-                this.readWriteSpinner.WriteEnd();
+                this.GetReadWriteSpinner(worldId).WriteEnd();
             }
         }
         
         [INLINE(256)]
-        public void OnEntityAdd(safe_ptr<State> state, uint entityId) {
-            this.Resize(state, entityId + 1u);
+        public void OnEntityAdd(safe_ptr<State> state, ushort worldId, uint entityId) {
+            this.Resize(state, worldId, entityId + 1u);
         }
 
         #if ENABLE_BECS_FLAT_QUERIES
@@ -309,7 +309,7 @@ namespace ME.BECS {
         }
         
         [INLINE(256)]
-        public bool Set(safe_ptr<State> state, uint entityId, ushort entityGen, void* data, out bool changed) {
+        public bool Set(safe_ptr<State> state, ushort worldId, uint entityId, ushort entityGen, void* data, out bool changed) {
             changed = false;
             var isNew = false;
             var pageIndex = _pageIndex(entityId);
@@ -317,7 +317,7 @@ namespace ME.BECS {
             var isCreated = page.ptr->isCreated;
             if (Unity.Burst.CompilerServices.Hint.Unlikely(isCreated == 0)) {
                 // create page if not exist
-                this.readWriteSpinner.ReadBegin();
+                this.GetReadWriteSpinner(worldId).ReadBegin();
                 page = (safe_ptr<Page>)DoubleBuffer.GetActivePages(ref this.buffer).GetUnsafePtr(in state.ptr->allocator) + pageIndex;
                 page.ptr->Lock(state);
                 if (page.ptr->isCreated == 0) {
@@ -326,7 +326,7 @@ namespace ME.BECS {
                     }
                 }
                 page.ptr->Unlock(state);
-                this.readWriteSpinner.ReadEnd();
+                this.GetReadWriteSpinner(worldId).ReadEnd();
             }
             var ptr = _getBlock(state, page, entityId, this.dataSize);
             if (this.dataSize > 0u) { // set data
@@ -349,7 +349,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)][Unity.Burst.CompilerServices.SkipLocalsInitAttribute]
-        public byte* Get(safe_ptr<State> state, uint entityId, ushort entityGen, out bool isNew, safe_ptr defaultValue) {
+        public byte* Get(safe_ptr<State> state, ushort worldId, uint entityId, ushort entityGen, out bool isNew, safe_ptr defaultValue) {
             isNew = false;
             if (Unity.Burst.CompilerServices.Hint.Unlikely(this.dataSize == 0u)) return null;
             var pageIndex = _pageIndex(entityId);
@@ -357,7 +357,7 @@ namespace ME.BECS {
             var isCreated = page.ptr->isCreated;
             if (Unity.Burst.CompilerServices.Hint.Unlikely(isCreated == 0)) {
                 // create page if not exist
-                this.readWriteSpinner.ReadBegin();
+                this.GetReadWriteSpinner(worldId).ReadBegin();
                 page = (safe_ptr<Page>)DoubleBuffer.GetActivePages(ref this.buffer).GetUnsafePtr(in state.ptr->allocator) + pageIndex;
                 page.ptr->Lock(state);
                 if (page.ptr->isCreated == 0) {
@@ -366,7 +366,7 @@ namespace ME.BECS {
                     }
                 }
                 page.ptr->Unlock(state);
-                this.readWriteSpinner.ReadEnd();
+                this.GetReadWriteSpinner(worldId).ReadEnd();
             }
             var ptr = _getBlock(state, page, entityId, this.dataSize);
             var dataPtr = _offsetData(ptr);

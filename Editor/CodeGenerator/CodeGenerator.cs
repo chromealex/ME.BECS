@@ -554,7 +554,7 @@ namespace ME.BECS.Editor {
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var aotContent = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
-                ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.GetUsedObjects(out var usedObjects);
+                ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editorAssembly, out var usedObjects);
                 var types = usedObjects.systems;//UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
                 PatchSystemsList(types);
                 var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>();

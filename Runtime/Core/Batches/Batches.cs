@@ -384,6 +384,7 @@ namespace ME.BECS {
             }.Execute();
             #endif
             new ApplyDestroyedJob() {
+                worldId = worldId,
                 state = state,
             }.Execute();
         }
@@ -400,6 +401,7 @@ namespace ME.BECS {
             }.ScheduleSingle(jobHandle);
             #endif
             var handle2 = new ApplyDestroyedJob() { 
+                worldId = worldId,
                 state = state,
             }.ScheduleSingle(jobHandle);
             #if ENABLE_BECS_FLAT_QUERIES

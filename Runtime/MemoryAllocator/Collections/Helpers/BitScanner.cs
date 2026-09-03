@@ -18,6 +18,67 @@ namespace ME.BECS.Collections {
     public static unsafe class BitScanner {
 
         public const int BITS_IN_ULONG = 64;
+
+        [INLINE(256)]
+        public static int GetTrueBitsCount(in TempBitArray arr) {
+            return GetTrueBitsCount(arr.ptr.ptr, (int)arr.Length);
+        }
+
+        [INLINE(256)]
+        public static int GetTrueBitsCount(ulong* data, int bitLength) {
+            var wordCount = (bitLength + BITS_IN_ULONG - 1) / BITS_IN_ULONG;
+            var count = 0;
+            for (var i = 0; i < wordCount; ++i) {
+                var value = data[i];
+                if (i == wordCount - 1) value &= GetLastWordMask(bitLength);
+                count += math.countbits(value);
+            }
+            return count;
+        }
+
+        [INLINE(256)]
+        public static int WriteTrueBits(in TempBitArray arr, uint* destination, int startIndex, int count) {
+            return WriteTrueBits(arr.ptr.ptr, (int)arr.Length, destination, startIndex, count);
+        }
+
+        [INLINE(256)]
+        public static int WriteTrueBits(ulong* data, int bitLength, uint* destination, int startIndex, int count) {
+            if (count <= 0) return 0;
+
+            var wordCount = (bitLength + BITS_IN_ULONG - 1) / BITS_IN_ULONG;
+            var sourceIndex = 0;
+            var destinationIndex = 0;
+            for (var i = 0; i < wordCount; ++i) {
+                var value = data[i];
+                if (i == wordCount - 1) value &= GetLastWordMask(bitLength);
+                if (value == 0UL) continue;
+
+                var bitsCount = math.countbits(value);
+                if (sourceIndex + bitsCount <= startIndex) {
+                    sourceIndex += bitsCount;
+                    continue;
+                }
+
+                var offset = (uint)(i * BITS_IN_ULONG);
+                while (value != 0UL) {
+                    var bit = math.tzcnt(value);
+                    if (sourceIndex >= startIndex) {
+                        destination[destinationIndex++] = offset + (uint)bit;
+                        if (destinationIndex == count) return destinationIndex;
+                    }
+                    ++sourceIndex;
+                    value &= value - 1UL;
+                }
+            }
+
+            return destinationIndex;
+        }
+
+        [INLINE(256)]
+        private static ulong GetLastWordMask(int bitLength) {
+            var remainder = bitLength & (BITS_IN_ULONG - 1);
+            return remainder == 0 ? ulong.MaxValue : (1UL << remainder) - 1UL;
+        }
         
         [INLINE(256)]
         public static UnsafeList<uint> GetTrueBitsTempFast(in TempBitArray arr, Unity.Collections.Allocator allocator) {

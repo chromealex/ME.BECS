@@ -215,7 +215,7 @@ namespace ME.BECS {
             var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, typeId);
             var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
             fixed (T* dataPtr = &data) {
-                storage.ptr->Set(state, ent.id, ent.gen, dataPtr, out var changed);
+                storage.ptr->Set(state, ent.worldId, ent.id, ent.gen, dataPtr, out var changed);
             }
 
         }

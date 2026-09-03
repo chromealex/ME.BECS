@@ -7,6 +7,66 @@ namespace ME.BECS.Tests {
 
     public unsafe class Tests_Core {
 
+        [Test]
+        public void LocksCacheSeparatesWorldsAndKeepsStableSpinnerAddresses() {
+
+            using var worldA = World.Create(switchContext: false);
+            ref var spinnerA = ref LocksCache.GetReadWriteSpinner(worldA.id, LocksCache.COMPONENTS, 1u);
+            var spinnerAPtr = (System.IntPtr)_addressT(ref spinnerA).ptr;
+            ref var spinnerANext = ref LocksCache.GetReadWriteSpinner(worldA.id, LocksCache.COMPONENTS, 2u);
+            var spinnerANextPtr = (System.IntPtr)_addressT(ref spinnerANext).ptr;
+            ref var spinnerAGroup = ref LocksCache.GetReadWriteSpinner(worldA.id, LocksCache.ENT_GROUPS, 1u);
+            var spinnerAGroupPtr = (System.IntPtr)_addressT(ref spinnerAGroup).ptr;
+
+            using var worldB = World.Create(switchContext: false);
+            ref var spinnerB = ref LocksCache.GetReadWriteSpinner(worldB.id, LocksCache.COMPONENTS, 1u);
+            var spinnerBPtr = (System.IntPtr)_addressT(ref spinnerB).ptr;
+            ref var spinnerAAfterResize = ref LocksCache.GetReadWriteSpinner(worldA.id, LocksCache.COMPONENTS, 1u);
+            var spinnerAAfterResizePtr = (System.IntPtr)_addressT(ref spinnerAAfterResize).ptr;
+
+            Assert.AreNotEqual(spinnerAPtr, spinnerBPtr);
+            Assert.AreEqual(spinnerAPtr, spinnerAAfterResizePtr);
+            Assert.AreEqual(TSize<ReadWriteNativeSpinner>.size, (uint)(spinnerANextPtr.ToInt64() - spinnerAPtr.ToInt64()));
+            Assert.AreNotEqual(spinnerAPtr, spinnerAGroupPtr);
+            Assert.IsTrue(spinnerA.ReadBegin());
+            spinnerA.ReadEnd();
+            Assert.IsTrue(spinnerA.WriteBegin());
+            spinnerA.WriteEnd();
+
+        }
+
+        [Test]
+        public void AtomicHelpersHandleUnsignedAndNaNValues() {
+
+            var unsignedValue = uint.MaxValue;
+            Assert.IsFalse(JobUtils.SetIfGreater(ref unsignedValue, 0u));
+            Assert.AreEqual(uint.MaxValue, unsignedValue);
+
+            unsignedValue = (uint)int.MaxValue + 1u;
+            Assert.IsTrue(JobUtils.SetIfGreater(ref unsignedValue, uint.MaxValue));
+            Assert.AreEqual(uint.MaxValue, unsignedValue);
+
+            var floatValue = float.NaN;
+            JobUtils.Increment(ref floatValue, 1f);
+            Assert.IsTrue(float.IsNaN(floatValue));
+
+            JobUtils.Decrement(ref floatValue, 1f);
+            Assert.IsTrue(float.IsNaN(floatValue));
+
+            var first = 1;
+            var second = 2;
+            var third = 3;
+            var location = &first;
+            var previous = JobUtils.CompareExchange(ref location, &second, &first);
+            Assert.AreEqual((System.IntPtr)(&first), (System.IntPtr)previous);
+            Assert.AreEqual((System.IntPtr)(&second), (System.IntPtr)location);
+
+            previous = JobUtils.CompareExchange(ref location, &third, &first);
+            Assert.AreEqual((System.IntPtr)(&second), (System.IntPtr)previous);
+            Assert.AreEqual((System.IntPtr)(&second), (System.IntPtr)location);
+
+        }
+
         [UnityEngine.TestTools.UnitySetUpAttribute]
         public System.Collections.IEnumerator SetUp() {
             AllTests.Start();

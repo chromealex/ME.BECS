@@ -24,6 +24,7 @@ namespace ME.BECS.Editor {
             JobUtils.Initialize();
             {{CONTENT_TYPES}}
             LocksCache.Initialize(LocksCache.COMPONENTS, StaticTypes.counter + 1u);
+            LocksCache.Initialize(LocksCache.ENT_GROUPS, EntityTypes.groupsCount + 1u);
         }
     }
     

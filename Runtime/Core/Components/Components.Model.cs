@@ -18,6 +18,9 @@ namespace ME.BECS {
         // entityId => [typeId => hash]
         internal MemArray<MemArray<uint>> entityIdToHash;
         public MemArray<MemAllocatorPtr> items;
+        // Derived capacity cache and its synchronization are intentionally not serialized.
+        internal uint entitiesCapacity;
+        private LockSpinner resizeLock;
         private bbool allowStaticStorage;
 
         public int Hash => (int)this.items.Length;

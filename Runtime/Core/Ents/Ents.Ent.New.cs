@@ -115,7 +115,7 @@ namespace ME.BECS {
         [INLINE(256)]
         internal static void Resize(ushort worldId, safe_ptr<State> state, uint length) {
             length = Bitwise.AlignUp(length, Ents.ENTITIES_PER_PAGE);
-            Components.OnEntityAdd(state, length);
+            Components.OnEntityAdd(state, worldId, length - 1u);
             Batches.OnEntityAdd(worldId, length);
             CollectionsRegistry.OnEntityAdd(state, length);
             AutoDestroyRegistry.OnEntityAdd(state, length);

@@ -242,6 +242,10 @@ namespace ME.BECS {
                 rootGroup.Dispose();
                 WorldSystemRegistry.systemGroups.Remove(address);
 
+            } else {
+                
+                dependsOn.Complete();
+                
             }
 
             return dependsOn;

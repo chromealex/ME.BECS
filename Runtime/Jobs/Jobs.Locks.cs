@@ -23,21 +23,44 @@ namespace ME.BECS {
 
         private safe_ptr value;   // per-thread read counters
         private int writeValue;   // 0 = free, 1 = writer active
+        private uint threadsCount;
         private Unity.Collections.Allocator allocator;
+        private byte ownsMemory;
 
         [INLINE(256)]
         public static ReadWriteNativeSpinner Create(Unity.Collections.Allocator allocator) {
-            var size = CACHE_LINE_SIZE * JobUtils.ThreadsCountMax;
-            var arr = _calloc((int)size, TAlign<int>.alignInt, allocator);
+            var threadsCount = JobUtils.ThreadsCount;
+            if (threadsCount == 0u) threadsCount = 1u;
+            var size = GetReadCountersSize(threadsCount);
+            var arr = _calloc((int)size, (int)JobUtils.CacheLineSize, allocator);
             return new ReadWriteNativeSpinner() {
                 value = arr,
                 allocator = allocator,
                 writeValue = 0,
+                threadsCount = threadsCount,
+                ownsMemory = 1,
             };
         }
 
         [INLINE(256)]
+        internal static ReadWriteNativeSpinner Create(safe_ptr readCounters, uint threadsCount) {
+            return new ReadWriteNativeSpinner() {
+                value = readCounters,
+                writeValue = 0,
+                threadsCount = threadsCount,
+                allocator = Unity.Collections.Allocator.Invalid,
+                ownsMemory = 0,
+            };
+        }
+
+        [INLINE(256)]
+        internal static uint GetReadCountersSize(uint threadsCount) {
+            return CACHE_LINE_SIZE * threadsCount;
+        }
+
+        [INLINE(256)]
         private int* GetThreadPtr() {
+            E.RANGE(JobUtils.ThreadIndex, 0u, this.threadsCount);
             return (int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
         }
 
@@ -45,7 +68,7 @@ namespace ME.BECS {
         private int ReadCount() {
             var cnt = 0;
             var basePtr = this.value;
-            for (uint i = 0u; i < JobUtils.ThreadsCountMax; ++i) {
+            for (uint i = 0u; i < this.threadsCount; ++i) {
                 var ptr = (int*)(basePtr + i * CACHE_LINE_SIZE).ptr;
                 cnt += Volatile.Read(ref *ptr);
             }
@@ -130,7 +153,7 @@ namespace ME.BECS {
         }
 
         public void Dispose() {
-            _free(this.value, this.allocator);
+            if (this.ownsMemory != 0) _free(this.value, this.allocator);
             this = default;
         }
 

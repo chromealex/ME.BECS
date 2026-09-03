@@ -24,6 +24,7 @@ namespace ME.BECS {
             using (new AllocatorTag(ALLOC_TAGS.COMPONENTS)) {
                 var components = new Components() {
                     items = new MemArray<MemAllocatorPtr>(ref state.ptr->allocator, StaticTypes.counter + 1u),
+                    entitiesCapacity = Bitwise.AlignUp(stateProperties.EntitiesCapacity, DataDenseSet.ENTITIES_PER_PAGE),
                     allowStaticStorage = stateProperties.allowStaticStorage,
                 }.InitializeSharedComponents(state, stateProperties);
 

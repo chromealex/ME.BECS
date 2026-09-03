@@ -207,6 +207,28 @@ namespace ME.BECS.Tests {
 
         }
 
+        [Test]
+        public unsafe void TestCountAndWriteTrueBitsRange() {
+
+            var data = new TempBitArray(130u, ClearOptions.ClearMemory, Unity.Collections.Allocator.Temp);
+            data.Set(0, true);
+            data.Set(2, true);
+            data.Set(63, true);
+            data.Set(64, true);
+            data.Set(100, true);
+            data.Set(129, true);
+
+            Assert.AreEqual(6, ME.BECS.Collections.BitScanner.GetTrueBitsCount(in data));
+
+            var result = stackalloc uint[3];
+            var written = ME.BECS.Collections.BitScanner.WriteTrueBits(in data, result, 2, 3);
+            Assert.AreEqual(3, written);
+            Assert.AreEqual(63u, result[0]);
+            Assert.AreEqual(64u, result[1]);
+            Assert.AreEqual(100u, result[2]);
+
+        }
+
         [Unity.Burst.BurstCompileAttribute]
         private static void TestsBurst(ref TempBitArray data) {
             

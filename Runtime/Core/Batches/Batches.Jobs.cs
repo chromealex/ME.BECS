@@ -34,12 +34,13 @@ namespace ME.BECS {
     [BURST]
     public struct ApplyDestroyedJob : IJobSingle {
 
+        public ushort worldId;
         public safe_ptr<State> state;
             
         [INLINE(256)]
         public void Execute() {
 
-            Ents.ApplyDestroyed(this.state);
+            Ents.ApplyDestroyed(this.state, this.worldId);
 
         }
 

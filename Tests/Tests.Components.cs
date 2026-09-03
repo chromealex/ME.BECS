@@ -72,20 +72,20 @@ namespace ME.BECS.Tests {
                 };
                 var test = &testData;
                 var sp = new DataDenseSet(1u, world.state, TSize<TestComponent>.size, 10);
-                sp.Set(world.state, 1, 1, test, out _);
-                sp.Set(world.state, 2, 1, test, out _);
-                sp.Set(world.state, 3, 1, test, out _);
-                sp.Set(world.state, 4, 1, test, out _);
+                sp.Set(world.state, world.id, 1, 1, test, out _);
+                sp.Set(world.state, world.id, 2, 1, test, out _);
+                sp.Set(world.state, world.id, 3, 1, test, out _);
+                sp.Set(world.state, world.id, 4, 1, test, out _);
                 
                 sp.Remove(world.state, 1, 1);
                 sp.Remove(world.state, 2, 1);
                 sp.Remove(world.state, 3, 1);
                 sp.Remove(world.state, 4, 1);
                 
-                sp.Set(world.state, 1, 2, test, out _);
-                sp.Set(world.state, 2, 2, test, out _);
-                sp.Set(world.state, 3, 2, test, out _);
-                sp.Set(world.state, 4, 2, test, out _);
+                sp.Set(world.state, world.id, 1, 2, test, out _);
+                sp.Set(world.state, world.id, 2, 2, test, out _);
+                sp.Set(world.state, world.id, 3, 2, test, out _);
+                sp.Set(world.state, world.id, 4, 2, test, out _);
                 
                 sp.Remove(world.state, 1, 2);
                 sp.Remove(world.state, 2, 2);
@@ -101,15 +101,15 @@ namespace ME.BECS.Tests {
                 };
                 var test = &testData;
                 var sp = new DataDenseSet(1u, world.state, TSize<TestComponent>.size, 10);
-                sp.Set(world.state, 1, 1, test, out _);
-                sp.Set(world.state, 2, 1, test, out _);
-                sp.Set(world.state, 3, 1, test, out _);
-                sp.Set(world.state, 4, 1, test, out _);
+                sp.Set(world.state, world.id, 1, 1, test, out _);
+                sp.Set(world.state, world.id, 2, 1, test, out _);
+                sp.Set(world.state, world.id, 3, 1, test, out _);
+                sp.Set(world.state, world.id, 4, 1, test, out _);
                 
-                sp.Set(world.state, 1, 2, test, out _);
-                sp.Set(world.state, 2, 2, test, out _);
-                sp.Set(world.state, 3, 2, test, out _);
-                sp.Set(world.state, 4, 2, test, out _);
+                sp.Set(world.state, world.id, 1, 2, test, out _);
+                sp.Set(world.state, world.id, 2, 2, test, out _);
+                sp.Set(world.state, world.id, 3, 2, test, out _);
+                sp.Set(world.state, world.id, 4, 2, test, out _);
                 
                 sp.Remove(world.state, 1, 2);
                 sp.Remove(world.state, 2, 2);

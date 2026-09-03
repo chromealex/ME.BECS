@@ -965,45 +965,33 @@ namespace ME.BECS {
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("GetTrueBits");
                     marker.Begin();
-                    var trueBitsTemp = tempBits.GetTrueBitsTemp();
+                    var totalElementsCount = (uint)ME.BECS.Collections.BitScanner.GetTrueBitsCount(in tempBits);
                     marker.End();
-                    var elementsCount = (uint)trueBitsTemp.Length;
-                    if (elementsCount == 0u) {
+                    if (totalElementsCount == 0u) {
                         this.buffer.ptr->entities = null;
                         this.buffer.ptr->count = 0u;
                         return;
                     }
 
-                    safe_ptr<uint> arrPtr;
+                    var fromIdx = 0u;
+                    var elementsCount = totalElementsCount;
                     if (this.queryData.ptr->steps > 0u) {
 
                         var currentStep = this.state.ptr->tick;
                         var steps = this.queryData.ptr->steps;
                         {
-                            var elementsPerStep = elementsCount / steps;
+                            var elementsPerStep = totalElementsCount / steps;
                             if (elementsPerStep < this.queryData.ptr->minElementsPerStep) elementsPerStep = this.queryData.ptr->minElementsPerStep;
-                            steps = (uint)math.ceil((elementsCount / (tfloat)elementsPerStep));
-                            var fromIdx = (uint)(currentStep % steps) * elementsPerStep;
+                            steps = (uint)math.ceil((totalElementsCount / (tfloat)elementsPerStep));
+                            fromIdx = (uint)(currentStep % steps) * elementsPerStep;
                             var toIdx = fromIdx + elementsPerStep;
-                            if (toIdx > elementsCount) toIdx = elementsCount;
-                            // Add range fromIdx..toIdx
-                            var size = toIdx - fromIdx;
-                            arrPtr = _makeArray<uint>(size, this.allocator);
-                            if (size > 0u) _memcpy((safe_ptr)(trueBitsTemp.Ptr + fromIdx), arrPtr, TSize<uint>.size * size);
-                            elementsCount = size;
+                            if (toIdx > totalElementsCount) toIdx = totalElementsCount;
+                            elementsCount = toIdx - fromIdx;
                         }
-
-                    } else {
-                        arrPtr = _makeArray<uint>(elementsCount, this.allocator);
-                        _memcpy(new safe_ptr(trueBitsTemp.Ptr), arrPtr, elementsCount * TSize<uint>.size);
                     }
 
-                    if (this.useSort == true) {
-                        var markerSort = new Unity.Profiling.ProfilerMarker("Sort");
-                        markerSort.Begin();
-                        Unity.Collections.NativeSortExtension.Sort(trueBitsTemp.Ptr, (int)elementsCount);
-                        markerSort.End();
-                    }
+                    var arrPtr = _makeArray<uint>(elementsCount, this.allocator);
+                    ME.BECS.Collections.BitScanner.WriteTrueBits(in tempBits, arrPtr.ptr, (int)fromIdx, (int)elementsCount);
                     this.buffer.ptr->entities = arrPtr.ptr;
                     this.buffer.ptr->count = elementsCount;
                 }

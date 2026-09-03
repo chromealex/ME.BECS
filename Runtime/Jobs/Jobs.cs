@@ -435,12 +435,12 @@ namespace ME.BECS {
         [INLINE(256)]
         public static bool SetIfGreater(ref uint target, uint newValue) {
             E.ADDR_4(ref target);
-            int snapshot;
+            uint snapshot;
             bool stillMore;
             do {
-                snapshot = (int)target;
+                snapshot = target;
                 stillMore = newValue > snapshot;
-            } while (stillMore && System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref target), (int)newValue, snapshot) != snapshot);
+            } while (stillMore && (uint)System.Threading.Interlocked.CompareExchange(ref _as<uint, int>(ref target), (int)newValue, (int)snapshot) != snapshot);
 
             return stillMore;
         }
@@ -517,23 +517,27 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void Increment(ref float value, float count) {
             E.ADDR_4(ref value);
-            float initialValue;
-            float computedValue;
+            int initialValue;
+            int computedValue;
             do {
-                initialValue = value;
-                computedValue = initialValue + count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
+                initialValue = _as<float, int>(ref value);
+                var currentValue = _as<int, float>(ref initialValue);
+                var newValue = currentValue + count;
+                computedValue = _as<float, int>(ref newValue);
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<float, int>(ref value), computedValue, initialValue));
         }
 
         [INLINE(256)]
         public static void Increment(ref sfloat value, sfloat count) {
             E.ADDR_4(ref value);
-            sfloat initialValue;
-            sfloat computedValue;
+            int initialValue;
+            int computedValue;
             do {
-                initialValue = value;
-                computedValue = initialValue + count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<sfloat, float>(ref value), (float)computedValue, (float)initialValue));
+                initialValue = _as<sfloat, int>(ref value);
+                var currentValue = _as<int, sfloat>(ref initialValue);
+                var newValue = currentValue + count;
+                computedValue = _as<sfloat, int>(ref newValue);
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<sfloat, int>(ref value), computedValue, initialValue));
         }
 
         [INLINE(256)]
@@ -572,12 +576,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void Decrement(ref float value, float count) {
             E.ADDR_4(ref value);
-            float initialValue;
-            float computedValue;
+            int initialValue;
+            int computedValue;
             do {
-                initialValue = value;
-                computedValue = initialValue - count;
-            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref value, computedValue, initialValue));
+                initialValue = _as<float, int>(ref value);
+                var currentValue = _as<int, float>(ref initialValue);
+                var newValue = currentValue - count;
+                computedValue = _as<float, int>(ref newValue);
+            } while (initialValue != System.Threading.Interlocked.CompareExchange(ref _as<float, int>(ref value), computedValue, initialValue));
         }
 
         [INLINE(256)]
@@ -604,11 +610,9 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static T* CompareExchange<T>(ref T* location, T* value, T* comparand) where T : unmanaged {
-
-            var loc = (System.IntPtr)location;
-            var res = (T*)System.Threading.Interlocked.CompareExchange(ref loc, (System.IntPtr)value, (System.IntPtr)comparand);
-            location = (T*)loc;
-            return res;
+            fixed (T** locationPtr = &location) {
+                return (T*)System.Threading.Interlocked.CompareExchange(ref *(System.IntPtr*)locationPtr, (System.IntPtr)value, (System.IntPtr)comparand);
+            }
 
         }
 

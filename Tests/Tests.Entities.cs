@@ -398,11 +398,15 @@ namespace ME.BECS.Tests {
                         sizeInBytesCapacity = 1024 * 1024,
                     },
                 });
-                for (int i = 0; i < 20; ++i) {
+                Assert.AreEqual(64u, world.state.ptr->components.entitiesCapacity);
+                for (int i = 0; i < 70; ++i) {
                     var ent = Ent.New();
                     Assert.IsTrue(ent.IsAlive());
                     Assert.AreEqual(i, ent.id);
                     Assert.AreEqual(1, ent.gen);
+                    ent.Set(new TestComponent() { data = i });
+                    Assert.AreEqual(i, ent.Read<TestComponent>().data);
+                    Assert.AreEqual(i < 64 ? 64u : 128u, world.state.ptr->components.entitiesCapacity);
                 }
             }
 
