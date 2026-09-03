@@ -132,6 +132,21 @@ namespace ME.BECS.Tests {
 
         }
 
+        [Test]
+        public void DestroyDisabledComponent() {
+
+            using var world = World.Create();
+            var ent = Ent.New();
+            TestDestroyData.value.Data = 0;
+            ent.Set(new TestComponentDestroy());
+            ent.Disable<TestComponentDestroy>();
+
+            ent.Destroy();
+
+            Assert.AreEqual(1, TestDestroyData.value.Data);
+
+        }
+
     }
 
 }

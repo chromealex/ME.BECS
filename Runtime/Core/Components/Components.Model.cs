@@ -13,10 +13,11 @@ namespace ME.BECS {
     public partial struct Components {
 
         public LockSpinner lockSharedIndex;
-        // hash => SharedComponentStorage<T>
-        internal UIntDictionary<MemAllocatorPtr> sharedData;
-        // entityId => [typeId => hash]
-        internal MemArray<MemArray<uint>> entityIdToHash;
+        // (sharedTypeId << 32 | hash) => SharedComponentStorage<T>
+        internal ULongDictionary<MemAllocatorPtr> sharedData;
+        // entityId * sharedTypesCount + sharedTypeId => hash
+        internal MemArray<uint> entityIdToHash;
+        internal uint sharedTypesCount;
         public MemArray<MemAllocatorPtr> items;
         // Derived capacity cache and its synchronization are intentionally not serialized.
         internal uint entitiesCapacity;
@@ -29,6 +30,7 @@ namespace ME.BECS {
             writer.Write(this.lockSharedIndex);
             writer.Write(this.sharedData);
             writer.Write(this.entityIdToHash);
+            writer.Write(this.sharedTypesCount);
             writer.Write(this.items);
             writer.Write(this.allowStaticStorage);
         }
@@ -37,6 +39,7 @@ namespace ME.BECS {
             reader.Read(ref this.lockSharedIndex);
             reader.Read(ref this.sharedData);
             reader.Read(ref this.entityIdToHash);
+            reader.Read(ref this.sharedTypesCount);
             reader.Read(ref this.items);
             reader.Read(ref this.allowStaticStorage);
         }

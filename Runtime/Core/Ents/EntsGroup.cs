@@ -208,16 +208,19 @@ namespace ME.BECS {
 
             [INLINE(256)]
             public void Delete(safe_ptr<State> state, ushort worldId, uint entId) {
-                this.GetResizeLock(worldId).ReadBegin();
+                this.GetResizeLock(worldId).WriteBegin();
+                this.DeleteNoLock(state, entId);
+                this.GetResizeLock(worldId).WriteEnd();
+            }
+
+            [INLINE(256)]
+            internal void DeleteNoLock(safe_ptr<State> state, uint entId) {
                 var localGroupIndex = state.ptr->entities.entityToGroupLocal[state, entId];
                 ref var group = ref this.groups[state, localGroupIndex];
                 group.Delete(entId);
-                this.GetResizeLock(worldId).ReadEnd();
-                this.GetResizeLock(worldId).WriteBegin();
                 if (this.freeGroupsHas.Add(ref state.ptr->allocator, localGroupIndex) == true) {
                     this.freeGroups.Add(ref state.ptr->allocator, localGroupIndex);
                 }
-                this.GetResizeLock(worldId).WriteEnd();
             }
 
             public uint GetReservedSizeInBytes(safe_ptr<State> state) {
@@ -475,11 +478,18 @@ namespace ME.BECS {
             }
             {
                 state.ptr->entities.destroyed.Sort<uint>(state);
-                for (uint i = 0u; i < state.ptr->entities.destroyed.Count; ++i) {
+                for (uint i = 0u; i < state.ptr->entities.destroyed.Count;) {
                     var entId = state.ptr->entities.destroyed[state, i];
                     var groupId = state.ptr->entities.entityToGroup[state, entId];
                     ref var groups = ref state.ptr->entities.groupByEntityType[state, groupId];
-                    groups.Delete(state, worldId, entId);
+                    groups.GetResizeLock(worldId).WriteBegin();
+                    do {
+                        groups.DeleteNoLock(state, entId);
+                        ++i;
+                        if (i >= state.ptr->entities.destroyed.Count) break;
+                        entId = state.ptr->entities.destroyed[state, i];
+                    } while (state.ptr->entities.entityToGroup[state, entId] == groupId);
+                    groups.GetResizeLock(worldId).WriteEnd();
                 }
                 state.ptr->entities.freeCount += state.ptr->entities.destroyed.Count;
                 state.ptr->entities.destroyed.Clear();

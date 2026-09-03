@@ -36,7 +36,7 @@ namespace ME.BECS {
 
         }
 
-        // Each world owns one stable block: [all spinner structs][all per-thread read counters].
+        // Each world owns one stable block: [all spinner structs][thread-major read counters].
         public static readonly SharedStatic<Cache> cache = SharedStatic<Cache>.GetOrCreate<ReadWriteSpinnerShared>();
 
     }
@@ -90,14 +90,14 @@ namespace ME.BECS {
             if (threadsCount == 0u) threadsCount = 1u;
             var spinnersSize = TSize<ReadWriteNativeSpinner>.size * cache.locksCount;
             var countersOffset = Bitwise.AlignUp(spinnersSize, JobUtils.CacheLineSize);
-            var countersStride = ReadWriteNativeSpinner.GetReadCountersSize(threadsCount);
-            var totalSize = countersOffset + countersStride * cache.locksCount;
+            var countersStride = Bitwise.AlignUp(TSize<int>.size * cache.locksCount, JobUtils.CacheLineSize);
+            var totalSize = countersOffset + countersStride * threadsCount;
             var block = _calloc((int)totalSize, (int)JobUtils.CacheLineSize, Constants.ALLOCATOR_DOMAIN);
             var spinners = new safe_ptr<ReadWriteNativeSpinner>((ReadWriteNativeSpinner*)block.ptr, spinnersSize);
             var counters = block + countersOffset;
 
             for (uint i = 0u; i < cache.locksCount; ++i) {
-                spinners[i] = ReadWriteNativeSpinner.Create(counters + countersStride * i, threadsCount);
+                spinners[i] = ReadWriteNativeSpinner.Create(counters + TSize<int>.size * i, threadsCount, countersStride);
             }
 
             world = new ReadWriteSpinnerShared.WorldLocks() {

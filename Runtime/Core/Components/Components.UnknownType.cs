@@ -35,12 +35,14 @@ namespace ME.BECS {
             state.ptr->components.resizeLock.LockWhile();
             if (state.ptr->components.entitiesCapacity < requiredCapacity) {
                 var c = StaticTypes.counter;
+                var allocatedCapacity = requiredCapacity;
                 for (uint i = 1u; i <= c; ++i) {
                     var ptr = state.ptr->components.items.GetUnsafePtr(in state.ptr->allocator, i);
                     var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
-                    storage.ptr->OnEntityAdd(state, worldId, entityId);
+                    var storageCapacity = storage.ptr->OnEntityAdd(state, worldId, entityId);
+                    if (i == 1u || storageCapacity < allocatedCapacity) allocatedCapacity = storageCapacity;
                 }
-                System.Threading.Volatile.Write(ref state.ptr->components.entitiesCapacity, requiredCapacity);
+                System.Threading.Volatile.Write(ref state.ptr->components.entitiesCapacity, allocatedCapacity);
             }
             state.ptr->components.resizeLock.UnlockWhile();
 

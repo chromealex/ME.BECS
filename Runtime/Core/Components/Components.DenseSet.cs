@@ -250,7 +250,7 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
-        private void Resize(safe_ptr<State> state, ushort worldId, uint entitiesCapacity) {
+        private uint Resize(safe_ptr<State> state, ushort worldId, uint entitiesCapacity) {
             var newSize = _sizeData(entitiesCapacity);
             ref var activePages = ref DoubleBuffer.GetActivePages(ref this.buffer);
             if (newSize > activePages.Length) {
@@ -263,11 +263,12 @@ namespace ME.BECS {
                 }
                 this.GetReadWriteSpinner(worldId).WriteEnd();
             }
+            return DoubleBuffer.GetActivePages(ref this.buffer).Length * ENTITIES_PER_PAGE;
         }
         
         [INLINE(256)]
-        public void OnEntityAdd(safe_ptr<State> state, ushort worldId, uint entityId) {
-            this.Resize(state, worldId, entityId + 1u);
+        public uint OnEntityAdd(safe_ptr<State> state, ushort worldId, uint entityId) {
+            return this.Resize(state, worldId, entityId + 1u);
         }
 
         #if ENABLE_BECS_FLAT_QUERIES

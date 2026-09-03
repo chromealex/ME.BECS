@@ -24,6 +24,7 @@ namespace ME.BECS {
         private safe_ptr value;   // per-thread read counters
         private int writeValue;   // 0 = free, 1 = writer active
         private uint threadsCount;
+        private uint readCounterStride;
         private Unity.Collections.Allocator allocator;
         private byte ownsMemory;
 
@@ -38,16 +39,18 @@ namespace ME.BECS {
                 allocator = allocator,
                 writeValue = 0,
                 threadsCount = threadsCount,
+                readCounterStride = CACHE_LINE_SIZE,
                 ownsMemory = 1,
             };
         }
 
         [INLINE(256)]
-        internal static ReadWriteNativeSpinner Create(safe_ptr readCounters, uint threadsCount) {
+        internal static ReadWriteNativeSpinner Create(safe_ptr readCounters, uint threadsCount, uint readCounterStride) {
             return new ReadWriteNativeSpinner() {
                 value = readCounters,
                 writeValue = 0,
                 threadsCount = threadsCount,
+                readCounterStride = readCounterStride,
                 allocator = Unity.Collections.Allocator.Invalid,
                 ownsMemory = 0,
             };
@@ -61,7 +64,7 @@ namespace ME.BECS {
         [INLINE(256)]
         private int* GetThreadPtr() {
             E.RANGE(JobUtils.ThreadIndex, 0u, this.threadsCount);
-            return (int*)(this.value + CACHE_LINE_SIZE * JobUtils.ThreadIndex).ptr;
+            return (int*)(this.value + this.readCounterStride * JobUtils.ThreadIndex).ptr;
         }
 
         [INLINE(256)]
@@ -69,7 +72,7 @@ namespace ME.BECS {
             var cnt = 0;
             var basePtr = this.value;
             for (uint i = 0u; i < this.threadsCount; ++i) {
-                var ptr = (int*)(basePtr + i * CACHE_LINE_SIZE).ptr;
+                var ptr = (int*)(basePtr + i * this.readCounterStride).ptr;
                 cnt += Volatile.Read(ref *ptr);
             }
             return cnt;

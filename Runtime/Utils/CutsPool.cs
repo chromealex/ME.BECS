@@ -47,6 +47,13 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public static safe_ptr<T> _makeArray<T>(uint elementsCount, Unity.Collections.Allocator allocator, bool clearMemory) where T : unmanaged {
+            
+            return Cuts._makeArray<T>(elementsCount, allocator, clearMemory);
+            
+        }
+
+        [INLINE(256)]
         public static safe_ptr<T> _make<T>() where T : unmanaged {
 
             return Cuts._makeDefault<T>();

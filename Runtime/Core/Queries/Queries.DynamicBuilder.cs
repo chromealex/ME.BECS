@@ -982,14 +982,14 @@ namespace ME.BECS {
                 };
 
                 var withCount = (uint)this.composeJob.query.with.Length;
-                var with = withCount > 0u ? Cuts._makeArray<BitWords>(withCount, Constants.ALLOCATOR_TEMP, false) : default;
+                var with = withCount > 0u ? _makeArray<BitWords>(withCount, Constants.ALLOCATOR_TEMP, false) : default;
                 for (uint i = 0u; i < withCount; ++i) {
                     with[i] = this.GetComponentBitWords(this.composeJob.query.with[(int)i]);
                 }
 
                 var hasWithAny = this.composeJob.query.withAny.Length > 0;
                 var withAnyCapacity = (uint)this.composeJob.query.withAny.Length * 2u;
-                var withAny = withAnyCapacity > 0u ? Cuts._makeArray<BitWords>(withAnyCapacity, Constants.ALLOCATOR_TEMP, false) : default;
+                var withAny = withAnyCapacity > 0u ? _makeArray<BitWords>(withAnyCapacity, Constants.ALLOCATOR_TEMP, false) : default;
                 var withAnyCount = 0u;
                 for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
                     var typeIdPair = this.composeJob.query.withAny[i];
@@ -998,18 +998,19 @@ namespace ME.BECS {
                 }
 
                 var withoutCount = (uint)this.composeJob.query.without.Length;
-                var without = withoutCount > 0u ? Cuts._makeArray<BitWords>(withoutCount, Constants.ALLOCATOR_TEMP, false) : default;
+                var without = withoutCount > 0u ? _makeArray<BitWords>(withoutCount, Constants.ALLOCATOR_TEMP, false) : default;
                 for (uint i = 0u; i < withoutCount; ++i) {
                     without[i] = this.GetComponentBitWords(this.composeJob.query.without[(int)i]);
                 }
 
+                var composedWords = _makeArray<ulong>(wordCount, Constants.ALLOCATOR_TEMP, false);
                 var totalElementsCount = 0u;
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("Query");
                     marker.Begin();
                     for (uint i = 0u; i < wordCount; ++i) {
                         var value = ComposeWord(i, in alive, with, withCount, withAny, withAnyCount, hasWithAny, without, withoutCount);
-                        if (i == wordCount - 1u && (allCount & 63u) != 0u) value &= (1UL << (int)(allCount & 63u)) - 1UL;
+                        composedWords[i] = value;
                         totalElementsCount += (uint)math.countbits(value);
                     }
                     marker.End();
@@ -1039,8 +1040,7 @@ namespace ME.BECS {
                 var sourceIndex = 0u;
                 var destinationIndex = 0u;
                 for (uint i = 0u; i < wordCount; ++i) {
-                    var value = ComposeWord(i, in alive, with, withCount, withAny, withAnyCount, hasWithAny, without, withoutCount);
-                    if (i == wordCount - 1u && (allCount & 63u) != 0u) value &= (1UL << (int)(allCount & 63u)) - 1UL;
+                    var value = composedWords[i];
                     if (value == 0UL) continue;
 
                     var bitsCount = (uint)math.countbits(value);

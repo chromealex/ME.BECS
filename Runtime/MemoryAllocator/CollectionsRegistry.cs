@@ -16,7 +16,91 @@ namespace ME.BECS {
     #endif
     public unsafe struct CollectionsRegistry {
 
-        private MemArray<List<MemPtr>> list;
+        private struct EntityCollectionPtrs {
+
+            private MemPtr storageOrFirst;
+            private uint count;
+            private uint capacity;
+
+            public bool IsCreated => this.count > 0u;
+            public uint Count => this.count;
+
+            [INLINE(256)]
+            public void Add(ref MemoryAllocator allocator, in MemPtr ptr) {
+                if (this.count == 0u) {
+                    this.storageOrFirst = ptr;
+                    this.count = 1u;
+                    return;
+                }
+                if (this.count == 1u) {
+                    var first = this.storageOrFirst;
+                    this.capacity = 2u;
+                    this.storageOrFirst = allocator.AllocArray<MemPtr>(this.capacity, out var items);
+                    items[0u] = first;
+                    items[1u] = ptr;
+                    this.count = 2u;
+                    return;
+                }
+                if (this.count == this.capacity) {
+                    this.capacity *= 2u;
+                    this.storageOrFirst = allocator.ReAllocArray<MemPtr>(this.storageOrFirst, this.capacity, out _);
+                }
+                var arr = (safe_ptr<MemPtr>)allocator.GetUnsafePtr(this.storageOrFirst);
+                arr[this.count++] = ptr;
+            }
+
+            [INLINE(256)]
+            public bool Remove(ref MemoryAllocator allocator, in MemPtr ptr) {
+                if (this.count == 0u) return false;
+                if (this.count == 1u) {
+                    if (this.storageOrFirst != ptr) return false;
+                    this = default;
+                    return true;
+                }
+                var arr = (safe_ptr<MemPtr>)allocator.GetUnsafePtr(this.storageOrFirst);
+                for (uint i = 0u; i < this.count; ++i) {
+                    if (arr[i] != ptr) continue;
+                    --this.count;
+                    if (this.count == 1u) {
+                        var remaining = arr[i == 0u ? 1u : 0u];
+                        allocator.Free(this.storageOrFirst);
+                        this.storageOrFirst = remaining;
+                        this.capacity = 0u;
+                    } else {
+                        arr[i] = arr[this.count];
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            [INLINE(256)]
+            public void Destroy(safe_ptr<State> state) {
+                if (this.count == 0u) return;
+                if (this.count == 1u) {
+                    state.ptr->allocator.Free(this.storageOrFirst);
+                    this = default;
+                    return;
+                }
+                var arr = (safe_ptr<MemPtr>)state.ptr->allocator.GetUnsafePtr(this.storageOrFirst);
+                for (uint i = 0u; i < this.count; ++i) state.ptr->allocator.Free(arr[i]);
+                state.ptr->allocator.Free(this.storageOrFirst);
+                this = default;
+            }
+
+            public uint GetReservedSizeInBytes(safe_ptr<State> state) {
+                var size = this.count > 1u ? this.storageOrFirst.GetSizeInBytes(state) : 0u;
+                if (this.count == 1u) return size + this.storageOrFirst.GetSizeInBytes(state);
+                if (this.count > 1u) {
+                    var arr = (safe_ptr<MemPtr>)state.ptr->allocator.GetUnsafePtr(this.storageOrFirst);
+                    for (uint i = 0u; i < this.count; ++i) size += arr[i].GetSizeInBytes(state);
+                }
+                return size;
+            }
+
+        }
+
+        private MemArray<EntityCollectionPtrs> list;
         private ReadWriteSpinner readWriteSpinner;
         private MemArray<LockSpinner> readWriteSpinnerPerEntity;
 
@@ -39,7 +123,7 @@ namespace ME.BECS {
 
             using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
                 return new CollectionsRegistry() {
-                    list = new MemArray<List<MemPtr>>(ref state.ptr->allocator, capacity),
+                    list = new MemArray<EntityCollectionPtrs>(ref state.ptr->allocator, capacity),
                     readWriteSpinnerPerEntity = new MemArray<LockSpinner>(ref state.ptr->allocator, capacity),
                     readWriteSpinner = ReadWriteSpinner.Create(state),
                 };
@@ -72,11 +156,7 @@ namespace ME.BECS {
                 ref var entitySpinner = ref state.ptr->collectionsRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
                 entitySpinner.Lock();
                 if (list.IsCreated == true) {
-                    for (uint i = 0; i < list.Count; ++i) {
-                        state.ptr->allocator.Free(in list[in state.ptr->allocator, i]);
-                    }
-
-                    list.Clear();
+                    list.Destroy(state);
                 }
                 entitySpinner.Unlock();
             }
@@ -91,13 +171,8 @@ namespace ME.BECS {
             ref var entitySpinner = ref state.ptr->collectionsRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
             entitySpinner.Lock();
             ref var list = ref state.ptr->collectionsRegistry.list[in state.ptr->allocator, ent.id];
-            if (list.IsCreated == false) {
-                using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
-                    list = new List<MemPtr>(ref state.ptr->allocator, 1u);
-                }
-            }
             using (new AllocatorTag(ALLOC_TAGS.COLLECTIONS)) {
-                list.Add(ref state.ptr->allocator, ptr);
+                list.Add(ref state.ptr->allocator, in ptr);
             }
             entitySpinner.Unlock();
             state.ptr->collectionsRegistry.readWriteSpinner.ReadEnd(state);
@@ -112,7 +187,7 @@ namespace ME.BECS {
             if (list.IsCreated == true) {
                 ref var entitySpinner = ref state.ptr->collectionsRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
                 entitySpinner.Lock();
-                list.Remove(ref state.ptr->allocator, ptr);
+                list.Remove(ref state.ptr->allocator, in ptr);
                 entitySpinner.Unlock();
             }
             state.ptr->collectionsRegistry.readWriteSpinner.ReadEnd(state);
@@ -124,11 +199,7 @@ namespace ME.BECS {
             var size = TSize<CollectionsRegistry>.size;
             for (uint i = 0u; i < state.ptr->collectionsRegistry.list.Length; ++i) {
                 var item = state.ptr->collectionsRegistry.list[state, i];
-                size += item.GetReservedSizeInBytes();
-                for (uint j = 0u; j < item.Count; ++j) {
-                    var obj = item[state, j];
-                    size += obj.GetSizeInBytes(state);
-                }
+                size += item.GetReservedSizeInBytes(state);
             }
             return size;
 

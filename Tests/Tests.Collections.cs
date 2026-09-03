@@ -49,6 +49,29 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void AutoCollectionsRegistryInlineAndOverflow() {
+
+            using var world = World.Create();
+            var ent = Ent.New();
+            var first = new MemArrayAuto<int>(in ent, 2u);
+            var second = new MemArrayAuto<int>(in ent, 2u);
+
+            first[0u] = 10;
+            second[0u] = 20;
+            Assert.AreEqual(10, first[0u]);
+            Assert.AreEqual(20, second[0u]);
+
+            first.Dispose();
+            var third = new MemArrayAuto<int>(in ent, 2u);
+            third[0u] = 30;
+            Assert.AreEqual(30, third[0u]);
+
+            ent.Destroy();
+            world.state.ptr->allocator.CheckConsistency();
+
+        }
+
+        [Test]
         [Unity.PerformanceTesting.PerformanceAttribute]
         public void Performance() {
 
