@@ -186,11 +186,11 @@ namespace ME.BECS {
 
         public ViewSource RegisterViewSource(EntityView entityView, uint providerId, bool sceneSource = false) {
 
-            if (providerId == GAMEOBJECT_PROVIDER_ID) {
+            if (providerId == GAMEOBJECT_PROVIDER_ID && this.properties.viewsGameObjects) {
                 return this.viewsGameObjects.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
-            } else if (providerId == DRAW_MESH_PROVIDER_ID) {
+            } else if (providerId == DRAW_MESH_PROVIDER_ID && this.properties.viewsDrawMeshes) {
                 return this.viewsDrawMeshes.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
-            } else if (providerId == PARTICLES_PROVIDER_ID) {
+            } else if (providerId == PARTICLES_PROVIDER_ID && this.properties.viewsParticles) {
                 return this.viewsParticles.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
             }
             
