@@ -78,7 +78,7 @@ namespace ME.BECS {
 
             this.locks = default;
             if (threadSafe == true) {
-                this.locks = new MemArray<LockSpinner>(ref allocator, sizeInBytes / 2u, ClearOptions.ClearMemory);
+                this.locks = new MemArray<LockSpinner>(ref allocator, Bitwise.GetLength(length), ClearOptions.ClearMemory);
             }
 
         }
@@ -239,7 +239,7 @@ namespace ME.BECS {
                 }
 
                 if (this.locks.IsCreated == true) {
-                    this.locks.Resize(ref allocator, newSize / 2u, 1);
+                    this.locks.Resize(ref allocator, Bitwise.GetLength(newLength), 1);
                 }
                 this.Length = newLength;
             }

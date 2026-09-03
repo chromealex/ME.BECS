@@ -593,7 +593,7 @@ namespace ME.BECS.Editor {
                 var state = this.value.World.state;
                 if (force == false) {
                     #if ENABLE_BECS_FLAT_QUERIES
-                    var componentsCount = state.ptr->entities.entityToComponents[state, this.value.id].entities.Count;
+                    var componentsCount = state.ptr->entities.GetEntityComponentsCount(state, this.value.id);
                     #else
                     var componentsCount = state.ptr->archetypes.list[state, state.ptr->archetypes.entToArchetypeIdx[state, this.value.id]].componentsCount;
                     #endif

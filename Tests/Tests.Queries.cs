@@ -199,7 +199,7 @@ namespace ME.BECS.Tests {
                 });
 
                 var result = new System.Collections.Generic.List<Ent>();
-                var arr = API.Query(world, Batches.Apply(default, world)).ToArray();
+                var arr = API.Query(world, Batches.Apply(default, world)).ToArrayOnDemand();
                 foreach (var item in arr) result.Add(item);
 
                 Assert.AreEqual(3, result.Count);
@@ -1089,6 +1089,9 @@ namespace ME.BECS.Tests {
 
                 var handle = API.Query(world).AsParallel(1).Schedule<EntityCreateJob, TestComponent>();
                 handle.Complete();
+
+                Assert.AreEqual((uint)amount, JobStaticInfo<EntityCreateJob>.lastCount);
+                Assert.AreEqual(2u, JobStaticInfo<EntityCreateJob>.inlineCount[EntityTypes<DefaultEntityType>.id]);
 
                 for (int i = 0; i < amount; ++i) {
                     var e = arr1[i];

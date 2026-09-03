@@ -18,6 +18,37 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void ThreadSafeLocksMatchWordCount() {
+
+            using var world = World.Create();
+            var bits = new BitArray(ref world.state.ptr->allocator, 65u, threadSafe: true);
+            Assert.AreEqual(2u, bits.locks.Length);
+
+            bits.SetThreaded(in world.state.ptr->allocator, 0u, true);
+            bits.SetThreaded(in world.state.ptr->allocator, 64u, true);
+            Assert.IsTrue(bits.IsSet(in world.state.ptr->allocator, 0));
+            Assert.IsTrue(bits.IsSet(in world.state.ptr->allocator, 64));
+
+            bits.Resize(ref world.state.ptr->allocator, 129u);
+            Assert.AreEqual(3u, bits.locks.Length);
+            bits.SetThreaded(in world.state.ptr->allocator, 128u, true);
+            Assert.IsTrue(bits.IsSet(in world.state.ptr->allocator, 128));
+
+            var source = new BitArray(ref world.state.ptr->allocator, 65u, threadSafe: true);
+            var target = default(BitArray);
+            target.Resize(ref world.state.ptr->allocator, 129u);
+            target.CopyFrom(ref world.state.ptr->allocator, in source);
+            Assert.AreEqual(3u, target.locks.Length);
+            target.SetThreaded(in world.state.ptr->allocator, 128u, true);
+            Assert.IsTrue(target.IsSet(in world.state.ptr->allocator, 128));
+
+            source.Dispose(ref world.state.ptr->allocator);
+            target.Dispose(ref world.state.ptr->allocator);
+            bits.Dispose(ref world.state.ptr->allocator);
+
+        }
+
+        [Test]
         [Unity.PerformanceTesting.PerformanceAttribute]
         public void Performance() {
 

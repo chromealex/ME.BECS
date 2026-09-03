@@ -201,13 +201,16 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly uint GetOffset(uint groupId) {
             if (this.itemsPerCall.ptr == null) return 0u;
-            return this.index * this.itemsPerCall[groupId] + this.localOffsets[groupId];
+            var itemsPerCall = this.itemsPerCall[groupId];
+            var localOffset = this.localOffsets[groupId];
+            E.RANGE(localOffset, 0u, itemsPerCall);
+            return this.index * itemsPerCall + localOffset;
         }
 
         [INLINE(256)]
         public void Initialize(safe_ptr<uint> inlineCount) {
             this.itemsPerCall = inlineCount;
-            this.results = _makeArray<safe_ptr<Ent>>(EntityTypes.groupsCount, WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator, false);
+            this.results = _makeArray<safe_ptr<Ent>>(EntityTypes.groupsCount, WorldsTempAllocator.allocatorTemp.Get(this.worldId).Allocator.ToAllocator);
         }
 
         [INLINE(256)]
@@ -256,11 +259,13 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public void CreateLocalCounter() {
+            if (this.itemsPerCall.ptr == null) return;
             this.localOffsets = _makeArray<uint>(EntityTypes.groupsCount, Constants.ALLOCATOR_TEMP);
         }
         
         [INLINE(256)]
         public void ResetLocalCounter() {
+            if (this.itemsPerCall.ptr == null) return;
             _memclear(this.localOffsets, EntityTypes.groupsCount * sizeof(uint));
         }
 

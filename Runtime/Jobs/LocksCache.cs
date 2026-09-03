@@ -49,6 +49,19 @@ namespace ME.BECS {
         public const uint ENT_GROUPS = 2u;
 
         [INLINE(256)]
+        private static void EnsureLayout() {
+            ref var cache = ref ReadWriteSpinnerShared.cache.Data;
+            var componentsCount = StaticTypes.counter + 1u;
+            var entityGroupsCount = EntityTypes.groupsCount;
+            if (cache.categoryLengths.Length >= MAX_ID &&
+                cache.categoryLengths.Get(COMPONENTS) == componentsCount &&
+                cache.categoryLengths.Get(ENT_GROUPS) == entityGroupsCount) return;
+
+            Initialize(COMPONENTS, componentsCount);
+            Initialize(ENT_GROUPS, entityGroupsCount);
+        }
+
+        [INLINE(256)]
         public static void Initialize(uint groupId, uint maxIndex) {
             ref var cache = ref ReadWriteSpinnerShared.cache.Data;
             if (cache.categoryLengths.Length < MAX_ID) {
@@ -66,6 +79,7 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public static void AddWorld(ushort worldId) {
+            EnsureLayout();
             ref var cache = ref ReadWriteSpinnerShared.cache.Data;
             if (worldId >= cache.worlds.Length) cache.worlds.Resize((uint)worldId + 1u);
 

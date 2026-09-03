@@ -584,6 +584,46 @@ namespace ME.BECS.Tests {
 
         }
 
+        #if ENABLE_BECS_FLAT_QUERIES
+        [Test]
+        public void FlatQueryEntityComponents() {
+
+            using var world = World.Create();
+            var ent = Ent.New();
+            ent.Set(new Test2Component());
+            ent.Set(new TestComponent());
+            ent.Set(new Test1Component());
+            ent.Set(new TestComponent());
+
+            Assert.AreEqual(3u, world.state.ptr->entities.GetEntityComponentsCount(world.state, ent.id));
+
+            ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, ent.id);
+            componentsLock.Lock();
+            var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, ent.id);
+            var previousTypeId = 0u;
+            var count = 0u;
+            while (e.MoveNext() == true) {
+                if (count > 0u) Assert.Greater(e.Current, previousTypeId);
+                previousTypeId = e.Current;
+                ++count;
+            }
+            componentsLock.Unlock();
+            Assert.AreEqual(3u, count);
+
+            ent.Remove<Test1Component>();
+            Assert.AreEqual(2u, world.state.ptr->entities.GetEntityComponentsCount(world.state, ent.id));
+
+            var entityId = ent.id;
+            ent.Destroy();
+            Batches.Apply(world);
+
+            var reusedEnt = Ent.New();
+            Assert.AreEqual(entityId, reusedEnt.id);
+            Assert.AreEqual(0u, world.state.ptr->entities.GetEntityComponentsCount(world.state, reusedEnt.id));
+
+        }
+        #endif
+
         [Unity.Burst.BurstCompileAttribute]
         public struct TestJobSetParallel : IJobParallelFor {
         

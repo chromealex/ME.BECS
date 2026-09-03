@@ -560,8 +560,8 @@ namespace ME.BECS.Editor.Jobs {
         
         public static NewEntInfo GetJobEntInfo(System.Type jobType, CustomCodeGenerator codeGenerator) {
 
-            var allTypes = EntityTypeCodeGenerator.GetAllTypes(out var maxId).Where(x => codeGenerator.IsValidTypeForAssembly(x.Item1, true)).ToDictionary(x => x.Item1, x => x.Item2);
-            var groupsCount = maxId + 1u;
+            var allTypesArray = EntityTypeCodeGenerator.GetAllTypes(codeGenerator, out var groupsCount);
+            var allTypes = allTypesArray.ToDictionary(x => x.Item1, x => x.Item2);
             var result = new NewEntInfo();
             var anyCount = 0;
             result.count = new int[groupsCount];

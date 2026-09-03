@@ -177,6 +177,7 @@ namespace ME.BECS {
             state.ptr->components.lockSharedIndex.Lock();
             // get shared storage for component by hash
             if (state.ptr->components.sharedData.TryGetValue(in state.ptr->allocator, hash, out var ptr) == false) {
+                state.ptr->components.lockSharedIndex.Unlock();
                 return false;
             }
             

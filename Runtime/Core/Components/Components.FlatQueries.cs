@@ -12,17 +12,17 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void CleanUpEntity(safe_ptr<State> state, in Ent ent) {
 
-            ref var components = ref state.ptr->entities.entityToComponents[in state.ptr->allocator, ent.id];
-            components.lockSpinner.Lock();
-            var e = components.entities.GetEnumerator(state);
+            ref var spinner = ref state.ptr->entities.GetEntityComponentsLock(state, ent.id);
+            spinner.Lock();
+            var e = state.ptr->entities.GetEntityComponentsEnumerator(state, ent.id);
             while (e.MoveNext() == true) {
                 var typeId = e.Current;
                 var ptr = state.ptr->components.items.GetUnsafePtr(state, typeId);
                 var storage = ptr.ptr->AsPtr<DataDenseSet>(in state.ptr->allocator);
                 storage.ptr->CleanUpEntity(state, ent.id, typeId);
             }
-            components.entities.Dispose(ref state.ptr->allocator);
-            components.lockSpinner.Unlock();
+            Cuts._memclear(state.ptr->entities.GetEntityComponentsWords(state, ent.id), state.ptr->entities.entityToComponentsWords * sizeof(ulong));
+            spinner.Unlock();
 
         }
         #endif

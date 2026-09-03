@@ -13,9 +13,9 @@ namespace ME.BECS {
         public static void CopyFrom(safe_ptr<State> sourceState, in Ent ent, safe_ptr<State> targetState, in Ent targetEnt) {
 
             #if ENABLE_BECS_FLAT_QUERIES
-            ref var list = ref sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
-            list.lockSpinner.Lock();
-            var e = list.entities.GetEnumerator(sourceState);
+            ref var listLock = ref sourceState.ptr->entities.GetEntityComponentsLock(sourceState, ent.id);
+            listLock.Lock();
+            var e = sourceState.ptr->entities.GetEntityComponentsEnumerator(sourceState, ent.id);
             #else
             var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
             var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
@@ -26,7 +26,7 @@ namespace ME.BECS {
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
             }
             #if ENABLE_BECS_FLAT_QUERIES
-            list.lockSpinner.Unlock();
+            listLock.Unlock();
             #endif
             
         }
@@ -36,9 +36,9 @@ namespace ME.BECS {
 
             var ignore0 = StaticTypes<TIgnore0>.typeId;
             #if ENABLE_BECS_FLAT_QUERIES
-            ref var list = ref sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
-            list.lockSpinner.Lock();
-            var e = list.entities.GetEnumerator(sourceState);
+            ref var listLock = ref sourceState.ptr->entities.GetEntityComponentsLock(sourceState, ent.id);
+            listLock.Lock();
+            var e = sourceState.ptr->entities.GetEntityComponentsEnumerator(sourceState, ent.id);
             #else
             var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
             var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
@@ -50,7 +50,7 @@ namespace ME.BECS {
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
             }
             #if ENABLE_BECS_FLAT_QUERIES
-            list.lockSpinner.Unlock();
+            listLock.Unlock();
             #endif
             
         }
@@ -61,9 +61,9 @@ namespace ME.BECS {
             var ignore0 = StaticTypes<TIgnore0>.typeId;
             var ignore1 = StaticTypes<TIgnore1>.typeId;
             #if ENABLE_BECS_FLAT_QUERIES
-            ref var list = ref sourceState.ptr->entities.entityToComponents[sourceState, ent.id];
-            list.lockSpinner.Lock();
-            var e = list.entities.GetEnumerator(sourceState);
+            ref var listLock = ref sourceState.ptr->entities.GetEntityComponentsLock(sourceState, ent.id);
+            listLock.Lock();
+            var e = sourceState.ptr->entities.GetEntityComponentsEnumerator(sourceState, ent.id);
             #else
             var srcArchId = sourceState.ptr->archetypes.entToArchetypeIdx[sourceState, ent.id];
             var srcArch = sourceState.ptr->archetypes.list[sourceState, srcArchId];
@@ -75,7 +75,7 @@ namespace ME.BECS {
                 CopyFrom_INTERNAL(sourceState, in ent, targetState, in targetEnt, typeId);
             }
             #if ENABLE_BECS_FLAT_QUERIES
-            list.lockSpinner.Unlock();
+            listLock.Unlock();
             #endif
             
         }

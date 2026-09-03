@@ -76,6 +76,9 @@ namespace ME.BECS {
             var sizeInBytes = (uint)Bitwise.AlignUp((int)length, 64) / 8u;
             allocator.MemMove(arr.ptr, 0, fromArr.ptr, 0, sizeInBytes);
             Copy(ref allocator, fromArr.locks, ref arr.locks);
+            if (arr.locks.IsCreated == true) {
+                arr.locks.Resize(ref allocator, Bitwise.GetLength(arr.Length), 1);
+            }
 
         }
 

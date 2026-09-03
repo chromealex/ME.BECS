@@ -531,19 +531,19 @@ namespace ME.BECS.Editor {
             var cnt = 0;
             {
                 #if ENABLE_BECS_FLAT_QUERIES
-                ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
-                item.lockSpinner.Lock();
-                var components = item.entities;
+                ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, this.entity.id);
+                componentsLock.Lock();
+                var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, this.entity.id);
                 #else
                 var components = arch.components;
-                #endif
                 var e = components.GetEnumerator(world);
+                #endif
                 while (e.MoveNext() == true) {
                     var cId = e.Current;
                     if (StaticTypesLoadedManaged.loadedTypes.ContainsKey(cId) == true) ++cnt;
                 }
                 #if ENABLE_BECS_FLAT_QUERIES
-                item.lockSpinner.Unlock();
+                componentsLock.Unlock();
                 #endif
             }
 
@@ -555,13 +555,13 @@ namespace ME.BECS.Editor {
                 {
                     var i = 0;
                     #if ENABLE_BECS_FLAT_QUERIES
-                    ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
-                    item.lockSpinner.Lock();
-                    var components = item.entities;
+                    ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, this.entity.id);
+                    componentsLock.Lock();
+                    var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, this.entity.id);
                     #else
                     var components = arch.components;
-                    #endif
                     var e = components.GetEnumerator(world);
+                    #endif
                     while (e.MoveNext() == true) {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
@@ -573,7 +573,7 @@ namespace ME.BECS.Editor {
                         }
                     }
                     #if ENABLE_BECS_FLAT_QUERIES
-                    item.lockSpinner.Unlock();
+                    componentsLock.Unlock();
                     #endif
                 }
             } else {
@@ -583,13 +583,13 @@ namespace ME.BECS.Editor {
                 {
                     var i = 0;
                     #if ENABLE_BECS_FLAT_QUERIES
-                    ref var item = ref world.state.ptr->entities.entityToComponents[world.state, this.entity.id];
-                    item.lockSpinner.Lock();
-                    var components = item.entities;
+                    ref var componentsLock = ref world.state.ptr->entities.GetEntityComponentsLock(world.state, this.entity.id);
+                    componentsLock.Lock();
+                    var e = world.state.ptr->entities.GetEntityComponentsEnumerator(world.state, this.entity.id);
                     #else
                     var components = arch.components;
-                    #endif
                     var e = components.GetEnumerator(world);
+                    #endif
                     while (e.MoveNext() == true) {
                         var cId = e.Current;
                         if (StaticTypesLoadedManaged.loadedTypes.TryGetValue(cId, out var type) == true) {
@@ -601,7 +601,7 @@ namespace ME.BECS.Editor {
                         }
                     }
                     #if ENABLE_BECS_FLAT_QUERIES
-                    item.lockSpinner.Unlock();
+                    componentsLock.Unlock();
                     #endif
                 }
             }

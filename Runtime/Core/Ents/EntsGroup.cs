@@ -315,6 +315,9 @@ namespace ME.BECS {
             size += this.groupByEntityType.GetReservedSizeInBytes();
             size += this.destroyed.GetReservedSizeInBytes();
             size += this.aliveBits.GetReservedSizeInBytes();
+            #if ENABLE_BECS_FLAT_QUERIES
+            size += this.GetEntityComponentsReservedSizeInBytes();
+            #endif
             
             return size;
         }
@@ -350,6 +353,9 @@ namespace ME.BECS {
             this.locksPerEntity.BurstMode(in allocator, mode);
             this.destroyed.BurstMode(in allocator, mode);
             this.aliveBits.BurstMode(in allocator, mode);
+            #if ENABLE_BECS_FLAT_QUERIES
+            this.BurstModeEntityComponents(in allocator, mode);
+            #endif
         }
 
         [NotThreadSafe]
@@ -500,7 +506,7 @@ namespace ME.BECS {
                 entities.locksPerEntity.Resize(ref state.ptr->allocator, len, 2);
                 entities.seeds.Resize(ref state.ptr->allocator, len, 2);
                 #if ENABLE_BECS_FLAT_QUERIES
-                entities.entityToComponents.Resize(ref state.ptr->allocator, len, 2);
+                entities.ResizeEntityComponents(state, len);
                 #endif
             }
         }
@@ -545,9 +551,7 @@ namespace ME.BECS {
                     state.ptr->entities.generations[in state.ptr->allocator, entId] = gen;
                     state.ptr->entities.versions[in state.ptr->allocator, entId] = version;
                     #if ENABLE_BECS_FLAT_QUERIES
-                    using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
-                        state.ptr->entities.entityToComponents[in state.ptr->allocator, entId] = new LockedEntityToComponent(ref state.ptr->allocator, LockedEntityToComponent.DEFAULT_CAPACITY);
-                    }
+                    state.ptr->entities.ClearEntityComponents(state, entId);
                     #endif
                 }
                 state.ptr->entities.resizeLock.WriteEnd();
@@ -564,9 +568,7 @@ namespace ME.BECS {
                     state.ptr->entities.entityToGroup[state, entId] = groupId;
                     state.ptr->entities.entityToGroupLocal[state, entId] = localGroupIndex;
                     #if ENABLE_BECS_FLAT_QUERIES
-                    using (new AllocatorTag(ALLOC_TAGS.ENTITIES)) {
-                        state.ptr->entities.entityToComponents[in state.ptr->allocator, entId].Clear(state, LockedEntityToComponent.DEFAULT_CAPACITY);
-                    }
+                    state.ptr->entities.ClearEntityComponents(state, entId);
                     #endif
                 }
                 state.ptr->entities.resizeLock.ReadEnd(state);

@@ -6,56 +6,48 @@ namespace ME.BECS.Editor {
     [CodeGeneratorOrder(-100)]
     public class EntityTypeCodeGenerator : CustomCodeGenerator {
 
-        public static (System.Type, uint)[] GetAllTypes(out uint maxId) {
+        public static (System.Type, uint)[] GetAllTypes(CustomCodeGenerator codeGenerator, out uint count) {
 
             var content = new System.Collections.Generic.List<(System.Type, uint)>();
             var id = 0u;
-            var aspects = EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
-            foreach (var aspect in aspects) {
+            foreach (var type in codeGenerator.entityTypes) {
 
-                if (aspect.IsValueType == false) continue;
-                if (aspect.IsVisible == false) continue;
+                if (type.IsValueType == false) continue;
+                if (type.IsVisible == false) continue;
+                if (codeGenerator.IsValidTypeForAssembly(type, true) == false) continue;
 
-                content.Add((aspect, id));
+                content.Add((type, id));
                 ++id;
 
             }
 
-            maxId = id;
+            count = id;
             return content.ToArray();
 
         }
         
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
-            var id = 0u;
             var content = new System.Collections.Generic.List<string>();
-            var types = this.entityTypes;//EditorUtils.GetTypesDerivedFrom(typeof(IEntityType));
+            var types = GetAllTypes(this, out var count);
             
             {
                 var data = $"EntityTypes.Init();";
                 content.Add(data);
             }
             
-            foreach (var type in types) {
-
-                if (type.IsValueType == false) continue;
-                if (type.IsVisible == false) continue;
-
-                if (this.IsValidTypeForAssembly(type, true) == false) continue;
-                
+            foreach (var item in types) {
                 var contentItem = new System.Collections.Generic.List<string>();
-                var strType = EditorUtils.GetTypeName(type);
+                var strType = EditorUtils.GetTypeName(item.Item1);
 
-                contentItem.Add($"EntityTypes.Register<{strType}>({id});");
-                ++id;
+                contentItem.Add($"EntityTypes.Register<{strType}>({item.Item2});");
                 
                 content.AddRange(contentItem);
 
             }
 
             {
-                var data = $"EntityTypes.groupsCount = {id}u;";
+                var data = $"EntityTypes.groupsCount = {count}u;";
                 content.Add(data);
             }
 

@@ -120,7 +120,7 @@ namespace ME.BECS {
                     ref var entitySpinner = ref state.ptr->autoDestroyRegistry.readWriteSpinnerPerEntity[in state.ptr->allocator, ent.id];
                     entitySpinner.Lock();
                     if (list.IsCreated == true) {
-                        list.Remove(ref state.ptr->allocator, ent.id);
+                        list.Remove(ref state.ptr->allocator, typeId);
                     }
                     entitySpinner.Unlock();
                 }

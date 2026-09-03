@@ -904,6 +904,61 @@ namespace ME.BECS {
         [BURST]
         public struct SetEntitiesJob : IJob {
 
+            #if ENABLE_BECS_FLAT_QUERIES
+            private struct BitWords {
+
+                public safe_ptr<ulong> ptr;
+                public uint length;
+
+            }
+
+            [INLINE(256)]
+            private readonly BitWords GetComponentBitWords(uint typeId) {
+                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
+                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
+                var bits = storage.ptr->GetBits();
+                return new BitWords() {
+                    ptr = (safe_ptr<ulong>)this.state.ptr->allocator.GetUnsafePtr(in bits.ptr),
+                    length = Bitwise.GetLength(bits.Length),
+                };
+            }
+
+            [INLINE(256)]
+            private static ulong ComposeWord(uint index,
+                                             in BitWords alive,
+                                             safe_ptr<BitWords> with,
+                                             uint withCount,
+                                             safe_ptr<BitWords> withAny,
+                                             uint withAnyCount,
+                                             bool hasWithAny,
+                                             safe_ptr<BitWords> without,
+                                             uint withoutCount) {
+                if (index >= alive.length) return 0UL;
+                var value = alive.ptr[index];
+                for (uint i = 0u; i < withCount; ++i) {
+                    var bits = with[i];
+                    if (index >= bits.length) return 0UL;
+                    value &= bits.ptr[index];
+                    if (value == 0UL) return 0UL;
+                }
+                if (hasWithAny == true) {
+                    var any = 0UL;
+                    for (uint i = 0u; i < withAnyCount; ++i) {
+                        var bits = withAny[i];
+                        if (index < bits.length) any |= bits.ptr[index];
+                    }
+                    value &= any;
+                    if (value == 0UL) return 0UL;
+                }
+                for (uint i = 0u; i < withoutCount; ++i) {
+                    var bits = without[i];
+                    if (index < bits.length) value &= ~bits.ptr[index];
+                    if (value == 0UL) return 0UL;
+                }
+                return value;
+            }
+            #endif
+
             #if ENABLE_UNITY_COLLECTIONS_CHECKS && ENABLE_BECS_COLLECTIONS_CHECKS
             public SafetyComponentContainerRO<TNull> safety;
             #endif
@@ -919,82 +974,95 @@ namespace ME.BECS {
 
                 #if ENABLE_BECS_FLAT_QUERIES
                 var allCount = (this.state.ptr->entities.Capacity + DataDenseSet.ENTITIES_PER_PAGE_MASK) / DataDenseSet.ENTITIES_PER_PAGE * DataDenseSet.ENTITIES_PER_PAGE;
-                var tempBits = new TempBitArray(allCount, ClearOptions.ClearMemory, Constants.ALLOCATOR_TEMP);
-                tempBits.Union(in this.state.ptr->allocator, in this.state.ptr->entities.aliveBits);
-                
+                var wordCount = Bitwise.GetLength(allCount);
+                var aliveBits = this.state.ptr->entities.aliveBits;
+                var alive = new BitWords() {
+                    ptr = (safe_ptr<ulong>)this.state.ptr->allocator.GetUnsafePtr(in aliveBits.ptr),
+                    length = Bitwise.GetLength(aliveBits.Length),
+                };
+
+                var withCount = (uint)this.composeJob.query.with.Length;
+                var with = withCount > 0u ? Cuts._makeArray<BitWords>(withCount, Constants.ALLOCATOR_TEMP, false) : default;
+                for (uint i = 0u; i < withCount; ++i) {
+                    with[i] = this.GetComponentBitWords(this.composeJob.query.with[(int)i]);
+                }
+
+                var hasWithAny = this.composeJob.query.withAny.Length > 0;
+                var withAnyCapacity = (uint)this.composeJob.query.withAny.Length * 2u;
+                var withAny = withAnyCapacity > 0u ? Cuts._makeArray<BitWords>(withAnyCapacity, Constants.ALLOCATOR_TEMP, false) : default;
+                var withAnyCount = 0u;
+                for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
+                    var typeIdPair = this.composeJob.query.withAny[i];
+                    if (typeIdPair.Key > 0u) withAny[withAnyCount++] = this.GetComponentBitWords(typeIdPair.Key);
+                    if (typeIdPair.Value > 0u) withAny[withAnyCount++] = this.GetComponentBitWords(typeIdPair.Value);
+                }
+
+                var withoutCount = (uint)this.composeJob.query.without.Length;
+                var without = withoutCount > 0u ? Cuts._makeArray<BitWords>(withoutCount, Constants.ALLOCATOR_TEMP, false) : default;
+                for (uint i = 0u; i < withoutCount; ++i) {
+                    without[i] = this.GetComponentBitWords(this.composeJob.query.without[(int)i]);
+                }
+
+                var totalElementsCount = 0u;
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("Query");
                     marker.Begin();
-                    if (this.composeJob.query.with.Length > 0) {
-                        for (int i = 0; i < this.composeJob.query.with.Length; ++i) {
-                            var typeId = this.composeJob.query.with[i];
-                            var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
-                            var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
-                            var bits = storage.ptr->GetBits();
-                            tempBits.Intersect(in this.state.ptr->allocator, in bits, allCount);
-                        }
-                    }
-                    if (this.composeJob.query.withAny.Length > 0) {
-                        var temp = new TempBitArray(allCount, allocator: Constants.ALLOCATOR_TEMP);
-                        for (int i = 0; i < this.composeJob.query.withAny.Length; ++i) {
-                            var typeIdPair = this.composeJob.query.withAny[i];
-                            if (typeIdPair.Key > 0u) {
-                                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeIdPair.Key);
-                                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.ptr->GetBits();
-                                temp.Union(in this.state.ptr->allocator, in bits);
-                            }
-                            if (typeIdPair.Value > 0u) {
-                                var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeIdPair.Value);
-                                var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
-                                var bits = storage.ptr->GetBits();
-                                temp.Union(in this.state.ptr->allocator, in bits);
-                            }
-                        }
-                        tempBits.Intersect(in temp, allCount);
-                    }
-                    for (int i = 0; i < this.composeJob.query.without.Length; ++i) {
-                        var typeId = this.composeJob.query.without[i];
-                        var ptr = this.state.ptr->components.items.GetUnsafePtr(this.state, typeId);
-                        var storage = ptr.ptr->AsPtr<DataDenseSet>(in this.state.ptr->allocator);
-                        var bits = storage.ptr->GetBits();
-                        tempBits.Remove(in this.state.ptr->allocator, bits);
+                    for (uint i = 0u; i < wordCount; ++i) {
+                        var value = ComposeWord(i, in alive, with, withCount, withAny, withAnyCount, hasWithAny, without, withoutCount);
+                        if (i == wordCount - 1u && (allCount & 63u) != 0u) value &= (1UL << (int)(allCount & 63u)) - 1UL;
+                        totalElementsCount += (uint)math.countbits(value);
                     }
                     marker.End();
                 }
-                {
-                    var marker = new Unity.Profiling.ProfilerMarker("GetTrueBits");
-                    marker.Begin();
-                    var totalElementsCount = (uint)ME.BECS.Collections.BitScanner.GetTrueBitsCount(in tempBits);
-                    marker.End();
-                    if (totalElementsCount == 0u) {
-                        this.buffer.ptr->entities = null;
-                        this.buffer.ptr->count = 0u;
-                        return;
-                    }
 
-                    var fromIdx = 0u;
-                    var elementsCount = totalElementsCount;
-                    if (this.queryData.ptr->steps > 0u) {
-
-                        var currentStep = this.state.ptr->tick;
-                        var steps = this.queryData.ptr->steps;
-                        {
-                            var elementsPerStep = totalElementsCount / steps;
-                            if (elementsPerStep < this.queryData.ptr->minElementsPerStep) elementsPerStep = this.queryData.ptr->minElementsPerStep;
-                            steps = (uint)math.ceil((totalElementsCount / (tfloat)elementsPerStep));
-                            fromIdx = (uint)(currentStep % steps) * elementsPerStep;
-                            var toIdx = fromIdx + elementsPerStep;
-                            if (toIdx > totalElementsCount) toIdx = totalElementsCount;
-                            elementsCount = toIdx - fromIdx;
-                        }
-                    }
-
-                    var arrPtr = _makeArray<uint>(elementsCount, this.allocator);
-                    ME.BECS.Collections.BitScanner.WriteTrueBits(in tempBits, arrPtr.ptr, (int)fromIdx, (int)elementsCount);
-                    this.buffer.ptr->entities = arrPtr.ptr;
-                    this.buffer.ptr->count = elementsCount;
+                if (totalElementsCount == 0u) {
+                    this.buffer.ptr->entities = null;
+                    this.buffer.ptr->count = 0u;
+                    return;
                 }
+
+                var fromIdx = 0u;
+                var elementsCount = totalElementsCount;
+                if (this.queryData.ptr->steps > 0u) {
+                    var currentStep = this.state.ptr->tick;
+                    var steps = this.queryData.ptr->steps;
+                    var elementsPerStep = totalElementsCount / steps;
+                    if (elementsPerStep < this.queryData.ptr->minElementsPerStep) elementsPerStep = this.queryData.ptr->minElementsPerStep;
+                    steps = (uint)math.ceil((totalElementsCount / (tfloat)elementsPerStep));
+                    fromIdx = (uint)(currentStep % steps) * elementsPerStep;
+                    var toIdx = fromIdx + elementsPerStep;
+                    if (toIdx > totalElementsCount) toIdx = totalElementsCount;
+                    elementsCount = toIdx - fromIdx;
+                }
+
+                var arrPtr = _makeArray<uint>(elementsCount, this.allocator);
+                var sourceIndex = 0u;
+                var destinationIndex = 0u;
+                for (uint i = 0u; i < wordCount; ++i) {
+                    var value = ComposeWord(i, in alive, with, withCount, withAny, withAnyCount, hasWithAny, without, withoutCount);
+                    if (i == wordCount - 1u && (allCount & 63u) != 0u) value &= (1UL << (int)(allCount & 63u)) - 1UL;
+                    if (value == 0UL) continue;
+
+                    var bitsCount = (uint)math.countbits(value);
+                    if (sourceIndex + bitsCount <= fromIdx) {
+                        sourceIndex += bitsCount;
+                        continue;
+                    }
+
+                    var offset = i * 64u;
+                    while (value != 0UL) {
+                        var bit = math.tzcnt(value);
+                        if (sourceIndex >= fromIdx) {
+                            arrPtr[destinationIndex++] = offset + (uint)bit;
+                            if (destinationIndex == elementsCount) break;
+                        }
+                        ++sourceIndex;
+                        value &= value - 1UL;
+                    }
+                    if (destinationIndex == elementsCount) break;
+                }
+                this.buffer.ptr->entities = arrPtr.ptr;
+                this.buffer.ptr->count = elementsCount;
                 #else
                 {
                     var marker = new Unity.Profiling.ProfilerMarker("Compose");
