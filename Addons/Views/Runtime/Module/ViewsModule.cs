@@ -186,13 +186,15 @@ namespace ME.BECS {
 
         public ViewSource RegisterViewSource(EntityView entityView, uint providerId, bool sceneSource = false) {
 
-            if (providerId == GAMEOBJECT_PROVIDER_ID && this.properties.viewsGameObjects) {
+            if (providerId == GAMEOBJECT_PROVIDER_ID && this.properties.viewsGameObjects == true) {
                 return this.viewsGameObjects.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
-            } else if (providerId == DRAW_MESH_PROVIDER_ID && this.properties.viewsDrawMeshes) {
+            } else if (providerId == DRAW_MESH_PROVIDER_ID && this.properties.viewsDrawMeshes == true) {
                 return this.viewsDrawMeshes.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
-            } else if (providerId == PARTICLES_PROVIDER_ID && this.properties.viewsParticles) {
+            } else if (providerId == PARTICLES_PROVIDER_ID && this.properties.viewsParticles == true) {
                 return this.viewsParticles.RegisterViewSource(entityView, checkPrefab: false, sceneSource: sceneSource);
             }
+
+            Logger.Views.Warning($"RegisterViewSource failed for {entityView} because provider #{providerId} was not found or disabled");
             
             return default;
 

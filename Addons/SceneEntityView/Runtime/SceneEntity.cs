@@ -27,13 +27,13 @@ namespace ME.BECS {
 
         public void Start() {
             if (string.IsNullOrEmpty(this.worldName) == true) {
-                Debug.LogError("World Name is empty!");
+                Logger.Views.Error("World Name is empty!");
                 return;
             }
 
             var initializer = WorldInitializers.GetByWorldName(this.worldName);
             if (initializer == null) {
-                Debug.LogError($"WorldInitializer was not found by the world name {this.worldName}");
+                Logger.Views.Error($"WorldInitializer was not found by the world name {this.worldName}");
                 return;
             }
 
@@ -70,8 +70,7 @@ namespace ME.BECS {
 
             } else {
 
-                Debug.LogError($"WorldInitializer {this.worldName} is not created yet");
-
+                Logger.Views.Error($"WorldInitializer {this.worldName} is not created yet");
 
             }
 
