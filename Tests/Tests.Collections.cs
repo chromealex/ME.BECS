@@ -72,6 +72,24 @@ namespace ME.BECS.Tests {
         }
 
         [Test]
+        public void NativeMinHeapEntOrdersByCostThenEntity() {
+
+            var heap = new NativeCollections.NativeMinHeapEnt(1u, Constants.ALLOCATOR_TEMP);
+            heap.Push(new NativeCollections.MinHeapNodeEnt(new Ent(5ul), 2f));
+            heap.Push(new NativeCollections.MinHeapNodeEnt(new Ent(3ul), 1f));
+            heap.Push(new NativeCollections.MinHeapNodeEnt(new Ent(2ul), 1f));
+            heap.Push(new NativeCollections.MinHeapNodeEnt(new Ent(1ul), 3f));
+
+            Assert.AreEqual(2u, heap[heap.Pop()].data.id);
+            Assert.AreEqual(3u, heap[heap.Pop()].data.id);
+            Assert.AreEqual(5u, heap[heap.Pop()].data.id);
+            Assert.AreEqual(1u, heap[heap.Pop()].data.id);
+            Assert.IsFalse(heap.HasNext());
+            heap.Dispose();
+
+        }
+
+        [Test]
         [Unity.PerformanceTesting.PerformanceAttribute]
         public void Performance() {
 

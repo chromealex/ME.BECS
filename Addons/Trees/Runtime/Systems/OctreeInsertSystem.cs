@@ -438,8 +438,9 @@ namespace ME.BECS {
                 resultsTemp.Dispose();
 
                 if (ignoreSorting == false) {
-                    results.EnsureCapacity(heap.Count);
-                    for (uint i = 0u; i < heap.Count; ++i) {
+                    var count = heap.Count;
+                    results.EnsureCapacity(count);
+                    for (uint i = 0u; i < count; ++i) {
                         results.Add(heap[heap.Pop()].data);
                     }
                 }

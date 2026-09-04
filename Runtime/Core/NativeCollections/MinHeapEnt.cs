@@ -20,14 +20,13 @@ namespace ME.BECS.NativeCollections {
 
     public struct NativeMinHeapEnt : IDisposable {
 
-        public uint Count => (uint)this.mBufferLength;
+        public uint Count => (uint)this.mHeapLength;
 
         private safe_ptr<MinHeapNodeEnt> mBuffer;
         private uint mCapacity;
         private Allocator mAllocatorLabel;
 
-        private int mHead;
-        private int mBufferLength;
+        private int mHeapLength;
         //private int mMinIndex;
         //private int mMaxIndex;
 
@@ -56,67 +55,79 @@ namespace ME.BECS.NativeCollections {
             nativeMinHeap.mAllocatorLabel = allocator;
             //nativeMinHeap.mMinIndex = 0;
             //nativeMinHeap.mMaxIndex = capacity - 1;
-            nativeMinHeap.mHead = -1;
-            nativeMinHeap.mBufferLength = 0;
+            nativeMinHeap.mHeapLength = 0;
 
         }
 
         [INLINE(256)]
         public bool HasNext() {
-            return this.mHead >= 0;
+            return this.mHeapLength > 0;
         }
 
         [INLINE(256)]
         public void EnsureCapacity(uint capacity) {
 
-            var free = this.mCapacity - (uint)this.mBufferLength;
+            var free = this.mCapacity - (uint)this.mHeapLength;
             if (free < capacity) {
-                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mBufferLength);
+                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, capacity + (uint)this.mHeapLength);
             }
 
         }
 
         [INLINE(256)]
         public void Push(MinHeapNodeEnt node) {
-
-            if (this.mHead < 0) {
-                this.mHead = this.mBufferLength;
-                node.next = -1;
-            } else if (node.expectedCost < this[this.mHead].expectedCost) {
-                node.next = this.mHead;
-                this.mHead = this.mBufferLength;
-            } else {
-                var currentPtr = this.mHead;
-                var current = this[currentPtr];
-
-                while (current.next >= 0 && this[current.next].expectedCost <= node.expectedCost) {
-                    currentPtr = current.next;
-                    current = this[current.next];
-                }
-
-                node.next = current.next;
-                current.next = this.mBufferLength;
-
-                this.mBuffer[currentPtr] = current;
+            if ((uint)this.mHeapLength == this.mCapacity) {
+                _resizeArray(this.mAllocatorLabel, ref this.mBuffer, ref this.mCapacity, math.max(1u, this.mCapacity * 2u));
             }
 
-            this.mBuffer[this.mBufferLength] = node;
-            ++this.mBufferLength;
+            var index = this.mHeapLength;
+            while (index > 0) {
+                var parent = (index - 1) >> 1;
+                var parentNode = this.mBuffer[parent];
+                if (Less(in node, in parentNode) == false) break;
+                this.mBuffer[index] = parentNode;
+                index = parent;
+            }
+
+            this.mBuffer[index] = node;
+            ++this.mHeapLength;
         }
 
         [INLINE(256)]
         public int Pop() {
-            var result = this.mHead;
-            this.mHead = this[this.mHead].next;
-            return result;
+            var result = this.mBuffer[0];
+            --this.mHeapLength;
+            if (this.mHeapLength > 0) {
+                var tail = this.mBuffer[this.mHeapLength];
+                var index = 0;
+                while (true) {
+                    var left = index * 2 + 1;
+                    if (left >= this.mHeapLength) break;
+                    var right = left + 1;
+                    var child = right < this.mHeapLength && Less(in this.mBuffer[right], in this.mBuffer[left]) == true ? right : left;
+                    if (Less(in tail, in this.mBuffer[child]) == true) break;
+                    this.mBuffer[index] = this.mBuffer[child];
+                    index = child;
+                }
+                this.mBuffer[index] = tail;
+            }
+
+            this.mBuffer[this.mHeapLength] = result;
+            return this.mHeapLength;
         }
 
         public MinHeapNodeEnt this[int index] => this.mBuffer[index];
 
         [INLINE(256)]
         public void Clear() {
-            this.mHead = -1;
-            this.mBufferLength = 0;
+            this.mHeapLength = 0;
+        }
+
+        [INLINE(256)]
+        private static bool Less(in MinHeapNodeEnt a, in MinHeapNodeEnt b) {
+            if (a.expectedCost < b.expectedCost) return true;
+            if (a.expectedCost > b.expectedCost) return false;
+            return a.data.CompareTo(b.data) < 0;
         }
 
         [INLINE(256)]

@@ -175,7 +175,14 @@ namespace ME.BECS {
         [INLINE(256)]
         public int AddTree() {
 
-            this.trees.Add((safe_ptr)_make(new NativeTrees.SpatialHashing(this.capacity, this.cellSize, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator)));
+            return this.AddTree(this.capacity, this.cellSize);
+
+        }
+
+        [INLINE(256)]
+        public int AddTree(int capacity, int cellSize) {
+
+            this.trees.Add((safe_ptr)_make(new NativeTrees.SpatialHashing(capacity, cellSize, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator)));
             return this.trees.Length - 1;
 
         }
@@ -229,7 +236,7 @@ namespace ME.BECS {
             if (tr.IsCalculated == false) return;
 
             var q = query.readQuery;
-            if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick == 0) return;
+            if (q.updatePerTick > 0 && (query.ent.World.CurrentTick + query.ent.id) % q.updatePerTick != 0) return;
 
             QueryResults.Create(ref query.results.results, query.ent, q.nearestCount > 0u ? q.nearestCount : 1u, q.updatePerTick == 0);
 
@@ -238,7 +245,7 @@ namespace ME.BECS {
                 int i = math.tzcnt(mask);
                 mask &= mask - 1;
                 ref var tree = ref *this.GetTree(i).ptr;
-                var list = tree.tempObjects.ToList(Constants.ALLOCATOR_TEMP);
+                var list = tree.GetObjects();
                 foreach (var item in list) {
                     query.results.results.Add(item.obj);
                 }
@@ -314,7 +321,7 @@ namespace ME.BECS {
                             break;
                         }
 
-                        var distSq = math.distancesq(worldPos, visitor.nearest.GetAspect<TransformAspect>().GetWorldMatrixPosition());
+                        var distSq = visitor.nearestDistanceSqr;
                         heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, distSq));
                         rangeSqr = math.min(rangeSqr, distSq);
                     }
@@ -377,12 +384,13 @@ namespace ME.BECS {
                 var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
                 var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
                 var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
-                var resultsTemp = new UnsafeHashSet<Ent>(nearestCount, Constants.ALLOCATOR_TEMP);
+                var resultsTemp = new UnsafeList<SpatialQueryCandidate<Ent>>(nearestCount, Constants.ALLOCATOR_TEMP);
                 var visitor = new SpatialKNearestAABBVisitor<Ent, T>() {
                     subFilter = subFilter,
                     sector = sector,
                     results = resultsTemp,
                     max = nearestCount,
+                    stopWhenFull = ignoreSorting,
                     ignoreSelf = ignoreSelf,
                     ignore = selfEnt,
                 };
@@ -396,13 +404,13 @@ namespace ME.BECS {
                         if (ignoreSorting == true) {
                             markerResultsUnsorted.Begin();
                             foreach (var item in visitor.results) {
-                                results.Add(item);
+                                results.Add(item.obj);
                             }
                             markerResultsUnsorted.End();
                         } else {
                             markerResultsSorted.Begin();
                             foreach (var item in visitor.results) {
-                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.distancesq(worldPos, item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item.obj, item.distanceSqr));
                             }
                             markerResultsSorted.End();
                         }
@@ -427,7 +435,7 @@ namespace ME.BECS {
                 var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
                 // select all units
                 var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
-                var resultsTemp = new UnsafeHashSet<Ent>((int)this.treesCount, Constants.ALLOCATOR_TEMP);
+                var resultsTemp = new UnsafeList<SpatialQueryCandidate<Ent>>((int)this.treesCount, Constants.ALLOCATOR_TEMP);
                 var visitor = new RangeAABB2DSpatialUniqueVisitor<Ent, T>() {
                     subFilter = subFilter,
                     sector = sector,
@@ -448,16 +456,16 @@ namespace ME.BECS {
                         tree->Range(bounds, ref visitor);
                         if (ignoreSorting == true) {
                             markerResultsUnsorted.Begin();
-                            results.EnsureCapacity(results.Count + (uint)visitor.results.Count);
+                            results.EnsureCapacity(results.Count + (uint)visitor.results.Length);
                             foreach (var item in visitor.results) {
-                                results.Add(item);
+                                results.Add(item.obj);
                             }
                             markerResultsUnsorted.End();
                         } else {
                             markerResultsSorted.Begin();
-                            heap.EnsureCapacity((uint)visitor.results.Count);
+                            heap.EnsureCapacity((uint)visitor.results.Length);
                             foreach (var item in visitor.results) {
-                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item, math.distancesq(worldPos, item.GetAspect<TransformAspect>().GetWorldMatrixPosition())));
+                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item.obj, item.distanceSqr));
                             }
                             markerResultsSorted.End();
                         }
@@ -466,8 +474,9 @@ namespace ME.BECS {
                 }
 
                 if (ignoreSorting == false) {
-                    results.EnsureCapacity(heap.Count);
-                    for (uint i = 0u; i < heap.Count; ++i) {
+                    var count = heap.Count;
+                    results.EnsureCapacity(count);
+                    for (uint i = 0u; i < count; ++i) {
                         results.Add(heap[heap.Pop()].data);
                     }
                 }

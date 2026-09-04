@@ -624,7 +624,7 @@ namespace ME.BECS.Views {
                 this.prefabIdToPool.Add(new PrefabKey() { prefabId = instanceInfo.prefabInfo.ptr->prefabId, uniqueId = customViewId }.key, stack);
                 
             }
-            
+
             this.renderingOnSceneTransforms.RemoveAtSwapBack((int)instanceInfo.index);
             
         }

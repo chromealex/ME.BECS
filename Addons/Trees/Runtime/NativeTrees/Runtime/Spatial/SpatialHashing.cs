@@ -47,7 +47,7 @@ namespace NativeTrees {
     public interface ISpatialNearestVisitor<T> {
 
         [INLINE(256)]
-        bool OnVisit(in T obj, in AABB2D bounds);
+        bool OnVisit(in T obj, in AABB2D bounds, tfloat distanceSqr);
         uint Capacity { get; }
 
     }
@@ -71,17 +71,26 @@ namespace NativeTrees {
         public tfloat DistanceSquared(in float2 point, in T obj, in NativeTrees.AABB2D bounds) => bounds.DistanceSquared(point);
     }
     
-    public struct SpatialHashing {
+    public unsafe struct SpatialHashing {
 
         public readonly struct ObjWrapper : System.IComparable<ObjWrapper>, System.IEquatable<ObjWrapper> {
 
             public readonly NativeTrees.AABB2D bounds;
             public readonly ME.BECS.Ent obj;
+            public readonly int2 minCell;
 
             [INLINE(256)]
             public ObjWrapper(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
                 this.obj = obj;
                 this.bounds = bounds;
+                this.minCell = default;
+            }
+
+            [INLINE(256)]
+            public ObjWrapper(ME.BECS.Ent obj, NativeTrees.AABB2D bounds, int2 minCell) {
+                this.obj = obj;
+                this.bounds = bounds;
+                this.minCell = minCell;
             }
 
             [INLINE(256)]
@@ -106,26 +115,35 @@ namespace NativeTrees {
 
         }
         
-        public NativeParallelMultiHashMap<int, ObjWrapper> data;
+        public NativeParallelMultiHashMap<long, ObjWrapper> data;
         private Allocator allocator;
         private int cellSize;
         private tfloat invCellSize;
         public NativeParallelList<ObjWrapper> tempObjects;
+        private UnsafeList<ObjWrapper> objects;
 
         public SpatialHashing(int capacity, int cellSize, Allocator allocator) {
             this.allocator = allocator;
             this.cellSize = cellSize;
             this.invCellSize = 1f / cellSize;
-            this.data = new NativeParallelMultiHashMap<int, ObjWrapper>(capacity, allocator);
+            this.data = new NativeParallelMultiHashMap<long, ObjWrapper>(capacity, allocator);
             this.tempObjects = new NativeParallelList<ObjWrapper>(capacity, allocator);
+            this.objects = new UnsafeList<ObjWrapper>(capacity, allocator);
         }
 
         public void Dispose() {
             this.data.Dispose();
+            this.tempObjects.Dispose();
+            this.objects.Dispose();
         }
 
         [INLINE(256)]
-        public int GetHash(float2 pos) {
+        public readonly UnsafeList<ObjWrapper> GetObjects() {
+            return this.objects;
+        }
+
+        [INLINE(256)]
+        public long GetHash(float2 pos) {
             var cx = (int)math.floor(pos.x * this.invCellSize);
             var cy = (int)math.floor(pos.y * this.invCellSize);
             var hash = GetHash(cx, cy);
@@ -133,14 +151,15 @@ namespace NativeTrees {
         }
 
         [INLINE(256)]
-        public static int GetHash(int cx, int cy) {
-            return cx * 73856093 ^ cy * 19349663;
+        public static long GetHash(int cx, int cy) {
+            return ((long)cx << 32) | (uint)cy;
         }
 
         [INLINE(256)]
         public void Clear() {
             this.tempObjects.Clear();
             this.data.Clear();
+            this.objects.Clear();
         }
         
         [INLINE(256)]
@@ -149,10 +168,11 @@ namespace NativeTrees {
             var minY = (int)math.floor(bounds.min.y * this.invCellSize);
             var maxX = (int)math.floor(bounds.max.x * this.invCellSize);
             var maxY = (int)math.floor(bounds.max.y * this.invCellSize);
+            var item = new ObjWrapper(obj, bounds, new int2(minX, minY));
             for (int x = minX; x <= maxX; ++x) {
                 for (int y = minY; y <= maxY; ++y) {
                     var hash = GetHash(x, y);
-                    this.data.Add(hash, new ObjWrapper(obj, bounds));
+                    this.data.Add(hash, item);
                 }
             }
         }
@@ -168,31 +188,54 @@ namespace NativeTrees {
             var temp = this.tempObjects.ToList(Allocator.Temp);
             // [!] Must be sorted because we add elements in threads 
             temp.Sort();
+            this.objects.Clear();
+            this.objects.AddRange(temp.Ptr, temp.Length);
             var marker = new Unity.Profiling.ProfilerMarker("Insert");
+            marker.Begin();
             foreach (var obj in temp) {
-                marker.Begin();
                 this.Insert(obj.obj, obj.bounds);
-                marker.End();
             }
+            marker.End();
                 
         }
         
         [INLINE(256)]
         public void NearestFirst<U, V>(float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V provider, bool ignoreSorting) where U : struct, ISpatialNearestVisitor<ME.BECS.Ent> where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
-            if (this.tempObjects.Count == 0) return;
-            var rangeInt = (int)math.ceil(math.sqrt(maxDistanceSqr) * this.invCellSize);
+            if (this.objects.Length == 0) return;
+            var range = math.sqrt(maxDistanceSqr);
+            var min = this.GetCell(pos - range);
+            var max = this.GetCell(pos + range);
             var dist = tfloat.MaxValue;
-            for (int x = -rangeInt; x <= rangeInt; ++x) {
-                for (int y = -rangeInt; y <= rangeInt; ++y) {
-                    var p = new float2(pos.x + x * this.cellSize, pos.y + y * this.cellSize);
-                    var hash = this.GetHash(p);
+            var nearest = default(ME.BECS.Ent);
+            var hasNearest = false;
+            if (this.ShouldUseLinear(in min, in max) == true) {
+                for (int i = 0; i < this.objects.Length; ++i) {
+                    var item = this.objects[i];
+                    var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
+                    if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && (d < dist || (d == dist && hasNearest == true && item.obj.CompareTo(nearest) < 0))) {
+                        if (visitor.OnVisit(in item.obj, in item.bounds, d) == false) {
+                            dist = d;
+                            nearest = item.obj;
+                            hasNearest = true;
+                            if (ignoreSorting == true) return;
+                        }
+                    }
+                }
+                return;
+            }
+            for (int x = min.x; x <= max.x; ++x) {
+                for (int y = min.y; y <= max.y; ++y) {
+                    var hash = GetHash(x, y);
                     var e = this.data.GetValuesForKey(hash);
                     while (e.MoveNext() == true) {
                         var item = e.Current;
+                        if (IsCanonicalCell(in item, in min, x, y) == false) continue;
                         var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
-                        if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && d < dist) {
-                            if (visitor.OnVisit(in item.obj, in item.bounds) == false) {
+                        if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && (d < dist || (d == dist && hasNearest == true && item.obj.CompareTo(nearest) < 0))) {
+                            if (visitor.OnVisit(in item.obj, in item.bounds, d) == false) {
                                 dist = d;
+                                nearest = item.obj;
+                                hasNearest = true;
                                 if (ignoreSorting == true) return;
                             }
                         }
@@ -203,18 +246,28 @@ namespace NativeTrees {
 
         [INLINE(256)]
         public void Nearest<U, V>(float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref U visitor, ref V provider) where U : struct, ISpatialNearestVisitor<ME.BECS.Ent> where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
-            if (this.tempObjects.Count == 0) return;
-            var rangeInt = (int)math.ceil(math.sqrt(maxDistanceSqr) * this.invCellSize);
-            for (int x = -rangeInt; x <= rangeInt; ++x) {
-                for (int y = -rangeInt; y <= rangeInt; ++y) {
-                    var p = new float2(pos.x + x * this.cellSize, pos.y + y * this.cellSize);
-                    var hash = this.GetHash(p);
+            if (this.objects.Length == 0) return;
+            var range = math.sqrt(maxDistanceSqr);
+            var min = this.GetCell(pos - range);
+            var max = this.GetCell(pos + range);
+            if (this.ShouldUseLinear(in min, in max) == true) {
+                for (int i = 0; i < this.objects.Length; ++i) {
+                    var item = this.objects[i];
+                    var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
+                    if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && visitor.OnVisit(in item.obj, in item.bounds, d) == false) return;
+                }
+                return;
+            }
+            for (int x = min.x; x <= max.x; ++x) {
+                for (int y = min.y; y <= max.y; ++y) {
+                    var hash = GetHash(x, y);
                     var e = this.data.GetValuesForKey(hash);
                     while (e.MoveNext() == true) {
                         var item = e.Current;
+                        if (IsCanonicalCell(in item, in min, x, y) == false) continue;
                         var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
                         if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr) {
-                            if (visitor.OnVisit(in item.obj, in item.bounds) == false) {
+                            if (visitor.OnVisit(in item.obj, in item.bounds, d) == false) {
                                 return;
                             }
                         }
@@ -225,16 +278,23 @@ namespace NativeTrees {
 
         [INLINE(256)]
         public void Range<U>(AABB2D range, ref U visitor) where U : struct, ISpatialRangeVisitor<ME.BECS.Ent> {
-            if (this.tempObjects.Count == 0) return;
-            var rangeIntX = (int)math.ceil(range.Size.x * 0.5f * this.invCellSize);
-            var rangeIntY = (int)math.ceil(range.Size.y * 0.5f * this.invCellSize);
-            for (int x = -rangeIntX; x <= rangeIntX; ++x) {
-                for (int y = -rangeIntY; y <= rangeIntY; ++y) {
-                    var p = new float2(range.Center.x + x * this.cellSize, range.Center.y + y * this.cellSize);
-                    var hash = this.GetHash(p);
+            if (this.objects.Length == 0) return;
+            var min = this.GetCell(range.min);
+            var max = this.GetCell(range.max);
+            if (this.ShouldUseLinear(in min, in max) == true) {
+                for (int i = 0; i < this.objects.Length; ++i) {
+                    var item = this.objects[i];
+                    if (visitor.OnVisit(in item.obj, in item.bounds, range) == false) return;
+                }
+                return;
+            }
+            for (int x = min.x; x <= max.x; ++x) {
+                for (int y = min.y; y <= max.y; ++y) {
+                    var hash = GetHash(x, y);
                     var e = this.data.GetValuesForKey(hash);
                     while (e.MoveNext() == true) {
                         var item = e.Current;
+                        if (IsCanonicalCell(in item, in min, x, y) == false) continue;
                         if (visitor.OnVisit(in item.obj, in item.bounds, range) == false) {
                             e.Dispose();
                             return;
@@ -246,13 +306,30 @@ namespace NativeTrees {
 
         [INLINE(256)]
         public int2 GetCoord(float2 position) {
-            return new int2((int)math.round(position.x * this.invCellSize), (int)math.round(position.y * this.invCellSize));
+            return this.GetCell(position);
+        }
+
+        [INLINE(256)]
+        private int2 GetCell(float2 position) {
+            return (int2)math.floor(position * this.invCellSize);
+        }
+
+        [INLINE(256)]
+        private bool ShouldUseLinear(in int2 min, in int2 max) {
+            var width = (long)max.x - min.x + 1L;
+            var height = (long)max.y - min.y + 1L;
+            return width * height >= this.objects.Length;
+        }
+
+        [INLINE(256)]
+        private static bool IsCanonicalCell(in ObjWrapper item, in int2 queryMin, int cellX, int cellY) {
+            return cellX == math.max(item.minCell.x, queryMin.x) && cellY == math.max(item.minCell.y, queryMin.y);
         }
 
         [INLINE(256)]
         public bool RaycastAABB(Ray2D ray, out SpatialRaycastHit raycastHit, tfloat distance) {
             raycastHit = default;
-            if (this.tempObjects.Count == 0) return false;
+            if (this.objects.Length == 0) return false;
 
             var precomputedRay2D = new PrecomputedRay2D(ray);
             var position = (float2)ray.origin;
@@ -325,7 +402,7 @@ namespace NativeTrees {
         private static readonly UnityEngine.Vector3[] gizmosPoints = new UnityEngine.Vector3[4];
         public void DrawGizmos() {
 
-            var rendered = new UnsafeHashSet<int>(this.data.Count(), Allocator.Temp);
+            var rendered = new UnsafeHashSet<long>(this.data.Count(), Allocator.Temp);
             foreach (var kv in this.data) {
                 var item = kv.Value;
                 var bounds = item.bounds;

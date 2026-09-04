@@ -30,15 +30,17 @@ namespace ME.BECS {
 
         public T ignoreSelf;
         public T nearest;
+        public tfloat nearestDistanceSqr;
         public bool found;
         public uint Capacity => 1u;
         
         [INLINE(256)]
-        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds, tfloat distanceSqr) {
 
             if (this.ignoreSelf.Equals(obj) == true) return true;
             this.found = true;
             this.nearest = obj;
+            this.nearestDistanceSqr = distanceSqr;
         
             return false; // immediately stop iterating at first hit
             // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
@@ -58,11 +60,19 @@ namespace ME.BECS {
         public bool IsValid(in Ent ent, in NativeTrees.AABB2D bounds) => ent.IsAlive();
 
     }
+
+    public struct SpatialQueryCandidate<T> where T : unmanaged {
+
+        public T obj;
+        public tfloat distanceSqr;
+
+    }
     
     public struct SpatialNearestAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
 
         public TSubFilter subFilter;
         public T nearest;
+        public tfloat nearestDistanceSqr;
         public bool found;
         public MathSector sector;
         public bool ignoreSelf;
@@ -70,7 +80,7 @@ namespace ME.BECS {
         public uint Capacity => 1u;
 
         [INLINE(256)]
-        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds, tfloat distanceSqr) {
 
             if (this.ignoreSelf == true) {
                 if (this.ignore.Equals(obj) == true) return true;
@@ -86,6 +96,7 @@ namespace ME.BECS {
 
             this.found = true;
             this.nearest = obj;
+            this.nearestDistanceSqr = distanceSqr;
 
             return false; // false to immediately stop iterating at first hit
             // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
@@ -95,24 +106,24 @@ namespace ME.BECS {
         public void Reset() {
             this.found = false;
             this.nearest = default;
+            this.nearestDistanceSqr = default;
         }
 
     }
 
-    public struct SpatialKNearestAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
+    public struct SpatialKNearestAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T>, System.IComparable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
 
         public TSubFilter subFilter;
-        public UnsafeHashSet<T> results;
+        public UnsafeList<SpatialQueryCandidate<T>> results;
         public uint max;
+        public bool stopWhenFull;
         public MathSector sector;
         public bool ignoreSelf;
         public T ignore;
         public uint Capacity => (uint)this.results.Capacity;
 
         [INLINE(256)]
-        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds) {
-
-            if (this.results.Contains(obj) == true) return true;
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds, tfloat distanceSqr) {
 
             if (this.subFilter.IsValid(in obj, in bounds) == false) {
                 return true;
@@ -123,12 +134,31 @@ namespace ME.BECS {
             }
             
             if (this.sector.IsValid(bounds.Center) == true) {
-                this.results.Add(obj);
+                var candidate = new SpatialQueryCandidate<T>() {
+                    obj = obj,
+                    distanceSqr = distanceSqr,
+                };
+                if (this.max == 0u || this.results.Length < this.max) {
+                    this.results.Add(candidate);
+                    if (this.stopWhenFull == true && this.results.Length == this.max) return false;
+                } else {
+                    var worstIndex = 0;
+                    var worst = this.results[0];
+                    for (int i = 1; i < this.results.Length; ++i) {
+                        var item = this.results[i];
+                        if (item.distanceSqr > worst.distanceSqr || (item.distanceSqr == worst.distanceSqr && item.obj.CompareTo(worst.obj) > 0)) {
+                            worstIndex = i;
+                            worst = item;
+                        }
+                    }
+
+                    if (distanceSqr < worst.distanceSqr || (distanceSqr == worst.distanceSqr && obj.CompareTo(worst.obj) < 0)) {
+                        this.results[worstIndex] = candidate;
+                    }
+                }
             }
 
-            if (this.max == 0u) return true;
-            return this.results.Count < this.max; // immediately stop iterating at first hit
-            // if we want the 2nd or 3rd neighbour, we could iterate on and keep track of the count!
+            return true;
         }
 
         [INLINE(256)]
@@ -141,7 +171,7 @@ namespace ME.BECS {
     public struct RangeAABB2DSpatialUniqueVisitor<T, TSubFilter> : NativeTrees.ISpatialRangeVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
         
         public TSubFilter subFilter;
-        public UnsafeHashSet<T> results;
+        public UnsafeList<SpatialQueryCandidate<T>> results;
         public tfloat rangeSqr;
         public uint max;
         public MathSector sector;
@@ -151,8 +181,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public bool OnVisit(in T obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
 
-            if (this.results.Contains(obj) == true) return true;
-            
             if (this.subFilter.IsValid(in obj, in objBounds) == false) {
                 return true;
             } 
@@ -163,10 +191,13 @@ namespace ME.BECS {
 
             if (this.sector.IsValid(objBounds.Center) == true) {
                 // check if our object's AABB overlaps with the query AABB
-                if (objBounds.Overlaps(queryRange) == true &&
-                    objBounds.DistanceSquared(queryRange.Center) <= this.rangeSqr) {
-                    this.results.Add(obj);
-                    if (this.max > 0u && this.results.Count == this.max) return false;
+                var distanceSqr = objBounds.DistanceSquared(queryRange.Center);
+                if (objBounds.Overlaps(queryRange) == true && distanceSqr <= this.rangeSqr) {
+                    this.results.Add(new SpatialQueryCandidate<T>() {
+                        obj = obj,
+                        distanceSqr = distanceSqr,
+                    });
+                    if (this.max > 0u && this.results.Length == this.max) return false;
                 }
             }
 
