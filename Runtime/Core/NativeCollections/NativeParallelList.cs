@@ -88,9 +88,16 @@ namespace ME.BECS.NativeCollections {
         }
 
         [INLINE(256)]
+        public readonly ref UnsafeList<T> GetThreadList() {
+
+            return ref *((UnsafeList<T>*)(this.lists + (uint)JobsUtility.ThreadIndex * CACHE_LINE_SIZE).ptr);
+
+        }
+
+        [INLINE(256)]
         public void Add(in T item) {
 
-            ref var arr = ref *((UnsafeList<T>*)(this.lists + (uint)JobsUtility.ThreadIndex * CACHE_LINE_SIZE).ptr);
+            ref var arr = ref this.GetThreadList();
             arr.Add(item);
 
         }

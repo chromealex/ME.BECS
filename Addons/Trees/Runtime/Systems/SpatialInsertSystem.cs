@@ -16,6 +16,7 @@ namespace ME.BECS {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
     using BURST = Unity.Burst.BurstCompileAttribute;
+    using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using ME.BECS.Jobs;
     using System.Runtime.InteropServices;
@@ -98,13 +99,18 @@ namespace ME.BECS {
         public int cellSize;
         
         private UnsafeList<safe_ptr> trees;
+        private UnsafeList<safe_ptr> staticTrees;
+        private ME.BECS.NativeCollections.NativeParallelList<SpatialQueryCandidate<Ent>> queryScratch;
         public readonly uint treesCount => (uint)this.trees.Length;
         private ushort worldId;
+        private ushort stateVersion;
+        private ulong stateTick;
 
         [BURST]
         public struct CollectRectJob : IJobForAspects<SpatialAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
+            public bool isStatic;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
@@ -113,7 +119,12 @@ namespace ME.BECS {
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var size = spatialAspect.rectSize;
                 var halfSize = new float2(size.x * 0.5f, size.y * 0.5f);
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB2D(pos - halfSize, pos + new float2(halfSize.x, halfSize.y)));
+                var bounds = new NativeTrees.AABB2D(pos - halfSize, pos + new float2(halfSize.x, halfSize.y));
+                if (this.isStatic == true) {
+                    tree.ptr->AddStatic(tr.ent, bounds);
+                } else {
+                    tree.ptr->Add(tr.ent, bounds);
+                }
                 
             }
 
@@ -123,6 +134,7 @@ namespace ME.BECS {
         public struct CollectJob : IJobForAspects<SpatialAspect, TransformAspect> {
             
             public UnsafeList<safe_ptr> trees;
+            public bool isStatic;
 
             public void Execute(in JobInfo jobInfo, in Ent ent, ref SpatialAspect spatialAspect, ref TransformAspect tr) {
                 
@@ -131,7 +143,12 @@ namespace ME.BECS {
                 var pos = tr.GetWorldMatrixPosition().xz;
                 var radius = spatialAspect.readSpatialElement.radius;
 
-                tree.ptr->Add(tr.ent, new NativeTrees.AABB2D(pos - spatialAspect.readSpatialElement.radius, pos + new float2(radius, radius)));
+                var bounds = new NativeTrees.AABB2D(pos - spatialAspect.readSpatialElement.radius, pos + new float2(radius, radius));
+                if (this.isStatic == true) {
+                    tree.ptr->AddStatic(tr.ent, bounds);
+                } else {
+                    tree.ptr->Add(tr.ent, bounds);
+                }
                 
             }
 
@@ -141,11 +158,15 @@ namespace ME.BECS {
         public struct ApplyJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
+            public UnsafeList<safe_ptr> staticTrees;
+            public bool forceStaticRebuild;
             
             public void Execute(int index) {
 
                 var tree = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[index];
                 tree.ptr->Rebuild();
+                var staticTree = (safe_ptr<NativeTrees.SpatialHashing>)this.staticTrees[index];
+                staticTree.ptr->RebuildStatic(this.forceStaticRebuild);
                 
             }
 
@@ -155,11 +176,14 @@ namespace ME.BECS {
         public struct ClearJob : Unity.Jobs.IJobParallelFor {
 
             public UnsafeList<safe_ptr> trees;
+            public UnsafeList<safe_ptr> staticTrees;
 
             public void Execute(int index) {
 
                 var item = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[index];
                 item.ptr->Clear();
+                var staticItem = (safe_ptr<NativeTrees.SpatialHashing>)this.staticTrees[index];
+                staticItem.ptr->ClearStaticStaging();
                 
             }
 
@@ -180,9 +204,25 @@ namespace ME.BECS {
         }
 
         [INLINE(256)]
+        public readonly safe_ptr<NativeTrees.SpatialHashing> GetStaticTree(int treeIndex) {
+
+            return (safe_ptr<NativeTrees.SpatialHashing>)this.staticTrees[treeIndex];
+
+        }
+
+        [INLINE(256)]
+        public int AddTree(int cellSize) {
+
+            return this.AddTree(this.capacity, cellSize);
+
+        }
+
+        [INLINE(256)]
         public int AddTree(int capacity, int cellSize) {
 
-            this.trees.Add((safe_ptr)_make(new NativeTrees.SpatialHashing(capacity, cellSize, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator)));
+            var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator;
+            this.trees.Add((safe_ptr)_make(new NativeTrees.SpatialHashing(capacity, cellSize, allocator)));
+            this.staticTrees.Add((safe_ptr)_make(new NativeTrees.SpatialHashing(math.max(1, capacity / 4), cellSize, allocator, true)));
             return this.trees.Length - 1;
 
         }
@@ -190,30 +230,54 @@ namespace ME.BECS {
         public void OnAwake(ref SystemContext context) {
 
             this.worldId = context.world.id;
-            this.trees = new UnsafeList<safe_ptr>(10, WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator);
+            var allocator = WorldsPersistentAllocator.allocatorPersistent.Get(this.worldId).Allocator.ToAllocator;
+            this.trees = new UnsafeList<safe_ptr>(10, allocator);
+            this.staticTrees = new UnsafeList<safe_ptr>(10, allocator);
+            this.queryScratch = new ME.BECS.NativeCollections.NativeParallelList<SpatialQueryCandidate<Ent>>(64, allocator);
+            this.stateVersion = context.world.state.ptr->allocator.version;
+            this.stateTick = context.world.state.ptr->tick;
             
         }
 
         public void OnUpdate(ref SystemContext context) {
 
+            var currentStateVersion = context.world.state.ptr->allocator.version;
+            var currentStateTick = context.world.state.ptr->tick;
+            var forceStaticRebuild = currentStateVersion != this.stateVersion || currentStateTick < this.stateTick;
+            this.stateVersion = currentStateVersion;
+            this.stateTick = currentStateTick;
             var clearJob = new ClearJob() {
                 trees = this.trees,
+                staticTrees = this.staticTrees,
             };
             var clearJobHandle = clearJob.Schedule(this.trees.Length, 1, context.dependsOn);
             
-            var handle = context.Query(clearJobHandle).Without<SpatialElementRect>().AsParallel().AsUnsafe().Schedule<CollectJob, SpatialAspect, TransformAspect>(new CollectJob() {
+            var handle = context.Query(clearJobHandle).Without<IsTransformStaticCalculatedComponent>().Without<SpatialElementRect>().AsParallel().AsUnsafe().Schedule<CollectJob, SpatialAspect, TransformAspect>(new CollectJob() {
                 trees = this.trees,
             });
             
-            var handleRect = context.Query(clearJobHandle).With<SpatialElementRect>().AsParallel().AsUnsafe().Schedule<CollectRectJob, SpatialAspect, TransformAspect>(new CollectRectJob() {
+            var handleRect = context.Query(clearJobHandle).Without<IsTransformStaticCalculatedComponent>().With<SpatialElementRect>().AsParallel().AsUnsafe().Schedule<CollectRectJob, SpatialAspect, TransformAspect>(new CollectRectJob() {
                 trees = this.trees,
+            });
+
+            var staticHandle = context.Query(clearJobHandle).With<IsTransformStaticCalculatedComponent>().Without<SpatialElementRect>().AsParallel().AsUnsafe().Schedule<CollectJob, SpatialAspect, TransformAspect>(new CollectJob() {
+                trees = this.staticTrees,
+                isStatic = true,
+            });
+
+            var staticHandleRect = context.Query(clearJobHandle).With<IsTransformStaticCalculatedComponent>().With<SpatialElementRect>().AsParallel().AsUnsafe().Schedule<CollectRectJob, SpatialAspect, TransformAspect>(new CollectRectJob() {
+                trees = this.staticTrees,
+                isStatic = true,
             });
 
             var job = new ApplyJob() {
                 trees = this.trees,
+                staticTrees = this.staticTrees,
+                forceStaticRebuild = forceStaticRebuild,
             };
-            var resultHandle = job.Schedule(this.trees.Length, 1, JobHandle.CombineDependencies(handle, handleRect));
-            //var resultHandle = handle;
+            var dynamicHandle = JobHandle.CombineDependencies(handle, handleRect);
+            var staticCollectHandle = JobHandle.CombineDependencies(staticHandle, staticHandleRect);
+            var resultHandle = job.Schedule(this.trees.Length, 1, JobHandle.CombineDependencies(dynamicHandle, staticCollectHandle));
             context.SetDependency(resultHandle);
 
         }
@@ -224,9 +288,14 @@ namespace ME.BECS {
                 var item = (safe_ptr<NativeTrees.SpatialHashing>)this.trees[i];
                 item.ptr->Dispose();
                 _free(item);
+                var staticItem = (safe_ptr<NativeTrees.SpatialHashing>)this.staticTrees[i];
+                staticItem.ptr->Dispose();
+                _free(staticItem);
             }
 
             this.trees.Dispose();
+            this.staticTrees.Dispose();
+            this.queryScratch.Dispose();
 
         }
 
@@ -249,17 +318,16 @@ namespace ME.BECS {
                 foreach (var item in list) {
                     query.results.results.Add(item.obj);
                 }
+                var staticList = this.GetStaticTree(i).ptr->GetObjects();
+                foreach (var item in staticList) {
+                    query.results.results.Add(item.obj);
+                }
             }
         }
 
         [INLINE(256)]
         public readonly void FillNearest<T>(ref SpatialQueryAspect query, in TransformAspect tr, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
             
-            var marker = new Unity.Profiling.ProfilerMarker("tree::FillNearest");
-            marker.Begin();
-            
-            var markerRead = new Unity.Profiling.ProfilerMarker("tree::FillNearest::Read");
-            markerRead.Begin();
             var q = query.readQuery;
             var ent = query.ent;
 
@@ -269,13 +337,7 @@ namespace ME.BECS {
                 var worldRot = q.useParentRotation == true ? tr.parent.GetAspect<TransformAspect>().rotation : tr.rotation;
                 sector = new MathSector(worldPos, worldRot, query.readQuery.sector);
             }
-            markerRead.End();
-
-            var markerCleanUp = new Unity.Profiling.ProfilerMarker("tree::FillNearest::CleanUp");
-            markerCleanUp.Begin();
-            // clean up results
             QueryResults.Create(ref query.results.results, query.ent, q.nearestCount > 0u ? q.nearestCount : 1u, q.updatePerTick == 0);
-            markerCleanUp.End();
             
             if (q.nearestCount == 1u) {
                 var nearest = this.GetNearestFirst(q.treeMask, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
@@ -283,8 +345,6 @@ namespace ME.BECS {
             } else {
                 this.GetNearest(q.treeMask, q.nearestCount, ref query.results.results, in ent, in worldPos, in sector, q.minRangeSqr, q.rangeSqr, q.ignoreSelf, q.ignoreSorting, in subFilter);
             }
-            marker.End();
-            
         }
         
         [INLINE(256)]
@@ -296,10 +356,6 @@ namespace ME.BECS {
         [INLINE(256)]
         public readonly Ent GetNearestFirst<T>(int mask, in Ent selfEnt = default, in float3 worldPos = default, in MathSector sector = default, tfloat minRangeSqr = default, tfloat rangeSqr = default, bool ignoreSelf = default, bool ignoreSorting = default, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
 
-            const uint nearestCount = 1u;
-            var marker = new Unity.Profiling.ProfilerMarker("tree::NearestFirst");
-            marker.Begin();
-            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
             var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
             var visitor = new SpatialNearestAABBVisitor<Ent, T>() {
                 subFilter = subFilter,
@@ -308,36 +364,32 @@ namespace ME.BECS {
                 ignore = selfEnt,
             };
             Ent result = default;
+            var resultDistanceSqr = tfloat.MaxValue;
+            var found = false;
             // for each tree
             while (mask != 0) {
                 int i = math.tzcnt(mask);
                 mask &= mask - 1;
-                var tree = this.GetTree(i).ptr;
-                {
+                for (var layer = 0; layer < 2; ++layer) {
+                    var tree = layer == 0 ? this.GetTree(i).ptr : this.GetStaticTree(i).ptr;
                     tree->NearestFirst(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d, ignoreSorting);
                     if (visitor.found == true) {
                         if (ignoreSorting == true) {
-                            result = visitor.nearest;
-                            break;
+                            return visitor.nearest;
                         }
 
                         var distSq = visitor.nearestDistanceSqr;
-                        heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(visitor.nearest, distSq));
+                        if (found == false || distSq < resultDistanceSqr || (distSq == resultDistanceSqr && visitor.nearest.CompareTo(result) < 0)) {
+                            result = visitor.nearest;
+                            resultDistanceSqr = distSq;
+                            found = true;
+                        }
                         rangeSqr = math.min(rangeSqr, distSq);
                     }
                     visitor.Reset();
                 }
             }
             
-            if (ignoreSorting == false) {
-                var max = math.min(nearestCount, heap.Count);
-                if (max > 0u) {
-                    marker.End();
-                    return heap[heap.Pop()].data;
-                }
-            }
-            marker.End();
-
             return result;
 
         }
@@ -346,17 +398,19 @@ namespace ME.BECS {
         public bool Raycast(Ray2D ray, int mask, tfloat distance, out SpatialRaycastHit raycastHit, bool ignoreSorting = false) {
             
             raycastHit = default;
-            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.SpatialRaycastHitMinNode>(this.treesCount, Constants.ALLOCATOR_TEMP);
+            var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeap<NativeTrees.SpatialRaycastHitMinNode>(this.treesCount * 2u, Constants.ALLOCATOR_TEMP);
             while (mask != 0) {
                 int i = math.tzcnt(mask);
                 mask &= mask - 1;
-                var tree = this.GetTree(i).ptr;
-                if (tree->RaycastAABB(ray, out var hitResult, distance) == true) {
-                    if (ignoreSorting == true) return true;
-                    heap.Push(new NativeTrees.SpatialRaycastHitMinNode() {
-                        data = hitResult,
-                        cost = math.distancesq(ray.origin, hitResult.point),
-                    });
+                for (var layer = 0; layer < 2; ++layer) {
+                    var tree = layer == 0 ? this.GetTree(i).ptr : this.GetStaticTree(i).ptr;
+                    if (tree->RaycastAABB(ray, out var hitResult, distance) == true) {
+                        if (ignoreSorting == true) return true;
+                        heap.Push(new NativeTrees.SpatialRaycastHitMinNode() {
+                            data = hitResult,
+                            cost = math.distancesq(ray.origin, hitResult.point),
+                        });
+                    }
                 }
             }
 
@@ -375,115 +429,128 @@ namespace ME.BECS {
 
         [INLINE(256)]
         public readonly void GetNearest<T>(int mask, ushort nearestCount, ref QueryResults results, in Ent selfEnt, in float3 worldPos, in MathSector sector, tfloat minRangeSqr, tfloat rangeSqr, bool ignoreSelf, bool ignoreSorting, in T subFilter = default) where T : struct, ISpatialSubFilter<Ent> {
-            
+            var distanceProvider = new AABB2DSpatialDistanceSquaredProvider<Ent>();
             if (nearestCount > 0u) {
+                if (ignoreSorting == true) {
+                    results.EnsureCapacity(results.Count + (uint)nearestCount * (uint)math.countbits(mask));
+                    var directVisitor = new SpatialKNearestDirectAABBVisitor<T>() {
+                        subFilter = subFilter,
+                        results = _addressT(ref results),
+                        max = nearestCount,
+                        sector = sector,
+                        ignoreSelf = ignoreSelf,
+                        ignore = selfEnt,
+                    };
+                    while (mask != 0) {
+                        int i = math.tzcnt(mask);
+                        mask &= mask - 1;
+                        this.GetTree(i).ptr->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref directVisitor, ref distanceProvider);
+                        this.GetStaticTree(i).ptr->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref directVisitor, ref distanceProvider);
+                        directVisitor.Reset();
+                    }
+                    return;
+                }
 
-                var marker = new Unity.Profiling.ProfilerMarker("tree::Nearest");
-                marker.Begin();
-                var markerResultsUnsorted = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
-                var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
-                var d = new AABB2DSpatialDistanceSquaredProvider<Ent>();
-                var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(nearestCount * this.treesCount, Constants.ALLOCATOR_TEMP);
-                var resultsTemp = new UnsafeList<SpatialQueryCandidate<Ent>>(nearestCount, Constants.ALLOCATOR_TEMP);
-                var visitor = new SpatialKNearestAABBVisitor<Ent, T>() {
+                FixedList512Bytes<SpatialQueryCandidate<Ent>> fixedResults = default;
+                if (nearestCount <= fixedResults.Capacity) {
+                    var fixedVisitor = new SpatialKNearestFixedAABBVisitor<Ent, T>() {
+                        subFilter = subFilter,
+                        results = fixedResults,
+                        max = nearestCount,
+                        sector = sector,
+                        ignoreSelf = ignoreSelf,
+                        ignore = selfEnt,
+                    };
+                    while (mask != 0) {
+                        int i = math.tzcnt(mask);
+                        mask &= mask - 1;
+                        this.GetTree(i).ptr->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref fixedVisitor, ref distanceProvider);
+                        this.GetStaticTree(i).ptr->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref fixedVisitor, ref distanceProvider);
+                    }
+                    fixedResults = fixedVisitor.results;
+                    Sort(ref fixedResults);
+                    results.EnsureCapacity((uint)fixedResults.Length);
+                    for (var i = 0; i < fixedResults.Length; ++i) results.Add(fixedResults[i].obj);
+                    return;
+                }
+
+                ref var nearestScratch = ref this.queryScratch.GetThreadList();
+                nearestScratch.Clear();
+                var nearestVisitor = new SpatialKNearestAABBVisitor<Ent, T>() {
                     subFilter = subFilter,
-                    sector = sector,
-                    results = resultsTemp,
+                    results = nearestScratch,
                     max = nearestCount,
-                    stopWhenFull = ignoreSorting,
+                    sector = sector,
                     ignoreSelf = ignoreSelf,
                     ignore = selfEnt,
                 };
-                // for each tree
                 while (mask != 0) {
                     int i = math.tzcnt(mask);
                     mask &= mask - 1;
-                    var tree = this.GetTree(i).ptr;
-                    {
-                        tree->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref visitor, ref d);
-                        if (ignoreSorting == true) {
-                            markerResultsUnsorted.Begin();
-                            foreach (var item in visitor.results) {
-                                results.Add(item.obj);
-                            }
-                            markerResultsUnsorted.End();
-                        } else {
-                            markerResultsSorted.Begin();
-                            foreach (var item in visitor.results) {
-                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item.obj, item.distanceSqr));
-                            }
-                            markerResultsSorted.End();
-                        }
-                        visitor.Reset();
-                    }
+                    this.GetTree(i).ptr->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref nearestVisitor, ref distanceProvider);
+                    this.GetStaticTree(i).ptr->Nearest(worldPos.xz, minRangeSqr, rangeSqr, ref nearestVisitor, ref distanceProvider);
                 }
-
-                if (ignoreSorting == false) {
-                    var max = math.min((uint)nearestCount, heap.Count);
-                    results.EnsureCapacity(max);
-                    for (uint i = 0u; i < max; ++i) {
-                        results.Add(heap[heap.Pop()].data);
-                    }
-                }
-                marker.End();
-
-            } else {
-                
-                var marker = new Unity.Profiling.ProfilerMarker("tree::Range");
-                marker.Begin();
-                var markerResultsUnsorted = new Unity.Profiling.ProfilerMarker("Fill Results (Unsorted)");
-                var markerResultsSorted = new Unity.Profiling.ProfilerMarker("Fill Results (Sorted)");
-                // select all units
-                var heap = ignoreSorting == true ? default : new ME.BECS.NativeCollections.NativeMinHeapEnt(this.treesCount, Constants.ALLOCATOR_TEMP);
-                var resultsTemp = new UnsafeList<SpatialQueryCandidate<Ent>>((int)this.treesCount, Constants.ALLOCATOR_TEMP);
-                var visitor = new RangeAABB2DSpatialUniqueVisitor<Ent, T>() {
-                    subFilter = subFilter,
-                    sector = sector,
-                    results = resultsTemp,
-                    rangeSqr = rangeSqr,
-                    max = nearestCount,
-                    ignoreSelf = ignoreSelf,
-                    ignore = selfEnt,
-                };
-                // for each tree
-                while (mask != 0) {
-                    int i = math.tzcnt(mask);
-                    mask &= mask - 1;
-                    var tree = this.GetTree(i).ptr;
-                    {
-                        var range = math.sqrt(rangeSqr);
-                        var bounds = new NativeTrees.AABB2D(worldPos.xz - range, worldPos.xz + range);
-                        tree->Range(bounds, ref visitor);
-                        if (ignoreSorting == true) {
-                            markerResultsUnsorted.Begin();
-                            results.EnsureCapacity(results.Count + (uint)visitor.results.Length);
-                            foreach (var item in visitor.results) {
-                                results.Add(item.obj);
-                            }
-                            markerResultsUnsorted.End();
-                        } else {
-                            markerResultsSorted.Begin();
-                            heap.EnsureCapacity((uint)visitor.results.Length);
-                            foreach (var item in visitor.results) {
-                                heap.Push(new ME.BECS.NativeCollections.MinHeapNodeEnt(item.obj, item.distanceSqr));
-                            }
-                            markerResultsSorted.End();
-                        }
-                        visitor.Reset();
-                    }
-                }
-
-                if (ignoreSorting == false) {
-                    var count = heap.Count;
-                    results.EnsureCapacity(count);
-                    for (uint i = 0u; i < count; ++i) {
-                        results.Add(heap[heap.Pop()].data);
-                    }
-                }
-                marker.End();
-
+                nearestVisitor.results.Sort();
+                results.EnsureCapacity((uint)nearestVisitor.results.Length);
+                foreach (var item in nearestVisitor.results) results.Add(item.obj);
+                nearestScratch = nearestVisitor.results;
+                return;
             }
 
+            var range = math.sqrt(rangeSqr);
+            var bounds = new NativeTrees.AABB2D(worldPos.xz - range, worldPos.xz + range);
+            if (ignoreSorting == true) {
+                var directVisitor = new RangeAABB2DSpatialDirectVisitor<T>() {
+                    subFilter = subFilter,
+                    results = _addressT(ref results),
+                    rangeSqr = rangeSqr,
+                    sector = sector,
+                    ignoreSelf = ignoreSelf,
+                    ignore = selfEnt,
+                };
+                while (mask != 0) {
+                    int i = math.tzcnt(mask);
+                    mask &= mask - 1;
+                    this.GetTree(i).ptr->Range(bounds, ref directVisitor);
+                    this.GetStaticTree(i).ptr->Range(bounds, ref directVisitor);
+                }
+                return;
+            }
+
+            ref var rangeScratch = ref this.queryScratch.GetThreadList();
+            rangeScratch.Clear();
+            var rangeVisitor = new RangeAABB2DSpatialUniqueVisitor<Ent, T>() {
+                subFilter = subFilter,
+                results = rangeScratch,
+                rangeSqr = rangeSqr,
+                sector = sector,
+                ignoreSelf = ignoreSelf,
+                ignore = selfEnt,
+            };
+            while (mask != 0) {
+                int i = math.tzcnt(mask);
+                mask &= mask - 1;
+                this.GetTree(i).ptr->Range(bounds, ref rangeVisitor);
+                this.GetStaticTree(i).ptr->Range(bounds, ref rangeVisitor);
+            }
+            rangeVisitor.results.Sort();
+            results.EnsureCapacity((uint)rangeVisitor.results.Length);
+            foreach (var item in rangeVisitor.results) results.Add(item.obj);
+            rangeScratch = rangeVisitor.results;
+
+        }
+
+        [INLINE(256)]
+        private static void Sort(ref FixedList512Bytes<SpatialQueryCandidate<Ent>> items) {
+            for (var i = 1; i < items.Length; ++i) {
+                var value = items[i];
+                var j = i - 1;
+                while (j >= 0 && value.CompareTo(items[j]) < 0) {
+                    items[j + 1] = items[j];
+                    --j;
+                }
+                items[j + 1] = value;
+            }
         }
 
         [WithoutBurst]
@@ -492,6 +559,8 @@ namespace ME.BECS {
             for (int i = 0; i < this.treesCount; ++i) {
                 var tree = this.GetTree(i);
                 tree.ptr->DrawGizmos();
+                var staticTree = this.GetStaticTree(i);
+                staticTree.ptr->DrawGizmos();
             }
         }
 

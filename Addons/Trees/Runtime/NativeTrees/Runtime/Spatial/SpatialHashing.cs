@@ -121,20 +121,31 @@ namespace NativeTrees {
         private tfloat invCellSize;
         public NativeParallelList<ObjWrapper> tempObjects;
         private UnsafeList<ObjWrapper> objects;
+        private NativeParallelHashMap<ME.BECS.Ent, AABB2D> cachedBounds;
+        private int staticDirty;
+        private bool trackStatic;
 
-        public SpatialHashing(int capacity, int cellSize, Allocator allocator) {
+        public SpatialHashing(int capacity, int cellSize, Allocator allocator, bool trackStatic = false) {
             this.allocator = allocator;
             this.cellSize = cellSize;
             this.invCellSize = 1f / cellSize;
             this.data = new NativeParallelMultiHashMap<long, ObjWrapper>(capacity, allocator);
-            this.tempObjects = new NativeParallelList<ObjWrapper>(capacity, allocator);
+            var threadsCount = (int)JobUtils.ThreadsCount;
+            var capacityPerThread = math.max(1, (capacity + threadsCount - 1) / threadsCount);
+            this.tempObjects = new NativeParallelList<ObjWrapper>(capacityPerThread, allocator);
             this.objects = new UnsafeList<ObjWrapper>(capacity, allocator);
+            this.trackStatic = trackStatic;
+            this.staticDirty = 0;
+            this.cachedBounds = trackStatic == true ? new NativeParallelHashMap<ME.BECS.Ent, AABB2D>(capacity, allocator) : default;
         }
 
         public void Dispose() {
             this.data.Dispose();
             this.tempObjects.Dispose();
             this.objects.Dispose();
+            if (this.trackStatic == true) {
+                this.cachedBounds.Dispose();
+            }
         }
 
         [INLINE(256)]
@@ -161,6 +172,12 @@ namespace NativeTrees {
             this.data.Clear();
             this.objects.Clear();
         }
+
+        [INLINE(256)]
+        public void ClearStaticStaging() {
+            this.tempObjects.Clear();
+            this.staticDirty = 0;
+        }
         
         [INLINE(256)]
         public void Insert(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
@@ -180,6 +197,14 @@ namespace NativeTrees {
         [INLINE(256)]
         public void Add(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
             this.tempObjects.Add(new ObjWrapper(obj, bounds));
+        }
+
+        [INLINE(256)]
+        public void AddStatic(ME.BECS.Ent obj, NativeTrees.AABB2D bounds) {
+            this.tempObjects.Add(new ObjWrapper(obj, bounds));
+            if (this.cachedBounds.TryGetValue(obj, out var cached) == false || math.all(cached.min == bounds.min) == false || math.all(cached.max == bounds.max) == false) {
+                System.Threading.Interlocked.Exchange(ref this.staticDirty, 1);
+            }
         }
 
         [INLINE(256)]
@@ -208,37 +233,90 @@ namespace NativeTrees {
             var dist = tfloat.MaxValue;
             var nearest = default(ME.BECS.Ent);
             var hasNearest = false;
-            if (this.ShouldUseLinear(in min, in max) == true) {
-                for (int i = 0; i < this.objects.Length; ++i) {
-                    var item = this.objects[i];
-                    var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
-                    if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && (d < dist || (d == dist && hasNearest == true && item.obj.CompareTo(nearest) < 0))) {
-                        if (visitor.OnVisit(in item.obj, in item.bounds, d) == false) {
-                            dist = d;
-                            nearest = item.obj;
-                            hasNearest = true;
-                            if (ignoreSorting == true) return;
+            var center = this.GetCell(pos);
+            var maxRing = math.max(math.max(center.x - min.x, max.x - center.x), math.max(center.y - min.y, max.y - center.y));
+            var visitedCells = 0;
+            for (var ring = 0; ring <= maxRing; ++ring) {
+                var ringMinX = center.x - ring;
+                var ringMaxX = center.x + ring;
+                var ringMinY = center.y - ring;
+                var ringMaxY = center.y + ring;
+
+                for (var x = ringMinX; x <= ringMaxX; ++x) {
+                    if (this.VisitNearestCell(x, ringMinY, in min, in max, in pos, minDistanceSqr, maxDistanceSqr, ref dist, ref nearest, ref hasNearest, ref visitedCells, ref visitor, ref provider, ignoreSorting) == false) return;
+                    if (ring > 0 && this.VisitNearestCell(x, ringMaxY, in min, in max, in pos, minDistanceSqr, maxDistanceSqr, ref dist, ref nearest, ref hasNearest, ref visitedCells, ref visitor, ref provider, ignoreSorting) == false) return;
+                }
+                for (var y = ringMinY + 1; y < ringMaxY; ++y) {
+                    if (this.VisitNearestCell(ringMinX, y, in min, in max, in pos, minDistanceSqr, maxDistanceSqr, ref dist, ref nearest, ref hasNearest, ref visitedCells, ref visitor, ref provider, ignoreSorting) == false) return;
+                    if (ring > 0 && this.VisitNearestCell(ringMaxX, y, in min, in max, in pos, minDistanceSqr, maxDistanceSqr, ref dist, ref nearest, ref hasNearest, ref visitedCells, ref visitor, ref provider, ignoreSorting) == false) return;
+                }
+
+                if (hasNearest == true && ring < maxRing) {
+                    var visitedMin = new float2(ringMinX, ringMinY) * this.cellSize;
+                    var visitedMax = new float2(ringMaxX + 1, ringMaxY + 1) * this.cellSize;
+                    var distanceToUnvisited = math.min(math.min(pos.x - visitedMin.x, visitedMax.x - pos.x), math.min(pos.y - visitedMin.y, visitedMax.y - pos.y));
+                    if (distanceToUnvisited * distanceToUnvisited > dist) return;
+                }
+                if (visitedCells >= this.objects.Length) {
+                    this.VisitNearestObjects(in pos, minDistanceSqr, maxDistanceSqr, ref dist, ref nearest, ref hasNearest, ref visitor, ref provider, ignoreSorting);
+                    return;
+                }
+            }
+        }
+
+        [INLINE(256)]
+        public void RebuildStatic(bool force) {
+            if (force == false && this.staticDirty == 0 && this.tempObjects.Count == this.objects.Length) return;
+            this.data.Clear();
+            this.Rebuild();
+            this.cachedBounds.Clear();
+            if (this.cachedBounds.Capacity < this.objects.Length) this.cachedBounds.Capacity = this.objects.Length;
+            foreach (var item in this.objects) this.cachedBounds.TryAdd(item.obj, item.bounds);
+        }
+
+        [INLINE(256)]
+        private bool VisitNearestCell<U, V>(int x, int y, in int2 min, in int2 max, in float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr,
+                                            ref tfloat nearestDistanceSqr, ref ME.BECS.Ent nearest, ref bool hasNearest, ref int visitedCells, ref U visitor, ref V provider, bool ignoreSorting)
+            where U : struct, ISpatialNearestVisitor<ME.BECS.Ent>
+            where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
+            if (x < min.x || x > max.x || y < min.y || y > max.y) return true;
+            ++visitedCells;
+            var e = this.data.GetValuesForKey(GetHash(x, y));
+            while (e.MoveNext() == true) {
+                var item = e.Current;
+                var distanceSqr = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
+                if ((minDistanceSqr <= 0f || distanceSqr > minDistanceSqr) && distanceSqr <= maxDistanceSqr &&
+                    (distanceSqr < nearestDistanceSqr || (distanceSqr == nearestDistanceSqr && hasNearest == true && item.obj.CompareTo(nearest) < 0))) {
+                    if (visitor.OnVisit(in item.obj, in item.bounds, distanceSqr) == false) {
+                        nearestDistanceSqr = distanceSqr;
+                        nearest = item.obj;
+                        hasNearest = true;
+                        if (ignoreSorting == true) {
+                            e.Dispose();
+                            return false;
                         }
                     }
                 }
-                return;
             }
-            for (int x = min.x; x <= max.x; ++x) {
-                for (int y = min.y; y <= max.y; ++y) {
-                    var hash = GetHash(x, y);
-                    var e = this.data.GetValuesForKey(hash);
-                    while (e.MoveNext() == true) {
-                        var item = e.Current;
-                        if (IsCanonicalCell(in item, in min, x, y) == false) continue;
-                        var d = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
-                        if ((minDistanceSqr <= 0f || d > minDistanceSqr) && d <= maxDistanceSqr && (d < dist || (d == dist && hasNearest == true && item.obj.CompareTo(nearest) < 0))) {
-                            if (visitor.OnVisit(in item.obj, in item.bounds, d) == false) {
-                                dist = d;
-                                nearest = item.obj;
-                                hasNearest = true;
-                                if (ignoreSorting == true) return;
-                            }
-                        }
+            e.Dispose();
+            return true;
+        }
+
+        [INLINE(256)]
+        private void VisitNearestObjects<U, V>(in float2 pos, tfloat minDistanceSqr, tfloat maxDistanceSqr, ref tfloat nearestDistanceSqr,
+                                               ref ME.BECS.Ent nearest, ref bool hasNearest, ref U visitor, ref V provider, bool ignoreSorting)
+            where U : struct, ISpatialNearestVisitor<ME.BECS.Ent>
+            where V : struct, ISpatialDistanceProvider<ME.BECS.Ent> {
+            for (var i = 0; i < this.objects.Length; ++i) {
+                var item = this.objects[i];
+                var distanceSqr = provider.DistanceSquared(in pos, in item.obj, in item.bounds);
+                if ((minDistanceSqr <= 0f || distanceSqr > minDistanceSqr) && distanceSqr <= maxDistanceSqr &&
+                    (distanceSqr < nearestDistanceSqr || (distanceSqr == nearestDistanceSqr && hasNearest == true && item.obj.CompareTo(nearest) < 0))) {
+                    if (visitor.OnVisit(in item.obj, in item.bounds, distanceSqr) == false) {
+                        nearestDistanceSqr = distanceSqr;
+                        nearest = item.obj;
+                        hasNearest = true;
+                        if (ignoreSorting == true) return;
                     }
                 }
             }

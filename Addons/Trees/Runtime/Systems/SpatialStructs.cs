@@ -17,6 +17,7 @@ using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
 
 namespace ME.BECS {
 
+    using Unity.Collections;
     using Unity.Collections.LowLevel.Unsafe;
     using static Cuts;
     
@@ -61,10 +62,103 @@ namespace ME.BECS {
 
     }
 
-    public struct SpatialQueryCandidate<T> where T : unmanaged {
+    public struct SpatialQueryCandidate<T> : System.IComparable<SpatialQueryCandidate<T>> where T : unmanaged, System.IComparable<T> {
 
         public T obj;
         public tfloat distanceSqr;
+
+        [INLINE(256)]
+        public int CompareTo(SpatialQueryCandidate<T> other) {
+            if (this.distanceSqr < other.distanceSqr) return -1;
+            if (this.distanceSqr > other.distanceSqr) return 1;
+            return this.obj.CompareTo(other.obj);
+        }
+
+    }
+
+    public struct SpatialKNearestFixedAABBVisitor<T, TSubFilter> : NativeTrees.ISpatialNearestVisitor<T> where T : unmanaged, System.IEquatable<T>, System.IComparable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
+
+        public TSubFilter subFilter;
+        public FixedList512Bytes<SpatialQueryCandidate<T>> results;
+        public uint max;
+        public MathSector sector;
+        public bool ignoreSelf;
+        public T ignore;
+        public uint Capacity => (uint)this.results.Capacity;
+
+        [INLINE(256)]
+        public bool OnVisit(in T obj, in NativeTrees.AABB2D bounds, tfloat distanceSqr) {
+            if (this.subFilter.IsValid(in obj, in bounds) == false) return true;
+            if (this.ignoreSelf == true && this.ignore.Equals(obj) == true) return true;
+            if (this.sector.IsValid(bounds.Center) == false) return true;
+
+            var candidate = new SpatialQueryCandidate<T>() {
+                obj = obj,
+                distanceSqr = distanceSqr,
+            };
+            if ((uint)this.results.Length < this.max) {
+                this.results.Add(candidate);
+            } else {
+                var worstIndex = 0;
+                var worst = this.results[0];
+                for (int i = 1; i < this.results.Length; ++i) {
+                    var item = this.results[i];
+                    if (item.CompareTo(worst) > 0) {
+                        worstIndex = i;
+                        worst = item;
+                    }
+                }
+                if (candidate.CompareTo(worst) < 0) this.results[worstIndex] = candidate;
+            }
+            return true;
+        }
+
+    }
+
+    public unsafe struct SpatialKNearestDirectAABBVisitor<TSubFilter> : NativeTrees.ISpatialNearestVisitor<Ent> where TSubFilter : struct, ISpatialSubFilter<Ent> {
+
+        public TSubFilter subFilter;
+        public safe_ptr<QueryResults> results;
+        public uint max;
+        public uint count;
+        public MathSector sector;
+        public bool ignoreSelf;
+        public Ent ignore;
+        public uint Capacity => this.max;
+
+        [INLINE(256)]
+        public bool OnVisit(in Ent obj, in NativeTrees.AABB2D bounds, tfloat distanceSqr) {
+            if (this.count >= this.max) return false;
+            if (this.subFilter.IsValid(in obj, in bounds) == false) return true;
+            if (this.ignoreSelf == true && this.ignore.Equals(obj) == true) return true;
+            if (this.sector.IsValid(bounds.Center) == false) return true;
+            this.results.ptr->Add(obj);
+            return ++this.count < this.max;
+        }
+
+        [INLINE(256)]
+        public void Reset() => this.count = 0u;
+
+    }
+
+    public unsafe struct RangeAABB2DSpatialDirectVisitor<TSubFilter> : NativeTrees.ISpatialRangeVisitor<Ent> where TSubFilter : struct, ISpatialSubFilter<Ent> {
+
+        public TSubFilter subFilter;
+        public safe_ptr<QueryResults> results;
+        public tfloat rangeSqr;
+        public MathSector sector;
+        public bool ignoreSelf;
+        public Ent ignore;
+
+        [INLINE(256)]
+        public bool OnVisit(in Ent obj, in NativeTrees.AABB2D objBounds, in NativeTrees.AABB2D queryRange) {
+            if (this.subFilter.IsValid(in obj, in objBounds) == false) return true;
+            if (this.ignoreSelf == true && this.ignore.Equals(obj) == true) return true;
+            if (this.sector.IsValid(objBounds.Center) == false) return true;
+            var distanceSqr = objBounds.DistanceSquared(queryRange.Center);
+            if (objBounds.Overlaps(queryRange) == true && distanceSqr <= this.rangeSqr) this.results.ptr->Add(obj);
+            return true;
+        }
 
     }
     
@@ -168,7 +262,7 @@ namespace ME.BECS {
 
     }
     
-    public struct RangeAABB2DSpatialUniqueVisitor<T, TSubFilter> : NativeTrees.ISpatialRangeVisitor<T> where T : unmanaged, System.IEquatable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
+    public struct RangeAABB2DSpatialUniqueVisitor<T, TSubFilter> : NativeTrees.ISpatialRangeVisitor<T> where T : unmanaged, System.IEquatable<T>, System.IComparable<T> where TSubFilter : struct, ISpatialSubFilter<T> {
         
         public TSubFilter subFilter;
         public UnsafeList<SpatialQueryCandidate<T>> results;
