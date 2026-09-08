@@ -306,14 +306,33 @@ namespace ME.BECS.Views {
         }
 
         [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
+        public struct PrepareInterpolationFactorJob : IJob {
+
+            public safe_ptr<ViewsModuleData> data;
+            public safe_ptr<State> beginFrameState;
+            public ulong currentTick;
+            public float tickTime;
+            public double currentTimeSinceStart;
+
+            public void Execute() {
+                var prevTick = this.beginFrameState.ptr->tick;
+                if (prevTick == this.currentTick) {
+                    this.data.ptr->interpolationFactor = 0f;
+                    return;
+                }
+                var prevTime = prevTick * (double)this.tickTime;
+                var currentTime = this.currentTick * (double)this.tickTime;
+                this.data.ptr->interpolationFactor = (float)um::math.clamp(um::math.unlerp(prevTime, currentTime, this.currentTimeSinceStart), 0d, 1d);
+            }
+        }
+
+        [BURST(Unity.Burst.FloatPrecision.Low, Unity.Burst.FloatMode.Fast)]
         public struct JobUpdateTransformsInterpolationPrepare : IJobParallelFor {
 
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
             public safe_ptr<State> beginFrameState;
-            public ulong currentTick;
-            public float tickTime;
-            public double currentTimeSinceStart;
+            public safe_ptr<ViewsModuleData> data;
             public NativeArray<InterpolationTempData> results;
 
             public void Execute(int index) {
@@ -335,7 +354,7 @@ namespace ME.BECS.Views {
                 }
 
                 float factor = 1f;
-                if (interpolate == true) factor = this.GetFactor();
+                if (interpolate == true) factor = this.data.ptr->interpolationFactor;
                 
                 if (entityData.element.Has<ParentComponent>() == true) {
 
@@ -344,10 +363,20 @@ namespace ME.BECS.Views {
                     var rot = (um::quaternion)MatrixUtils.GetRotation(localMatrix);
                     var scale = MatrixUtils.GetScale(localMatrix);
 
-                    // sync local matrix
-                    var sourceRot = (um::quaternion)MatrixUtils.GetRotation(sourceData.value);
-                    transform.SetLocalPositionAndRotation(um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, factor), Math.FastSlerp(sourceRot, rot, factor));
-                    transform.localScale = um::math.lerp(MatrixUtils.GetScale(sourceData.value), scale, factor);
+                    // Local interpolation is valid only while the parent is unchanged.
+                    var currentParent = tr.parent;
+                    if (interpolate == true &&
+                        Components.Has<ParentComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true &&
+                        Components.Read<ParentComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen).value.ToULong() == currentParent.ToULong() &&
+                        Components.Has<LocalMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen, true) == true) {
+                        var previousLocal = Components.Read<LocalMatrixComponent>(this.beginFrameState, entityData.element.id, entityData.element.gen).value;
+                        var sourceRot = (um::quaternion)MatrixUtils.GetRotation(previousLocal);
+                        transform.SetLocalPositionAndRotation(um::math.lerp(MatrixUtils.GetPosition(previousLocal), pos, factor), Math.FastSlerp(sourceRot, rot, factor));
+                        transform.localScale = um::math.lerp(MatrixUtils.GetScale(previousLocal), scale, factor);
+                    } else {
+                        transform.SetLocalPositionAndRotation(pos, rot);
+                        transform.localScale = (Vector3)scale;
+                    }
                     
                 } else {
 
@@ -355,23 +384,19 @@ namespace ME.BECS.Views {
                     var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
                     var rot = (um::quaternion)MatrixUtils.GetRotation(worldMatrix);
 
-                    var sourceRot = (um::quaternion)MatrixUtils.GetRotation(sourceData.value);
-                    transform.SetLocalPositionAndRotation(um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, factor), Math.FastSlerp(sourceRot, rot, factor));
-                    transform.localScale = um::math.lerp(MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
+                    if (interpolate == true) {
+                        var sourceRot = (um::quaternion)MatrixUtils.GetRotation(sourceData.value);
+                        transform.SetLocalPositionAndRotation(um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, factor), Math.FastSlerp(sourceRot, rot, factor));
+                        transform.localScale = um::math.lerp(MatrixUtils.GetScale(sourceData.value), tr.readLocalScale, factor);
+                    } else {
+                        transform.SetLocalPositionAndRotation(pos, rot);
+                        transform.localScale = (Vector3)tr.readLocalScale;
+                    }
                     
                 }
                 
             }
 
-            private float GetFactor() {
-                var prevTick = this.beginFrameState.ptr->tick;
-                var currentTick = this.currentTick;
-                var tickTime = (double)this.tickTime;
-                var prevTime = prevTick * tickTime;
-                var currentTime = currentTick * tickTime;
-                var currentWorldTime = this.currentTimeSinceStart;
-                return (float)um::math.select(0d, um::math.clamp(um::math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
-            }
 
         }
 
@@ -381,9 +406,7 @@ namespace ME.BECS.Views {
             [ReadOnly]
             public UnsafeList<ViewsModuleData.EntityData> renderingOnSceneEnts;
             public safe_ptr<State> beginFrameState;
-            public ulong currentTick;
-            public float tickTime;
-            public double currentTimeSinceStart;
+            public safe_ptr<ViewsModuleData> data;
             public NativeArray<InterpolationTempData> results;
 
             public void Execute(int index) {
@@ -405,7 +428,7 @@ namespace ME.BECS.Views {
                 }
 
                 float factor = 0f;
-                if (interpolate == true) factor = this.GetFactor();
+                if (interpolate == true) factor = this.data.ptr->interpolationFactor;
                 
                 var worldMatrix = tr.readWorldMatrix;
                 var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
@@ -420,15 +443,6 @@ namespace ME.BECS.Views {
                 
             }
 
-            private float GetFactor() {
-                var prevTick = this.beginFrameState.ptr->tick;
-                var currentTick = this.currentTick;
-                var tickTime = (double)this.tickTime;
-                var prevTime = prevTick * tickTime;
-                var currentTime = currentTick * tickTime;
-                var currentWorldTime = this.currentTimeSinceStart;
-                return (float)um::math.select(0d, um::math.clamp(um::math.unlerp(prevTime, currentTime, currentWorldTime), 0d, 1d), prevTick != currentTick);
-            }
 
         }
 
@@ -732,50 +746,50 @@ namespace ME.BECS.Views {
         }
 
         [BURST]
+        public struct PrepareCullingJob : IJob {
+
+            public safe_ptr<ViewsModuleData> viewsModuleData;
+
+            public void Execute() {
+                var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
+                this.viewsModuleData.ptr->cullingSnapshot = CameraUtils.CreateCullingSnapshot(in camera);
+            }
+        }
+
+        [BURST]
         public struct UpdateCullingJob : IJobParallelForDefer {
 
             public safe_ptr<State> state;
             public safe_ptr<ViewsModuleData> viewsModuleData;
-            public CullingType cullingType;
-            public CullingJobType dataType;
-
-            public static MemArray<ibool> GetCullingData(safe_ptr<ViewsModuleData> data, CullingJobType dataType) {
-
-                switch (dataType) {
-                    case CullingJobType.Update: return data.ptr->renderingOnSceneUpdateCulling;
-                    case CullingJobType.UpdateParallel: return data.ptr->renderingOnSceneUpdateParallelCulling;
-                    case CullingJobType.ApplyState: return data.ptr->renderingOnSceneApplyStateCulling;
-                    case CullingJobType.ApplyStateParallel: return data.ptr->renderingOnSceneApplyStateParallelCulling;
-                }
-
-                return default;
-
-            }
-
-            public static RenderingSparseList GetListData(safe_ptr<ViewsModuleData> data, CullingJobType dataType) {
-
-                switch (dataType) {
-                    case CullingJobType.Update: return data.ptr->renderingOnSceneUpdate;
-                    case CullingJobType.UpdateParallel: return data.ptr->renderingOnSceneUpdateParallel;
-                    case CullingJobType.ApplyState: return data.ptr->renderingOnSceneApplyState;
-                    case CullingJobType.ApplyStateParallel: return data.ptr->renderingOnSceneApplyStateParallel;
-                }
-
-                return default;
-
-            }
 
             public void Execute(int index) {
 
-                var entId = GetListData(this.viewsModuleData, this.dataType).sparseSet.dense[in this.state.ptr->allocator, (uint)index];
-                {
-                    var ent = new Ent(entId, this.viewsModuleData.ptr->connectedWorld);
+                ref var allocator = ref this.state.ptr->allocator;
+                var ent = this.viewsModuleData.ptr->renderingOnSceneEnts[index].element;
+                var entId = ent.id;
+                var prefabId = this.viewsModuleData.ptr->renderingOnSceneEntToPrefabId[in allocator, entId];
+                if (this.viewsModuleData.ptr->prefabIdToInfo.TryGetValue(in allocator, prefabId, out var prefabInfo) == false) return;
+
+                ref readonly var info = ref *prefabInfo.info.ptr;
+                var hasApplyState = info.typeInfo.HasApplyState || info.typeInfo.HasApplyStateParallel ||
+                                    info.HasApplyStateModules || info.HasApplyStateParallelModules;
+                var hasUpdate = info.typeInfo.HasUpdate || info.typeInfo.HasUpdateParallel ||
+                                info.HasUpdateModules || info.HasUpdateParallelModules;
+                var applyStateFrustum = hasApplyState &&
+                                        (info.typeInfo.cullingType == CullingType.Frustum || info.typeInfo.cullingType == CullingType.FrustumApplyStateOnly);
+                var updateFrustum = hasUpdate &&
+                                    (info.typeInfo.cullingType == CullingType.Frustum || info.typeInfo.cullingType == CullingType.FrustumOnUpdateOnly);
+
+                var culled = false;
+                if (applyStateFrustum == true || updateFrustum == true) {
                     var bounds = ent.GetAspect<TransformAspect>().GetBounds();
-                    var camera = this.viewsModuleData.ptr->camera.GetAspect<CameraAspect>();
-                    var isVisible = CameraUtils.IsVisible(in camera, in bounds);
-                    var culling = GetCullingData(this.viewsModuleData, this.dataType);
-                    culling[in this.state.ptr->allocator, entId] = (isVisible == false);
+                    culled = this.viewsModuleData.ptr->cullingSnapshot.IsVisible(in bounds) == false;
                 }
+
+                this.viewsModuleData.ptr->renderingOnSceneApplyStateCulling[in allocator, entId] = applyStateFrustum && culled;
+                this.viewsModuleData.ptr->renderingOnSceneApplyStateParallelCulling[in allocator, entId] = applyStateFrustum && culled;
+                this.viewsModuleData.ptr->renderingOnSceneUpdateCulling[in allocator, entId] = updateFrustum && culled;
+                this.viewsModuleData.ptr->renderingOnSceneUpdateParallelCulling[in allocator, entId] = updateFrustum && culled;
 
             }
 

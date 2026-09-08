@@ -22,6 +22,44 @@ namespace ME.BECS.Views {
 
     public static class CameraUtils {
 
+        public struct CullingPlane {
+            public float3 normal;
+            public float3 absoluteNormal;
+            public tfloat distance;
+        }
+
+        public struct CullingSnapshot {
+            public Bounds worldBounds;
+            public Unity.Collections.FixedList512Bytes<CullingPlane> planes;
+
+            public readonly bool IsVisible(in Bounds bounds) {
+                if (this.worldBounds.Intersects(bounds) == false) return false;
+                var center = (float3)bounds.center;
+                var extents = (float3)bounds.extents;
+                for (var i = 0; i < this.planes.Length; ++i) {
+                    var plane = this.planes[i];
+                    var r = math.dot(extents, plane.absoluteNormal);
+                    var dist = math.dot(plane.normal, center) + plane.distance;
+                    if (dist < -r) return false;
+                }
+                return true;
+            }
+        }
+
+        public static CullingSnapshot CreateCullingSnapshot(in CameraAspect camera) {
+            var result = new CullingSnapshot() { worldBounds = camera.WorldBounds };
+            ref readonly var planes = ref camera.readComponent.localPlanes;
+            for (uint i = 0; i < PLANES_COUNT; ++i) {
+                var plane = planes[i];
+                result.planes.Add(new CullingPlane() {
+                    normal = (float3)plane.normal,
+                    absoluteNormal = math.abs((float3)plane.normal),
+                    distance = plane.distance,
+                });
+            }
+            return result;
+        }
+
         private const uint PLANES_COUNT = 6u;
         private const uint CORNERS_COUNT = 4u;
 

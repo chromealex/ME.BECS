@@ -18,6 +18,13 @@ namespace ME.BECS.Transforms {
     [IgnoreProfiler]
     public static unsafe class Transform3DExt {
 
+        public struct HierarchyItem {
+
+            public Ent ent;
+            public bbool parentDirty;
+
+        }
+
         [INLINE(256)]
         public static Ent ReadParent(this in EntRO ent) {
             return ent.Read<ParentComponent>().value;
@@ -65,13 +72,12 @@ namespace ME.BECS.Transforms {
                 children.list.Remove(ent);
                 children.lockSpinner.Unlock();
                 currentParent = default;
-                RecalculateParent(in ent);
             }
 
             if (parent.IsAlive() == false) {
                 // Clean up parent component
                 ent.Remove<ParentComponent>();
-                RecalculateParent(in ent);
+                MarkTransformDirty(in ent);
                 return;
             }
 
@@ -87,41 +93,18 @@ namespace ME.BECS.Transforms {
             }
             
             currentParent = parent;
-            RecalculateParent(in ent);
-
+            MarkTransformDirty(in ent);
         }
 
         [INLINE(256)]
-        private static void RecalculateParent(in Ent ent) {
-            var level = 0u;
-            var e = ent;
-            while (e.IsAlive() == true && e.TryRead(out ParentComponent parent) == true) {
-                ++level;
-                e = parent.value;
-            }
-            
-            ent.SetTag<TransformLevel1>(false);
-            ent.SetTag<TransformLevel2>(false);
-            ent.SetTag<TransformLevel3>(false);
-            ent.SetTag<TransformLevel4>(false);
-            ent.SetTag<TransformLevelOther>(false);
-            
-            switch (level) {
-                case 0u: break;
-                case 1u: ent.SetTag<TransformLevel1>(true); break;
-                case 2u: ent.SetTag<TransformLevel2>(true); break;
-                case 3u: ent.SetTag<TransformLevel3>(true); break;
-                case 4u: ent.SetTag<TransformLevel4>(true); break;
-                default: ent.SetTag<TransformLevelOther>(true); break;
-            }
+        private static void MarkTransformDirty(in Ent ent) {
 
-            if (ent.TryRead(out ChildrenComponent list) == true) {
-                for (var i = 0u; i < list.list.Count; ++i) {
-                    var child = list.list[i];
-                    if (child.worldId != ent.worldId) continue;
-                    RecalculateParent(in child);
-                }
-            }
+            if (ent.Has<LocalPositionComponent>() == false || ent.Has<LocalRotationComponent>() == false ||
+                ent.Has<LocalMatrixComponent>() == false || ent.Has<WorldMatrixComponent>() == false) return;
+            var tr = ent.GetAspect<TransformAspect>();
+            tr.SetDirty();
+            tr.IsWorldMatrixTickCalculated = false;
+
         }
         
         [INLINE(256)]
@@ -142,10 +125,17 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void CalculateLocalMatrix(in TransformAspect ent) {
 
+            ent.localMatrix = CreateLocalMatrix(in ent);
+
+        }
+
+        [INLINE(256)]
+        private static float4x4 CreateLocalMatrix(in TransformAspect ent) {
+
             var t = ent.readLocalPosition;
             var s = ent.readLocalScale;
             var r = ent.readLocalRotation.value;
-            ref var matrix = ref ent.localMatrix;
+            float4x4 matrix = default;
             matrix.c0.x = (1 - 2 * (r.y * r.y + r.z * r.z)) * s.x;
             matrix.c0.y = (r.x * r.y + r.z * r.w) * s.x * 2;
             matrix.c0.z = (r.x * r.z - r.y * r.w) * s.x * 2;
@@ -163,7 +153,7 @@ namespace ME.BECS.Transforms {
             matrix.c3.z = t.z;
             matrix.c3.w = 1;
             
-            //ent.localMatrix = (float4x4)UnityEngine.Matrix4x4.TRS((UnityEngine.Vector3)ent.readLocalPosition, (UnityEngine.Quaternion)ent.readLocalRotation, (UnityEngine.Vector3)ent.readLocalScale); //float4x4.TRS(ent.readLocalPosition, ent.readLocalRotation, ent.readLocalScale);
+            return matrix;
 
         }
 
@@ -178,6 +168,76 @@ namespace ME.BECS.Transforms {
         [INLINE(256)]
         public static void CalculateWorldMatrixHierarchy(ref TransformAspect aspect) {
             CalculateWorldMatrixHierarchy(aspect.parent, aspect);
+        }
+
+        [INLINE(256)]
+        public static void CalculateLocalMatrixAndMarkDirty(in TransformAspect ent) {
+
+            var current = CreateLocalMatrix(in ent);
+            ref readonly var previous = ref ent.readLocalMatrix;
+            if (math.all(previous.c0 == current.c0) == false ||
+                math.all(previous.c1 == current.c1) == false ||
+                math.all(previous.c2 == current.c2) == false ||
+                math.all(previous.c3 == current.c3) == false) {
+                ent.localMatrix = current;
+                ent.SetDirty();
+            }
+
+        }
+
+        [INLINE(256)]
+        public static void CalculateWorldMatrixHierarchy(in TransformAspect root, ref Unity.Collections.LowLevel.Unsafe.UnsafeList<HierarchyItem> stack) {
+
+            var rootDirty = root.IsDirty || root.IsWorldMatrixTickCalculated == false ||
+                            (root.IsStatic == true && root.ent.Has<IsTransformStaticCalculatedComponent>() == false);
+            if (rootDirty == true) {
+                CalculateWorldMatrix(in root);
+                if (root.IsStatic == true) root.ent.SetTag<IsTransformStaticCalculatedComponent>(true);
+            }
+
+            AddChildrenReverse(in root, rootDirty, ref stack);
+            while (stack.Length > 0) {
+                var index = stack.Length - 1;
+                var item = stack[index];
+                stack.RemoveAtSwapBack(index);
+                var ent = item.ent;
+                if (ent.IsAlive() == false || ent.worldId != root.ent.worldId) continue;
+                if (ent.Has<LocalPositionComponent>() == false || ent.Has<LocalRotationComponent>() == false ||
+                    ent.Has<LocalMatrixComponent>() == false || ent.Has<WorldMatrixComponent>() == false) continue;
+
+                var tr = ent.GetAspect<TransformAspect>();
+                var parent = tr.parent;
+                if (parent.IsAlive() == false || parent.worldId != ent.worldId) continue;
+
+                var worldDirty = item.parentDirty || tr.IsDirty || tr.IsWorldMatrixTickCalculated == false ||
+                                 (tr.IsStatic == true && ent.Has<IsTransformStaticCalculatedComponent>() == false);
+                if (worldDirty == true) {
+                    var parentTr = parent.GetAspect<TransformAspect>();
+                    if (tr.IsStatic == true) {
+                        CalculateMatrixStatic(in parentTr, in tr);
+                    } else {
+                        CalculateMatrix(in parentTr, in tr);
+                    }
+                    tr.IsWorldMatrixTickCalculated = true;
+                }
+
+                AddChildrenReverse(in tr, worldDirty, ref stack);
+            }
+
+        }
+
+        [INLINE(256)]
+        private static void AddChildrenReverse(in TransformAspect ent, bool parentDirty, ref Unity.Collections.LowLevel.Unsafe.UnsafeList<HierarchyItem> stack) {
+
+            if (ent.ent.Has<ChildrenComponent>() == false) return;
+            ref readonly var children = ref ent.children;
+            for (var i = (int)children.Count - 1; i >= 0; --i) {
+                stack.Add(new HierarchyItem() {
+                    ent = children[(uint)i],
+                    parentDirty = parentDirty,
+                });
+            }
+
         }
 
         [INLINE(256)]

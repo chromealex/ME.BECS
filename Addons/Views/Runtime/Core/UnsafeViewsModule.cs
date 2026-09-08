@@ -374,6 +374,8 @@ namespace ME.BECS.Views {
         public safe_ptr<BeginFrameState> beginFrameState;
 
         public Ent camera;
+        public CameraUtils.CullingSnapshot cullingSnapshot;
+        public float interpolationFactor;
         
         public static ViewsModuleData Create(ref MemoryAllocator allocator, ushort worldId, uint entitiesCapacity, ViewsModuleProperties properties) {
             
@@ -702,36 +704,14 @@ namespace ME.BECS.Views {
             
             if (this.data.ptr->camera.IsAlive() == true) { // Update culling
 
-                var depends = new NativeArray<JobHandle>(4, Constants.ALLOCATOR_TEMP);
-                depends[0] = new Jobs.UpdateCullingJob() {
+                dependsOn = new Jobs.PrepareCullingJob() {
+                    viewsModuleData = this.data,
+                }.Schedule(dependsOn);
+
+                dependsOn = new Jobs.UpdateCullingJob() {
                     state = this.data.ptr->viewsWorld.state,
                     viewsModuleData = this.data,
-                    cullingType = CullingType.FrustumApplyStateOnly,
-                    dataType = CullingJobType.ApplyStateParallel,
-                }.Schedule(&this.data.ptr->applyStateParallelCounter.ptr->count, 64, dependsOn);
-
-                depends[1] = new Jobs.UpdateCullingJob() {
-                    state = this.data.ptr->viewsWorld.state,
-                    viewsModuleData = this.data,
-                    cullingType = CullingType.FrustumOnUpdateOnly,
-                    dataType = CullingJobType.UpdateParallel,
-                }.Schedule(&this.data.ptr->updateParallelCounter.ptr->count, 64, dependsOn);
-
-                depends[2] = new Jobs.UpdateCullingJob() {
-                    state = this.data.ptr->viewsWorld.state,
-                    viewsModuleData = this.data,
-                    cullingType = CullingType.FrustumApplyStateOnly,
-                    dataType = CullingJobType.ApplyState,
-                }.Schedule(&this.data.ptr->applyStateCounter.ptr->count, 64, dependsOn);
-
-                depends[3] = new Jobs.UpdateCullingJob() {
-                    state = this.data.ptr->viewsWorld.state,
-                    viewsModuleData = this.data,
-                    cullingType = CullingType.FrustumOnUpdateOnly,
-                    dataType = CullingJobType.Update,
-                }.Schedule(&this.data.ptr->updateCounter.ptr->count, 64, dependsOn);
-
-                dependsOn = JobHandle.CombineDependencies(depends);
+                }.Schedule((int*)&this.data.ptr->renderingOnSceneCount, 64, dependsOn);
 
             }
 

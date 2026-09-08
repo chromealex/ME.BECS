@@ -115,26 +115,6 @@ namespace ME.BECS.Transforms {
 
     }
 
-    [EditorComment("First Transform Level")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct TransformLevel1 : IComponent { }
-
-    [EditorComment("Second Transform Level")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct TransformLevel2 : IComponent { }
-
-    [EditorComment("Third Transform Level")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct TransformLevel3 : IComponent { }
-
-    [EditorComment("Fourth Transform Level")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct TransformLevel4 : IComponent { }
-
-    [EditorComment("Other Transform Level")]
-    [ComponentGroup(typeof(TransformComponentGroup))]
-    public struct TransformLevelOther : IComponent { }
-
     [ComponentGroup(typeof(TransformComponentGroup))]
     public struct DirtyMoveComponent : IComponent {
 
