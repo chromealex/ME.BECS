@@ -519,6 +519,12 @@ namespace ME.BECS.Editor {
 
         private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
 
+            var assembliesByName = new System.Collections.Generic.Dictionary<string, AssemblyInfo>(System.StringComparer.Ordinal);
+            foreach (var assembly in asms) {
+                if (assembliesByName.ContainsKey(assembly.name) == false) assembliesByName.Add(assembly.name, assembly);
+            }
+            AssemblyInfo FindAssembly(string name) => assembliesByName.TryGetValue(name, out var assembly) ? assembly : default;
+
             string postfix;
             if (editorAssembly == true) {
                 postfix = "Editor";
@@ -576,7 +582,7 @@ namespace ME.BECS.Editor {
                     if (type.IsValueType == false) continue;
                     var asm = type.Assembly;
                     var name = asm.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == name);
+                    var info = FindAssembly(name);
                     if (editorAssembly == false && info.isEditor == true) continue;
 
                     if (type.IsVisible == false) continue;
@@ -641,7 +647,7 @@ namespace ME.BECS.Editor {
                 foreach (var component in usedObjects.componentsGroup) {
 
                     var asm = component.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    var info = FindAssembly(asm);
                     if (editorAssembly == false && info.isEditor == true) continue;
 
                     var attr = (ComponentGroupAttribute)component.GetCustomAttribute(typeof(ComponentGroupAttribute));
@@ -661,7 +667,7 @@ namespace ME.BECS.Editor {
                         if (component.IsValueType == false) continue;
 
                         var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTagType = IsTagType(component);
@@ -693,7 +699,7 @@ namespace ME.BECS.Editor {
                         if (component.IsValueType == false) continue;
 
                         var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
@@ -714,7 +720,7 @@ namespace ME.BECS.Editor {
                         if (component.IsValueType == false) continue;
 
                         var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
@@ -734,7 +740,7 @@ namespace ME.BECS.Editor {
                         if (component.IsValueType == false) continue;
 
                         var asm = component.Assembly.GetName().Name;
-                        var info = asms.FirstOrDefault(x => x.name == asm);
+                        var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
                         var isTag = IsTagType(component).ToString().ToLower();
@@ -869,24 +875,24 @@ namespace ME.BECS.Editor {
                 var types = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem));
                 foreach (var type in types) {
                     var asm = type.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    var info = FindAssembly(asm);
                     if (editorAssembly == false && info.isEditor == true) continue;
                     content.Add(asm);
                 }
 
                 foreach (var type in componentTypes) {
                     var asm = type.Assembly.GetName().Name;
-                    var info = asms.FirstOrDefault(x => x.name == asm);
+                    var info = FindAssembly(asm);
                     if (editorAssembly == false && info.isEditor == true) continue;
                     content.Add(asm);
                 }
 
                 // load references
                 foreach (var asm in content.ToArray()) {
-                    var asmInfo = asms.FirstOrDefault(x => x.name == asm);
+                    var asmInfo = FindAssembly(asm);
                     if (asmInfo.references != null) {
                         foreach (var refAsm in asmInfo.references) {
-                            var info = asms.FirstOrDefault(x => x.name == refAsm);
+                            var info = FindAssembly(refAsm);
                             if (editorAssembly == false && info.isEditor == true) continue;
                             content.Add(refAsm);
                         }

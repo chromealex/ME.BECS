@@ -611,6 +611,7 @@ namespace ME.BECS.Editor.Systems {
                 AddAllEditorTypes(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
             } else {
                 var asms = System.AppDomain.CurrentDomain.GetAssemblies();
+                var lookup = new UsedObjectsLookup();
                 foreach (var asm in asms) {
                     var asmIncludes = asm.GetCustomAttributes<CodeGeneratorInclude>().ToArray();
                     if (asmIncludes.Length > 0) {
@@ -630,10 +631,10 @@ namespace ME.BECS.Editor.Systems {
 
                 var modules = UnityEditor.TypeCache.GetTypesDerivedFrom<Module>();
                 foreach (var module in modules) {
-                    AddMethod(module, nameof(Module.OnAwake), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
-                    AddMethod(module, nameof(Module.OnStart), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
-                    AddMethod(module, nameof(Module.OnUpdate), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
-                    AddMethod(module, nameof(Module.DoDestroy), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                    lookup.AddMethod(module, nameof(Module.OnAwake), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                    lookup.AddMethod(module, nameof(Module.OnStart), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                    lookup.AddMethod(module, nameof(Module.OnUpdate), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                    lookup.AddMethod(module, nameof(Module.DoDestroy), systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                 }
 
                 var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
@@ -645,7 +646,7 @@ namespace ME.BECS.Editor.Systems {
                     while (q.Count > 0) {
                         var node = q.Dequeue();
                         if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
-                            LookUp(systemNode.system, systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                            lookup.LookUp(systemNode.system, systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                         } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
                             foreach (var n in graphNode.graphValue.nodes) {
                                 q.Enqueue(n);
@@ -671,7 +672,7 @@ namespace ME.BECS.Editor.Systems {
                     }
                 }
 
-                LookUpComponents(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                lookup.LookUpComponents(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
             }
 
             usedObjects.jobTypes = jobTypesSet.OrderBy(x => x.FullName).ToList();
@@ -736,7 +737,16 @@ namespace ME.BECS.Editor.Systems {
 
         }
 
-        private static void LookUpComponents(System.Collections.Generic.HashSet<System.Type> types,
+        // All memoized work is scoped to one discovery run, never shared with worker threads.
+        private sealed class UsedObjectsLookup {
+
+        private readonly System.Collections.Generic.HashSet<MethodInfo> scannedMethods = new System.Collections.Generic.HashSet<MethodInfo>();
+        private readonly System.Collections.Generic.HashSet<System.Type> scannedAspects = new System.Collections.Generic.HashSet<System.Type>();
+        private readonly System.Collections.Generic.Dictionary<System.Type, MethodInfo[]> methodsByType = new System.Collections.Generic.Dictionary<System.Type, MethodInfo[]>();
+        private readonly MethodInfo newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+        private readonly MethodInfo aspectMethod = typeof(WorldAspectStorage).GetMethod(nameof(WorldAspectStorage.InitializeObj), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+
+        public void LookUpComponents(System.Collections.Generic.HashSet<System.Type> types,
                                              System.Collections.Generic.HashSet<System.Type> components,
                                              System.Collections.Generic.HashSet<System.Type> jobTypes,
                                              System.Collections.Generic.HashSet<System.Type> entityTypes,
@@ -755,7 +765,7 @@ namespace ME.BECS.Editor.Systems {
             
         }
 
-        private static void LookUp(ISystem system, 
+        public void LookUp(ISystem system,
                                    System.Collections.Generic.HashSet<System.Type> types,
                                    System.Collections.Generic.HashSet<System.Type> components,
                                    System.Collections.Generic.HashSet<System.Type> jobTypes,
@@ -775,14 +785,12 @@ namespace ME.BECS.Editor.Systems {
         }
         
         
-        private static void AddMethod(System.Type type, string name, 
+        public void AddMethod(System.Type type, string name,
                               System.Collections.Generic.HashSet<System.Type> types, 
                               System.Collections.Generic.HashSet<System.Type> components,
                               System.Collections.Generic.HashSet<System.Type> jobTypes,
                               System.Collections.Generic.HashSet<System.Type> entityTypes,
                               System.Collections.Generic.HashSet<System.Type> aspects) {
-            var newEntMethod = typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            var aspectMethod = typeof(WorldAspectStorage).GetMethod(nameof(WorldAspectStorage.InitializeObj), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
             if (type.IsGenericType == true) {
                 var without = type.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x) && x.IsGenericType == true).Select(x => x.GetGenericArguments()[0]).ToArray();
                 var constraints = type.GetGenericArguments()[0].GetGenericParameterConstraints();
@@ -801,9 +809,13 @@ namespace ME.BECS.Editor.Systems {
             }
 
             void Run(System.Type type) {
-                var methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                if (this.methodsByType.TryGetValue(type, out var methods) == false) {
+                    methods = type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                    this.methodsByType.Add(type, methods);
+                }
                 foreach (var method in methods) {
                     if (method.Name != name) continue;
+                    if (this.scannedMethods.Add(method) == false) continue;
                     var componentTypes = JobsEarlyInitCodeGenerator.GetMethodTypesInfo(method, methodParameters: false, onInstruction: (inst, q) => {
                         if (inst.Operand is MethodInfo methodInfo) {
                             if (IsMethod(methodInfo, aspectMethod) == true) {
@@ -843,7 +855,7 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
-        private static void AddToLookup(System.Type type, System.Collections.Generic.HashSet<System.Type> types, System.Collections.Generic.HashSet<System.Type> components, System.Collections.Generic.HashSet<System.Type> jobTypes, System.Collections.Generic.HashSet<System.Type> entityTypes, System.Collections.Generic.HashSet<System.Type> aspects) {
+        private void AddToLookup(System.Type type, System.Collections.Generic.HashSet<System.Type> types, System.Collections.Generic.HashSet<System.Type> components, System.Collections.Generic.HashSet<System.Type> jobTypes, System.Collections.Generic.HashSet<System.Type> entityTypes, System.Collections.Generic.HashSet<System.Type> aspects) {
             if (type.IsGenericTypeParameter == true) {
                 var constraints = type.GetGenericParameterConstraints();
                 foreach (var constraint in constraints) {
@@ -859,6 +871,7 @@ namespace ME.BECS.Editor.Systems {
                 components.Add(type);
             } else if (typeof(IAspect).IsAssignableFrom(type) == true) {
                 aspects.Add(type);
+                if (this.scannedAspects.Add(type) == false) return;
                 var fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 foreach (var field in fields) {
                     if (typeof(IAspectData).IsAssignableFrom(field.FieldType) == true) {
@@ -868,6 +881,7 @@ namespace ME.BECS.Editor.Systems {
             }
         }
 
+        }
     }
     
 }
