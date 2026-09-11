@@ -69,7 +69,7 @@ namespace ME.BECS.Perks {
         
         [INLINE(256)]
         public void OnUpdate(ref SystemContext context) {
-            context.Query().AsParallel().Without<IsPerkInitializeRequired>().Without<IsPerkUsedComponent>().Schedule<Job, PerkAspect, T>().AddDependency(ref context);
+            context.Query().Without<IsPerkInitializeRequired>().Without<IsPerkUsedComponent>().Schedule<Job, PerkAspect, T>().AddDependency(ref context);
         }
 
     }
