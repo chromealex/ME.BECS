@@ -75,12 +75,12 @@ namespace ME.BECS.Units {
             
             public void Execute(in JobInfo jobInfo, in Ent ent, ref TransformAspect tr, ref UnitAspect unit) {
 
-                tr.position += unit.readComponentRuntime.collisionDirection + unit.readComponentRuntime.desiredDirection * this.dt;
-                unit.componentRuntime.velocity = unit.readComponentRuntime.desiredDirection;
-                unit.speed = math.length(unit.componentRuntime.velocity);
-                if (math.lengthsq(unit.readComponentRuntime.alignmentVector) > 0.1f) tr.rotation = math.slerp(tr.rotation, quaternion.LookRotationSafe(unit.readComponentRuntime.alignmentVector, new float3(0f, 1f, 0f)), unit.readRotationSpeed * this.dt);
+                tr.position += unit.readComponentRuntimeRvo.collisionDirection + unit.readComponentRuntime.desiredDirection * this.dt;
+                unit.componentRuntimeRvo.velocity = unit.readComponentRuntime.desiredDirection;
+                unit.speed = math.length(unit.readComponentRuntimeRvo.velocity);
+                if (math.lengthsq(unit.readComponentRuntimeRvo.alignmentVector) > 0.1f) tr.rotation = math.slerp(tr.rotation, quaternion.LookRotationSafe(unit.readComponentRuntimeRvo.alignmentVector, new float3(0f, 1f, 0f)), unit.readRotationSpeed * this.dt);
                 if (unit.readComponentRuntime.collideWithEnd == true) unit.IsCollideWithEnd = true;
-                unit.componentRuntime.collisionDirection = default;
+                unit.componentRuntimeRvo.collisionDirection = default;
 
             }
             
@@ -93,10 +93,10 @@ namespace ME.BECS.Units {
             var collideWithEnd = this.ResolveOverlap(in tr, in unit, list, dt);
             if (collideWithEnd == true || unit.IsPathFollow == false) {
                 newVelocity = float3.zero;
-                unit.componentRuntime.pathDirection = float3.zero;
+                unit.componentRuntimeRvo.pathDirection = float3.zero;
                 unit.componentRuntime.collideWithEnd = collideWithEnd;
             } else {
-                var desiredVelocity = math.normalizesafe(unit.readComponentRuntime.pathDirection) * unit.maxSpeed;
+                var desiredVelocity = math.normalizesafe(unit.readComponentRuntimeRvo.pathDirection) * unit.maxSpeed;
                 newVelocity = this.ComputeRVO(in tr, in unit, list, desiredVelocity, out tfloat danger);
                 var speedFactor = math.lerp(1f, this.minSpeedFactor, danger * unit.readDecelerationSpeed);
                 newVelocity *= speedFactor;
@@ -107,9 +107,9 @@ namespace ME.BECS.Units {
             
             unit.componentRuntime.desiredDirection = velocity;
 
-            unit.componentRuntime.alignmentVector = unit.readComponentRuntime.desiredDirection;
+            unit.componentRuntimeRvo.alignmentVector = unit.readComponentRuntime.desiredDirection;
             if (math.lengthsq(velocity) > 0.01f) {
-                unit.componentRuntime.alignmentVector = math.normalizesafe(velocity);
+                unit.componentRuntimeRvo.alignmentVector = math.normalizesafe(velocity);
             }
 
         }
@@ -140,7 +140,7 @@ namespace ME.BECS.Units {
                 }
             }
 
-            currentUnit.componentRuntime.collisionDirection = collisionDirection;
+            currentUnit.componentRuntimeRvo.collisionDirection = collisionDirection;
             return collideWithEnd;
         }
         

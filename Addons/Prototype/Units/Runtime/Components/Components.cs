@@ -59,17 +59,24 @@ namespace ME.BECS.Units {
 
     }
 
+    [EditorComment("Current unit agent RVO values")]
+    [ComponentGroup(typeof(UnitComponentGroup))]
+    public struct NavAgentRVOPathRuntimeComponent : IComponent {
+
+        public float3 collisionDirection;
+        public float3 alignmentVector;
+        public float3 velocity;
+        public float3 pathDirection;
+
+    }
+
     [EditorComment("Current unit agent values")]
     [ComponentGroup(typeof(UnitComponentGroup))]
     public struct NavAgentRuntimeComponent : IComponent {
 
         public AgentType properties;
 
-        public float3 collisionDirection;
-        public float3 alignmentVector;
         public float3 desiredDirection;
-        public float3 velocity;
-        public float3 pathDirection;
 
         public Ent placementsRoot;
         public ListAuto<Ent> placements;

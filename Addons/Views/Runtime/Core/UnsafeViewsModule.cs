@@ -556,6 +556,7 @@ namespace ME.BECS.Views {
             viewsWorldProperties.allocatorProperties.sizeInBytesCapacity = (uint)MemoryAllocator.MIN_ZONE_SIZE; // Use min allocator size
             viewsWorldProperties.name = ViewsModule.providerInfos[providerId].editorName;
             viewsWorldProperties.stateProperties.mode = WorldMode.Visual;
+            viewsWorldProperties.stateProperties.entitiesCapacity = entitiesCapacity;
 
             var viewsWorld = World.Create(viewsWorldProperties, switchContext: false);
             var prevContext = Context.world;

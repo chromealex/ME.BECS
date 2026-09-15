@@ -68,6 +68,7 @@ namespace ME.BECS.Units {
         [QueryWith]
         public AspectDataPtr<NavAgentComponent> navAgentDataPtr;
         public AspectDataPtr<NavAgentRuntimeComponent> navAgentRuntimeDataPtr;
+        public AspectDataPtr<NavAgentRVOPathRuntimeComponent> navAgentRuntimeRvoDataPtr;
         public AspectDataPtr<NavAgentRuntimeSpeedComponent> navAgentRuntimeSpeedDataPtr;
         [QueryWith]
         public AspectDataPtr<UnitCommandGroupComponent> unitCommandGroupDataPtr;
@@ -131,8 +132,8 @@ namespace ME.BECS.Units {
         public readonly ref readonly AgentType readAgentProperties => ref this.readComponentRuntime.properties;
         public readonly ref uint typeId => ref this.componentRuntime.properties.typeId;
         public readonly ref readonly uint readTypeId => ref this.readComponentRuntime.properties.typeId;
-        public readonly ref float3 velocity => ref this.componentRuntime.velocity;
-        public readonly ref readonly float3 readVelocity => ref this.readComponentRuntime.velocity;
+        public readonly ref float3 velocity => ref this.componentRuntimeRvo.velocity;
+        public readonly ref readonly float3 readVelocity => ref this.readComponentRuntimeRvo.velocity;
         public readonly ref tfloat radius => ref this.componentRuntime.properties.radius;
         public readonly ref readonly tfloat readRadius => ref this.readComponentRuntime.properties.radius;
         public readonly ref tfloat speed => ref this.componentRuntimeSpeed.speed;
@@ -154,6 +155,8 @@ namespace ME.BECS.Units {
         public readonly ref readonly NavAgentComponent readComponent => ref this.navAgentDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeComponent componentRuntime => ref this.navAgentRuntimeDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentRuntimeComponent readComponentRuntime => ref this.navAgentRuntimeDataPtr.Read(this.ent.id, this.ent.gen);
+        public readonly ref NavAgentRVOPathRuntimeComponent componentRuntimeRvo => ref this.navAgentRuntimeRvoDataPtr.Get(this.ent.id, this.ent.gen);
+        public readonly ref readonly NavAgentRVOPathRuntimeComponent readComponentRuntimeRvo => ref this.navAgentRuntimeRvoDataPtr.Read(this.ent.id, this.ent.gen);
         public readonly ref NavAgentRuntimeSpeedComponent componentRuntimeSpeed => ref this.navAgentRuntimeSpeedDataPtr.Get(this.ent.id, this.ent.gen);
         public readonly ref readonly NavAgentRuntimeSpeedComponent readComponentRuntimeSpeed => ref this.navAgentRuntimeSpeedDataPtr.Read(this.ent.id, this.ent.gen);
 

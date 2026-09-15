@@ -92,10 +92,14 @@ namespace ME.BECS {
             private BitArray bitsB;
             #endif
 
-            public DoubleBuffer(safe_ptr<State> state, uint pages) {
-                this.dataPagesA = new MemArray<Page>(ref state.ptr->allocator, pages);
+            public DoubleBuffer(safe_ptr<State> state, uint pages, uint groupIndex) {
+                using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_PAGES, groupIndex)) {
+                    this.dataPagesA = new MemArray<Page>(ref state.ptr->allocator, pages);
+                }
                 #if ENABLE_BECS_FLAT_QUERIES
-                this.bitsA = new BitArray(ref state.ptr->allocator, pages * ENTITIES_PER_PAGE, ClearOptions.ClearMemory, true);
+                using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_BITS, groupIndex)) {
+                    this.bitsA = new BitArray(ref state.ptr->allocator, pages * ENTITIES_PER_PAGE, ClearOptions.ClearMemory, true);
+                }
                 this.bitsB = default;
                 #endif
                 this.dataPagesB = default;
@@ -125,14 +129,18 @@ namespace ME.BECS {
             #endif
 
             [INLINE(256)]
-            public static void Swap(ref DoubleBuffer buffer, safe_ptr<State> state, uint newSize) {
-                ref var targetPages = ref GetTargetPages(ref buffer);
-                targetPages.Resize(ref state.ptr->allocator, newSize, 2);
-                targetPages.CopyFrom(ref state.ptr->allocator, in GetActivePages(ref buffer));
+            public static void Swap(ref DoubleBuffer buffer, safe_ptr<State> state, uint newSize, uint groupIndex) {
+                using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_PAGES, groupIndex)) {
+                    ref var targetPages = ref GetTargetPages(ref buffer);
+                    targetPages.Resize(ref state.ptr->allocator, newSize, 2);
+                    targetPages.CopyFrom(ref state.ptr->allocator, in GetActivePages(ref buffer));
+                }
                 #if ENABLE_BECS_FLAT_QUERIES
-                ref var targetBits = ref GetTargetBits(ref buffer);
-                targetBits.Resize(ref state.ptr->allocator, newSize * ENTITIES_PER_PAGE, growFactor: 2);
-                targetBits.CopyFrom(ref state.ptr->allocator, in GetActiveBits(ref buffer));
+                using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_BITS, groupIndex)) {
+                    ref var targetBits = ref GetTargetBits(ref buffer);
+                    targetBits.Resize(ref state.ptr->allocator, newSize * ENTITIES_PER_PAGE, growFactor: 2);
+                    targetBits.CopyFrom(ref state.ptr->allocator, in GetActiveBits(ref buffer));
+                }
                 #endif
                 System.Threading.Interlocked.Exchange(ref buffer.active, buffer.active == 0 ? 1 : 0);
             }
@@ -172,7 +180,11 @@ namespace ME.BECS {
 
         }
 
+        #if ENTITIES_PER_PAGE_32
+        internal const uint ENTITIES_PER_PAGE = 32u;
+        #else
         internal const uint ENTITIES_PER_PAGE = 64u;
+        #endif
         internal const uint ENTITIES_PER_PAGE_MASK = ENTITIES_PER_PAGE - 1u;
         private const int ENTITIES_PER_PAGE_POW = 6;
 
@@ -185,9 +197,7 @@ namespace ME.BECS {
         public DataDenseSet(uint groupIndex, safe_ptr<State> state, uint dataSize, uint entitiesCapacity) {
             var pages = _sizeData(entitiesCapacity);
             this.dataSize = dataSize;
-            using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, groupIndex)) {
-                this.buffer = new DoubleBuffer(state, pages);
-            }
+            this.buffer = new DoubleBuffer(state, pages, groupIndex);
             this.groupIndex = groupIndex;
             MemoryAllocator.ValidateConsistency(ref state.ptr->allocator);
         }
@@ -257,9 +267,7 @@ namespace ME.BECS {
                 this.GetReadWriteSpinner(worldId).WriteBegin();
                 activePages = ref DoubleBuffer.GetActivePages(ref this.buffer);
                 if (newSize > activePages.Length) {
-                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
-                        DoubleBuffer.Swap(ref this.buffer, state, newSize);
-                    }
+                    DoubleBuffer.Swap(ref this.buffer, state, newSize, this.groupIndex);
                 }
                 this.GetReadWriteSpinner(worldId).WriteEnd();
             }
@@ -322,7 +330,7 @@ namespace ME.BECS {
                 page = (safe_ptr<Page>)DoubleBuffer.GetActivePages(ref this.buffer).GetUnsafePtr(in state.ptr->allocator) + pageIndex;
                 page.ptr->Lock(state);
                 if (page.ptr->isCreated == 0) {
-                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
+                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_DATA, this.groupIndex)) {
                         Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
                     }
                 }
@@ -362,7 +370,7 @@ namespace ME.BECS {
                 page = (safe_ptr<Page>)DoubleBuffer.GetActivePages(ref this.buffer).GetUnsafePtr(in state.ptr->allocator) + pageIndex;
                 page.ptr->Lock(state);
                 if (page.ptr->isCreated == 0) {
-                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS, this.groupIndex)) {
+                    using (new AllocatorTag(ALLOC_TAGS.COMPONENTS_DATA, this.groupIndex)) {
                         Page.Create(page, state, this.dataSize, ENTITIES_PER_PAGE);
                     }
                 }

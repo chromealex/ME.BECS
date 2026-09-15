@@ -27,6 +27,10 @@ namespace ME.BECS {
         [AllocatorTagInfo] public static readonly AllocatorTagInfo ONE_SHOT = new AllocatorTagInfo() { tag = 1004, name = "ONE SHOT", color = UnityEngine.Color.indianRed };
         [AllocatorTagInfo] public static readonly AllocatorTagInfo SYSTEMS = new AllocatorTagInfo() { tag = 1005, name = "SYSTEMS", color = UnityEngine.Color.lightSkyBlue };
 
+        [AllocatorTagInfo] public static readonly AllocatorTagInfo COMPONENTS_DATA = new AllocatorTagInfo() { tag = 1006, name = "COMPONENTS DATA", color = UnityEngine.Color.deepSkyBlue };
+        [AllocatorTagInfo] public static readonly AllocatorTagInfo COMPONENTS_BITS = new AllocatorTagInfo() { tag = 1007, name = "COMPONENTS BITS", color = UnityEngine.Color.cornflowerBlue };
+        [AllocatorTagInfo] public static readonly AllocatorTagInfo COMPONENTS_PAGES = new AllocatorTagInfo() { tag = 1008, name = "COMPONENTS PAGES", color = UnityEngine.Color.cadetBlue };
+
     }
 
 }

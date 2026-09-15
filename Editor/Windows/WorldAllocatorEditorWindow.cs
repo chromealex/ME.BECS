@@ -111,14 +111,14 @@ namespace ME.BECS.Editor {
             var blocksCount = 0;
             var freeBlocksCount = 0;
             var node = (MemoryAllocator.BlockHeader*)zone->firstBlock.ptr;
-            do {
+            while (node->next != uint.MaxValue) {
                 ++blocksCount;
                 if (node->freeIndex != uint.MaxValue) {
                     ++freeBlocksCount;
                 }
                 list.Add(new BlockHeaderPtr() { ptr = (System.IntPtr)node, header = *node, });
                 node = (MemoryAllocator.BlockHeader*)(zone->root.ptr + node->next);
-            } while (node->next != uint.MaxValue);
+            }
             
             var delta = list.Count - zoneVisual.blocks.Count;
             if (delta > 0) {
