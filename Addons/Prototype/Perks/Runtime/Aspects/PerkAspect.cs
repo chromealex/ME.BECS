@@ -4,7 +4,7 @@ namespace ME.BECS.Perks {
     
     using ME.BECS.Players;
 
-    public struct PerkAspect : IAspect {
+    public partial struct PerkAspect : IAspect {
         
         public Ent ent { get; set; }
         

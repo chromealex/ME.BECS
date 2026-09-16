@@ -28,30 +28,9 @@ namespace ME.BECS.Editor {
         
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
-            var content = new System.Collections.Generic.List<string>();
-            var types = GetAllTypes(this, out var count);
-            
-            {
-                var data = $"EntityTypes.Init();";
-                content.Add(data);
-            }
-            
-            foreach (var item in types) {
-                var contentItem = new System.Collections.Generic.List<string>();
-                var strType = EditorUtils.GetTypeName(item.Item1);
-
-                contentItem.Add($"EntityTypes.Register<{strType}>({item.Item2});");
-                
-                content.AddRange(contentItem);
-
-            }
-
-            {
-                var data = $"EntityTypes.groupsCount = {count}u;";
-                content.Add(data);
-            }
-
-            dataList.AddRange(content);
+            // The compiler owns registration statements and IDs from the ordered manifest.
+            // Keep this call in the existing initialization slot; missing inputs fail compilation.
+            dataList.Add("global::ME.BECS.SourceGenerated.EntityInputs.Initialize();");
             
         }
 

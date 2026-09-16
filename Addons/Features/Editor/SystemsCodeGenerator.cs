@@ -13,8 +13,7 @@ namespace ME.BECS.Editor.Systems {
         private void AddMethod<T>(SystemsGraph graph, string baseName, string methodName, Method method, out scg::List<string> content, out scg::List<string> innerMethods) where T : class {
             //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
             content = new scg::List<string>();
-            content.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.{methodName}))]");
-            content.Add($"public static void Graph{methodName}_{GetId(graph)}_{this.GetType().Name}(uint dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {{");
+            content.Add($"private static void ExecuteGraph{methodName}_{GetId(graph)}_{this.GetType().Name}(uint dt, ref World world, ref Unity.Jobs.JobHandle dependsOn) {{");
             //content.Add("/*");
             {
                 content.Add("// " + graph.name);
@@ -40,7 +39,8 @@ namespace ME.BECS.Editor.Systems {
 
         public override string AddPublicContent() {
             
-            return this.AddContent(null);
+            // Runtime graph registration and its load hook are emitted by Roslyn.
+            return string.Empty;
             
         }
 
@@ -76,34 +76,28 @@ namespace ME.BECS.Editor.Systems {
                             filename = $"{baseName}.DrawGizmos",
                         };
                         var graphInitializeContent = new scg::List<string>();
-                        graphInitializeContent.Add($"[BURST] public unsafe class Graph{baseName}Initialize {{");
+                        graphInitializeContent.Add($"[BURST] public unsafe partial class Graph{baseName}Initialize {{");
                         var graphAwakeContent = new scg::List<string>();
-                        graphAwakeContent.Add($"public static unsafe class Graph{baseName}Awake {{");
+                        graphAwakeContent.Add($"public static unsafe partial class Graph{baseName}Awake {{");
                         var graphStartContent = new scg::List<string>();
-                        graphStartContent.Add($"public static unsafe class Graph{baseName}Start {{");
+                        graphStartContent.Add($"public static unsafe partial class Graph{baseName}Start {{");
                         var graphUpdateContent = new scg::List<string>();
-                        graphUpdateContent.Add($"public static unsafe class Graph{baseName}Update {{");
+                        graphUpdateContent.Add($"public static unsafe partial class Graph{baseName}Update {{");
                         var graphDestroyContent = new scg::List<string>();
-                        graphDestroyContent.Add($"public static unsafe class Graph{baseName}Destroy {{");
+                        graphDestroyContent.Add($"public static unsafe partial class Graph{baseName}Destroy {{");
                         var graphDrawGizmosContent = new scg::List<string>();
-                        graphDrawGizmosContent.Add($"public static unsafe class Graph{baseName}DrawGizmos {{");
+                        graphDrawGizmosContent.Add($"public static unsafe partial class Graph{baseName}DrawGizmos {{");
                         
                         //var name = System.Text.RegularExpressions.Regex.Replace(graph.name, @"(\s+|@|&|'|\(|\)|<|>|#|-)", "_");
-                        graphInitializeContent.Add($"private static readonly SharedStatic<NativeArray<System.IntPtr>> graphNodes{GetId(graph)}_{this.GetType().Name}Data = SharedStatic<NativeArray<System.IntPtr>>.GetOrCreate<Graph{baseName}Initialize>();");
-                        graphInitializeContent.Add($"public static ref NativeArray<System.IntPtr> graphNodes{GetId(graph)}_{this.GetType().Name} => ref graphNodes{GetId(graph)}_{this.GetType().Name}Data.Data;");
 
                         { // initialize method
-                            graphInitializeContent.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.InitializeGraph))]");
-                            graphInitializeContent.Add($"public static void GraphInitialize_{GetId(graph)}_{this.GetType().Name}() {{"); 
-                            {
+                            InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
+                            if (!SourceGeneratorInputManifest.TryGetGraphApplyPlan(graph, out _)) {
+                                graphInitializeContent.Add("private static void ApplyInjections() {");
                                 graphInitializeContent.Add($"// {graph.name}");
-                                graphInitializeContent.Add("var allocator = (AllocatorManager.AllocatorHandle)Constants.ALLOCATOR_DOMAIN;");
-                                graphInitializeContent.Add($"if (graphNodes{id}_{this.GetType().Name}.IsCreated == true) Utils.DisposePtrArray(graphNodes{id}_{this.GetType().Name}, allocator);");
-                                graphInitializeContent.Add($"graphNodes{id}_{this.GetType().Name} = CollectionHelper.CreateNativeArray<System.IntPtr>({GetSystemsCount(graph)}, allocator);");
-                                InitializeGraph(this, systemTypeToVar, graphInitializeContent, graph, id, 0);
                                 InitializeInjections(graph, graphInitializeContent, systemTypeToVar);
+                                graphInitializeContent.Add("}");
                             }
-                            graphInitializeContent.Add("}");
                         }
                         {
                             this.AddMethod<IAwake>(graph, baseName, "OnAwake", Method.Awake, out var caller, out var innerMethods);
@@ -130,12 +124,6 @@ namespace ME.BECS.Editor.Systems {
                             graphDrawGizmosContent.AddRange(innerMethods);
                             graphDrawGizmosContent.AddRange(caller);
                         }
-                        {
-                            graphInitializeContent.Add($"[AOT.MonoPInvokeCallback(typeof(SystemsStatic.GetSystem))]");
-                            graphInitializeContent.Add($"public static void GraphGetSystem_{id}_{this.GetType().Name}(int index, out void* ptr) {{");
-                            graphInitializeContent.Add($"ptr = (void*)graphNodes{id}_{this.GetType().Name}[index];");
-                            graphInitializeContent.Add("}");
-                        }
 
                         graphInitializeContent.Add("}");
                         graphAwakeContent.Add("}");
@@ -157,33 +145,6 @@ namespace ME.BECS.Editor.Systems {
                         filesContent.Add(graphDestroy);
                         filesContent.Add(graphDrawGizmos);
                     }
-                } else {
-                    // initialize callbacks
-                    content.Add("[UnityEngine.RuntimeInitializeOnLoadMethodAttribute(UnityEngine.RuntimeInitializeLoadType.BeforeSplashScreen)]");
-                    content.Add("public static void Initialize() {");
-                    content.Add("CustomModules.RegisterFirstPass(SystemsLoad);");
-                    content.Add("}");
-                    content.Add("[UnityEngine.Scripting.PreserveAttribute]");
-                    content.Add("public static void SystemsLoad() {");
-                    foreach (var guid in graphs) {
-                        var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                        var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<SystemsGraph>(path);
-                        if (graph.isInnerGraph == true) continue;
-                        var id = GetId(graph);
-                        var graphId = graph.GetId();
-                        var baseName = $"Graph{EditorUtils.GetCodeName(graph.name)}";
-                        content.Add($"// Graph: {graph.name}");
-                        content.Add("{");
-                        content.Add($"SystemsStatic.RegisterMethod(Graph{baseName}Initialize.GraphInitialize_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add($"SystemsStatic.RegisterAwakeMethod(Graph{baseName}Awake.GraphOnAwake_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add($"SystemsStatic.RegisterStartMethod(Graph{baseName}Start.GraphOnStart_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add($"SystemsStatic.RegisterUpdateMethod(Graph{baseName}Update.GraphOnUpdate_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add($"SystemsStatic.RegisterDrawGizmosMethod(Graph{baseName}DrawGizmos.GraphOnDrawGizmos_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add($"SystemsStatic.RegisterDestroyMethod(Graph{baseName}Destroy.GraphOnDestroy_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add($"SystemsStatic.RegisterGetSystemMethod(Graph{baseName}Initialize.GraphGetSystem_{id}_{this.GetType().Name}, {graphId}, false);");
-                        content.Add("}");
-                    }
-                    content.Add("}");
                 }
             }
             
@@ -306,8 +267,7 @@ namespace ME.BECS.Editor.Systems {
                             var needApplyJob = false;
                             {
                                 var types = new scg::HashSet<System.Type>();
-                                var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
-                                CollectJobsTypes(systemType.GetMethod(method, flags), types);
+                                SourceGeneratorScheduledJobs.Collect(systemType, types, typeof(T));
                                 foreach (var jobType in types) {
                                     var typeInfos = ME.BECS.Editor.Jobs.JobsEarlyInitCodeGenerator.GetJobTypesInfo(jobType);
                                     foreach (var typeInfo in typeInfos) {
@@ -378,8 +338,7 @@ namespace ME.BECS.Editor.Systems {
                         while (q.Count > 0) {
 
                             if (--maxIter == 0) {
-                                UnityEngine.Debug.LogError("max iter");
-                                break;
+                                throw new System.InvalidOperationException($"[ME.BECS] Graph '{graph.name}', phase {methodEnum}: dependency traversal exceeded 10000 iterations. Check cycles or unresolved input dependencies. Refusing to emit an incomplete lifecycle body.");
                             }
 
                             var n = q.Dequeue();
@@ -559,7 +518,8 @@ namespace ME.BECS.Editor.Systems {
                                                         }
 
                                                         methodContent.Add("{");
-                                                        AddApply(systemNode, srcDep, ref schemeDependsOn, $"Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()})", collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"), forceWithoutSync: withoutSync);
+                                                        var combinedGenericDependency = types.Length == 0 ? dependsOn : $"Unity.Jobs.JobHandle.CombineDependencies(depsGeneric{srcDep.ToString()})";
+                                                        AddApply(systemNode, srcDep, ref schemeDependsOn, combinedGenericDependency, collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"), forceWithoutSync: withoutSync);
                                                         methodContent.Add("}");
                                                         index = srcDep;
                                                     } else {
@@ -859,10 +819,11 @@ namespace ME.BECS.Editor.Systems {
                 type = type.GetGenericTypeDefinition();
             }
             var isSystemBursted = generator.burstedTypes.Contains(type);
-            var methodInfo = type.GetMethod(method);
-            var isBursted = generator.burstedTypes.Any(x => x == methodInfo);
-            var isDiscarded = generator.burstDiscardedTypes.Contains(methodInfo);
-            if (isSystemBursted == true && isDiscarded == true) return false;
+            var methodInfo = SourceGeneratorScheduledJobsValidation.GetLifecycleMethod(type, method);
+            if (methodInfo == null) return false;
+            var isBursted = System.Attribute.IsDefined(methodInfo, typeof(Unity.Burst.BurstCompileAttribute));
+            var isDiscarded = System.Attribute.IsDefined(methodInfo, typeof(WithoutBurstAttribute));
+            if (isDiscarded) return false;
             if (isSystemBursted == false && isBursted == false) return false;
             return true;
         }
@@ -916,74 +877,17 @@ namespace ME.BECS.Editor.Systems {
         }
 
         public static int InitializeGraph(CustomCodeGenerator generator, scg::Dictionary<System.Type, string> systemTypeToVar, scg::List<string> content, SystemsGraph graph, int rootGraphId, int index) {
-            for (int idx = 0; idx < graph.nodes.Count; ++idx) {
-                var node = graph.nodes[idx];
-                if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
-                    var system = systemNode.system;
-                    if (system == null) {
-                        content.Add("// [!] system is null");
-                    } else {
-                        var systemType = system.GetType();
-                        if (systemType.IsGenericType == true) {
-                            systemType = systemType.GetGenericTypeDefinition();
-                            var genType = EditorUtils.GetFirstInterfaceConstraintType(systemType);
-                            if (genType != null) {
-                                var types = EditorUtils.GetTypesDerivedFrom(genType, systemType);
-                                foreach (var cType in types) {
-                                    var type = systemType.MakeGenericType(cType);
-                                    var systemTypeStr = EditorUtils.GetTypeName(type);
-                                    content.Add("{");
-                                    content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
-                                    content.Add($"*({systemTypeStr}*)item = {GetDefinition(graph, idx, System.Activator.CreateInstance(type), type)};");
-                                    var v = $"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}]";
-                                    systemTypeToVar.TryAdd(type, v);
-                                    content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
-                                    content.Add($"{v} = (System.IntPtr)item;");
-                                    content.Add("}");
-                                    ++index;
-                                }
-                            }
-                        } else {
-                            var systemTypeStr = EditorUtils.GetTypeName(systemType);
-                            content.Add("{");
-                            content.Add($"var item = allocator.Allocate(TSize<{systemTypeStr}>.sizeInt, TAlign<{systemTypeStr}>.alignInt);");
-                            content.Add($"*({systemTypeStr}*)item = {GetDefinition(graph, idx, systemNode.system)};");
-                            var v = $"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}]";
-                            systemTypeToVar.TryAdd(systemNode.system.GetType(), v);
-                            content.Add($"TSystemGraph.Register<{systemTypeStr}>({rootGraphId}, item);");
-                            content.Add($"{v} = (System.IntPtr)item;");
-                            content.Add("}");
-                            ++index;
-                        }
-                    }
-                } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                    index = InitializeGraph(generator, systemTypeToVar, content, graphNode.graphValue, rootGraphId, index);
-                }
+            foreach (var input in SourceGeneratorInputManifest.GetGraphSystems(graph)) {
+                var variable = $"graphNodes{rootGraphId}_{generator.GetType().Name}[{index}]";
+                systemTypeToVar.TryAdd(input.type, variable);
+                index = checked(index + 1);
             }
 
             return index;
         }
 
         public static int GetSystemsCount(SystemsGraph graph) {
-            var cnt = 0;
-            foreach (var node in graph.nodes) {
-                if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
-                    if (systemNode.system != null) {
-                        if (systemNode.system.GetType().IsGenericType == true) {
-                            var typeGen = EditorUtils.GetFirstInterfaceConstraintType(systemNode.system.GetType().GetGenericTypeDefinition());
-                            if (typeGen != null) {
-                                cnt += EditorUtils.GetTypesDerivedFrom(typeGen, systemNode.system.GetType()).Length;
-                            }
-                        } else {
-                            ++cnt;
-                        }
-                    }
-                } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
-                    cnt += GetSystemsCount(graphNode.graphValue);
-                }
-            }
-
-            return cnt;
+            return SourceGeneratorInputManifest.GetSystemsCount(graph);
         }
 
         
@@ -997,9 +901,11 @@ namespace ME.BECS.Editor.Systems {
 
         public static void InjectDependencies(SystemsGraph graph, scg::List<string> content, scg::Dictionary<System.Type, string> typeToVar, System.Type systemType) {
             var localContent = new scg::List<string>();
-            {
+            if (SourceGeneratorInputManifest.TryGetGraphSystemInjection(graph, systemType, out var systemInjection)) {
+                content.Add(systemInjection);
+            } else {
                 var variable = typeToVar[systemType];
-                var src = EditorUtils.GetTypeName(systemType);
+                var src = SourceGeneratorInputManifest.GetClosedTypeName(systemType);
                 var fields = systemType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 var containsBool = false;
                 foreach (var field in fields) {
@@ -1011,7 +917,12 @@ namespace ME.BECS.Editor.Systems {
                         if (injectType.IsVisible == false) continue;
                         var t = EditorUtils.GetTypeName(injectType);
                         var v = typeToVar[injectType];
-                        if (field.IsPublic == false) {
+                        if (field.IsPublic && !field.IsInitOnly && field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(InjectSystem<>)) {
+                            var method = SourceGeneratorInputManifest.GetSystemInjectionMethodName(systemType, field.Name);
+                            localContent.Add($"{method}(ref *(({src}*){variable}), (void*){v});");
+                        } else if (SourceGeneratorInputManifest.TryGetPrivateSystemInjectionMethod(field, out var privateMethod)) {
+                            localContent.Add($"{privateMethod}(ref *(({src}*){variable}), (void*){v});");
+                        } else if (field.IsPublic == false) {
                             localContent.Add("{");
                             localContent.Add($"ref var s = ref *(({src}*){variable});");
                             localContent.Add($"typeof({src}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValueDirect(__makeref(s), new InjectSystem<{t}>(new SystemLink<{t}>(({t}*){v})));");
@@ -1033,18 +944,22 @@ namespace ME.BECS.Editor.Systems {
             
             // Find jobs
             var types = new scg::HashSet<System.Type>();
-            var flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
-            CollectJobsTypes(systemType.GetMethod(nameof(IAwake.OnAwake), flags), types);
-            CollectJobsTypes(systemType.GetMethod(nameof(IStart.OnStart), flags), types);
-            CollectJobsTypes(systemType.GetMethod(nameof(IUpdate.OnUpdate), flags), types);
-            CollectJobsTypes(systemType.GetMethod(nameof(IDestroy.OnDestroy), flags), types);
-            CollectJobsTypes(systemType.GetMethod(nameof(IDrawGizmos.OnDrawGizmos), flags), types);
+            SourceGeneratorScheduledJobs.Collect(systemType, types);
             
             var methodContent = new scg::List<string>();
-            foreach (var jobType in types) {
+            foreach (var jobType in types.OrderBy(t => t.FullName, System.StringComparer.Ordinal)
+                                         .ThenBy(t => t.Assembly.FullName, System.StringComparer.Ordinal)) {
                 if (jobType.IsVisible == false) continue;
+                if (SourceGeneratorInputManifest.TryGetGraphJobRegistration(graph, jobType, out var graphJobRegistration)) {
+                    content.Add(graphJobRegistration);
+                    continue;
+                }
+                if (SourceGeneratorInputManifest.TryGetJobDeltaTimeRegistration(jobType, out var deltaTimeRegistration)) {
+                    content.Add(deltaTimeRegistration);
+                    continue;
+                }
                 var fields = jobType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                var jobTypeStr = EditorUtils.GetTypeName(jobType);
+                var jobTypeStr = SourceGeneratorInputManifest.GetClosedTypeName(jobType);
                 var methodName = $"Patch_{EditorUtils.GetCodeName(jobTypeStr)}";
                 var containsBool = false;
                 localContent.Clear();
@@ -1061,14 +976,21 @@ namespace ME.BECS.Editor.Systems {
                     if (typeof(IInject).IsAssignableFrom(field.FieldType) == true) {
                         var injectType = field.FieldType.GenericTypeArguments[0];
                         if (typeToVar.TryGetValue(injectType, out var v) == true) {
-                            methodContent.Add($"job->{field.Name} = new InjectSystem<{EditorUtils.GetTypeName(injectType)}>({v});");
+                            if (SourceGeneratorInputManifest.TryGetPartialInjectionMethod(field, out var injectionMethod)) {
+                                methodContent.Add($"{injectionMethod}(ref *job, (void*){v});");
+                            } else {
+                                methodContent.Add($"job->{field.Name} = InjectSystem<{SourceGeneratorInputManifest.GetClosedTypeName(injectType)}>.FromPointer((void*){v});");
+                            }
                             hasAny = true;
                         } else {
                             UnityEngine.Debug.LogError($"[CodeGenerator] {graph.name} failed to inject system {injectType.Name} because it's missing in current graph. If this graph is inner, use `Is Inner Graph` flag on graph object.");
                         }
                     }
                     var attr = field.GetCustomAttribute<InjectDeltaTimeAttribute>();
-                    if (attr != null) {
+                    if (attr != null && SourceGeneratorInputManifest.TryGetPartialDeltaTimeMethod(field, out var deltaMethod)) {
+                        methodContent.Add($"{deltaMethod}(ref *job, worldId);");
+                        hasAny = true;
+                    } else if (attr != null) {
                         byte fieldType = 0;
                         if (field.FieldType == typeof(sfloat)) {
                             fieldType = 1;
@@ -1105,86 +1027,7 @@ namespace ME.BECS.Editor.Systems {
             }
         }
         
-        private static void CollectJobsTypes(MethodInfo root, scg::HashSet<System.Type> types) {
-            if (root == null) return;
-            var q = new scg::Queue<System.Reflection.MethodInfo>();
-            q.Enqueue(root);
-            var visited = new scg::HashSet<MethodPointerData>();
-            while (q.Count > 0) {
-                var body = q.Dequeue();
-                var instructions = body.GetInstructions();
-                foreach (var inst in instructions) {
-                    if (inst.Operand is MethodInfo methodInfo) {
-                        if ((methodInfo.Name == "Schedule" || methodInfo.Name == "ScheduleSingleWithInject" || methodInfo.Name == "ScheduleSingleWithInjectByRef") && methodInfo.IsGenericMethod == true) {
-                            if (methodInfo.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                                var jobType = methodInfo.GetGenericArguments()[0];
-                                types.Add(jobType);
-                            }
-                        }
-                    }
-
-                    if (inst.Operand is System.Reflection.MethodInfo member) {
-                        if (visited.Add(new MethodPointerData(member)) == true && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
-                            if (member.GetMethodBody() != null) {
-                                q.Enqueue(member);
-                            }
-                        }
-                    }
-                }
-            }
-        }
         
-        private static string GetDefinition(SystemsGraph graph, int nodeIndex, object system, System.Type type = null) {
-
-            if (type == null) type = system.GetType();
-            if (type.IsGenericType == true) return "default";
-            ObjectReferenceRegistry.LoadForced();
-            var sourceId = ObjectReferenceRegistry.data.Add(graph, out var isNew);
-            return $"({EditorUtils.GetTypeName(type)})((ME.BECS.FeaturesGraph.Nodes.SystemNode)ObjectReferenceRegistry.GetObjectBySourceId<ME.BECS.FeaturesGraph.SystemsGraph>({sourceId}).nodes[{nodeIndex}]).system";
-            // var result = new System.Text.StringBuilder(100);
-            // result.Append("new ");
-            // result.Append(EditorUtils.GetTypeName(type));
-            // result.Append(" {\n");
-            // //var result = $"new {GetTypeName(system.GetType())}() {{\n";
-            // var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance/* | System.Reflection.BindingFlags.NonPublic*/);
-            // foreach (var field in fields) {
-            //     //var isSerializable = field.FieldType.GetCustomAttribute<System.SerializableAttribute>() != null;
-            //     if (field.IsInitOnly == true) continue;
-            //     if (field.IsPublic == false) continue;
-            //     //if (field.IsPublic == false && field.GetCustomAttribute<UnityEngine.SerializeField>() == null) continue;
-            //     //if (isSerializable == false) continue;
-            //     result.Append(field.Name);
-            //     result.Append(" = ");
-            //     if (field.FieldType.IsEnum == true) {
-            //         result.Append(field.FieldType.FullName);
-            //         result.Append(".");
-            //         result.Append(field.GetValue(system));
-            //     } else if (field.FieldType.IsPrimitive == true) {
-            //         var val = field.GetValue(system);
-            //         if (val is double) {
-            //             result.Append(val);
-            //             result.Append("d");
-            //         } else if (val is float fVal) {
-            //             result.Append(fVal.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            //             result.Append("f");
-            //         } else if (val is bool) {
-            //             result.Append(val.ToString().ToLower());
-            //         } else if (val is string str) {
-            //             result.Append("\"");
-            //             result.Append(str);
-            //             result.Append("\"");
-            //         } else {
-            //             result.Append(val);
-            //         }
-            //     } else {
-            //         result.Append(GetDefinition(graph, nodeIndex, field.GetValue(system)));
-            //     }
-            //     result.Append(",\n");
-            // }
-            // result.Append("}\n");
-            // return result.ToString();
-
-        }
 
     }
 

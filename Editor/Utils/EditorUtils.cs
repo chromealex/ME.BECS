@@ -1225,11 +1225,38 @@ namespace ME.BECS.Editor {
         }
 
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type baseTypeWithout) {
-            return GetTypesDerivedFrom(genType, baseTypeWithout.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+            if (typeof(ISystem).IsAssignableFrom(baseTypeWithout) == false) {
+                return GetTypesDerivedFrom(genType, baseTypeWithout.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+            }
+            var definition = baseTypeWithout.IsGenericTypeDefinition ? baseTypeWithout : baseTypeWithout.GetGenericTypeDefinition();
+            if (definition.GetGenericArguments().Length != 1) {
+                throw new System.NotSupportedException($"Generic system {definition.FullName}: automatic specialization currently requires exactly one generic parameter.");
+            }
+            if (SourceGeneratorBridge.TryGetGenericComponents(definition, genType, out var snapshot)) return snapshot;
+            var candidates = GetTypesDerivedFrom(genType, definition.GetInterfaces().Where(x => typeof(IGenericWithout).IsAssignableFrom(x)).ToArray());
+            var result = candidates.Where(component => {
+                if (!component.IsVisible || component.ContainsGenericParameters || !typeof(IComponentBase).IsAssignableFrom(component) ||
+                    !IsUnmanagedGenericComponent(component, new System.Collections.Generic.HashSet<System.Type>())) return false;
+                // MakeGenericType validates ALL constraints, not just the first interface used for discovery.
+                try { definition.MakeGenericType(component); return true; }
+                catch (System.ArgumentException) { return false; }
+            }).OrderBy(component => component.Namespace?.StartsWith("ME.BECS", System.StringComparison.Ordinal) == false)
+                .ThenBy(component => component.FullName, System.StringComparer.Ordinal)
+                .ThenBy(component => component.Assembly.FullName, System.StringComparer.Ordinal).ToArray();
+            SourceGeneratorBridge.StoreGenericComponents(definition, genType, result);
+            return result;
+        }
+
+        private static bool IsUnmanagedGenericComponent(System.Type type, System.Collections.Generic.HashSet<System.Type> visited) {
+            if (type.IsPointer || type.IsPrimitive || type.IsEnum) return true;
+            if (!type.IsValueType || type.IsByRefLike) return false;
+            if (!visited.Add(type)) return true;
+            return type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                .All(field => IsUnmanagedGenericComponent(field.FieldType, visited));
         }
 
         public static System.Type[] GetTypesDerivedFrom(System.Type genType, System.Type[] withoutTypes = null) {
-            var types = UnityEditor.TypeCache.GetTypesDerivedFrom(genType).Where(x => x.IsValueType).OrderBy(x => x.Namespace?.StartsWith("ME.BECS") == false).ThenBy(x => x.FullName);
+            var types = SourceGeneratorBridge.GetDerivedTypesSnapshot(genType).Where(x => x.IsValueType).OrderBy(x => x.Namespace?.StartsWith("ME.BECS") == false).ThenBy(x => x.FullName);
             if (withoutTypes != null) {
                 var list = types.ToArray();
                 foreach (var item in withoutTypes) {

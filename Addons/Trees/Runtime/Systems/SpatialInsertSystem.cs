@@ -55,7 +55,7 @@ namespace ME.BECS {
     }
 
     [EditorComment("Used by SpatialInsertSystem to filter entities by treeIndex")]
-    public struct SpatialAspect : IAspect {
+    public partial struct SpatialAspect : IAspect {
         
         public Ent ent { get; set; }
 

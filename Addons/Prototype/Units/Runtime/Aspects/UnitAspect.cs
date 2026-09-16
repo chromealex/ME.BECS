@@ -17,7 +17,7 @@ namespace ME.BECS.Units {
     #endif
     using ME.BECS.Players;
 
-    public struct HealthAspect : IAspect {
+    public partial struct HealthAspect : IAspect {
 
         public Ent ent { get; set; }
 
@@ -61,7 +61,7 @@ namespace ME.BECS.Units {
 
     }
     
-    public struct UnitAspect : IAspect {
+    public partial struct UnitAspect : IAspect {
         
         public Ent ent { get; set; }
 

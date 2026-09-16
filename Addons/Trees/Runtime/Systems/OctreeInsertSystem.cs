@@ -73,7 +73,7 @@ namespace ME.BECS {
     }
 
     [EditorComment("Used by OctreeInsertSystem to filter entities by treeIndex")]
-    public struct OctreeAspect : IAspect {
+    public partial struct OctreeAspect : IAspect {
         
         public Ent ent { get; set; }
 

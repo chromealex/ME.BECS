@@ -598,6 +598,10 @@ namespace ME.BECS.Editor.Systems {
         }
 
         public static void GetUsedObjects(bool editorAssembly, out UsedObjects usedObjects) {
+            GetUsedObjects(editorAssembly, out usedObjects, useSourceCatalogs: true);
+        }
+
+        internal static void GetUsedObjects(bool editorAssembly, out UsedObjects usedObjects, bool useSourceCatalogs) {
             
             usedObjects = new UsedObjects();
             
@@ -608,7 +612,7 @@ namespace ME.BECS.Editor.Systems {
             var aspectsSet = new System.Collections.Generic.HashSet<System.Type>(10);
 
             if (editorAssembly == true) {
-                AddAllEditorTypes(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
+                AddAllEditorTypes(systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet, useSourceCatalogs);
             } else {
                 var asms = System.AppDomain.CurrentDomain.GetAssemblies();
                 var lookup = new UsedObjectsLookup();
@@ -638,6 +642,9 @@ namespace ME.BECS.Editor.Systems {
                 }
 
                 var guids = UnityEditor.AssetDatabase.FindAssets("t:SystemsGraph");
+                // Discovery collects a set of types, not execution occurrences. Shared or
+                // cyclic subgraphs must not cause repeated/unbounded traversal.
+                var discoveredGraphNodes = new System.Collections.Generic.HashSet<ME.BECS.Extensions.GraphProcessor.BaseNode>();
                 foreach (var guid in guids) {
                     var graph = UnityEditor.AssetDatabase.LoadAssetAtPath<ME.BECS.FeaturesGraph.SystemsGraph>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
                     if (graph.isInnerGraph == true) continue;
@@ -645,6 +652,7 @@ namespace ME.BECS.Editor.Systems {
                     var q = new System.Collections.Generic.Queue<ME.BECS.Extensions.GraphProcessor.BaseNode>(nodes);
                     while (q.Count > 0) {
                         var node = q.Dequeue();
+                        if (node == null || !discoveredGraphNodes.Add(node)) continue;
                         if (node is ME.BECS.FeaturesGraph.Nodes.SystemNode systemNode) {
                             lookup.LookUp(systemNode.system, systemsSet, componentsSet, jobTypesSet, entityTypesSet, aspectsSet);
                         } else if (node is ME.BECS.FeaturesGraph.Nodes.GraphNode graphNode) {
@@ -696,12 +704,17 @@ namespace ME.BECS.Editor.Systems {
                                               System.Collections.Generic.HashSet<System.Type> components,
                                               System.Collections.Generic.HashSet<System.Type> jobTypes,
                                               System.Collections.Generic.HashSet<System.Type> entityTypes,
-                                              System.Collections.Generic.HashSet<System.Type> aspects) {
+                                              System.Collections.Generic.HashSet<System.Type> aspects,
+                                              bool useSourceCatalogs) {
 
             AddTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<ISystem>(), systems, allowOpenGeneric: true);
-            AddTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>(), components);
+            if (useSourceCatalogs) {
+                SourceGeneratorBridge.AddEditorTypes(components, aspects);
+            } else {
+                AddTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentBase>(), components);
+                AddTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IAspect>(), aspects);
+            }
             AddTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IEntityType>(), entityTypes);
-            AddTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IAspect>(), aspects);
 
             AddJobTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IJobParallelForAspectsComponentsBase>(), jobTypes);
             AddJobTypes(UnityEditor.TypeCache.GetTypesDerivedFrom<IJobParallelForComponentsBase>(), jobTypes);

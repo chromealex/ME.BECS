@@ -22,6 +22,11 @@ namespace ME.BECS.Editor.Aspects {
 
                 var collectionsCount = GetCollectionsCount(component);
                 if (collectionsCount == 0u) continue;
+                if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(component, true, out var generatedCount, out _)) {
+                    dataList.Add(generatedCount);
+                    references.Add(component);
+                    continue;
+                }
                 var type = EditorUtils.GetTypeName(component);
                 var str = $"StaticTypes<{type}>.SetCollectionsCount({collectionsCount}u);";
                 dataList.Add(str);
@@ -42,6 +47,12 @@ namespace ME.BECS.Editor.Aspects {
                 
                 if (component.IsValueType == false) continue;
                 if (this.IsValidTypeForAssembly(component) == false) continue;
+
+                if (SourceGeneratorBridge.TryGetConfigMaskRegistration(component, out var generatedRegistration, out _)) {
+                    definitions.Add(new CodeGenerator.MethodDefinition { generatedRegistration = generatedRegistration });
+                    references.Add(component);
+                    continue;
+                }
                 
                 content.Clear();
                 
@@ -82,6 +93,11 @@ namespace ME.BECS.Editor.Aspects {
                 if (this.IsValidTypeForAssembly(component) == false) continue;
 
                 var type = component;
+                if (SourceGeneratorBridge.TryGetConfigCollectionsRegistration(component, false, out var generatedRegistration, out _)) {
+                    definitions.Add(new CodeGenerator.MethodDefinition { generatedRegistration = generatedRegistration });
+                    references.Add(component);
+                    continue;
+                }
                 var strType = EditorUtils.GetTypeName(type);
                 var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public).OrderBy(x => x.FieldType.FullName).ToArray();
                 var count = 0u;

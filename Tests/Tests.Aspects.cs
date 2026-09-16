@@ -24,7 +24,7 @@ namespace ME.BECS.Tests {
 
     }
 
-    public struct Test2Aspect : IAspect {
+    public partial struct Test2Aspect : IAspect {
             
         public Ent ent { get; set; }
 
@@ -59,7 +59,7 @@ namespace ME.BECS.Tests {
             yield return null;
         }
 
-        public struct TestAspect : IAspect {
+        public partial struct TestAspect : IAspect {
             
             public Ent ent { get; set; }
 

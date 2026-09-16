@@ -6,7 +6,7 @@ namespace ME.BECS.Effects {
     using INLINE = System.Runtime.CompilerServices.MethodImplAttribute;
     #endif
 
-    public struct EffectAspect : IAspect {
+    public partial struct EffectAspect : IAspect {
         
         public Ent ent { get; set; }
 

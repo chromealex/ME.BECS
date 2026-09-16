@@ -9,6 +9,45 @@ namespace ME.BECS.Editor.Jobs {
     
     public class JobsEarlyInitCodeGenerator : CustomCodeGenerator {
 
+        private System.Collections.Generic.List<(System.Type job, string call)> earlyInitDiagnostics;
+        private MethodInfo[] earlyInitMethods;
+        private readonly SourceGeneratorJobWeights sourceWeights = new SourceGeneratorJobWeights();
+        private readonly System.Collections.Generic.Dictionary<System.Type, uint> selectedWeights = new System.Collections.Generic.Dictionary<System.Type, uint>();
+
+        private uint SelectWeight(System.Type jobType) {
+            if (this.selectedWeights.TryGetValue(jobType, out var weight)) return weight;
+            weight = this.sourceWeights.TryGetComplete(jobType, out var sourceWeight)
+                ? sourceWeight : GetJobWeightsInfo(jobType).weight;
+            this.selectedWeights.Add(jobType, weight);
+            return weight;
+        }
+
+        private string WeightInitialization(System.Type jobType) => this.sourceWeights.TryGetInitializer(jobType, out var call)
+            ? call : $"JobStaticInfo<{EditorUtils.GetTypeName(jobType)}>.opsWeight = {this.SelectWeight(jobType)}u;";
+
+        internal static string CompareEarlyInit(System.Collections.Generic.List<System.Type> jobs, bool editor) {
+            var generator = new JobsEarlyInitCodeGenerator {
+                jobTypes = jobs, editorAssembly = editor, asms = EditorUtils.GetAssembliesInfo(),
+                earlyInitDiagnostics = new System.Collections.Generic.List<(System.Type job, string call)>(),
+            };
+            // Same selection path as real generation, but no cache, IL analysis, debug metadata or writes.
+            generator.AddInitialization(new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<System.Type>());
+            var report = new System.Text.StringBuilder();
+            foreach (var generic in new[] { false, true }) {
+                var entries = generator.earlyInitDiagnostics.Where(e => e.job.IsGenericType == generic).Distinct().ToArray();
+                var generated = 0;
+                var fallback = new System.Collections.Generic.List<string>();
+                foreach (var entry in entries) {
+                    var resolved = SourceGeneratorBridge.ResolveJobEarlyInit(entry.job, entry.call, out var reason);
+                    if (resolved != entry.call) ++generated;
+                    else fallback.Add(entry.job.FullName + " [" + entry.job.Assembly.GetName().Name + "] — " + reason);
+                }
+                report.AppendLine($"Job EarlyInit ({(generic ? "generic" : "ordinary")}): generated={generated}, fallback={fallback.Count}, selected calls={entries.Length}");
+                foreach (var entry in fallback.OrderBy(s => s, System.StringComparer.Ordinal)) report.Append("  ").AppendLine(entry);
+            }
+            return report.AppendLine("EarlyInit diagnostics: fresh selection, no cache files read/written; initialization methods NOT invoked.").ToString();
+        }
+
         public struct TypeInfo : System.IEquatable<TypeInfo> {
 
             public System.Type type;
@@ -35,13 +74,21 @@ namespace ME.BECS.Editor.Jobs {
 
         private void Generate<TJobBase, T0, T1>(System.Collections.Generic.List<string> dataList, string method) {
 
-            this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
+            if (this.earlyInitDiagnostics == null) this.cache.SetKey($"{method}:{typeof(TJobBase).Name}:{typeof(T0).Name}:{typeof(T1).Name}");
             var jobsComponents = this.GetTypesDerivedFrom(typeof(TJobBase)).OrderBy(x => x.FullName).ToList();
             CodeGenerator.PatchSystemsList(jobsComponents);
             foreach (var jobType in jobsComponents) {
 
-                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
-                    dataList.AddRange(list);
+                if (this.earlyInitDiagnostics == null && this.cache.TryGetValue<System.Collections.Generic.List<string>>(jobType, out var list) == true) {
+                    // This cache hashes the job's own script, not transitive methods or
+                    // source-generator metadata. Never reuse an opsWeight from that cache.
+                    var weightPrefix = $"JobStaticInfo<{EditorUtils.GetTypeName(jobType)}>.opsWeight = ";
+                    foreach (var line in list) {
+                        var current = line.StartsWith(weightPrefix, System.StringComparison.Ordinal) || line.StartsWith("global::ME.BECS.SourceGenerated.JobWeight_", System.StringComparison.Ordinal)
+                            ? this.WeightInitialization(jobType)
+                            : line;
+                        dataList.Add(SourceGeneratorBridge.ResolveJobEarlyInit(jobType, current));
+                    }
                     continue;
                 }
                 
@@ -80,6 +127,7 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
 
+                if (this.earlyInitDiagnostics == null) {
                 var entsInfo = GetJobEntInfo(jobType, this);
                 if (entsInfo.brCount > 0) {
                     content.Add($"JobStaticInfo<{jobTypeFullName}>.loopCount = {entsInfo.brCount}u;");
@@ -101,13 +149,13 @@ namespace ME.BECS.Editor.Jobs {
                     }
                 }
                 
-                var weightsInfo = GetJobWeightsInfo(jobType);
-                content.Add($"JobStaticInfo<{jobTypeFullName}>.opsWeight = {weightsInfo.weight}u;");
+                content.Add(this.WeightInitialization(jobType));
                 content.Add($"JobStaticInfo<{jobTypeFullName}>.maxStructSize = {maxStructSize}u;");
+                }
 
                 if (workInterface != null && components.Count == workInterface.GenericTypeArguments.Length) {
 
-                    var methods = typeof(ME.BECS.Jobs.EarlyInit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var methods = this.earlyInitMethods ??= typeof(ME.BECS.Jobs.EarlyInit).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                     MethodInfo methodInfoResult = null;
                     foreach (var methodInfo in methods) {
                         if (methodInfo.Name.StartsWith(method) == false) continue;
@@ -130,17 +178,20 @@ namespace ME.BECS.Editor.Jobs {
                     }
 
                     if (methodInfoResult == null) {
+                        if (this.earlyInitDiagnostics != null) throw new System.InvalidOperationException($"Legacy EarlyInit method not found for {jobTypeFullName} ({method}).");
                         UnityEngine.Debug.LogWarning($"[ CodeGenerator ] Failed to generate EarlyInit method for job type {jobTypeFullName}.");
                         continue;
                     }
                     var str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}, {string.Join(", ", components)}>();";
                     if (components.Count == 0) str = $"EarlyInit.{methodInfoResult.Name}<{jobTypeFullName}>();";
                     content.Add(str);
+                    if (this.earlyInitDiagnostics != null) this.earlyInitDiagnostics.Add((jobType, str));
 
                 }
 
+                if (this.earlyInitDiagnostics != null) continue;
                 this.cache.Add(jobType, content);
-                dataList.AddRange(content);
+                foreach (var line in content) dataList.Add(SourceGeneratorBridge.ResolveJobEarlyInit(jobType, line));
 
             }
             
@@ -434,7 +485,7 @@ namespace ME.BECS.Editor.Jobs {
             var q = new System.Collections.Generic.Queue<System.Reflection.MethodInfo>();
             q.Enqueue(root);
             var uniqueTypes = new System.Collections.Generic.HashSet<TypeInfo>();
-            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>(MethodPointerData.ExactComparer);
             while (q.Count > 0) {
                 var body = q.Dequeue();
                 var deps = useAnalyzer == true ? ILAnalyzer.AnalyzeMethod(body) : null;
@@ -524,14 +575,19 @@ namespace ME.BECS.Editor.Jobs {
                         if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null && (member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member, body.DeclaringType)) == true)) {
                             if (body.DeclaringType.IsGenericType == true && member.DeclaringType.IsInterface == true) {
                                 var arg = body.DeclaringType.GetGenericArguments()[0];
-                                var newMethods = arg.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                                foreach (var newMethod in newMethods) {
-                                    if (newMethod.Name != member.Name) continue;
-                                    if (newMethod == null) {
-                                        if (member.GetMethodBody() != null) q.Enqueue(member);
-                                    } else {
-                                        if (newMethod.GetMethodBody() != null) q.Enqueue(newMethod);
+                                if (member.DeclaringType.IsAssignableFrom(arg)) {
+                                    var map = arg.GetInterfaceMap(member.DeclaringType);
+                                    var definition = member.IsGenericMethod ? member.GetGenericMethodDefinition() : member;
+                                    for (var methodIndex = 0; methodIndex < map.InterfaceMethods.Length; ++methodIndex) {
+                                        if (!map.InterfaceMethods[methodIndex].Equals(definition)) continue;
+                                        var target = map.TargetMethods[methodIndex];
+                                        if (member.IsGenericMethod && !member.IsGenericMethodDefinition)
+                                            target = target.MakeGenericMethod(member.GetGenericArguments());
+                                        if (target.GetMethodBody() != null) q.Enqueue(target);
+                                        break;
                                     }
+                                } else if (member.GetMethodBody() != null) {
+                                    q.Enqueue(member);
                                 }
                             } else {
                                 if (member.GetMethodBody() != null) q.Enqueue(member);
@@ -638,7 +694,8 @@ namespace ME.BECS.Editor.Jobs {
 
         }
         
-        public static WeightsInfo GetJobWeightsInfo(System.Type jobType) {
+        public static WeightsInfo GetJobWeightsInfo(System.Type jobType, System.Collections.Generic.Dictionary<string, uint> contributions = null) {
+            contributions?.Clear();
             var config = new System.Collections.Generic.List<MethodWeightInfo>();
             config.Add(new MethodWeightInfo() {
                 methods = new [] { typeof(Ent).GetMethod(nameof(Ent.NewEnt_INTERNAL), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public) },
@@ -669,12 +726,35 @@ namespace ME.BECS.Editor.Jobs {
                 weight = 1u,
             });
             var root = jobType.GetMethod("Execute");
-            var visited = new System.Collections.Generic.HashSet<MethodPointerData>();
+            var visited = new System.Collections.Generic.HashSet<MethodPointerData>(MethodPointerData.ExactComparer);
             var instructions = root.GetInstructions().ToList();
             for (int i = 0; i < instructions.Count; ++i) {
                 var inst = instructions[i];
                 if (inst.Operand is System.Reflection.MethodInfo member) {
                     if (member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() != null) continue;
+                    if (member.DeclaringType.IsInterface) {
+                        // Use the actual constrained receiver from IL, not the first generic
+                        // parameter of the root job (helpers can use another specialization).
+                        System.Type receiver = null;
+                        for (var prefix = i - 1; prefix >= 0 && instructions[prefix].OpCode.OpCodeType == System.Reflection.Emit.OpCodeType.Prefix; --prefix) {
+                            if (instructions[prefix].OpCode == System.Reflection.Emit.OpCodes.Constrained) {
+                                receiver = instructions[prefix].Operand as System.Type;
+                                break;
+                            }
+                        }
+                        if (receiver != null && receiver.IsValueType && !receiver.ContainsGenericParameters && member.DeclaringType.IsAssignableFrom(receiver)) {
+                            var map = receiver.GetInterfaceMap(member.DeclaringType);
+                            var definition = member.IsGenericMethod ? member.GetGenericMethodDefinition() : member;
+                            for (var index = 0; index < map.InterfaceMethods.Length; ++index) {
+                                if (!map.InterfaceMethods[index].Equals(definition)) continue;
+                                var target = map.TargetMethods[index];
+                                if (member.IsGenericMethod && !member.IsGenericMethodDefinition)
+                                    target = target.MakeGenericMethod(member.GetGenericArguments());
+                                member = target;
+                                break;
+                            }
+                        }
+                    }
                     if ((member.GetCustomAttribute<CodeGeneratorIgnoreVisitedAttribute>() != null || visited.Add(new MethodPointerData(member)) == true) && member.GetCustomAttribute<CodeGeneratorIgnoreAttribute>() == null) {
                         if (member.GetMethodBody() != null) {
                             instructions.InsertRange(i + 1, member.GetInstructions());
@@ -693,6 +773,11 @@ namespace ME.BECS.Editor.Jobs {
                     foreach (var item in config) {
                         if (System.Array.IndexOf(item.methods, methodInfo) >= 0) {
                             weight += item.weight;
+                            if (contributions != null) {
+                                var key = methodInfo.DeclaringType.FullName + "." + methodInfo.Name;
+                                contributions.TryGetValue(key, out var previous);
+                                contributions[key] = previous + item.weight;
+                            }
                             break;
                         }
                     }
@@ -742,7 +827,7 @@ namespace ME.BECS.Editor.Jobs {
         
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
 
-            this.GenerateJobsDebug(dataList, references);
+            if (this.earlyInitDiagnostics == null) this.GenerateJobsDebug(dataList, references);
             this.Generate<IJobForComponentsBase, TNull, TNull>(dataList, "DoComponents");
             this.Generate<IJobParallelForComponentsBase, IComponentBase, TNull>(dataList, "DoParallelForComponents");
             this.Generate<IJobForComponentsBase, IComponentBase, TNull>(dataList, "DoComponents");

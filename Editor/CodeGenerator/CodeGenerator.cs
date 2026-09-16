@@ -19,6 +19,18 @@ namespace ME.BECS.Editor {
 
     public struct MethodPointerData : System.IEquatable<MethodPointerData> {
 
+        // Safety/weights must distinguish closed generic methods and overloads. Keep the
+        // legacy default comparer for counts until allocation migration is validated separately.
+        public static readonly System.Collections.Generic.IEqualityComparer<MethodPointerData> ExactComparer = new ExactMethodComparer();
+
+        private sealed class ExactMethodComparer : System.Collections.Generic.IEqualityComparer<MethodPointerData> {
+            public bool Equals(MethodPointerData x, MethodPointerData y) =>
+                object.Equals(x.originalMethodInfo, y.originalMethodInfo) && x.rootType == y.rootType;
+
+            public int GetHashCode(MethodPointerData value) =>
+                (value.originalMethodInfo?.GetHashCode() ?? 0) ^ (value.rootType?.GetHashCode() ?? 0);
+        }
+
         private MethodInfo originalMethodInfo;
         private System.Type rootType;
 
@@ -276,6 +288,8 @@ namespace ME.BECS.Editor {
     public static class CodeGenerator {
         
         public struct MethodDefinition {
+            // Callback body and registration are owned by a source generator.
+            public string generatedRegistration;
 
             public string methodName;
             public string customMethodParamsCall;
@@ -472,7 +486,7 @@ namespace ME.BECS.Editor {
             
         }
 
-        private static bool HasComponentCustomSharedHash(System.Type type) {
+        internal static bool HasComponentCustomSharedHash(System.Type type) {
 
             var m = type.GetMethod(nameof(IComponentShared.GetHash), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (m == null) {
@@ -483,7 +497,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static bool IsTagType(System.Type type) {
+        internal static bool IsTagType(System.Type type) {
 
             if (System.Runtime.InteropServices.Marshal.SizeOf(type) <= 1 &&
                 type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Length == 0) {
@@ -494,7 +508,7 @@ namespace ME.BECS.Editor {
 
         }
 
-        private static bool IsStaticType(System.Type type) {
+        internal static bool IsStaticType(System.Type type) {
             return typeof(IConfigComponentStatic).IsAssignableFrom(type);
         }
 
@@ -518,6 +532,8 @@ namespace ME.BECS.Editor {
         public const string PROGRESS_BAR_CAPTION = "[ ME.BECS ] CodeGenerator";
 
         private static void Build(System.Collections.Generic.List<AssemblyInfo> asms, string dir, bool editorAssembly = false) {
+            using var sourceGeneratorLookup = SourceGeneratorBridge.BeginLookupScope();
+            using var timings = new CodeGeneratorTimings(editorAssembly);
 
             var assembliesByName = new System.Collections.Generic.Dictionary<string, AssemblyInfo>(System.StringComparer.Ordinal);
             foreach (var assembly in asms) {
@@ -541,6 +557,8 @@ namespace ME.BECS.Editor {
 
             UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, $"Build {dir}", 0f);
             var componentTypes = new System.Collections.Generic.List<System.Type>();
+            var inputManifestPath = $"{dir}/{ECS}.{postfix}.becs-inputs";
+            var inputManifestReady = false;
             try {
                 var path = @$"{dir}/{ECS}.Gen.cs";
                 var filesPath = @$"{dir}/{ECS}.Files";
@@ -560,9 +578,20 @@ namespace ME.BECS.Editor {
                 //var template = "namespace " + ECS + " {\n [UnityEngine.Scripting.PreserveAttribute] public static unsafe class AOTBurstHelper { \n[UnityEngine.Scripting.PreserveAttribute] \npublic static void AOT() { \n{{CONTENT}} \n}\n }\n }";
                 var aotContent = new System.Collections.Generic.List<string>();
                 var typesContent = new System.Collections.Generic.List<string>();
+                timings.Mark("setup / templates");
                 ME.BECS.Editor.Systems.SystemDependenciesCodeGenerator.GetUsedObjects(editorAssembly, out var usedObjects);
+                // Compiler input, produced only by this source generator feeder. Preserve the
+                // discovery snapshot before legacy specialization mutates its type lists.
+                var inputManifest = SourceGeneratorInputManifest.Serialize($"{ECS}.Gen.{postfix}", editorAssembly, usedObjects, registerGraphReferences: true);
+                if (!System.IO.File.Exists(inputManifestPath) || System.IO.File.ReadAllText(inputManifestPath) != inputManifest) {
+                    System.IO.File.WriteAllText(inputManifestPath, inputManifest, new System.Text.UTF8Encoding(false));
+                    UnityEditor.AssetDatabase.ImportAsset(inputManifestPath);
+                }
+                inputManifestReady = true;
+                timings.Mark("GetUsedObjects");
                 var types = usedObjects.systems;//UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(ISystem)).OrderBy(x => x.FullName).ToList();
                 PatchSystemsList(types);
+                timings.Mark("generic system expansion");
                 var burstedTypes = UnityEditor.TypeCache.GetTypesWithAttribute<BURST>();
                 var burstDiscardedTypes = UnityEditor.TypeCache.GetMethodsWithAttribute<WithoutBurstAttribute>();
                 /*var typesAwake = UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAwake)).OrderBy(x => x.FullName).ToList();
@@ -588,8 +617,10 @@ namespace ME.BECS.Editor {
                     if (type.IsVisible == false) continue;
 
                     var systemType = EditorUtils.GetTypeName(type);
-                    aotContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
-                    typesContent.Add($"StaticSystemTypes<{systemType}>.Validate();");
+                    var systemRegistration = "global::ME.BECS.SourceGenerated.SystemInputs.Register_" +
+                        ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(type.AssemblyQualifiedName) + "();";
+                    aotContent.Add(systemRegistration);
+                    typesContent.Add(systemRegistration);
 
                     var isBursted = (burstedTypes.Contains(type) == true);
                     var hasAwake = typeof(IAwake).IsAssignableFrom(type);
@@ -599,62 +630,57 @@ namespace ME.BECS.Editor {
                     var hasDrawGizmos = typeof(IDrawGizmos).IsAssignableFrom(type);
                     //if (burstedTypes.Contains(type) == false) continue;
 
-                    var awakeBurst = hasAwake == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IAwake.OnAwake))) == false;
-                    var startBurst = hasStart == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IStart.OnStart))) == false;
-                    var updateBurst = hasUpdate == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IUpdate.OnUpdate))) == false;
-                    var destroyBurst = hasDestroy == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDestroy.OnDestroy))) == false;
-                    var drawGizmosBurst = hasDrawGizmos == true && burstDiscardedTypes.Contains(type.GetMethod(nameof(IDrawGizmos.OnDrawGizmos))) == false;
+                    var awakeBurst = hasAwake && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IAwake.OnAwake));
+                    var startBurst = hasStart && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IStart.OnStart));
+                    var updateBurst = hasUpdate && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IUpdate.OnUpdate));
+                    var destroyBurst = hasDestroy && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IDestroy.OnDestroy));
+                    var drawGizmosBurst = hasDrawGizmos && SourceGeneratorScheduledJobsValidation.IsLifecycleBurstAllowed(type, nameof(IDrawGizmos.OnDrawGizmos));
                     if (awakeBurst == true) {
-                        if (isBursted == true) aotContent.Add($"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Awake", "Burst", out var awakeBurstAotPointer) ? awakeBurstAotPointer : $"{AWAKE_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (startBurst == true) {
-                        if (isBursted == true) aotContent.Add($"{START_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Start", "Burst", out var startBurstAotPointer) ? startBurstAotPointer : $"{START_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (updateBurst == true) {
-                        if (isBursted == true) aotContent.Add($"{UPDATE_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Update", "Burst", out var updateBurstAotPointer) ? updateBurstAotPointer : $"{UPDATE_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (destroyBurst == true) {
-                        if (isBursted == true) aotContent.Add($"{DESTROY_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Destroy", "Burst", out var destroyBurstAotPointer) ? destroyBurstAotPointer : $"{DESTROY_METHOD}<{systemType}>.MakeMethod(null);");
                     }
 
                     if (drawGizmosBurst == true) {
-                        if (isBursted == true) aotContent.Add($"{DRAWGIZMOS_METHOD}<{systemType}>.MakeMethod(null);");
+                        if (isBursted == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "Burst", out var drawGizmosBurstAotPointer) ? drawGizmosBurstAotPointer : $"{DRAWGIZMOS_METHOD}<{systemType}>.MakeMethod(null);");
                     }
                     
-                    if (hasAwake == true) aotContent.Add($"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasStart == true) aotContent.Add($"{START_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasUpdate == true) aotContent.Add($"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasDestroy == true) aotContent.Add($"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
-                    if (hasDrawGizmos == true) aotContent.Add($"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasAwake == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Awake", "NoBurst", out var awakeNoBurstAotPointer) ? awakeNoBurstAotPointer : $"{AWAKE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasStart == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Start", "NoBurst", out var startNoBurstAotPointer) ? startNoBurstAotPointer : $"{START_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasUpdate == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Update", "NoBurst", out var updateNoBurstAotPointer) ? updateNoBurstAotPointer : $"{UPDATE_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasDestroy == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Destroy", "NoBurst", out var destroyNoBurstAotPointer) ? destroyNoBurstAotPointer : $"{DESTROY_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
+                    if (hasDrawGizmos == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "NoBurst", out var drawGizmosNoBurstAotPointer) ? drawGizmosNoBurstAotPointer : $"{DRAWGIZMOS_METHOD}NoBurst<{systemType}>.MakeMethod(null);");
 
-                    if (hasAwake == true) aotContent.Add($"new {systemType}().OnAwake(ref nullContext);");
-                    if (hasStart == true) aotContent.Add($"new {systemType}().OnStart(ref nullContext);");
-                    if (hasUpdate == true) aotContent.Add($"new {systemType}().OnUpdate(ref nullContext);");
-                    if (hasDestroy == true) aotContent.Add($"new {systemType}().OnDestroy(ref nullContext);");
-                    if (hasDrawGizmos == true) aotContent.Add($"new {systemType}().OnDrawGizmos(ref nullContext);");
+                    if (hasAwake == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Awake", out var awakeAot) ? awakeAot : $"new {systemType}().OnAwake(ref nullContext);");
+                    if (hasStart == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Start", out var startAot) ? startAot : $"new {systemType}().OnStart(ref nullContext);");
+                    if (hasUpdate == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Update", out var updateAot) ? updateAot : $"new {systemType}().OnUpdate(ref nullContext);");
+                    if (hasDestroy == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "Destroy", out var destroyAot) ? destroyAot : $"new {systemType}().OnDestroy(ref nullContext);");
+                    if (hasDrawGizmos == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemLifecycleAot(type, "DrawGizmos", out var drawGizmosAot) ? drawGizmosAot : $"new {systemType}().OnDrawGizmos(ref nullContext);");
 
-                    if (awakeBurst == true) aotContent.Add($"BurstCompileMethod.MakeAwake<{systemType}>(default);");
-                    if (startBurst == true) aotContent.Add($"BurstCompileMethod.MakeStart<{systemType}>(default);");
-                    if (updateBurst == true) aotContent.Add($"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
-                    if (destroyBurst == true) aotContent.Add($"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
-                    if (drawGizmosBurst == true) aotContent.Add($"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
+                    if (awakeBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Awake", "Factory", out var awakeFactoryAotPointer) ? awakeFactoryAotPointer : $"BurstCompileMethod.MakeAwake<{systemType}>(default);");
+                    if (startBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Start", "Factory", out var startFactoryAotPointer) ? startFactoryAotPointer : $"BurstCompileMethod.MakeStart<{systemType}>(default);");
+                    if (updateBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Update", "Factory", out var updateFactoryAotPointer) ? updateFactoryAotPointer : $"BurstCompileMethod.MakeUpdate<{systemType}>(default);");
+                    if (destroyBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "Destroy", "Factory", out var destroyFactoryAotPointer) ? destroyFactoryAotPointer : $"BurstCompileMethod.MakeDestroy<{systemType}>(default);");
+                    if (drawGizmosBurst == true) aotContent.Add(SourceGeneratorBridge.TryGetSystemPointerAot(type, "DrawGizmos", "Factory", out var drawGizmosFactoryAotPointer) ? drawGizmosFactoryAotPointer : $"BurstCompileMethod.MakeDrawGizmos<{systemType}>(default);");
                 }
 
-                //var componentsGroups = UnityEditor.TypeCache.GetTypesWithAttribute<ComponentGroupAttribute>().OrderBy(x => x.FullName).ToArray();
+                typesContent.Add("global::ME.BECS.SourceGenerated.GroupInputs.Initialize();");
                 foreach (var component in usedObjects.componentsGroup) {
 
                     var asm = component.Assembly.GetName().Name;
                     var info = FindAssembly(asm);
                     if (editorAssembly == false && info.isEditor == true) continue;
 
-                    var attr = (ComponentGroupAttribute)component.GetCustomAttribute(typeof(ComponentGroupAttribute));
-                    var systemType = EditorUtils.GetTypeName(component);
-                    var groupType = EditorUtils.GetTypeName(attr.groupType);
-                    var str = $"StaticTypes<{systemType}>.ApplyGroup(typeof({groupType}));";
-                    typesContent.Add(str);
                     componentTypes.Add(component);
 
                 }
@@ -670,24 +696,10 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var isTagType = IsTagType(component);
-                        var isStaticType = IsStaticType(component);
-                        var isTag = isTagType.ToString().ToLower();
-                        var isStatic = isStaticType.ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
-                        {
-                            var str = $"StaticTypes<{type}>.Validate(isTag: {isTag}, isStatic: {isStatic});";
-                            typesContent.Add(str);
-                        }
+                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
+                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.Register_" + registrationKey + "();");
                         componentTypes.Add(component);
-                        if (isTagType == false) {
-                            if (component.GetProperty("Default", BindingFlags.Static | BindingFlags.Public) != null) {
-                                var str = $"StaticTypes<{type}>.SetDefaultValue({type}.Default);";
-                                typesContent.Add(str);
-                            }
-                        }
-
-                        aotContent.Add($"StaticTypes<{type}>.AOT();");
+                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.Aot_" + registrationKey + "();");
 
                     }
                 }
@@ -702,13 +714,10 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var isTag = IsTagType(component).ToString().ToLower();
-                        var hasCustomHash = HasComponentCustomSharedHash(component);
-                        var type = EditorUtils.GetTypeName(component);
-                        var str = $"StaticTypes<{type}>.ValidateShared(isTag: {isTag}, hasCustomHash: {hasCustomHash.ToString().ToLower()});";
-                        typesContent.Add(str);
+                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
+                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.RegisterShared_" + registrationKey + "();");
                         componentTypes.Add(component);
-                        aotContent.Add($"StaticTypesShared<{type}>.AOT();");
+                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotShared_" + registrationKey + "();");
 
                     }
                 }
@@ -723,12 +732,10 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var isTag = IsTagType(component).ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
-                        var str = $"StaticTypes<{type}>.ValidateStatic(isTag: {isTag});";
-                        typesContent.Add(str);
+                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
+                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.RegisterStatic_" + registrationKey + "();");
                         componentTypes.Add(component);
-                        aotContent.Add($"StaticTypesStatic<{type}>.AOT();");
+                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotStatic_" + registrationKey + "();");
 
                     }
                 }
@@ -743,25 +750,26 @@ namespace ME.BECS.Editor {
                         var info = FindAssembly(asm);
                         if (editorAssembly == false && info.isEditor == true) continue;
 
-                        var isTag = IsTagType(component).ToString().ToLower();
-                        var isStatic = IsStaticType(component).ToString().ToLower();
-                        var type = EditorUtils.GetTypeName(component);
-                        var str = $"StaticTypes<{type}>.Validate(isTag: {isTag}, isStatic: {isStatic});";
-                        typesContent.Add(str);
+                        var registrationKey = ME.BECS.CodeGeneration.SourceGeneratorNames.Hash(component.AssemblyQualifiedName);
+                        typesContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.RegisterConfig_" + registrationKey + "();");
                         componentTypes.Add(component);
-                        aotContent.Add($"ConfigInitializeTypes<{type}>.AOT();");
+                        aotContent.Add("global::ME.BECS.SourceGenerated.ComponentInputs.AotConfig_" + registrationKey + "();");
 
                     }
                 }
 
                 var methods = new scg::List<MethodDefinition>();
+                timings.Mark("registration / AOT emission");
                 var publicContent = new scg::List<string>();
                 var filesContent = new scg::List<FileContent[]>();
                 {
                     var cache = new Cache();
                     for (var index = 0; index < generators.Length; ++index) {
                         var customCodeGenerator = generators[index];
+                        timings.Mark("generator setup");
                         cache.Load(dir, $"Cache/{customCodeGenerator.GetType().Name}.cache");
+                        var timingName = customCodeGenerator.GetType().FullName;
+                        timings.Mark(timingName + " cache load");
                         customCodeGenerator.cache = cache;
                         customCodeGenerator.dir = dir;
                         customCodeGenerator.asms = asms;
@@ -775,20 +783,25 @@ namespace ME.BECS.Editor {
                         UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_CAPTION, customCodeGenerator.GetType().Name, index / (float)generators.Length);
                         cache.SetMethod("AddInitialization");
                         customCodeGenerator.AddInitialization(typesContent, componentTypes);
+                        timings.Mark(timingName + " initialization");
                         cache.SetMethod("AddPublicContent");
                         publicContent.Add(customCodeGenerator.AddPublicContent());
+                        timings.Mark(timingName + " public content");
                         cache.SetMethod("AddFileContent");
                         var files = customCodeGenerator.AddFileContent(componentTypes);
+                        timings.Mark(timingName + " file content");
                         if (files != null) filesContent.Add(files);
                         cache.SetMethod("AddMethods");
                         methods.AddRange(customCodeGenerator.AddMethods(componentTypes));
+                        timings.Mark(timingName + " methods");
                         cache.Push();
+                        timings.Mark(timingName + " cache save");
                         componentTypes.Add(customCodeGenerator.GetType());
                     }
                 }
 
-                var methodRegistryContents = methods.Where(x => x.definition != null && x.type != null)
-                                                    .Select(x => $"WorldStaticCallbacks.{x.registerMethodName}<{x.type}>({x.GetMethodParamsCall()});").ToArray();
+                var methodRegistryContents = methods.Where(x => x.generatedRegistration != null || (x.definition != null && x.type != null))
+                                                    .Select(x => x.generatedRegistration ?? $"WorldStaticCallbacks.{x.registerMethodName}<{x.type}>({x.GetMethodParamsCall()});").ToArray();
                 var methodContents = methods.Where(x => x.definition != null)
                                             .Select(
                                                 x =>
@@ -841,7 +854,9 @@ namespace ME.BECS.Editor {
                     // Clean up all files
                     System.IO.Directory.Delete(filesPath, true);
                 }
+                timings.Mark("format / write / import output");
             } catch (System.Exception ex) {
+                timings.Mark("interrupted stage (see exception)");
                 UnityEngine.Debug.LogException(ex);
             } finally {
                 UnityEditor.EditorUtility.ClearProgressBar();
@@ -904,9 +919,17 @@ namespace ME.BECS.Editor {
                 if (prevContent != newContent) {
                     var pathDummy = @$"{dir}/{ECS}.Dummy.cs";
                     System.IO.File.WriteAllText(pathDummy, "// Code generator dummy script");
-                    System.IO.File.WriteAllText(csc, "@Assets/csc.rsp");
                     System.IO.File.WriteAllText(path, newContent);
                     UnityEditor.AssetDatabase.ImportAsset(path);
+                }
+                // Update independently of asmdef changes, otherwise an existing assembly never
+                // receives the new AdditionalText. No compilation is launched explicitly here.
+                if (inputManifestReady) {
+                    var response = "@Assets/csc.rsp\n-additionalfile:\"" + inputManifestPath.Replace('\\', '/') + "\"\n";
+                    if (!System.IO.File.Exists(csc) || System.IO.File.ReadAllText(csc) != response) {
+                        System.IO.File.WriteAllText(csc, response);
+                        UnityEditor.AssetDatabase.ImportAsset(csc);
+                    }
                 }
             }
 
@@ -925,7 +948,12 @@ namespace ME.BECS.Editor {
                     --index;
                     var typeGen = EditorUtils.GetFirstInterfaceConstraintType(type);
                     if (typeGen != null) {
-                        var genTypes = UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).OrderBy(x => x.FullName).ToArray();
+                        // Systems must use the same constraint/exclusion filter as graph allocation and execution.
+                        // Jobs still use their existing expansion path.
+                        var genTypes = typeof(ISystem).IsAssignableFrom(type)
+                            ? EditorUtils.GetTypesDerivedFrom(typeGen, type).OrderBy(x => x.FullName, System.StringComparer.Ordinal)
+                                .ThenBy(x => x.Assembly.FullName, System.StringComparer.Ordinal).ToArray()
+                            : UnityEditor.TypeCache.GetTypesDerivedFrom(typeGen).OrderBy(x => x.FullName).ToArray();
                         foreach (var genType in genTypes) {
                             if (genType.IsValueType == false) continue;
                             var gType = type.MakeGenericType(genType);

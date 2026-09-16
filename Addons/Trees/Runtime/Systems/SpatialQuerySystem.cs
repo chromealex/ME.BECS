@@ -77,7 +77,7 @@ namespace ME.BECS {
     }
 
     [EditorComment("Filter all entities which suitable for this query")]
-    public struct SpatialQueryAspect : IAspect {
+    public partial struct SpatialQueryAspect : IAspect {
 
         public Ent ent { get; set; }
 

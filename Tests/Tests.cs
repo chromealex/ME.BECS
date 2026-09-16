@@ -19,7 +19,7 @@ namespace ME.BECS.Tests {
 
     }
 
-    public struct TestAspect : IAspect {
+    public partial struct TestAspect : IAspect {
             
         public Ent ent { get; set; }
 

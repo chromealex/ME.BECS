@@ -7,7 +7,7 @@ using static ME.BECS.Cuts;
 
 namespace ME.BECS.Tests {
     
-    public struct Aspect1 : IAspect {
+    public partial struct Aspect1 : IAspect {
         
         public Ent ent { get; set; }
         
@@ -27,7 +27,7 @@ namespace ME.BECS.Tests {
 
     }
 
-    public struct Aspect2 : IAspect {
+    public partial struct Aspect2 : IAspect {
         
         public Ent ent { get; set; }
 

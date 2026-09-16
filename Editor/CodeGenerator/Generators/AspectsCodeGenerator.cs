@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Reflection;
 
 namespace ME.BECS.Editor.Aspects {
@@ -7,65 +6,35 @@ namespace ME.BECS.Editor.Aspects {
 
         public override void AddInitialization(System.Collections.Generic.List<string> dataList, System.Collections.Generic.List<System.Type> references) {
             
-            var content = new System.Collections.Generic.List<string>();
-            //UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray()
             var aspects = this.aspects;
             foreach (var aspect in aspects) {
-
-                if (this.cache.TryGetValue<System.Collections.Generic.List<string>>(aspect, out var cacheData) == true) {
-                    content.AddRange(cacheData);
-                    continue;
-                }
 
                 if (aspect.IsValueType == false) continue;
                 if (aspect.IsVisible == false) continue;
 
                 if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
-                
-                var contentItem = new System.Collections.Generic.List<string>();
-                var type = aspect;
-                var strType = EditorUtils.GetTypeName(type);
-                var types = new System.Collections.Generic.List<string>();
-                var fieldsCount = 0;
-                var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+
+                // Only dependency collection remains here. Registration/query code is compiler-owned.
+                references.Add(aspect);
+                var fields = aspect.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
                 foreach (var field in fields) {
                     var fieldType = field.FieldType;
                     if (typeof(IAspectData).IsAssignableFrom(fieldType) == true &&
                         field.GetCustomAttribute(typeof(QueryWithAttribute)) != null) {
-                        ++fieldsCount;
                         var gType = fieldType.GenericTypeArguments[0];
                         if (gType.IsVisible == false) continue;
-                        types.Add(EditorUtils.GetTypeName(gType));
                         references.Add(gType);
                     }
                 }
 
-                var str = $"AspectTypeInfo<{strType}>.Validate();";
-                contentItem.Add(str);
-                if (fieldsCount > 0 && fieldsCount == types.Count) {
-                    references.Add(type);
-                    str = $"AspectTypeInfo.with.Get(AspectTypeInfo<{strType}>.typeId).Resize({types.Count});";
-                    contentItem.Add(str);
-                    for (int i = 0; i < types.Count; ++i) {
-                        str = $"AspectTypeInfo.with.Get(AspectTypeInfo<{strType}>.typeId).Get({i}) = StaticTypes<{types[i]}>.typeId;";
-                        contentItem.Add(str);
-                    }
-                }
-                
-                this.cache.Add(aspect, contentItem);
-                content.AddRange(contentItem);
-
             }
             
-            this.cache.Push();
-            
-            dataList.AddRange(content);
+            dataList.Add("global::ME.BECS.SourceGenerated.AspectInputs.Initialize();");
             
         }
 
         public override System.Collections.Generic.List<CodeGenerator.MethodDefinition> AddMethods(System.Collections.Generic.List<System.Type> references) {
 
-            var content = new System.Collections.Generic.List<string>();
             //UnityEditor.TypeCache.GetTypesDerivedFrom(typeof(IAspect)).OrderBy(x => x.FullName).ToArray()
             var aspects = this.aspects;
             foreach (var aspect in aspects) {
@@ -75,35 +44,20 @@ namespace ME.BECS.Editor.Aspects {
 
                 if (this.IsValidTypeForAssembly(aspect, true) == false) continue;
 
-                var type = aspect;
-                var strType = EditorUtils.GetTypeName(type);
-                var types = new System.Collections.Generic.List<string>();
-                var fieldsCount = 0;
-                var fields = type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).OrderBy(x => x.FieldType.FullName).ToArray();
+                if (SourceGeneratorBridge.TryGetAspectConstruction(aspect, out _, out var constructionComponents)) {
+                    references.Add(aspect);
+                    references.AddRange(constructionComponents);
+                    continue;
+                }
+
+                var fields = aspect.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
                 foreach (var field in fields) {
                     var fieldType = field.FieldType;
                     if (typeof(IAspectData).IsAssignableFrom(fieldType) == true) {
-                        ++fieldsCount;
-                        var gType = fieldType.GenericTypeArguments[0];
-                        if (gType.IsVisible == false) continue;
-                        if (field.IsPublic == true) {
-                            types.Add($"(({strType}*)addr.ptr)->{field.Name} = new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world);");
-                        } else {
-                            types.Add("{");
-                            types.Add($"ref var s = ref *(({strType}*)addr.ptr);");
-                            types.Add($"typeof({strType}).GetField(\"{field.Name}\", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValueDirect(__makeref(s), new AspectDataPtr<{EditorUtils.GetTypeName(gType)}>(in world));");
-                            types.Add("}");
-                        }
+                        throw new System.InvalidOperationException("Generated aspect constructor unavailable: " + aspect.AssemblyQualifiedName);
                     }
                 }
                 
-                if (fieldsCount > 0) {
-                    var str = $@"{{
-var addr = WorldAspectStorage.Initialize(world.id, AspectTypeInfo<{strType}>.typeId, TSize<{strType}>.size);
-{string.Join("\n", types)}
-}}";
-                    content.Add(str);
-                }
                 
             }
             
@@ -112,7 +66,7 @@ var addr = WorldAspectStorage.Initialize(world.id, AspectTypeInfo<{strType}>.typ
                 type = "World",
                 registerMethodName = "RegisterCallback",
                 definition = "ref World world",
-                content = string.Join("\n", content),
+                content = "global::ME.BECS.SourceGenerated.AspectInputs.Construct(ref world);",
             };
             return new System.Collections.Generic.List<CodeGenerator.MethodDefinition>() { def };
 

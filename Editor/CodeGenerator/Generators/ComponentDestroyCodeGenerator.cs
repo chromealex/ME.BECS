@@ -10,6 +10,12 @@ namespace ME.BECS.Editor {
             var definitions = new System.Collections.Generic.List<CodeGenerator.MethodDefinition>();
             var allComponents = UnityEditor.TypeCache.GetTypesDerivedFrom<IComponentDestroy>().OrderBy(x => x.FullName).ToArray();
             foreach (var component in allComponents) {
+                if (component.IsValueType == false || this.IsValidTypeForAssembly(component) == false) continue;
+                if (SourceGeneratorBridge.TryGetDestroyRegistration(component, out var generatedRegistration)) {
+                    definitions.Add(new CodeGenerator.MethodDefinition { generatedRegistration = generatedRegistration });
+                    references.Add(component);
+                    continue;
+                }
 
                 var contentItem = new System.Collections.Generic.List<string>();
                 var type = component;

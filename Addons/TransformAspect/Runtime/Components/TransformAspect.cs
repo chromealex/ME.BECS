@@ -19,7 +19,7 @@ namespace ME.BECS.Transforms {
     using LAYOUT = System.Runtime.InteropServices.StructLayoutAttribute;
 
     [EditorComment("Give access to the transform methods")]
-    public struct TransformAspect : IAspect {
+    public partial struct TransformAspect : IAspect {
         
         public Ent ent { get; set; }
         
