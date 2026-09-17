@@ -35,7 +35,21 @@ namespace ME.BECS.Units {
         
         [INLINE(256)]
         [NotThreadSafe]
-        public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo) {
+        public readonly void Hit(in Ent hitOwner, uint damage, in Ent source, in JobInfo jobInfo, bool explosion = false, byte damageCategory = 0) {
+            if (this.ent.Has<CombatDamageModifiers>()) {
+                ref var modifiers = ref this.ent.Get<CombatDamageModifiers>();
+                tfloat adjustedDamage = damage;
+                if (modifiers.playerUnit && hitOwner != this.readOwner && hitOwner.IsAlive() && hitOwner.TryRead(out PlayerDamageModifiers attacker) && attacker.pvpMultiplier > 0) adjustedDamage *= attacker.pvpMultiplier;
+                if (modifiers.burning && hitOwner.IsAlive() && hitOwner.TryRead(out PlayerDamageModifiers rules)) adjustedDamage *= 1 + (explosion ? rules.fuelExplosionBonus : rules.fuelAllBonus);
+                if (modifiers.marks.IsCreated) foreach (var mark in modifiers.marks) {
+                    if (mark.remaining > 0 && mark.owner == hitOwner) { adjustedDamage *= 1 + mark.bonus; break; }
+                }
+                damage = (uint)math.round(adjustedDamage);
+                if (modifiers.shieldRemaining > 0 && modifiers.shield > 0) {
+                    var absorbed = math.min((tfloat)damage, modifiers.shield);
+                    modifiers.shield -= absorbed; damage -= (uint)absorbed;
+                }
+            }
             if (damage == 0u) return;
             if (this.readHealth > 0u) {
                 var ent = Ent.New<UnitHitEntityType>(in jobInfo);
@@ -45,6 +59,7 @@ namespace ME.BECS.Units {
                     target = this.ent,
                     damage = damage,
                     damageTotal = damage,
+                    damageCategory = damageCategory != 0 ? damageCategory : source.IsAlive() && source.TryRead(out CombatDamageModifiers sourceRules) ? sourceRules.damageCategory : (byte)0,
                 });
                 ent.Destroy(1UL);
                 this.ent.SetOneShot(new DamageTookEvent() {

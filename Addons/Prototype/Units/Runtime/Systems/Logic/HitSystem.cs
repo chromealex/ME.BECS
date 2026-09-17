@@ -27,6 +27,25 @@ namespace ME.BECS.Units {
                     }
                 }
 
+                if (damageComponent.sourceOwner.IsAlive() && damageComponent.sourceOwner.Has<PlayerDamageModifiers>()) {
+                    ref var totals = ref damageComponent.sourceOwner.Get<PlayerDamageModifiers>();
+                    var actual = System.Math.Min(unit.readHealth, damageComponent.damage);
+                    switch (damageComponent.damageCategory) {
+                        case 1: totals.heroShots += actual; break; case 2: totals.super += actual; break; case 3: totals.imprints += actual; break;
+                        case 4: totals.sniper += actual; break; case 5: totals.tesla += actual; break; case 6: totals.tank += actual; break;
+                        case 7: totals.flame += actual; break; case 8: totals.miner += actual; break; case 9: totals.rocket += actual; break;
+                    }
+                    if (unit.ent.Has<CombatDamageModifiers>() && unit.readOwner != damageComponent.sourceOwner) {
+                        ref var victim = ref unit.ent.Get<CombatDamageModifiers>();
+                        if (victim.playerUnit && unit.readHealth > 0) {
+                            if (!victim.pvpStarted) { victim.pvpStarted = true; victim.pvpStartTime = totals.matchSeconds; }
+                            if (damageComponent.damage >= unit.readHealth) {
+                                if (!totals.kills.IsCreated) totals.kills = new ListAuto<PlayerDamageModifiers.Kill>(damageComponent.sourceOwner, 8);
+                                totals.kills.Add(new PlayerDamageModifiers.Kill { ttk = totals.matchSeconds - victim.pvpStartTime, killerLevel = totals.level, victimLevel = victim.level });
+                            }
+                        }
+                    }
+                }
                 var newHealth = (int)unit.readHealth - (int)damageComponent.damage;
                 if (newHealth <= 0) {
                     unit.health = 0u;

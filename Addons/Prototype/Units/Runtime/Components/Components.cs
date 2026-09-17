@@ -185,6 +185,7 @@ namespace ME.BECS.Units {
         public Ent target;
         public uint damage;
         public uint damageTotal;
+        public byte damageCategory;
 
     }
     

@@ -1140,7 +1140,10 @@ namespace ME.BECS.Editor.Systems {
             if (type.IsGenericType == true) return "default";
             ObjectReferenceRegistry.LoadForced();
             var sourceId = ObjectReferenceRegistry.data.Add(graph, out var isNew);
-            return $"({EditorUtils.GetTypeName(type)})((ME.BECS.FeaturesGraph.Nodes.SystemNode)ObjectReferenceRegistry.GetObjectBySourceId<ME.BECS.FeaturesGraph.SystemsGraph>({sourceId}).nodes[{nodeIndex}]).system";
+            // Node positions can change after graph edits or deserialization. Keep the
+            // generated system bound to its node identity instead of its list index.
+            var nodeGuid = graph.nodes[nodeIndex].GUID.Replace("\"", "\"\"");
+            return $"({EditorUtils.GetTypeName(type)})((ME.BECS.FeaturesGraph.Nodes.SystemNode)ObjectReferenceRegistry.GetObjectBySourceId<ME.BECS.FeaturesGraph.SystemsGraph>({sourceId}).nodesPerGUID[@\"{nodeGuid}\"]).system";
             // var result = new System.Text.StringBuilder(100);
             // result.Append("new ");
             // result.Append(EditorUtils.GetTypeName(type));
