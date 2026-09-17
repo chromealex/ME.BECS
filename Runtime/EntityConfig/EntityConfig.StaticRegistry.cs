@@ -113,6 +113,9 @@ namespace ME.BECS {
                     Logger.Core.Warning($"Config is null while loading #{obj.sourceId}");
                     return;
                 }
+                // Addressable configs have no direct source during registry initialization.
+                // Bind the loaded object before Register asks for its persistent ID.
+                ObjectReferenceRegistry.data.objectLookup.TryAdd(config, obj.sourceId);
                 var unsafeConfig = config.AsUnsafeConfig();
                 if (unsafeConfig.IsValid() == false) return;
                 TryAdd(obj.sourceId, unsafeConfig);

@@ -323,6 +323,11 @@ namespace ME.BECS {
                 if (this.itemLookup.TryAdd(item.data.sourceId, item.data) == false) {
                     UnityEngine.Debug.LogError($"[ObjectReference] Data contains duplicate sourceId {item.data.sourceId} {item.data.source}");
                 }
+                // GetId uses this reverse lookup in a player. Preserve authored IDs
+                // instead of registering persistent assets as temporary runtime objects.
+                if (item.data.source != null) {
+                    this.objectLookup.TryAdd(item.data.source, item.data.sourceId);
+                }
                 if (item.data.sourceId > this.sourceId) this.sourceId = item.data.sourceId;
             }
         }
