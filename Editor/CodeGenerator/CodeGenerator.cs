@@ -445,6 +445,8 @@ namespace ME.BECS.Editor {
                 return;
             }
 
+return;
+
             Logger.Editor.Log($"[ ME.BECS ] Regenerating assemblies {(forced == true ? "(forced)" : "")}");
 
             if (cleanCache == true) {
