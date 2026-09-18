@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using ME.BECS.Transforms;
 using Unity.Jobs.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Jobs;
@@ -46,9 +47,6 @@ namespace ME.BECS.Views {
         public struct ParticleInstanceData {
             public float3 position;
             public quaternion rotation;
-            public float3 prevPos;
-            public ulong prevTick;
-            public float3 velocity;
         }
 
         public struct ObjectsPerPrefab {
@@ -205,9 +203,6 @@ namespace ME.BECS.Views {
                 var pos = item.ent.Read<ME.BECS.Transforms.WorldMatrixComponent>().value.c3.xyz;
                 objects.instances.Add(new ParticleInstanceData() {
                     position = pos,
-                    prevPos = pos,
-                    prevTick = data.ptr->connectedWorld.CurrentTick,
-                    velocity = float3.zero,
                 });
                 objects.isDirty = true;
 
@@ -285,18 +280,14 @@ namespace ME.BECS.Views {
                 marker.Begin();
                 // move
 
-                var currentTick = data.ptr->connectedWorld.CurrentTick;
-                var beginFrameState = data.ptr->beginFrameState.ptr->state;
-                var tickTime = data.ptr->beginFrameState.ptr->tickTime; // ms
-                var currentTimeSinceStart = data.ptr->beginFrameState.ptr->timeSinceStart;
-
-                var factor = this.GetInterpolationFactor(beginFrameState, currentTick, tickTime, currentTimeSinceStart);
-
-                // UnityEngine.Debug.Log($"Factor {factor}");
-
-                var tickMod = 1f;
-                if (tickTime > 0) {
-                    tickMod = 1000 / tickTime;
+                if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
+                    var prevTick = data.ptr->beginFrameState.ptr->state.ptr->tick;
+                    if (prevTick == data.ptr->connectedWorld.CurrentTick) {
+                        data.ptr->interpolationFactor = 0f;
+                    }
+                    var prevTime = prevTick * (double)data.ptr->beginFrameState.ptr->tickTime;
+                    var currentTime = data.ptr->connectedWorld.CurrentTick * (double)data.ptr->beginFrameState.ptr->tickTime;
+                    data.ptr->interpolationFactor = (float)um::math.clamp(um::math.unlerp(prevTime, currentTime, data.ptr->beginFrameState.ptr->timeSinceStart), 0d, 1d);
                 }
 
                 foreach (var kv in this.entityToPrefabId) {
@@ -308,39 +299,33 @@ namespace ME.BECS.Views {
 
                     var instance = objects.instances[instanceIndex];
 
-                    var worldMatrix = ent.Read<ME.BECS.Transforms.WorldMatrixComponent>().value;
+                    var tr = ent.GetAspect<TransformAspect>();
+                    if (data.ptr->properties.interpolateState == true && data.ptr->beginFrameState.ptr->state.ptr != null && data.ptr->beginFrameState.ptr->state.ptr->IsCreated == true) {
 
-                    if (beginFrameState.ptr == null || beginFrameState.ptr->IsCreated == false) {
+                        var interpolate = true;
+                        WorldMatrixComponent sourceData;
+                        if (Components.Has<WorldMatrixComponent>(data.ptr->beginFrameState.ptr->state, ent.id, ent.gen, true) == true) {
+                            sourceData = Components.Read<WorldMatrixComponent>(data.ptr->beginFrameState.ptr->state, ent.id, ent.gen);
+                            if (sourceData.isTickCalculated == false) {
+                                interpolate = false;
+                            }
+                        } else {
+                            sourceData = default;
+                            interpolate = false;
+                        }
 
-                        // move by velocity interpolation
+                        var worldMatrix = tr.readWorldMatrix;
+                        var pos = (um::float3)MatrixUtils.GetPosition(worldMatrix);
+                        var rot = (um::quaternion)MatrixUtils.GetRotation(worldMatrix);
+                        var position = interpolate == true ? um::math.lerp(MatrixUtils.GetPosition(sourceData.value), pos, data.ptr->interpolationFactor) : pos;
+                        var rotation = interpolate == true ? Math.FastSlerp((um::quaternion)MatrixUtils.GetRotation(sourceData.value), rot, data.ptr->interpolationFactor) : rot;
 
-                        instance.prevPos = instance.position;
-                        instance.position = math.lerp(instance.position, worldMatrix.c3.xyz, dt * 10);
-                        instance.velocity = (instance.position - instance.prevPos) / dt;
-
-                        var targetRotation = quaternion.LookRotationSafe(worldMatrix.c2.xyz, worldMatrix.c1.xyz);
-                        instance.rotation = targetRotation;
+                        instance.rotation = rotation;
+                        instance.position = position;
 
                     } else {
-
-                        // move by tick interpolation
-
-                        var beginFrameMatrix = worldMatrix;
-                        if (Components.Has<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen, true) == true) {
-                            beginFrameMatrix = Components.Read<ME.BECS.Transforms.WorldMatrixComponent>(beginFrameState, ent.id, ent.gen).value;
-                        }
-
-                        var nextPos = math.lerp(beginFrameMatrix.c3.xyz, worldMatrix.c3.xyz, factor);
-                        if (data.ptr->connectedWorld.CurrentTick > instance.prevTick && tickTime > 0) {
-                            var ticksDiff = data.ptr->connectedWorld.CurrentTick - instance.prevTick;
-                            instance.velocity = (nextPos - instance.prevPos) * (tickMod / ticksDiff);
-                            instance.prevPos = nextPos;
-                            instance.prevTick = data.ptr->connectedWorld.CurrentTick;
-                        }
-                        instance.position = nextPos;
-                        var targetRotation = quaternion.LookRotationSafe(worldMatrix.c2.xyz, worldMatrix.c1.xyz);
-                        instance.rotation = math.slerp(instance.rotation, targetRotation, factor);
-
+                        instance.rotation = tr.rotation;
+                        instance.position = tr.GetWorldMatrixPosition();
                     }
 
                     objects.instances[instanceIndex] = instance;
@@ -378,7 +363,6 @@ namespace ME.BECS.Views {
                     var instance = objects.instances[i];
                     particle.position = (Vector3)instance.position;
                     particle.rotation3D = (Vector3)instance.rotation.ToEuler();
-                    particle.velocity = (Vector3)instance.velocity;
                     particlesArr[i] = particle;
 
                 }
