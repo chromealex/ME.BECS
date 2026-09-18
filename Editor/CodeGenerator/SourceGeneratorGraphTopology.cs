@@ -49,6 +49,8 @@ namespace ME.BECS.Editor {
                     var layout = Layout(graph);
                     var starts = new int[graph.nodes.Count];
                     var counts = new int[graph.nodes.Count];
+                    foreach (var item in layout)
+                        if (item.graph == graph) counts[item.nodeIndex] = checked(counts[item.nodeIndex] + 1);
                     var cursor = firstSlot;
                     var indices = new Dictionary<BaseNode, int>();
                     for (var index = 0; index < graph.nodes.Count; ++index) {
@@ -57,8 +59,6 @@ namespace ME.BECS.Editor {
                         indices.Add(node, index);
                         starts[index] = cursor;
                         if (node is FeaturesGraph.Nodes.GraphNode nested) counts[index] = Layout(nested.graphValue).Count;
-                        else foreach (var item in layout)
-                            if (item.graph == graph && item.nodeIndex == index) ++counts[index];
                         cursor = checked(cursor + counts[index]);
                     }
                     result.Append("graph\t").Append(Number(occurrence)).Append('\t').Append(Number(parent)).Append('\t').Append(Number(parentNode))

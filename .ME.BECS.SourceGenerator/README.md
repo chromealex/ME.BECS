@@ -164,6 +164,19 @@ are retained. Transitional Editor phase classes are partial and contain private 
 bodies called by these entry points. Dependency traversal, generic parallel scheduling, ref-world/ref-
 JobHandle propagation and inner Burst methods are unchanged. Regenerate phase files together with
 the DLL; this moves callback ownership, not yet lifecycle-body generation.
+Per-slot lifecycle invocation is now compiler-owned as well. Each phase emits InvokeSystem_<slot>
+only for slots implementing that lifecycle interface. The helper uses SourceGeneratorSystemCalls'
+constrained ref-T dispatch, supporting explicit interface implementations without boxing or copying
+system state. Transitional ordinary/sequential-generic/parallel-generic bodies call these helpers at
+their original positions; SystemContext creation, dependsOn propagation and batch placement remain
+unchanged. The runtime bridge is separate from the AOT-only null-node reachability helpers.
+Sequential generic groups now also execute through Roslyn-generated InvokeSequential_<start>_<count>
+helpers derived from bound topology ranges. Variants retain manifest slot order; every call receives
+the preceding handle and optionally applies batches before the next variant. Empty groups return the
+incoming handle. Editor supplies the existing node/ancestor/flat-query apply decision via a shared
+RequiresApply predicate and retains the final group apply and incoming dependency assignment. The
+old per-variant IL safety query was only fed into an unused forceWithoutSync argument and is no longer
+performed for sequential groups. Parallel-group emission and outer graph traversal remain transitional.
 Production graph discovery now uses SourceGeneratorScheduledJobs: complete zero-gap summaries must
 cover the exact full interface-map lifecycle set, each typed root must be unique, and Type[] must
 round-trip to the encoded job set. Only then can all jobs or a selected lifecycle phase be collected
@@ -178,18 +191,29 @@ It uses fresh graph/IL discovery and the production selectors, reads no generate
 does not modify the registry and never invokes patch/registration methods. Counts describe selection
 only, not successful generated compilation, Burst execution or runtime equivalence. Graph errors are
 reported separately and must not be treated as zero fallback coverage.
-`Export Graph Topology` writes diagnostic GraphTopology.txt snapshots in Temp. GraphTopology.v1
+`Export Graph Topology` writes diagnostic GraphTopology.txt snapshots in Temp. GraphTopology.v2
 assigns preorder occurrence IDs to nested graph uses (not asset IDs), preserving repeated uses.
 Rows retain local node order, node/system type identities, enabled/group-enabled flags, stored sync
 data for each phase, and input/output port edge order including duplicates. Missing sync arrays are
 explicitly unknown; the exporter never calls the mutating GetSyncPoint normalization. Cycles,
 missing nodes/graphs and missing/cross-graph endpoints fail a snapshot instead of producing a partial
 plan. Runtime manifests now carry the snapshot in `graph-topology` records (ordinal, base64 `topology`,
-signed root graph ID, base64 GraphTopology.v1 payload). Roslyn parses typed occurrences/nodes/ports
+signed root graph ID, base64 GraphTopology.v2 payload). Roslyn parses typed occurrences/nodes/ports
 and rejects bad root/parent references, duplicate or missing nodes/phases, noncanonical values and
 out-of-range edges. Unknown sync data stays unknown. These inputs are not yet used to emit lifecycle
-bodies; topology equality alone does not prove scheduling equivalence. Refreshing sync analysis and
-binding generic slot ranges remain required before switching the lifecycle planner.
+bodies; topology equality alone does not prove scheduling equivalence. Each node now carries an
+absolute slot start/count and generic-parallel flag. Binding checks contiguous ranges, parent/child
+range agreement, complete single ownership of allocated slots, original system definitions, unique
+closed variants within each node and SystemGenericParallelMode. Repeated graph occurrences own
+distinct ranges. Refreshing sync analysis and compiling dependencies remain required before switching
+the lifecycle planner. Old v1 topology snapshots must be regenerated.
+Roslyn now exports ME.BECS.GraphDependencyOrder.v1 metadata for each topology. This independent
+structural pass checks reciprocal edges, deduplicates dependencies in first-edge order and uses a
+stable node-index topological traversal. Cycles/blocked dependents are explicit and never produce a
+partial success order. All nested occurrences are analyzed separately. This is diagnostic planning
+data, not the runtime scheduling order: entry reachability, phase filtering, sync/batch decisions and
+generic parallel expansion still need to be incorporated before replacing lifecycle bodies. Stored
+sync accumulators are signed integers, matching the existing in-degree/out-degree calculation.
 
 The obsolete per-assembly `JobDeltaTimeGenerator` was removed after production selection moved to
 manifest-owned callbacks. Its partial-scope construction is retained as PartialTypeScope and used by

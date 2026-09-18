@@ -64,7 +64,7 @@ internal sealed class GraphTopologyInput {
                 if (fields[0] == "sync") {
                     if (index < 1 || index > 5 || target.Phases.ContainsKey(index)) throw new FormatException("Invalid/duplicate phase");
                     if (fields.Length == 5 && fields[4] == "unknown") target.Phases.Add(index, null);
-                    else if (fields.Length == 7) target.Phases.Add(index, (Boolean(fields[4]), Integer(fields[5], 0), Boolean(fields[6])));
+                    else if (fields.Length == 7) target.Phases.Add(index, (Boolean(fields[4]), Integer(fields[5], int.MinValue), Boolean(fields[6])));
                     else throw new FormatException("Invalid phase shape");
                 } else if (fields[0] == "input" || fields[0] == "output") {
                     var ports = fields[0] == "input" ? target.Inputs : target.Outputs;
@@ -91,6 +91,12 @@ internal sealed class GraphTopologyInput {
             var cursor = parent?.SlotStart ?? 0;
             for (var index = 0; index < graph.Nodes.Count; ++index) {
                 var node = graph.Nodes[index];
+                var nodeType = resolver.ResolveDefinition(node.Type, out _);
+                if (nodeType != null) {
+                    var isGraph = DerivesFrom(nodeType, "ME.BECS.FeaturesGraph.Nodes.GraphNode");
+                    if (isGraph != children.ContainsKey((occurrence, index)) ||
+                        (node.SystemType.Length != 0 && !DerivesFrom(nodeType, "ME.BECS.FeaturesGraph.Nodes.SystemNode"))) return false;
+                }
                 if (node.SlotStart != cursor || (long)node.SlotStart + node.SlotCount > slots.Count) return false;
                 cursor += node.SlotCount;
                 if (node.SystemType.Length == 0) {
@@ -102,8 +108,10 @@ internal sealed class GraphTopologyInput {
                 if (type == null || (!type.IsGenericType && node.SlotCount != 1)) return false;
                 var parallel = type.IsGenericType && type.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == "ME.BECS.SystemGenericParallelModeAttribute");
                 if (parallel != node.Parallel) return false;
+                var variants = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
                 for (var slot = node.SlotStart; slot < cursor; ++slot) {
-                    if (occupied[slot] || !SymbolEqualityComparer.Default.Equals(slots[slot].OriginalDefinition, type.OriginalDefinition)) return false;
+                    if (occupied[slot] || !variants.Add(slots[slot]) ||
+                        !SymbolEqualityComparer.Default.Equals(slots[slot].OriginalDefinition, type.OriginalDefinition)) return false;
                     occupied[slot] = true;
                 }
             }
@@ -112,6 +120,12 @@ internal sealed class GraphTopologyInput {
         if (occupied.Any(value => !value)) return false;
         reason = "";
         return true;
+    }
+
+    private static bool DerivesFrom(INamedTypeSymbol type, string name) {
+        for (INamedTypeSymbol? current = type; current != null; current = current.BaseType)
+            if (current.ToDisplayString() == name) return true;
+        return false;
     }
 
     private static int Integer(string text, int minimum) {

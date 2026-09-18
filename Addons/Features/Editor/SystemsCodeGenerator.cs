@@ -297,12 +297,25 @@ namespace ME.BECS.Editor.Systems {
                             return dependsOn;
                         }
                         
+                        bool RequiresApply(ME.BECS.Extensions.GraphProcessor.BaseNode node) {
+                            if (node is not ME.BECS.FeaturesGraph.Nodes.ExitNode && !node.GetSyncPoint(methodEnum).syncPoint) return false;
+                            #if !ENABLE_BECS_FLAT_QUERIES
+                            if (customInputDeps.TryGetValue(node, out var parent)) {
+                                while (parent != null) {
+                                    if (!parent.GetSyncPoint(methodEnum).syncPoint) return false;
+                                    customInputDeps.TryGetValue(parent, out parent);
+                                }
+                            }
+                            #endif
+                            return true;
+                        }
+
                         void AddApply(ME.BECS.Extensions.GraphProcessor.BaseNode node, GraphLink index, ref string schemeDependsOn, string customDep = null, string customOutputDep = null, bool forceWithoutSync = false) {
 
                             var indexStr = index.ToString();
                             if (customDep == null) customDep = $"dep{indexStr}";
                             if (customOutputDep == null) customOutputDep = $"dep{indexStr}";
-                            if ((node is not ME.BECS.FeaturesGraph.Nodes.ExitNode && node.GetSyncPoint(methodEnum).syncPoint == false)) {
+                            if (!RequiresApply(node)) {
                                 methodContent.Add($"{customOutputDep} = {customDep};");
                                 return;
                             }
@@ -310,16 +323,6 @@ namespace ME.BECS.Editor.Systems {
                             var tag = "[   SET   ]";
                             #else
                             var tag = "[  SYNC   ]";
-                            if (customInputDeps.TryGetValue(node, out var parentNode) == true) {
-                                while (parentNode != null) {
-                                    if (parentNode.GetSyncPoint(methodEnum).syncPoint == false) {
-                                        methodContent.Add($"{customOutputDep} = {customDep};");
-                                        return;
-                                    }
-                                    customInputDeps.TryGetValue(parentNode, out var parentNodeInner);
-                                    parentNode = parentNodeInner;
-                                }
-                            }
 
                             /*if (forceWithoutSync == true) {
                                 methodContent.Add("// Force sync point removed");
@@ -505,7 +508,7 @@ namespace ME.BECS.Editor.Systems {
                                                             var indexStr = index.ToString();
                                                             methodContent.Add("{");
                                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
-                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
+                                                            methodContent.Add($"InvokeSystem_{index.globalIndex + index.genericIndex}(systems[{index.globalIndex + index.genericIndex}], ref systemContext);");
                                                             methodContent.Add($"depsGeneric{srcDep.ToString()}[{index.genericIndex}] = systemContext.dependsOn;");
                                                             methodContent.Add("}");
                                                             if (index.genericIndex == 0) collectedDeps.Add($"dep{indexStr}");
@@ -527,18 +530,7 @@ namespace ME.BECS.Editor.Systems {
                                                         customAttr = "[ ONE-BY-ONE ]";
                                                         var srcDep = index;
                                                         var prevIndex = dependsOn;
-                                                        methodContent.Add("{");
-                                                        methodContent.Add($"var localDependsOn = {prevIndex};");
-                                                        foreach (var cType in types) {
-                                                            var type = systemType.MakeGenericType(cType);
-                                                            methodContent.Add($"systemContext = SystemContext.Create(dt, in world, localDependsOn);");
-                                                            methodContent.Add($"(({EditorUtils.GetTypeName(type)}*)systems[{(index.globalIndex + index.genericIndex)}])->{method}(ref systemContext);");
-                                                            var withoutSync = IsSyncNotRequired(type);
-                                                            AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", "localDependsOn", forceWithoutSync: withoutSync);
-                                                            index.AddGeneric();
-                                                        }
-                                                        methodContent.Add($"{prevIndex} = localDependsOn;");
-                                                        methodContent.Add("}");
+                                                        methodContent.Add($"{prevIndex} = InvokeSequential_{index.globalIndex}_{types.Length}(dt, in world, {prevIndex}, systems, {(RequiresApply(systemNode) ? "true" : "false")});");
                                                         AddApply(systemNode, srcDep, ref schemeDependsOn, prevIndex, collectedDeps.GetReadOpString($"dep{srcDep.ToString()}"));
 
                                                         index = srcDep;
@@ -552,7 +544,7 @@ namespace ME.BECS.Editor.Systems {
                                             collectedDeps.Add($"dep{index.ToString()}");
                                             methodContent.Add("{");
                                             methodContent.Add($"systemContext = SystemContext.Create(dt, in world, {dependsOn});");
-                                            methodContent.Add($"(({EditorUtils.GetTypeName(systemType)}*)systems[{index.globalIndex}])->{method}(ref systemContext);");
+                                            methodContent.Add($"InvokeSystem_{index.globalIndex}(systems[{index.globalIndex}], ref systemContext);");
 
                                             var withoutSync = IsSyncNotRequired(systemType);
                                             AddApply(systemNode, index, ref schemeDependsOn, "systemContext.dependsOn", collectedDeps.GetReadOpString($"dep{index.ToString()}"), forceWithoutSync: withoutSync);
