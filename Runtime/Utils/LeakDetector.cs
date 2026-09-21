@@ -103,6 +103,32 @@ namespace ME.BECS {
     public unsafe class LeakDetectorData {
 
         [IgnoreProfiler]
+        public readonly struct Key : System.IEquatable<Key> {
+
+            public readonly System.IntPtr ptr;
+
+            [INLINE(256)]
+            public Key(void* ptr) {
+                this.ptr = (System.IntPtr)ptr;
+            }
+
+            [INLINE(256)]
+            public bool Equals(Key other) {
+                return this.ptr == other.ptr;
+            }
+
+            public override bool Equals(object obj) {
+                return obj is Key other && this.Equals(other);
+            }
+
+            [INLINE(256)]
+            public override int GetHashCode() {
+                return this.ptr.GetHashCode();
+            }
+
+        }
+
+        [IgnoreProfiler]
         public struct Item : System.IEquatable<Item> {
 
             public System.IntPtr ptr;
@@ -152,14 +178,56 @@ namespace ME.BECS {
 
         }
         
-        public static readonly SharedStatic<UnsafeHashMap<Item, Item>> tracked = SharedStatic<UnsafeHashMap<Item, Item>>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<UnsafeHashMap<Item, Item>>.align, 1L);
-        public static readonly SharedStatic<LockSpinner> spinner = SharedStatic<LockSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<LockSpinner>.align, 2L);
+        public struct Shard {
+
+            public UnsafeHashMap<Key, Item> tracked;
+            public LockSpinner spinner;
+
+        }
+
+        public const int SHARDS_COUNT = 64;
+        private const int SHARD_INITIAL_CAPACITY = 1;
+
+        public static readonly SharedStatic<UnsafeList<Shard>> shards = SharedStatic<UnsafeList<Shard>>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<UnsafeList<Shard>>.align, 1L);
+        public static readonly SharedStatic<LockSpinner> shardsSpinner = SharedStatic<LockSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<LockSpinner>.align, 2L);
         public static readonly SharedStatic<Internal.Array<int>> counter = SharedStatic<Internal.Array<int>>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<Internal.Array<int>>.align, 3L);
         public static readonly SharedStatic<LockSpinner> counterSpinner = SharedStatic<LockSpinner>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<LockSpinner>.align, 4L);
         public static readonly SharedStatic<bbool> counterAwait = SharedStatic<bbool>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<bbool>.align, 5L);
+        private static readonly SharedStatic<int> shardsInitialized = SharedStatic<int>.GetOrCreatePartiallyUnsafeWithHashCode<LeakDetectorData>(TAlign<int>.align, 6L);
+
+        [INLINE(256)]
+        public static int GetShardIndex(void* ptr) {
+            var value = (ulong)ptr;
+            value >>= 4;
+            value ^= value >> 33;
+            value *= 0xff51afd7ed558ccdUL;
+            value ^= value >> 33;
+            return (int)(value & (SHARDS_COUNT - 1));
+        }
 
         public static void Validate() {
-            if (tracked.Data.IsCreated == false) tracked.Data = new UnsafeHashMap<Item, Item>(100, Constants.ALLOCATOR_DOMAIN);
+            if (System.Threading.Volatile.Read(ref shardsInitialized.Data) == 1) return;
+            shardsSpinner.Data.Lock();
+            if (shardsInitialized.Data == 0) {
+                var value = new UnsafeList<Shard>(SHARDS_COUNT, Constants.ALLOCATOR_DOMAIN);
+                value.Resize(SHARDS_COUNT, Unity.Collections.NativeArrayOptions.ClearMemory);
+                shards.Data = value;
+                System.Threading.Volatile.Write(ref shardsInitialized.Data, 1);
+            }
+            shardsSpinner.Data.Unlock();
+        }
+
+        [INLINE(256)]
+        public static ref Shard GetShard(void* ptr) {
+            Validate();
+            return ref shards.Data.ElementAt(GetShardIndex(ptr));
+        }
+
+        [INLINE(256)]
+        public static void Validate(ref Shard shard) {
+            if (shard.tracked.IsCreated == false) {
+                shard.tracked = new UnsafeHashMap<Key, Item>(SHARD_INITIAL_CAPACITY, Constants.ALLOCATOR_DOMAIN);
+            }
         }
 
     }
@@ -208,10 +276,13 @@ namespace ME.BECS {
         public static void TrackAllocator(void* ptr, MemPtr memPtr) {
 
             var tag = AllocatorTag.Get();
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, default, Unity.Collections.Allocator.FirstUserIndex, false), new LeakDetectorData.Item(ptr, ptr, memPtr, Unity.Collections.Allocator.FirstUserIndex, tag: tag));
-            LeakDetectorData.spinner.Data.Unlock();
+            var item = new LeakDetectorData.Item(ptr, ptr, memPtr, Unity.Collections.Allocator.FirstUserIndex, tag: tag);
+            ref var shard = ref LeakDetectorData.GetShard(ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.TryAdd(new LeakDetectorData.Key(ptr), item);
+            shard.spinner.Unlock();
+            if (result == false) UnityEngine.Debug.LogError($"Pointer {((System.IntPtr)ptr).ToInt64()} is already tracked.");
 
         }
 
@@ -221,10 +292,13 @@ namespace ME.BECS {
         public static void TrackAllocator(safe_ptr ptr, MemPtr memPtr) {
 
             var tag = AllocatorTag.Get();
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, false), new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, memPtr, Unity.Collections.Allocator.FirstUserIndex, tag: tag));
-            LeakDetectorData.spinner.Data.Unlock();
+            var item = new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, memPtr, Unity.Collections.Allocator.FirstUserIndex, tag: tag);
+            ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.TryAdd(new LeakDetectorData.Key(ptr.ptr), item);
+            shard.spinner.Unlock();
+            if (result == false) UnityEngine.Debug.LogError($"Pointer {((System.IntPtr)ptr.ptr).ToInt64()} is already tracked.");
 
         }
 
@@ -234,10 +308,13 @@ namespace ME.BECS {
         public static void Track(void* ptr, Unity.Collections.Allocator allocator) {
 
             if (IsTrackable(allocator) == false) return;
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr, ptr, default, allocator, false), new LeakDetectorData.Item(ptr, ptr, default, allocator));
-            LeakDetectorData.spinner.Data.Unlock();
+            var item = new LeakDetectorData.Item(ptr, ptr, default, allocator);
+            ref var shard = ref LeakDetectorData.GetShard(ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.TryAdd(new LeakDetectorData.Key(ptr), item);
+            shard.spinner.Unlock();
+            if (result == false) UnityEngine.Debug.LogError($"Pointer {((System.IntPtr)ptr).ToInt64()} is already tracked.");
 
         }
 
@@ -247,10 +324,13 @@ namespace ME.BECS {
         public static void Track(safe_ptr ptr, Unity.Collections.Allocator allocator) {
 
             if (IsTrackable(allocator) == false) return;
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            LeakDetectorData.tracked.Data.Add(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, allocator, false), new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, allocator));
-            LeakDetectorData.spinner.Data.Unlock();
+            var item = new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, allocator);
+            ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.TryAdd(new LeakDetectorData.Key(ptr.ptr), item);
+            shard.spinner.Unlock();
+            if (result == false) UnityEngine.Debug.LogError($"Pointer {((System.IntPtr)ptr.ptr).ToInt64()} is already tracked.");
 
         }
 
@@ -266,10 +346,11 @@ namespace ME.BECS {
         [INLINE(256)]
         public static void FreeAllocator(void* ptr, MemPtr memPtr) {
 
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr, ptr, default, Unity.Collections.Allocator.FirstUserIndex, false));
-            LeakDetectorData.spinner.Data.Unlock();
+            ref var shard = ref LeakDetectorData.GetShard(ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.Remove(new LeakDetectorData.Key(ptr));
+            shard.spinner.Unlock();
             if (result == false) {
                 UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr).ToInt64()} ({memPtr}) which has been already freed or was never instantiated.");
             }
@@ -282,10 +363,11 @@ namespace ME.BECS {
         public static void Free(safe_ptr ptr, Unity.Collections.Allocator allocator) {
 
             if (IsTrackable(allocator) == false) return;
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.Remove(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, allocator, false));
-            LeakDetectorData.spinner.Data.Unlock();
+            ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.Remove(new LeakDetectorData.Key(ptr.ptr));
+            shard.spinner.Unlock();
             if (result == false) {
                 UnityEngine.Debug.LogError($"You are trying to free pointer {((System.IntPtr)ptr.ptr).ToInt64()} which has been already freed or was never instantiated.");
             }
@@ -293,8 +375,14 @@ namespace ME.BECS {
         }
 
         public static void ClearAllocated() {
-            LeakDetectorData.counter.Data.Dispose();
-            LeakDetectorData.tracked.Data.Clear();
+            if (LeakDetectorData.counter.Data.IsCreated == true) LeakDetectorData.counter.Data.Dispose();
+            LeakDetectorData.Validate();
+            for (int i = 0; i < LeakDetectorData.SHARDS_COUNT; ++i) {
+                ref var shard = ref LeakDetectorData.shards.Data.ElementAt(i);
+                shard.spinner.Lock();
+                if (shard.tracked.IsCreated == true) shard.tracked.Clear();
+                shard.spinner.Unlock();
+            }
         }
 
         public static void PrintAllocated(Unity.Collections.Allocator allocator) {
@@ -305,16 +393,23 @@ namespace ME.BECS {
                 }
             }
 
-            LeakDetectorData.spinner.Data.Lock();
+            var output = new System.Collections.Generic.List<string>();
             LeakDetectorData.Validate();
-            foreach (var item in LeakDetectorData.tracked.Data) {
-                if (item.Value.IsTrackableAllocator() == false) continue;
-                if (allocator != Unity.Collections.Allocator.None && allocator != item.Value.allocator) continue; 
-                var str = item.Value.stackTrace.ToString();
-                if (str.Contains("UnsafeEntityConfig") == true || str.Contains("ME.BECS.Gen") == true) continue;
-                UnityEngine.Debug.Log($"{item.Value.ptr} - {item.Value.allocator}\n{str}");
+            for (int i = 0; i < LeakDetectorData.SHARDS_COUNT; ++i) {
+                ref var shard = ref LeakDetectorData.shards.Data.ElementAt(i);
+                shard.spinner.Lock();
+                if (shard.tracked.IsCreated == true) {
+                    foreach (var item in shard.tracked) {
+                        if (item.Value.IsTrackableAllocator() == false) continue;
+                        if (allocator != Unity.Collections.Allocator.None && allocator != item.Value.allocator) continue;
+                        var str = item.Value.stackTrace.ToString();
+                        if (str.Contains("UnsafeEntityConfig") == true || str.Contains("ME.BECS.Gen") == true) continue;
+                        output.Add($"{item.Value.ptr} - {item.Value.allocator}\n{str}");
+                    }
+                }
+                shard.spinner.Unlock();
             }
-            LeakDetectorData.spinner.Data.Unlock();
+            foreach (var str in output) UnityEngine.Debug.Log(str);
             
         }
 
@@ -322,10 +417,12 @@ namespace ME.BECS {
         public static void IsAlive(safe_ptr ptr) {
             
             if (ptr.LowBound == null || ptr.HiBound == null) return;
-            LeakDetectorData.spinner.Data.Lock();
-            LeakDetectorData.Validate();
-            var result = LeakDetectorData.tracked.Data.ContainsKey(new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, withStackTrace: false));
-            LeakDetectorData.spinner.Data.Unlock();
+            var allocationPtr = ptr.LowBound;
+            ref var shard = ref LeakDetectorData.GetShard(allocationPtr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.ContainsKey(new LeakDetectorData.Key(allocationPtr));
+            shard.spinner.Unlock();
             if (result == false) {
                 if (ptr.HiBound != ptr.LowBound) {
                     E.RANGE(ptr.ptr, ptr.LowBound, ptr.HiBound);
@@ -347,19 +444,21 @@ namespace ME.BECS {
         }
 
         public static Unity.Collections.FixedString4096Bytes FindStack(safe_ptr ptr) {
-            var item = new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, withStackTrace: false);
-            if (LeakDetectorData.tracked.Data.TryGetValue(item, out var value) == true) {
-                return value.stackTrace;
-            }
-            return default;
+            ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.TryGetValue(new LeakDetectorData.Key(ptr.ptr), out var value);
+            shard.spinner.Unlock();
+            return result == true ? value.stackTrace : default;
         }
 
         public static LeakDetectorData.Item Find(safe_ptr ptr) {
-            var item = new LeakDetectorData.Item(ptr.ptr, ptr.HiBound, default, Unity.Collections.Allocator.FirstUserIndex, withStackTrace: false);
-            if (LeakDetectorData.tracked.Data.TryGetValue(item, out var value) == true) {
-                return value;
-            }
-            return default;
+            ref var shard = ref LeakDetectorData.GetShard(ptr.ptr);
+            shard.spinner.Lock();
+            LeakDetectorData.Validate(ref shard);
+            var result = shard.tracked.TryGetValue(new LeakDetectorData.Key(ptr.ptr), out var value);
+            shard.spinner.Unlock();
+            return result == true ? value : default;
         }
 
     }
