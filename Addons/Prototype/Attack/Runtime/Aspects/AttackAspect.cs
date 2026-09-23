@@ -219,8 +219,10 @@ namespace ME.BECS.Attack {
             if (this.ent.TryRead(out AttackTargetsComponent attackTargetsComponent) == true) {
 
                 for (uint i = 0u; i < attackTargetsComponent.targets.Count; ++i) {
-                    var target = attackTargetsComponent.targets[i].GetAspect<TransformAspect>();
-                    if (IsTargetInSector(in tr, in target, in sector) == true) return true;
+                    var target = attackTargetsComponent.targets[i];
+                    if (target.IsAlive() == false) continue;
+                    var targetAspect = target.GetAspect<TransformAspect>();
+                    if (IsTargetInSector(in tr, in targetAspect, in sector) == true) return true;
                 }
 
             } else if (this.target.IsAlive() == true) {
